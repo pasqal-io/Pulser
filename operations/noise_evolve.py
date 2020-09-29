@@ -1,5 +1,5 @@
 from operations import states as st
-from device import pasqalobj
+from devices import pasqalobj
 import numpy as np
 import matplotlib.pyplot as plt
 from qutip import *

@@ -1,4 +1,4 @@
-from device import pasqalobj
+from devices import pasqalobj
 import numpy as np
 from qutip import *
 

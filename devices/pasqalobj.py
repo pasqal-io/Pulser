@@ -98,7 +98,7 @@ class IsingPasqalObj(PasqalObj):
         sz_list = []
         nn_list = []
 
-        for j in range(N):
+        for j in range(N): # Note these are different for the XY
             op_list = [si for _ in range(N)]
 
             op_list[j] = sx
