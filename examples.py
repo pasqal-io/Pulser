@@ -25,16 +25,17 @@ if __name__ == "__main__":
 def main():
     # Initial parameters
     depth = 5
-    my_rabi = "rabi_guess"
-    my_detuning = "guess_detuning"
-    my_interval = "guess_interval"
-    InitialGuess = pulses.Parameters(my_rabi, my_detuning, my_interval)
 
-    # cost_fct =
-    my_state = "ALL_UP"
-    my_device = "devices.Device1(...)"
+    # Define parameters:
+    params = {
+                "rabi" : [f"rabi{k}" for k in range(depth)],
+                "detuning" : [f"detuning{k}" for k in range(depth)],
+                "intervals" : [ 0.1*k for k in range(depth)]
+                }
+    # can add also identifiers for a particular type of function (square, sawtooth, etc).
+    # the associated parameters should still remain as numbers
 
-    seq = sequences.ParamSequence(device=my_device, Parameters=InitialGuess, initial_state=my_state)
+    seq = ParamSequence(device="my_device", param_set=params)
     print(seq.queue)
 
 
