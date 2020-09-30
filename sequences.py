@@ -1,19 +1,17 @@
-import bursts
+import pulses
 
 class Sequence():
     """
     Creates a pulse sequence
     """
-    def __init__(self, device, atom_array, initial_state):
+    def __init__(self, device, atom_array):
         self.device = device
-        self.atom_array = atom_array
-        self.initial_state = initial_state
         self.queue = []
         # Check the atom_array is valid according to device
         print("STARTED SEQUENCE")
 
-    def add(self,Burst):
-        self.queue.append(Burst.rabi)
+    def add(self,Pulse):
+        self.queue.append(Pulse.rabi)
         # Check if burst is OK
         #print(f'ADDED BURST. SEQUENCE IS: {self.queue} ')
 
@@ -26,18 +24,18 @@ class CustomSequence(Sequence):
 
     # Additional methods
 
-class QaoaSequence(Sequence):
+class ParamSequence(Sequence):
     """
     Creates a QAOA pulse sequence
     """
-    def __init__(self, device, Parameters, initial_state, layers=1):
-        Sequence.__init__(self, device, atom_array='GLOBAL', initial_state='ALL_DOWN')
+    def __init__(self, device, Parameters, initial_state='ALL_DOWN', layers=1):
+        Sequence.__init__(self, device, initial_state)
+
         #Add first layer
-        qaoa_burst = bursts.IsingBurst(Parameters)
-        self.add(qaoa_burst)
+        qaoa_pulse = pulses.IsingPulse(Parameters)
+        self.add(qaoa_pulse)
         #Add the rest of layers
         for i in range(1,layers):
-            Parameters.rabi=f"rabi_{i+1}"
-            qaoa_burst(Parameters)
-            self.add(qaoa_burst)
+            qaoa_pulse(Parameters.rabi[i], Parameters.detunin[i])
+            self.add(qaoa_pulse)
         print(f"BEGIN QAOA. INITIAL STATE IS {initial_state}")

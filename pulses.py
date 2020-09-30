@@ -1,6 +1,6 @@
-class Burst():
+class Pulse():
     """
-    Base burst class. For the moment onyl global bursts?
+    Base pulse class. For the moment onyl global pulses?
     """
     def __init__(self, Parameters):
         self.rabi = Parameters.rabi
@@ -9,12 +9,12 @@ class Burst():
         print("LOADED")
         # Check this is a good burst
 
-class IsingBurst(Burst):
+class IsingPulse(Pulse):
     """
-    Creates Ising Burst
+    Creates Ising Pulse
     """
     def __init__(self, Parameters):
-        Burst.__init__(self, Parameters)
+        Pulse.__init__(self, Parameters)
 
     def __call__(self, Parameters):
         if Parameters.rabi is not None: self.rabi = Parameters.rabi

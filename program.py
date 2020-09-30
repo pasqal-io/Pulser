@@ -9,3 +9,6 @@ def program():
         self.pulse_seq = pulse_seq
         self.parameters = parameters
         self.classical_process = classical_process
+
+
+def simulate(program)

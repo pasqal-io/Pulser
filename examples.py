@@ -1,7 +1,8 @@
 import numpy as np
-from devices import pasqalobj
 from operations import noise_evolve, states
 import matplotlib.pyplot as plt
+
+import sequences, pulses
 
 ########################################
 
@@ -21,17 +22,21 @@ if __name__ == "__main__":
     plt.show()
 '''
 
-import sequences, bursts
-
-if __name__ == "__main__":
-
+def main():
     # Initial parameters
-    my_rabi = "guess_rabi"
+    depth = 5
+    my_rabi = "rabi_guess"
     my_detuning = "guess_detuning"
     my_interval = "guess_interval"
-    InitialGuess = bursts.Parameters(my_rabi, my_detuning, my_interval)
+    InitialGuess = pulses.Parameters(my_rabi, my_detuning, my_interval)
 
+    # cost_fct =
     my_state = "ALL_UP"
+    my_device = "devices.Device1(...)"
 
-    seq = sequences.QaoaSequence("shadoq2", Parameters=InitialGuess, layers=4, initial_state=my_state)
+    seq = sequences.ParamSequence(device=my_device, Parameters=InitialGuess, initial_state=my_state)
     print(seq.queue)
+
+
+if __name__ == "__main__":
+    main()
