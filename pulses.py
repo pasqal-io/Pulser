@@ -22,4 +22,4 @@ class IsingPulse(Pulse):
         if parameters["rabi"] is not None: self.rabi = parameters["rabi"]
         if parameters["detuning"] is not None: self.detuning = parameters["detuning"]
         if parameters["intervals"] is not None: self.intervals = parameters["intervals"]
-        print("UPDATED PULSE")
+        print("UPDATED AND LOADED PULSE")

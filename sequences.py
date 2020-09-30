@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+
+import numpy as np
 import pulses
 
 class Sequence(ABC):
@@ -44,41 +46,32 @@ class ParamSequence(Sequence):
         super().__init__(device, param_set, initial_state)
         self.depth = len(param_set["intervals"])
         print("SEQUENCE ACTIVATED")
-        self.add_layers(param_set)
+        self.add_layers()
         print(f"BEGIN QAOA. INITIAL STATE IS {initial_state}")
 
-    def add_layers(self, param_set):
+    def add_layers(self):
         # Try a simple sequence of square pulses
-        layer_params = self.get_layer_params(param_set, 0)
+        layer_params = self.get_layer_params(0)
         pulse = pulses.IsingPulse(layer_params)
         self.add(pulse)
         for i in range(1,self.depth):
-            layer_params = self.get_layer_params(param_set, i)
+            layer_params = self.get_layer_params(i)
             pulse(layer_params)
             self.add(pulse)
 
-    def get_layer_params(self, param_set, position):
+    def get_layer_params(self, pos):
         layer_params = {
-                        "rabi" : param_set["rabi"][position],
-                        "detuning" : param_set["detuning"][position],
-                        "intervals" : param_set["intervals"][position]
+                        "rabi" : self.parameters["rabi"][pos],
+                        "detuning" : self.parameters["detuning"][pos],
+                        "intervals" : self.parameters["intervals"][pos]
                         }
         return layer_params
 
+    def get_parameter_set(self):
+        ans = []
+        for key,values in self.parameters.items():
+            #print(f"{key}:")
+            ans.append(values)
+        return ans
+
     # There should be a function to modify the existing pulse
-
-if __name__ == "__main__":
-
-    depth = 5
-
-    # Define parameters:
-    params = {
-                "rabi" : [f"rabi{k}" for k in range(depth)],
-                "detuning" : [f"detuning{k}" for k in range(depth)],
-                "intervals" : [ 0.1*k for k in range(depth)]
-                }
-    # can add also identifiers for a particular type of function (square, sawtooth, etc).
-    # the associated parameters should still remain as numbers
-
-    seq = ParamSequence(device="my_device", param_set=params)
-    print(seq.queue)

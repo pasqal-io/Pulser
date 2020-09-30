@@ -1,8 +1,8 @@
 import numpy as np
-from operations import noise_evolve, states
+#from operations import noise_evolve, states
 import matplotlib.pyplot as plt
 
-import sequences, pulses
+import devices, sequences, pulses
 
 ########################################
 
@@ -23,21 +23,29 @@ if __name__ == "__main__":
 '''
 
 def main():
-    # Initial parameters
+    N = 7
+    np.random.seed(3)
+    atoms = np.random.randint(0,40,(N,2))
+
+    # Depth of the circuit
     depth = 5
 
     # Define parameters:
     params = {
-                "rabi" : [f"rabi{k}" for k in range(depth)],
-                "detuning" : [f"detuning{k}" for k in range(depth)],
+                "rabi" : [np.random.rand() for k in range(depth)],
+                "detuning" : [np.random.rand() for k in range(depth)],
                 "intervals" : [ 0.1*k for k in range(depth)]
                 }
     # can add also identifiers for a particular type of function (square, sawtooth, etc).
     # the associated parameters should still remain as numbers
 
-    seq = ParamSequence(device="my_device", param_set=params)
-    print(seq.queue)
+    # Define Device
+    my_device =devices.Device1(atoms)
 
+    seq = sequences.ParamSequence(device="my_device", param_set=params)
+
+    param_set = seq.get_parameter_set()
+    print(param_set)
 
 if __name__ == "__main__":
     main()
