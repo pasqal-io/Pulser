@@ -1,29 +1,54 @@
-class Pulse():
-    """
-    Base pulse class. For the moment onyl global pulses?
-    """
-    def __init__(self, Parameters):
-        self.rabi = Parameters.rabi
-        self.detuning = Parameters.detuning
-        self.interval = Parameters.interval
-        print("LOADED")
-        # Check this is a good burst
+import warnings
+import numpy as np
 
-class IsingPulse(Pulse):
-    """
-    Creates Ising Pulse
-    """
-    def __init__(self, Parameters):
-        Pulse.__init__(self, Parameters)
+from . import Waveform, ConstantWaveform
 
-    def __call__(self, Parameters):
-        if Parameters.rabi is not None: self.rabi = Parameters.rabi
-        if Parameters.detuning is not None: self.detuning = Parameters.detuning
-        if Parameters.interval is not None: self.interval = Parameters.interval
-        print("UPDATED")
 
-class Parameters():
-    def __init__(self, rabi, detuning, interval):
-        self.rabi = rabi
-        self.detuning = detuning
-        self.interval = interval
+class Pulse:
+    """A generic pulse.
+
+    Args:
+        duration (int): The pulse duration (in ns).
+        amplitude (float, Waveform): The pulse amplitude. Can be a float, in
+            which case it's kept constant throught the entire pulse, or a
+            waveform.
+        frequency (float, Waveform): The pulse frequency. Can be a float, in
+            which case it's kept constant throught the entire pulse, or a
+            waveform.
+        phase (float): The pulse phase.
+    """
+
+    def __init__(self, duration, amplitude, frequency, phase):
+
+        try:
+            _duration = int(duration)
+        except (TypeError, ValueError):
+            raise TypeError("duration needs to be castable to an int but "
+                            "type %s was provided" % type(duration))
+        if duration >= 0:
+            self._duration = _duration
+        else:
+            raise ValueError("duration has to be castable to a non-negative "
+                             "integer.")
+        if duration % 1 != 0:
+            warnings.warn("The given duration is below the machine's precision"
+                          " of 1 ns time steps. It was rounded down to the"
+                          " nearest integer.")
+
+        if isinstance(amplitude, Waveform):
+            if amplitude.duration != self._duration:
+                raise ValueError("The amplitude waveform's duration doesn't"
+                                 " match the pulses' duration.")
+            self._amplitude = amplitude
+        else:
+            self._amplitude = ConstantWaveform(self._duration, amplitude)
+
+        if isinstance(frequency, Waveform):
+            if frequency.duration != self._duration:
+                raise ValueError("The frequency waveform's duration doesn't"
+                                 " match the pulses' duration.")
+            self._frequency = frequency
+        else:
+            self._frequency = ConstantWaveform(self._duration, frequency)
+
+        self._phase = float(phase) % (2 * np.pi)

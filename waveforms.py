@@ -6,6 +6,24 @@ from abc import ABC, abstractmethod
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
+    def __init__(self, duration):
+        try:
+            _duration = int(duration)
+        except (TypeError, ValueError):
+            raise TypeError("duration needs to be castable to an int but "
+                            "type %s was provided" % type(duration))
+
+        if duration >= 0:
+            self._duration = _duration
+        else:
+            raise ValueError("duration has to be castable to a non-negative "
+                             "integer.")
+
+        if duration % 1 != 0:
+            warnings.warn("The given duration is below the machine's precision"
+                          " of 1 ns time steps. It was rounded down to the"
+                          " nearest integer.")
+
     @property
     @abstractmethod
     def duration(self):
@@ -14,11 +32,10 @@ class Waveform(ABC):
 
     @abstractmethod
     def samples(self):
-        """The amplitude at each time step that describes the waveform.
+        """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with an amplitude value for each
-                time step.
+            samples(np.ndarray): A numpy array with a value for each time step.
         """
         pass
 
@@ -39,14 +56,13 @@ class ArbitraryWaveform(Waveform):
     """An arbitrary waveform.
 
     Args:
-        samples (array_like): The amplitude values at each time step.
+        samples (array_like): The modulation values at each time step.
     """
 
     def __init__(self, samples):
         samples_arr = np.array(samples)
         if np.any(samples_arr < 0):
-            raise ValueError("All amplitude values in a sample must be "
-                             "non-negative.")
+            raise ValueError("All values in a sample must be non-negative.")
         self._samples = samples_arr
 
     @property
@@ -55,32 +71,28 @@ class ArbitraryWaveform(Waveform):
         return len(self._samples)
 
     def samples(self):
-        """The amplitude at each time step that describes the waveform.
+        """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with an amplitude value at each
-                time step.
+            samples(np.ndarray): A numpy array with a value for each time step.
         """
         return self._samples
 
 
 class ConstantWaveform(Waveform):
-    """A waveform of constant amplitude.
+    """A waveform of constant value.
 
     Args:
         duration: The waveform duration (in ns).
-        value: The amplitude value.
+        value: The modulation value.
     """
 
-    def __init__(self, duration, amp):
-        if amp < 0:
-            raise ValueError("Can't accept negative amplitude values.")
-        if duration % 1 != 0:
-            warnings.warn("The given duration is below the machine's precision"
-                          " of 1 ns time steps. It was rounded down to the"
-                          " nearest integer.")
-        self._duration = int(duration)
-        self._amp = float(amp)
+    def __init__(self, duration, value):
+        if value < 0:
+            raise ValueError("Can't accept negative modulation values.")
+
+        super().__init__(duration)
+        self._value = float(value)
 
     @property
     def duration(self):
@@ -88,27 +100,57 @@ class ConstantWaveform(Waveform):
         return self._duration
 
     def samples(self):
-        """The amplitude at each time step that describes the waveform.
+        """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with an amplitude value at each
-                time step.
+            samples(np.ndarray): A numpy array with a value for each time step.
         """
-        return np.full(self.duration, self._amp)
+        return np.full(self.duration, self._value)
 
 
-class GaussianWaveform(Waveform):
-    """A Gaussian-shaped amplitude waveform.
+class RampWaveform(Waveform):
+    """A linear ramp waveform.
 
     Args:
         duration: The waveform duration (in ns).
-        max_amp: The maximum amplitude value.
+        start: The initial value.
+        stop: The final value.
+    """
+
+    def __init__(self, duration, start, stop):
+        if start < 0 or stop < 0:
+            raise ValueError("Can't accept negative modulation values.")
+
+        super().__init__(duration)
+        self._start = float(start)
+        self._stop = float(stop)
+
+    @property
+    def duration(self):
+        """The duration of the pulse (in ns)."""
+        return self._duration
+
+    def samples(self):
+        """The value at each time step that describes the waveform.
+
+        Returns:
+            samples(np.ndarray): A numpy array with a value for each time step.
+        """
+        return np.linspace(self._start, self._stop, num=self._duration)
+
+
+class GaussianWaveform(Waveform):
+    """A Gaussian-shaped waveform.
+
+    Args:
+        duration: The waveform duration (in ns).
+        max_val: The maximum value.
         sigma: The standard deviation of the gaussian shape (in ns).
     """
 
-    def __init__(self, duration, max_amp, sigma):
-        # NOTE: This stores max_amp in self._amp
-        ConstantWaveform.__init__(self, duration, max_amp)
+    def __init__(self, duration, max_val, sigma):
+        # NOTE: This stores max_val in self._value
+        ConstantWaveform.__init__(self, duration, max_val)
         if sigma <= 0:
             raise ValueError("The standard deviation has to be positive.")
         self._sigma = sigma
@@ -119,12 +161,11 @@ class GaussianWaveform(Waveform):
         return self._duration
 
     def samples(self):
-        """The amplitude at each time step that describes the waveform.
+        """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with an amplitude value at each
-                time step.
+            samples(np.ndarray): A numpy array with a value for each time step.
         """
         # Ensures intervals are always symmetrical
         ts = np.arange(self.duration, dtype=float) - (self.duration - 1) * 0.5
-        return self._amp * np.exp(-0.5 * (ts / self._sigma)**2)
+        return self._value * np.exp(-0.5 * (ts / self._sigma)**2)
