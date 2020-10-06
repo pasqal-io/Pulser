@@ -60,6 +60,12 @@ class PasqalDevice(ABC):
         pass
 
     @property
+    @abstractmethod
+    def supported_basis_states(self):
+        """Supported basis states upon measurement."""
+        pass
+
+    @property
     def qubits(self):
         """The dictionary of qubit names and their positions."""
         return dict(self._qubits)
@@ -93,28 +99,28 @@ class Chadoq2(PasqalDevice):
         return "Chadoq2"
 
     @property
-    @abstractmethod
     def max_dimensionality(self):
         """Whether it works at most with a 2D or 3D array (returns 2 or 3)."""
         return 2
 
     @property
-    @abstractmethod
     def max_atom_num(self):
         """Maximum number of atoms that can be simultaneously trapped."""
         return 100
 
     @property
-    @abstractmethod
     def max_radial_distance(self):
         """Maximum allowed distance from the center of the array (in um)."""
         return 50
 
     @property
-    @abstractmethod
     def min_atom_distance(self):
         """Minimal allowed distance of atoms in the trap (in um)."""
         return 4
+
+    @property
+    def supported_basis_states(self):
+        return {'digital', 'ising'}
 
     @property
     def available_channels(self):
