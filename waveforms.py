@@ -61,8 +61,6 @@ class ArbitraryWaveform(Waveform):
 
     def __init__(self, samples):
         samples_arr = np.array(samples)
-        if np.any(samples_arr < 0):
-            raise ValueError("All values in a sample must be non-negative.")
         self._samples = samples_arr
 
     @property
@@ -88,9 +86,6 @@ class ConstantWaveform(Waveform):
     """
 
     def __init__(self, duration, value):
-        if value < 0:
-            raise ValueError("Can't accept negative modulation values.")
-
         super().__init__(duration)
         self._value = float(value)
 
@@ -118,9 +113,6 @@ class RampWaveform(Waveform):
     """
 
     def __init__(self, duration, start, stop):
-        if start < 0 or stop < 0:
-            raise ValueError("Can't accept negative modulation values.")
-
         super().__init__(duration)
         self._start = float(start)
         self._stop = float(stop)
@@ -146,16 +138,21 @@ class GaussianWaveform(Waveform):
         duration: The waveform duration (in ns).
         max_val: The maximum value.
         sigma: The standard deviation of the gaussian shape (in ns).
+
+    Keyword Args:
+        offset (default=0): A constant offset that defines the baseline.
     """
 
-    def __init__(self, duration, max_val, sigma):
+    def __init__(self, duration, max_val, sigma, offset=0):
         super().__init__(duration)
-        if max_val < 0:
-            raise ValueError("Can't accept negative modulation values.")
+        if max_val < offset:
+            raise ValueError("Can't accept a maximum value that is smaller"
+                             " than the offset of a gaussian waveform.")
         if sigma <= 0:
             raise ValueError("The standard deviation has to be positive.")
-        self._value = float(max_val)
+        self._top = float(max_val - offset)
         self._sigma = sigma
+        self._offset = float(offset)
 
     @property
     def duration(self):
@@ -170,4 +167,4 @@ class GaussianWaveform(Waveform):
         """
         # Ensures intervals are always symmetrical
         ts = np.arange(self.duration, dtype=float) - (self.duration - 1) * 0.5
-        return self._value * np.exp(-0.5 * (ts / self._sigma)**2)
+        return self._top * np.exp(-0.5 * (ts / self._sigma)**2) + self._offset
