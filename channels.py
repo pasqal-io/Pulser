@@ -37,21 +37,42 @@ class Channel(ABC):
 
 
 class Raman(Channel):
-    """Raman beam channel."""
+    """Raman beam channel.
+
+    Args:
+        addressing (str): 'local' or 'global'.
+        max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
+        absolute value.
+        max_amp(tuple): Maximum pulse amplitude (in MHz).
+    """
     @property
     def name(self):
         return 'Raman'
 
 
 class Rydberg(Channel):
-    """Rydberg beam  channel."""
+    """Rydberg beam  channel.
+
+    Args:
+        addressing (str): 'local' or 'global'.
+        max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
+        absolute value.
+        max_amp(tuple): Maximum pulse amplitude (in MHz).
+    """
     @property
     def name(self):
         return 'Rydberg'
 
 
 class MW(Channel):
-    """Microwave channel."""
+    """Microwave channel.
+
+    Args:
+        addressing (str): 'local' or 'global'.
+        max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
+        absolute value.
+        max_amp(tuple): Maximum pulse amplitude (in MHz).
+    """
     @property
     def name(self):
         return 'MW'

@@ -1,55 +1,124 @@
+import scipy
+import numpy as np
 from abc import ABC, abstractmethod
 
-from scipy.spatial.distance import pdist
-import numpy as np
+from . import Raman, Rydberg
 
-PLANCK = 6.625 * 10**(-34) # Planck's Constant
 
-class PasqalDevice():
+class PasqalDevice(ABC):
+    """Abstract class for Pasqal Devices.
+
+    Every Pasqal QPU should be defined as a child class of PasqalDevice, thus
+    following this template.
+
+    Args:
+        qubits (dict): Dictionary with the qubit names as keys and their
+            position coordinates as values (e.g. {'q0':(2, -1, 0), ...}).
     """
-    Abstract class for Pasqal Devices
-    """
-    def __init__(self):
+
+    def __init__(self, qubits):
+        if not isinstance(qubits, dict):
+            raise TypeError("The qubits have to be stored in a dictionary.")
+
+        self.check_array(list(qubits.values()))
+        self._qubits = qubits
+
+    @property
+    @abstractmethod
+    def name(self):
+        """The device name."""
         pass
 
-    #Physical Constraints
-    #def set_couplings(self, atoms)
+    @property
+    @abstractmethod
+    def max_dimensionality(self):
+        """Whether it works at most with a 2D or 3D array (returns 2 or 3)."""
+        pass
 
-    def check_array(self,atoms):
-        distances = pdist(atoms)
-        if len(atoms) > self.max_atoms:
-            raise ValueError("Too many atoms")
-        if np.max(distances) > self.diameter:
-            raise ValueError("Maximal Diameter Error")
-        if np.min(distances) < self.min_radius:
-            raise ValueError("Minimal Radius Error")
+    @property
+    @abstractmethod
+    def max_atom_num(self):
+        """Maximum number of atoms that can be simultaneously trapped."""
+        pass
 
-class Device1(PasqalDevice):
-    """
-    A Pasqal Devices well suited for Ising model
-    """
-    def __init__(self, atoms):
-        super().__init__()
-        # Spatial Constraints
-        self.max_atoms = 100
-        self.diameter = 100
-        self.min_radius = 4
-        self.check_array(atoms)
-        self.atom_array = atoms
-        print(f"DEVICE STARTED. ATOM COORDINATES ARE \n {atoms}")
+    @property
+    @abstractmethod
+    def max_radial_distance(self):
+        """Maximum allowed distance from the center of the array."""
+        pass
+
+    @property
+    @abstractmethod
+    def min_atom_distance(self):
+        """Minimal allowed distance of atoms in the trap (in um)."""
+        pass
+
+    @property
+    @abstractmethod
+    def available_channels(self):
+        """Channels available on the device."""
+        pass
+
+    @property
+    def qubits(self):
+        """The dictionary of qubit names and their positions."""
+        return dict(self._qubits)
+
+    def check_array(self, atoms):
+        if len(atoms) > self.max_atom_num:
+            raise ValueError("Too many atoms in the array, accepts at most"
+                             "{} atoms.".format(self.max_atom_num))
+        for pos in atoms:
+            if len(pos) != self.max_dimensionality:
+                raise ValueError("All qubit positions must be {}D "
+                                 "vectors.".format(self.max_dimensionality))
+
+        distances = scipy.spatial.distance.pdist(atoms)
+        if np.min(distances) < self.min_atom_distance:
+            raise ValueError("The qubit positions don't respect the minimal "
+                             "distance between atoms required by the device.")
+
+        if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
+            raise ValueError("All qubits must be at most {}um away from the"
+                             "center of the array.".format(
+                                                    self.max_radial_distance))
 
 
-class Device2(PasqalDevice):
-    """
-    A Pasqal Devices well suited for Ising model
-    """
-    def __init__(self, atoms):
-        # Spatial Constraints
-        self.max_atoms = 1000
-        self.diameter = 100
-        self.min_radius = 4
+class Chadoq2(PasqalDevice):
+    """Chadoq2 device specifications."""
 
+    @property
+    def name(self):
+        """The device name."""
+        return "Chadoq2"
 
+    @property
+    @abstractmethod
+    def max_dimensionality(self):
+        """Whether it works at most with a 2D or 3D array (returns 2 or 3)."""
+        return 2
 
-    #Physical Constraints
-    #def set_couplings(self, atoms)
+    @property
+    @abstractmethod
+    def max_atom_num(self):
+        """Maximum number of atoms that can be simultaneously trapped."""
+        return 100
+
+    @property
+    @abstractmethod
+    def max_radial_distance(self):
+        """Maximum allowed distance from the center of the array (in um)."""
+        return 50
+
+    @property
+    @abstractmethod
+    def min_atom_distance(self):
+        """Minimal allowed distance of atoms in the trap (in um)."""
+        return 4
+
+    @property
+    def available_channels(self):
+        """Channels available on the device."""
+        return {'rydberg_global': Rydberg('global', 50, 1.25),
+                'rydberg_local': Rydberg('local', 50, 10),
+                'raman_local': Raman('local', 50, 10)}
