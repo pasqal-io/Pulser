@@ -149,10 +149,12 @@ class GaussianWaveform(Waveform):
     """
 
     def __init__(self, duration, max_val, sigma):
-        # NOTE: This stores max_val in self._value
-        ConstantWaveform.__init__(self, duration, max_val)
+        super().__init__(duration)
+        if max_val < 0:
+            raise ValueError("Can't accept negative modulation values.")
         if sigma <= 0:
             raise ValueError("The standard deviation has to be positive.")
+        self._value = float(max_val)
         self._sigma = sigma
 
     @property
