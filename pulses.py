@@ -9,16 +9,16 @@ class Pulse:
 
     Args:
         duration (int): The pulse duration (in ns).
-        amplitude (float, Waveform): The pulse amplitude. Can be a float, in
-            which case it's kept constant throught the entire pulse, or a
+        amplitude (float, Waveform): The pulse amplitude. Can be a float (MHz),
+            in which case it's kept constant throught the entire pulse, or a
             waveform.
-        frequency (float, Waveform): The pulse frequency. Can be a float, in
-            which case it's kept constant throught the entire pulse, or a
+        detuning (float, Waveform): The pulse detuning. Can be a float (MHz),
+            in which case it's kept constant throught the entire pulse, or a
             waveform.
-        phase (float): The pulse phase.
+        phase (float): The pulse phase (in radians).
     """
 
-    def __init__(self, duration, amplitude, frequency, phase):
+    def __init__(self, duration, amplitude, detuning, phase):
 
         try:
             _duration = int(duration)
@@ -39,16 +39,22 @@ class Pulse:
             if amplitude.duration != self._duration:
                 raise ValueError("The amplitude waveform's duration doesn't"
                                  " match the pulses' duration.")
+            if np.any(self.samples < 0):
+                raise ValueError("An amplitude waveform has always to be "
+                                 "non-negative.")
             self._amplitude = amplitude
-        else:
+        elif amplitude > 0:
             self._amplitude = ConstantWaveform(self._duration, amplitude)
 
-        if isinstance(frequency, Waveform):
-            if frequency.duration != self._duration:
-                raise ValueError("The frequency waveform's duration doesn't"
-                                 " match the pulses' duration.")
-            self._frequency = frequency
         else:
-            self._frequency = ConstantWaveform(self._duration, frequency)
+            raise ValueError("Negative amplitudes are invalid.")
+
+        if isinstance(detuning, Waveform):
+            if detuning.duration != self._duration:
+                raise ValueError("The detuning waveform's duration doesn't"
+                                 " match the pulses' duration.")
+            self._detuning = detuning
+        else:
+            self._detuning = ConstantWaveform(self._duration, detuning)
 
         self._phase = float(phase) % (2 * np.pi)
