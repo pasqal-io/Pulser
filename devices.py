@@ -1,8 +1,8 @@
-import scipy
 import numpy as np
 from abc import ABC, abstractmethod
+from scipy.spatial.distance import pdist
 
-from . import Raman, Rydberg
+from channels import Raman, Rydberg
 
 
 class PasqalDevice(ABC):
@@ -55,7 +55,7 @@ class PasqalDevice(ABC):
 
     @property
     @abstractmethod
-    def available_channels(self):
+    def channels(self):
         """Channels available on the device."""
         pass
 
@@ -79,13 +79,14 @@ class PasqalDevice(ABC):
                 raise ValueError("All qubit positions must be {}D "
                                  "vectors.".format(self.max_dimensionality))
 
-        distances = scipy.spatial.distance.pdist(atoms)
-        if np.min(distances) < self.min_atom_distance:
-            raise ValueError("The qubit positions don't respect the minimal "
-                             "distance between atoms required by the device.")
+        if len(atoms) > 1:
+            distances = pdist(atoms)  # Pairwise distance between atoms
+            if np.min(distances) < self.min_atom_distance:
+                raise ValueError("Qubit positions don't respect the minimal "
+                                 "distance between atoms for this device.")
 
         if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
-            raise ValueError("All qubits must be at most {}um away from the"
+            raise ValueError("All qubits must be at most {}um away from the "
                              "center of the array.".format(
                                                     self.max_radial_distance))
 
@@ -123,8 +124,8 @@ class Chadoq2(PasqalDevice):
         return {'digital', 'ising'}
 
     @property
-    def available_channels(self):
+    def channels(self):
         """Channels available on the device."""
         return {'rydberg_global': Rydberg('global', 50, 1.25),
-                'rydberg_local': Rydberg('local', 50, 10),
-                'raman_local': Raman('local', 50, 10)}
+                'rydberg_local': Rydberg('local', 50, 10, retarget_time=100),
+                'raman_local': Raman('local', 50, 10, retarget_time=100)}

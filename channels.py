@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 class Channel(ABC):
     """Base class for an hardware channel."""
 
-    def __init__(self, addressing, max_abs_detuning, max_amp):
+    def __init__(self, addressing, max_abs_detuning, max_amp,
+                 retarget_time=None):
         """Initialize a channel with specific charactheristics.
 
         Args:
@@ -12,9 +13,21 @@ class Channel(ABC):
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
             absolute value.
             max_amp(tuple): Maximum pulse amplitude (in MHz).
+
+        Keyword Args:
+            retarget_time (default=None): Time to change the target (in ns).
         """
-        if addressing not in ['global', 'local']:
+        if addressing == 'local':
+            if retarget_time is None:
+                raise ValueError("Must set retarget time for local channel.")
+            self.retarget_time = int(retarget_time)
+
+        elif addressing == 'global':
+            if retarget_time is not None:
+                raise ValueError("Can't set retarget time for global channel.")
+        else:
             raise ValueError("Addressing can only be 'global' or 'local'.")
+
         self.addressing = addressing
 
         if max_abs_detuning < 0:
