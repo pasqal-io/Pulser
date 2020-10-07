@@ -1,7 +1,8 @@
 import warnings
 import numpy as np
 
-from . import Waveform, ConstantWaveform
+from waveforms import Waveform, ConstantWaveform
+from utils import validate_duration
 
 
 class Pulse:
@@ -20,20 +21,7 @@ class Pulse:
 
     def __init__(self, duration, amplitude, detuning, phase):
 
-        try:
-            _duration = int(duration)
-        except (TypeError, ValueError):
-            raise TypeError("duration needs to be castable to an int but "
-                            "type %s was provided" % type(duration))
-        if duration >= 0:
-            self._duration = _duration
-        else:
-            raise ValueError("duration has to be castable to a non-negative "
-                             "integer.")
-        if duration % 1 != 0:
-            warnings.warn("The given duration is below the machine's precision"
-                          " of 1 ns time steps. It was rounded down to the"
-                          " nearest integer.")
+        self._duration = validate_duration
 
         if isinstance(amplitude, Waveform):
             if amplitude.duration != self._duration:

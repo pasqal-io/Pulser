@@ -1,28 +1,13 @@
 import numpy as np
-import warnings
 from abc import ABC, abstractmethod
+from utils import validate_duration
 
 
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
     def __init__(self, duration):
-        try:
-            _duration = int(duration)
-        except (TypeError, ValueError):
-            raise TypeError("duration needs to be castable to an int but "
-                            "type %s was provided" % type(duration))
-
-        if duration >= 0:
-            self._duration = _duration
-        else:
-            raise ValueError("duration has to be castable to a non-negative "
-                             "integer.")
-
-        if duration % 1 != 0:
-            warnings.warn("The given duration is below the machine's precision"
-                          " of 1 ns time steps. It was rounded down to the"
-                          " nearest integer.")
+        self._duration = validate_duration(duration)
 
     @property
     @abstractmethod
