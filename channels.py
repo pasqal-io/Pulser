@@ -44,9 +44,11 @@ class Channel(ABC):
         pass
 
     def __repr__(self):
-        s = "({}, Max Absolute Detuning: {} MHz, Max Amplitude: {} MHz)"
+        s = "({}, Max Absolute Detuning: {} MHz, Max Amplitude: {} MHz"
         config = s.format(self.addressing, self.max_abs_detuning, self.max_amp)
-        return self.name + config
+        if self.addressing == 'local':
+            s += ", Target time: {} ns".format(self.retarget_time)
+        return self.name + config + ")"
 
 
 class Raman(Channel):

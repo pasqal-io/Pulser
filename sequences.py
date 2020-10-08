@@ -1,7 +1,9 @@
 import warnings
+import numpy as np
 from collections import namedtuple
 
 from devices import PasqalDevice
+from pulses import Pulse
 from utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
@@ -73,15 +75,56 @@ class Sequence:
             self.target(initial_target, name)
 
     def add(self, pulse, channel, protocol='min-delay'):
-        # TODO
-        pass
+        """Add a pulse to a channel.
+
+        Args:
+            pulse (Pulse): The pulse object to add to the channel.
+            channel (str): The channel's name provided when declared.
+
+        Keyword Args:
+            protocol (default='min-delay'): Stipulates how to deal with
+                eventual conflicts with other channels, specifically in terms
+                of having to channels act on the same target simultaneously.
+                'min-delay': Before adding the pulse, introduces the smallest
+                    possible delay that avoids all exisiting conflicts.
+                'no-delay': Adds the pulse to the channel, regardless of
+                    existing conflicts.
+                'wait-for-all': Before adding the pulse, adds a delay that
+                    idles the channel until the end of the other channels'
+                    latest pulse.
+        """
+
+        last = self._last(channel)
+        self._validate_pulse(pulse, channel)
+
+        t0 = last.tf    # Preliminary ti
+        current_max_t = t0  # Stores the maximum tf found so far
+        if protocol != 'no-delay':
+            for ch, seq in self._schedule.items():
+                if ch == channel:
+                    continue
+                for op in self._schedule[ch][::-1]:
+                    if op.tf <= current_max_t:
+                        break
+                    if op.type in ['delay', 'target']:
+                        continue
+                    if op.targets & last.targets or protocol == 'wait-for-all':
+                        current_max_t = op.tf
+                        break
+
+        ti = current_max_t
+        tf = ti + pulse.duration
+        if ti > t0:
+            self.delay(ti-t0, channel)
+
+        self._schedule[channel].append(TimeSlot(pulse, ti, tf, last.targets))
 
     def target(self, qubits, channel):
         """Changes the target qubit of a 'local' channel.
 
         Args:
             qubits (set(str)): The new target for this channel.
-            channel (str): The channel's name.
+            channel (str): The channel's name provided when declared.
         """
 
         if channel not in self._channels:
@@ -115,7 +158,7 @@ class Sequence:
 
         Args:
             duration (int): Time to delay (in ns).
-            channel (str): The channel's name.
+            channel (str): The channel's name provided when declared.
         """
         last = self._last(channel)
         ti = last.tf
@@ -130,3 +173,16 @@ class Sequence:
             return self._schedule[channel][-1]
         except IndexError:
             raise ValueError("The chosen channel has no target.")
+
+    def _validate_pulse(self, pulse, channel):
+        if not isinstance(pulse, Pulse):
+            raise TypeError("pulse input must be of type Pulse, not of type "
+                            "{}.".format(type(pulse)))
+
+        ch = self._channels[channel]
+        if np.any(pulse.amplitude.samples > ch.max_amp):
+            raise ValueError("The pulse's amplitude goes over the maximum "
+                             "value allowed for the chosen channel.")
+        if np.any(np.abs(pulse.detuning.samples) > ch.max_abs_detuning):
+            raise ValueError("The pulse's detuning values go out of the range "
+                             "allowed for the chosen channel.")

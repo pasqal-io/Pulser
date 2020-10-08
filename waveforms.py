@@ -15,6 +15,7 @@ class Waveform(ABC):
         """The duration of the pulse (in ns)."""
         pass
 
+    @property
     @abstractmethod
     def samples(self):
         """The value at each time step that describes the waveform.
@@ -53,6 +54,7 @@ class ArbitraryWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return len(self._samples)
 
+    @property
     def samples(self):
         """The value at each time step that describes the waveform.
 
@@ -79,6 +81,7 @@ class ConstantWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
+    @property
     def samples(self):
         """The value at each time step that describes the waveform.
 
@@ -107,6 +110,7 @@ class RampWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
+    @property
     def samples(self):
         """The value at each time step that describes the waveform.
 
@@ -144,6 +148,7 @@ class GaussianWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
+    @property
     def samples(self):
         """The value at each time step that describes the waveform.
 

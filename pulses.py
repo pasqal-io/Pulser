@@ -1,4 +1,3 @@
-import warnings
 import numpy as np
 
 from waveforms import Waveform, ConstantWaveform
@@ -21,28 +20,28 @@ class Pulse:
 
     def __init__(self, duration, amplitude, detuning, phase):
 
-        self._duration = validate_duration
+        self.duration = validate_duration(duration)
 
         if isinstance(amplitude, Waveform):
-            if amplitude.duration != self._duration:
+            if amplitude.duration != self.duration:
                 raise ValueError("The amplitude waveform's duration doesn't"
                                  " match the pulses' duration.")
             if np.any(self.samples < 0):
                 raise ValueError("An amplitude waveform has always to be "
                                  "non-negative.")
-            self._amplitude = amplitude
+            self.amplitude = amplitude
         elif amplitude > 0:
-            self._amplitude = ConstantWaveform(self._duration, amplitude)
+            self.amplitude = ConstantWaveform(self.duration, amplitude)
 
         else:
             raise ValueError("Negative amplitudes are invalid.")
 
         if isinstance(detuning, Waveform):
-            if detuning.duration != self._duration:
+            if detuning.duration != self.duration:
                 raise ValueError("The detuning waveform's duration doesn't"
                                  " match the pulses' duration.")
-            self._detuning = detuning
+            self.detuning = detuning
         else:
-            self._detuning = ConstantWaveform(self._duration, detuning)
+            self.detuning = ConstantWaveform(self.duration, detuning)
 
-        self._phase = float(phase) % (2 * np.pi)
+        self.phase = float(phase) % (2 * np.pi)
