@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from waveforms import Waveform, ConstantWaveform
 from utils import validate_duration
@@ -45,6 +46,17 @@ class Pulse:
             self.detuning = ConstantWaveform(self.duration, detuning)
 
         self.phase = float(phase) % (2 * np.pi)
+
+    def draw(self):
+        """Draw the pulse's amplitude and frequency waveforms."""
+
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+
+        self.amplitude._plot(ax1, "Amplitude (MHz)", color="darkgreen")
+        self.detuning._plot(ax2, "Detuning (MHz)", color="indigo")
+
+        plt.show()
 
     def __str__(self):
         return "Pulse(Amp={!s}, Detuning={!s}, Phase={})".format(
