@@ -122,7 +122,7 @@ class Sequence:
         if ti > t0:
             self.delay(ti-t0, channel)
 
-        self._schedule[channel].append(TimeSlot(pulse, ti, tf, last.targets))
+        self._add_to_schedule(channel, TimeSlot(pulse, ti, tf, last.targets))
 
     def target(self, qubits, channel):
         """Changes the target qubit of a 'local' channel.
@@ -156,7 +156,7 @@ class Sequence:
             ti = -1
             tf = 0
 
-        self._schedule[channel].append(TimeSlot('target', ti, tf, qs))
+        self._add_to_schedule(channel, TimeSlot('target', ti, tf, qs))
 
     def delay(self, duration, channel):
         """Idle a given choosen for a specific duration.
@@ -168,20 +168,51 @@ class Sequence:
         last = self._last(channel)
         ti = last.tf
         tf = ti + validate_duration(duration)
-        self._schedule[channel].append(TimeSlot('delay', ti, tf, last.targets))
+        self._add_to_schedule(channel, TimeSlot('delay', ti, tf, last.targets))
+
+    def measure(self, basis='ground-rydberg'):
+        """Measure in a valid basis.
+
+        Args:
+            basis (str): Valid basis for measurement (consult the
+                'supported_basis_states' attribute of the selected device for
+                the available options).
+        """
+        available = self._device.supported_basis_states
+        if basis not in available:
+            raise ValueError(f"The basis '{basis}' is not support by the "
+                             "selected device. The available options are: "
+                             + ", ".join(list(available)))
+
+        if hasattr(self, '_measurement'):
+            raise ValueError("The sequence has already been measured.")
+
+        self._measurement = basis
 
     def __str__(self):
         full = ""
-        #header = "Time (ns) \t Element \t Targets\n"
         line = "t: {}->{} | {} | Targets: {}\n"
         for ch, seq in self._schedule.items():
             full += f"Channel: {ch}\n"
-            #full += header
+            first_slot = True
             for ts in seq:
-                full += line.format(ts.ti, ts.tf, ts.type, ts.targets)
+                if first_slot:
+                    full += f"t: 0 | Initial targets: {ts.targets}\n"
+                    first_slot = False
+                else:
+                    full += line.format(ts.ti, ts.tf, ts.type, ts.targets)
             full += "\n"
 
+        if hasattr(self, "_measurement"):
+            full += f"Measured in basis: {self._measurement}"
+
         return full
+
+    def _add_to_schedule(self, channel, timeslot):
+        if hasattr(self, "_measurement"):
+            raise ValueError("The sequence has already been measured. "
+                             "Nothing more can be added.")
+        self._schedule[channel].append(timeslot)
 
     def _last(self, channel):
         """Shortcut to last element in the channel's schedule."""
