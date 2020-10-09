@@ -121,11 +121,13 @@ class Chadoq2(PasqalDevice):
 
     @property
     def supported_basis_states(self):
-        return {'digital', 'ising'}
+        """Supported basis states upon measurement."""
+        return {'digital', 'ground-rydberg'}
 
     @property
     def channels(self):
         """Channels available on the device."""
         return {'rydberg_global': Rydberg('global', 50, 1.25),
                 'rydberg_local': Rydberg('local', 50, 10, retarget_time=100),
+                'rydberg_local2': Rydberg('local', 50, 10, retarget_time=100),
                 'raman_local': Raman('local', 50, 10, retarget_time=100)}
