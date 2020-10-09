@@ -26,7 +26,7 @@ class Pulse:
             if amplitude.duration != self.duration:
                 raise ValueError("The amplitude waveform's duration doesn't"
                                  " match the pulses' duration.")
-            if np.any(self.samples < 0):
+            if np.any(amplitude.samples < 0):
                 raise ValueError("An amplitude waveform has always to be "
                                  "non-negative.")
             self.amplitude = amplitude
@@ -45,3 +45,7 @@ class Pulse:
             self.detuning = ConstantWaveform(self.duration, detuning)
 
         self.phase = float(phase) % (2 * np.pi)
+
+    def __str__(self):
+        return "Pulse(Amp={!s}, Detuning={!s}, Phase={})".format(
+                self.amplitude, self.detuning, self.phase)

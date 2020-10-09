@@ -47,7 +47,7 @@ class Channel(ABC):
         s = "({}, Max Absolute Detuning: {} MHz, Max Amplitude: {} MHz"
         config = s.format(self.addressing, self.max_abs_detuning, self.max_amp)
         if self.addressing == 'local':
-            s += ", Target time: {} ns".format(self.retarget_time)
+            config += ", Target time: {} ns".format(self.retarget_time)
         return self.name + config + ")"
 
 

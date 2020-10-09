@@ -97,6 +97,11 @@ class Sequence:
         last = self._last(channel)
         self._validate_pulse(pulse, channel)
 
+        valid_protocols = ['min-delay', 'no-delay', 'wait-for-all']
+        if protocol not in valid_protocols:
+            raise ValueError(f"Invalid protocol '{protocol}', only accepts "
+                             "protocols: " + ", ".join(valid_protocols))
+
         t0 = last.tf    # Preliminary ti
         current_max_t = t0  # Stores the maximum tf found so far
         if protocol != 'no-delay':
@@ -164,6 +169,19 @@ class Sequence:
         ti = last.tf
         tf = ti + validate_duration(duration)
         self._schedule[channel].append(TimeSlot('delay', ti, tf, last.targets))
+
+    def __str__(self):
+        full = ""
+        #header = "Time (ns) \t Element \t Targets\n"
+        line = "t: {}->{} | {} | Targets: {}\n"
+        for ch, seq in self._schedule.items():
+            full += f"Channel: {ch}\n"
+            #full += header
+            for ts in seq:
+                full += line.format(ts.ti, ts.tf, ts.type, ts.targets)
+            full += "\n"
+
+        return full
 
     def _last(self, channel):
         """Shortcut to last element in the channel's schedule."""

@@ -63,6 +63,9 @@ class ArbitraryWaveform(Waveform):
         """
         return self._samples
 
+    def __str__(self):
+        return 'Arbitrary'
+
 
 class ConstantWaveform(Waveform):
     """A waveform of constant value.
@@ -89,6 +92,9 @@ class ConstantWaveform(Waveform):
             samples(np.ndarray): A numpy array with a value for each time step.
         """
         return np.full(self.duration, self._value)
+
+    def __str__(self):
+        return f"{self._value}MHz"
 
 
 class RampWaveform(Waveform):
@@ -118,6 +124,9 @@ class RampWaveform(Waveform):
             samples(np.ndarray): A numpy array with a value for each time step.
         """
         return np.linspace(self._start, self._stop, num=self._duration)
+
+    def __str__(self):
+        return f"[{self._start}->{self._stop}]MHz"
 
 
 class GaussianWaveform(Waveform):
@@ -158,3 +167,7 @@ class GaussianWaveform(Waveform):
         # Ensures intervals are always symmetrical
         ts = np.arange(self.duration, dtype=float) - (self.duration - 1) * 0.5
         return self._top * np.exp(-0.5 * (ts / self._sigma)**2) + self._offset
+
+    def __str__(self):
+        return (f"Gaussian([{self._offset}->{self._top+self._offset}]MHz," +
+                f"sigma={self._sigma}ns)")
