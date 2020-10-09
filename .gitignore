@@ -3,3 +3,4 @@ $ cat .gitignore
 /*.ipynb
 __pycache__/
 .pytest_cache/
+env-pasqal-qutip/
