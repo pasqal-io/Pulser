@@ -40,11 +40,11 @@ class Pulse:
         return cls(amplitude_wf, detuning, phase)
 
     @classmethod
-    def ConstantPulse(cls, amplitude, detuning, phase, duration):
+    def ConstantPulse(cls, duration, amplitude, detuning, phase):
         """Pulse with a constant amplitude and a constant detuning"""
 
-        detuning_wf = ConstantWaveform(duration, detuning)
         amplitude_wf = ConstantWaveform(duration, amplitude)
+        detuning_wf = ConstantWaveform(duration, detuning)
         return cls(amplitude_wf, detuning_wf, phase)
 
     def draw(self):
