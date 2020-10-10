@@ -3,3 +3,4 @@ $ cat .gitignore
 __pycache__/
 .pytest_cache/
 env-pasqal-qutip/
+.DS_Store
