@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from waveforms import Waveform, ConstantWaveform
-from utils import validate_duration
 
 
 class Pulse:
@@ -10,42 +9,43 @@ class Pulse:
 
     Args:
         duration (int): The pulse duration (in ns).
-        amplitude (float, Waveform): The pulse amplitude. Can be a float (MHz),
-            in which case it's kept constant throught the entire pulse, or a
-            waveform.
-        detuning (float, Waveform): The pulse detuning. Can be a float (MHz),
-            in which case it's kept constant throught the entire pulse, or a
-            waveform.
+        amplitude (Waveform): The pulse amplitude waveform.
+        detuning (Waveform): The pulse detuning waveform.
         phase (float): The pulse phase (in radians).
     """
 
-    def __init__(self, duration, amplitude, detuning, phase):
-
-        self.duration = validate_duration(duration)
-
-        if isinstance(amplitude, Waveform):
-            if amplitude.duration != self.duration:
-                raise ValueError("The amplitude waveform's duration doesn't"
-                                 " match the pulses' duration.")
-            if np.any(amplitude.samples < 0):
-                raise ValueError("An amplitude waveform has always to be "
-                                 "non-negative.")
+    def __init__(self, amplitude, detuning, phase):
+        if detuning.duration != amplitude.duration:
+            raise ValueError("The detuning waveform's duration doesn't"
+                             " match the pulses' duration.")
+        if np.any(amplitude.samples < 0):
+            raise ValueError("An amplitude waveform has always to be "
+                             "non-negative.")
             self.amplitude = amplitude
-        elif amplitude > 0:
-            self.amplitude = ConstantWaveform(self.duration, amplitude)
-
-        else:
-            raise ValueError("Negative amplitudes are invalid.")
-
-        if isinstance(detuning, Waveform):
-            if detuning.duration != self.duration:
-                raise ValueError("The detuning waveform's duration doesn't"
-                                 " match the pulses' duration.")
-            self.detuning = detuning
-        else:
-            self.detuning = ConstantWaveform(self.duration, detuning)
-
+        self.detuning = detuning
         self.phase = float(phase) % (2 * np.pi)
+
+    @classmethod
+    def ConstantDetuning(cls, amplitude, detuning, phase):
+        """Pulse with a constant amplitude and a detuning waveform"""
+
+        detuning_wf = ConstantWaveform(amplitude.duration, detuning)
+        return cls(amplitude, detuning_wf, phase)
+
+    @classmethod
+    def ConstantAmplitude(cls, amplitude, detuning, phase):
+        """Pulse with an amplitude waveform and a constant detuning"""
+
+        amplitude_wf = ConstantWaveform(detuning.duration, amplitude)
+        return cls(amplitude_wf, detuning, phase)
+
+    @classmethod
+    def ConstantPulse(cls, amplitude, detuning, phase, duration):
+        """Pulse with a constant amplitude and a constant detuning"""
+
+        detuning_wf = ConstantWaveform(duration, detuning)
+        amplitude_wf = ConstantWaveform(duration, amplitude)
+        return cls(amplitude_wf, detuning_wf, phase)
 
     def draw(self):
         """Draw the pulse's amplitude and frequency waveforms."""
@@ -60,4 +60,4 @@ class Pulse:
 
     def __str__(self):
         return "Pulse(Amp={!s}, Detuning={!s}, Phase={})".format(
-                self.amplitude, self.detuning, self.phase)
+            self.amplitude, self.detuning, self.phase)
