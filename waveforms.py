@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 from utils import validate_duration
 
@@ -25,6 +26,19 @@ class Waveform(ABC):
         """
         pass
 
+    @property
+    def integral(self):
+        """Determines the integral of the waveform (time: ns, value: MHz)."""
+        return np.sum(self.samples) * 1e-3  # ns * MHz = 1e-3
+
+    def draw(self):
+        """Draws the waveform."""
+
+        fig, ax = plt.subplots()
+        self._plot(ax, "MHz")
+
+        plt.show()
+
     def __add__(self, other):
         if not isinstance(other, Waveform):
             raise TypeError("Can't add a waveform to an object of "
@@ -36,6 +50,19 @@ class Waveform(ABC):
 
         new_samples = self.samples + other.samples
         return ArbitraryWaveform(new_samples)
+
+    def _plot(self, ax, ylabel, color=None):
+        ax.set_xlabel('t (ns)')
+        ts = np.arange(self.duration)
+        if color:
+            ax.set_ylabel(ylabel, color=color)
+            ax.plot(ts, self.samples, color=color)
+            ax.tick_params(axis='y', labelcolor=color)
+            ax.axhline(0, color=color, linestyle=':', linewidth=0.5)
+        else:
+            ax.set_ylabel(ylabel)
+            ax.plot(ts, self.samples)
+            ax.axhline(0, color='black', linestyle=':', linewidth=0.5)
 
 
 class ArbitraryWaveform(Waveform):
@@ -169,5 +196,5 @@ class GaussianWaveform(Waveform):
         return self._top * np.exp(-0.5 * (ts / self._sigma)**2) + self._offset
 
     def __str__(self):
-        return (f"Gaussian([{self._offset}->{self._top+self._offset}]MHz," +
+        return (f"Gaussian([{self._offset}->{self._top+self._offset}]MHz, " +
                 f"sigma={self._sigma}ns)")
