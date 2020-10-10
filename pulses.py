@@ -8,7 +8,6 @@ class Pulse:
     """A generic pulse.
 
     Args:
-        duration (int): The pulse duration (in ns).
         amplitude (Waveform): The pulse amplitude waveform.
         detuning (Waveform): The pulse detuning waveform.
         phase (float): The pulse phase (in radians).
@@ -18,10 +17,11 @@ class Pulse:
         if detuning.duration != amplitude.duration:
             raise ValueError("The detuning waveform's duration doesn't"
                              " match the pulses' duration.")
+        self.duration = amplitude.duration
         if np.any(amplitude.samples < 0):
             raise ValueError("An amplitude waveform has always to be "
                              "non-negative.")
-            self.amplitude = amplitude
+        self.amplitude = amplitude
         self.detuning = detuning
         self.phase = float(phase) % (2 * np.pi)
 
