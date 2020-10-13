@@ -1,9 +1,10 @@
 import warnings
 import numpy as np
+import matplotlib.pyplot as plt
 from collections import namedtuple
 
 from devices import PasqalDevice
-from pulses import Pulse
+from pulses import Pulse, ConstantWaveform
 from utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
@@ -189,6 +190,106 @@ class Sequence:
 
         self._measurement = basis
 
+    def draw(self):
+        """Draw the entire sequence."""
+        n_channels = len(self._channels)
+        data = self._gather_data()
+        time_scale = 1e3 if self._total_duration > 1e4 else 1
+
+        fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
+        gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
+
+        ch_axes = {}
+        for i, (ch, gs_) in enumerate(zip(self._channels, gs)):
+            ax = fig.add_subplot(gs_)
+            ax.spines['top'].set_color('none')
+            ax.spines['bottom'].set_color('none')
+            ax.spines['left'].set_color('none')
+            ax.spines['right'].set_color('none')
+            ax.tick_params(labelcolor='w', top=False, bottom=False, left=False,
+                           right=False)
+            ax.set_ylabel(ch, labelpad=35, fontsize=18)
+            subgs = gs_.subgridspec(2, 1, hspace=0.)
+            ax1 = fig.add_subplot(subgs[0, :])
+            ax2 = fig.add_subplot(subgs[1, :])
+            ch_axes[ch] = (ax1, ax2)
+            for j, ax in enumerate(ch_axes[ch]):
+                ax.axvline(0, linestyle='--', linewidth=0.5, color='grey')
+                if j == 0:
+                    ax.spines['bottom'].set_visible(False)
+                else:
+                    ax.spines['top'].set_visible(False)
+
+                if i < n_channels - 1 or j == 0:
+                    ax.tick_params(axis='x', which='both', bottom=True,
+                                   top=False, labelbottom=False, direction='in')
+                else:
+                    unit = 'ns' if time_scale == 1 else r'$\mu s$'
+                    ax.set_xlabel(f't ({unit})', fontsize=12)
+
+        for ch, (a, b) in ch_axes.items():
+            t = np.array(data[ch]['time']) / time_scale
+            ya = data[ch]['amp']
+            yb = data[ch]['detuning']
+
+            t_min = -t[-1]*0.03
+            t_max = t[-1]*1.05
+            a.set_xlim(t_min, t_max)
+            b.set_xlim(t_min, t_max)
+
+            max_amp = np.max(ya)
+            amp_top = max_amp * 1.2
+            a.set_ylim(-0.02, amp_top)
+            det_max = np.max(yb)
+            det_min = np.min(yb)
+            det_range = det_max - det_min
+            det_top = det_max + det_range * 0.15
+            det_bottom = det_min - det_range * 0.05
+            b.set_ylim(det_bottom, det_top)
+
+            a.plot(t, ya, color="darkgreen", linewidth=0.8)
+            b.plot(t, yb, color='indigo', linewidth=0.8)
+            a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
+            b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
+            a.set_ylabel('Amplitude (MHz)', fontsize=12, labelpad=10)
+            b.set_ylabel('Detuning (MHz)', fontsize=12)
+
+            for coords in data[ch]['target']:
+                targets = list(data[ch]['target'][coords])
+                tgt_txt_y = max_amp*1.1-0.25*(len(targets)-1)
+                tgt_str = "\n".join([str(q) for q in targets])
+                if coords == 'initial':
+                    x = t_min + t[-1]*0.005
+                    if self._channels[ch].addressing == 'global':
+                        a.text(x, amp_top*0.98, "GLOBAL",
+                               fontsize=13, rotation=90, ha='left', va='top',
+                               bbox=dict(boxstyle="round", facecolor='orange'))
+                    else:
+                        a.text(x, tgt_txt_y, tgt_str, fontsize=12, ha='left',
+                               bbox=dict(boxstyle="round", facecolor='orange'))
+                else:
+                    ti, tf = coords
+                    a.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
+                    b.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
+                    a.text(tf + t[-1]*0.006, tgt_txt_y, tgt_str, fontsize=12,
+                           bbox=dict(boxstyle="round", facecolor='orange'))
+
+            if 'measurement' in data[ch]:
+                msg = f"Basis: {data[ch]['measurement']}"
+                b.text(t[-1]*1.025, det_top, msg, ha='center', va='center',
+                       fontsize=14, color='white', rotation=90)
+                a.axvspan(t[-1], t_max, color='midnightblue', alpha=1)
+                b.axvspan(t[-1], t_max, color='midnightblue', alpha=1)
+                a.axhline(0, xmax=0.95, linestyle='-', linewidth=0.5,
+                          color='grey')
+                b.axhline(0, xmax=0.95, linestyle=':', linewidth=0.5,
+                          color='grey')
+            else:
+                a.axhline(0, linestyle='-', linewidth=0.5, color='grey')
+                b.axhline(0, linestyle=':', linewidth=0.5, color='grey')
+
+        plt.show()
+
     def __str__(self):
         full = ""
         line = "t: {}->{} | {} | Targets: {}\n"
@@ -235,3 +336,48 @@ class Sequence:
         if np.any(np.abs(pulse.detuning.samples) > ch.max_abs_detuning):
             raise ValueError("The pulse's detuning values go out of the range "
                              "allowed for the chosen channel.")
+
+    def _gather_data(self):
+        """Collects the whole sequence data for plotting."""
+
+        self._total_duration = max(self._last(ch).tf for ch in self._schedule)
+        data = {}
+        for ch, seq in self._schedule.items():
+            time = []
+            amp = []
+            detuning = []
+            target = {}
+            for slot in seq:
+                if slot.ti == -1:
+                    target['initial'] = slot.targets
+                    time += [0]
+                    amp += [0]
+                    detuning += [0]
+                    continue
+                if slot.type in ['delay', 'target']:
+                    time += [slot.ti, slot.tf-1]
+                    amp += [0, 0]
+                    detuning += [0, 0]
+                    if slot.type == 'target':
+                        target[(slot.ti, slot.tf-1)] = slot.targets
+                    continue
+                pulse = slot.type
+                if (isinstance(pulse.amplitude, ConstantWaveform) and
+                        isinstance(pulse.detuning, ConstantWaveform)):
+                    time += [slot.ti, slot.tf-1]
+                    amp += [pulse.amplitude._value] * 2
+                    detuning += [pulse.detuning._value] * 2
+                else:
+                    time += list(range(slot.ti, slot.tf))
+                    amp += pulse.amplitude.samples.tolist()
+                    detuning += pulse.detuning.samples.tolist()
+            if time[-1] < self._total_duration - 1:
+                time += [time[-1]+1, self._total_duration-1]
+                amp += [0, 0]
+                detuning += [0, 0]
+            # Store everything
+            data[ch] = {'time': time, 'amp': amp, 'detuning': detuning,
+                        'target': target}
+            if hasattr(self, "_measurement"):
+                data[ch]['measurement'] = self._measurement
+        return data
