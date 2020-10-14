@@ -99,6 +99,11 @@ class CompositeWaveform(Waveform):
         """
         return np.concatenate(list(wf.samples for wf in self._waveforms))
 
+    @property
+    def waveforms(self):
+        """The waveforms encapsulated in the composite waveform."""
+        return list(self._waveforms)
+
     def insert(self, waveform, where=0):
         """Insert a new waveform into the CompositeWaveform.
 
