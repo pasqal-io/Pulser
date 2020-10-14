@@ -15,8 +15,8 @@ class Pulse:
 
     def __init__(self, amplitude, detuning, phase):
         if detuning.duration != amplitude.duration:
-            raise ValueError("The detuning waveform's duration doesn't"
-                             " match the pulses' duration.")
+            raise ValueError(
+                "Detuning and amplitude waveforms' durations don't match.")
         self.duration = amplitude.duration
         if np.any(amplitude.samples < 0):
             raise ValueError("An amplitude waveform has always to be "
