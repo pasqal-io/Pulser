@@ -65,6 +65,71 @@ class Waveform(ABC):
             ax.axhline(0, color='black', linestyle=':', linewidth=0.5)
 
 
+class CompositeWaveform(Waveform):
+    """A waveform combining multiple smaller waveforms.
+
+    Args:
+        waveforms: Two or more waveforms to combine.
+    """
+
+    def __init__(self, *waveforms):
+
+        if len(waveforms) < 2:
+            raise ValueError("Needs at least two waveforms to form a "
+                             "CompositeWaveform.")
+        for wf in waveforms:
+            self._validate(wf)
+
+        self._waveforms = list(waveforms)
+
+    @property
+    def duration(self):
+        """The duration of the pulse (in ns)."""
+        duration = 0
+        for wf in self._waveforms:
+            duration += wf.duration
+        return duration
+
+    @property
+    def samples(self):
+        """The value at each time step that describes the waveform.
+
+        Returns:
+            samples(np.ndarray): A numpy array with a value for each time step.
+        """
+        return np.concatenate(list(wf.samples for wf in self._waveforms))
+
+    @property
+    def waveforms(self):
+        """The waveforms encapsulated in the composite waveform."""
+        return list(self._waveforms)
+
+    def insert(self, waveform, where=0):
+        """Insert a new waveform into the CompositeWaveform.
+
+        Args:
+            waveform: A valid waveform.
+
+        Keyword Args:
+            where (default=0): Index before which the waveform is inserted.
+        """
+        self._validate(waveform)
+        self._waveforms.insert(where, waveform)
+
+    def append(self, waveform):
+        """Append a new waveform to the end of a CompositeWaveform.
+
+        Args:
+            waveform: A valid waveform.
+        """
+        self.insert(waveform, where=len(self._waveforms))
+
+    def _validate(self, waveform):
+        if not isinstance(waveform, Waveform):
+            raise TypeError("{!r} is not a valid waveform. Please provide a "
+                            "valid Waveform.".format(waveform))
+
+
 class ArbitraryWaveform(Waveform):
     """An arbitrary waveform.
 
@@ -154,6 +219,36 @@ class RampWaveform(Waveform):
 
     def __str__(self):
         return f"[{self._start}->{self._stop}]MHz"
+
+
+class BlackmanWaveform(Waveform):
+    """A Blackman window of a specified duration and area.
+
+    Args:
+        duration: The waveform duration (in ns).
+        area: The area under the waveform.
+    """
+    def __init__(self, duration, area):
+        super().__init__(duration)
+        if area <= 0:
+            raise ValueError("Area under the waveform needs to be positive.")
+        self._area = area
+
+    @property
+    def duration(self):
+        """The duration of the pulse (in ns)."""
+        return self._duration
+
+    @property
+    def samples(self):
+        """The value at each time step that describes the waveform.
+
+        Returns:
+            samples(np.ndarray): A numpy array with a value for each time step.
+        """
+        samples = np.blackman(self._duration)
+        scaling = self._area / np.sum(samples) / 1e-3
+        return samples * scaling
 
 
 class GaussianWaveform(Waveform):

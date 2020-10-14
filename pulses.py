@@ -56,6 +56,7 @@ class Pulse:
         self.amplitude._plot(ax1, "Amplitude (MHz)", color="darkgreen")
         self.detuning._plot(ax2, "Detuning (MHz)", color="indigo")
 
+        fig.tight_layout()
         plt.show()
 
     def __str__(self):
