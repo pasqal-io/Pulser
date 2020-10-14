@@ -156,6 +156,36 @@ class RampWaveform(Waveform):
         return f"[{self._start}->{self._stop}]MHz"
 
 
+class BlackmanWaveform(Waveform):
+    """A Blackman window of a specified duration and area.
+
+    Args:
+        duration: The waveform duration (in ns).
+        area: The area under the waveform.
+    """
+    def __init__(self, duration, area):
+        super().__init__(duration)
+        if area <= 0:
+            raise ValueError("Area under the waveform needs to be positive.")
+        self._area = area
+
+    @property
+    def duration(self):
+        """The duration of the pulse (in ns)."""
+        return self._duration
+
+    @property
+    def samples(self):
+        """The value at each time step that describes the waveform.
+
+        Returns:
+            samples(np.ndarray): A numpy array with a value for each time step.
+        """
+        samples = np.blackman(self._duration)
+        scaling = self._area / np.sum(samples) / 1e-3
+        return samples * scaling
+
+
 class GaussianWaveform(Waveform):
     """A Gaussian-shaped waveform.
 
