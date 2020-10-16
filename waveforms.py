@@ -39,6 +39,10 @@ class Waveform(ABC):
 
         plt.show()
 
+    @abstractmethod
+    def __str__(self):
+        pass
+
     def __add__(self, other):
         if not isinstance(other, Waveform):
             raise TypeError("Can't add a waveform to an object of "
@@ -129,6 +133,14 @@ class CompositeWaveform(Waveform):
             raise TypeError("{!r} is not a valid waveform. Please provide a "
                             "valid Waveform.".format(waveform))
 
+    def __str__(self):
+        contents = ["{!r}"] * len(self._waveforms)
+        contents = ", ".join(contents)
+        contents = contents.format(*self._waveforms)
+        return f'Composite({contents})'
+
+    def __repr__(self):
+        return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
 class ArbitraryWaveform(Waveform):
     """An arbitrary waveform.
@@ -186,7 +198,10 @@ class ConstantWaveform(Waveform):
         return np.full(self.duration, self._value)
 
     def __str__(self):
-        return f"{self._value}MHz"
+        return f"{self._value:.3g} MHz"
+
+    def __repr__(self):
+        return f"ConstantWaveform({self._duration} ns, {self._value:.3g} MHz)"
 
 
 class RampWaveform(Waveform):
@@ -218,7 +233,11 @@ class RampWaveform(Waveform):
         return np.linspace(self._start, self._stop, num=self._duration)
 
     def __str__(self):
-        return f"[{self._start}->{self._stop}]MHz"
+        return f"Ramp({self._start:.3g}->{self._stop:.3g} MHz)"
+
+    def __repr__(self):
+        return (f"RampWaveform({self._duration} ns, " +
+                f"{self._start:.3g}->{self._stop:.3g} MHz)")
 
 
 class BlackmanWaveform(Waveform):
@@ -249,6 +268,12 @@ class BlackmanWaveform(Waveform):
         samples = np.blackman(self._duration)
         scaling = self._area / np.sum(samples) / 1e-3
         return samples * scaling
+
+    def __str__(self):
+        return f"Blackman(Area: {self._area:.3g})"
+
+    def __repr__(self):
+        return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
 
 
 class GaussianWaveform(Waveform):
@@ -291,5 +316,11 @@ class GaussianWaveform(Waveform):
         return self._top * np.exp(-0.5 * (ts / self._sigma)**2) + self._offset
 
     def __str__(self):
-        return (f"Gaussian([{self._offset}->{self._top+self._offset}]MHz, " +
-                f"sigma={self._sigma}ns)")
+        args = (f"({self._offset:.3g}->{self._top+self._offset:.3g} MHz,"
+                + f" sigma={self._sigma:.4g} ns)")
+        return "Gaussian" + args
+
+    def __repr__(self):
+        args = (f"({self._duration} ns, max={self._top:.3g} MHz, " +
+                f"offset={self._offset:.3g} MHz, sigma={self._sigma:.4g} ns)")
+        return "GaussianWaveform" + args

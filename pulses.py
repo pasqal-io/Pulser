@@ -67,5 +67,10 @@ class Pulse:
         plt.show()
 
     def __str__(self):
-        return "Pulse(Amp={!s}, Detuning={!s}, Phase={})".format(
+        return "Pulse(Amp={!s}, Detuning={!s}, Phase={:.3g})".format(
             self.amplitude, self.detuning, self.phase)
+
+    def __repr__(self):
+        return (f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, " +
+                f"phase={self.phase:.3g}, " +
+                f"post_phase_shift={self.post_phase_shift:.3g})")
