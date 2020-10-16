@@ -11,9 +11,15 @@ class Pulse:
         amplitude (Waveform): The pulse amplitude waveform.
         detuning (Waveform): The pulse detuning waveform.
         phase (float): The pulse phase (in radians).
+
+    Keyword Args:
+        post_phase_shift (default=0): Optionally lets you add a phase shift
+            (in rads) immediatly after the end of the pulse. This allows for
+            enconding of arbitrary single-qubit gates into a single pulse
+            (see Sequence.phase_shift() for more information).
     """
 
-    def __init__(self, amplitude, detuning, phase):
+    def __init__(self, amplitude, detuning, phase, post_phase_shift=0):
         if detuning.duration != amplitude.duration:
             raise ValueError(
                 "Detuning and amplitude waveforms' durations don't match.")
@@ -24,6 +30,7 @@ class Pulse:
         self.amplitude = amplitude
         self.detuning = detuning
         self.phase = float(phase) % (2 * np.pi)
+        self.post_phase_shift = float(post_phase_shift) % (2 * np.pi)
 
     @classmethod
     def ConstantDetuning(cls, amplitude, detuning, phase):

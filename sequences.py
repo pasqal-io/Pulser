@@ -1,4 +1,5 @@
 import warnings
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import namedtuple
@@ -9,6 +10,9 @@ from utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
 TimeSlot = namedtuple('TimeSlot', ['type', 'ti', 'tf', 'targets'])
+
+# Auxiliary class to store a channel's phase reference
+Phase = namedtuple('Phase', ['value'])
 
 
 class Sequence:
@@ -25,6 +29,7 @@ class Sequence:
         self._device = device
         self._channels = {}
         self._schedule = {}
+        self._phase_ref = {}  # The phase reference of each channel
         self._taken_channels = []   # Stores the ids of selected channels
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
 
@@ -69,6 +74,7 @@ class Sequence:
         self._channels[name] = ch
         self._taken_channels.append(channel_id)
         self._schedule[name] = []
+        self._phase_ref[name] = [Phase(value=0)]
 
         if ch.addressing == 'global':
             self._schedule[name].append(TimeSlot('target', -1, 0, self._qids))
@@ -112,18 +118,26 @@ class Sequence:
                 for op in self._schedule[ch][::-1]:
                     if op.tf <= current_max_t:
                         break
-                    if op.type in ['delay', 'target']:
+                    if not isinstance(op.type, Pulse):
                         continue
                     if op.targets & last.targets or protocol == 'wait-for-all':
                         current_max_t = op.tf
                         break
-
         ti = current_max_t
         tf = ti + pulse.duration
         if ti > t0:
             self.delay(ti-t0, channel)
 
+        phase_ref = self._phase_ref[channel][-1].value
+        if phase_ref != 0:
+            # Has to copy to keep the original pulse intact
+            pulse = copy.deepcopy(pulse)
+            pulse.phase = (pulse.phase + phase_ref) % (2 * np.pi)
+
         self._add_to_schedule(channel, TimeSlot(pulse, ti, tf, last.targets))
+
+        if pulse.post_phase_shift:
+            self.phase_shift(pulse.post_phase_shift, channel)
 
     def target(self, qubits, channel):
         """Changes the target qubit of a 'local' channel.
@@ -189,6 +203,26 @@ class Sequence:
             raise ValueError("The sequence has already been measured.")
 
         self._measurement = basis
+
+    def phase_shift(self, phi, channel):
+        """Shift the phase of a channel's reference by 'phi'.
+
+        This is equivalent to an Rz(phi) gate (i.e. a rotation of the target
+        qubit's state by an angle phi around the z-axis of the Bloch sphere).
+
+        Args:
+            phi (float): The intended phase shift (in rads).
+        """
+        if phi == 0:
+            warnings.warn("A phase shift of 0 is meaningless, "
+                          "it will be ommited.")
+            return
+        last = self._last(channel)
+        ti = last.tf
+        self._add_to_schedule(
+            channel, TimeSlot(Phase(phi), ti, ti, last.targets))
+        new_phase = (self._phase_ref[channel][-1].value + phi) % (2 * np.pi)
+        self._phase_ref[channel].append(Phase(new_phase))
 
     def draw(self):
         """Draw the entire sequence."""
@@ -274,6 +308,17 @@ class Sequence:
                     a.text(tf + t[-1]*0.006, tgt_txt_y, tgt_str, fontsize=12,
                            bbox=dict(boxstyle="round", facecolor='orange'))
 
+            for ti, phase in data[ch]['phase_shift'].items():
+                a.axvline(ti, linestyle='--', linewidth=1.5, color='black')
+                b.axvline(ti, linestyle='--', linewidth=1.5, color='black')
+                value = (((phase + np.pi) % (2*np.pi)) - np.pi) / np.pi
+                if value == -1:
+                    msg = u"\u27F2 " + r"$\pi$"
+                else:
+                    msg = u"\u27F2 " + r"{:.2g}$\pi$".format(value)
+                a.text(ti, max_amp*1.1, msg, ha='right', fontsize=14,
+                       bbox=dict(boxstyle="round", facecolor='ghostwhite'))
+
             if 'measurement' in data[ch]:
                 msg = f"Basis: {data[ch]['measurement']}"
                 b.text(t[-1]*1.025, det_top, msg, ha='center', va='center',
@@ -292,7 +337,9 @@ class Sequence:
 
     def __str__(self):
         full = ""
-        line = "t: {}->{} | {} | Targets: {}\n"
+        std_line = "t: {}->{} | {} | Targets: {}\n"
+        delay_line = "t: {}->{} | Delay \n"
+        phase_line = "t: {} | Phase shift of: {:.3f}\n"
         for ch, seq in self._schedule.items():
             full += f"Channel: {ch}\n"
             first_slot = True
@@ -300,8 +347,12 @@ class Sequence:
                 if first_slot:
                     full += f"t: 0 | Initial targets: {ts.targets}\n"
                     first_slot = False
+                elif isinstance(ts.type, Pulse) or ts.type == 'target':
+                    full += std_line.format(ts.ti, ts.tf, ts.type, ts.targets)
+                elif ts.type == 'delay':
+                    full += delay_line.format(ts.ti, ts.tf)
                 else:
-                    full += line.format(ts.ti, ts.tf, ts.type, ts.targets)
+                    full += phase_line.format(ts.ti, ts.type.value)
             full += "\n"
 
         if hasattr(self, "_measurement"):
@@ -347,6 +398,7 @@ class Sequence:
             amp = []
             detuning = []
             target = {}
+            phase_shift = {}
             for slot in seq:
                 if slot.ti == -1:
                     target['initial'] = slot.targets
@@ -360,6 +412,9 @@ class Sequence:
                     detuning += [0, 0]
                     if slot.type == 'target':
                         target[(slot.ti, slot.tf-1)] = slot.targets
+                    continue
+                elif isinstance(slot.type, Phase):
+                    phase_shift[slot.ti] = slot.type.value
                     continue
                 pulse = slot.type
                 if (isinstance(pulse.amplitude, ConstantWaveform) and
@@ -377,7 +432,7 @@ class Sequence:
                 detuning += [0, 0]
             # Store everything
             data[ch] = {'time': time, 'amp': amp, 'detuning': detuning,
-                        'target': target}
+                        'target': target, 'phase_shift': phase_shift}
             if hasattr(self, "_measurement"):
                 data[ch]['measurement'] = self._measurement
         return data
