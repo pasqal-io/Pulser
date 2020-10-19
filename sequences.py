@@ -227,6 +227,8 @@ class Sequence:
     def draw(self):
         """Draw the entire sequence."""
         n_channels = len(self._channels)
+        if not n_channels:
+            raise SystemError("Can't draw an empty sequence.")
         data = self._gather_data()
         time_scale = 1e3 if self._total_duration > 1e4 else 1
 
@@ -242,7 +244,7 @@ class Sequence:
             ax.spines['right'].set_color('none')
             ax.tick_params(labelcolor='w', top=False, bottom=False, left=False,
                            right=False)
-            ax.set_ylabel(ch, labelpad=35, fontsize=18)
+            ax.set_ylabel(ch, labelpad=40, fontsize=18)
             subgs = gs_.subgridspec(2, 1, hspace=0.)
             ax1 = fig.add_subplot(subgs[0, :])
             ax2 = fig.add_subplot(subgs[1, :])
@@ -272,11 +274,14 @@ class Sequence:
             b.set_xlim(t_min, t_max)
 
             max_amp = np.max(ya)
+            max_amp = 1 if max_amp == 0 else max_amp
             amp_top = max_amp * 1.2
             a.set_ylim(-0.02, amp_top)
             det_max = np.max(yb)
             det_min = np.min(yb)
             det_range = det_max - det_min
+            if det_range == 0:
+                det_min, det_max, det_range = -1, 1, 2
             det_top = det_max + det_range * 0.15
             det_bottom = det_min - det_range * 0.05
             b.set_ylim(det_bottom, det_top)
@@ -390,11 +395,12 @@ class Sequence:
 
     def _gather_data(self):
         """Collects the whole sequence data for plotting."""
-
-        self._total_duration = max(self._last(ch).tf for ch in self._schedule)
+        # The minimum time axis length is 100 ns
+        self._total_duration = max([self._last(ch).tf for ch in self._schedule
+                                    if self._schedule[ch]] + [100])
         data = {}
         for ch, seq in self._schedule.items():
-            time = []
+            time = [-1]     # To not break the "time[-1]" later on
             amp = []
             detuning = []
             target = {}
@@ -431,6 +437,7 @@ class Sequence:
                 amp += [0, 0]
                 detuning += [0, 0]
             # Store everything
+            time.pop(0)     # Removes the -1 in the beginning
             data[ch] = {'time': time, 'amp': amp, 'detuning': detuning,
                         'target': target, 'phase_shift': phase_shift}
             if hasattr(self, "_measurement"):
