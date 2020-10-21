@@ -307,7 +307,7 @@ class Sequence:
                         a.text(x, tgt_txt_y, tgt_str, fontsize=12, ha='left',
                                bbox=dict(boxstyle="round", facecolor='orange'))
                 else:
-                    ti, tf = coords
+                    ti, tf = np.array(coords) / time_scale
                     a.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
                     b.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
                     a.text(tf + t[-1]*0.006, tgt_txt_y, tgt_str, fontsize=12,

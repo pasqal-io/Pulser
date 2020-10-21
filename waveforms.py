@@ -142,6 +142,7 @@ class CompositeWaveform(Waveform):
     def __repr__(self):
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
+
 class ArbitraryWaveform(Waveform):
     """An arbitrary waveform.
 
@@ -265,7 +266,7 @@ class BlackmanWaveform(Waveform):
         Returns:
             samples(np.ndarray): A numpy array with a value for each time step.
         """
-        samples = np.blackman(self._duration)
+        samples = np.clip(np.blackman(self._duration), 0, np.inf)
         scaling = self._area / np.sum(samples) / 1e-3
         return samples * scaling
 
