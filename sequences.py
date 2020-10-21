@@ -11,9 +11,6 @@ from utils import validate_duration
 # Auxiliary class to store the information in the schedule
 TimeSlot = namedtuple('TimeSlot', ['type', 'ti', 'tf', 'targets'])
 
-# Auxiliary class to store a channel's phase reference
-Phase = namedtuple('Phase', ['value'])
-
 
 class Sequence:
     """A sequence of operations on a device.
@@ -32,6 +29,7 @@ class Sequence:
         self._phase_ref = {}  # The phase reference of each channel
         self._taken_channels = []   # Stores the ids of selected channels
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
+        self._last_used = {}    # Last time each qubit was used, by basis
 
     @property
     def qubit_info(self):
@@ -74,7 +72,11 @@ class Sequence:
         self._channels[name] = ch
         self._taken_channels.append(channel_id)
         self._schedule[name] = []
-        self._phase_ref[name] = [Phase(value=0)]
+
+        if ch.basis_states not in self._phase_ref:
+            self._phase_ref[ch.basis_states] = {q: PhaseTracker(0)
+                                                for q in self._qids}
+            self._last_used[ch.basis_states] = {q: 0 for q in self._qids}
 
         if ch.addressing == 'global':
             self._schedule[name].append(TimeSlot('target', -1, 0, self._qids))
@@ -110,7 +112,10 @@ class Sequence:
                              "protocols: " + ", ".join(valid_protocols))
 
         t0 = last.tf    # Preliminary ti
-        current_max_t = t0  # Stores the maximum tf found so far
+        basis = self._channels[channel].basis_states
+        phase_barriers = [self._phase_ref[basis][q].last_time
+                          for q in last.targets]
+        current_max_t = max(t0, *phase_barriers)
         if protocol != 'no-delay':
             for ch, seq in self._schedule.items():
                 if ch == channel:
@@ -128,7 +133,14 @@ class Sequence:
         if ti > t0:
             self.delay(ti-t0, channel)
 
-        phase_ref = self._phase_ref[channel][-1].value
+        prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
+        if len(prs) != 1:
+            raise ValueError("Cannot do a multiple-target pulse on qubits "
+                             "with different phase references for the same "
+                             "basis.")
+        else:
+            phase_ref = prs.pop()
+
         if phase_ref != 0:
             # Has to copy to keep the original pulse intact
             pulse = copy.deepcopy(pulse)
@@ -136,8 +148,12 @@ class Sequence:
 
         self._add_to_schedule(channel, TimeSlot(pulse, ti, tf, last.targets))
 
+        for q in last.targets:
+            if self._last_used[basis][q] < tf:
+                self._last_used[basis][q] = tf
+
         if pulse.post_phase_shift:
-            self.phase_shift(pulse.post_phase_shift, channel)
+            self.phase_shift(pulse.post_phase_shift, *last.targets, basis=basis)
 
     def target(self, qubits, channel):
         """Changes the target qubit of a 'local' channel.
@@ -158,6 +174,12 @@ class Sequence:
             raise ValueError("Can only choose target of 'local' channels.")
         elif len(qs) != 1:
             raise ValueError("This channel takes only a single target qubit.")
+
+        basis = self._channels[channel].basis_states
+        phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
+        if len(phase_refs) != 1:
+            raise ValueError("Cannot target multiple qubits with different "
+                             "phase references for the same basis.")
 
         try:
             last = self._last(channel)
@@ -204,33 +226,58 @@ class Sequence:
 
         self._measurement = basis
 
-    def phase_shift(self, phi, channel):
-        """Shift the phase of a channel's reference by 'phi'.
+    def phase_shift(self, phi, *targets, basis='digital'):
+        """Shift the phase of a qubit's reference by 'phi', for a given basis.
 
         This is equivalent to an Rz(phi) gate (i.e. a rotation of the target
         qubit's state by an angle phi around the z-axis of the Bloch sphere).
 
         Args:
             phi (float): The intended phase shift (in rads).
+            targets: The ids of the qubits on which to apply the phase shift.
+
+        Keyword Args:
+            basis(str): The basis (i.e. electronic transition) to associate
+                the phase shift to. Must correspond to the basis of a declared
+                channel.
         """
         if phi == 0:
             warnings.warn("A phase shift of 0 is meaningless, "
                           "it will be ommited.")
             return
-        last = self._last(channel)
-        ti = last.tf
-        self._add_to_schedule(
-            channel, TimeSlot(Phase(phi), ti, ti, last.targets))
-        new_phase = (self._phase_ref[channel][-1].value + phi) % (2 * np.pi)
-        self._phase_ref[channel].append(Phase(new_phase))
+        if not set(targets) <= self._qids:
+            raise ValueError("All given targets have to be qubit ids declared"
+                             " in this sequence's device.")
+
+        if basis not in self._phase_ref:
+            raise ValueError("No declared channel targets the given 'basis'.")
+
+        for q in targets:
+            t = self._last_used[basis][q]
+            new_phase = self._phase_ref[basis][q].last_phase + phi
+            self._phase_ref[basis][q][t] = new_phase
 
     def draw(self):
         """Draw the entire sequence."""
+
+        def phase_str(phi):
+            value = (((phi + np.pi) % (2*np.pi)) - np.pi) / np.pi
+            if value == -1:
+                return r"$\pi$"
+            elif value == 0:
+                return "0"
+            else:
+                return r"{:.2g}$\pi$".format(value)
+
         n_channels = len(self._channels)
         if not n_channels:
             raise SystemError("Can't draw an empty sequence.")
         data = self._gather_data()
         time_scale = 1e3 if self._total_duration > 1e4 else 1
+
+        # Boxes for qubit and phase text
+        q_box = dict(boxstyle="round", facecolor='orange')
+        ph_box = dict(boxstyle="round", facecolor='ghostwhite')
 
         fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
         gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
@@ -264,6 +311,7 @@ class Sequence:
                     ax.set_xlabel(f't ({unit})', fontsize=12)
 
         for ch, (a, b) in ch_axes.items():
+            basis = self._channels[ch].basis_states
             t = np.array(data[ch]['time']) / time_scale
             ya = data[ch]['amp']
             yb = data[ch]['detuning']
@@ -293,36 +341,50 @@ class Sequence:
             a.set_ylabel('Amplitude (MHz)', fontsize=12, labelpad=10)
             b.set_ylabel('Detuning (MHz)', fontsize=12)
 
+            target_regions = []     # [[start1, [targets1], end1],...]
             for coords in data[ch]['target']:
                 targets = list(data[ch]['target'][coords])
                 tgt_txt_y = max_amp*1.1-0.25*(len(targets)-1)
                 tgt_str = "\n".join([str(q) for q in targets])
                 if coords == 'initial':
                     x = t_min + t[-1]*0.005
+                    target_regions.append([0, targets])
                     if self._channels[ch].addressing == 'global':
-                        a.text(x, amp_top*0.98, "GLOBAL",
-                               fontsize=13, rotation=90, ha='left', va='top',
-                               bbox=dict(boxstyle="round", facecolor='orange'))
+                        a.text(x, amp_top*0.98, "GLOBAL", fontsize=13,
+                               rotation=90, ha='left', va='top', bbox=q_box)
                     else:
                         a.text(x, tgt_txt_y, tgt_str, fontsize=12, ha='left',
-                               bbox=dict(boxstyle="round", facecolor='orange'))
+                               bbox=q_box)
+                        phase = self._phase_ref[basis][targets[0]][0]
+                        if phase:
+                            msg = r"$\phi=$" + phase_str(phase)
+                            a.text(0, max_amp*1.1, msg, ha='left', fontsize=12,
+                                   bbox=ph_box)
                 else:
-                    ti, tf = coords
+                    ti, tf = np.array(coords) / time_scale
+                    target_regions[-1].append(ti)   # Closing previous regions
+                    target_regions.append([tf, targets])  # Starting a new one
+                    phase = self._phase_ref[basis][targets[0]][tf * time_scale]
                     a.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
                     b.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
-                    a.text(tf + t[-1]*0.006, tgt_txt_y, tgt_str, fontsize=12,
-                           bbox=dict(boxstyle="round", facecolor='orange'))
-
-            for ti, phase in data[ch]['phase_shift'].items():
-                a.axvline(ti, linestyle='--', linewidth=1.5, color='black')
-                b.axvline(ti, linestyle='--', linewidth=1.5, color='black')
-                value = (((phase + np.pi) % (2*np.pi)) - np.pi) / np.pi
-                if value == -1:
-                    msg = u"\u27F2 " + r"$\pi$"
-                else:
-                    msg = u"\u27F2 " + r"{:.2g}$\pi$".format(value)
-                a.text(ti, max_amp*1.1, msg, ha='right', fontsize=14,
-                       bbox=dict(boxstyle="round", facecolor='ghostwhite'))
+                    a.text(tf + t[-1]*0.008, tgt_txt_y, tgt_str, ha='right',
+                           fontsize=12, bbox=q_box)
+                    if phase:
+                        msg = r"$\phi=$" + phase_str(phase)
+                        a.text(tf + t[-1]*0.02, max_amp*1.1, msg, ha='left',
+                               fontsize=12, bbox=ph_box)
+            # Terminate the last open region
+            target_regions[-1].append(t[-1])
+            for start, targets, end in target_regions:
+                q = targets[0]  # All targets have the same ref, so we pick
+                ref = self._phase_ref[basis][q]
+                for t_, delta in ref.changes(start, end, time_scale=time_scale):
+                    conf = dict(linestyle='--', linewidth=1.5, color='black')
+                    a.axvline(t_, **conf)
+                    b.axvline(t_, **conf)
+                    msg = u"\u27F2 " + phase_str(delta)
+                    a.text(t_, max_amp*1.1, msg, ha='right', fontsize=14,
+                           bbox=ph_box)
 
             if 'measurement' in data[ch]:
                 msg = f"Basis: {data[ch]['measurement']}"
@@ -342,22 +404,32 @@ class Sequence:
 
     def __str__(self):
         full = ""
-        std_line = "t: {}->{} | {} | Targets: {}\n"
+        pulse_line = "t: {}->{} | {} | Targets: {}\n"
+        target_line = "t: {}->{} | Target: {} | Phase Reference: {}\n"
         delay_line = "t: {}->{} | Delay \n"
-        phase_line = "t: {} | Phase shift of: {:.3f}\n"
+        # phase_line = "t: {} | Phase shift of: {:.3f} | Targets: {}\n"
         for ch, seq in self._schedule.items():
+            basis = self._channels[ch].basis_states
             full += f"Channel: {ch}\n"
             first_slot = True
             for ts in seq:
-                if first_slot:
-                    full += f"t: 0 | Initial targets: {ts.targets}\n"
-                    first_slot = False
-                elif isinstance(ts.type, Pulse) or ts.type == 'target':
-                    full += std_line.format(ts.ti, ts.tf, ts.type, ts.targets)
-                elif ts.type == 'delay':
+                if ts.type == 'delay':
                     full += delay_line.format(ts.ti, ts.tf)
-                else:
-                    full += phase_line.format(ts.ti, ts.type.value)
+                    continue
+
+                tgts = list(ts.targets)
+                tgt_txt = ", ".join([str(t) for t in tgts])
+                if isinstance(ts.type, Pulse):
+                    full += pulse_line.format(ts.ti, ts.tf, ts.type, tgt_txt)
+                elif ts.type == 'target':
+                    phase = self._phase_ref[basis][tgts[0]][ts.tf]
+                    if first_slot:
+                        full += (f"t: 0 | Initial targets: {tgt_txt} | " +
+                                 f"Phase Reference: {phase} \n")
+                        first_slot = False
+                    else:
+                        full += target_line.format(ts.ti, ts.tf, tgt_txt, phase)
+
             full += "\n"
 
         if hasattr(self, "_measurement"):
@@ -404,7 +476,7 @@ class Sequence:
             amp = []
             detuning = []
             target = {}
-            phase_shift = {}
+            # phase_shift = {}
             for slot in seq:
                 if slot.ti == -1:
                     target['initial'] = slot.targets
@@ -418,9 +490,6 @@ class Sequence:
                     detuning += [0, 0]
                     if slot.type == 'target':
                         target[(slot.ti, slot.tf-1)] = slot.targets
-                    continue
-                elif isinstance(slot.type, Phase):
-                    phase_shift[slot.ti] = slot.type.value
                     continue
                 pulse = slot.type
                 if (isinstance(pulse.amplitude, ConstantWaveform) and
@@ -439,7 +508,48 @@ class Sequence:
             # Store everything
             time.pop(0)     # Removes the -1 in the beginning
             data[ch] = {'time': time, 'amp': amp, 'detuning': detuning,
-                        'target': target, 'phase_shift': phase_shift}
+                        'target': target}
             if hasattr(self, "_measurement"):
                 data[ch]['measurement'] = self._measurement
         return data
+
+
+class PhaseTracker:
+    """Tracks a phase reference over time."""
+
+    def __init__(self, initial_phase):
+        self._times = [0]
+        self._phases = [self._format(initial_phase)]
+
+    @property
+    def last_time(self):
+        return self._times[-1]
+
+    @property
+    def last_phase(self):
+        return self._phases[-1]
+
+    def changes(self, ti, tf, time_scale=1):
+        """Changes in phases within ]ti, tf]."""
+        start, end = np.searchsorted(
+                self._times, (ti * time_scale, tf * time_scale), side='right')
+        for i in range(start, end):
+            change = self._phases[i] - self._phases[i-1]
+            yield (self._times[i] / time_scale, change)
+
+    def _format(self, phi):
+        return phi % (2 * np.pi)
+
+    def __setitem__(self, t, phi):
+        phase = self._format(phi)
+        if t in self._times:
+            ind = self._times.index(t)
+            self._phases[ind] = phase
+        else:
+            ind = np.searchsorted(self._times, t, side='right')
+            self._times.insert(ind, t)
+            self._phases.insert(ind, phase)
+
+    def __getitem__(self, t):
+        ind = np.searchsorted(self._times, t, side='right') - 1
+        return self._phases[ind]

@@ -43,6 +43,12 @@ class Channel(ABC):
     def name(self):
         pass
 
+    @property
+    @abstractmethod
+    def basis_states(self):
+        """The target transition at zero detuning."""
+        pass
+
     def __repr__(self):
         s = "({}, Max Absolute Detuning: {} MHz, Max Amplitude: {} MHz"
         config = s.format(self.addressing, self.max_abs_detuning, self.max_amp)
@@ -64,6 +70,11 @@ class Raman(Channel):
     def name(self):
         return 'Raman'
 
+    @property
+    def basis_states(self):
+        """The target transition at zero detuning."""
+        return 'digital'
+
 
 class Rydberg(Channel):
     """Rydberg beam  channel.
@@ -78,6 +89,11 @@ class Rydberg(Channel):
     def name(self):
         return 'Rydberg'
 
+    @property
+    def basis_states(self):
+        """The target transition at zero detuning."""
+        return 'ground-rydberg'
+
 
 class MW(Channel):
     """Microwave channel.
@@ -91,3 +107,5 @@ class MW(Channel):
     @property
     def name(self):
         return 'MW'
+
+    # TODO: Define basis states for this channel
