@@ -121,7 +121,7 @@ class Chadoq2(PasqalDevice):
     @property
     def channels(self):
         """Channels available on the device."""
-        return {'rydberg_global': Rydberg('global', 50, 1.25),
+        return {'rydberg_global': Rydberg('global', 50, 2.5),
                 'rydberg_local': Rydberg('local', 50, 10, retarget_time=100),
                 'rydberg_local2': Rydberg('local', 50, 10, retarget_time=100),
                 'raman_local': Raman('local', 50, 10, retarget_time=100)}
