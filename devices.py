@@ -60,9 +60,9 @@ class PasqalDevice(ABC):
         pass
 
     @property
-    def supported_basis_states(self):
-        """Possible electronic transitions for control and measurement."""
-        return {ch.basis_states for ch in self.channels.values()}
+    def supported_bases(self):
+        """Available electronic transitions for control and measurement."""
+        return {ch.basis for ch in self.channels.values()}
 
     @property
     def qubits(self):

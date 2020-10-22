@@ -45,7 +45,7 @@ class Channel(ABC):
 
     @property
     @abstractmethod
-    def basis_states(self):
+    def basis(self):
         """The target transition at zero detuning."""
         pass
 
@@ -71,7 +71,7 @@ class Raman(Channel):
         return 'Raman'
 
     @property
-    def basis_states(self):
+    def basis(self):
         """The target transition at zero detuning."""
         return 'digital'
 
@@ -90,7 +90,7 @@ class Rydberg(Channel):
         return 'Rydberg'
 
     @property
-    def basis_states(self):
+    def basis(self):
         """The target transition at zero detuning."""
         return 'ground-rydberg'
 
@@ -108,4 +108,4 @@ class MW(Channel):
     def name(self):
         return 'MW'
 
-    # TODO: Define basis states for this channel
+    # TODO: Define basis for this channel
