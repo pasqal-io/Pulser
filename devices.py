@@ -60,10 +60,9 @@ class PasqalDevice(ABC):
         pass
 
     @property
-    @abstractmethod
-    def supported_basis_states(self):
-        """Supported basis states upon measurement."""
-        pass
+    def supported_bases(self):
+        """Available electronic transitions for control and measurement."""
+        return {ch.basis for ch in self.channels.values()}
 
     @property
     def qubits(self):
@@ -118,11 +117,6 @@ class Chadoq2(PasqalDevice):
     def min_atom_distance(self):
         """Minimal allowed distance of atoms in the trap (in um)."""
         return 4
-
-    @property
-    def supported_basis_states(self):
-        """Supported basis states upon measurement."""
-        return {'digital', 'ground-rydberg'}
 
     @property
     def channels(self):
