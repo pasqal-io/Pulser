@@ -54,6 +54,7 @@ class Channel(ABC):
         config = s.format(self.addressing, self.max_abs_detuning, self.max_amp)
         if self.addressing == 'local':
             config += ", Target time: {} ns".format(self.retarget_time)
+        config += f", Basis: '{self.basis}'"
         return self.name + config + ")"
 
 

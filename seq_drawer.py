@@ -141,8 +141,9 @@ def draw_sequence(seq):
         target_regions = []     # [[start1, [targets1], end1],...]
         for coords in data[ch]['target']:
             targets = list(data[ch]['target'][coords])
+            tgt_strs = [str(q) for q in targets]
             tgt_txt_y = max_amp*1.1-0.25*(len(targets)-1)
-            tgt_str = "\n".join([str(q) for q in targets])
+            tgt_str = "\n".join(tgt_strs)
             if coords == 'initial':
                 x = t_min + t[-1]*0.005
                 target_regions.append([0, targets])
@@ -160,27 +161,31 @@ def draw_sequence(seq):
             else:
                 ti, tf = np.array(coords) / time_scale
                 target_regions[-1].append(ti)   # Closing previous regions
-                target_regions.append([tf, targets])  # Starting a new one
-                phase = seq._phase_ref[basis][targets[0]][tf * time_scale]
+                target_regions.append([tf + 1/time_scale, targets])  # New one
+                phase = seq._phase_ref[basis][targets[0]][tf * time_scale + 1]
                 a.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
                 b.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
-                a.text(tf + t[-1]*0.008, tgt_txt_y, tgt_str, ha='right',
+                a.text(tf + t[-1]*5e-3, tgt_txt_y, tgt_str, ha='left',
                        fontsize=12, bbox=q_box)
                 if phase:
                     msg = r"$\phi=$" + phase_str(phase)
-                    a.text(tf + t[-1]*0.02, max_amp*1.1, msg, ha='left',
+                    wrd_len = len(max(tgt_strs, key=len))
+                    x = tf + t[-1]*0.01*(wrd_len+1)
+                    a.text(x, max_amp*1.1, msg, ha='left',
                            fontsize=12, bbox=ph_box)
         # Terminate the last open region
         target_regions[-1].append(t[-1])
         for start, targets, end in target_regions:
             q = targets[0]  # All targets have the same ref, so we pick
             ref = seq._phase_ref[basis][q]
+            if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
+                end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
                 conf = dict(linestyle='--', linewidth=1.5, color='black')
                 a.axvline(t_, **conf)
                 b.axvline(t_, **conf)
                 msg = u"\u27F2 " + phase_str(delta)
-                a.text(t_, max_amp*1.1, msg, ha='right', fontsize=14,
+                a.text(t_-t[-1]*8e-3, max_amp*1.1, msg, ha='right', fontsize=14,
                        bbox=ph_box)
 
         if 'measurement' in data[ch]:

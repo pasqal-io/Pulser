@@ -33,26 +33,27 @@ class Pulse:
         self.post_phase_shift = float(post_phase_shift) % (2 * np.pi)
 
     @classmethod
-    def ConstantDetuning(cls, amplitude, detuning, phase):
+    def ConstantDetuning(cls, amplitude, detuning, phase, post_phase_shift=0):
         """Pulse with a constant amplitude and a detuning waveform"""
 
         detuning_wf = ConstantWaveform(amplitude.duration, detuning)
-        return cls(amplitude, detuning_wf, phase)
+        return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
-    def ConstantAmplitude(cls, amplitude, detuning, phase):
+    def ConstantAmplitude(cls, amplitude, detuning, phase, post_phase_shift=0):
         """Pulse with an amplitude waveform and a constant detuning"""
 
         amplitude_wf = ConstantWaveform(detuning.duration, amplitude)
-        return cls(amplitude_wf, detuning, phase)
+        return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
-    def ConstantPulse(cls, duration, amplitude, detuning, phase):
-        """Pulse with a constant amplitude and a constant detuning"""
+    def ConstantPulse(cls, duration, amplitude, detuning, phase,
+                      post_phase_shift=0):
+        """Pulse with a constant amplitude and a constant detuning."""
 
         amplitude_wf = ConstantWaveform(duration, amplitude)
         detuning_wf = ConstantWaveform(duration, detuning)
-        return cls(amplitude_wf, detuning_wf, phase)
+        return cls(amplitude_wf, detuning_wf, phase, post_phase_shift)
 
     def draw(self):
         """Draw the pulse's amplitude and frequency waveforms."""
