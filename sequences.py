@@ -45,6 +45,27 @@ class Sequence:
         return {id: ch for id, ch in self._device.channels.items()
                 if id not in self._taken_channels}
 
+    def current_phase_ref(self, qubit, basis='digital'):
+        """Returns the current phase reference of a specific qubit in a basis.
+
+        Args:
+            qubit (str): The id of the qubit whose phase shift is desired.
+
+        Keyword args:
+            basis (str): The basis (i.e. electronic transition) the phase
+                reference is associated with. Must correspond to the basis of a
+                declared channel.
+
+        """
+        if qubit not in self._qids:
+            raise ValueError("'qubit' must be the id of a qubit declared in "
+                             "this sequence's device.")
+
+        if basis not in self._phase_ref:
+            raise ValueError("No declared channel targets the given 'basis'.")
+
+        return self._phase_ref[basis][qubit].last_phase
+
     def declare_channel(self, name, channel_id, initial_target=None):
         """Declare a new channel to the Sequence.
 
