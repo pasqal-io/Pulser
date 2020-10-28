@@ -14,7 +14,7 @@ class Pulse:
 
     Keyword Args:
         post_phase_shift (default=0): Optionally lets you add a phase shift
-            (in rads) immediatly after the end of the pulse. This allows for
+            (in rads) immediately after the end of the pulse. This allows for
             enconding of arbitrary single-qubit gates into a single pulse
             (see Sequence.phase_shift() for more information).
     """
@@ -34,14 +34,14 @@ class Pulse:
 
     @classmethod
     def ConstantDetuning(cls, amplitude, detuning, phase, post_phase_shift=0):
-        """Pulse with a constant amplitude and a detuning waveform"""
+        """Pulse with a constant amplitude and a detuning waveform."""
 
         detuning_wf = ConstantWaveform(amplitude.duration, detuning)
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
     def ConstantAmplitude(cls, amplitude, detuning, phase, post_phase_shift=0):
-        """Pulse with an amplitude waveform and a constant detuning"""
+        """Pulse with an amplitude waveform and a constant detuning."""
 
         amplitude_wf = ConstantWaveform(detuning.duration, amplitude)
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
