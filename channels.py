@@ -6,7 +6,7 @@ class Channel(ABC):
 
     def __init__(self, addressing, max_abs_detuning, max_amp,
                  retarget_time=None):
-        """Initialize a channel with specific charactheristics.
+        """Initialize a channel with specific characteristics.
 
         Args:
             addressing (str): 'local' or 'global'.
@@ -15,7 +15,7 @@ class Channel(ABC):
             max_amp(tuple): Maximum pulse amplitude (in MHz).
 
         Keyword Args:
-            retarget_time (default=None): Time to change the target (in ns).
+            retarget_time (default = None): Time to change the target (in ns).
         """
         if addressing == 'local':
             if retarget_time is None:
@@ -78,7 +78,7 @@ class Raman(Channel):
 
 
 class Rydberg(Channel):
-    """Rydberg beam  channel.
+    """Rydberg beam channel.
 
     Args:
         addressing (str): 'local' or 'global'.
