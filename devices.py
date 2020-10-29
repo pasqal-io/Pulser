@@ -89,6 +89,76 @@ class PasqalDevice(ABC):
                              "center of the array.".format(
                                                     self.max_radial_distance))
 
+    @classmethod
+    def rectangle(cls, rows, columns, spacing=4, prefix=None):
+        """Initializes the device with the qubits in a rectangular array.
+
+        Args:
+            rows (int): Number of rows.
+            columns (int): Number of columns.
+
+        Keyword args:
+            spacing(float): The distance between neighbouring qubits in um.
+            prefix (str): The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
+        """
+        coords = np.array([(x, y) for x in range(columns)
+                           for y in range(rows)], dtype=float) * spacing
+
+        return cls(cls._coords_to_qubits(coords, prefix=prefix))
+
+    @classmethod
+    def square(cls, side, spacing=4, prefix=None):
+        """Initializes the device with the qubits in a square array.
+
+        Args:
+            side (int): Side of the square in number of qubits.
+
+        Keyword args:
+            spacing(float): The distance between neighbouring qubits in um.
+            prefix (str): The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+        """
+        return cls.rectangle(side, side, spacing=spacing, prefix=prefix)
+
+    @classmethod
+    def triangular_lattice(cls, rows, atoms_per_row, spacing=4, prefix=None):
+        """Initializes the device with the qubits in a triangular lattice.
+
+        Initializes the qubits in a triangular lattice pattern, more
+        specifically a triangular lattice with horizontal rows, meaning the
+        triangles are pointing up and down.
+
+        Args:
+            rows (int): Number of rows.
+            atoms_per_row (int): Number of atoms per row.
+
+        Keyword args:
+            spacing(float): The distance between neighbouring qubits in um.
+            prefix (str): The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+        """
+        coords = np.array([(x, y) for x in range(atoms_per_row)
+                           for y in range(rows)], dtype=float)
+        coords[:, 0] += 0.5 * np.mod(coords[:, 1], 2)
+        coords[:, 1] *= np.sqrt(3) / 2
+        coords *= spacing
+
+        return cls(cls._coords_to_qubits(coords, prefix=prefix))
+
+    @staticmethod
+    def _coords_to_qubits(coords, prefix=None):
+        """Centers a coords array and returns the respective qubits dict."""
+        coords -= np.mean(coords, axis=0)      # Centers the array
+        if prefix is not None:
+            pre = str(prefix)
+            return {pre+str(i): pos for i, pos in enumerate(coords)}
+        else:
+            return dict(enumerate(coords))
+
 
 class Chadoq2(PasqalDevice):
     """Chadoq2 device specifications."""

@@ -20,6 +20,11 @@ class Pulse:
     """
 
     def __init__(self, amplitude, detuning, phase, post_phase_shift=0):
+
+        if not (isinstance(amplitude, Waveform) and
+                isinstance(detuning, Waveform)):
+            raise TypeError("'amplitude' and 'detuning' have to be waveforms.")
+
         if detuning.duration != amplitude.duration:
             raise ValueError(
                 "Detuning and amplitude waveforms' durations don't match.")
