@@ -5,7 +5,14 @@ from waveforms import ConstantWaveform
 
 
 def gather_data(seq):
-    """Collects the whole sequence data for plotting."""
+    """Collects the whole sequence data for plotting.
+
+    Args:
+        seq (Sequence): The input sequence of operations on a device.
+
+    Returns:
+        data: The data to plot.
+    """
     # The minimum time axis length is 100 ns
     seq._total_duration = max([seq._last(ch).tf for ch in seq._schedule
                                if seq._schedule[ch]] + [100])
@@ -54,7 +61,14 @@ def gather_data(seq):
 
 
 def draw_sequence(seq):
-    """Draw the entire sequence."""
+    """Draw the entire sequence.
+
+    Args:
+        seq (Sequence): The input sequence of operations on a device.
+
+    Returns:
+        plt.show(): The plot of the sequence.
+    """
 
     def phase_str(phi):
         """Formats a phase value for printing."""
