@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Register:
@@ -13,11 +14,12 @@ class Register:
     def __init__(self, qubits):
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary.")
-        self._qubits = qubits
+        self._ids = list(qubits.keys())
+        self._coords = list(qubits.values())
 
     @property
     def qubits(self):
-        return dict(self._qubits)
+        return dict(zip(self._ids, self._coords))
 
     @classmethod
     def from_coordinates(cls, coords, center=True, prefix=None):
@@ -57,8 +59,8 @@ class Register:
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
         """
-        coords = np.array([(x, y) for x in range(columns)
-                           for y in range(rows)], dtype=float) * spacing
+        coords = np.array([(x, y) for y in range(rows)
+                           for x in range(columns)], dtype=float) * spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
@@ -95,10 +97,54 @@ class Register:
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
-        coords = np.array([(x, y) for x in range(atoms_per_row)
-                           for y in range(rows)], dtype=float)
+        coords = np.array([(x, y) for y in range(rows)
+                           for x in range(atoms_per_row)], dtype=float)
         coords[:, 0] += 0.5 * np.mod(coords[:, 1], 2)
         coords[:, 1] *= np.sqrt(3) / 2
         coords *= spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
+
+    def rotate(self, degrees):
+        """Rotate the array around the origin by the given angle.
+
+        Args:
+            degrees (float): The angle of rotation in degrees.
+        """
+        theta = np.deg2rad(degrees)
+        rot = np.array([[np.cos(theta), -np.sin(theta)],
+                        [np.sin(theta), np.cos(theta)]])
+        self._coords = [rot @ v for v in self._coords]
+
+
+    def draw(self, with_labels=True):
+        """Draws the entire register.
+
+        Keyword args:
+            with_labels(bool, default=True): If True, writes the qubit ID's
+                next to each qubit.
+        """
+        pos = np.array(self._coords)
+        diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
+        diffs[diffs < 9] *= 1.5
+        diffs[diffs < 9] += 2
+        big_side = max(diffs)
+        proportions = diffs / big_side
+        Ls = proportions * min(big_side/4, 10)  # Figsize is, at most, (10,10)
+
+        fig, ax = plt.subplots(figsize=Ls)
+        ax.scatter(pos[:, 0], pos[:, 1], s=30, alpha=0.7,
+                   c='darkgreen')
+        ax.axvline(0, c='grey', alpha=0.5, linestyle=':')
+        ax.axhline(0, c='grey', alpha=0.5, linestyle=':')
+        ax.set_xlabel(r"$\mu m$")
+        ax.set_ylabel(r"$\mu m$")
+        ax.axis('equal')
+        ax.spines['right'].set_color('none')
+        ax.spines['top'].set_color('none')
+
+        if with_labels:
+            for q, coords in zip(self._ids, self._coords):
+                ax.annotate(q, coords, fontsize=12, ha='left', va='bottom')
+
+        plt.show()
