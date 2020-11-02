@@ -4,7 +4,7 @@ import numpy as np
 from collections import namedtuple
 
 from .devices import PasqalDevice
-from .pulses import Pulse
+from .pulse import Pulse
 from .seq_drawer import draw_sequence
 from .utils import validate_duration
 
