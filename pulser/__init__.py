@@ -2,6 +2,6 @@
 
 from .register import Register
 
-from .pulses import Pulse
+from .pulse import Pulse
 
-from .sequences import Sequence
+from .sequence import Sequence
