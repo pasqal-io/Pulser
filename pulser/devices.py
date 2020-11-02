@@ -2,8 +2,8 @@ import numpy as np
 from abc import ABC, abstractmethod
 from scipy.spatial.distance import pdist
 
-from channels import Raman, Rydberg
-from register import Register
+from .channels import Raman, Rydberg
+from .register import Register
 
 
 class PasqalDevice(ABC):

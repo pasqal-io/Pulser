@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from waveforms import Waveform, ConstantWaveform
+from .waveforms import Waveform, ConstantWaveform
 
 
 class Pulse:

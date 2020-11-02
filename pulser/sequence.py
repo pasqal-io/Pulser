@@ -3,10 +3,10 @@ import copy
 import numpy as np
 from collections import namedtuple
 
-from devices import PasqalDevice
-from pulses import Pulse
-from seq_drawer import draw_sequence
-from utils import validate_duration
+from .devices import PasqalDevice
+from .pulses import Pulse
+from .seq_drawer import draw_sequence
+from .utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
 TimeSlot = namedtuple('TimeSlot', ['type', 'ti', 'tf', 'targets'])

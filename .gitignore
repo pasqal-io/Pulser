@@ -1,6 +1,7 @@
 $ cat .gitignore
-/.ipynb_checkpoints
+.ipynb_checkpoints
 __pycache__/
 .pytest_cache/
 env-pasqal-qutip/
 .DS_Store
+/*.ipynb
