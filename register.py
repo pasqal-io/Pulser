@@ -13,7 +13,8 @@ class Register:
 
     def __init__(self, qubits):
         if not isinstance(qubits, dict):
-            raise TypeError("The qubits have to be stored in a dictionary.")
+            raise TypeError("The qubits have to be stored in a dictionary "
+                            "matching qubit ids to position coordinates.")
         self._ids = list(qubits.keys())
         self._coords = list(qubits.values())
 
@@ -115,7 +116,6 @@ class Register:
         rot = np.array([[np.cos(theta), -np.sin(theta)],
                         [np.sin(theta), np.cos(theta)]])
         self._coords = [rot @ v for v in self._coords]
-
 
     def draw(self, with_labels=True):
         """Draws the entire register.
