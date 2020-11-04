@@ -55,6 +55,14 @@ class Waveform(ABC):
         new_samples = self.samples + other.samples
         return ArbitraryWaveform(new_samples)
 
+    def __eq__(self, other):
+        if not isinstance(other, Waveform):
+            return False
+        elif self.duration != other.duration:
+            return False
+        else:
+            return np.all(np.isclose(self.samples, other.samples))
+
     def _plot(self, ax, ylabel, color=None):
         ax.set_xlabel('t (ns)')
         ts = np.arange(self.duration)
