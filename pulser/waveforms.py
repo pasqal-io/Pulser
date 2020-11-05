@@ -43,17 +43,9 @@ class Waveform(ABC):
     def __str__(self):
         pass
 
-    def __add__(self, other):
-        if not isinstance(other, Waveform):
-            raise TypeError("Can't add a waveform to an object of "
-                            "type {}.".format(type(other)))
-
-        if self.duration != other.duration:
-            raise ValueError("The sum of two waveforms of different durations "
-                             "is ambiguous.")
-
-        new_samples = self.samples + other.samples
-        return ArbitraryWaveform(new_samples)
+    @abstractmethod
+    def __repr__(self):
+        pass
 
     def __eq__(self, other):
         if not isinstance(other, Waveform):
@@ -109,7 +101,7 @@ class CompositeWaveform(Waveform):
         Returns:
             samples(np.ndarray): A numpy array with a value for each time step.
         """
-        return np.concatenate(list(wf.samples for wf in self._waveforms))
+        return np.concatenate([wf.samples for wf in self._waveforms])
 
     @property
     def waveforms(self):
@@ -178,6 +170,9 @@ class ArbitraryWaveform(Waveform):
 
     def __str__(self):
         return 'Arbitrary'
+
+    def __repr__(self):
+        return f'ArbitraryWaveform({self.duration} ns, {self.samples!r})'
 
 
 class ConstantWaveform(Waveform):
@@ -299,7 +294,7 @@ class GaussianWaveform(Waveform):
 
     def __init__(self, duration, max_val, sigma, offset=0):
         super().__init__(duration)
-        if max_val < offset:
+        if max_val <= offset:
             raise ValueError("Can't accept a maximum value that is smaller"
                              " than the offset of a gaussian waveform.")
         if sigma <= 0:
@@ -330,6 +325,6 @@ class GaussianWaveform(Waveform):
         return "Gaussian" + args
 
     def __repr__(self):
-        args = (f"({self._duration} ns, max={self._top:.3g} MHz, " +
-                f"offset={self._offset:.3g} MHz, sigma={self._sigma:.4g} ns)")
+        args = (f"({self._duration} ns, max={self._top+self._offset:.3g} MHz," +
+                f" offset={self._offset:.3g} MHz, sigma={self._sigma:.4g} ns)")
         return "GaussianWaveform" + args
