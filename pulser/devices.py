@@ -26,7 +26,7 @@ class PasqalDevice(ABC):
             raise TypeError("The qubits must be a in a dict or Register class "
                             "instance.")
 
-        self.check_array(list(register.qubits.values()))
+        self._check_array(list(register.qubits.values()))
         self._register = register
 
     @property
@@ -75,7 +75,7 @@ class PasqalDevice(ABC):
         """The dictionary of qubit names and their positions."""
         return self._register.qubits
 
-    def check_array(self, atoms):
+    def _check_array(self, atoms):
         if len(atoms) > self.max_atom_num:
             raise ValueError("Too many atoms in the array, accepts at most"
                              "{} atoms.".format(self.max_atom_num))

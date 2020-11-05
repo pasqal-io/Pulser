@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 
 from pulser.channels import Raman, Rydberg
 
