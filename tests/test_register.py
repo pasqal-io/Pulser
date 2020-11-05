@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import matplotlib.pyplot as plt
+from unittest.mock import patch
 
 from pulser import Register
 
@@ -42,6 +42,7 @@ def test_rotation():
     assert np.all(np.isclose(reg._coords, coords_))
 
 
-# def test_drawing():
-#     reg = Register.triangular_lattice(3, 8)
-#     reg.draw()
+def test_drawing():
+    reg = Register.triangular_lattice(3, 8)
+    with patch('matplotlib.pyplot.show'):
+        reg.draw()
