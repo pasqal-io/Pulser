@@ -15,6 +15,8 @@ def test_init():
     reg = Register(qubits)
     dev2 = Chadoq2(reg)
     assert dev1.qubits == dev2.qubits
+    assert isinstance(dev1.channels, dict)
+    assert dev2.supported_bases == {'digital', 'ground-rydberg'}
 
 
 def test_check_array():
