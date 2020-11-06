@@ -161,7 +161,7 @@ def draw_sequence(seq):
             if coords == 'initial':
                 x = t_min + t[-1]*0.005
                 target_regions.append([0, targets])
-                if seq._channels[ch].addressing == 'global':
+                if seq._channels[ch].addressing == 'Global':
                     a.text(x, amp_top*0.98, "GLOBAL", fontsize=13,
                            rotation=90, ha='left', va='top', bbox=q_box)
                 else:
