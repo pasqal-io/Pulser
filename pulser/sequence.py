@@ -2,6 +2,7 @@ import warnings
 import copy
 import numpy as np
 from collections import namedtuple
+from collections.abc import Iterable
 
 from .devices import PasqalDevice
 from .pulse import Pulse
@@ -99,7 +100,7 @@ class Sequence:
             self._last_used[ch.basis] = {q: 0 for q in self._qids}
 
         if ch.addressing == 'Global':
-            self._schedule[name].append(TimeSlot('target', -1, 0, self._qids))
+            self._add_to_schedule(name, TimeSlot('target', -1, 0, self._qids))
         elif initial_target is not None:
             self.target(initial_target, name)
 
@@ -179,14 +180,20 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (set(str)): The new target for this channel.
+            qubits (hashable, iterable): The new target for this channel. Must
+                correspond to a qubit ID in device or an iterable of qubit IDs,
+                when multi-qubit adressing is possible.
             channel (str): The channel's name provided when declared.
         """
 
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
 
-        qs = {qubits}
+        if isinstance(qubits, Iterable) and not isinstance(qubits, str):
+            qs = set(qubits)
+        else:
+            qs = {qubits}
+
         if not qs.issubset(self._qids):
             raise ValueError("The given qubits have to belong to the device.")
 
@@ -238,12 +245,12 @@ class Sequence:
         """
         available = self._device.supported_bases
         if basis not in available:
-            raise ValueError(f"The basis '{basis}' is not support by the "
+            raise ValueError(f"The basis '{basis}' is not supported by the "
                              "selected device. The available options are: "
                              + ", ".join(list(available)))
 
         if hasattr(self, '_measurement'):
-            raise ValueError("The sequence has already been measured.")
+            raise SystemError("The sequence has already been measured.")
 
         self._measurement = basis
 
@@ -262,7 +269,7 @@ class Sequence:
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
-        if phi == 0:
+        if phi % (2*np.pi) == 0:
             warnings.warn("A phase shift of 0 is meaningless, "
                           "it will be ommited.")
             return
@@ -318,8 +325,8 @@ class Sequence:
 
     def _add_to_schedule(self, channel, timeslot):
         if hasattr(self, "_measurement"):
-            raise ValueError("The sequence has already been measured. "
-                             "Nothing more can be added.")
+            raise SystemError("The sequence has already been measured. "
+                              "Nothing more can be added.")
         self._schedule[channel].append(timeslot)
 
     def _last(self, channel):

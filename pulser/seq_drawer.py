@@ -187,8 +187,9 @@ def draw_sequence(seq):
                     x = tf + t[-1]*0.01*(wrd_len+1)
                     a.text(x, max_amp*1.1, msg, ha='left',
                            fontsize=12, bbox=ph_box)
-        # Terminate the last open region
-        target_regions[-1].append(t[-1])
+        # Terminate the last open regions
+        if target_regions:
+            target_regions[-1].append(t[-1])
         for start, targets, end in target_regions:
             q = targets[0]  # All targets have the same ref, so we pick
             ref = seq._phase_ref[basis][q]
