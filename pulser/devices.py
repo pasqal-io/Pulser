@@ -26,7 +26,7 @@ class PasqalDevice(ABC):
             raise TypeError("The qubits must be a in a dict or Register class "
                             "instance.")
 
-        self.check_array(list(register.qubits.values()))
+        self._check_array(list(register.qubits.values()))
         self._register = register
 
     @property
@@ -75,7 +75,7 @@ class PasqalDevice(ABC):
         """The dictionary of qubit names and their positions."""
         return self._register.qubits
 
-    def check_array(self, atoms):
+    def _check_array(self, atoms):
         if len(atoms) > self.max_atom_num:
             raise ValueError("Too many atoms in the array, accepts at most"
                              "{} atoms.".format(self.max_atom_num))
@@ -127,7 +127,7 @@ class Chadoq2(PasqalDevice):
     @property
     def channels(self):
         """Channels available on the device."""
-        return {'rydberg_global': Rydberg('global', 50, 2.5),
-                'rydberg_local': Rydberg('local', 50, 10, retarget_time=100),
-                'rydberg_local2': Rydberg('local', 50, 10, retarget_time=100),
-                'raman_local': Raman('local', 50, 10, retarget_time=100)}
+        return {'rydberg_global': Rydberg.Global(50, 2.5),
+                'rydberg_local': Rydberg.Local(50, 10, 100),
+                'rydberg_local2': Rydberg.Local(50, 10, 100),
+                'raman_local': Raman.Local(50, 10, 100)}

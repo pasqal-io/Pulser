@@ -5,3 +5,4 @@ __pycache__/
 env-pasqal-qutip/
 .DS_Store
 /*.ipynb
+*.coverage

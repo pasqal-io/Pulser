@@ -2,6 +2,7 @@ import warnings
 import copy
 import numpy as np
 from collections import namedtuple
+from collections.abc import Iterable
 
 from .devices import PasqalDevice
 from .pulse import Pulse
@@ -74,7 +75,7 @@ class Sequence:
             channel_id (str): How the channel is identified in the device.
 
         Keyword Args:
-            initial_target (set, default=None): For 'local' adressing channels
+            initial_target (set, default=None): For 'Local' adressing channels
                 where a target has to be defined, it can be done when the
                 channel is first declared. If left as None, this will have to
                 be done manually as the first addition to a channel.
@@ -98,8 +99,8 @@ class Sequence:
             self._phase_ref[ch.basis] = {q: PhaseTracker(0) for q in self._qids}
             self._last_used[ch.basis] = {q: 0 for q in self._qids}
 
-        if ch.addressing == 'global':
-            self._schedule[name].append(TimeSlot('target', -1, 0, self._qids))
+        if ch.addressing == 'Global':
+            self._add_to_schedule(name, TimeSlot('target', -1, 0, self._qids))
         elif initial_target is not None:
             self.target(initial_target, name)
 
@@ -176,24 +177,31 @@ class Sequence:
             self.phase_shift(pulse.post_phase_shift, *last.targets, basis=basis)
 
     def target(self, qubits, channel):
-        """Changes the target qubit of a 'local' channel.
+        """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (set(str)): The new target for this channel.
+            qubits (hashable, iterable): The new target for this channel. Must
+                correspond to a qubit ID in device or an iterable of qubit IDs,
+                when multi-qubit adressing is possible.
             channel (str): The channel's name provided when declared.
         """
 
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
 
-        qs = {qubits}
+        if isinstance(qubits, Iterable) and not isinstance(qubits, str):
+            qs = set(qubits)
+        else:
+            qs = {qubits}
+
         if not qs.issubset(self._qids):
             raise ValueError("The given qubits have to belong to the device.")
 
-        if self._channels[channel].addressing != 'local':
-            raise ValueError("Can only choose target of 'local' channels.")
-        elif len(qs) != 1:
-            raise ValueError("This channel takes only a single target qubit.")
+        if self._channels[channel].addressing != 'Local':
+            raise ValueError("Can only choose target of 'Local' channels.")
+        elif len(qs) > self._channels[channel].max_targets:
+            raise ValueError("This channel can target at most {} qubits at a "
+                             "time".format(self._channels[channel].max_targets))
 
         basis = self._channels[channel].basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
@@ -237,12 +245,12 @@ class Sequence:
         """
         available = self._device.supported_bases
         if basis not in available:
-            raise ValueError(f"The basis '{basis}' is not support by the "
+            raise ValueError(f"The basis '{basis}' is not supported by the "
                              "selected device. The available options are: "
                              + ", ".join(list(available)))
 
         if hasattr(self, '_measurement'):
-            raise ValueError("The sequence has already been measured.")
+            raise SystemError("The sequence has already been measured.")
 
         self._measurement = basis
 
@@ -261,7 +269,7 @@ class Sequence:
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
-        if phi == 0:
+        if phi % (2*np.pi) == 0:
             warnings.warn("A phase shift of 0 is meaningless, "
                           "it will be ommited.")
             return
@@ -317,8 +325,8 @@ class Sequence:
 
     def _add_to_schedule(self, channel, timeslot):
         if hasattr(self, "_measurement"):
-            raise ValueError("The sequence has already been measured. "
-                             "Nothing more can be added.")
+            raise SystemError("The sequence has already been measured. "
+                              "Nothing more can be added.")
         self._schedule[channel].append(timeslot)
 
     def _last(self, channel):
