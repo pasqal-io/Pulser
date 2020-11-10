@@ -5,7 +5,7 @@
 .idea/
 .coverage
 *.dat
-*.ipynp
+/*.ipynb
 *.ipynb_checkpoints
 _build
 __pycache__/
