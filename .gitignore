@@ -1,8 +1,16 @@
-$ cat .gitignore
-.ipynb_checkpoints
-__pycache__/
-.pytest_cache/
-env-pasqal-qutip/
 .DS_Store
-/*.ipynb
-*.coverage
+.vscode
+.python-version
+.pytest_cache/
+.idea/
+.coverage
+*.dat
+*.ipynp
+*.ipynb_checkpoints
+_build
+__pycache__/
+build/
+docs/build/
+dist/
+env-pasqal-qutip/
+pulser.egg-info/
