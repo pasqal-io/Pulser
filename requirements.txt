@@ -4,6 +4,7 @@ scipy
 
 # tests
 pytest
+pytest-cov
 
 # tutorials
 notebook
