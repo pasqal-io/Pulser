@@ -1,0 +1,10 @@
+matplotlib
+numpy
+scipy
+
+# tests
+pytest
+
+# tutorials
+notebook
+qutip
