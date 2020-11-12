@@ -1,6 +1,7 @@
-import pytest
-import numpy as np
 from unittest.mock import patch
+
+import numpy as np
+import pytest
 
 from pulser import Pulse
 from pulser.waveforms import ConstantWaveform, BlackmanWaveform, RampWaveform

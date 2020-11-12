@@ -1,7 +1,7 @@
 """A pulse-level composer for Pasqal's quantum devices."""
 
-from .register import Register
+from pulser.pulse import Pulse
 
-from .pulse import Pulse
+from pulser.register import Register
 
-from .sequence import Sequence
+from pulser.sequence import Sequence
