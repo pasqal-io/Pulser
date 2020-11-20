@@ -152,7 +152,7 @@ class Simulation:
                 self._operators['sigma_gr'], qubit)
 
             global_rg += self.build_local_operator(
-                self._operators['sigma_gr'], qubit)
+                self._operators['sigma_rg'], qubit)
 
             global_rr += self.build_local_operator(
                 self._operators['sigma_rr'], qubit)
