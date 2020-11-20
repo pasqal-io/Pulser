@@ -151,6 +151,9 @@ class Simulation:
             global_gr += self.build_local_operator(
                 self._operators['sigma_gr'], qubit)
 
+            global_rg += self.build_local_operator(
+                self._operators['sigma_gr'], qubit)
+
             global_rr += self.build_local_operator(
                 self._operators['sigma_rr'], qubit)
 
