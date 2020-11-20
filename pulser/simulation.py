@@ -104,16 +104,11 @@ class Simulation:
         g = self._basis['g']
         h = self._basis['h']
         self._operators = {'I': qutip.qeye(3),
+                           'sigma_gr': g * r.dag(),
+                           'sigma_rg': g.dag() * r,
 
-                           'sigma_gr': r * g.dag() + g * r.dag(),
-                           # 'sigma_gr': r * g.dag(),
-                           'rydY': -1j * r * g.dag() + 1j * g * r.dag(),
-                           'rydZ': r * r.dag() - g * g.dag(),
-
-                           'sigma_hg': h * g.dag() + g * h.dag(),
-                           # 'sigma_hg': g * h.dag(),
-                           'excY': 1j * h * g.dag() - 1j * g * h.dag(),
-                           'excZ': -h * h.dag() + g * g.dag(),
+                           'sigma_hg': h * g.dag(),
+                           'sigma_gh': h.dag() * g,
 
                            'sigma_rr': r * r.dag(),
                            'sigma_gg': g * g.dag(),
@@ -149,16 +144,14 @@ class Simulation:
                     self._operators['sigma_rr'], qubit1, qubit2)
 
         # Rydberg(Global) terms
-        global_X = 0
-        global_Y = 0
-        global_N = 0
+        global_gr = 0
+        global_rr = 0
         for qubit in self._reg.qubits:
             # Rotation in the Ground-Rydberg basis
-            global_X += self.build_local_operator(
+            global_gr += self.build_local_operator(
                 self._operators['sigma_gr'], qubit)
-            global_Y += self.build_local_operator(
-                self._operators['rydY'], qubit)
-            global_N += self.build_local_operator(
+
+            global_rr += self.build_local_operator(
                 self._operators['sigma_rr'], qubit)
 
         # Build Hamiltonian
@@ -167,11 +160,13 @@ class Simulation:
         self._H = qutip.QobjEvo([VdW])  # Time independent
 
         # Calculate once global channel coefficient arrays
-        global_X_coeff = self._global_samples['amp'] * \
-            np.cos(self._global_samples['phase'])
-        global_Y_coeff = - \
-            self._global_samples['amp'] * np.sin(self._global_samples['phase'])
-        global_N_coeff = self._global_samples['det']
+        global_gr_coeff = self._global_samples['amp'] * \
+            np.exp(-1j * self._global_samples['phase'])
+
+        global_rg_coeff = self._global_samples['amp'] * \
+            np.exp(1j * self._global_samples['phase'])
+
+        global_n_coeff = self._global_samples['det']
 
         # Add Local terms taken from 'local' channel
         for qubit in self._reg.qubits:
@@ -186,11 +181,11 @@ class Simulation:
                 [
                     # Include Global Channel and Local Rydberg Channels:
                     [self.build_local_operator(
-                        self._operators['sigma_gr'], qubit), global_X_coeff + amplitude * np.cos(phase)],
+                        self._operators['sigma_gr'], qubit), global_gr_coeff + amplitude * np.exp(-1j * phase)],
                     [self.build_local_operator(
-                        self._operators['rydY'], qubit), global_Y_coeff - amplitude * np.sin(phase)],
+                        self._operators['sigma_rg'], qubit), global_rg_coeff + amplitude * np.exp(1j * phase)],
                     [self.build_local_operator(
-                        self._operators['sigma_rr'], qubit), global_N_coeff + detuning]
+                        self._operators['sigma_rr'], qubit), global_n_coeff + detuning]
                 ],
                 tlist=self._times)
 
@@ -202,11 +197,11 @@ class Simulation:
             self._H += qutip.QobjEvo(
                 [
                     [self.build_local_operator(
-                        self._operators['sigma_hg'], qubit), amplitude * np.cos(phase)],
+                        self._operators['sigma_hg'], qubit), amplitude * np.exp(-1j * phase)],
                     [self.build_local_operator(
-                        self._operators['excY'], qubit), -amplitude * np.sin(phase)],
+                        self._operators['sigma_gh'], qubit), amplitude * np.exp(1j * phase)],
                     [self.build_local_operator(
-                        self._operators['excZ'], qubit), detuning]
+                        self._operators['sigma_hh'], qubit), detuning]
                 ],
                 tlist=self._times)
 
