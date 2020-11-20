@@ -145,6 +145,7 @@ class Simulation:
 
         # Rydberg(Global) terms
         global_gr = 0
+        global_rg = 0
         global_rr = 0
         for qubit in self._reg.qubits:
             # Rotation in the Ground-Rydberg basis
