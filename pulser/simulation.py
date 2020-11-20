@@ -105,10 +105,10 @@ class Simulation:
         h = self._basis['h']
         self._operators = {'I': qutip.qeye(3),
                            'sigma_gr': g * r.dag(),
-                           'sigma_rg': g.dag() * r,
+                           'sigma_rg': r * g.dag(),
 
                            'sigma_hg': h * g.dag(),
-                           'sigma_gh': h.dag() * g,
+                           'sigma_gh': g * h.dag(),
 
                            'sigma_rr': r * r.dag(),
                            'sigma_gg': g * g.dag(),
