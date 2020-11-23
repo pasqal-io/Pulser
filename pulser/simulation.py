@@ -26,10 +26,8 @@ class Simulation:
         self._define_sample_dicts()
         self._extract_samples()
 
-        self._construct_hamiltonian()
-
-        self._initial_state = qutip.tensor(
-            [qutip.basis(3, 0) for _ in range(self._L)])
+        self._H = self._construct_hamiltonian()
+        self._initial_state = qutip.tensor([qutip.basis(self._dim) for _ in range(self._L)])
 
     def _make_sample_dict(self):
         return {'amp': np.zeros(self._tot_duration),
@@ -97,15 +95,18 @@ class Simulation:
     def _create_basis(self,basis):
         """Creates the basis elements"""
         if basis == 'all':
+            self._dim = 3
             self._basis = {'r': qutip.basis(3, 0),
                            'g': qutip.basis(3, 1),
                            'h': qutip.basis(3, 2)
                            }
         if basis == 'ryd':
+            self._dim = 2
             self._basis = {'r': qutip.basis(2, 0),
                            'g': qutip.basis(2, 1)
                            }
         if basis == 'digital':
+            self._dim = 2
             self._basis = {'g': qutip.basis(2, 0),
                            'h': qutip.basis(2, 1)
                            }
@@ -143,9 +144,10 @@ class Simulation:
                                }
 
     # Define Operators
-    def build_local_operator(self, operator, *qubit_ids):
+
+    def _build_local_operator(self, operator, *qubit_ids):
         """
-        Returns a local gate at atoms in positions given by qubit_ids
+        Returns a local gate at atoms in positions given by qubit_id
         """
         if len(set(qubit_ids)) < len(qubit_ids):
             raise ValueError("Duplicate atom ids in argument list")
@@ -156,17 +158,34 @@ class Simulation:
             temp[pos] = operator
         return qutip.tensor(temp)
 
-    def _sum_local_operator(self, operator):
+    def _build_array_local_operators(self,operator):
         """
-        Returns a QObj for the sum of 'operator' over the entire array
+        Returns an array with 'operator' acting nontrivially on each qubit position
         """
-        ans = 0
-        idd = [qutip.qeye(operator.shape[0]) for _ in range(self._L)]
-        for pos in range(self._L):
-            temp = idd.copy()
-            temp[pos] = operator
-            ans += qutip.tensor(temp)
-        return ans
+        op_array = []
+        for qubit in self._reg.qubits:
+            op_array.append(self._build_local_operator(operator,qubit))
+        return op_array
+
+    def _build_operator_array_dict(self):
+        if self.addressing['digital']:
+            if self.addressing['global'] or self.addressing['local_ryd']:
+                return {
+                'sigma_gr' : self._build_array_local_operators(self._operators['sigma_gr']),
+                'sigma_rr' : self._build_array_local_operators(self._operators['sigma_rr']),
+                'sigma_hg' : self._build_array_local_operators(self._operators['sigma_hg']),
+                'sigma_hh' : self._build_array_local_operators(self._operators['sigma_hh'])
+                }
+            else: # Only digital basis
+                return {
+                'sigma_hg' : self._build_array_local_operators(self._operators['sigma_hg']),
+                'sigma_hh' : self._build_array_local_operators(self._operators['sigma_hh'])
+                }
+        else: # Only rydberg basis
+            return {
+            'sigma_gr' : self._build_array_local_operators(self._operators['sigma_gr']),
+            'sigma_rr' : self._build_array_local_operators(self._operators['sigma_rr'])
+            }
 
     def _make_VdW_term(self):
         """
@@ -178,7 +197,7 @@ class Simulation:
             R = np.sqrt(
                 np.sum((self._reg.qubits[qubit1] - self._reg.qubits[qubit2])**2))
 
-            VdW += (1e5 / R**6) * 0.5 * self.build_local_operator(
+            VdW += (1e5 / R**6) * 0.5 * self._build_local_operator(
                 self._operators['sigma_rr'], qubit1, qubit2)
         return VdW
 
@@ -196,8 +215,9 @@ class Simulation:
                 global_gr_coeff, global_n_coeff = global_samples
 
                 # Build global Rydberg operators
-                global_gr = self._sum_local_operator(self._operators['sigma_gr'])
-                global_rr = self._sum_local_operator(self._operators['sigma_rr'])
+                global_gr = sum(self._array_operators['sigma_gr'])
+                global_rr = sum(self._array_operators['sigma_rr'])
+
             else:
                 global_gr_coeff, global_n_coeff = 0, 0
 
@@ -210,10 +230,8 @@ class Simulation:
             rotation_term = qutip.QobjEvo(
                 [
                     # Include Global Channel and Local Rydberg Channels:
-                    [self.build_local_operator(
-                        self._operators['sigma_gr'], qubit), global_gr_coeff+gr_coeff],
-                    [0.5 * self.build_local_operator(
-                        self._operators['sigma_rr'], qubit), global_n_coeff+n_coeff]
+                    [self._array_operators['sigma_gr'][list(self._reg.qubits).index(qubit)], global_gr_coeff+gr_coeff],
+                    [0.5 * self._array_operators['sigma_gr'][list(self._reg.qubits).index(qubit)], global_n_coeff+n_coeff]
                 ],
                 tlist=self._times)
 
@@ -225,10 +243,8 @@ class Simulation:
             # Digital basis
             rotation_term = qutip.QobjEvo(
                 [
-                    [self.build_local_operator(
-                        self._operators['sigma_hg'], qubit), hg_coeff],
-                    [0.5 * self.build_local_operator(
-                        self._operators['sigma_hh'], qubit), n_coeff]
+                    [self._array_operators['sigma_hg'][list(self._reg.qubits).index(qubit)], hg_coeff],
+                    [0.5 * self._array_operators['sigma_hh'][list(self._reg.qubits).index(qubit)], n_coeff]
                 ],
                 tlist=self._times)
 
@@ -243,10 +259,12 @@ class Simulation:
 
                 self._create_basis('digital')
                 self._create_operators('digital')
+                self._array_operators = self._build_operator_array_dict()
 
-                self._H = 0
+
+                H = 0
                 for qubit in self._reg.qubits:
-                    self._H += self._make_rotation_term('digital',
+                    H += self._make_rotation_term('digital',
                                                         qubit,
                                                         local_samples = self._local_raman_samples[qubit]
                                                         )
@@ -254,9 +272,11 @@ class Simulation:
 
                 self._create_basis('all')
                 self._create_operators('all')
+                self._array_operators = self._build_operator_array_dict()
+
 
                 # Van der Waals Interaction Terms
-                self._H = qutip.QobjEvo( [self._make_VdW_term()] ) # Time independent
+                H = qutip.QobjEvo( [self._make_VdW_term()] ) # Time independent
 
                 if self.addressing['global']:
                     # Calculate once global channel coefficient arrays
@@ -266,45 +286,48 @@ class Simulation:
                     if self.addressing['local_ryd']:   #Rydberg Global + Rydberg Local + Digital
                         # Add Local terms taken from 'local' channel
                         for qubit in self._reg.qubits:
-                            self._H += self._make_rotation_term('rydberg',
-                                                                qubit,
-                                                                local_samples = self._local_ryd_samples[qubit],
-                                                                global_samples = [global_gr_coeff,global_n_coeff]
-                                                                )
-                            self._H += self._make_rotation_term('digital',
-                                                                qubit,
-                                                                local_samples = self._local_raman_samples[qubit],
-                                                                )
+                            H += self._make_rotation_term('rydberg',
+                                                            qubit,
+                                                            local_samples = self._local_ryd_samples[qubit],
+                                                            global_samples = [global_gr_coeff,global_n_coeff]
+                                                          )
+                            H += self._make_rotation_term('digital',
+                                                            qubit,
+                                                            local_samples = self._local_raman_samples[qubit],
+                                                         )
                     else: #Rydberg Global + Digital
+                        H += self._make_rotation_term('rydberg',
+                                                        global_samples = [global_gr_coeff,global_n_coeff]
+                                                     )
+
                         for qubit in self._reg.qubits:
-                            self._H += self._make_rotation_term('rydberg',
-                                                                qubit,
-                                                                global_samples = [global_gr_coeff,global_n_coeff]
-                                                                )
-                            self._H += self._make_rotation_term('digital',
+                            H += self._make_rotation_term('digital',
                                                                 qubit,
                                                                 local_samples = self._local_raman_samples[qubit],
                                                                 )
                 else: #Rydberg Local + Digital
-                    self._H += self._make_rotation_term('rydberg',
-                                                        qubit,
-                                                        local_samples = self._local_ryd_samples[qubit],
-                                                        )
-                    self._H += self._make_rotation_term('digital',
-                                                        qubit,
-                                                        local_samples = self._local_raman_samples[qubit],
-                                                        )
+                    for qubit in self._reg.qubits:
+                        H += self._make_rotation_term('rydberg',
+                                                            qubit,
+                                                            local_samples = self._local_ryd_samples[qubit],
+                                                            )
+                        H += self._make_rotation_term('digital',
+                                                            qubit,
+                                                            local_samples = self._local_raman_samples[qubit],
+                                                            )
 
         else: # Use only two-level Rydberg basis:
 
             self._create_basis('ryd')
             self._create_operators('ryd')
+            self._array_operators = self._build_operator_array_dict()
 
-            self._H = qutip.QobjEvo( [self._make_VdW_term()] )
+
+            H = qutip.QobjEvo( [self._make_VdW_term()] )
 
             if not self.addressing['global']: #Only Local
                 for qubit in self._reg.qubits:
-                    self._H += self._make_rotation_term('rydberg',
+                    H += self._make_rotation_term('rydberg',
                                                         qubit,
                                                         local_samples = self._local_ryd_samples[qubit]
                                                         )
@@ -330,17 +353,22 @@ class Simulation:
                                                         local_samples = self._local_ryd_samples[qubit],
                                                         global_samples = [global_gr_coeff,global_n_coeff]
                                                         )
-        self._H = self._H + (self._H).dag()
+
+        return H + H.dag()
 
     # Run Simulation Evolution using Qutip
-    def run(self, observable, plot=True):
+    def run(self, observable=None, plot=True):
         """
         Simulates the sequence with the predefined observable
         """
-        result = qutip.sesolve(self._H, self._initial_state, self._times, [
-                               observable])  # Without observables, we get the output state
-        self.data = result.expect[0]
+        if observable:
+            result = qutip.sesolve(self._H, self._initial_state, self._times, [
+                                   observable])  # With observables, we get their expectation value
+            self.output = result.expect[0]
+        else:
+            result = qutip.sesolve(self._H, self._initial_state, self._times)  # Without observables, we get the output state
+            self.output = result.states[-1] # Get final state of evolution
 
         if plot:
-            plt.plot(self._times, self.data, label=f"Observable")
+            plt.plot(self._times, self.output, label=f"Observable")
             plt.legend()
