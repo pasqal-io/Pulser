@@ -105,11 +105,7 @@ class Simulation:
         h = self._basis['h']
         self._operators = {'I': qutip.qeye(3),
                            'sigma_gr': g * r.dag(),
-                           'sigma_rg': r * g.dag(),
-
                            'sigma_hg': h * g.dag(),
-                           'sigma_gh': g * h.dag(),
-
                            'sigma_rr': r * r.dag(),
                            'sigma_gg': g * g.dag(),
                            'sigma_hh': h * h.dag()
@@ -139,21 +135,17 @@ class Simulation:
         for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
             R = np.sqrt(
                 np.sum((self._reg.qubits[qubit1] - self._reg.qubits[qubit2])**2))
-            VdW += (1e5 / R**6) * \
-                self.build_local_operator(
-                    self._operators['sigma_rr'], qubit1, qubit2)
+
+            VdW += (1e5 / R**6) * 0.5 * self.build_local_operator(
+                self._operators['sigma_rr'], qubit1, qubit2)
 
         # Rydberg(Global) terms
         global_gr = 0
-        global_rg = 0
         global_rr = 0
         for qubit in self._reg.qubits:
             # Rotation in the Ground-Rydberg basis
             global_gr += self.build_local_operator(
                 self._operators['sigma_gr'], qubit)
-
-            global_rg += self.build_local_operator(
-                self._operators['sigma_rg'], qubit)
 
             global_rr += self.build_local_operator(
                 self._operators['sigma_rr'], qubit)
@@ -166,9 +158,6 @@ class Simulation:
         # Calculate once global channel coefficient arrays
         global_gr_coeff = self._global_samples['amp'] * \
             np.exp(-1j * self._global_samples['phase'])
-
-        global_rg_coeff = self._global_samples['amp'] * \
-            np.exp(1j * self._global_samples['phase'])
 
         global_n_coeff = self._global_samples['det']
 
@@ -186,9 +175,7 @@ class Simulation:
                     # Include Global Channel and Local Rydberg Channels:
                     [self.build_local_operator(
                         self._operators['sigma_gr'], qubit), global_gr_coeff + amplitude * np.exp(-1j * phase)],
-                    [self.build_local_operator(
-                        self._operators['sigma_rg'], qubit), global_rg_coeff + amplitude * np.exp(1j * phase)],
-                    [self.build_local_operator(
+                    [0.5 * self.build_local_operator(
                         self._operators['sigma_rr'], qubit), global_n_coeff + detuning]
                 ],
                 tlist=self._times)
@@ -202,12 +189,11 @@ class Simulation:
                 [
                     [self.build_local_operator(
                         self._operators['sigma_hg'], qubit), amplitude * np.exp(-1j * phase)],
-                    [self.build_local_operator(
-                        self._operators['sigma_gh'], qubit), amplitude * np.exp(1j * phase)],
-                    [self.build_local_operator(
+                    [0.5 * self.build_local_operator(
                         self._operators['sigma_hh'], qubit), detuning]
                 ],
                 tlist=self._times)
+        self._H = self._H + (self._H).dag()
 
     # Run Simulation Evolution using Qutip
     def run(self, observable, plot=True):
