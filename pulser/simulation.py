@@ -18,8 +18,8 @@ class Simulation:
         self._seq = sequence
         self._reg = sequence._device._register
         self._L = len(self._reg.qubits)
-        self._tot_duration = max(
-            [self._seq._last(ch).tf for ch in self._seq._schedule])
+        #self._tot_duration = max([self._seq._last(ch).tf for ch in self._seq._schedule])
+        self._tot_duration = self._seq.current_duration() # Involves adding a method in sequence.py
         self._times = np.arange(self._tot_duration, dtype=np.double)
         self.addressing = {'global' : False, 'local_ryd' : False, 'digital' : False}
 
@@ -27,10 +27,9 @@ class Simulation:
         self._extract_samples()
 
         self._H = self._construct_hamiltonian()
-        self._initial_state = qutip.tensor([qutip.basis(self._dim) for _ in range(self._L)])
 
     def _make_sample_dict(self):
-        return {'amp': np.zeros(self._tot_duration),
+        return {'amp': np.zeros(self._tot_duration), #Duration includes retargeting, delays, etc.
                 'det': np.zeros(self._tot_duration),
                 'phase': np.zeros(self._tot_duration)}
 
@@ -45,10 +44,10 @@ class Simulation:
         for qubit in self._reg.qubits:
             self._local_raman_samples[qubit] = self._make_sample_dict()
 
-    def _record_samples_from_slot(self, slot, dictionary):
-        dictionary['amp'][slot.ti:slot.tf] = slot.type.amplitude.samples
-        dictionary['det'][slot.ti:slot.tf] = slot.type.detuning.samples
-        dictionary['phase'][slot.ti:slot.tf] = slot.type.phase
+    def _record_samples_from_slot(self, slot, samples_dict):
+        samples_dict['amp'][slot.ti:slot.tf] = slot.type.amplitude.samples
+        samples_dict['det'][slot.ti:slot.tf] = slot.type.detuning.samples
+        samples_dict['phase'][slot.ti:slot.tf] = slot.type.phase
         return
 
     def _extract_samples(self):
@@ -70,7 +69,6 @@ class Simulation:
                 if self._seq.declared_channels[channel].basis == 'ground-rydberg':
 
                     self.addressing['local_ryd'] = True
-                    #self._local_ryd_samples = self._make_sample_dict()
 
                     for slot in self._seq._schedule[channel]:
                         if isinstance(slot.type, Pulse):
@@ -138,7 +136,7 @@ class Simulation:
             g = self._basis['g']
             h = self._basis['h']
             self._operators = {'I': qutip.qeye(2),
-                               'sigma_gh': g * h.dag(),
+                               'sigma_hg': h * g.dag(),
                                'sigma_hh': h * h.dag(),
                                'sigma_gg': g * g.dag()
                                }
@@ -171,6 +169,7 @@ class Simulation:
         if self.addressing['digital']:
             if self.addressing['global'] or self.addressing['local_ryd']:
                 return {
+                'sigma_gg' : self._build_array_local_operators(self._operators['sigma_gg']),
                 'sigma_gr' : self._build_array_local_operators(self._operators['sigma_gr']),
                 'sigma_rr' : self._build_array_local_operators(self._operators['sigma_rr']),
                 'sigma_hg' : self._build_array_local_operators(self._operators['sigma_hg']),
@@ -196,8 +195,8 @@ class Simulation:
         for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
             R = np.sqrt(
                 np.sum((self._reg.qubits[qubit1] - self._reg.qubits[qubit2])**2))
-
-            VdW += (1e5 / R**6) * 0.5 * self._build_local_operator(
+            coeff = 1e6 / (R**6)
+            VdW += coeff * 0.5 * self._build_local_operator(
                 self._operators['sigma_rr'], qubit1, qubit2)
         return VdW
 
@@ -213,7 +212,6 @@ class Simulation:
             # Coefficient arrays:
             if global_samples:
                 global_gr_coeff, global_n_coeff = global_samples
-
                 # Build global Rydberg operators
                 global_gr = sum(self._array_operators['sigma_gr'])
                 global_rr = sum(self._array_operators['sigma_rr'])
@@ -231,7 +229,7 @@ class Simulation:
                 [
                     # Include Global Channel and Local Rydberg Channels:
                     [self._array_operators['sigma_gr'][list(self._reg.qubits).index(qubit)], global_gr_coeff+gr_coeff],
-                    [0.5 * self._array_operators['sigma_gr'][list(self._reg.qubits).index(qubit)], global_n_coeff+n_coeff]
+                    [0.5 * self._array_operators['sigma_rr'][list(self._reg.qubits).index(qubit)], global_n_coeff+n_coeff]
                 ],
                 tlist=self._times)
 
@@ -274,7 +272,6 @@ class Simulation:
                 self._create_operators('all')
                 self._array_operators = self._build_operator_array_dict()
 
-
                 # Van der Waals Interaction Terms
                 H = qutip.QobjEvo( [self._make_VdW_term()] ) # Time independent
 
@@ -308,9 +305,10 @@ class Simulation:
                 else: #Rydberg Local + Digital
                     for qubit in self._reg.qubits:
                         H += self._make_rotation_term('rydberg',
-                                                            qubit,
-                                                            local_samples = self._local_ryd_samples[qubit],
-                                                            )
+                                                           qubit,
+                                                           local_samples = self._local_ryd_samples[qubit],
+                                                           )
+
                         H += self._make_rotation_term('digital',
                                                             qubit,
                                                             local_samples = self._local_raman_samples[qubit],
@@ -357,18 +355,27 @@ class Simulation:
         return H + H.dag()
 
     # Run Simulation Evolution using Qutip
-    def run(self, observable=None, plot=True):
+    def run(self, initial_state=None, observable=None, plot=True, all_states=False):
         """
         Simulates the sequence with the predefined observable
         """
-        if observable:
-            result = qutip.sesolve(self._H, self._initial_state, self._times, [
-                                   observable])  # With observables, we get their expectation value
-            self.output = result.expect[0]
+        if initial_state:
+            self._initial_state = initial_state
         else:
-            result = qutip.sesolve(self._H, self._initial_state, self._times)  # Without observables, we get the output state
-            self.output = result.states[-1] # Get final state of evolution
+            # by default, lowest energy state
+            self._initial_state = qutip.tensor([qutip.basis(self._dim,self._dim - 1) for _ in range(self._L)])
 
-        if plot:
-            plt.plot(self._times, self.output, label=f"Observable")
-            plt.legend()
+        if observable:
+            # With observables, we get their expectation value
+            result = qutip.sesolve(self._H, self._initial_state, self._times, [observable])
+            self.output = result.expect[0]
+            if plot:
+                plt.plot(self._times, self.output, label=f"Observable")
+                plt.legend()
+        else:
+            # Without observables, we get the output state
+            result = qutip.sesolve(self._H, self._initial_state, self._times)
+            if all_states:
+                self.output = result.states # Get all states of evolution
+            else:
+                self.output = result.states[-1] # Get only final state of evolution
