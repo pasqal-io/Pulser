@@ -46,11 +46,6 @@ class Sequence:
         return {id: ch for id, ch in self._device.channels.items()
                 if id not in self._taken_channels}
 
-    def current_duration(self):
-        """Returns the current duration of the sequence"""
-        return max([self._last(ch).tf for ch in self._schedule
-                                   if self._schedule[ch]] + [100])
-
     def current_phase_ref(self, qubit, basis='digital'):
         """Returns the current phase reference of a specific qubit in a basis.
 
