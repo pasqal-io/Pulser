@@ -1,70 +1,39 @@
-from abc import ABC, abstractmethod
+from dataclasses import dataclass, InitVar
+from typing import ClassVar, Dict, Union
 
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from pulser.channels import Raman, Rydberg
+from pulser.channels import Channel, Raman, Rydberg
 from pulser.register import Register
 
 
-class PasqalDevice(ABC):
-    """Abstract class for Pasqal Devices.
-
-    Every Pasqal QPU should be defined as a child class of PasqalDevice, thus
-    following this template.
+@dataclass
+class PasqalDevice:
+    """Definition of a Pasqal Device.
 
     Args:
         qubits (dict, Register): A dictionary or a Register class instance with
             all the qubits' names and respective positions in the array.
     """
+    name: ClassVar[str]
+    max_dimensionality: ClassVar[int]
+    max_atom_num: ClassVar[int]
+    max_radial_distance: ClassVar[int]
+    min_atom_distance: ClassVar[int]
+    channels: ClassVar[Dict[str, Channel]]
+    qubits: InitVar[Union[dict, Register]]
 
-    def __init__(self, qubits):
+    def __post_init__(self, qubits):
         if isinstance(qubits, dict):
             register = Register(qubits)
         elif isinstance(qubits, Register):
             register = qubits
         else:
-            raise TypeError("The qubits must be a in a dict or Register class "
-                            "instance.")
+            raise TypeError("The qubits' type must be dict or Register.")
 
         self._check_array(list(register.qubits.values()))
         self._register = register
-
-    @property
-    @abstractmethod
-    def name(self):
-        """The device name."""
-        pass
-
-    @property
-    @abstractmethod
-    def max_dimensionality(self):
-        """Whether it works at most with a 2D or 3D array (returns 2 or 3)."""
-        pass
-
-    @property
-    @abstractmethod
-    def max_atom_num(self):
-        """Maximum number of atoms that can be simultaneously trapped."""
-        pass
-
-    @property
-    @abstractmethod
-    def max_radial_distance(self):
-        """Maximum allowed distance from the center of the array."""
-        pass
-
-    @property
-    @abstractmethod
-    def min_atom_distance(self):
-        """Minimal allowed distance of atoms in the trap (in um)."""
-        pass
-
-    @property
-    @abstractmethod
-    def channels(self):
-        """Channels available on the device."""
-        pass
 
     @property
     def supported_bases(self):
@@ -98,37 +67,21 @@ class PasqalDevice(ABC):
 
 
 class Chadoq2(PasqalDevice):
-    """Chadoq2 device specifications."""
+    """Chadoq2 device specifications.
 
-    @property
-    def name(self):
-        """The device name."""
-        return "Chadoq2"
+    Args:
+        qubits (dict, Register): A dictionary or a Register class instance with
+            all the qubits' names and respective positions in the array.
+    """
 
-    @property
-    def max_dimensionality(self):
-        """Whether it works at most with a 2D or 3D array (returns 2 or 3)."""
-        return 2
-
-    @property
-    def max_atom_num(self):
-        """Maximum number of atoms that can be simultaneously trapped."""
-        return 100
-
-    @property
-    def max_radial_distance(self):
-        """Maximum allowed distance from the center of the array (in um)."""
-        return 50
-
-    @property
-    def min_atom_distance(self):
-        """Minimal allowed distance of atoms in the trap (in um)."""
-        return 4
-
-    @property
-    def channels(self):
-        """Channels available on the device."""
-        return {'rydberg_global': Rydberg.Global(50, 2.5),
-                'rydberg_local': Rydberg.Local(50, 10, 100),
-                'rydberg_local2': Rydberg.Local(50, 10, 100),
-                'raman_local': Raman.Local(50, 10, 100)}
+    name = "Chadoq2"
+    max_dimensionality = 2
+    max_atom_num = 100
+    max_radial_distance = 50
+    min_atom_distance = 4
+    channels = {
+        "rydberg_global": Rydberg.Global(50, 2.5),
+        "rydberg_local": Rydberg.Local(50, 10, 100),
+        "rydberg_local2": Rydberg.Local(50, 10, 100),
+        "raman_local": Raman.Local(50, 10, 100),
+        }
