@@ -4,7 +4,7 @@ import qutip
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .pulse import Pulse
+from pulser import Pulse
 
 print('simulation module...')
 
@@ -20,121 +20,137 @@ class Simulation:
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
                                 )
         self._times = np.arange(self._tot_duration, dtype=np.double)
-        self.addressing = {'global_rydberg': False,
-                           'local_rydberg': False,
-                           'global_raman': False,
-                           'local_raman': False}
 
-        self.active_qubits = self._get_active_qubits()
+        self.samples = {addr: {basis: {}
+                               for basis in ['ground-rydberg', 'digital']}
+                        for addr in ['Global', 'Local']}
+        self.addressing = {addr: {basis: False
+                                  for basis in ['ground-rydberg', 'digital']}
+                           for addr in ['Global', 'Local']}
+
+        # self.active_local = self._get_active_local()
+        self.active_local = self._get_active()
         self._qid_index = {qid: i for i, qid in enumerate(self._reg.qubits)}
+        self._active_qid_index = {
+            basis: {qid: i for i, qid in enumerate(self.active_local[basis])}
+            for basis in ['ground-rydberg', 'digital']}
 
-        self._dim = 3
-        self._basis = {}
-        self._operators = {}
+        self.dim = 3  # Default value
+        self.basis = {}
+        self.operators = {}
+        self._array_operators = {basis: []
+                                 for basis in ['ground-rydberg', 'digital']}
 
         self._extract_samples()
-
+        self._decide_basis()
+        self._create_basis_and_operators()
         self._hamiltonian = self._construct_hamiltonian()
 
-    def _get_active_qubits(self):
-        active = []
-        for basis in self._seq._last_used:
-            for qid, time in self._seq._last_used[basis].items():
-                if time > 0 and qid not in active:
-                    active.append(qid)
+    def _get_active_local(self):
+        active = {basis: set() for basis in ['ground-rydberg', 'digital']}
+        for channel in self._seq.declared_channels:
+            addr = self._seq.declared_channels[channel].addressing
+            basis = self._seq.declared_channels[channel].basis
+            if addr == 'Local':
+                for slot in self._seq._schedule[channel]:
+                    if isinstance(slot.type, Pulse):
+                        active[basis] |= slot.targets
+        return active
+
+    def _get_active(self):
+        active = {basis: set() for basis in ['ground-rydberg', 'digital']}
+        for channel in self._seq.declared_channels:
+            basis = self._seq.declared_channels[channel].basis
+            for slot in self._seq._schedule[channel]:
+                if isinstance(slot.type, Pulse):
+                    active[basis] |= slot.targets
         return active
 
     def _extract_samples(self):
 
-        def _record_samples(channel, samples_dict):
-            for slot in self._seq._schedule[channel]:
-                if isinstance(slot.type, Pulse):
-                    for qubit in slot.targets:  # Allow multiaddressing
-                        samples_dict[qubit]['amp'][slot.ti:slot.tf]\
-                            += slot.type.amplitude.samples
-                        samples_dict[qubit]['det'][slot.ti:slot.tf]\
-                            += slot.type.detuning.samples
-                        samples_dict[qubit]['phase'][slot.ti:slot.tf]\
-                            = slot.type.phase
-
-        def _make_sample_dict():
+        def prepare_dict():
             # Duration includes retargeting, delays, etc.
             return {'amp': np.zeros(self._tot_duration),
                     'det': np.zeros(self._tot_duration),
                     'phase': np.zeros(self._tot_duration)}
 
+        def write_samples(slot, samples_dict):
+            samples_dict['amp'][slot.ti:slot.tf] += slot.type.amplitude.samples
+            samples_dict['det'][slot.ti:slot.tf] += slot.type.detuning.samples
+            samples_dict['phase'][slot.ti:slot.tf] = slot.type.phase
+
         for channel in self._seq.declared_channels:
-            ch_addressing = self._seq.declared_channels[channel].addressing
+            ch_addr = self._seq.declared_channels[channel].addressing
             ch_basis = self._seq.declared_channels[channel].basis
+            self.addressing[ch_addr][ch_basis] = True
 
-            if ch_addressing == 'Global':
-                if ch_basis == 'ground-rydberg':
-                    # Define the samples dictionary the first time
-                    self.addressing['global_rydberg'] = True
-                    if not hasattr(self, '_global_rydberg_samples'):
-                        self._global_rydberg_samples = _make_sample_dict()
-                    _record_samples(channel, self._global_rydberg_samples)
+            if ch_addr == 'Global':
+                if not self.samples[ch_addr][ch_basis]:
+                    self.samples[ch_addr][ch_basis] = prepare_dict()
+                for slot in self._seq._schedule[channel]:
+                    if isinstance(slot.type, Pulse):
+                        samples_dict = self.samples[ch_addr][ch_basis]
+                        write_samples(slot, samples_dict)
 
-                if ch_basis == 'digital':
-                    self.addressing['global_raman'] = True
-                    if not hasattr(self, '_global_raman_samples'):
-                        self._global_raman_samples = _make_sample_dict()
-                    _record_samples(channel, self._global_raman_samples)
+            elif ch_addr == 'Local':
+                if not self.samples[ch_addr][ch_basis]:
+                    self.samples[ch_addr][ch_basis] = \
+                                    {qubit: prepare_dict()
+                                     for qubit in self.active_local[ch_basis]}
+                for slot in self._seq._schedule[channel]:
+                    if isinstance(slot.type, Pulse):
+                        for qubit in slot.targets:  # Allow multiaddressing
+                            samples_dict = self.samples[ch_addr][ch_basis]
+                            write_samples(slot, samples_dict[qubit])
 
-            if ch_addressing == 'Local':
-                if ch_basis == 'ground-rydberg':
-                    self.addressing['local_rydberg'] = True
-                    if not hasattr(self, '_local_rydberg_samples'):
-                        self._local_rydberg_samples =\
-                                {qubit: _make_sample_dict()
-                                    for qubit in self.active_qubits}
-                    _record_samples(channel, self._local_rydberg_samples)
-
-                if ch_basis == 'digital':
-                    self.addressing['local_raman'] = True
-                    if not hasattr(self, '_local_raman_samples'):
-                        self._local_raman_samples =\
-                                {qubit: _make_sample_dict()
-                                    for qubit in self.active_qubits}
-                    _record_samples(channel, self._local_raman_samples)
+    def _decide_basis(self):
+        """Decide appropriate basis."""
+        if not self.addressing['Global']['digital']\
+                and not self.addressing['Local']['digital']:
+            self.basis_name = 'ground-rydberg'
+        elif not self.addressing['Global']['ground-rydberg']\
+                and not self.addressing['Local']['ground-rydberg']:
+            self.basis_name = 'digital'
+        else:
+            self.basis_name = 'all'  # All three states
 
     def _create_basis_and_operators(self):
         """Create the basis elements."""
         if self.basis_name == 'all':
-            self._dim = 3
-            self._basis = {'r': qutip.basis(3, 0),
-                           'g': qutip.basis(3, 1),
-                           'h': qutip.basis(3, 2)
-                           }
-            self._operators = {
+            self.dim = 3
+            self.basis = {'r': qutip.basis(3, 0),
+                          'g': qutip.basis(3, 1),
+                          'h': qutip.basis(3, 2)
+                          }
+            self.operators = {
                     'I': qutip.qeye(3),
-                    'sigma_gr': self._basis['g'] * self._basis['r'].dag(),
-                    'sigma_hg': self._basis['h'] * self._basis['g'].dag(),
-                    'sigma_rr': self._basis['r'] * self._basis['r'].dag(),
-                    'sigma_gg': self._basis['g'] * self._basis['g'].dag(),
-                    'sigma_hh': self._basis['h'] * self._basis['h'].dag()
+                    'sigma_gr': self.basis['g'] * self.basis['r'].dag(),
+                    'sigma_hg': self.basis['h'] * self.basis['g'].dag(),
+                    'sigma_rr': self.basis['r'] * self.basis['r'].dag(),
+                    'sigma_gg': self.basis['g'] * self.basis['g'].dag(),
+                    'sigma_hh': self.basis['h'] * self.basis['h'].dag()
                                }
-        elif self.basis_name == 'rydberg':
-            self._dim = 2
-            self._basis = {'r': qutip.basis(2, 0),
-                           'g': qutip.basis(2, 1)
-                           }
-            self._operators = {
+        elif self.basis_name == 'ground-rydberg':
+            self.dim = 2
+            self.basis = {'r': qutip.basis(2, 0),
+                          'g': qutip.basis(2, 1)
+                          }
+            self.operators = {
                     'I': qutip.qeye(2),
-                    'sigma_gr': self._basis['g'] * self._basis['r'].dag(),
-                    'sigma_rr': self._basis['r'] * self._basis['r'].dag(),
-                    'sigma_gg': self._basis['g'] * self._basis['g'].dag()
+                    'sigma_gr': self.basis['g'] * self.basis['r'].dag(),
+                    'sigma_rr': self.basis['r'] * self.basis['r'].dag(),
+                    'sigma_gg': self.basis['g'] * self.basis['g'].dag()
                                }
         elif self.basis_name == 'digital':
-            self._dim = 2
-            self._basis = {'g': qutip.basis(2, 0),
-                           'h': qutip.basis(2, 1)
-                           }
-            self._operators = {
+            self.dim = 2
+            self.basis = {'g': qutip.basis(2, 0),
+                          'h': qutip.basis(2, 1)
+                          }
+            self.operators = {
                     'I': qutip.qeye(2),
-                    'sigma_hg': self._basis['h'] * self._basis['g'].dag(),
-                    'sigma_hh': self._basis['h'] * self._basis['h'].dag(),
-                    'sigma_gg': self._basis['g'] * self._basis['g'].dag()
+                    'sigma_hg': self.basis['h'] * self.basis['g'].dag(),
+                    'sigma_hh': self.basis['h'] * self.basis['h'].dag(),
+                    'sigma_gg': self.basis['g'] * self.basis['g'].dag()
                               }
 
     def _build_local_operator(self, operator, *qubit_ids):
@@ -148,144 +164,105 @@ class Simulation:
             temp[self._qid_index[qubit]] = operator
         return qutip.tensor(temp)
 
-    def _build_array_local_operators(self, operator):
+    def _build_array_operators(self, basis):
         """
-        Return array with 'operator' acting non-trivially on each qubit index.
+        Return array with 'operator' acting non-trivially on each active qid.
 
         We create local operators only for the qubits that are active
         during the evolution. If all are active, then the sum in
         self._global_operators can be calculated.
         """
-        op_array = [self._build_local_operator(operator, qubit)
-                    for qubit in self.active_qubits]
-        return op_array
+        op_dic = {key: [self._build_local_operator(op, qubit)
+                        for qubit in self.active_local[basis]]
+                  for key, op in self.operators.items() if key != 'I'}
 
-    def _build_operator_array_dict(self):
-        return {key: self._build_array_local_operators(op)
-                for key, op in self._operators.items() if key != 'I'}
-
-    def _make_vdw_term(self):
-        """
-        Construct the Van der Waals interaction Term.
-
-        For each pair of qubits, calculate each distance pairwise, then assign
-        the local operator "sigma_rr" on each pair.
-        """
-        vdw = 0
-        # Get every pair without duplicates
-        for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
-            distance = np.linalg.norm(
-                    self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
-            coeff = 1e6 / (distance**6)
-            vdw += coeff * 0.5 * self._build_local_operator(
-                self._operators['sigma_rr'], qubit1, qubit2)
-        return vdw
-
-    def _make_rotation_term(self, basis, qubit=None, local_samples=None,
-                            global_samples=None):
-        """
-        Create the terms that build the Hamiltonian.
-
-        Note that this works once a basis has been defined.
-        For the moment one will not have both local and global samples given
-        (see _construct_hamiltonian method)
-        """
-        # Choose operator names according to addressing:
-        if basis == 'rydberg':
-            xy_name = "sigma_gr"
-            z_name = "sigma_rr"
-        elif basis == 'raman':
-            xy_name = "sigma_hg"
-            z_name = "sigma_gg"
-
-        # Create Coefficients and Operators:
-        if global_samples:
-            xy_coeff = global_samples['amp'] * np.exp(
-                                                -1j*global_samples['phase'])
-            z_coeff = global_samples['det']
-            if not hasattr(self, '_global_array_operators'):
-                self._global_operators = {
-                                xy_name: sum(self._array_operators[xy_name]),
-                                z_name: sum(self._array_operators[z_name])
-                                         }
-            xy_operator = self._global_operators[xy_name]
-            z_operator = self._global_operators[z_name]
-
-        elif local_samples:
-            xy_coeff = local_samples['amp'] * np.exp(
-                                                -1j*local_samples['phase'])
-            z_coeff = local_samples['det']
-            qubit_index = self._qid_index[qubit]
-            xy_operator = self._array_operators[xy_name][qubit_index]
-            z_operator = self._array_operators[z_name][qubit_index]
-
-        op_list = []
-        if np.any(xy_coeff != 0):
-            op_list.append([xy_operator, xy_coeff])
-        if np.any(z_coeff != 0):
-            op_list.append([0.5 * z_operator, z_coeff])
-
-        # Build rotation term as QObjEvo :
-        if op_list:
-            rotation_term = qutip.QobjEvo(op_list, tlist=self._times)
-        else:
-            rotation_term = 0
-
-        return rotation_term
+        return op_dic
 
     def _construct_hamiltonian(self):
+        def make_vdw_term():
+            """
+            Construct the Van der Waals interaction Term.
 
-        # Decide appropriate basis:
-        if not self.addressing['global_raman']\
-                and not self.addressing['local_raman']:
-            self.basis_name = 'rydberg'
-        elif not self.addressing['global_rydberg']\
-                and not self.addressing['local_rydberg']:
-            self.basis_name = 'raman'
-        else:
-            self.basis_name = 'all'  # All three states
+            For each pair of qubits, calculate each distance pairwise, then
+            assign the local operator "sigma_rr" on each pair.
+            """
+            vdw = 0
+            # Get every pair without duplicates
+            for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
+                dist = np.linalg.norm(
+                        self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
+                vdw += (1e6 / (dist**6)) * 0.5 * \
+                    self._build_local_operator(self.operators['sigma_rr'],
+                                               qubit1, qubit2)
+            return vdw
 
-        # Construct Basis, basic operators and array of local operators
-        self._create_basis_and_operators()
-        self._array_operators = self._build_operator_array_dict()
+        def make_coeffs_ops(basis, addressing):
+            # Choose operator names according to addressing:
+            if basis == 'ground-rydberg':
+                xy_name = "sigma_gr"
+                z_name = "sigma_rr"
+            elif basis == 'digital':
+                xy_name = "sigma_hg"
+                z_name = "sigma_gg"
 
-        # Construct Hamiltonian
+            if addressing == 'Global':
+                samples = self.samples[addressing][basis]
+                xy_coeff = samples['amp'] * np.exp(-1j * samples['phase'])
+                z_coeff = samples['det']
+                xy_op = sum(self._array_operators[basis][xy_name])
+                z_op = sum(self._array_operators[basis][z_name])
+            elif addressing == 'Local':
+                for qubit in self.active_local[basis]:
+                    q_index = self._active_qid_index[basis][qubit]
+                    samples = self.samples[addressing][basis][qubit]
+                    xy_coeff = samples['amp'] * np.exp(-1j * samples['phase'])
+                    z_coeff = samples['det']
+                    xy_op = self._array_operators[basis][xy_name][q_index]
+                    z_op = self._array_operators[basis][z_name][q_index]
+
+            return [xy_coeff, xy_op, z_coeff, z_op]
+
+        def make_rotation_term(blocks):
+            """
+            Create the terms that build the Hamiltonian.
+
+            Note that this works once a basis has been defined.
+            """
+            xy_coeff, xy_op, z_coeff, z_op = blocks
+            op_list = []
+            if np.any(xy_coeff != 0):
+                op_list.append([xy_op, xy_coeff])
+            if np.any(z_coeff != 0):
+                op_list.append([0.5 * z_op, z_coeff])
+
+            # Build rotation term as QObjEvo :
+            if op_list:
+                rotation_term = qutip.QobjEvo(op_list, tlist=self._times)
+            else:
+                rotation_term = 0
+
+            return rotation_term
 
         # Time independent term:
         if self.basis_name == 'digital':
             ham = 0
         else:
             # Van der Waals Interaction Terms
-            ham = qutip.QobjEvo([self._make_vdw_term()])
+            ham = qutip.QobjEvo([make_vdw_term()])
 
         # Time dependent terms:
-        if self.addressing["global_rydberg"]:
-            ham += self._make_rotation_term(
-                                    'rydberg',
-                                    global_samples=self._global_rydberg_samples
-                                    )
-        if self.addressing["global_raman"]:
-            ham += self._make_rotation_term(
-                                    'raman',
-                                    global_samples=self._global_raman_samples
-                                    )
+        for addr in self.addressing:
+            for basis in self.addressing[addr]:
+                if not self._array_operators[basis]:
+                    self._array_operators[basis] = \
+                                            self._build_array_operators(basis)
+                if self.samples[addr][basis]:
+                    blocks = make_coeffs_ops(basis, addr)
+                    ham += make_rotation_term(blocks)
 
-        if self.addressing["local_rydberg"]:
-            for qubit in self.active_qubits:
-                ham += self._make_rotation_term(
-                            'rydberg',
-                            qubit,
-                            local_samples=self._local_rydberg_samples[qubit]
-                            )
-        if self.addressing["local_raman"]:
-            for qubit in self.active_qubits:
-                ham += self._make_rotation_term(
-                            'raman',
-                            qubit,
-                            local_samples=self._local_raman_samples[qubit]
-                            )
         ham = ham + ham.dag()
         ham.compress()
+
         return ham
 
     # Run Simulation Evolution using Qutip
@@ -299,17 +276,17 @@ class Simulation:
         optionally add a custom label
         """
         if initial_state:
-            self._initial_state = initial_state
+            psi0 = initial_state
         else:
             # by default, "all down" state
-            self._initial_state = qutip.tensor(
-                        [qutip.basis(self._dim, self._dim - 1)
+            psi0 = qutip.tensor(
+                        [qutip.basis(self.dim, self.dim - 1)
                             for _ in range(self._size)]
                         )
 
         if observable:
             # With observables, we get their expectation value
-            result = qutip.sesolve(self._hamiltonian, self._initial_state,
+            result = qutip.sesolve(self._hamiltonian, psi0,
                                    self._times, [observable])
             self.output = result.expect[0]
             if plot:
@@ -317,7 +294,7 @@ class Simulation:
                 plt.legend()
         else:
             # Without observables, we get the output state
-            result = qutip.sesolve(self._hamiltonian, self._initial_state,
+            result = qutip.sesolve(self._hamiltonian, psi0,
                                    self._times)
             if all_states:
                 self.output = result.states  # All states of evolution
