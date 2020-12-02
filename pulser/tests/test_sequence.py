@@ -139,7 +139,8 @@ def test_sequence():
         seq.add([1, 5, 3], 'ch0')
     with pytest.raises(ValueError, match='amplitude goes over the maximum'):
         seq.add(Pulse.ConstantPulse(10, 10, -100, 0), 'ch2')
-    with pytest.raises(ValueError, match='detuning values go out of range'):
+    with pytest.raises(ValueError,
+                       match='detuning values go out of the range'):
         seq.add(Pulse.ConstantPulse(500, 1, -100, 0), 'ch0')
     with pytest.raises(ValueError, match='qubits with different phase ref'):
         seq.add(pulse2, 'ch2')
