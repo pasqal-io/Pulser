@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pulser",
-    version="0.0.1",
+    version="0.0.1a1",
     install_requires=[
         "matplotlib",
         "numpy",
