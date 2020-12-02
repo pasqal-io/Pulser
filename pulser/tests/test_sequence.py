@@ -59,7 +59,8 @@ def test_target():
     assert seq._schedule['ch0'][-1] == TimeSlot('target', -1, 0, {'q1'})
     seq.target('q4', 'ch0')
     retarget_t = seq.declared_channels['ch0'].retarget_time
-    assert seq._schedule['ch0'][-1] == TimeSlot('target', 0, retarget_t, {'q4'})
+    assert seq._schedule['ch0'][-1] == TimeSlot('target', 0,
+                                                retarget_t, {'q4'})
     with pytest.warns(UserWarning):
         seq.target('q4', 'ch0')
     seq.target('q20', 'ch0')
@@ -138,7 +139,8 @@ def test_sequence():
         seq.add([1, 5, 3], 'ch0')
     with pytest.raises(ValueError, match='amplitude goes over the maximum'):
         seq.add(Pulse.ConstantPulse(10, 10, -100, 0), 'ch2')
-    with pytest.raises(ValueError, match='detuning values go out of the range'):
+    with pytest.raises(ValueError,
+                       match='detuning values go out of the range'):
         seq.add(Pulse.ConstantPulse(500, 1, -100, 0), 'ch0')
     with pytest.raises(ValueError, match='qubits with different phase ref'):
         seq.add(pulse2, 'ch2')
