@@ -31,9 +31,9 @@ class Simulation:
         # self.active_local = self._get_active_local()
         self.active_local = self._get_active()
         self._qid_index = {qid: i for i, qid in enumerate(self._reg.qubits)}
-        self._active_qid_index = {
-            basis: {qid: i for i, qid in enumerate(self.active_local[basis])}
-            for basis in ['ground-rydberg', 'digital']}
+        self._active_qid_index = {basis: {qid: self._qid_index[qid]
+                                          for qid in self.active_local[basis]}
+                                  for basis in ['ground-rydberg', 'digital']}
 
         self.dim = 3  # Default value
         self.basis = {}
@@ -44,7 +44,7 @@ class Simulation:
         self._extract_samples()
         self._decide_basis()
         self._create_basis_and_operators()
-        self._hamiltonian = self._construct_hamiltonian()
+        self._construct_hamiltonian()
 
     def _get_active_local(self):
         active = {basis: set() for basis in ['ground-rydberg', 'digital']}
@@ -179,6 +179,7 @@ class Simulation:
         return op_dic
 
     def _construct_hamiltonian(self):
+
         def make_vdw_term():
             """
             Construct the Van der Waals interaction Term.
@@ -194,9 +195,9 @@ class Simulation:
                 vdw += (1e6 / (dist**6)) * 0.5 * \
                     self._build_local_operator(self.operators['sigma_rr'],
                                                qubit1, qubit2)
-            return vdw
+            return [vdw]
 
-        def make_coeffs_ops(basis, addressing):
+        def build_coeffs_ops(basis, addressing):
             # Choose operator names according to addressing:
             if basis == 'ground-rydberg':
                 xy_name = "sigma_gr"
@@ -211,7 +212,9 @@ class Simulation:
                 z_coeff = samples['det']
                 xy_op = sum(self._array_operators[basis][xy_name])
                 z_op = sum(self._array_operators[basis][z_name])
+                return build_term([xy_coeff, xy_op, z_coeff, z_op])
             elif addressing == 'Local':
+                terms = []
                 for qubit in self.active_local[basis]:
                     q_index = self._active_qid_index[basis][qubit]
                     samples = self.samples[addressing][basis][qubit]
@@ -219,14 +222,15 @@ class Simulation:
                     z_coeff = samples['det']
                     xy_op = self._array_operators[basis][xy_name][q_index]
                     z_op = self._array_operators[basis][z_name][q_index]
+                    terms += build_term([xy_coeff, xy_op, z_coeff, z_op])
+                return terms
 
-            return [xy_coeff, xy_op, z_coeff, z_op]
-
-        def make_rotation_term(blocks):
+        def build_term(blocks):
             """
             Create the terms that build the Hamiltonian.
 
             Note that this works once a basis has been defined.
+            Returns a list.
             """
             xy_coeff, xy_op, z_coeff, z_op = blocks
             op_list = []
@@ -237,7 +241,7 @@ class Simulation:
 
             # Build rotation term as QObjEvo :
             if op_list:
-                rotation_term = qutip.QobjEvo(op_list, tlist=self._times)
+                rotation_term = op_list
             else:
                 rotation_term = 0
 
@@ -245,10 +249,10 @@ class Simulation:
 
         # Time independent term:
         if self.basis_name == 'digital':
-            ham = 0
+            qobj_list = []
         else:
             # Van der Waals Interaction Terms
-            ham = qutip.QobjEvo([make_vdw_term()])
+            qobj_list = make_vdw_term()
 
         # Time dependent terms:
         for addr in self.addressing:
@@ -257,13 +261,12 @@ class Simulation:
                     self._array_operators[basis] = \
                                             self._build_array_operators(basis)
                 if self.samples[addr][basis]:
-                    blocks = make_coeffs_ops(basis, addr)
-                    ham += make_rotation_term(blocks)
+                    qobj_list += build_coeffs_ops(basis, addr)
 
+        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
         ham.compress()
-
-        return ham
+        self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
     def run(self, initial_state=None, observable=None, plot=True,
@@ -279,10 +282,9 @@ class Simulation:
             psi0 = initial_state
         else:
             # by default, "all down" state
-            psi0 = qutip.tensor(
-                        [qutip.basis(self.dim, self.dim - 1)
-                            for _ in range(self._size)]
-                        )
+            all_down = [qutip.basis(self.dim, self.dim - 1)
+                        for _ in range(self._size)]
+            psi0 = qutip.tensor(all_down)
 
         if observable:
             # With observables, we get their expectation value
