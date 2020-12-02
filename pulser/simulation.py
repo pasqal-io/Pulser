@@ -29,7 +29,7 @@ class Simulation:
                            for addr in ['Global', 'Local']}
 
         # self.active_local = self._get_active_local()
-        self.active_local = self._get_active()
+        self.active_local = self._get_active_local()
         self._qid_index = {qid: i for i, qid in enumerate(self._reg.qubits)}
         self._active_qid_index = {basis: {qid: self._qid_index[qid]
                                           for qid in self.active_local[basis]}
@@ -38,8 +38,11 @@ class Simulation:
         self.dim = 3  # Default value
         self.basis = {}
         self.operators = {}
-        self._array_operators = {basis: []
+        self._local_operators = {basis: {qubit: {}
+                                 for qubit in self.active_local[basis]}
                                  for basis in ['ground-rydberg', 'digital']}
+        self._global_operators = {basis: {}
+                                  for basis in ['ground-rydberg', 'digital']}
 
         self._extract_samples()
         self._decide_basis()
@@ -55,15 +58,6 @@ class Simulation:
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
                         active[basis] |= slot.targets
-        return active
-
-    def _get_active(self):
-        active = {basis: set() for basis in ['ground-rydberg', 'digital']}
-        for channel in self._seq.declared_channels:
-            basis = self._seq.declared_channels[channel].basis
-            for slot in self._seq._schedule[channel]:
-                if isinstance(slot.type, Pulse):
-                    active[basis] |= slot.targets
         return active
 
     def _extract_samples(self):
@@ -164,22 +158,11 @@ class Simulation:
             temp[self._qid_index[qubit]] = operator
         return qutip.tensor(temp)
 
-    def _build_array_operators(self, basis):
-        """
-        Return array with 'operator' acting non-trivially on each active qid.
-
-        We create local operators only for the qubits that are active
-        during the evolution. If all are active, then the sum in
-        self._global_operators can be calculated.
-        """
-        op_dic = {key: [self._build_local_operator(op, qubit)
-                        for qubit in self.active_local[basis]]
-                  for key, op in self.operators.items() if key != 'I'}
-
-        return op_dic
+    def _build_global_operator(self, op_name):
+        return sum([self._build_local_operator(self.operators[op_name], qubit)
+                    for qubit in self._reg.qubits])
 
     def _construct_hamiltonian(self):
-
         def make_vdw_term():
             """
             Construct the Van der Waals interaction Term.
@@ -200,52 +183,39 @@ class Simulation:
         def build_coeffs_ops(basis, addressing):
             # Choose operator names according to addressing:
             if basis == 'ground-rydberg':
-                xy_name = "sigma_gr"
-                z_name = "sigma_rr"
+                op_ids = ['sigma_gr', 'sigma_rr']
             elif basis == 'digital':
-                xy_name = "sigma_hg"
-                z_name = "sigma_gg"
+                op_ids = ['sigma_hg', 'sigma_gg']
 
+            terms = []
             if addressing == 'Global':
                 samples = self.samples[addressing][basis]
-                xy_coeff = samples['amp'] * np.exp(-1j * samples['phase'])
-                z_coeff = samples['det']
-                xy_op = sum(self._array_operators[basis][xy_name])
-                z_op = sum(self._array_operators[basis][z_name])
-                return build_term([xy_coeff, xy_op, z_coeff, z_op])
+                coeffs = [samples['amp'] * np.exp(-1j * samples['phase']),
+                          samples['det']]
+                for coeff, op_id in zip(coeffs, op_ids):
+                    if np.any(coeff != 0):
+                        # Build once global operators as they are needed
+                        if not self._global_operators[basis] \
+                         or not self._global_operators[basis][op_id]:
+                            self._global_operators[basis][op_id] = \
+                             self._build_global_operator(op_id)
+                        terms.append([self._global_operators[basis][op_id],
+                                      coeff])
             elif addressing == 'Local':
-                terms = []
                 for qubit in self.active_local[basis]:
-                    q_index = self._active_qid_index[basis][qubit]
                     samples = self.samples[addressing][basis][qubit]
-                    xy_coeff = samples['amp'] * np.exp(-1j * samples['phase'])
-                    z_coeff = samples['det']
-                    xy_op = self._array_operators[basis][xy_name][q_index]
-                    z_op = self._array_operators[basis][z_name][q_index]
-                    terms += build_term([xy_coeff, xy_op, z_coeff, z_op])
-                return terms
-
-        def build_term(blocks):
-            """
-            Create the terms that build the Hamiltonian.
-
-            Note that this works once a basis has been defined.
-            Returns a list.
-            """
-            xy_coeff, xy_op, z_coeff, z_op = blocks
-            op_list = []
-            if np.any(xy_coeff != 0):
-                op_list.append([xy_op, xy_coeff])
-            if np.any(z_coeff != 0):
-                op_list.append([0.5 * z_op, z_coeff])
-
-            # Build rotation term as QObjEvo :
-            if op_list:
-                rotation_term = op_list
-            else:
-                rotation_term = 0
-
-            return rotation_term
+                    coeffs = [samples['amp'] * np.exp(-1j * samples['phase']),
+                              samples['det']]
+                    for coeff, op_id in zip(coeffs, op_ids):
+                        if np.any(coeff != 0):
+                            if not self._local_operators[basis][qubit]:
+                                self._local_operators[basis][qubit][op_id] = \
+                                 self._build_local_operator(
+                                    self.operators[op_id], qubit)
+                            terms.append(
+                                [self._local_operators[basis][qubit][op_id],
+                                 coeff])
+            return terms
 
         # Time independent term:
         if self.basis_name == 'digital':
@@ -257,9 +227,6 @@ class Simulation:
         # Time dependent terms:
         for addr in self.addressing:
             for basis in self.addressing[addr]:
-                if not self._array_operators[basis]:
-                    self._array_operators[basis] = \
-                                            self._build_array_operators(basis)
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
