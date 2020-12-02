@@ -111,7 +111,8 @@ class Sequence:
         self._schedule[name] = []
 
         if ch.basis not in self._phase_ref:
-            self._phase_ref[ch.basis] = {q: PhaseTracker(0) for q in self._qids}
+            self._phase_ref[ch.basis] = {q: PhaseTracker(0)
+                                         for q in self._qids}
             self._last_used[ch.basis] = {q: 0 for q in self._qids}
 
         if ch.addressing == 'Global':
@@ -189,7 +190,8 @@ class Sequence:
                 self._last_used[basis][q] = tf
 
         if pulse.post_phase_shift:
-            self.phase_shift(pulse.post_phase_shift, *last.targets, basis=basis)
+            self.phase_shift(pulse.post_phase_shift, *last.targets,
+                             basis=basis)
 
     def target(self, qubits, channel):
         """Changes the target qubit of a 'Local' channel.
@@ -215,8 +217,10 @@ class Sequence:
         if self._channels[channel].addressing != 'Local':
             raise ValueError("Can only choose target of 'Local' channels.")
         elif len(qs) > self._channels[channel].max_targets:
-            raise ValueError("This channel can target at most {} qubits at a "
-                             "time".format(self._channels[channel].max_targets))
+            raise ValueError(
+                "This channel can target at most "
+                f"{self._channels[channel].max_targets} qubits at a time"
+            )
 
         basis = self._channels[channel].basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
@@ -329,7 +333,8 @@ class Sequence:
                                  f"Phase Reference: {phase} \n")
                         first_slot = False
                     else:
-                        full += target_line.format(ts.ti, ts.tf, tgt_txt, phase)
+                        full += target_line.format(ts.ti, ts.tf, tgt_txt,
+                                                   phase)
 
             full += "\n"
 

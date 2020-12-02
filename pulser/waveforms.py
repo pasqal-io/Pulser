@@ -341,6 +341,7 @@ class GaussianWaveform(Waveform):
         return "Gaussian" + args
 
     def __repr__(self):
-        args = (f"({self._duration} ns, max={self._top+self._offset:.3g} MHz," +
-                f" offset={self._offset:.3g} MHz, sigma={self._sigma:.4g} ns)")
+        args = (
+            f"({self._duration} ns, max={self._top+self._offset:.3g} MHz," +
+            f" offset={self._offset:.3g} MHz, sigma={self._sigma:.4g} ns)")
         return "GaussianWaveform" + args

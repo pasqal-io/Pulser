@@ -214,8 +214,8 @@ def draw_sequence(seq):
                 a.axvline(t_, **conf)
                 b.axvline(t_, **conf)
                 msg = u"\u27F2 " + phase_str(delta)
-                a.text(t_-t[-1]*8e-3, max_amp*1.1, msg, ha='right', fontsize=14,
-                       bbox=ph_box)
+                a.text(t_-t[-1]*8e-3, max_amp*1.1, msg, ha='right',
+                       fontsize=14, bbox=ph_box)
 
         if 'measurement' in data[ch]:
             msg = f"Basis: {data[ch]['measurement']}"
