@@ -40,7 +40,7 @@ class Sequence:
         device: A pulser.PasqalDevice instance.
     """
     def __init__(self, device):
-        "Initializes a new sequence."
+        """Initializes a new pulse sequence."""
         if not isinstance(device, PasqalDevice):
             raise TypeError("The Sequence's device has to be a PasqalDevice.")
         self._device = device
