@@ -24,6 +24,11 @@ class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
     def __init__(self, duration):
+        """Initializes a waveform with a given duration.
+
+        Args:
+            duration (int): The waveforms duration (in ns).
+        """
         self._duration = validate_duration(duration)
 
     @property
@@ -93,7 +98,7 @@ class CompositeWaveform(Waveform):
     """
 
     def __init__(self, *waveforms):
-
+        """Initializes a waveform from multiple waveforms."""
         if len(waveforms) < 2:
             raise ValueError("Needs at least two waveforms to form a "
                              "CompositeWaveform.")
@@ -167,6 +172,7 @@ class ArbitraryWaveform(Waveform):
     """
 
     def __init__(self, samples):
+        """Initializes a custom waveform."""
         samples_arr = np.array(samples)
         self._samples = samples_arr
 
@@ -200,6 +206,7 @@ class ConstantWaveform(Waveform):
     """
 
     def __init__(self, duration, value):
+        """Initializes a constant waveform."""
         super().__init__(duration)
         self._value = float(value)
 
@@ -234,6 +241,7 @@ class RampWaveform(Waveform):
     """
 
     def __init__(self, duration, start, stop):
+        """Initializes a ramp waveform."""
         super().__init__(duration)
         self._start = float(start)
         self._stop = float(stop)
@@ -268,6 +276,7 @@ class BlackmanWaveform(Waveform):
         area: The area under the waveform.
     """
     def __init__(self, duration, area):
+        """Initializes a Blackman waveform."""
         super().__init__(duration)
         if area <= 0:
             raise ValueError("Area under the waveform needs to be positive.")
@@ -309,6 +318,7 @@ class GaussianWaveform(Waveform):
     """
 
     def __init__(self, duration, max_val, sigma, offset=0):
+        """Initializes a aussian-shaped waveform."""
         super().__init__(duration)
         if max_val <= offset:
             raise ValueError("Can't accept a maximum value that is smaller"
