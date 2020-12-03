@@ -21,7 +21,7 @@ import numpy as np
 
 from pulser.devices import PasqalDevice
 from pulser.pulse import Pulse
-from pulser.seq_drawer import draw_sequence
+from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
