@@ -21,6 +21,12 @@ from pulser.waveforms import Waveform, ConstantWaveform
 class Pulse:
     """A generic pulse.
 
+    In Pulser, a Pulse is a modulation of a frequency signal in amplitude
+    and/or frequency, with a specific phase, over a given duration. Amplitude
+    and frequency modulation are defined by objects of type pulser.Waveform.
+    Frequency modulation is determined by a detuning waveform, which describes
+    shift in frequency from the channel's central frequency over time.
+
     Args:
         amplitude (Waveform): The pulse amplitude waveform.
         detuning (Waveform): The pulse detuning waveform.
@@ -34,6 +40,7 @@ class Pulse:
     """
 
     def __init__(self, amplitude, detuning, phase, post_phase_shift=0):
+        """Initializes a new Pulse."""
 
         if not (isinstance(amplitude, Waveform) and
                 isinstance(detuning, Waveform)):
@@ -53,14 +60,26 @@ class Pulse:
 
     @classmethod
     def ConstantDetuning(cls, amplitude, detuning, phase, post_phase_shift=0):
-        """Pulse with a constant amplitude and a detuning waveform."""
+        """Pulse with an amplitude waveform and a constant detuning.
+
+        Args:
+            amplitude (Waveform): The pulse amplitude waveform.
+            detuning (float): The detuning value (in MHz).
+            phase (float): The pulse phase (in radians).
+        """
 
         detuning_wf = ConstantWaveform(amplitude.duration, detuning)
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
     def ConstantAmplitude(cls, amplitude, detuning, phase, post_phase_shift=0):
-        """Pulse with an amplitude waveform and a constant detuning."""
+        """Pulse with a constant amplitude and a detuning waveform.
+
+        Args:
+            amplitude (float): The pulse amplitude value (in MHz).
+            detuning (Waveform): The pulse detuning waveform.
+            phase (float): The pulse phase (in radians).
+        """
 
         amplitude_wf = ConstantWaveform(detuning.duration, amplitude)
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
@@ -68,14 +87,21 @@ class Pulse:
     @classmethod
     def ConstantPulse(cls, duration, amplitude, detuning, phase,
                       post_phase_shift=0):
-        """Pulse with a constant amplitude and a constant detuning."""
+        """Pulse with a constant amplitude and a constant detuning.
+
+        Args:
+            duration (int): The pulse duration (in ns).
+            amplitude (float): The pulse amplitude value (in MHz).
+            detuning (float): The detuning value (in MHz).
+            phase (float): The pulse phase (in radians).
+        """
 
         amplitude_wf = ConstantWaveform(duration, amplitude)
         detuning_wf = ConstantWaveform(duration, detuning)
         return cls(amplitude_wf, detuning_wf, phase, post_phase_shift)
 
     def draw(self):
-        """Draw the pulse's amplitude and frequency waveforms."""
+        """Draws the pulse's amplitude and frequency waveforms."""
 
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
