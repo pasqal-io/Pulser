@@ -161,6 +161,7 @@ class Simulation:
 
         def build_coeffs_ops(basis, addr):
             samples = self.samples[addr][basis]
+            operators = self.operators[addr][basis]
             # Choose operator names according to addressing:
             if basis == 'ground-rydberg':
                 op_ids = ['sigma_gr', 'sigma_rr']
@@ -174,26 +175,25 @@ class Simulation:
                 for coeff, op_id in zip(coeffs, op_ids):
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
-                        if op_id not in self.operators[addr][basis]:
-                            self.operators[addr][basis][op_id] = \
-                                self._build_operator(op_id, global_op=True)
-                        terms.append([self.operators[addr][basis][op_id],
-                                      coeff])
+                        if op_id not in operators:
+                            operators[op_id] =\
+                                    self._build_operator(op_id, global_op=True)
+                        terms.append([operators[op_id], coeff])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
-                    if q_id not in self.operators[addr][basis]:
-                        self.operators[addr][basis][q_id] = {}
-                    coeffs = [samples_q['amp'] * np.exp(
-                                                     -1j * samples_q['phase']),
+                    if q_id not in operators:
+                        operators[q_id] = {}
+                    coeffs = [samples_q['amp'] * np.exp(-1j
+                                                        * samples_q['phase']),
                               0.5 * samples_q['det']]
                     for coeff, op_id in zip(coeffs, op_ids):
                         if np.any(coeff != 0):
-                            if op_id not in self.operators[addr][basis][q_id]:
-                                self.operators[addr][basis][q_id][op_id] = \
+                            if op_id not in operators[q_id]:
+                                operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
-                            terms.append(
-                                [self.operators[addr][basis][q_id][op_id],
-                                 coeff])
+                            terms.append([operators[q_id][op_id], coeff])
+
+            self.operators[addr][basis] = operators
             return terms
 
         # Time independent term:
