@@ -3,8 +3,9 @@ import itertools
 import qutip
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
-from pulser import Pulse
+from pulser import Pulse, Sequence
 
 print('simulation module...')
 
@@ -13,6 +14,9 @@ class Simulation:
     """Simulation of a pulse sequence using QuTiP."""
 
     def __init__(self, sequence):
+        if not isinstance(sequence, Sequence):
+            raise TypeError("The provided sequence has to be a valid"
+                            "pulser.Sequence instance.")
         self._seq = sequence
         self._reg = sequence._device._register
         self._size = len(self._reg.qubits)
@@ -22,19 +26,11 @@ class Simulation:
         self._times = np.arange(self._tot_duration, dtype=np.double)
         self._qid_index = {qid: i for i, qid in enumerate(self._reg.qubits)}
 
-        self.dim = 3  # Default value
-        self.basis = {}
-        self.op_matrix = {}
-
         self.samples = {addr: {basis: {}
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
-        self.addressing = {addr: {basis: False
-                                  for basis in ['ground-rydberg', 'digital']}
-                           for addr in ['Global', 'Local']}
-        self.operators = {addr: {basis: {}
-                                 for basis in ['ground-rydberg', 'digital']}
-                          for addr in ['Global', 'Local']}
+        self.addressing = deepcopy(self.samples)
+        self.operators = deepcopy(self.samples)
 
         self._extract_samples()
         self._decide_basis()
