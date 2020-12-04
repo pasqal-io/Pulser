@@ -89,40 +89,26 @@ class Simulation:
         """Create the basis elements."""
         if self.basis_name == 'all':
             self.dim = 3
-            self.basis = {'r': qutip.basis(3, 0),
-                          'g': qutip.basis(3, 1),
-                          'h': qutip.basis(3, 2)
-                          }
-            self.op_matrix = {
-                    'I': qutip.qeye(3),
-                    'sigma_gr': self.basis['g'] * self.basis['r'].dag(),
-                    'sigma_hg': self.basis['h'] * self.basis['g'].dag(),
-                    'sigma_rr': self.basis['r'] * self.basis['r'].dag(),
-                    'sigma_gg': self.basis['g'] * self.basis['g'].dag(),
-                    'sigma_hh': self.basis['h'] * self.basis['h'].dag()
-                               }
+            basis = ['r', 'g', 'h']
+            projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
         elif self.basis_name == 'ground-rydberg':
             self.dim = 2
-            self.basis = {'r': qutip.basis(2, 0),
-                          'g': qutip.basis(2, 1)
-                          }
-            self.op_matrix = {
-                    'I': qutip.qeye(2),
-                    'sigma_gr': self.basis['g'] * self.basis['r'].dag(),
-                    'sigma_rr': self.basis['r'] * self.basis['r'].dag(),
-                    'sigma_gg': self.basis['g'] * self.basis['g'].dag()
-                               }
+            basis = ['r', 'g']
+            projectors = ['gr', 'rr', 'gg']
         elif self.basis_name == 'digital':
             self.dim = 2
-            self.basis = {'g': qutip.basis(2, 0),
-                          'h': qutip.basis(2, 1)
-                          }
-            self.op_matrix = {
-                    'I': qutip.qeye(2),
-                    'sigma_hg': self.basis['h'] * self.basis['g'].dag(),
-                    'sigma_hh': self.basis['h'] * self.basis['h'].dag(),
-                    'sigma_gg': self.basis['g'] * self.basis['g'].dag()
-                              }
+            basis = ['g', 'h']
+            projectors = ['hg', 'hh', 'gg']
+
+        self.op_matrix = {'I': qutip.qeye(self.dim)}
+        self.basis = {}
+        for i, b in enumerate(basis):
+            self.basis[b] = qutip.basis(self.dim, i)
+
+        for proj in projectors:
+            self.op_matrix['sigma_' + proj] = (
+                                self.basis[proj[0]] * self.basis[proj[1]].dag()
+                                )
 
     def _build_operator(self, op_id, *qubit_ids, global_op=False):
         if global_op:
@@ -132,8 +118,7 @@ class Simulation:
         if len(set(qubit_ids)) < len(qubit_ids):
             raise ValueError("Duplicate atom ids in argument list.")
         # List of identity matrices with shape of operator:
-        temp = [qutip.qeye(self.op_matrix[op_id].shape[0])
-                for _ in range(self._size)]
+        temp = [self.op_matrix['I'] for _ in range(self._size)]
         for q_id in qubit_ids:
             temp[self._qid_index[q_id]] = self.op_matrix[op_id]
         return qutip.tensor(temp)
