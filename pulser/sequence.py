@@ -25,13 +25,14 @@ from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
-TimeSlot = namedtuple('TimeSlot', ['type', 'ti', 'tf', 'targets'])
+_TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
 
 
 class Sequence:
     """A sequence of operations on a device.
 
     A sequence is composed by
+
         - The device in which we want to implement it
         - The device's channels that are used
         - The schedule of operations on each channel
@@ -127,7 +128,7 @@ class Sequence:
             self._last_used[ch.basis] = {q: 0 for q in self._qids}
 
         if ch.addressing == 'Global':
-            self._add_to_schedule(name, TimeSlot('target', -1, 0, self._qids))
+            self._add_to_schedule(name, _TimeSlot('target', -1, 0, self._qids))
         elif initial_target is not None:
             self.target(initial_target, name)
 
@@ -142,11 +143,15 @@ class Sequence:
             protocol (default='min-delay'): Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
                 of having to channels act on the same target simultaneously.
-                'min-delay': Before adding the pulse, introduces the smallest
+
+                - 'min-delay'
+                    Before adding the pulse, introduces the smallest
                     possible delay that avoids all exisiting conflicts.
-                'no-delay': Adds the pulse to the channel, regardless of
+                - 'no-delay'
+                    Adds the pulse to the channel, regardless of
                     existing conflicts.
-                'wait-for-all': Before adding the pulse, adds a delay that
+                - 'wait-for-all'
+                    Before adding the pulse, adds a delay that
                     idles the channel until the end of the other channels'
                     latest pulse.
         """
@@ -194,7 +199,7 @@ class Sequence:
             pulse = copy.deepcopy(pulse)
             pulse.phase = (pulse.phase + phase_ref) % (2 * np.pi)
 
-        self._add_to_schedule(channel, TimeSlot(pulse, ti, tf, last.targets))
+        self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
 
         for q in last.targets:
             if self._last_used[basis][q] < tf:
@@ -252,7 +257,7 @@ class Sequence:
             ti = -1
             tf = 0
 
-        self._add_to_schedule(channel, TimeSlot('target', ti, tf, qs))
+        self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qs))
 
     def delay(self, duration, channel):
         """Idles a given channel for a specific duration.
@@ -264,7 +269,8 @@ class Sequence:
         last = self._last(channel)
         ti = last.tf
         tf = ti + validate_duration(duration)
-        self._add_to_schedule(channel, TimeSlot('delay', ti, tf, last.targets))
+        self._add_to_schedule(channel,
+                              _TimeSlot('delay', ti, tf, last.targets))
 
     def measure(self, basis='ground-rydberg'):
         """Measures in a valid basis.

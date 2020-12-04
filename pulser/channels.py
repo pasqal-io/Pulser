@@ -16,23 +16,23 @@ from abc import ABC, abstractmethod
 
 
 class Channel(ABC):
-    """Base class for an hardware channel."""
+    """Base class for an hardware channel.
+
+    Args:
+        addressing (str): 'Local' or 'Global'.
+        max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
+            absolute value.
+        max_amp(tuple): Maximum pulse amplitude (in MHz).
+
+    Keyword Args:
+        retarget_time (default = None): Time to change the target (in ns).
+        max_targets (int, default=1): (For local channels only) How
+            many qubits can be addressed at once by the same beam.
+    """
 
     def __init__(self, addressing, max_abs_detuning, max_amp,
                  retarget_time=None, max_targets=1):
-        """Initializes a channel with specific characteristics.
-
-        Args:
-            addressing (str): 'Local' or 'Global'.
-            max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-            absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in MHz).
-
-        Keyword Args:
-            retarget_time (default = None): Time to change the target (in ns).
-            max_targets (int, default=1): (For local channels only) How
-                many qubits can be addressed at once by the same beam.
-        """
+        """Initializes a channel with specific characteristics."""
         if addressing == 'Local':
             if retarget_time is None:
                 raise ValueError("Must set retarget time for local channel.")
@@ -63,7 +63,7 @@ class Channel(ABC):
 
         Args:
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-            absolute value.
+                absolute value.
             max_amp(tuple): Maximum pulse amplitude (in MHz).
 
         Keyword Args:
@@ -80,7 +80,7 @@ class Channel(ABC):
 
         Args:
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-            absolute value.
+                absolute value.
             max_amp(tuple): Maximum pulse amplitude (in MHz)."""
 
         return cls('Global', max_abs_detuning, max_amp)
