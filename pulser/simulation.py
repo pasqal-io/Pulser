@@ -29,7 +29,6 @@ class Simulation:
         self.samples = {addr: {basis: {}
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
-        self.addressing = deepcopy(self.samples)
         self.operators = deepcopy(self.samples)
 
         self._extract_samples()
@@ -53,7 +52,6 @@ class Simulation:
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
             basis = self._seq.declared_channels[channel].basis
-            self.addressing[addr][basis] = True
 
             samples_dict = self.samples[addr][basis]
 
@@ -76,11 +74,12 @@ class Simulation:
 
     def _decide_basis(self):
         """Decide appropriate basis."""
-        if not self.addressing['Global']['digital']\
-                and not self.addressing['Local']['digital']:
+        # No samples => Empty dict entry => False
+        if (not self.samples['Global']['digital']
+                and not self.samples['Local']['digital']):
             self.basis_name = 'ground-rydberg'
-        elif not self.addressing['Global']['ground-rydberg']\
-                and not self.addressing['Local']['ground-rydberg']:
+        elif (not self.samples['Global']['ground-rydberg']
+                and not self.samples['Local']['ground-rydberg']):
             self.basis_name = 'digital'
         else:
             self.basis_name = 'all'  # All three states
@@ -185,8 +184,8 @@ class Simulation:
             qobj_list = make_vdw_term()
 
         # Time dependent terms:
-        for addr in self.addressing:
-            for basis in self.addressing[addr]:
+        for addr in self.samples:
+            for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
