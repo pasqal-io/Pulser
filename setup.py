@@ -24,6 +24,7 @@ setup(
     ],
     packages=find_packages(),
     include_package_data=True,
+    description="A pulse-level composer for Pasqal's quantum devices.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",
@@ -36,5 +37,5 @@ setup(
          "Operating System :: Microsoft :: Windows",
          "Topic :: Scientific/Engineering",
          ],
-    url="https://pasqal.io/",
+    url="https://github.com/pasqal-io/Pulser",
 )

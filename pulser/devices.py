@@ -33,6 +33,7 @@ class PasqalDevice(ABC):
     """
 
     def __init__(self, qubits):
+        """Initializes a device with a specific set of qubits."""
         if isinstance(qubits, dict):
             register = Register(qubits)
         elif isinstance(qubits, Register):
