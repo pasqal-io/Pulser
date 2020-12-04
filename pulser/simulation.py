@@ -215,7 +215,7 @@ class Simulation:
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
-    def run(self, initial_state=None, observable=None, plot=True,
+    def run(self, initial_state=None, obs_list=None, plot=False,
             all_states=False, custom_label=None):
         """
         Simulate the sequence.
@@ -232,18 +232,32 @@ class Simulation:
                         for _ in range(self._size)]
             psi0 = qutip.tensor(all_down)
 
-        if observable:
-            # With observables, we get their expectation value
-            result = qutip.sesolve(self._hamiltonian, psi0,
-                                   self._times, [observable])
-            self.output = result.expect[0]
+        if obs_list:
+            if not isinstance(obs_list, list):
+                raise TypeError("`obs_list` must be a list of operators")
+            print('Observables provided. Calculating expectation value...')
+            result = qutip.sesolve(self._hamiltonian,
+                                   psi0,
+                                   self._times,
+                                   obs_list,
+                                   options=qutip.Options(nsteps=5000,
+                                                         method='bdf',
+                                                         order=5)
+                                   )
+            self.output = result.expect
             if plot:
-                plt.plot(self._times, self.output, label=custom_label)
-                plt.legend()
+                for i, expect in enumerate(self.output):
+                    plt.plot(self._times, expect, label=f"Observable {i+1}")
+                    plt.legend()
         else:
-            # Without observables, we get the output state
-            result = qutip.sesolve(self._hamiltonian, psi0,
-                                   self._times)
+            print('No observable provided. Calculating state evolution...')
+            result = qutip.sesolve(self._hamiltonian,
+                                   psi0,
+                                   self._times,
+                                   options=qutip.Options(nsteps=5000,
+                                                         method='bdf',
+                                                         order=5)
+                                   )
             if all_states:
                 self.output = result.states  # All states of evolution
             else:
