@@ -155,8 +155,8 @@ class Simulation:
             for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
                 dist = np.linalg.norm(
                         self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
-                vdw += (1e6 / (dist**6)) * 0.5 * \
-                    self._build_operator('sigma_rr', qubit1, qubit2)
+                U = 0.5 * (2*np.pi) * (1e6/dist**6)  # = U/hbar
+                vdw += U * self._build_operator('sigma_rr', qubit1, qubit2)
             return [vdw]
 
         def build_coeffs_ops(basis, addr):
@@ -178,7 +178,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                     self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], coeff])
+                        terms.append([operators[op_id], 0.5*coeff])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -191,7 +191,7 @@ class Simulation:
                             if op_id not in operators[q_id]:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
-                            terms.append([operators[q_id][op_id], coeff])
+                            terms.append([operators[q_id][op_id], 0.5*coeff])
 
             self.operators[addr][basis] = operators
             return terms
