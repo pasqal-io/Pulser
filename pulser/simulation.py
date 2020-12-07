@@ -156,7 +156,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                     self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], 0.5*coeff])
+                        terms.append([operators[op_id], 0.5*coeff + 1e-6])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -169,7 +169,8 @@ class Simulation:
                             if op_id not in operators[q_id]:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
-                            terms.append([operators[q_id][op_id], 0.5*coeff])
+                            terms.append([operators[q_id][op_id],
+                                          0.5*coeff + 1e-6])
 
             self.operators[addr][basis] = operators
             return terms
