@@ -59,7 +59,7 @@ class Channel(ABC):
 
     @classmethod
     def Local(cls, max_abs_detuning, max_amp, retarget_time, max_targets=1):
-        """Initializes the channel with local adressing.
+        """Initializes the channel with local addressing.
 
         Args:
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
@@ -68,20 +68,22 @@ class Channel(ABC):
 
         Keyword Args:
             retarget_time (default = None): Time to change the target (in ns).
-            max_targets (int, default=1): (For local channels only) How
-                many qubits can be addressed at once by the same beam."""
+            max_targets (int, default=1): How many qubits can be addressed at
+                once by the same beam.
+        """
 
         return cls('Local', max_abs_detuning, max_amp, max_targets=max_targets,
                    retarget_time=retarget_time)
 
     @classmethod
     def Global(cls, max_abs_detuning, max_amp):
-        """Initializes the channel with global adressing.
+        """Initializes the channel with global addressing.
 
         Args:
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
                 absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in MHz)."""
+            max_amp(tuple): Maximum pulse amplitude (in MHz).
+        """
 
         return cls('Global', max_abs_detuning, max_amp)
 

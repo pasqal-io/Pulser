@@ -25,7 +25,7 @@ class Pulse:
     and/or frequency, with a specific phase, over a given duration. Amplitude
     and frequency modulation are defined by objects of type pulser.Waveform.
     Frequency modulation is determined by a detuning waveform, which describes
-    shift in frequency from the channel's central frequency over time.
+    the shift in frequency from the channel's central frequency over time.
 
     Args:
         amplitude (Waveform): The pulse amplitude waveform.

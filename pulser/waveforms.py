@@ -49,7 +49,7 @@ class Waveform(ABC):
 
     @property
     def integral(self):
-        """Determines the integral of the waveform (time: ns, value: MHz)."""
+        """Integral of the waveform (time in ns, value in MHz)."""
         return np.sum(self.samples) * 1e-3  # ns * MHz = 1e-3
 
     def draw(self):
@@ -120,7 +120,7 @@ class CompositeWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         return np.concatenate([wf.samples for wf in self._waveforms])
 
@@ -186,7 +186,7 @@ class ArbitraryWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         return self._samples
 
@@ -220,7 +220,7 @@ class ConstantWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         return np.full(self.duration, self._value)
 
@@ -256,7 +256,7 @@ class RampWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         return np.linspace(self._start, self._stop, num=self._duration)
 
@@ -292,7 +292,7 @@ class BlackmanWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         samples = np.clip(np.blackman(self._duration), 0, np.inf)
         scaling = self._area / np.sum(samples) / 1e-3
@@ -318,7 +318,7 @@ class GaussianWaveform(Waveform):
     """
 
     def __init__(self, duration, max_val, sigma, offset=0):
-        """Initializes a aussian-shaped waveform."""
+        """Initializes a gaussian-shaped waveform."""
         super().__init__(duration)
         if max_val <= offset:
             raise ValueError("Can't accept a maximum value that is smaller"
@@ -339,7 +339,7 @@ class GaussianWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         # Ensures intervals are always symmetrical
         ts = np.arange(self.duration, dtype=float) - (self.duration - 1) * 0.5

@@ -13,7 +13,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../pulser'))
-sys.path.insert(1, os.path.abspath('../../'))
 
 
 # -- Project information -----------------------------------------------------
@@ -32,7 +31,10 @@ release = '0.0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'nbsphinx',
+    'nbsphinx_link',
     'sphinx.ext.autodoc',
+    'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'recommonmark',
 ]
@@ -50,7 +52,7 @@ source_suffix = ['.rst', '.md']
 
 # Autodoc config
 autosummary_generate = True
-autodoc_member_order = 'groupwise'
+autodoc_member_order = 'bysource'
 
 
 # -- Options for HTML output -------------------------------------------------
