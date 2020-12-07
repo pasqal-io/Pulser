@@ -100,10 +100,8 @@ class Simulation:
             projectors = ['hg', 'hh', 'gg']
 
         self.op_matrix = {'I': qutip.qeye(self.dim)}
-        self.basis = {}
-        for i, b in enumerate(basis):
-            self.basis[b] = qutip.basis(self.dim, i)
 
+        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
         for proj in projectors:
             self.op_matrix['sigma_' + proj] = (
                                 self.basis[proj[0]] * self.basis[proj[1]].dag()
