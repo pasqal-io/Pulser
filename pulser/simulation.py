@@ -135,7 +135,7 @@ class Simulation:
                         self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
                 U = 0.5 * (2*np.pi) * (1e6/dist**6)  # = U/hbar
                 vdw += U * self._build_operator('sigma_rr', qubit1, qubit2)
-            return [vdw]
+            return vdw
 
         def build_coeffs_ops(basis, addr):
             samples = self.samples[addr][basis]
@@ -180,7 +180,7 @@ class Simulation:
             qobj_list = []
         else:
             # Van der Waals Interaction Terms
-            qobj_list = make_vdw_term()
+            qobj_list = [make_vdw_term()]
 
         # Time dependent terms:
         for addr in self.samples:
@@ -206,10 +206,10 @@ class Simulation:
         if initial_state:
             psi0 = initial_state
         else:
-            # by default, "all down" state
-            all_down = [qutip.basis(self.dim, self.dim - 1)
+            # by default, initial state is "ground" state of g-r basis.
+            all_ground = [qutip.basis(self.dim, self.dim - 1)
                         for _ in range(self._size)]
-            psi0 = qutip.tensor(all_down)
+            psi0 = qutip.tensor(all_ground)
 
         if obs_list:
             if not isinstance(obs_list, list):
