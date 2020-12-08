@@ -156,7 +156,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                     self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], 0.5*coeff + 1e-6])
+                        terms.append([operators[op_id], 0.5*coeff])# + 1e-6])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -170,7 +170,7 @@ class Simulation:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          0.5*coeff + 1e-6])
+                                          0.5*coeff])# + 1e-6])
 
             self.operators[addr][basis] = operators
             return terms
@@ -207,8 +207,7 @@ class Simulation:
             psi0 = initial_state
         else:
             # by default, initial state is "ground" state of g-r basis.
-            all_ground = [qutip.basis(self.dim, self.dim - 1)
-                        for _ in range(self._size)]
+            all_ground = [self.basis['g'] for _ in range(self._size)]
             psi0 = qutip.tensor(all_ground)
 
         if obs_list:
@@ -219,9 +218,8 @@ class Simulation:
                                    psi0,
                                    self._times,
                                    obs_list,
-                                   options=qutip.Options(nsteps=5000,
-                                                         method='bdf',
-                                                         order=5)
+                                   options=qutip.Options(max_step=5,
+                                                         nsteps=10000)
                                    )
             self.output = result.expect
             if plot:
@@ -233,9 +231,8 @@ class Simulation:
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
                                    self._times,
-                                   options=qutip.Options(nsteps=5000,
-                                                         method='bdf',
-                                                         order=5)
+                                   options=qutip.Options(max_step=5,
+                                                         nsteps=10000)
                                    )
             if all_states:
                 self.output = result.states  # All states of evolution
