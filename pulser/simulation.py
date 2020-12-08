@@ -15,7 +15,7 @@ class Simulation:
 
     def __init__(self, sequence):
         if not isinstance(sequence, Sequence):
-            raise TypeError("The provided sequence has to be a valid"
+            raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
         self._seq = sequence
         self._reg = sequence._device._register
@@ -32,8 +32,7 @@ class Simulation:
         self.operators = deepcopy(self.samples)
 
         self._extract_samples()
-        self._decide_basis()
-        self._create_basis_and_operators()
+        self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
 
     def _extract_samples(self):
@@ -72,36 +71,30 @@ class Simulation:
 
             self.samples[addr][basis] = samples_dict
 
-    def _decide_basis(self):
+    def _build_basis_and_op_matrices(self):
         """Decide appropriate basis."""
         # No samples => Empty dict entry => False
         if (not self.samples['Global']['digital']
                 and not self.samples['Local']['digital']):
             self.basis_name = 'ground-rydberg'
-        elif (not self.samples['Global']['ground-rydberg']
-                and not self.samples['Local']['ground-rydberg']):
-            self.basis_name = 'digital'
-        else:
-            self.basis_name = 'all'  # All three states
-
-    def _create_basis_and_operators(self):
-        """Create the basis elements."""
-        if self.basis_name == 'all':
-            self.dim = 3
-            basis = ['r', 'g', 'h']
-            projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
-        elif self.basis_name == 'ground-rydberg':
             self.dim = 2
             basis = ['r', 'g']
             projectors = ['gr', 'rr', 'gg']
-        elif self.basis_name == 'digital':
+        elif (not self.samples['Global']['ground-rydberg']
+                and not self.samples['Local']['ground-rydberg']):
+            self.basis_name = 'digital'
             self.dim = 2
             basis = ['g', 'h']
             projectors = ['hg', 'hh', 'gg']
-
-        self.op_matrix = {'I': qutip.qeye(self.dim)}
+        else:
+            self.basis_name = 'all'  # All three states
+            self.dim = 3
+            basis = ['r', 'g', 'h']
+            projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
 
         self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
+        self.op_matrix = {'I': qutip.qeye(self.dim)}
+
         for proj in projectors:
             self.op_matrix['sigma_' + proj] = (
                                 self.basis[proj[0]] * self.basis[proj[1]].dag()
@@ -156,7 +149,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                     self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], 0.5*coeff])# + 1e-6])
+                        terms.append([operators[op_id], 0.5*coeff])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -170,7 +163,7 @@ class Simulation:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          0.5*coeff])# + 1e-6])
+                                          0.5*coeff])
 
             self.operators[addr][basis] = operators
             return terms
