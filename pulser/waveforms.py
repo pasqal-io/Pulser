@@ -94,7 +94,7 @@ class CompositeWaveform(Waveform):
     """A waveform combining multiple smaller waveforms.
 
     Args:
-        waveforms: Two or more waveforms to combine.
+        *waveforms: Two or more waveforms to combine.
     """
 
     def __init__(self, *waveforms):

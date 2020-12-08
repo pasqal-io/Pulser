@@ -299,7 +299,8 @@ class Sequence:
 
         Args:
             phi (float): The intended phase shift (in rads).
-            targets: The ids of the qubits on which to apply the phase shift.
+            *targets: The ids of the qubits on which to apply the phase
+                shift.
 
         Keyword Args:
             basis(str): The basis (i.e. electronic transition) to associate
