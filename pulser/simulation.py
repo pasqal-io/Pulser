@@ -1,17 +1,36 @@
+# Copyright 2020 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import itertools
 
 import qutip
 import numpy as np
-import matplotlib.pyplot as plt
 from copy import deepcopy
 
 from pulser import Pulse, Sequence
 
-print('simulation module...')
-
 
 class Simulation:
-    """Simulation of a pulse sequence using QuTiP."""
+    """Simulation of a pulse sequence using QuTiP.
+
+    Creates a Hamiltonian object with the proper dimension according to the
+    pulse sequence given, then provides a method to time-evolve an initial
+    state using the QuTiP solvers.
+
+    Args:
+        sequence: An open smalltable.Table instance.
+    """
 
     def __init__(self, sequence):
         if not isinstance(sequence, Sequence):
@@ -72,7 +91,6 @@ class Simulation:
             self.samples[addr][basis] = samples_dict
 
     def _build_basis_and_op_matrices(self):
-        """Decide appropriate basis."""
         # No samples => Empty dict entry => False
         if (not self.samples['Global']['digital']
                 and not self.samples['Local']['digital']):
@@ -115,8 +133,7 @@ class Simulation:
 
     def _construct_hamiltonian(self):
         def make_vdw_term():
-            """
-            Construct the Van der Waals interaction Term.
+            """Construct the Van der Waals interaction Term.
 
             For each pair of qubits, calculate each distance pairwise, then
             assign the local operator "sigma_rr" on each pair.
@@ -187,14 +204,17 @@ class Simulation:
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
-    def run(self, initial_state=None, obs_list=None, plot=False,
-            all_states=False, custom_label=None):
-        """
-        Simulate the sequence.
+    def run(self, initial_state=None, obs_list=None):
+        """Simulate the sequence using QuTiP's solvers.
 
-        Can either give a predefined observable, or the final state after
-        evolution, or the list of all states during evolution. If plot,
-        optionally add a custom label
+        Args:
+            initial_state: (Optional) The initial state of the evolution.
+                           Must be a qutip.Qobj object
+            obs_list: (Optional) A list of all the observables of which
+                      an expectation value will be obtained.
+
+        Raises:
+            TypeError: If the user has not given a list of operators.
         """
         if initial_state:
             psi0 = initial_state
@@ -214,11 +234,6 @@ class Simulation:
                                    options=qutip.Options(max_step=5,
                                                          nsteps=10000)
                                    )
-            self.output = result.expect
-            if plot:
-                for i, expect in enumerate(self.output):
-                    plt.plot(self._times, expect, label=f"Observable {i+1}")
-                    plt.legend()
         else:
             print('No observable provided. Calculating state evolution...')
             result = qutip.sesolve(self._hamiltonian,
@@ -227,7 +242,4 @@ class Simulation:
                                    options=qutip.Options(max_step=5,
                                                          nsteps=10000)
                                    )
-            if all_states:
-                self.output = result.states  # All states of evolution
-            else:
-                self.output = result.states[-1]  # Final state of evolution
+        self.output = result
