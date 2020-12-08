@@ -27,12 +27,10 @@ class Simulation:
     Creates a Hamiltonian object with the proper dimension according to the
     pulse sequence given, then provides a method to time-evolve an initial
     state using the QuTiP solvers.
-
-    Args:
-        sequence: An open smalltable.Table instance.
     """
 
     def __init__(self, sequence):
+        """Initialize the Simulation with a specific pulser.Sequence."""
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
@@ -55,6 +53,7 @@ class Simulation:
         self._construct_hamiltonian()
 
     def _extract_samples(self):
+        """Populate samples dictionary with every pulse in the sequence."""
 
         def prepare_dict():
             # Duration includes retargeting, delays, etc.
@@ -91,6 +90,7 @@ class Simulation:
             self.samples[addr][basis] = samples_dict
 
     def _build_basis_and_op_matrices(self):
+        """Determine dimension, basis and projector operators."""
         # No samples => Empty dict entry => False
         if (not self.samples['Global']['digital']
                 and not self.samples['Local']['digital']):
@@ -119,6 +119,7 @@ class Simulation:
                                 )
 
     def _build_operator(self, op_id, *qubit_ids, global_op=False):
+        """Create qutip.Qobj with nontrivial action at *qubit_ids."""
         if global_op:
             return sum(self._build_operator(op_id, q_id)
                        for q_id in self._reg.qubits)
@@ -135,8 +136,9 @@ class Simulation:
         def make_vdw_term():
             """Construct the Van der Waals interaction Term.
 
-            For each pair of qubits, calculate each distance pairwise, then
-            assign the local operator "sigma_rr" on each pair.
+            For each pair of qubits, calculate the distance between them, then
+            assign the local operator "sigma_rr" at each pair. The units are
+            given so that the coefficient includes a 1/hbar factor.
             """
             vdw = 0
             # Get every pair without duplicates
@@ -148,6 +150,7 @@ class Simulation:
             return vdw
 
         def build_coeffs_ops(basis, addr):
+            """Build coefficients and operators for the hamiltonian QobjEvo."""
             samples = self.samples[addr][basis]
             operators = self.operators[addr][basis]
             # Choose operator names according to addressing:
@@ -207,14 +210,11 @@ class Simulation:
     def run(self, initial_state=None, obs_list=None):
         """Simulate the sequence using QuTiP's solvers.
 
-        Args:
-            initial_state: (Optional) The initial state of the evolution.
-                           Must be a qutip.Qobj object
-            obs_list: (Optional) A list of all the observables of which
-                      an expectation value will be obtained.
-
-        Raises:
-            TypeError: If the user has not given a list of operators.
+        Keyword Args:
+            initial_state: (qutip.Qobj) The initial quantum state of the
+                           evolution.
+            obs_list: (list) A list of qutip.Qobj observables whose
+                      expectation value will be calculated.
         """
         if initial_state:
             psi0 = initial_state
