@@ -102,8 +102,8 @@ class Simulation:
 
     def _build_operator(self, op_id, *qubit_ids, global_op=False):
         if global_op:
-            return sum([self._build_operator(op_id, q_id)
-                        for q_id in self._reg.qubits])
+            return sum(self._build_operator(op_id, q_id)
+                       for q_id in self._reg.qubits)
 
         if len(set(qubit_ids)) < len(qubit_ids):
             raise ValueError("Duplicate atom ids in argument list.")
