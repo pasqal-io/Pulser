@@ -27,6 +27,10 @@ class Simulation:
     Creates a Hamiltonian object with the proper dimension according to the
     pulse sequence given, then provides a method to time-evolve an initial
     state using the QuTiP solvers.
+
+    Args:
+        sequence (pulser.Sequence): An instance of a Pulser Sequence that we
+                                    want to simulate.
     """
 
     def __init__(self, sequence):
@@ -211,9 +215,9 @@ class Simulation:
         """Simulate the sequence using QuTiP's solvers.
 
         Keyword Args:
-            initial_state: (qutip.Qobj) The initial quantum state of the
+            initial_state (qutip.Qobj): The initial quantum state of the
                            evolution.
-            obs_list: (list) A list of qutip.Qobj observables whose
+            obs_list (list): A list of qutip.Qobj observables whose
                       expectation value will be calculated.
         """
         if initial_state:
