@@ -121,6 +121,19 @@ def test_phase():
     assert seq.current_phase_ref('q10', 'digital') == 1
 
 
+def test_align():
+    seq = Sequence(device)
+    seq.declare_channel('ch0', 'raman_local', initial_target='q0')
+    seq.declare_channel('ch1', 'rydberg_global')
+    with pytest.raises(ValueError, match="names must correspond to declared"):
+        seq.align('ch0', 'ch1', 'ch2')
+    with pytest.raises(ValueError, match="more than once"):
+        seq.align('ch0', 'ch1', 'ch0')
+    with pytest.raises(ValueError, match="at least two channels"):
+        seq.align()
+        seq.align('ch1')
+
+
 def test_str():
     seq = Sequence(device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
@@ -189,6 +202,9 @@ def test_sequence():
     assert seq._last('ch0').tf == 3000
     seq.add(pulse1, 'ch0', protocol='wait-for-all')
     assert seq._last('ch0').ti == 3500
+    assert seq._last('ch2').tf != seq._last('ch0').tf
+    seq.align('ch0', 'ch2')
+    assert seq._last('ch2').tf == seq._last('ch0').tf
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()

@@ -316,6 +316,37 @@ class Sequence:
             new_phase = self._phase_ref[basis][q].last_phase + phi
             self._phase_ref[basis][q][t] = new_phase
 
+    def align(self, *channels):
+        """Aligns multiple channels in time.
+
+        Introduces delays that align the provided channels with the one that
+        finished the latest, such that the next action added to any of them
+        will start right after the latest channel has finished.
+
+        Args:
+            *channels (str): The names of the channels to align, as given upon
+                declaration.
+        """
+
+        ch_set = set(channels)
+        # channels have to be a subset of the declared channels
+        if not ch_set <= set(self._channels):
+            raise ValueError("All channel names must correspond to declared"
+                             " channels.")
+        if len(channels) != len(ch_set):
+            raise ValueError("The same channel was provided more than once.")
+
+        if len(channels) < 2:
+            raise ValueError("Needs at least two channels for alignment.")
+
+        last_ts = {id: self._last(id).tf for id in channels}
+        tf = max(last_ts.values())
+
+        for id in channels:
+            delta = tf - last_ts[id]
+            if delta > 0:
+                self.delay(delta, id)
+
     def draw(self):
         """Draws the sequence in its current sequence."""
         draw_sequence(self)
