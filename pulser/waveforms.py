@@ -27,14 +27,14 @@ class Waveform(ABC):
         """Initializes a waveform with a given duration.
 
         Args:
-            duration (int): The waveforms duration (in ns).
+            duration (int): The waveforms duration (in multiples of 4 ns).
         """
         self._duration = validate_duration(duration)
 
     @property
     @abstractmethod
     def duration(self):
-        """The duration of the pulse (in ns)."""
+        """The duration of the pulse (in multiples of 4 ns)."""
         pass
 
     @property
@@ -109,7 +109,7 @@ class CompositeWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in ns)."""
+        """The duration of the pulse (in multiples of 4 ns)."""
         duration = 0
         for wf in self._waveforms:
             duration += wf.duration
@@ -178,7 +178,7 @@ class ArbitraryWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in ns)."""
+        """The duration of the pulse (in multiples of 4 ns)."""
         return len(self._samples)
 
     @property
@@ -201,7 +201,7 @@ class ConstantWaveform(Waveform):
     """A waveform of constant value.
 
     Args:
-        duration: The waveform duration (in ns).
+        duration: The waveform duration (in multiples of 4 ns).
         value: The modulation value.
     """
 
@@ -212,7 +212,7 @@ class ConstantWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in ns)."""
+        """The duration of the pulse (in multiples of 4 ns)."""
         return self._duration
 
     @property
@@ -235,7 +235,7 @@ class RampWaveform(Waveform):
     """A linear ramp waveform.
 
     Args:
-        duration: The waveform duration (in ns).
+        duration: The waveform duration (in multiples of 4 ns).
         start: The initial value.
         stop: The final value.
     """
@@ -248,7 +248,7 @@ class RampWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in ns)."""
+        """The duration of the pulse (in multiples of 4 ns)."""
         return self._duration
 
     @property
@@ -272,7 +272,7 @@ class BlackmanWaveform(Waveform):
     """A Blackman window of a specified duration and area.
 
     Args:
-        duration: The waveform duration (in ns).
+        duration: The waveform duration (in multiples of 4 ns).
         area: The area under the waveform.
     """
     def __init__(self, duration, area):
@@ -284,7 +284,7 @@ class BlackmanWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in ns)."""
+        """The duration of the pulse (in multiples of 4 ns)."""
         return self._duration
 
     @property
@@ -309,7 +309,7 @@ class GaussianWaveform(Waveform):
     """A Gaussian-shaped waveform.
 
     Args:
-        duration: The waveform duration (in ns).
+        duration: The waveform duration (in multiples of 4 ns).
         max_val: The maximum value.
         sigma: The standard deviation of the gaussian shape (in ns).
 
@@ -331,7 +331,7 @@ class GaussianWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in ns)."""
+        """The duration of the pulse (in multiples of 4 ns)."""
         return self._duration
 
     @property

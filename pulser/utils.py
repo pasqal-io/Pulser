@@ -19,7 +19,7 @@ def validate_duration(duration):
     """Validates a time interval.
 
     Returns:
-        int: The duration in ns.
+        int: The duration in multiples of 4 ns.
     """
     try:
         _duration = int(duration)
@@ -31,8 +31,9 @@ def validate_duration(duration):
         raise ValueError("duration has to be castable to a positive "
                          "integer.")
 
-    if duration % 1 != 0:
+    if duration % 4 != 0:
+        _duration -= _duration % 4
         warnings.warn("The given duration is below the machine's precision"
-                      " of 1 ns time steps. It was rounded down to the"
-                      " nearest integer.")
+                      " of 4 ns time steps. It was rounded down to the"
+                      " nearest valid value.")
     return _duration

@@ -90,7 +90,7 @@ class Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
         Args:
-            duration (int): The pulse duration (in ns).
+            duration (int): The pulse duration (in multiples of 4 ns).
             amplitude (float): The pulse amplitude value (in MHz).
             detuning (float): The detuning value (in MHz).
             phase (float): The pulse phase (in radians).

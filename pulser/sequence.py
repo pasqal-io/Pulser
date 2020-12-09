@@ -258,7 +258,7 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration (int): Time to delay (in ns).
+            duration (int): Time to delay (in multiples of 4 ns).
             channel (str): The channel's name provided when declared.
         """
         last = self._last(channel)
