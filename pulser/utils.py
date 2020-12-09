@@ -27,9 +27,8 @@ def validate_duration(duration):
         raise TypeError("duration needs to be castable to an int but "
                         "type %s was provided" % type(duration))
 
-    if duration <= 0:
-        raise ValueError("duration has to be castable to a positive "
-                         "integer.")
+    if duration < 4:
+        raise ValueError("duration has to be castable to at least 4 ns.")
 
     if duration % 4 != 0:
         _duration -= _duration % 4
