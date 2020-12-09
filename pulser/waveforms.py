@@ -260,6 +260,11 @@ class RampWaveform(Waveform):
         """
         return np.linspace(self._start, self._stop, num=self._duration)
 
+    @property
+    def slope(self):
+        """Slope of the ramp, in MHz/ns."""
+        return (self._stop - self._start) / self._duration
+
     def __str__(self):
         return f"Ramp({self._start:.3g}->{self._stop:.3g} MHz)"
 
