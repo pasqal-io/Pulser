@@ -12,40 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import FrozenInstanceError
+from unittest.mock import patch
+
 import pytest
 
-from pulser import Register
+import pulser
 from pulser.devices import Chadoq2
+from pulser.register import Register
 
 
 def test_init():
-    with pytest.raises(TypeError):
-        Chadoq2([1, 2, 4])
-        Chadoq2('q1')
-        Chadoq2(('a', 'b', 'c'))
+    for dev in pulser.devices._valid_devices:
+        assert isinstance(dev.channels, dict)
+        with pytest.raises(FrozenInstanceError):
+            dev.name = "something else"
+        for i, (id, ch) in enumerate(dev.channels.items()):
+            assert id == dev.channel_names[i]
+            assert ch == dev.channel_objs[i]
+    assert Chadoq2 in pulser.devices._valid_devices
+    assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
+    with patch('sys.stdout'):
+        Chadoq2.specs()
 
-    qubits = dict(enumerate([(0, 0), (10, 0)]))
-    dev1 = Chadoq2(qubits)
-    reg = Register(qubits)
-    dev2 = Chadoq2(reg)
-    assert dev1.qubits == dev2.qubits
-    assert isinstance(dev1.channels, dict)
-    assert dev2.supported_bases == {'digital', 'ground-rydberg'}
 
-
-def test_check_array():
+def test_validate_register():
     with pytest.raises(ValueError, match='Too many atoms'):
-        Chadoq2(Register.square(50))
+        Chadoq2._validate_register(Register.square(50))
 
     coords = [(100, 0), (-100, 0)]
-    with pytest.raises(ValueError, match='at most 50um away from the center'):
-        Chadoq2(Register.from_coordinates(coords))
+    with pytest.raises(ValueError, match='at most 50 um away from the center'):
+        Chadoq2._validate_register(Register.from_coordinates(coords))
 
     with pytest.raises(ValueError, match='must be 2D vectors'):
         coords += [(-10, 4, 0)]
-        Chadoq2(dict(enumerate(coords)))
+        Chadoq2._validate_register(Register(dict(enumerate(coords))))
 
     with pytest.raises(ValueError, match="don't respect the minimal distance"):
-        Chadoq2(Register.triangular_lattice(3, 4, spacing=3.9))
+        Chadoq2._validate_register(Register.triangular_lattice(
+                                                            3, 4, spacing=3.9))
 
-    Chadoq2(Register.rectangle(5, 10, spacing=5))
+    Chadoq2._validate_register(Register.rectangle(5, 10, spacing=5))

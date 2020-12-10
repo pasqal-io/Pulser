@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, InitVar
-from typing import ClassVar, Dict, Union
+from dataclasses import dataclass
+from typing import Tuple
 
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from pulser.channels import Channel, Raman, Rydberg
+from pulser.channels import Channel
 from pulser.register import Register
 
 
-@dataclass
+@dataclass(frozen=True, repr=False)
 class PasqalDevice:
     """Definition of a Pasqal Device.
 
@@ -30,39 +30,56 @@ class PasqalDevice:
         qubits (dict, Register): A dictionary or a Register class instance with
             all the qubits' names and respective positions in the array.
     """
-    name: ClassVar[str]
-    max_dimensionality: ClassVar[int]
-    max_atom_num: ClassVar[int]
-    max_radial_distance: ClassVar[int]
-    min_atom_distance: ClassVar[int]
-    channels: ClassVar[Dict[str, Channel]]
-    qubits: InitVar[Union[dict, Register]]
+    name: str
+    max_dimensionality: int
+    max_atom_num: int
+    max_radial_distance: int
+    min_atom_distance: int
+    channel_names: Tuple[str]
+    channel_objs: Tuple[Channel]
 
-    def __post_init__(self, qubits):
-        if isinstance(qubits, dict):
-            register = Register(qubits)
-        elif isinstance(qubits, Register):
-            register = qubits
-        else:
-            raise TypeError("The qubits' type must be dict or Register.")
-
-        self._check_array(list(register.qubits.values()))
-        self._register = register
+    @property
+    def channels(self):
+        """Available channels on this device."""
+        return dict(zip(self.channel_names, self.channel_objs))
 
     @property
     def supported_bases(self):
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channels.values()}
 
-    @property
-    def qubits(self):
-        """The dictionary of qubit names and their positions."""
-        return self._register.qubits
+    def specs(self):
+        """Prints the device specifications."""
+        title = f"{self.name} Specifications"
+        lines = [
+            "-"*len(title),
+            title,
+            "-"*len(title),
+            "\nRegister requirements:",
+            f" - Dimensions: {self.max_dimensionality}D",
+            f" - Maximum number of atoms: {self.max_atom_num}",
+            f" - Maximum distance from origin: {self.max_radial_distance} um",
+            (" - Minimum distance between neighbouring atoms: "
+             + f"{self.min_atom_distance} um"),
+            "\nChannels:"
+            ]
+        for name, ch in zip(self.channel_names, self.channel_objs):
+            lines.append(f" - '{name}': {ch!r}")
 
-    def _check_array(self, atoms):
+        print("\n".join(lines))
+
+    def __repr__(self):
+        return self.name
+
+    def _validate_register(self, register):
+        """Checks if 'register' is compatible with this device."""
+        if not isinstance(register, Register):
+            raise TypeError("register has to be a pulser.Register instance.")
+
+        atoms = list(register.qubits.values())
         if len(atoms) > self.max_atom_num:
-            raise ValueError("Too many atoms in the array, accepts at most"
-                             "{} atoms.".format(self.max_atom_num))
+            raise ValueError("Too many atoms in the array, the device accepts "
+                             "at most {} atoms.".format(self.max_atom_num))
         for pos in atoms:
             if len(pos) != self.max_dimensionality:
                 raise ValueError("All qubit positions must be {}D "
@@ -75,27 +92,6 @@ class PasqalDevice:
                                  "distance between atoms for this device.")
 
         if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
-            raise ValueError("All qubits must be at most {}um away from the "
+            raise ValueError("All qubits must be at most {} um away from the "
                              "center of the array.".format(
                                                     self.max_radial_distance))
-
-
-class Chadoq2(PasqalDevice):
-    """Chadoq2 device specifications.
-
-    Args:
-        qubits (dict, Register): A dictionary or a Register class instance with
-            all the qubits' names and respective positions in the array.
-    """
-
-    name = "Chadoq2"
-    max_dimensionality = 2
-    max_atom_num = 100
-    max_radial_distance = 50
-    min_atom_distance = 4
-    channels = {
-        "rydberg_global": Rydberg.Global(50, 2.5),
-        "rydberg_local": Rydberg.Local(50, 10, 100),
-        "rydberg_local2": Rydberg.Local(50, 10, 100),
-        "raman_local": Raman.Local(50, 10, 100),
-        }
