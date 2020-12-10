@@ -17,9 +17,8 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser.waveforms import (ConstantWaveform, RampWaveform, GaussianWaveform,
-                              BlackmanWaveform, CustomWaveform,
-                              CompositeWaveform)
+from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
+                              CustomWaveform, CompositeWaveform)
 
 np.random.seed(20201105)
 
@@ -27,7 +26,6 @@ constant = ConstantWaveform(100, -3)
 ramp = RampWaveform(2e3, 5, 19)
 arb_samples = np.random.random(50)
 custom = CustomWaveform(arb_samples)
-gaussian = GaussianWaveform(70, 10, 30, offset=5)
 blackman = BlackmanWaveform(40, np.pi)
 composite = CompositeWaveform(blackman, constant, custom)
 
@@ -36,7 +34,6 @@ def test_duration():
     with pytest.raises(TypeError, match='needs to be castable to an int'):
         ConstantWaveform("s", -1)
         RampWaveform([0, 1, 3], 1, 0)
-        GaussianWaveform((100,), 1, 50)
 
     with pytest.raises(ValueError, match='positive integer'):
         ConstantWaveform(0, -10)
@@ -67,7 +64,7 @@ def test_integral():
 def test_draw():
     with patch('matplotlib.pyplot.show'):
         composite.draw()
-        gaussian.draw()
+        blackman.draw()
 
 
 def test_eq():
@@ -112,18 +109,3 @@ def test_blackman():
     with pytest.raises(ValueError, match='Area under the waveform'):
         BlackmanWaveform(100, -100)
         BlackmanWaveform(10, 0)
-
-
-def test_gaussian():
-    with pytest.raises(ValueError, match='smaller than the offset'):
-        GaussianWaveform(100, 1, 400, offset=2)
-
-    with pytest.raises(ValueError, match='deviation has to be positive'):
-        GaussianWaveform(100, 1, 0)
-        GaussianWaveform(100, 1, -1)
-
-    s = "Gaussian(5->10 MHz, sigma=30 ns)"
-    assert gaussian.__str__() == s
-
-    r = "GaussianWaveform(70 ns, max=10 MHz, offset=5 MHz, sigma=30 ns)"
-    assert gaussian.__repr__() == r
