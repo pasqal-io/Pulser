@@ -34,6 +34,7 @@ def test_init():
     assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
     with patch('sys.stdout'):
         Chadoq2.specs()
+    assert Chadoq2.__repr__() == 'Chadoq2'
 
 
 def test_validate_register():
@@ -41,6 +42,8 @@ def test_validate_register():
         Chadoq2._validate_register(Register.square(50))
 
     coords = [(100, 0), (-100, 0)]
+    with pytest.raises(TypeError):
+        Chadoq2._validate_register(coords)
     with pytest.raises(ValueError, match='at most 50 um away from the center'):
         Chadoq2._validate_register(Register.from_coordinates(coords))
 
