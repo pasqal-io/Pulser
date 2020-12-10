@@ -164,8 +164,8 @@ class CompositeWaveform(Waveform):
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
 
-class ArbitraryWaveform(Waveform):
-    """An arbitrary waveform.
+class CustomWaveform(Waveform):
+    """A custom waveform.
 
     Args:
         samples (array_like): The modulation values at each time step.
@@ -191,10 +191,10 @@ class ArbitraryWaveform(Waveform):
         return self._samples
 
     def __str__(self):
-        return 'Arbitrary'
+        return 'Custom'
 
     def __repr__(self):
-        return f'ArbitraryWaveform({self.duration} ns, {self.samples!r})'
+        return f'CustomWaveform({self.duration} ns, {self.samples!r})'
 
 
 class ConstantWaveform(Waveform):
@@ -303,55 +303,3 @@ class BlackmanWaveform(Waveform):
 
     def __repr__(self):
         return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
-
-
-class GaussianWaveform(Waveform):
-    """A Gaussian-shaped waveform.
-
-    Args:
-        duration: The waveform duration (in ns).
-        max_val: The maximum value.
-        sigma: The standard deviation of the gaussian shape (in ns).
-
-    Keyword Args:
-        offset (default=0): A constant offset that defines the baseline.
-    """
-
-    def __init__(self, duration, max_val, sigma, offset=0):
-        """Initializes a aussian-shaped waveform."""
-        super().__init__(duration)
-        if max_val <= offset:
-            raise ValueError("Can't accept a maximum value that is smaller"
-                             " than the offset of a gaussian waveform.")
-        if sigma <= 0:
-            raise ValueError("The standard deviation has to be positive.")
-        self._top = float(max_val - offset)
-        self._sigma = sigma
-        self._offset = float(offset)
-
-    @property
-    def duration(self):
-        """The duration of the pulse (in ns)."""
-        return self._duration
-
-    @property
-    def samples(self):
-        """The value at each time step that describes the waveform.
-
-        Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
-        """
-        # Ensures intervals are always symmetrical
-        ts = np.arange(self.duration, dtype=float) - (self.duration - 1) * 0.5
-        return self._top * np.exp(-0.5 * (ts / self._sigma)**2) + self._offset
-
-    def __str__(self):
-        args = (f"({self._offset:.3g}->{self._top+self._offset:.3g} MHz,"
-                + f" sigma={self._sigma:.4g} ns)")
-        return "Gaussian" + args
-
-    def __repr__(self):
-        args = (
-            f"({self._duration} ns, max={self._top+self._offset:.3g} MHz," +
-            f" offset={self._offset:.3g} MHz, sigma={self._sigma:.4g} ns)")
-        return "GaussianWaveform" + args
