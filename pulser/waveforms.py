@@ -164,8 +164,8 @@ class CompositeWaveform(Waveform):
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
 
-class ArbitraryWaveform(Waveform):
-    """An arbitrary waveform.
+class CustomWaveform(Waveform):
+    """A custom waveform.
 
     Args:
         samples (array_like): The modulation values at each time step.
@@ -191,10 +191,10 @@ class ArbitraryWaveform(Waveform):
         return self._samples
 
     def __str__(self):
-        return 'Arbitrary'
+        return 'Custom'
 
     def __repr__(self):
-        return f'ArbitraryWaveform({self.duration} ns, {self.samples!r})'
+        return f'CustomWaveform({self.duration} ns, {self.samples!r})'
 
 
 class ConstantWaveform(Waveform):

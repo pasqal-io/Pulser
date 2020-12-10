@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from pulser.waveforms import (ConstantWaveform, RampWaveform, GaussianWaveform,
-                              BlackmanWaveform, ArbitraryWaveform,
+                              BlackmanWaveform, CustomWaveform,
                               CompositeWaveform)
 
 np.random.seed(20201105)
@@ -26,10 +26,10 @@ np.random.seed(20201105)
 constant = ConstantWaveform(100, -3)
 ramp = RampWaveform(2e3, 5, 19)
 arb_samples = np.random.random(50)
-arbitrary = ArbitraryWaveform(arb_samples)
+custom = CustomWaveform(arb_samples)
 gaussian = GaussianWaveform(70, 10, 30, offset=5)
 blackman = BlackmanWaveform(40, np.pi)
-composite = CompositeWaveform(blackman, constant, arbitrary)
+composite = CompositeWaveform(blackman, constant, custom)
 
 
 def test_duration():
@@ -46,7 +46,7 @@ def test_duration():
         wf = BlackmanWaveform(np.pi, 1)
 
     assert wf.duration == 3
-    assert arbitrary.duration == 50
+    assert custom.duration == 50
     assert composite.duration == 190
 
 
@@ -71,24 +71,24 @@ def test_draw():
 
 
 def test_eq():
-    assert constant == ArbitraryWaveform(np.full(100, -3))
+    assert constant == CustomWaveform(np.full(100, -3))
     assert constant != -3
-    assert constant != ArbitraryWaveform(np.full(50, -3))
+    assert constant != CustomWaveform(np.full(50, -3))
 
 
 def test_composite():
     with pytest.raises(ValueError, match='Needs at least two waveforms'):
         CompositeWaveform()
         CompositeWaveform(composite)
-        CompositeWaveform([blackman, arbitrary])
+        CompositeWaveform([blackman, custom])
         CompositeWaveform(10)
 
     with pytest.raises(TypeError, match='not a valid waveform'):
         CompositeWaveform(composite, 'constant')
 
-    assert composite.waveforms == [blackman, constant, arbitrary]
+    assert composite.waveforms == [blackman, constant, custom]
 
-    wf = CompositeWaveform(blackman, arbitrary)
+    wf = CompositeWaveform(blackman, custom)
     wf.insert(constant, where=1)
     assert composite == wf
 
@@ -98,14 +98,14 @@ def test_composite():
     assert wf.__str__() == f'Composite({msg})'
     assert wf.__repr__() == f'CompositeWaveform(140 ns, [{msg}])'
 
-    wf.append(arbitrary)
+    wf.append(custom)
     assert composite == wf
 
 
-def test_arbitrary():
-    wf = ArbitraryWaveform([0, 1])
-    assert wf.__str__() == 'Arbitrary'
-    assert wf.__repr__() == 'ArbitraryWaveform(2 ns, array([0, 1]))'
+def test_custom():
+    wf = CustomWaveform([0, 1])
+    assert wf.__str__() == 'Custom'
+    assert wf.__repr__() == 'CustomWaveform(2 ns, array([0, 1]))'
 
 
 def test_blackman():
