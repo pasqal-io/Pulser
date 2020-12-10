@@ -29,7 +29,8 @@ class Channel(ABC):
             max_amp(tuple): Maximum pulse amplitude (in MHz).
 
         Keyword Args:
-            retarget_time (default = None): Time to change the target (in ns).
+            retarget_time (default = None): Time it takes to change the target
+                (in ns).
             max_targets (int, default=1): (For local channels only) How
                 many qubits can be addressed at once by the same beam.
         """
@@ -67,7 +68,8 @@ class Channel(ABC):
             max_amp(tuple): Maximum pulse amplitude (in MHz).
 
         Keyword Args:
-            retarget_time (default = None): Time to change the target (in ns).
+            retarget_time (default = None): Time it takes to change the target
+                (in ns).
             max_targets (int, default=1): (For local channels only) How
                 many qubits can be addressed at once by the same beam."""
 
