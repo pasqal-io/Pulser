@@ -1,3 +1,17 @@
+# Copyright 2020 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC, abstractmethod
 
 
@@ -6,7 +20,7 @@ class Channel(ABC):
 
     def __init__(self, addressing, max_abs_detuning, max_amp,
                  retarget_time=None, max_targets=1):
-        """Initialize a channel with specific characteristics.
+        """Initializes a channel with specific characteristics.
 
         Args:
             addressing (str): 'Local' or 'Global'.
@@ -96,11 +110,8 @@ class Channel(ABC):
 class Raman(Channel):
     """Raman beam channel.
 
-    Args:
-        addressing (str): 'Local' or 'Global'.
-        max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-        absolute value.
-        max_amp(tuple): Maximum pulse amplitude (in MHz).
+    Channel targeting the transition between the hyperfine ground states, in
+    which the 'digital' basis is encoded. See base class.
     """
     @property
     def name(self):
@@ -115,11 +126,8 @@ class Raman(Channel):
 class Rydberg(Channel):
     """Rydberg beam channel.
 
-    Args:
-        addressing (str): 'Local' or 'Global'.
-        max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-        absolute value.
-        max_amp(tuple): Maximum pulse amplitude (in MHz).
+    Channel targeting the transition between the ground and rydberg states,
+    thus enconding the 'ground-rydberg' basis. See base class.
     """
     @property
     def name(self):
@@ -129,19 +137,3 @@ class Rydberg(Channel):
     def basis(self):
         """The target transition at zero detuning."""
         return 'ground-rydberg'
-
-
-class MW(Channel):
-    """Microwave channel.
-
-    Args:
-        addressing (str): 'Local' or 'Global'.
-        max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-        absolute value.
-        max_amp(tuple): Maximum pulse amplitude (in MHz).
-    """
-    @property
-    def name(self):
-        return 'MW'
-
-    # TODO: Define basis for this channel

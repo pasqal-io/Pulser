@@ -1,3 +1,17 @@
+# Copyright 2020 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from collections import namedtuple
 from collections.abc import Iterable
 import copy
@@ -7,7 +21,7 @@ import numpy as np
 
 from pulser.devices import PasqalDevice
 from pulser.pulse import Pulse
-from pulser.seq_drawer import draw_sequence
+from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
@@ -21,8 +35,12 @@ class Sequence:
         - The device in which we want to implement it
         - The device's channels that are used
         - The schedule of operations on each channel
+
+    Args:
+        device: A pulser.PasqalDevice instance.
     """
     def __init__(self, device):
+        """Initializes a new pulse sequence."""
         if not isinstance(device, PasqalDevice):
             raise TypeError("The Sequence's device has to be a PasqalDevice.")
         self._device = device
@@ -35,20 +53,22 @@ class Sequence:
 
     @property
     def qubit_info(self):
-        """Returns the dictionary with the qubit's IDs and positions."""
+        """Dictionary with the qubit's IDs and positions."""
         return self._device.qubits
 
     @property
     def declared_channels(self):
+        """Channels declared in this Sequence."""
         return dict(self._channels)
 
     @property
     def available_channels(self):
+        """Channels still available for declaration."""
         return {id: ch for id, ch in self._device.channels.items()
                 if id not in self._taken_channels}
 
     def current_phase_ref(self, qubit, basis='digital'):
-        """Returns the current phase reference of a specific qubit in a basis.
+        """Current phase reference of a specific qubit for a given basis.
 
         Args:
             qubit (str): The id of the qubit whose phase shift is desired.
@@ -57,6 +77,9 @@ class Sequence:
             basis (str): The basis (i.e. electronic transition) the phase
                 reference is associated with. Must correspond to the basis of a
                 declared channel.
+
+        Returns:
+            float: Current phase reference of 'qubit' in 'basis'.
 
         """
         if qubit not in self._qids:
@@ -69,17 +92,19 @@ class Sequence:
         return self._phase_ref[basis][qubit].last_phase
 
     def declare_channel(self, name, channel_id, initial_target=None):
-        """Declare a new channel to the Sequence.
+        """Declares a new channel to the Sequence.
 
         Args:
             name (str): Unique name for the channel in the sequence.
             channel_id (str): How the channel is identified in the device.
+                Consult Sequence.available_channels to see which channel ID's
+                are still available and the associated channel's description.
 
         Keyword Args:
             initial_target (set, default=None): For 'Local' adressing channels
-                where a target has to be defined, it can be done when the
-                channel is first declared. If left as None, this will have to
-                be done manually as the first addition to a channel.
+                only. Declares the initial target of the channel. If left as
+                None, the initial target will have to be set manually as the
+                first addition to this channel.
         """
 
         if name in self._channels:
@@ -97,7 +122,8 @@ class Sequence:
         self._schedule[name] = []
 
         if ch.basis not in self._phase_ref:
-            self._phase_ref[ch.basis] = {q: PhaseTracker(0) for q in self._qids}
+            self._phase_ref[ch.basis] = {q: _PhaseTracker(0)
+                                         for q in self._qids}
             self._last_used[ch.basis] = {q: 0 for q in self._qids}
 
         if ch.addressing == 'Global':
@@ -106,10 +132,10 @@ class Sequence:
             self.target(initial_target, name)
 
     def add(self, pulse, channel, protocol='min-delay'):
-        """Add a pulse to a channel.
+        """Adds a pulse to a channel.
 
         Args:
-            pulse (Pulse): The pulse object to add to the channel.
+            pulse (pulser.Pulse): The pulse object to add to the channel.
             channel (str): The channel's name provided when declared.
 
         Keyword Args:
@@ -175,7 +201,8 @@ class Sequence:
                 self._last_used[basis][q] = tf
 
         if pulse.post_phase_shift:
-            self.phase_shift(pulse.post_phase_shift, *last.targets, basis=basis)
+            self.phase_shift(pulse.post_phase_shift, *last.targets,
+                             basis=basis)
 
     def target(self, qubits, channel):
         """Changes the target qubit of a 'Local' channel.
@@ -184,8 +211,9 @@ class Sequence:
             qubits (hashable, iterable): The new target for this channel. Must
                 correspond to a qubit ID in device or an iterable of qubit IDs,
                 when multi-qubit adressing is possible.
-            channel (str): The channel's name provided when declared.
-        """
+            channel (str): The channel's name provided when declared. Must be
+                a channel with 'Local' addressing.
+         """
 
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
@@ -201,8 +229,10 @@ class Sequence:
         if self._channels[channel].addressing != 'Local':
             raise ValueError("Can only choose target of 'Local' channels.")
         elif len(qs) > self._channels[channel].max_targets:
-            raise ValueError("This channel can target at most {} qubits at a "
-                             "time".format(self._channels[channel].max_targets))
+            raise ValueError(
+                "This channel can target at most "
+                f"{self._channels[channel].max_targets} qubits at a time"
+            )
 
         basis = self._channels[channel].basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
@@ -225,7 +255,7 @@ class Sequence:
         self._add_to_schedule(channel, TimeSlot('target', ti, tf, qs))
 
     def delay(self, duration, channel):
-        """Idle a given choosen for a specific duration.
+        """Idles a given channel for a specific duration.
 
         Args:
             duration (int): Time to delay (in ns).
@@ -237,7 +267,7 @@ class Sequence:
         self._add_to_schedule(channel, TimeSlot('delay', ti, tf, last.targets))
 
     def measure(self, basis='ground-rydberg'):
-        """Measure in a valid basis.
+        """Measures in a valid basis.
 
         Args:
             basis (str): Valid basis for measurement (consult the
@@ -256,7 +286,7 @@ class Sequence:
         self._measurement = basis
 
     def phase_shift(self, phi, *targets, basis='digital'):
-        """Shift the phase of a qubit's reference by 'phi', for a given basis.
+        """Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
         This is equivalent to an Rz(phi) gate (i.e. a rotation of the target
         qubit's state by an angle phi around the z-axis of the Bloch sphere).
@@ -286,7 +316,39 @@ class Sequence:
             new_phase = self._phase_ref[basis][q].last_phase + phi
             self._phase_ref[basis][q][t] = new_phase
 
+    def align(self, *channels):
+        """Aligns multiple channels in time.
+
+        Introduces delays that align the provided channels with the one that
+        finished the latest, such that the next action added to any of them
+        will start right after the latest channel has finished.
+
+        Args:
+            *channels (str): The names of the channels to align, as given upon
+                declaration.
+        """
+
+        ch_set = set(channels)
+        # channels have to be a subset of the declared channels
+        if not ch_set <= set(self._channels):
+            raise ValueError("All channel names must correspond to declared"
+                             " channels.")
+        if len(channels) != len(ch_set):
+            raise ValueError("The same channel was provided more than once.")
+
+        if len(channels) < 2:
+            raise ValueError("Needs at least two channels for alignment.")
+
+        last_ts = {id: self._last(id).tf for id in channels}
+        tf = max(last_ts.values())
+
+        for id in channels:
+            delta = tf - last_ts[id]
+            if delta > 0:
+                self.delay(delta, id)
+
     def draw(self):
+        """Draws the sequence in its current sequence."""
         draw_sequence(self)
 
     def __str__(self):
@@ -315,7 +377,8 @@ class Sequence:
                                  f"Phase Reference: {phase} \n")
                         first_slot = False
                     else:
-                        full += target_line.format(ts.ti, ts.tf, tgt_txt, phase)
+                        full += target_line.format(ts.ti, ts.tf, tgt_txt,
+                                                   phase)
 
             full += "\n"
 
@@ -353,7 +416,7 @@ class Sequence:
                              "allowed for the chosen channel.")
 
 
-class PhaseTracker:
+class _PhaseTracker:
     """Tracks a phase reference over time."""
 
     def __init__(self, initial_phase):

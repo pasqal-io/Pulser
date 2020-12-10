@@ -1,3 +1,17 @@
+# Copyright 2020 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC, abstractmethod
 
 import matplotlib.pyplot as plt
@@ -10,6 +24,11 @@ class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
     def __init__(self, duration):
+        """Initializes a waveform with a given duration.
+
+        Args:
+            duration (int): The waveforms duration (in ns).
+        """
         self._duration = validate_duration(duration)
 
     @property
@@ -79,7 +98,7 @@ class CompositeWaveform(Waveform):
     """
 
     def __init__(self, *waveforms):
-
+        """Initializes a waveform from multiple waveforms."""
         if len(waveforms) < 2:
             raise ValueError("Needs at least two waveforms to form a "
                              "CompositeWaveform.")
@@ -145,14 +164,15 @@ class CompositeWaveform(Waveform):
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
 
-class ArbitraryWaveform(Waveform):
-    """An arbitrary waveform.
+class CustomWaveform(Waveform):
+    """A custom waveform.
 
     Args:
         samples (array_like): The modulation values at each time step.
     """
 
     def __init__(self, samples):
+        """Initializes a custom waveform."""
         samples_arr = np.array(samples)
         self._samples = samples_arr
 
@@ -171,10 +191,10 @@ class ArbitraryWaveform(Waveform):
         return self._samples
 
     def __str__(self):
-        return 'Arbitrary'
+        return 'Custom'
 
     def __repr__(self):
-        return f'ArbitraryWaveform({self.duration} ns, {self.samples!r})'
+        return f'CustomWaveform({self.duration} ns, {self.samples!r})'
 
 
 class ConstantWaveform(Waveform):
@@ -186,6 +206,7 @@ class ConstantWaveform(Waveform):
     """
 
     def __init__(self, duration, value):
+        """Initializes a constant waveform."""
         super().__init__(duration)
         self._value = float(value)
 
@@ -220,6 +241,7 @@ class RampWaveform(Waveform):
     """
 
     def __init__(self, duration, start, stop):
+        """Initializes a ramp waveform."""
         super().__init__(duration)
         self._start = float(start)
         self._stop = float(stop)
@@ -254,6 +276,7 @@ class BlackmanWaveform(Waveform):
         area: The area under the waveform.
     """
     def __init__(self, duration, area):
+        """Initializes a Blackman waveform."""
         super().__init__(duration)
         if area <= 0:
             raise ValueError("Area under the waveform needs to be positive.")
@@ -280,53 +303,3 @@ class BlackmanWaveform(Waveform):
 
     def __repr__(self):
         return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
-
-
-class GaussianWaveform(Waveform):
-    """A Gaussian-shaped waveform.
-
-    Args:
-        duration: The waveform duration (in ns).
-        max_val: The maximum value.
-        sigma: The standard deviation of the gaussian shape (in ns).
-
-    Keyword Args:
-        offset (default=0): A constant offset that defines the baseline.
-    """
-
-    def __init__(self, duration, max_val, sigma, offset=0):
-        super().__init__(duration)
-        if max_val <= offset:
-            raise ValueError("Can't accept a maximum value that is smaller"
-                             " than the offset of a gaussian waveform.")
-        if sigma <= 0:
-            raise ValueError("The standard deviation has to be positive.")
-        self._top = float(max_val - offset)
-        self._sigma = sigma
-        self._offset = float(offset)
-
-    @property
-    def duration(self):
-        """The duration of the pulse (in ns)."""
-        return self._duration
-
-    @property
-    def samples(self):
-        """The value at each time step that describes the waveform.
-
-        Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
-        """
-        # Ensures intervals are always symmetrical
-        ts = np.arange(self.duration, dtype=float) - (self.duration - 1) * 0.5
-        return self._top * np.exp(-0.5 * (ts / self._sigma)**2) + self._offset
-
-    def __str__(self):
-        args = (f"({self._offset:.3g}->{self._top+self._offset:.3g} MHz,"
-                + f" sigma={self._sigma:.4g} ns)")
-        return "Gaussian" + args
-
-    def __repr__(self):
-        args = (f"({self._duration} ns, max={self._top+self._offset:.3g} MHz," +
-                f" offset={self._offset:.3g} MHz, sigma={self._sigma:.4g} ns)")
-        return "GaussianWaveform" + args

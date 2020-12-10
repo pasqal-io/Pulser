@@ -1,3 +1,17 @@
+# Copyright 2020 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -8,10 +22,10 @@ def gather_data(seq):
     """Collects the whole sequence data for plotting.
 
     Args:
-        seq (Sequence): The input sequence of operations on a device.
+        seq (pulser.Sequence): The input sequence of operations on a device.
 
     Returns:
-        data: The data to plot.
+        dict: The data to plot.
     """
     # The minimum time axis length is 100 ns
     seq._total_duration = max([seq._last(ch).tf for ch in seq._schedule
@@ -64,10 +78,7 @@ def draw_sequence(seq):
     """Draw the entire sequence.
 
     Args:
-        seq (Sequence): The input sequence of operations on a device.
-
-    Returns:
-        plt.show(): The plot of the sequence.
+        seq (pulser.Sequence): The input sequence of operations on a device.
     """
 
     def phase_str(phi):
@@ -200,8 +211,8 @@ def draw_sequence(seq):
                 a.axvline(t_, **conf)
                 b.axvline(t_, **conf)
                 msg = u"\u27F2 " + phase_str(delta)
-                a.text(t_-t[-1]*8e-3, max_amp*1.1, msg, ha='right', fontsize=14,
-                       bbox=ph_box)
+                a.text(t_-t[-1]*8e-3, max_amp*1.1, msg, ha='right',
+                       fontsize=14, bbox=ph_box)
 
         if 'measurement' in data[ch]:
             msg = f"Basis: {data[ch]['measurement']}"

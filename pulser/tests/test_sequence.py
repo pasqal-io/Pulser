@@ -1,3 +1,17 @@
+# Copyright 2020 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from unittest.mock import patch
 
 import numpy as np
@@ -59,7 +73,8 @@ def test_target():
     assert seq._schedule['ch0'][-1] == TimeSlot('target', -1, 0, {'q1'})
     seq.target('q4', 'ch0')
     retarget_t = seq.declared_channels['ch0'].retarget_time
-    assert seq._schedule['ch0'][-1] == TimeSlot('target', 0, retarget_t, {'q4'})
+    assert seq._schedule['ch0'][-1] == TimeSlot('target', 0,
+                                                retarget_t, {'q4'})
     with pytest.warns(UserWarning):
         seq.target('q4', 'ch0')
     seq.target('q20', 'ch0')
@@ -106,6 +121,19 @@ def test_phase():
     assert seq.current_phase_ref('q10', 'digital') == 1
 
 
+def test_align():
+    seq = Sequence(device)
+    seq.declare_channel('ch0', 'raman_local', initial_target='q0')
+    seq.declare_channel('ch1', 'rydberg_global')
+    with pytest.raises(ValueError, match="names must correspond to declared"):
+        seq.align('ch0', 'ch1', 'ch2')
+    with pytest.raises(ValueError, match="more than once"):
+        seq.align('ch0', 'ch1', 'ch0')
+    with pytest.raises(ValueError, match="at least two channels"):
+        seq.align()
+        seq.align('ch1')
+
+
 def test_str():
     seq = Sequence(device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
@@ -138,7 +166,8 @@ def test_sequence():
         seq.add([1, 5, 3], 'ch0')
     with pytest.raises(ValueError, match='amplitude goes over the maximum'):
         seq.add(Pulse.ConstantPulse(10, 10, -100, 0), 'ch2')
-    with pytest.raises(ValueError, match='detuning values go out of the range'):
+    with pytest.raises(ValueError,
+                       match='detuning values go out of the range'):
         seq.add(Pulse.ConstantPulse(500, 1, -100, 0), 'ch0')
     with pytest.raises(ValueError, match='qubits with different phase ref'):
         seq.add(pulse2, 'ch2')
@@ -173,6 +202,9 @@ def test_sequence():
     assert seq._last('ch0').tf == 3000
     seq.add(pulse1, 'ch0', protocol='wait-for-all')
     assert seq._last('ch0').ti == 3500
+    assert seq._last('ch2').tf != seq._last('ch0').tf
+    seq.align('ch0', 'ch2')
+    assert seq._last('ch2').tf == seq._last('ch0').tf
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()

@@ -1,3 +1,17 @@
+# Copyright 2020 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -12,6 +26,7 @@ class Register:
     """
 
     def __init__(self, qubits):
+        """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary "
                             "matching qubit ids to position coordinates.")
@@ -107,7 +122,7 @@ class Register:
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     def rotate(self, degrees):
-        """Rotate the array around the origin by the given angle.
+        """Rotates the array around the origin by the given angle.
 
         Args:
             degrees (float): The angle of rotation in degrees.
