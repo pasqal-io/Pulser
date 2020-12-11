@@ -24,12 +24,18 @@ from pulser.register import Register
 
 def test_init():
     for dev in pulser.devices._valid_devices:
+        assert dev.dimensions in (2, 3)
+        assert dev.max_atom_num > 10
+        assert dev.max_radial_distance > 10
+        assert dev.min_atom_distance > 0
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
         for i, (id, ch) in enumerate(dev.channels.items()):
             assert id == dev._channels[i][0]
+            assert isinstance(id, str)
             assert ch == dev._channels[i][1]
+            assert isinstance(ch, pulser.channels.Channel)
     assert Chadoq2 in pulser.devices._valid_devices
     assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
     with patch('sys.stdout'):
