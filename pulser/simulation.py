@@ -211,7 +211,7 @@ class Simulation:
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
-    def run(self, initial_state=None, obs_list=None):
+    def run(self, initial_state=None, obs_list=None, progress_bar=None):
         """Simulate the sequence using QuTiP's solvers.
 
         Keyword Args:
@@ -235,6 +235,7 @@ class Simulation:
                                    psi0,
                                    self._times,
                                    obs_list,
+                                   progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,
                                                          nsteps=10000)
                                    )
@@ -243,6 +244,7 @@ class Simulation:
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
                                    self._times,
+                                   progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,
                                                          nsteps=10000)
                                    )
