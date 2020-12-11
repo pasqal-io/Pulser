@@ -31,17 +31,16 @@ class PasqalDevice:
             all the qubits' names and respective positions in the array.
     """
     name: str
-    max_dimensionality: int
+    dimensions: int
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
-    channel_names: Tuple[str]
-    channel_objs: Tuple[Channel]
+    _channels: Tuple[Tuple[str, Channel]]
 
     @property
     def channels(self):
         """Available channels on this device."""
-        return dict(zip(self.channel_names, self.channel_objs))
+        return dict(self._channels)
 
     @property
     def supported_bases(self):
@@ -56,14 +55,14 @@ class PasqalDevice:
             title,
             "-"*len(title),
             "\nRegister requirements:",
-            f" - Dimensions: {self.max_dimensionality}D",
+            f" - Dimensions: {self.dimensions}D",
             f" - Maximum number of atoms: {self.max_atom_num}",
             f" - Maximum distance from origin: {self.max_radial_distance} um",
             (" - Minimum distance between neighbouring atoms: "
              + f"{self.min_atom_distance} um"),
             "\nChannels:"
             ]
-        for name, ch in zip(self.channel_names, self.channel_objs):
+        for name, ch in self._channels:
             lines.append(f" - '{name}': {ch!r}")
 
         print("\n".join(lines))
@@ -81,9 +80,9 @@ class PasqalDevice:
             raise ValueError("Too many atoms in the array, the device accepts "
                              "at most {} atoms.".format(self.max_atom_num))
         for pos in atoms:
-            if len(pos) != self.max_dimensionality:
+            if len(pos) != self.dimensions:
                 raise ValueError("All qubit positions must be {}D "
-                                 "vectors.".format(self.max_dimensionality))
+                                 "vectors.".format(self.dimensions))
 
         if len(atoms) > 1:
             distances = pdist(atoms)  # Pairwise distance between atoms

@@ -28,8 +28,8 @@ def test_init():
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
         for i, (id, ch) in enumerate(dev.channels.items()):
-            assert id == dev.channel_names[i]
-            assert ch == dev.channel_objs[i]
+            assert id == dev._channels[i][0]
+            assert ch == dev._channels[i][1]
     assert Chadoq2 in pulser.devices._valid_devices
     assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
     with patch('sys.stdout'):

@@ -28,8 +28,7 @@ device = Chadoq2
 
 
 def test_init():
-    fake_device = PasqalDevice("fake", 2, 10, 10, 1, Chadoq2.channel_names,
-                               Chadoq2.channel_objs)
+    fake_device = PasqalDevice("fake", 2, 10, 10, 1, Chadoq2._channels)
     with pytest.raises(ValueError, match='imported from pasqal.devices'):
         Sequence(reg, fake_device)
 

@@ -19,20 +19,14 @@ from pulser.channels import Raman, Rydberg
 
 Chadoq2 = PasqalDevice(
             name="Chadoq2",
-            max_dimensionality=2,
+            dimensions=2,
             max_atom_num=100,
             max_radial_distance=50,
             min_atom_distance=4,
-            channel_names=(
-                "rydberg_global",
-                "rydberg_local",
-                "rydberg_local2",
-                "raman_local",
+            _channels=(
+                ("rydberg_global", Rydberg.Global(50, 2.5)),
+                ("rydberg_local", Rydberg.Local(50, 10, 100)),
+                ("rydberg_local2", Rydberg.Local(50, 10, 100)),
+                ("raman_local", Raman.Local(50, 10, 100)),
                 ),
-            channel_objs=(
-                Rydberg.Global(50, 2.5),
-                Rydberg.Local(50, 10, 100),
-                Rydberg.Local(50, 10, 100),
-                Raman.Local(50, 10, 100),
-                )
             )
