@@ -37,5 +37,5 @@ def validate_duration(duration, min_duration=4, max_duration=16777216):
         _duration -= _duration % 4
         warnings.warn("The given duration is below the machine's precision"
                       " of 4 ns time steps. It was rounded down to the"
-                      " nearest valid value.")
+                      " nearest multiple of 4 ns.")
     return _duration
