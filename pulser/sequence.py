@@ -47,7 +47,8 @@ class Sequence:
         self._channels = {}
         self._schedule = {}
         self._phase_ref = {}  # The phase reference of each channel
-        self._taken_channels = []   # Stores the ids of selected channels
+        # Stores the ids of selected channels and their declared names
+        self._taken_channels = {}
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
         self._last_used = {}    # Last time each qubit was used, by basis
 
@@ -118,7 +119,7 @@ class Sequence:
 
         ch = self._device.channels[channel_id]
         self._channels[name] = ch
-        self._taken_channels.append(channel_id)
+        self._taken_channels[channel_id] = name
         self._schedule[name] = []
 
         if ch.basis not in self._phase_ref:
