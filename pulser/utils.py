@@ -15,7 +15,7 @@
 import warnings
 
 
-def validate_duration(duration):
+def validate_duration(duration, min_duration=4, max_duration=16777216):
     """Validates a time interval.
 
     Returns:
@@ -27,8 +27,11 @@ def validate_duration(duration):
         raise TypeError("duration needs to be castable to an int but "
                         "type %s was provided" % type(duration))
 
-    if duration < 4:
-        raise ValueError("duration has to be castable to at least 4 ns.")
+    if duration < min_duration:
+        raise ValueError(f"duration has to be at least {min_duration} ns.")
+
+    if duration > max_duration:
+        raise ValueError(f"duration can be at most {max_duration} ns.")
 
     if duration % 4 != 0:
         _duration -= _duration % 4

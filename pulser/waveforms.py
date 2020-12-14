@@ -29,7 +29,8 @@ class Waveform(ABC):
         Args:
             duration (int): The waveforms duration (in multiples of 4 ns).
         """
-        self._duration = validate_duration(duration)
+        self._duration = validate_duration(duration, min_duration=16,
+                                           max_duration=4194304)
 
     @property
     @abstractmethod

@@ -90,8 +90,8 @@ def test_delay():
     with pytest.raises(ValueError, match='channel has no target'):
         seq.delay(100, 'ch0')
     seq.target('q19', 'ch0')
-    seq.delay(389, 'ch0')
-    assert seq._last('ch0') == TimeSlot('delay', 0, 389, {'q19'})
+    seq.delay(388, 'ch0')
+    assert seq._last('ch0') == TimeSlot('delay', 0, 388, {'q19'})
 
 
 def test_phase():
@@ -165,7 +165,7 @@ def test_sequence():
     with pytest.raises(TypeError):
         seq.add([1, 5, 3], 'ch0')
     with pytest.raises(ValueError, match='amplitude goes over the maximum'):
-        seq.add(Pulse.ConstantPulse(10, 10, -100, 0), 'ch2')
+        seq.add(Pulse.ConstantPulse(20, 10, -100, 0), 'ch2')
     with pytest.raises(ValueError,
                        match='detuning values go out of the range'):
         seq.add(Pulse.ConstantPulse(500, 1, -100, 0), 'ch0')

@@ -38,9 +38,12 @@ def test_duration():
         RampWaveform([0, 1, 3], 1, 0)
         GaussianWaveform((100,), 1, 50)
 
-    with pytest.raises(ValueError, match='positive integer'):
-        ConstantWaveform(0, -10)
+    with pytest.raises(ValueError, match='at least 16 ns'):
+        ConstantWaveform(15, -10)
         RampWaveform(-20, 3, 4)
+
+    with pytest.raises(ValueError, match='at most 4194304 ns'):
+        BlackmanWaveform(2**23, np.pi/2)
 
     with pytest.warns(UserWarning):
         wf = BlackmanWaveform(np.pi, 1)
