@@ -45,20 +45,20 @@ def test_init():
 
 def test_validate_register():
     with pytest.raises(ValueError, match='Too many atoms'):
-        Chadoq2._validate_register(Register.square(50))
+        Chadoq2.validate_register(Register.square(50))
 
     coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
-        Chadoq2._validate_register(coords)
+        Chadoq2.validate_register(coords)
     with pytest.raises(ValueError, match='at most 50 um away from the center'):
-        Chadoq2._validate_register(Register.from_coordinates(coords))
+        Chadoq2.validate_register(Register.from_coordinates(coords))
 
     with pytest.raises(ValueError, match='must be 2D vectors'):
         coords += [(-10, 4, 0)]
-        Chadoq2._validate_register(Register(dict(enumerate(coords))))
+        Chadoq2.validate_register(Register(dict(enumerate(coords))))
 
     with pytest.raises(ValueError, match="don't respect the minimal distance"):
-        Chadoq2._validate_register(Register.triangular_lattice(
+        Chadoq2.validate_register(Register.triangular_lattice(
                                                             3, 4, spacing=3.9))
 
-    Chadoq2._validate_register(Register.rectangle(5, 10, spacing=5))
+    Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))

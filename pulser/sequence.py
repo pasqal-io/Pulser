@@ -50,7 +50,7 @@ class Sequence:
                          + "\n".join(names))
             raise ValueError(error_msg)
         # Checks if register is compatible with the device
-        device._validate_register(register)
+        device.validate_register(register)
 
         self._register = register
         self._device = device

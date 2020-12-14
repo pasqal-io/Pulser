@@ -24,12 +24,8 @@ from pulser.register import Register
 
 @dataclass(frozen=True, repr=False)
 class PasqalDevice:
-    """Definition of a Pasqal Device.
+    """Definition of a Pasqal Device."""
 
-    Args:
-        qubits (dict, Register): A dictionary or a Register class instance with
-            all the qubits' names and respective positions in the array.
-    """
     name: str
     dimensions: int
     max_atom_num: int
@@ -70,8 +66,12 @@ class PasqalDevice:
     def __repr__(self):
         return self.name
 
-    def _validate_register(self, register):
-        """Checks if 'register' is compatible with this device."""
+    def validate_register(self, register):
+        """Checks if 'register' is compatible with this device.
+
+        Args:
+            register(pulser.Register): The Register to validate.
+        """
         if not isinstance(register, Register):
             raise TypeError("register has to be a pulser.Register instance.")
 
