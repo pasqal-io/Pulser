@@ -28,6 +28,7 @@ setup(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",
+    python_requires=">=3.7.0",
     license="Apache 2.0",
     classifiers=[
          "Development Status :: 2 - Pre-Alpha",
