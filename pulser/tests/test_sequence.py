@@ -19,26 +19,27 @@ import pytest
 
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
+from pulser.devices._pasqal_device import PasqalDevice
 from pulser.sequence import TimeSlot
 from pulser.waveforms import BlackmanWaveform
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix='q')
-device = Chadoq2(reg)
+device = Chadoq2
 
 
 def test_init():
-    with pytest.raises(TypeError, match='has to be a PasqalDevice'):
-        Sequence(Chadoq2)
-        Sequence(np.random.rand(10, 2))
+    fake_device = PasqalDevice("fake", 2, 10, 10, 1, Chadoq2._channels)
+    with pytest.raises(ValueError, match='imported from pasqal.devices'):
+        Sequence(reg, fake_device)
 
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     assert seq.qubit_info == reg.qubits
     assert seq.declared_channels == {}
     assert seq.available_channels.keys() == device.channels.keys()
 
 
 def test_channel_declaration():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'rydberg_global')
     seq.declare_channel('ch1', 'raman_local')
     with pytest.raises(ValueError, match="No channel"):
@@ -56,7 +57,7 @@ def test_channel_declaration():
 
 
 def test_target():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q1')
     seq.declare_channel('ch1', 'rydberg_global')
 
@@ -83,7 +84,7 @@ def test_target():
 
 
 def test_delay():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local')
     with pytest.raises(ValueError, match='Use the name of a declared channel'):
         seq.delay(1e3, 'ch01')
@@ -95,7 +96,7 @@ def test_delay():
 
 
 def test_phase():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
     seq.phase_shift(-1, 'q0', 'q1')
     with pytest.raises(ValueError, match="id of a qubit declared"):
@@ -122,7 +123,7 @@ def test_phase():
 
 
 def test_align():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
     seq.declare_channel('ch1', 'rydberg_global')
     with pytest.raises(ValueError, match="names must correspond to declared"):
@@ -135,7 +136,7 @@ def test_align():
 
 
 def test_str():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     seq.add(pulse, 'ch0')
@@ -150,7 +151,7 @@ def test_str():
 
 
 def test_sequence():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     with pytest.raises(SystemError, match='empty sequence'):
         seq.draw()
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')

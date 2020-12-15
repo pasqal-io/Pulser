@@ -19,7 +19,7 @@ import warnings
 
 import numpy as np
 
-from pulser.devices import PasqalDevice
+import pulser
 from pulser.pulse import Pulse
 from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration
@@ -37,12 +37,22 @@ class Sequence:
         - The schedule of operations on each channel
 
     Args:
-        device: A pulser.PasqalDevice instance.
+        register(Register): The atom register on which to apply the pulses.
+        device(PasqalDevice): A valid device in which to execute the Sequence
+            (import it from the pulser.devices module).
     """
-    def __init__(self, device):
+    def __init__(self, register, device):
         """Initializes a new pulse sequence."""
-        if not isinstance(device, PasqalDevice):
-            raise TypeError("The Sequence's device has to be a PasqalDevice.")
+        if device not in pulser.devices._valid_devices:
+            names = [d.name for d in pulser.devices._valid_devices]
+            error_msg = ("The Sequence's device has to be imported from "
+                         + "pasqal.devices. Choose between the following:\n"
+                         + "\n".join(names))
+            raise ValueError(error_msg)
+        # Checks if register is compatible with the device
+        device.validate_register(register)
+
+        self._register = register
         self._device = device
         self._channels = {}
         self._schedule = {}
@@ -55,7 +65,7 @@ class Sequence:
     @property
     def qubit_info(self):
         """Dictionary with the qubit's IDs and positions."""
-        return self._device.qubits
+        return self._register.qubits
 
     @property
     def declared_channels(self):
