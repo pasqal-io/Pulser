@@ -30,7 +30,7 @@ class Channel:
 
     @classmethod
     def Local(cls, max_abs_detuning, max_amp, retarget_time, max_targets=1):
-        """Initializes the channel with local adressing.
+        """Initializes the channel with local addressing.
 
         Args:
             max_abs_detuning (float): Maximum possible detuning (in MHz), in
@@ -47,7 +47,7 @@ class Channel:
 
     @classmethod
     def Global(cls, max_abs_detuning, max_amp):
-        """Initializes the channel with global adressing.
+        """Initializes the channel with global addressing.
 
         Args:
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
