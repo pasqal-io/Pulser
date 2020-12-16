@@ -149,7 +149,7 @@ class Simulation:
             for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
                 dist = np.linalg.norm(
                         self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
-                U = 0.5 * (2*np.pi) * (1e6/dist**6)  # = U/hbar
+                U = 0.5 * 5.008e6 / dist**6  # = U/hbar
                 vdw += U * self._build_operator('sigma_rr', qubit1, qubit2)
             return vdw
 
@@ -205,7 +205,7 @@ class Simulation:
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
-        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
+        ham = qutip.QobjEvo(qobj_list, tlist=self._times/1000)
         ham = ham + ham.dag()
         ham.compress()
         self._hamiltonian = ham
