@@ -18,7 +18,7 @@ from typing import ClassVar
 
 @dataclass(init=False, repr=False, frozen=True)
 class Channel:
-    """Base class of an hardware channel."""
+    """Base class of a hardware channel."""
 
     name: ClassVar[str]
     basis: ClassVar[str]
