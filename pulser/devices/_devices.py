@@ -30,3 +30,17 @@ Chadoq2 = PasqalDevice(
                 ("raman_local", Raman.Local(50, 10, 100)),
                 ),
             )
+
+Mock = PasqalDevice(
+            name="Mock",
+            dimensions=2,
+            max_atom_num=100,
+            max_radial_distance=500,
+            min_atom_distance=0.5,
+            _channels=(
+                ("rydberg_global", Rydberg.Global(5000, 250)),
+                ("rydberg_local", Rydberg.Local(50, 10, 100)),
+                ("rydberg_local2", Rydberg.Local(50, 10, 100)),
+                ("raman_local", Raman.Local(50, 10, 100)),
+                ),
+            )
