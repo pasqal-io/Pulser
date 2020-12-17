@@ -150,6 +150,7 @@ class Simulation:
                 dist = np.linalg.norm(
                         self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
                 U = 0.5 * 5.008e6 / dist**6  # = U/hbar
+                self._U = 2*U
                 vdw += U * self._build_operator('sigma_rr', qubit1, qubit2)
             return vdw
 
@@ -165,29 +166,29 @@ class Simulation:
 
             terms = []
             if addr == 'Global':
-                coeffs = [samples['amp'] * np.exp(-1j * samples['phase']),
-                          0.5 * samples['det']]
+                coeffs = [0.5*samples['amp'] * np.exp(-1j * samples['phase']),
+                          -0.5 * samples['det']]
                 for coeff, op_id in zip(coeffs, op_ids):
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
                         if op_id not in operators:
                             operators[op_id] =\
                                     self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], 0.5*coeff])
+                        terms.append([operators[op_id], coeff])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
                         operators[q_id] = {}
-                    coeffs = [samples_q['amp'] * np.exp(-1j
-                                                        * samples_q['phase']),
-                              0.5 * samples_q['det']]
+                    coeffs = [0.5*samples_q['amp'] *
+                              np.exp(-1j * samples_q['phase']),
+                              -0.5 * samples_q['det']]
                     for coeff, op_id in zip(coeffs, op_ids):
                         if np.any(coeff != 0):
                             if op_id not in operators[q_id]:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          0.5*coeff])
+                                          coeff])
 
             self.operators[addr][basis] = operators
             return terms
@@ -236,8 +237,8 @@ class Simulation:
                                    self._times/1000,
                                    obs_list,
                                    progress_bar=progress_bar,
-                                   options=qutip.Options(max_step=20,
-                                                         nsteps=1000)
+                                   options=qutip.Options(max_step=5,
+                                                         nsteps=20000)
                                    )
         else:
             print('No observable provided. Calculating state evolution...')
@@ -245,7 +246,7 @@ class Simulation:
                                    psi0,
                                    self._times/1000,
                                    progress_bar=progress_bar,
-                                   options=qutip.Options(max_step=20,
-                                                         nsteps=1000)
+                                   options=qutip.Options(max_step=5,
+                                                         nsteps=20000)
                                    )
         self.output = result
