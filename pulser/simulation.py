@@ -39,7 +39,7 @@ class Simulation:
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
         self._seq = sequence
-        self._reg = sequence._device._register
+        self._reg = sequence._register
         self._size = len(self._reg.qubits)
         self._tot_duration = max(
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
