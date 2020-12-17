@@ -233,19 +233,19 @@ class Simulation:
             print('Observables provided. Calculating expectation value...')
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
-                                   self._times,
+                                   self._times/1000,
                                    obs_list,
                                    progress_bar=progress_bar,
-                                   options=qutip.Options(max_step=5,
-                                                         nsteps=10000)
+                                   options=qutip.Options(max_step=20,
+                                                         nsteps=1000)
                                    )
         else:
             print('No observable provided. Calculating state evolution...')
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
-                                   self._times,
+                                   self._times/1000,
                                    progress_bar=progress_bar,
-                                   options=qutip.Options(max_step=5,
-                                                         nsteps=10000)
+                                   options=qutip.Options(max_step=20,
+                                                         nsteps=1000)
                                    )
         self.output = result
