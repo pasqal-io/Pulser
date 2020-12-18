@@ -31,11 +31,6 @@ def test_init():
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
-        for i, (id, ch) in enumerate(dev.channels.items()):
-            assert id == dev._channels[i][0]
-            assert isinstance(id, str)
-            assert ch == dev._channels[i][1]
-            assert isinstance(ch, pulser.channels.Channel)
     assert Chadoq2 in pulser.devices._valid_devices
     assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
     with patch('sys.stdout'):
