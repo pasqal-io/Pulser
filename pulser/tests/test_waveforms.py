@@ -76,6 +76,11 @@ def test_eq():
     assert constant != CustomWaveform(np.full(50, -3))
 
 
+def test_hash():
+    assert hash(constant) == hash(tuple(np.full(100, -3)))
+    assert hash(ramp) == hash(tuple(np.linspace(5, 19, num=2000)))
+
+
 def test_composite():
     with pytest.raises(ValueError, match='Needs at least two waveforms'):
         CompositeWaveform()

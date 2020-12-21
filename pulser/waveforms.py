@@ -77,6 +77,9 @@ class Waveform(ABC):
         else:
             return np.all(np.isclose(self.samples, other.samples))
 
+    def __hash__(self):
+        return hash(tuple(self.samples))
+
     def _plot(self, ax, ylabel, color=None):
         ax.set_xlabel('t (ns)')
         ts = np.arange(self.duration)
