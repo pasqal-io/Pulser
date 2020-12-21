@@ -44,7 +44,7 @@ class Simulation:
         self._tot_duration = max(
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
                                 )
-        self._times = np.arange(self._tot_duration, dtype=np.double)
+        self._times = np.arange(self._tot_duration, dtype=np.double)/1000
         self._qid_index = {qid: i for i, qid in enumerate(self._reg.qubits)}
 
         self.samples = {addr: {basis: {}
@@ -209,7 +209,7 @@ class Simulation:
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
-        ham = qutip.QobjEvo(qobj_list, tlist=self._times/1000)
+        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
         ham.compress()
         self._hamiltonian = ham
@@ -237,7 +237,7 @@ class Simulation:
             print('Observables provided. Calculating expectation value...')
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
-                                   self._times/1000,
+                                   self._times,
                                    obs_list,
                                    progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,
@@ -247,7 +247,7 @@ class Simulation:
             print('No observable provided. Calculating state evolution...')
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
-                                   self._times/1000,
+                                   self._times,
                                    progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,
                                                          nsteps=2000)
