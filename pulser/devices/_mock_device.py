@@ -11,15 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Valid devices for Pulser Sequence execution."""
 
-from pulser.devices._devices import (
-                                Chadoq2,
-                                )
+from pulser.devices._pasqal_device import PasqalDevice
+from pulser.channels import Rydberg, Raman
 
-from pulser.devices._mock_device import MockDevice
 
-# Registers which devices can be used to avoid definition of custom devices
-_valid_devices = (
-            Chadoq2,
+MockDevice = PasqalDevice(
+            name="MockDevice",
+            dimensions=2,
+            max_atom_num=2000,
+            max_radial_distance=1000,
+            min_atom_distance=1,
+            _channels=(
+                ("rydberg_global", Rydberg.Global(1000, 200)),
+                ("rydberg_local", Rydberg.Local(1000, 200, 0, 2000)),
+                ("raman_global", Raman.Global(1000, 200)),
+                ("raman_local", Raman.Local(1000, 200, 0, 2000)),
+                )
             )

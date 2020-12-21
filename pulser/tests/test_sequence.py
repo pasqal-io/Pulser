@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from pulser import Sequence, Pulse, Register
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._pasqal_device import PasqalDevice
 from pulser.sequence import TimeSlot
 from pulser.waveforms import BlackmanWaveform
@@ -40,11 +40,12 @@ def test_init():
 
 def test_channel_declaration():
     seq = Sequence(reg, device)
+    available_channels = set(seq.available_channels)
     seq.declare_channel('ch0', 'rydberg_global')
     seq.declare_channel('ch1', 'raman_local')
     with pytest.raises(ValueError, match="No channel"):
         seq.declare_channel('ch2', 'raman')
-    with pytest.raises(ValueError, match="has already been added"):
+    with pytest.raises(ValueError, match="not available"):
         seq.declare_channel('ch2', 'rydberg_global')
     with pytest.raises(ValueError, match="name is already in use"):
         seq.declare_channel('ch0', 'raman_local')
@@ -52,8 +53,13 @@ def test_channel_declaration():
     chs = {'rydberg_global', 'raman_local'}
     assert seq._schedule['ch0'][-1] == TimeSlot('target', -1, 0,
                                                 set(seq.qubit_info.keys()))
-    assert set(seq.available_channels) == {ch for ch in device.channels
-                                           if ch not in chs}
+    assert set(seq.available_channels) == available_channels - chs
+
+    seq2 = Sequence(reg, MockDevice)
+    available_channels = set(seq2.available_channels)
+    seq2.declare_channel('ch0', 'raman_local', initial_target='q1')
+    seq2.declare_channel('ch1', 'rydberg_global')
+    assert set(seq2.available_channels) == available_channels
 
 
 def test_target():
@@ -81,6 +87,12 @@ def test_target():
     seq.target('q20', 'ch0')
     assert seq._schedule['ch0'][-1] == TimeSlot('target', retarget_t,
                                                 2*retarget_t, {'q20'})
+
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel('ch0', 'raman_local', initial_target={'q1', 'q10'})
+    seq2.phase_shift(1, 'q2')
+    with pytest.raises(ValueError, match="qubits with different phase"):
+        seq2.target({'q3', 'q1', 'q2'}, 'ch0')
 
 
 def test_delay():
