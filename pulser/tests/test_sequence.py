@@ -166,10 +166,10 @@ def test_sequence():
     with pytest.raises(TypeError):
         seq.add([1, 5, 3], 'ch0')
     with pytest.raises(ValueError, match='amplitude goes over the maximum'):
-        seq.add(Pulse.ConstantPulse(10, 10, -100, 0), 'ch2')
+        seq.add(Pulse.ConstantPulse(10, 2*np.pi*10, -2*np.pi*100, 0), 'ch2')
     with pytest.raises(ValueError,
                        match='detuning values go out of the range'):
-        seq.add(Pulse.ConstantPulse(500, 1, -100, 0), 'ch0')
+        seq.add(Pulse.ConstantPulse(500, 2*np.pi, -2*np.pi*100, 0), 'ch0')
     with pytest.raises(ValueError, match='qubits with different phase ref'):
         seq.add(pulse2, 'ch2')
     with pytest.raises(ValueError, match='Invalid protocol'):
