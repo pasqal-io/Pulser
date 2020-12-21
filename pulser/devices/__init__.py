@@ -18,6 +18,8 @@ from pulser.devices._devices import (
                                 Mock
                                 )
 
+from pulser.devices._mock_device import MockDevice
+
 # Registers which devices can be used to avoid definition of custom devices
 _valid_devices = (
             Chadoq2,

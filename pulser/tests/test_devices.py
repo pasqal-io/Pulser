@@ -31,16 +31,30 @@ def test_init():
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
-        for i, (id, ch) in enumerate(dev.channels.items()):
-            assert id == dev._channels[i][0]
-            assert isinstance(id, str)
-            assert ch == dev._channels[i][1]
-            assert isinstance(ch, pulser.channels.Channel)
     assert Chadoq2 in pulser.devices._valid_devices
     assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
     with patch('sys.stdout'):
         Chadoq2.specs()
     assert Chadoq2.__repr__() == 'Chadoq2'
+
+
+def test_mock():
+    dev = pulser.devices.MockDevice
+    assert dev.dimensions == 2
+    assert dev.max_atom_num > 1000
+    assert dev.min_atom_distance <= 1
+    names = ['Rydberg', 'Raman']
+    basis = ['ground-rydberg', 'digital']
+    for ch in dev.channels.values():
+        assert ch.name in names
+        assert ch.basis == basis[names.index(ch.name)]
+        assert ch.addressing in ['Local', 'Global']
+        assert ch.max_abs_detuning >= 1000
+        assert ch.max_amp >= 200
+        if ch.addressing == 'Local':
+            assert ch.retarget_time == 0
+            assert ch.max_targets > 1
+            assert ch.max_targets == int(ch.max_targets)
 
 
 def test_validate_register():
