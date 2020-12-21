@@ -21,6 +21,7 @@ import numpy as np
 
 import pulser
 from pulser.pulse import Pulse
+from pulser.devices import MockDevice
 from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration
 
@@ -43,11 +44,13 @@ class Sequence:
     """
     def __init__(self, register, device):
         """Initializes a new pulse sequence."""
-        if device not in pulser.devices._valid_devices:
+        cond1 = device not in pulser.devices._valid_devices
+        cond2 = device != MockDevice
+        if cond1 and cond2:
             names = [d.name for d in pulser.devices._valid_devices]
             error_msg = ("The Sequence's device has to be imported from "
-                         + "pasqal.devices. Choose between the following:\n"
-                         + "\n".join(names))
+                         + "pasqal.devices. Choose 'MockDevice' or between the"
+                         + " following real devices:\n" + "\n".join(names))
             raise ValueError(error_msg)
         # Checks if register is compatible with the device
         device.validate_register(register)
@@ -76,7 +79,8 @@ class Sequence:
     def available_channels(self):
         """Channels still available for declaration."""
         return {id: ch for id, ch in self._device.channels.items()
-                if id not in self._taken_channels}
+                if id not in self._taken_channels
+                or self._device == MockDevice}
 
     def current_phase_ref(self, qubit, basis='digital'):
         """Current phase reference of a specific qubit for a given basis.
@@ -124,8 +128,8 @@ class Sequence:
         if channel_id not in self._device.channels:
             raise ValueError("No channel %s in the device." % channel_id)
 
-        if channel_id in self._taken_channels:
-            raise ValueError("Channel %s has already been added." % channel_id)
+        if channel_id not in self.available_channels:
+            raise ValueError("Channel %s is not available." % channel_id)
 
         ch = self._device.channels[channel_id]
         self._channels[name] = ch

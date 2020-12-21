@@ -12,64 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import ClassVar
 
 
-class Channel(ABC):
-    """Base class for an hardware channel."""
+@dataclass(init=False, repr=False, frozen=True)
+class Channel:
+    """Base class of a hardware channel."""
 
-    def __init__(self, addressing, max_abs_detuning, max_amp,
-                 retarget_time=None, max_targets=1):
-        """Initializes a channel with specific characteristics.
-
-        Args:
-            addressing (str): 'Local' or 'Global'.
-            max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-            absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in MHz).
-
-        Keyword Args:
-            retarget_time (default = None): Time it takes to change the target
-                (in ns).
-            max_targets (int, default=1): (For local channels only) How
-                many qubits can be addressed at once by the same beam.
-        """
-        if addressing == 'Local':
-            if retarget_time is None:
-                raise ValueError("Must set retarget time for local channel.")
-            self.retarget_time = int(retarget_time)
-            if not isinstance(max_targets, int):
-                raise TypeError("max_targets must be an int.")
-            elif max_targets < 1:
-                raise ValueError("max_targets must be at least 1")
-            else:
-                self.max_targets = max_targets
-
-        elif addressing != 'Global':
-            raise ValueError("Addressing can only be 'Global' or 'Local'.")
-
-        self.addressing = addressing
-
-        if max_abs_detuning < 0:
-            raise ValueError("Maximum absolute detuning has to be positive.")
-        self.max_abs_detuning = max_abs_detuning
-
-        if max_amp <= 0:
-            raise ValueError("Maximum channel amplitude has to be positive.")
-        self.max_amp = max_amp
+    name: ClassVar[str]
+    basis: ClassVar[str]
+    addressing: str
+    max_abs_detuning: float
+    max_amp: float
+    retarget_time: int = None
+    max_targets: int = 1
 
     @classmethod
     def Local(cls, max_abs_detuning, max_amp, retarget_time, max_targets=1):
-        """Initializes the channel with local adressing.
+        """Initializes the channel with local addressing.
 
         Args:
-            max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
+            max_abs_detuning (float): Maximum possible detuning (in MHz), in
             absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in MHz).
+            max_amp(float): Maximum pulse amplitude (in MHz).
+            retarget_time (int): Time to change the target (in ns).
 
         Keyword Args:
-            retarget_time (default = None): Time it takes to change the target
-                (in ns).
             max_targets (int, default=1): (For local channels only) How
                 many qubits can be addressed at once by the same beam."""
 
@@ -78,7 +47,7 @@ class Channel(ABC):
 
     @classmethod
     def Global(cls, max_abs_detuning, max_amp):
-        """Initializes the channel with global adressing.
+        """Initializes the channel with global addressing.
 
         Args:
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
@@ -86,17 +55,6 @@ class Channel(ABC):
             max_amp(tuple): Maximum pulse amplitude (in MHz)."""
 
         return cls('Global', max_abs_detuning, max_amp)
-
-    @property
-    @abstractmethod
-    def name(self):
-        pass
-
-    @property
-    @abstractmethod
-    def basis(self):
-        """The target transition at zero detuning."""
-        pass
 
     def __repr__(self):
         s = ".{}(Max Absolute Detuning: {} MHz, Max Amplitude: {} MHz"
@@ -109,33 +67,23 @@ class Channel(ABC):
         return self.name + config + ")"
 
 
+@dataclass(init=True, repr=False, frozen=True)
 class Raman(Channel):
     """Raman beam channel.
 
     Channel targeting the transition between the hyperfine ground states, in
     which the 'digital' basis is encoded. See base class.
     """
-    @property
-    def name(self):
-        return 'Raman'
-
-    @property
-    def basis(self):
-        """The target transition at zero detuning."""
-        return 'digital'
+    name: ClassVar[str] = 'Raman'
+    basis: ClassVar[str] = 'digital'
 
 
+@dataclass(init=True, repr=False, frozen=True)
 class Rydberg(Channel):
     """Rydberg beam channel.
 
     Channel targeting the transition between the ground and rydberg states,
     thus enconding the 'ground-rydberg' basis. See base class.
     """
-    @property
-    def name(self):
-        return 'Rydberg'
-
-    @property
-    def basis(self):
-        """The target transition at zero detuning."""
-        return 'ground-rydberg'
+    name: ClassVar[str] = 'Rydberg'
+    basis: ClassVar[str] = 'ground-rydberg'
