@@ -241,6 +241,7 @@ class Simulation:
                                    psi0,
                                    self._times,
                                    obs_list,
+                                   progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,
                                                          nsteps=2000)
                                    )
@@ -249,6 +250,7 @@ class Simulation:
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
                                    self._times,
+                                   progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,
                                                          nsteps=2000)
                                    )
