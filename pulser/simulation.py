@@ -238,7 +238,7 @@ class Simulation:
                                    self._times,
                                    obs_list,
                                    options=qutip.Options(max_step=5,
-                                                         nsteps=10000)
+                                                         nsteps=2000)
                                    )
         else:
             print('No observable provided. Calculating state evolution...')
@@ -246,6 +246,6 @@ class Simulation:
                                    psi0,
                                    self._times,
                                    options=qutip.Options(max_step=5,
-                                                         nsteps=10000)
+                                                         nsteps=2000)
                                    )
         self.output = result
