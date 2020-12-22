@@ -44,7 +44,7 @@ class Simulation:
         self._tot_duration = max(
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
                                 )
-        self._times = np.arange(self._tot_duration, dtype=np.double)
+        self._times = np.arange(self._tot_duration, dtype=np.double)/1000
         self._qid_index = {qid: i for i, qid in enumerate(self._reg.qubits)}
 
         self.samples = {addr: {basis: {}
