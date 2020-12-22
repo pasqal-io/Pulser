@@ -146,11 +146,15 @@ class Simulation:
             """
             vdw = 0
             # Get every pair without duplicates
+            min_dist = 2 * self._seq._device.max_radial_distance
             for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
                 dist = np.linalg.norm(
                         self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
                 U = 0.5 * 5.008e6 / dist**6  # = U/hbar
+                if dist < min_dist:
+                    min_dist = dist
                 vdw += U * self._build_operator('sigma_rr', qubit1, qubit2)
+            self._U = 5.008e6 / min_dist**6
             return vdw
 
         def build_coeffs_ops(basis, addr):
