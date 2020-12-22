@@ -211,7 +211,7 @@ class Simulation:
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
-    def run(self, initial_state=None, obs_list=None):
+    def run(self, initial_state=None, obs_list=None, progress_bar=None):
         """Simulate the sequence using QuTiP's solvers.
 
         Keyword Args:
@@ -219,6 +219,8 @@ class Simulation:
                            evolution.
             obs_list (list): A list of qutip.Qobj observables whose
                       expectation value will be calculated.
+            progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
+                        will be shown.
         """
         if initial_state:
             psi0 = initial_state
