@@ -15,7 +15,7 @@
 import warnings
 
 
-def validate_duration(duration, min_duration=4, max_duration=16777216):
+def validate_duration(duration, min_duration=16, max_duration=67108864):
     """Validates a time interval.
 
     Returns:
