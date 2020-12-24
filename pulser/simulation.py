@@ -38,6 +38,11 @@ class Simulation:
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
+        if not sequence._schedule:
+            raise ValueError("The provided sequence has no declared channels.")
+        if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
+            raise ValueError("No instructions given for the channels in the "
+                             "sequence.")
         self._seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
