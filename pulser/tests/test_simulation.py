@@ -89,3 +89,48 @@ def test_init():
     assert sim._tot_duration == (duration * d
                                  + seq._channels['raman'].retarget_time * t)
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
+
+
+def test_extraction_of_sequences():
+    sim = Simulation(seq)
+    for channel in seq.declared_channels:
+        addr = seq.declared_channels[channel].addressing
+        basis = seq.declared_channels[channel].basis
+
+        if addr == 'Global':
+            for slot in seq._schedule[channel]:
+                if isinstance(slot.type, Pulse):
+                    samples = sim.samples[addr][basis]
+                    assert (samples['amp'][slot.ti:slot.tf]
+                            == slot.type.amplitude.samples).all()
+                    assert (samples['det'][slot.ti:slot.tf]
+                            == slot.type.detuning.samples).all()
+                    assert (samples['phase'][slot.ti:slot.tf]
+                            == slot.type.phase).all()
+
+        elif addr == 'Local':
+            for slot in seq._schedule[channel]:
+                if isinstance(slot.type, Pulse):
+                    for qubit in slot.targets:  # TO DO: multiaddressing??
+                        samples = sim.samples[addr][basis][qubit]
+                        assert (samples['amp'][slot.ti:slot.tf]
+                                == slot.type.amplitude.samples).all()
+                        assert (samples['det'][slot.ti:slot.tf]
+                                == slot.type.detuning.samples).all()
+                        assert (samples['phase'][slot.ti:slot.tf]
+                                == slot.type.phase).all()
+
+
+def test_building_basis_and_projection_operators():
+    sim = Simulation(seq)
+    assert sim.basis_name == 'all'
+    assert sim.dim == 3
+    assert sim.basis == {'r': qutip.basis(3, 0),
+                         'g': qutip.basis(3, 1),
+                         'h': qutip.basis(3, 2)}
+    assert (sim.op_matrix['sigma_rr'] ==
+            qutip.basis(3, 0) * qutip.basis(3, 0).dag())
+    assert (sim.op_matrix['sigma_gr'] ==
+            qutip.basis(3, 1) * qutip.basis(3, 0).dag())
+    assert (sim.op_matrix['sigma_hg'] ==
+            qutip.basis(3, 2) * qutip.basis(3, 1).dag())
