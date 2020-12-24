@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#from unittest.mock import patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -30,7 +30,7 @@ q_dict = {"control1": np.array([-4., 0.]),
 reg = Register(q_dict)
 device = Chadoq2
 
-duration = 3000
+duration = 1000
 pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., 0)
 twopi = Pulse.ConstantDetuning(BlackmanWaveform(duration, 2*np.pi), 0., 0)
 pi_Y = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., -np.pi/2)
@@ -76,7 +76,6 @@ seq.target('control1', 'rydA')
 seq.align('rydA', 'rydB')
 seq.add(pi, 'rydA')
 d += 1
-
 
 def test_init():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
@@ -134,3 +133,13 @@ def test_building_basis_and_projection_operators():
             qutip.basis(3, 1) * qutip.basis(3, 0).dag())
     assert (sim.op_matrix['sigma_hg'] ==
             qutip.basis(3, 2) * qutip.basis(3, 1).dag())
+
+
+def test_empty_sequences():
+    seq = Sequence(reg, Chadoq2)
+    with pytest.raises(ValueError, match='no declared channels'):
+        Simulation(seq)
+    with pytest.raises(ValueError, match='No instructions given'):
+        seq.declare_channel('test', 'rydberg_local', 'target')
+        seq.declare_channel("test2", "rydberg_global")
+        Simulation(seq)
