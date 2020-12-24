@@ -38,14 +38,19 @@ class Simulation:
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
+        if not sequence._schedule:
+            raise ValueError("The provided sequence has no declared channels.")
+        if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
+            raise ValueError("No instructions given for the channels in the "
+                             "sequence.")
         self._seq = sequence
-        self._reg = sequence._register
-        self._size = len(self._reg.qubits)
+        self._qdict = self._seq.qubit_info
+        self._size = len(self._qdict)
         self._tot_duration = max(
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
                                 )
         self._times = np.arange(self._tot_duration, dtype=np.double)/1000
-        self._qid_index = {qid: i for i, qid in enumerate(self._reg.qubits)}
+        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
         self.samples = {addr: {basis: {}
                                for basis in ['ground-rydberg', 'digital']}
@@ -126,7 +131,7 @@ class Simulation:
         """Create qutip.Qobj with nontrivial action at *qubit_ids."""
         if global_op:
             return sum(self._build_operator(op_id, q_id)
-                       for q_id in self._reg.qubits)
+                       for q_id in self._qdict)
 
         if len(set(qubit_ids)) < len(qubit_ids):
             raise ValueError("Duplicate atom ids in argument list.")
@@ -147,13 +152,13 @@ class Simulation:
             vdw = 0
             # Get every pair without duplicates
             min_dist = 2 * self._seq._device.max_radial_distance
-            for qubit1, qubit2 in itertools.combinations(self._reg._ids, r=2):
+            for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 dist = np.linalg.norm(
-                        self._reg.qubits[qubit1] - self._reg.qubits[qubit2])
+                        self._qdict[q1] - self._qdict[q2])
                 U = 0.5 * 5.008e6 / dist**6  # = U/hbar
                 if dist < min_dist:
                     min_dist = dist
-                vdw += U * self._build_operator('sigma_rr', qubit1, qubit2)
+                vdw += U * self._build_operator('sigma_rr', q1, q2)
             self._U = 5.008e6 / min_dist**6
             return vdw
 
