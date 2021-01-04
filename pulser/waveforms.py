@@ -49,6 +49,11 @@ class Waveform(ABC):
         pass
 
     @property
+    def first_value(self):
+        """The first value in the waveform."""
+        return self.samples[0]
+
+    @property
     def integral(self):
         """Determines the integral of the waveform (time: ns, value: MHz)."""
         return np.sum(self.samples) * 1e-3  # ns * MHz = 1e-3
@@ -127,6 +132,11 @@ class CompositeWaveform(Waveform):
             samples(np.ndarray): A numpy array with a value for each time step.
         """
         return np.concatenate([wf.samples for wf in self._waveforms])
+
+    @property
+    def first_value(self):
+        """The first value in the waveform."""
+        return self._waveforms[0].first_value
 
     @property
     def waveforms(self):
@@ -228,6 +238,11 @@ class ConstantWaveform(Waveform):
         """
         return np.full(self.duration, self._value)
 
+    @property
+    def first_value(self):
+        """The first value in the waveform."""
+        return self._value
+
     def __str__(self):
         return f"{self._value:.3g} MHz"
 
@@ -269,6 +284,11 @@ class RampWaveform(Waveform):
         """Slope of the ramp, in MHz/ns."""
         return (self._stop - self._start) / self._duration
 
+    @property
+    def first_value(self):
+        """The first value in the waveform."""
+        return self._start
+
     def __str__(self):
         return f"Ramp({self._start:.3g}->{self._stop:.3g} MHz)"
 
@@ -306,6 +326,11 @@ class BlackmanWaveform(Waveform):
         samples = np.clip(np.blackman(self._duration), 0, np.inf)
         scaling = self._area / np.sum(samples) / 1e-3
         return samples * scaling
+
+    @property
+    def first_value(self):
+        """The first value in the waveform."""
+        return 0
 
     def __str__(self):
         return f"Blackman(Area: {self._area:.3g})"
