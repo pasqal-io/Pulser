@@ -224,15 +224,24 @@ class Simulation:
         """Simulate the sequence using QuTiP's solvers.
 
         Keyword Args:
-            initial_state (qutip.Qobj): The initial quantum state of the
-                           evolution.
-            obs_list (list): A list of qutip.Qobj observables whose
-                      expectation value will be calculated.
+            initial_state (array): The initial quantum state of the
+                           evolution. Will be transformed into a
+                           qutip.Qobj instance.
+            obs_list (list): A list of observables whose
+                      expectation value will be calculated. Each member will
+                      be transformed into a qutip.Qobj instance.
             progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
                         will be shown.
         """
-        if initial_state:
-            psi0 = initial_state
+        if initial_state is not None:
+            if isinstance(initial_state, qutip.Qobj):
+                if initial_state.shape != (self.dim**self._size, 1):
+                    raise ValueError("Incompatible shape of initial_state")
+                psi0 = initial_state
+            else:
+                if initial_state.shape != (self.dim**self._size,):
+                    raise ValueError("Incompatible shape of initial_state")
+                psi0 = qutip.Qobj(initial_state)
         else:
             # by default, initial state is "ground" state of g-r basis.
             all_ground = [self.basis['g'] for _ in range(self._size)]
@@ -241,6 +250,12 @@ class Simulation:
         if obs_list:
             if not isinstance(obs_list, list):
                 raise TypeError("`obs_list` must be a list of operators")
+            for i, obs in enumerate(obs_list):
+                if obs.shape != (self.dim**self._size, self.dim**self._size):
+                    raise ValueError('Incompatible shape of observable')
+                if not isinstance(obs, qutip.Qobj):
+                    obs_list[i] = qutip.Qobj(obs)
+
             print('Observables provided. Calculating expectation value...')
             result = qutip.sesolve(self._hamiltonian,
                                    psi0,
