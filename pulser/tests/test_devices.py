@@ -15,6 +15,7 @@
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 
 import pulser
@@ -28,6 +29,7 @@ def test_init():
         assert dev.max_atom_num > 10
         assert dev.max_radial_distance > 10
         assert dev.min_atom_distance > 0
+        assert dev.interaction_coeff > 0
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
@@ -43,6 +45,7 @@ def test_mock():
     assert dev.dimensions == 2
     assert dev.max_atom_num > 1000
     assert dev.min_atom_distance <= 1
+    assert dev.interaction_coeff == 5008713
     names = ['Rydberg', 'Raman']
     basis = ['ground-rydberg', 'digital']
     for ch in dev.channels.values():
@@ -55,6 +58,11 @@ def test_mock():
             assert ch.retarget_time == 0
             assert ch.max_targets > 1
             assert ch.max_targets == int(ch.max_targets)
+
+
+def test_rydberg_blockade():
+    dev = pulser.devices.MockDevice
+    assert np.isclose(dev.rydberg_blockade_radius(3*np.pi), 9)
 
 
 def test_validate_register():
