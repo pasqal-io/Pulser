@@ -220,16 +220,13 @@ class Simulation:
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
-    def run(self, initial_state=None, obs_list=None, progress_bar=None):
+    def run(self, initial_state=None, progress_bar=None):
         """Simulate the sequence using QuTiP's solvers.
 
         Keyword Args:
             initial_state (array): The initial quantum state of the
                            evolution. Will be transformed into a
                            qutip.Qobj instance.
-            obs_list (list): A list of observables whose
-                      expectation value will be calculated. Each member will
-                      be transformed into a qutip.Qobj instance.
             progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
                         will be shown.
         """
@@ -247,31 +244,34 @@ class Simulation:
             all_ground = [self.basis['g'] for _ in range(self._size)]
             psi0 = qutip.tensor(all_ground)
 
-        if obs_list:
-            if not isinstance(obs_list, list):
-                raise TypeError("`obs_list` must be a list of operators")
-            for i, obs in enumerate(obs_list):
-                if obs.shape != (self.dim**self._size, self.dim**self._size):
-                    raise ValueError('Incompatible shape of observable')
-                if not isinstance(obs, qutip.Qobj):
-                    obs_list[i] = qutip.Qobj(obs)
+        result = qutip.sesolve(self._hamiltonian,
+                               psi0,
+                               self._times,
+                               progress_bar=progress_bar,
+                               options=qutip.Options(max_step=5,
+                                                     nsteps=2000)
+                               )
+        self.output = result.states
 
-            print('Observables provided. Calculating expectation value...')
-            result = qutip.sesolve(self._hamiltonian,
-                                   psi0,
-                                   self._times,
-                                   obs_list,
-                                   progress_bar=progress_bar,
-                                   options=qutip.Options(max_step=5,
-                                                         nsteps=2000)
-                                   )
-        else:
-            print('No observable provided. Calculating state evolution...')
-            result = qutip.sesolve(self._hamiltonian,
-                                   psi0,
-                                   self._times,
-                                   progress_bar=progress_bar,
-                                   options=qutip.Options(max_step=5,
-                                                         nsteps=2000)
-                                   )
-        self.output = result
+    def expect(self, obs_list):
+        """Calculate the expectation value of a list of observables.
+
+        Args:
+        obs_list (list): A list of observables whose
+                  expectation value will be calculated. Each member will
+                  be transformed into a qutip.Qobj instance.
+        """
+        if not self.output:
+            raise ValueError("Simulation has to be run first")
+        if not isinstance(obs_list, list):
+            raise TypeError("`obs_list` must be a list of operators")
+
+        for i, obs in enumerate(obs_list):
+            if obs.shape != (self.dim**self._size, self.dim**self._size):
+                raise ValueError('Incompatible shape of observable')
+            if not isinstance(obs, qutip.Qobj):
+                # Transfrom to qutip.Qobj and take dims from state
+                dim_list = [self.output[0].dims[0], self.output[0].dims[0]]
+                obs_list[i] = qutip.Qobj(obs, dims=dim_list)
+
+        return [qutip.expect(obs, self.output) for obs in obs_list]
