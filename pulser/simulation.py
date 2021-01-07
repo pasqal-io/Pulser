@@ -35,7 +35,7 @@ class Simulation:
                                     want to simulate.
     """
 
-    def __init__(self, sequence):
+    def __init__(self, sequence, skip=1):
         """Initialize the Simulation with a specific pulser.Sequence."""
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
@@ -51,9 +51,16 @@ class Simulation:
         self._tot_duration = max(
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
                                 )
-        self._times = np.arange(self._tot_duration, dtype=np.double)/1000
-        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
+        if not isinstance(skip, int):
+            raise ValueError('`skip` has to be an Integer.')
+        if skip > self._tot_duration/10:
+            raise ValueError('`skip` is too large for simulation.')
+        self.skip = skip
+        self._times = np.arange(self._tot_duration,
+                                dtype=np.double)[::self.skip]/1000
+
+        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self.samples = {addr: {basis: {}
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
@@ -185,7 +192,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                     self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], coeff])
+                        terms.append([operators[op_id], coeff[::self.skip]])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -199,7 +206,7 @@ class Simulation:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          coeff])
+                                          coeff[::self.skip]])
 
             self.operators[addr][basis] = operators
             return terms
@@ -217,7 +224,8 @@ class Simulation:
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
-        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
+        time_list = self._times.copy(order='C')
+        ham = qutip.QobjEvo(qobj_list, tlist=time_list)
         ham = ham + ham.dag()
         ham.compress()
         self._hamiltonian = ham
