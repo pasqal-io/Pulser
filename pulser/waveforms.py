@@ -54,6 +54,11 @@ class Waveform(ABC):
         return self.samples[0]
 
     @property
+    def last_value(self):
+        """The last value in the waveform."""
+        return self.samples[-1]
+
+    @property
     def integral(self):
         """Determines the integral of the waveform (time: ns, value: MHz)."""
         return np.sum(self.samples) * 1e-3  # ns * MHz = 1e-3
@@ -137,6 +142,11 @@ class CompositeWaveform(Waveform):
     def first_value(self):
         """The first value in the waveform."""
         return self._waveforms[0].first_value
+
+    @property
+    def last_value(self):
+        """The last value in the waveform."""
+        return self._waveforms[-1].last_value
 
     @property
     def waveforms(self):
@@ -243,6 +253,11 @@ class ConstantWaveform(Waveform):
         """The first value in the waveform."""
         return self._value
 
+    @property
+    def last_value(self):
+        """The last value in the waveform."""
+        return self._value
+
     def __str__(self):
         return f"{self._value:.3g} MHz"
 
@@ -289,6 +304,11 @@ class RampWaveform(Waveform):
         """The first value in the waveform."""
         return self._start
 
+    @property
+    def last_value(self):
+        """The first value in the waveform."""
+        return self._stop
+
     def __str__(self):
         return f"Ramp({self._start:.3g}->{self._stop:.3g} MHz)"
 
@@ -330,6 +350,11 @@ class BlackmanWaveform(Waveform):
     @property
     def first_value(self):
         """The first value in the waveform."""
+        return 0
+
+    @property
+    def last_value(self):
+        """The last value in the waveform."""
         return 0
 
     def __str__(self):
