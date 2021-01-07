@@ -15,6 +15,7 @@
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 
 import pulser
@@ -28,19 +29,40 @@ def test_init():
         assert dev.max_atom_num > 10
         assert dev.max_radial_distance > 10
         assert dev.min_atom_distance > 0
+        assert dev.interaction_coeff > 0
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
-        for i, (id, ch) in enumerate(dev.channels.items()):
-            assert id == dev._channels[i][0]
-            assert isinstance(id, str)
-            assert ch == dev._channels[i][1]
-            assert isinstance(ch, pulser.channels.Channel)
     assert Chadoq2 in pulser.devices._valid_devices
     assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
     with patch('sys.stdout'):
         Chadoq2.specs()
     assert Chadoq2.__repr__() == 'Chadoq2'
+
+
+def test_mock():
+    dev = pulser.devices.MockDevice
+    assert dev.dimensions == 2
+    assert dev.max_atom_num > 1000
+    assert dev.min_atom_distance <= 1
+    assert dev.interaction_coeff == 5008713
+    names = ['Rydberg', 'Raman']
+    basis = ['ground-rydberg', 'digital']
+    for ch in dev.channels.values():
+        assert ch.name in names
+        assert ch.basis == basis[names.index(ch.name)]
+        assert ch.addressing in ['Local', 'Global']
+        assert ch.max_abs_detuning >= 1000
+        assert ch.max_amp >= 200
+        if ch.addressing == 'Local':
+            assert ch.retarget_time == 0
+            assert ch.max_targets > 1
+            assert ch.max_targets == int(ch.max_targets)
+
+
+def test_rydberg_blockade():
+    dev = pulser.devices.MockDevice
+    assert np.isclose(dev.rydberg_blockade_radius(3*np.pi), 9)
 
 
 def test_validate_register():

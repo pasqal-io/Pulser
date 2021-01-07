@@ -24,7 +24,18 @@ from pulser.register import Register
 
 @dataclass(frozen=True, repr=False)
 class PasqalDevice:
-    """Definition of a Pasqal Device."""
+    """Definition of a Pasqal Device.
+
+    Attributes:
+        name: The name of the device.
+        dimensions: Whether it supports 2D or 3D arrays.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in um).
+        min_atom_distance: The closest together two atoms can be (in um).
+        interaction_coeff: C_6/hbar (in MHz.um^6), which sets the van der Waals
+            interaction strength between atoms in the Rydberg state.
+    """
 
     name: str
     dimensions: int
@@ -32,6 +43,7 @@ class PasqalDevice:
     max_radial_distance: int
     min_atom_distance: int
     _channels: Tuple[Tuple[str, Channel]]
+    interaction_coeff: float = 5008713.
 
     @property
     def channels(self):
@@ -65,6 +77,17 @@ class PasqalDevice:
 
     def __repr__(self):
         return self.name
+
+    def rydberg_blockade_radius(self, rabi_frequency):
+        """Calculates the Rydberg blockade radius for a given Rabi frequency.
+
+        Args:
+            rabi_frequency(float): The rabi frequency, in MHz.
+
+        Returns:
+            float: The rydberg blockade radius, in um.
+        """
+        return (self.interaction_coeff/rabi_frequency)**(1/6)
 
     def validate_register(self, register):
         """Checks if 'register' is compatible with this device.
