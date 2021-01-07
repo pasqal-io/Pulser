@@ -256,6 +256,8 @@ class Simulation:
                                )
         self.output = result.states
 
+        return [state.data.toarray() for state in self.output]
+
     def expect(self, obs_list):
         """Calculate the expectation value of a list of observables.
 
