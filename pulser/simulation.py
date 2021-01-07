@@ -16,6 +16,8 @@ import itertools
 
 import qutip
 import numpy as np
+import random
+import collections
 from copy import deepcopy
 
 from pulser import Pulse, Sequence
@@ -56,6 +58,7 @@ class Simulation:
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
+        self.output = None
 
         self._extract_samples()
         self._build_basis_and_op_matrices()
@@ -223,7 +226,7 @@ class Simulation:
     def run(self, initial_state=None, progress_bar=None):
         """Simulate the sequence using QuTiP's solvers.
 
-        Keyword Args:
+        Args:
             initial_state (array): The initial quantum state of the
                            evolution. Will be transformed into a
                            qutip.Qobj instance.
@@ -275,3 +278,21 @@ class Simulation:
                 obs_list[i] = qutip.Qobj(obs, dims=dim_list)
 
         return [qutip.expect(obs, self.output) for obs in obs_list]
+
+    def sample_final_state(self, N_samples=1000):
+        """Calculate the expectation value of a list of observables.
+
+        Args:
+        N_samples (int): Number of samples to take.
+        """
+        if not self.output:
+            raise ValueError("Simulation has to be run first")
+
+        N = self._size
+        state = self.output[-1]
+        bitstrings = [np.binary_repr(j, width=N) for j in range(N)]
+        weights = np.abs(state)**2
+        samples = random.choices(bitstrings, weights, k=int(N_samples))
+        print(f"Obtaining {int(N_samples)} samples from final state...")
+
+        return collections.Counter(samples)
