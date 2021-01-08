@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -199,11 +200,19 @@ class CustomWaveform(Waveform):
         """Initializes a custom waveform."""
         samples_arr = np.array(samples)
         self._samples = samples_arr
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error")
+            try:
+                super().__init__(len(samples))
+            except UserWarning:
+                raise ValueError("The provided samples correspond to a "
+                                 "waveform of invalid duration. Please give"
+                                 " samples whose size is a multiple of 4.")
 
     @property
     def duration(self):
         """The duration of the pulse (in multiples of 4 ns)."""
-        return len(self._samples)
+        return self._duration
 
     @property
     def samples(self):
