@@ -298,11 +298,7 @@ class Simulation:
         if not self.output:
             raise ValueError("Simulation has to be run first")
 
-        N = self._size
-        state = self.output[-1]
-        bitstrings = [np.binary_repr(j, width=N) for j in range(N)]
-        weights = np.abs(state)**2
-        samples = random.choices(bitstrings, weights, k=int(N_samples))
-        print(f"Obtaining {int(N_samples)} samples from final state...")
-
-        return collections.Counter(samples)
+        weights = np.abs(self.output[-1])**2
+        dist = np.random.binomial(N_samples, weights)
+        return {np.binary_repr(i, self._size): dist[i][0]
+                                               for i in np.nonzero(dist)[0]}
