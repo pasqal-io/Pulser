@@ -295,10 +295,11 @@ class Simulation:
         Args:
         N_samples (int): Number of samples to take.
         """
+
         if not self.output:
             raise ValueError("Simulation has to be run first")
 
         weights = np.abs(self.output[-1])**2
         dist = np.random.binomial(N_samples, weights)
-        return {np.binary_repr(i, self._size): dist[i][0]
+        return {np.binary_repr(i, self._size): dist[i][0]/np.sum(dist)
                                                for i in np.nonzero(dist)[0]}
