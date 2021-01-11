@@ -107,7 +107,8 @@ class SimulationResults():
                 weights.append(np.sum(probs[tuple(ind)]))
         else:
             raise NotImplementedError(
-                "Cannot sample singe-qubit state vectors with dimension > 3."
+                "Cannot sample system with singe-atom state vectors of "
+                "dimension > 3."
                 )
         dist = np.random.multinomial(N_samples, weights)
         return {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]}
