@@ -17,10 +17,9 @@ import numpy as np
 
 
 class SimulationResults():
-    """Result of a simulation run of a pulse sequence.
-    """
+    """Result of a simulation run of a pulse sequence."""
 
-    def __init__(self, run_output, dim, size, basis_name):
+    def __init__(self, run_output, dim, size, basis_name, meas_basis=None):
         if not isinstance(run_output, list):
             raise TypeError("Received simulation output is not a list of Qobj")
         if not all(isinstance(x, qutip.Qobj) for x in run_output):
@@ -29,6 +28,7 @@ class SimulationResults():
         self.dim = dim
         self.size = size
         self.basis_name = basis_name
+        self.meas_basis = meas_basis
 
     def expect(self, obs_list):
         """Calculate the expectation value of a list of observables.
@@ -51,7 +51,7 @@ class SimulationResults():
 
         return [qutip.expect(obs, self.states) for obs in obs_list]
 
-    def sample_final_state(self, meas_basis, N_samples=1000):
+    def sample_final_state(self, meas_basis=None, N_samples=1000):
         """Returns the result of multiple measurement in a given basis.
 
         The enconding of the results depends on the meaurement basis. Namely:\n
@@ -63,10 +63,25 @@ class SimulationResults():
         the corresponding value, in binary, will be 0Bb0b1..., where b0 is
         the outcome of measuring 'q0', 'b1' of measuring 'q1' and so on.
 
-        Args:
-            N_samples (int): Number of samples to take.
-            meas_basis (str): 'ground-rydberg' or 'digital'.
+        Keyword Args:
+            meas_basis (str, default=None): 'ground-rydberg' or 'digital'. If
+                left as None, uses the measurement basis defined in the
+                original sequence or raises a `ValueError` if there isn't one.
+            N_samples (int, default=1000): Number of samples to take.
         """
+        if meas_basis is None:
+            if self.meas_basis is None:
+                ValueError(
+                    "Can't accept an undefined measurement basis because the "
+                    "original sequence has no measurement."
+                    )
+            meas_basis = self.meas_basis
+
+        if meas_basis not in {'ground-rydberg', 'digital'}:
+            raise ValueError(
+                "'meas_basis' can only be 'ground-rydberg' or 'digital'."
+                )
+
         N = self.size
         probs = np.abs(self.states[-1])**2
         if self.dim == 2:
@@ -86,10 +101,6 @@ class SimulationResults():
             elif meas_basis == 'digital':
                 one_state = 2       # 1 = |h>
                 ex_one = slice(0, 2)
-            else:
-                raise ValueError(
-                    "'meas_basis' can only be 'ground-rydberg' or 'digital'."
-                    )
 
             probs = probs.reshape([3]*N)
             weights = []
@@ -107,7 +118,7 @@ class SimulationResults():
                 weights.append(np.sum(probs[tuple(ind)]))
         else:
             raise NotImplementedError(
-                "Cannot sample system with singe-atom state vectors of "
+                "Cannot sample system with single-atom state vectors of "
                 "dimension > 3."
                 )
         dist = np.random.multinomial(N_samples, weights)

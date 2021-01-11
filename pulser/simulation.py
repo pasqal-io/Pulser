@@ -253,5 +253,7 @@ class Simulation:
                                                      nsteps=2000)
                                )
 
-        return SimulationResults(result.states, self.dim, self._size,
-                                 self.basis_name)
+        return SimulationResults(
+            result.states, self.dim, self._size, self.basis_name,
+            meas_basis=self._seq._measurement
+            )
