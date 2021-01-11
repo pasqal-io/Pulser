@@ -81,14 +81,14 @@ class SimulationResults():
 
         elif self.dim == 3:
             if meas_basis == 'ground-rydberg':
-                one_state = 0       # 1 = \r>
+                one_state = 0       # 1 = |r>
                 ex_one = slice(1, 3)
             elif meas_basis == 'digital':
                 one_state = 2       # 1 = |h>
                 ex_one = slice(0, 2)
             else:
                 raise ValueError(
-                    "'meas_basis' can only be 'ground_rydberg' or 'digital'."
+                    "'meas_basis' can only be 'ground-rydberg' or 'digital'."
                     )
 
             probs = probs.reshape([3]*N)
@@ -100,6 +100,10 @@ class SimulationResults():
                         ind.append(ex_one)
                     else:
                         ind.append(one_state)
+                # Eg: 'digital' basis => |1> = index 2, |0> = index 0, 1 = 0:2
+                # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
+                # We sum all probabilites that correspond to measuring 11010,
+                # namely hhghg, hhrhg, hhghr, hhrhr
                 weights.append(np.sum(probs[tuple(ind)]))
         else:
             raise NotImplementedError(
