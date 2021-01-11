@@ -253,4 +253,5 @@ class Simulation:
                                                      nsteps=2000)
                                )
         self.output = result.states
-        return SimulationResults(self.output, self.dim, self._size)
+        return SimulationResults(self.output, self.dim, self._size,
+                                 self.basis_name)
