@@ -252,6 +252,6 @@ class Simulation:
                                options=qutip.Options(max_step=5,
                                                      nsteps=2000)
                                )
-        self.output = result.states
-        return SimulationResults(self.output, self.dim, self._size,
+
+        return SimulationResults(self.states, self.dim, self._size,
                                  self.basis_name)
