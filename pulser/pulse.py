@@ -141,5 +141,6 @@ class Pulse:
             clock_t = 4  # ns
             samples = self.detuning.samples
             chirps = samples[clock_t-1::clock_t] - samples[:-clock_t+1:clock_t]
+            chirps = chirps / clock_t
 
-        return chirps / clock_t
+        return chirps
