@@ -27,7 +27,7 @@ class SimulationResults:
         """Initializes a new SimulationResults instance.
 
         Args:
-            run_output (list of qutip.Qobj): List of `qutip.Qobj`corresponding
+            run_output (list of qutip.Qobj): List of `qutip.Qobj` corresponding
                 to the states at each time step after the evolution has been
                 simulated.
             dim (int): The dimension of the local space of each atom (2 or 3).
@@ -37,7 +37,7 @@ class SimulationResults:
 
         Keyword Args:
             meas_basis (None or str): The basis in which a sampling measurement
-            is desired.
+                is desired.
         """
         self.states = run_output
         self.dim = dim
