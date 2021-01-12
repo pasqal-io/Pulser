@@ -16,11 +16,10 @@ import itertools
 
 import qutip
 import numpy as np
-import random
-import collections
 from copy import deepcopy
 
 from pulser import Pulse, Sequence
+from pulser.simresults import SimulationResults
 
 
 class Simulation:
@@ -169,7 +168,6 @@ class Simulation:
                 if dist < min_dist:
                     min_dist = dist
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
-            self._U = 5.008e6 / min_dist**6
             return vdw
 
         def build_coeffs_ops(basis, addr):
@@ -262,44 +260,8 @@ class Simulation:
                                options=qutip.Options(max_step=5,
                                                      nsteps=2000)
                                )
-        self.output = result.states
 
-        return [state.data.toarray() for state in self.output]
-
-    def expect(self, obs_list):
-        """Calculate the expectation value of a list of observables.
-
-        Args:
-        obs_list (list): A list of observables whose
-                  expectation value will be calculated. Each member will
-                  be transformed into a qutip.Qobj instance.
-        """
-        if not self.output:
-            raise ValueError("Simulation has to be run first")
-        if not isinstance(obs_list, list):
-            raise TypeError("`obs_list` must be a list of operators")
-
-        for i, obs in enumerate(obs_list):
-            if obs.shape != (self.dim**self._size, self.dim**self._size):
-                raise ValueError('Incompatible shape of observable')
-            if not isinstance(obs, qutip.Qobj):
-                # Transfrom to qutip.Qobj and take dims from state
-                dim_list = [self.output[0].dims[0], self.output[0].dims[0]]
-                obs_list[i] = qutip.Qobj(obs, dims=dim_list)
-
-        return [qutip.expect(obs, self.output) for obs in obs_list]
-
-    def sample_final_state(self, N_samples=1000):
-        """Calculate the expectation value of a list of observables.
-
-        Args:
-        N_samples (int): Number of samples to take.
-        """
-
-        if not self.output:
-            raise ValueError("Simulation has to be run first")
-
-        weights = np.abs(self.output[-1])**2
-        dist = np.random.binomial(N_samples, weights)
-        return {np.binary_repr(i, self._size): dist[i][0]/np.sum(dist)
-                                               for i in np.nonzero(dist)[0]}
+        return SimulationResults(
+            result.states, self.dim, self._size, self.basis_name,
+            meas_basis=self._seq._measurement
+            )
