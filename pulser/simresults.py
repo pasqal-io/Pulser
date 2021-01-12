@@ -37,7 +37,7 @@ class SimulationResults:
 
         Keyword Args:
             meas_basis (None or str): The basis in which a sampling measurement
-            is desired.
+                is desired.
         """
         self.states = run_output
         self.dim = dim
