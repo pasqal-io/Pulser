@@ -125,7 +125,7 @@ class Pulse:
         """Describes the detuning waveform as a series of linear chirps.
 
         Turns the detuning into segments of linear frequency chirps, with a
-        lenght of 4ns. If the chirp rate is constant through the entire pulse,
+        length of 4ns. If the chirp rate is constant through the entire pulse,
         returns a single value.
 
         Returns:
@@ -141,6 +141,5 @@ class Pulse:
             clock_t = 4  # ns
             samples = self.detuning.samples
             chirps = samples[clock_t-1::clock_t] - samples[:-clock_t+1:clock_t]
-            chirps /= clock_t
 
-        return chirps
+        return chirps / clock_t

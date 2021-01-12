@@ -315,7 +315,7 @@ class RampWaveform(Waveform):
 
     @property
     def last_value(self):
-        """The first value in the waveform."""
+        """The last value in the waveform."""
         return self._stop
 
     def __str__(self):
