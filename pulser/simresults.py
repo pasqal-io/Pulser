@@ -71,7 +71,7 @@ class SimulationResults():
         """
         if meas_basis is None:
             if self.meas_basis is None:
-                ValueError(
+                raise ValueError(
                     "Can't accept an undefined measurement basis because the "
                     "original sequence has no measurement."
                     )

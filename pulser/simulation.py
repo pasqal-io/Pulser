@@ -252,8 +252,12 @@ class Simulation:
                                options=qutip.Options(max_step=5,
                                                      nsteps=2000)
                                )
+        if hasattr(self._seq, '_measurement'):
+            meas_basis = self._seq._measurement
+        else:
+            meas_basis = None
 
         return SimulationResults(
             result.states, self.dim, self._size, self.basis_name,
-            meas_basis=self._seq._measurement
+            meas_basis=meas_basis
             )
