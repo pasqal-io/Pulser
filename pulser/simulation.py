@@ -64,7 +64,6 @@ class Simulation:
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
-        self.output = None
 
         self._extract_samples()
         self._build_basis_and_op_matrices()
@@ -232,7 +231,7 @@ class Simulation:
     def run(self, initial_state=None, progress_bar=None):
         """Simulate the sequence using QuTiP's solvers.
 
-        Args:
+        Keyword Args:
             initial_state (array): The initial quantum state of the
                            evolution. Will be transformed into a
                            qutip.Qobj instance.
@@ -260,8 +259,12 @@ class Simulation:
                                options=qutip.Options(max_step=5,
                                                      nsteps=2000)
                                )
+        if hasattr(self._seq, '_measurement'):
+            meas_basis = self._seq._measurement
+        else:
+            meas_basis = None
 
         return SimulationResults(
             result.states, self.dim, self._size, self.basis_name,
-            meas_basis=self._seq._measurement
+            meas_basis=meas_basis
             )

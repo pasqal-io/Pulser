@@ -16,14 +16,29 @@ import qutip
 import numpy as np
 
 
-class SimulationResults():
-    """Result of a simulation run of a pulse sequence."""
+class SimulationResults:
+    """Results of a simulation run of a pulse sequence.
+
+    Contains methods for studying the states and extracting useful information
+    from them.
+    """
 
     def __init__(self, run_output, dim, size, basis_name, meas_basis=None):
-        if not isinstance(run_output, list):
-            raise TypeError("Received simulation output is not a list of Qobj")
-        if not all(isinstance(x, qutip.Qobj) for x in run_output):
-            raise TypeError("Received output elements are not all Qobj")
+        """Initializes a new SimulationResults instance.
+
+        Args:
+            run_output (list of qutip.Qobj): List of `qutip.Qobj` corresponding
+                to the states at each time step after the evolution has been
+                simulated.
+            dim (int): The dimension of the local space of each atom (2 or 3).
+            size (int): The number of atoms in the register.
+            basis_name (str): The basis indicating the addressed atoms after
+                the pulse sequence ('ground-rydberg', 'digital' or 'all').
+
+        Keyword Args:
+            meas_basis (None or str): The basis in which a sampling measurement
+                is desired.
+        """
         self.states = run_output
         self.dim = dim
         self.size = size
@@ -34,22 +49,23 @@ class SimulationResults():
         """Calculate the expectation value of a list of observables.
 
         Args:
-            obs_list (list): A list of observables whose
-                      expectation value will be calculated. Each member will
-                      be transformed into a qutip.Qobj instance.
+            obs_list (array-like of qutip.Qobj or array-like of np.ndarray):
+                A list of observables whose expectation value will be
+                calculated. If necessary, each member will be transformed into
+                a qutip.Qobj instance.
         """
-        if not isinstance(obs_list, list):
+        if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators")
 
-        for i, obs in enumerate(obs_list):
+        qobj_list = []
+        for obs in obs_list:
             if obs.shape != (self.dim**self.size, self.dim**self.size):
                 raise ValueError('Incompatible shape of observable')
-            if not isinstance(obs, qutip.Qobj):
-                # Transfrom to qutip.Qobj and take dims from state
-                dim_list = [self.states[0].dims[0], self.states[0].dims[0]]
-                obs_list[i] = qutip.Qobj(obs, dims=dim_list)
+            # Transfrom to qutip.Qobj and take dims from state
+            dim_list = [self.states[0].dims[0], self.states[0].dims[0]]
+            qobj_list.append(qutip.Qobj(obs, dims=dim_list))
 
-        return [qutip.expect(obs, self.states) for obs in obs_list]
+        return [qutip.expect(qobj, self.states) for qobj in qobj_list]
 
     def sample_final_state(self, meas_basis=None, N_samples=1000):
         """Returns the result of multiple measurement in a given basis.
@@ -71,7 +87,7 @@ class SimulationResults():
         """
         if meas_basis is None:
             if self.meas_basis is None:
-                ValueError(
+                raise ValueError(
                     "Can't accept an undefined measurement basis because the "
                     "original sequence has no measurement."
                     )
