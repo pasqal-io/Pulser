@@ -34,7 +34,7 @@ class Simulation:
                                     want to simulate.
     """
 
-    def __init__(self, sequence, skip=1):
+    def __init__(self, sequence, sampling_rate=1.0):
         """Initialize the Simulation with a specific pulser.Sequence."""
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
@@ -51,13 +51,9 @@ class Simulation:
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
                                 )
 
-        if not isinstance(skip, int):
-            raise ValueError('`skip` has to be an Integer.')
-        if skip > self._tot_duration/10:
-            raise ValueError('`skip` is too large for simulation.')
-        self.skip = skip
-        self._times = np.arange(self._tot_duration,
-                                dtype=np.double)[::self.skip]/1000
+        if sampling_rate < 0.05:
+            raise ValueError('`sampling_rate` is too small for simulation.')
+        self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self.samples = {addr: {basis: {}
@@ -150,6 +146,27 @@ class Simulation:
         return qutip.tensor(temp)
 
     def _construct_hamiltonian(self):
+        def adapt(full_array):
+            """Adapt list to correspond to sampling rate"""
+            if not isinstance(full_array, np.ndarray):
+                full_array = np.array(full_array)
+            coeff = 1
+            if self.sampling_rate > 0.3:
+                adapted_array = full_array.copy()
+                while coeff > self.sampling_rate:
+                    rand_ind = np.random.randint(1, len(adapted_array)-1)
+                    adapted_array = np.delete(adapted_array, rand_ind, axis=0)
+                    coeff = len(adapted_array)/self._tot_duration
+            else:
+                skip = 1
+                while coeff > self.sampling_rate:
+                    coeff = len(full_array[::skip])/self._tot_duration
+                    skip += 1
+                # Create adapted list including last full_array` item
+                adapted_array = np.concatenate([full_array[:-1:skip],
+                                               full_array[-1:]])
+            return adapted_array
+
         def make_vdw_term():
             """Construct the Van der Waals interaction Term.
 
@@ -189,7 +206,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                     self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], coeff[::self.skip]])
+                        terms.append([operators[op_id], adapt(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -203,7 +220,7 @@ class Simulation:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          coeff[::self.skip]])
+                                          adapt(coeff)])
 
             self.operators[addr][basis] = operators
             return terms
@@ -221,6 +238,8 @@ class Simulation:
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
+        self._times = adapt(np.arange(self._tot_duration,
+                                      dtype=np.double)/1000)
         time_list = self._times.copy(order='C')
         ham = qutip.QobjEvo(qobj_list, tlist=time_list)
         ham = ham + ham.dag()
