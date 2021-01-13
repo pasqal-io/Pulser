@@ -15,11 +15,11 @@
 import warnings
 
 
-def validate_duration(duration):
+def validate_duration(duration, min_duration=16, max_duration=67108864):
     """Validates a time interval.
 
     Returns:
-        int: The duration in ns.
+        int: The duration in multiples of 4 ns.
     """
     try:
         _duration = int(duration)
@@ -27,12 +27,15 @@ def validate_duration(duration):
         raise TypeError("duration needs to be castable to an int but "
                         "type %s was provided" % type(duration))
 
-    if duration <= 0:
-        raise ValueError("duration has to be castable to a positive "
-                         "integer.")
+    if duration < min_duration:
+        raise ValueError(f"duration has to be at least {min_duration} ns.")
 
-    if duration % 1 != 0:
+    if duration > max_duration:
+        raise ValueError(f"duration can be at most {max_duration} ns.")
+
+    if duration % 4 != 0:
+        _duration -= _duration % 4
         warnings.warn("The given duration is below the machine's precision"
-                      " of 1 ns time steps. It was rounded down to the"
-                      " nearest integer.")
+                      " of 4 ns time steps. It was rounded down to the"
+                      " nearest multiple of 4 ns.")
     return _duration

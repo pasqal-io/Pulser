@@ -24,7 +24,7 @@ np.random.seed(20201105)
 
 constant = ConstantWaveform(100, -3)
 ramp = RampWaveform(2e3, 5, 19)
-arb_samples = np.random.random(50)
+arb_samples = np.random.random(52)
 custom = CustomWaveform(arb_samples)
 blackman = BlackmanWaveform(40, np.pi)
 composite = CompositeWaveform(blackman, constant, custom)
@@ -35,16 +35,22 @@ def test_duration():
         ConstantWaveform("s", -1)
         RampWaveform([0, 1, 3], 1, 0)
 
-    with pytest.raises(ValueError, match='positive integer'):
-        ConstantWaveform(0, -10)
+    with pytest.raises(ValueError, match='at least 16 ns'):
+        ConstantWaveform(15, -10)
         RampWaveform(-20, 3, 4)
 
-    with pytest.warns(UserWarning):
-        wf = BlackmanWaveform(np.pi, 1)
+    with pytest.raises(ValueError, match='at most 4194304 ns'):
+        BlackmanWaveform(2**23, np.pi/2)
 
-    assert wf.duration == 3
-    assert custom.duration == 50
-    assert composite.duration == 190
+    with pytest.raises(ValueError, match='waveform of invalid duration'):
+        CustomWaveform(np.random.random(50))
+
+    with pytest.warns(UserWarning):
+        wf = BlackmanWaveform(np.pi*10, 1)
+
+    assert wf.duration == 28
+    assert custom.duration == 52
+    assert composite.duration == 192
 
 
 def test_samples():
@@ -70,7 +76,23 @@ def test_draw():
 def test_eq():
     assert constant == CustomWaveform(np.full(100, -3))
     assert constant != -3
-    assert constant != CustomWaveform(np.full(50, -3))
+    assert constant != CustomWaveform(np.full(48, -3))
+
+
+def test_first_last():
+    assert constant.first_value == constant.last_value
+    assert ramp.first_value == 5
+    assert ramp.last_value == 19
+    assert blackman.first_value == 0
+    assert blackman.last_value == 0
+    assert composite.first_value == 0
+    assert composite.last_value == arb_samples[-1]
+    assert custom.first_value == arb_samples[0]
+
+
+def test_hash():
+    assert hash(constant) == hash(tuple(np.full(100, -3)))
+    assert hash(ramp) == hash(tuple(np.linspace(5, 19, num=2000)))
 
 
 def test_composite():
@@ -100,9 +122,9 @@ def test_composite():
 
 
 def test_custom():
-    wf = CustomWaveform([0, 1])
+    wf = CustomWaveform(np.arange(16))
     assert wf.__str__() == 'Custom'
-    assert wf.__repr__() == 'CustomWaveform(2 ns, array([0, 1]))'
+    assert wf.__repr__() == f'CustomWaveform(16 ns, {np.arange(16)!r})'
 
 
 def test_blackman():
