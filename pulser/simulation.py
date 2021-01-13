@@ -35,7 +35,17 @@ class Simulation:
     """
 
     def __init__(self, sequence, sampling_rate=1.0):
-        """Initialize the Simulation with a specific pulser.Sequence."""
+        """Initialize the Simulation with a specific pulser.Sequence.
+
+        Args:
+            sequence (pulser.Sequence): Pulser sequence that we wish to
+                simulate.
+
+        Keyword Args:
+            sampling_rate (float): The fraction of samples that we wish to
+                extract from the pulse sequence to simulate. Has to be a
+                value between 0.05 and 1.0
+        """
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
@@ -51,8 +61,8 @@ class Simulation:
                         [self._seq._last(ch).tf for ch in self._seq._schedule]
                                 )
 
-        if sampling_rate < 0.05:
-            raise ValueError('`sampling_rate` is too small for simulation.')
+        if not 0.05 <= sampling_rate <= 1.0:
+            raise ValueError('`sampling_rate` has to lie between 0.05 and 1.0')
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
@@ -150,22 +160,10 @@ class Simulation:
             """Adapt list to correspond to sampling rate"""
             if not isinstance(full_array, np.ndarray):
                 full_array = np.array(full_array)
-            coeff = 1
-            if self.sampling_rate > 0.3:
-                adapted_array = full_array.copy()
-                while coeff > self.sampling_rate:
-                    rand_ind = np.random.randint(1, len(adapted_array)-1)
-                    adapted_array = np.delete(adapted_array, rand_ind, axis=0)
-                    coeff = len(adapted_array)/self._tot_duration
-            else:
-                skip = 1
-                while coeff > self.sampling_rate:
-                    coeff = len(full_array[::skip])/self._tot_duration
-                    skip += 1
-                # Create adapted list including last full_array` item
-                adapted_array = np.concatenate([full_array[:-1:skip],
-                                               full_array[-1:]])
-            return adapted_array
+            indexes = np.linspace(0, self._tot_duration-1,
+                                  int(self.sampling_rate*self._tot_duration),
+                                  dtype=int)
+            return full_array[indexes]
 
         def make_vdw_term():
             """Construct the Van der Waals interaction Term.
@@ -241,9 +239,11 @@ class Simulation:
         self._times = adapt(np.arange(self._tot_duration,
                                       dtype=np.double)/1000)
         time_list = self._times.copy(order='C')
+
         ham = qutip.QobjEvo(qobj_list, tlist=time_list)
         ham = ham + ham.dag()
         ham.compress()
+
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
