@@ -10,3 +10,5 @@ flake8
 # tutorials
 notebook
 qutip
+scikit-optimize
+python-igraph

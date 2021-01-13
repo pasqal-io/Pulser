@@ -12,5 +12,5 @@ __pycache__/
 build/
 docs/build/
 dist/
-env-pasqal-qutip/
+env*
 pulser.egg-info/
