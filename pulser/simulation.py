@@ -34,8 +34,18 @@ class Simulation:
                                     want to simulate.
     """
 
-    def __init__(self, sequence, skip=1):
-        """Initialize the Simulation with a specific pulser.Sequence."""
+    def __init__(self, sequence, sampling_rate=1.0):
+        """Initialize the Simulation with a specific pulser.Sequence.
+
+        Args:
+            sequence (pulser.Sequence): Pulser sequence that we wish to
+                simulate.
+
+        Keyword Args:
+            sampling_rate (float): The fraction of samples that we wish to
+                extract from the pulse sequence to simulate. Has to be a
+                value between 0.05 and 1.0
+        """
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
@@ -51,13 +61,9 @@ class Simulation:
             [self._seq._last(ch).tf for ch in self._seq._schedule]
         )
 
-        if not isinstance(skip, int):
-            raise ValueError('`skip` has to be an Integer.')
-        if skip > self._tot_duration/10:
-            raise ValueError('`skip` is too large for simulation.')
-        self.skip = skip
-        self._times = np.arange(self._tot_duration,
-                                dtype=np.double)[::self.skip]/1000
+        if not 0.05 <= sampling_rate <= 1.0:
+            raise ValueError('`sampling_rate` has to lie between 0.05 and 1.0')
+        self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self.samples = {addr: {basis: {}
@@ -150,6 +156,15 @@ class Simulation:
         return qutip.tensor(temp)
 
     def _construct_hamiltonian(self):
+        def adapt(full_array):
+            """Adapt list to correspond to sampling rate"""
+            if not isinstance(full_array, np.ndarray):
+                full_array = np.array(full_array)
+            indexes = np.linspace(0, self._tot_duration-1,
+                                  int(self.sampling_rate*self._tot_duration),
+                                  dtype=int)
+            return full_array[indexes]
+
         def make_vdw_term():
             """Construct the Van der Waals interaction Term.
 
@@ -189,7 +204,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                 self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], coeff[::self.skip]])
+                        terms.append([operators[op_id], adapt(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -203,7 +218,7 @@ class Simulation:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          coeff[::self.skip]])
+                                          adapt(coeff)])
 
             self.operators[addr][basis] = operators
             return terms
@@ -221,10 +236,14 @@ class Simulation:
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
+        self._times = adapt(np.arange(self._tot_duration,
+                                      dtype=np.double)/1000)
         time_list = self._times.copy(order='C')
+
         ham = qutip.QobjEvo(qobj_list, tlist=time_list)
         ham = ham + ham.dag()
         ham.compress()
+
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
