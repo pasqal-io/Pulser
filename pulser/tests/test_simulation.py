@@ -77,6 +77,7 @@ seq.align('rydA', 'rydB')
 seq.add(pi, 'rydA')
 d += 1
 
+
 def test_init():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
     with pytest.raises(TypeError, match='sequence has to be a valid'):
@@ -143,3 +144,11 @@ def test_empty_sequences():
         seq.declare_channel('test', 'rydberg_local', 'target')
         seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
+
+
+def test_run():
+    sim = Simulation(seq)
+    with pytest.raises(ValueError, match='Incompatible shape of initial_state'):
+        sim.run(initial_state=np.array([1.]))
+    with pytest.raises(ValueError, match='Incompatible shape of initial_state'):
+        sim.run(initial_state=qutip.Qobj(np.array([1.])))

@@ -48,8 +48,8 @@ class Simulation:
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = max(
-                        [self._seq._last(ch).tf for ch in self._seq._schedule]
-                                )
+            [self._seq._last(ch).tf for ch in self._seq._schedule]
+        )
 
         if not isinstance(skip, int):
             raise ValueError('`skip` has to be an Integer.')
@@ -132,8 +132,8 @@ class Simulation:
 
         for proj in projectors:
             self.op_matrix['sigma_' + proj] = (
-                                self.basis[proj[0]] * self.basis[proj[1]].dag()
-                                )
+                self.basis[proj[0]] * self.basis[proj[1]].dag()
+            )
 
     def _build_operator(self, op_id, *qubit_ids, global_op=False):
         """Create qutip.Qobj with nontrivial action at *qubit_ids."""
@@ -162,8 +162,8 @@ class Simulation:
             min_dist = 2 * self._seq._device.max_radial_distance
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 dist = np.linalg.norm(
-                        self._qdict[q1] - self._qdict[q2])
-                U = 0.5 * 5.008e6 / dist**6  # = U/hbar
+                    self._qdict[q1] - self._qdict[q2])
+                U = 0.5 * self._seq._device.interaction_coeff / dist**6
                 if dist < min_dist:
                     min_dist = dist
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
@@ -188,7 +188,7 @@ class Simulation:
                         # Build once global operators as they are needed
                         if op_id not in operators:
                             operators[op_id] =\
-                                    self._build_operator(op_id, global_op=True)
+                                self._build_operator(op_id, global_op=True)
                         terms.append([operators[op_id], coeff[::self.skip]])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
@@ -267,4 +267,4 @@ class Simulation:
         return SimulationResults(
             result.states, self.dim, self._size, self.basis_name,
             meas_basis=meas_basis
-            )
+        )
