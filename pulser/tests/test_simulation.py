@@ -82,13 +82,17 @@ def test_init():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
     with pytest.raises(TypeError, match='sequence has to be a valid'):
         Simulation(fake_sequence)
-    sim = Simulation(seq)
+    sim = Simulation(seq, sampling_rate=0.9)
     assert sim._seq == seq
     assert sim._qdict == seq.qubit_info
     assert sim._size == len(seq.qubit_info)
     assert sim._tot_duration == (duration * d
                                  + seq._channels['raman'].retarget_time * t)
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
+    assert np.isclose(sim.sampling_rate, 0.9)
+
+    with pytest.raises(ValueError, match='sampling_rate` has to lie between 0.05 and 1.0'):
+        Simulation(seq, sampling_rate=0.001)
 
 
 def test_extraction_of_sequences():
