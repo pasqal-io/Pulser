@@ -17,16 +17,14 @@ import pytest
 
 import qutip
 
-from pulser import Sequence, Pulse, Register
+from pulser import Sequence, Pulse, Register, Simulation
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
-from pulser.simulation import Simulation
 
 q_dict = {"control1": np.array([-4., 0.]),
           "target": np.array([0., 4.]),
           "control2": np.array([4., 0.])}
 reg = Register(q_dict)
-device = Chadoq2
 
 duration = 1000
 pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., 0)
@@ -76,7 +74,7 @@ seq.add(pi, 'rydA')
 d += 1
 
 
-def test_init():
+def test_initialization_and_construction_of_hamiltonian():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
     with pytest.raises(TypeError, match='sequence has to be a valid'):
         Simulation(fake_sequence)
@@ -89,8 +87,22 @@ def test_init():
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
     assert np.isclose(sim.sampling_rate, 0.9)
 
-    with pytest.raises(ValueError, match='has to lie between 0.05 and 1.0'):
-        Simulation(seq, sampling_rate=0.001)
+    with pytest.raises(ValueError, match='too small, less than'):
+        Simulation(seq, sampling_rate=0.0001)
+    with pytest.raises(ValueError, match='positive and not larger'):
+        Simulation(seq, sampling_rate=5)
+    with pytest.raises(ValueError, match='positive and not larger'):
+        Simulation(seq, sampling_rate=-1)
+
+    assert sim.sampling_rate == 0.9
+    assert len(sim._times) == int(sim.sampling_rate * sim._tot_duration)
+
+    assert isinstance(sim._hamiltonian, qutip.QobjEvo)
+    # Checks adapt() method:
+    assert bool(set(sim._hamiltonian.tlist).intersection(sim._times))
+    for qobjevo in sim._hamiltonian.ops:
+        for sh in qobjevo.qobj.shape:
+            assert sh == sim.dim**sim._size
 
 
 def test_extraction_of_sequences():
@@ -124,6 +136,7 @@ def test_extraction_of_sequences():
 
 
 def test_building_basis_and_projection_operators():
+    # All three levels:
     sim = Simulation(seq)
     assert sim.basis_name == 'all'
     assert sim.dim == 3
@@ -136,6 +149,55 @@ def test_building_basis_and_projection_operators():
             qutip.basis(3, 1) * qutip.basis(3, 0).dag())
     assert (sim.op_matrix['sigma_hg'] ==
             qutip.basis(3, 2) * qutip.basis(3, 1).dag())
+
+    # Check local operator building method:
+    with pytest.raises(ValueError, match="Duplicate atom"):
+        sim._build_operator('sigma_gg', "target", "target")
+
+    # Global ground-rydberg
+    seq2 = Sequence(reg, Chadoq2)
+    seq2.declare_channel('global', 'rydberg_global')
+    seq2.add(pi, 'global')
+    sim2 = Simulation(seq2)
+    assert sim2.basis_name == 'ground-rydberg'
+    assert sim2.dim == 2
+    assert sim2.basis == {'r': qutip.basis(2, 0),
+                          'g': qutip.basis(2, 1)
+                          }
+    assert (sim2.op_matrix['sigma_rr'] ==
+            qutip.basis(2, 0) * qutip.basis(2, 0).dag())
+    assert (sim2.op_matrix['sigma_gr'] ==
+            qutip.basis(2, 1) * qutip.basis(2, 0).dag())
+
+    # Digital
+    seq2b = Sequence(reg, Chadoq2)
+    seq2b.declare_channel('local', 'raman_local', 'target')
+    seq2b.add(pi, 'local')
+    sim2b = Simulation(seq2b)
+    assert sim2b.basis_name == 'digital'
+    assert sim2b.dim == 2
+    assert sim2b.basis == {'g': qutip.basis(2, 0),
+                           'h': qutip.basis(2, 1)
+                           }
+    assert (sim2b.op_matrix['sigma_gg'] ==
+            qutip.basis(2, 0) * qutip.basis(2, 0).dag())
+    assert (sim2b.op_matrix['sigma_hg'] ==
+            qutip.basis(2, 1) * qutip.basis(2, 0).dag())
+
+    # Local ground-rydberg
+    seq2c = Sequence(reg, Chadoq2)
+    seq2c.declare_channel('local_ryd', 'rydberg_local', 'target')
+    seq2c.add(pi, 'local_ryd')
+    sim2c = Simulation(seq2c)
+    assert sim2c.basis_name == 'ground-rydberg'
+    assert sim2c.dim == 2
+    assert sim2c.basis == {'r': qutip.basis(2, 0),
+                           'g': qutip.basis(2, 1)
+                           }
+    assert (sim2c.op_matrix['sigma_rr'] ==
+            qutip.basis(2, 0) * qutip.basis(2, 0).dag())
+    assert (sim2c.op_matrix['sigma_gr'] ==
+            qutip.basis(2, 1) * qutip.basis(2, 0).dag())
 
 
 def test_empty_sequences():
@@ -151,7 +213,14 @@ def test_empty_sequences():
 def test_run():
     sim = Simulation(seq)
     false_initial = np.array([1.])
-    with pytest.raises(ValueError, match='Incompatible shape of initial_state'):
+    with pytest.raises(ValueError,
+                       match='Incompatible shape of initial_state'):
         sim.run(false_initial)
-    with pytest.raises(ValueError, match='Incompatible shape of initial_state'):
+    with pytest.raises(ValueError,
+                       match='Incompatible shape of initial_state'):
         sim.run(qutip.Qobj(false_initial))
+    sim.run()
+    assert not hasattr(sim._seq, '_measurement')
+    seq.measure('ground-rydberg')
+    sim.run()
+    assert sim._seq._measurement == 'ground-rydberg'
