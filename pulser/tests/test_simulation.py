@@ -91,7 +91,7 @@ def test_init():
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
     assert np.isclose(sim.sampling_rate, 0.9)
 
-    with pytest.raises(ValueError, match='sampling_rate` has to lie between 0.05 and 1.0'):
+    with pytest.raises(ValueError, match='has to lie between 0.05 and 1.0'):
         Simulation(seq, sampling_rate=0.001)
 
 
