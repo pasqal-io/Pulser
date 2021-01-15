@@ -4,6 +4,7 @@
 .pytest_cache/
 .idea/
 .coverage
+.spyproject/
 *.dat
 /*.ipynb
 *.ipynb_checkpoints
