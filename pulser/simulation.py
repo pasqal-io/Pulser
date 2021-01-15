@@ -34,8 +34,18 @@ class Simulation:
                                     want to simulate.
     """
 
-    def __init__(self, sequence):
-        """Initialize the Simulation with a specific pulser.Sequence."""
+    def __init__(self, sequence, sampling_rate=1.0):
+        """Initialize the Simulation with a specific pulser.Sequence.
+
+        Args:
+            sequence (pulser.Sequence): Pulser sequence that we wish to
+                simulate.
+
+        Keyword Args:
+            sampling_rate (float): The fraction of samples that we wish to
+                extract from the pulse sequence to simulate. Has to be a
+                value between 0.05 and 1.0
+        """
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
@@ -48,11 +58,14 @@ class Simulation:
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = max(
-                        [self._seq._last(ch).tf for ch in self._seq._schedule]
-                                )
-        self._times = np.arange(self._tot_duration, dtype=np.double)/1000
-        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
+            [self._seq._last(ch).tf for ch in self._seq._schedule]
+        )
 
+        if not 0.05 <= sampling_rate <= 1.0:
+            raise ValueError('`sampling_rate` has to lie between 0.05 and 1.0')
+        self.sampling_rate = sampling_rate
+
+        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self.samples = {addr: {basis: {}
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
@@ -125,8 +138,8 @@ class Simulation:
 
         for proj in projectors:
             self.op_matrix['sigma_' + proj] = (
-                                self.basis[proj[0]] * self.basis[proj[1]].dag()
-                                )
+                self.basis[proj[0]] * self.basis[proj[1]].dag()
+            )
 
     def _build_operator(self, op_id, *qubit_ids, global_op=False):
         """Create qutip.Qobj with nontrivial action at *qubit_ids."""
@@ -143,6 +156,15 @@ class Simulation:
         return qutip.tensor(temp)
 
     def _construct_hamiltonian(self):
+        def adapt(full_array):
+            """Adapt list to correspond to sampling rate"""
+            if not isinstance(full_array, np.ndarray):
+                full_array = np.array(full_array)
+            indexes = np.linspace(0, self._tot_duration-1,
+                                  int(self.sampling_rate*self._tot_duration),
+                                  dtype=int)
+            return full_array[indexes]
+
         def make_vdw_term():
             """Construct the Van der Waals interaction Term.
 
@@ -155,8 +177,8 @@ class Simulation:
             min_dist = 2 * self._seq._device.max_radial_distance
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 dist = np.linalg.norm(
-                        self._qdict[q1] - self._qdict[q2])
-                U = 0.5 * 5.008e6 / dist**6  # = U/hbar
+                    self._qdict[q1] - self._qdict[q2])
+                U = 0.5 * self._seq._device.interaction_coeff / dist**6
                 if dist < min_dist:
                     min_dist = dist
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
@@ -181,8 +203,8 @@ class Simulation:
                         # Build once global operators as they are needed
                         if op_id not in operators:
                             operators[op_id] =\
-                                    self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], coeff])
+                                self._build_operator(op_id, global_op=True)
+                        terms.append([operators[op_id], adapt(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -196,7 +218,7 @@ class Simulation:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          coeff])
+                                          adapt(coeff)])
 
             self.operators[addr][basis] = operators
             return terms
@@ -214,9 +236,14 @@ class Simulation:
                 if self.samples[addr][basis]:
                     qobj_list += build_coeffs_ops(basis, addr)
 
-        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
+        self._times = adapt(np.arange(self._tot_duration,
+                                      dtype=np.double)/1000)
+        time_list = self._times.copy(order='C')
+
+        ham = qutip.QobjEvo(qobj_list, tlist=time_list)
         ham = ham + ham.dag()
         ham.compress()
+
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
@@ -259,4 +286,4 @@ class Simulation:
         return SimulationResults(
             result.states, self.dim, self._size, self.basis_name,
             meas_basis=meas_basis
-            )
+        )

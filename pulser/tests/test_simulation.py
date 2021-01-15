@@ -77,6 +77,7 @@ seq.align('rydA', 'rydB')
 seq.add(pi, 'rydA')
 d += 1
 
+
 def test_init():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
     with pytest.raises(TypeError, match='sequence has to be a valid'):
