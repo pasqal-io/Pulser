@@ -47,6 +47,11 @@ class SimulationResults:
                 "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
                 )
         self.basis_name = basis_name
+        if meas_basis:
+            if meas_basis not in {'ground-rydberg', 'digital'}:
+                raise ValueError(
+                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                    )
         self.meas_basis = meas_basis
 
     def expect(self, obs_list):
@@ -63,6 +68,8 @@ class SimulationResults:
 
         qobj_list = []
         for obs in obs_list:
+            if not hasattr(obs, "shape"):
+                raise TypeError("Incompatible type of observable")
             if obs.shape != (self.dim**self.size, self.dim**self.size):
                 raise ValueError('Incompatible shape of observable')
             # Transfrom to qutip.Qobj and take dims from state
