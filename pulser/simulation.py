@@ -61,8 +61,10 @@ class Simulation:
             [self._seq._last(ch).tf for ch in self._seq._schedule]
         )
 
-        if not 0.05 <= sampling_rate <= 1.0:
+        if not (0 < sampling_rate <= 1.0):
             raise ValueError('`sampling_rate` has to lie between 0.05 and 1.0')
+        if int(self._tot_duration*sampling_rate) < 4:
+            raise ValueError('`sampling_rate`is too small, less than 4 data points')
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
@@ -235,9 +237,8 @@ class Simulation:
 
         self._times = adapt(np.arange(self._tot_duration,
                                       dtype=np.double)/1000)
-        time_list = self._times.copy(order='C')
 
-        ham = qutip.QobjEvo(qobj_list, tlist=time_list)
+        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
         ham.compress()
 
@@ -272,9 +273,10 @@ class Simulation:
                                psi0,
                                self._times,
                                progress_bar=progress_bar,
-                               options=qutip.Options(max_step=5,
-                                                     nsteps=2000)
+                               options=qutip.Options(max_step=5)
                                )
+                                #                     nsteps=2000)
+                               #)
         if hasattr(self._seq, '_measurement'):
             meas_basis = self._seq._measurement
         else:
