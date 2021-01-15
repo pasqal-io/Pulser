@@ -86,6 +86,9 @@ def test_sample_final_state():
     assert results.N_samples == 1234
     assert len(sampling) == 4  # Check that all states were observed.
 
+    sampling0 = results.sample_final_state(meas_basis='digital', N_samples=911)
+    assert sampling0 == {'00': 911}
+
     seq_no_meas.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas.add(pi, 'raman')
     res_3level = Simulation(seq_no_meas).run()
