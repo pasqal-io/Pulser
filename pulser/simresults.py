@@ -42,6 +42,10 @@ class SimulationResults:
         self.states = run_output
         self.dim = dim
         self.size = size
+        if basis_name not in {'ground-rydberg', 'digital', 'all'}:
+            raise ValueError(
+                "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
+                )
         self.basis_name = basis_name
         self.meas_basis = meas_basis
 
@@ -99,6 +103,7 @@ class SimulationResults:
                 )
 
         N = self.size
+        self.N_samples = N_samples
         probs = np.abs(self.states[-1])**2
         if self.dim == 2:
             if meas_basis == self.basis_name:
