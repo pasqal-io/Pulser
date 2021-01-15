@@ -62,9 +62,11 @@ class Simulation:
         )
 
         if not (0 < sampling_rate <= 1.0):
-            raise ValueError('`sampling_rate` has to lie between 0.05 and 1.0')
+            raise ValueError("`sampling_rate` must be positive and "
+                             "not larger than 1.0")
         if int(self._tot_duration*sampling_rate) < 4:
-            raise ValueError('`sampling_rate`is too small, less than 4 data points')
+            raise ValueError("`sampling_rate` is too small, less than 4 data "
+                             "points.")
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
@@ -275,8 +277,7 @@ class Simulation:
                                progress_bar=progress_bar,
                                options=qutip.Options(max_step=5)
                                )
-                                #                     nsteps=2000)
-                               #)
+
         if hasattr(self._seq, '_measurement'):
             meas_basis = self._seq._measurement
         else:
