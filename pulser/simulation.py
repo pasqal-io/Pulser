@@ -61,7 +61,7 @@ class Simulation:
             [self._seq._last(ch).tf for ch in self._seq._schedule]
         )
 
-        if not 0.05 <= sampling_rate <= 1.0:
+        if not 0.02 <= sampling_rate <= 1.0:
             raise ValueError('`sampling_rate` has to lie between 0.05 and 1.0')
         self.sampling_rate = sampling_rate
 
@@ -238,9 +238,8 @@ class Simulation:
 
         self._times = adapt(np.arange(self._tot_duration,
                                       dtype=np.double)/1000)
-        time_list = self._times.copy(order='C')
 
-        ham = qutip.QobjEvo(qobj_list, tlist=time_list)
+        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
         ham.compress()
 
