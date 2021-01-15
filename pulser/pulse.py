@@ -15,7 +15,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.waveforms import Waveform, ConstantWaveform
+from pulser.waveforms import Waveform, ConstantWaveform, RampWaveform
 
 
 class Pulse:
@@ -90,7 +90,7 @@ class Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
         Args:
-            duration (int): The pulse duration (in ns).
+            duration (int): The pulse duration (in multiples of 4 ns).
             amplitude (float): The pulse amplitude value (in MHz).
             detuning (float): The detuning value (in MHz).
             phase (float): The pulse phase (in radians).
@@ -120,3 +120,27 @@ class Pulse:
         return (f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, " +
                 f"phase={self.phase:.3g}, " +
                 f"post_phase_shift={self.post_phase_shift:.3g})")
+
+    def _chirps(self):
+        """Describes the detuning waveform as a series of linear chirps.
+
+        Turns the detuning into segments of linear frequency chirps, with a
+        length of 4ns. If the chirp rate is constant through the entire pulse,
+        returns a single value.
+
+        Returns:
+            float, np.ndarray: The chirp rate, or an array of chirp rates,
+                describing the detuning waveform (in MHz/ns).
+        """
+
+        if isinstance(self.detuning, ConstantWaveform):
+            chirps = 0
+        elif isinstance(self.detuning, RampWaveform):
+            chirps = self.detuning.slope
+        else:
+            clock_t = 4  # ns
+            samples = self.detuning.samples
+            chirps = samples[clock_t-1::clock_t] - samples[:-clock_t+1:clock_t]
+            chirps = chirps / clock_t
+
+        return chirps
