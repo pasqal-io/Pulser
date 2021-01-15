@@ -23,8 +23,8 @@ from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
 from pulser.simresults import SimulationResults
 
-q_dict = {"A": np.array([-4., 0.]),
-          "B": np.array([0., 4.]),
+q_dict = {"A": np.array([0., 0.]),
+          "B": np.array([0., 10.]),
           }
 reg = Register(q_dict)
 
@@ -34,7 +34,7 @@ pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., 0)
 seq = Sequence(reg, Chadoq2)
 
 # Declare Channels
-seq.declare_channel('ryd', 'rydberg_local', 'A')
+seq.declare_channel('ryd', 'rydberg_global')
 seq.add(pi, 'ryd')
 seq_no_meas = deepcopy(seq)
 seq.measure('ground-rydberg')
@@ -65,6 +65,9 @@ def test_expect():
         results.expect(['bad_observable'])
     with pytest.raises(ValueError, match="Incompatible shape"):
         results.expect([np.array(3)])
+    op = [qutip.tensor(qutip.qeye(2),
+                       qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
+    assert len(results.expect(op)[0]) == duration
 
 
 def test_sample_final_state():
@@ -79,5 +82,18 @@ def test_sample_final_state():
         results_large_dim.dim = 7
         results_large_dim.sample_final_state()
 
-    results.sample_final_state(N_samples=1234)
+    sampling = results.sample_final_state(N_samples=1234)
     assert results.N_samples == 1234
+    assert len(sampling) == 4  # Check that all states were observed.
+
+    seq_no_meas.declare_channel('raman', 'raman_local', 'B')
+    seq_no_meas.add(pi, 'raman')
+    res_3level = Simulation(seq_no_meas).run()
+    sampling_three_level = res_3level.sample_final_state(meas_basis='digital')
+    # Raman pi pulse on one atom will not affect other,
+    # even with global pi on rydberg
+    assert len(sampling_three_level) == 2
+    sampling_three_levelB = res_3level.sample_final_state(
+                                meas_basis='ground-rydberg')
+    # Global Rydberg will affect both:
+    assert len(sampling_three_levelB) == 4
