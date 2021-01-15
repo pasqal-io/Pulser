@@ -144,3 +144,12 @@ def test_empty_sequences():
         seq.declare_channel('test', 'rydberg_local', 'target')
         seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
+
+
+def test_run():
+    sim = Simulation(seq)
+    false_initial = np.array([1.])
+    with pytest.raises(ValueError, match='Incompatible shape of initial_state'):
+        sim.run(false_initial)
+    with pytest.raises(ValueError, match='Incompatible shape of initial_state'):
+        sim.run(qutip.Qobj(false_initial))
