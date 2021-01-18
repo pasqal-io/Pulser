@@ -78,14 +78,13 @@ def test_initialization_and_construction_of_hamiltonian():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
     with pytest.raises(TypeError, match='sequence has to be a valid'):
         Simulation(fake_sequence)
-    sim = Simulation(seq, sampling_rate=0.01)
+    sim = Simulation(seq, sampling_rate=0.011)
     assert sim._seq == seq
     assert sim._qdict == seq.qubit_info
     assert sim._size == len(seq.qubit_info)
     assert sim._tot_duration == (duration * d
                                  + seq._channels['raman'].retarget_time * t)
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
-    assert np.isclose(sim.sampling_rate, 0.9)
 
     with pytest.raises(ValueError, match='too small, less than'):
         Simulation(seq, sampling_rate=0.0001)
@@ -94,7 +93,7 @@ def test_initialization_and_construction_of_hamiltonian():
     with pytest.raises(ValueError, match='positive and not larger'):
         Simulation(seq, sampling_rate=-1)
 
-    assert sim.sampling_rate == 0.9
+    assert sim.sampling_rate == 0.011
     assert len(sim._times) == int(sim.sampling_rate * sim._tot_duration)
 
     assert isinstance(sim._hamiltonian, qutip.QobjEvo)
@@ -211,7 +210,7 @@ def test_empty_sequences():
 
 
 def test_run():
-    sim = Simulation(seq, sampling_rate=0.001)
+    sim = Simulation(seq, sampling_rate=0.01)
     bad_initial = np.array([1.])
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)
