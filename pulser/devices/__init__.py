@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Valid devices for Pulser Sequence execution."""
 
-"""A pulse-level composer for Pasqal's quantum devices."""
+from pulser.devices._devices import (
+                                Chadoq2,
+                                )
 
-from pulser.pulse import Pulse
+from pulser.devices._mock_device import MockDevice
 
-from pulser.register import Register
-
-from pulser.sequence import Sequence
-
-from pulser.simulation import Simulation
+# Registers which devices can be used to avoid definition of custom devices
+_valid_devices = (
+            Chadoq2,
+            )

@@ -19,8 +19,9 @@ import warnings
 
 import numpy as np
 
-from pulser.devices import PasqalDevice
+import pulser
 from pulser.pulse import Pulse
+from pulser.devices import MockDevice
 from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration
 
@@ -38,24 +39,37 @@ class Sequence:
         - The schedule of operations on each channel
 
     Args:
-        device: A pulser.PasqalDevice instance.
+        register(Register): The atom register on which to apply the pulses.
+        device(PasqalDevice): A valid device in which to execute the Sequence
+            (import it from the pulser.devices module).
     """
-    def __init__(self, device):
+    def __init__(self, register, device):
         """Initializes a new pulse sequence."""
-        if not isinstance(device, PasqalDevice):
-            raise TypeError("The Sequence's device has to be a PasqalDevice.")
+        cond1 = device not in pulser.devices._valid_devices
+        cond2 = device != MockDevice
+        if cond1 and cond2:
+            names = [d.name for d in pulser.devices._valid_devices]
+            error_msg = ("The Sequence's device has to be imported from "
+                         + "pasqal.devices. Choose 'MockDevice' or between the"
+                         + " following real devices:\n" + "\n".join(names))
+            raise ValueError(error_msg)
+        # Checks if register is compatible with the device
+        device.validate_register(register)
+
+        self._register = register
         self._device = device
         self._channels = {}
         self._schedule = {}
         self._phase_ref = {}  # The phase reference of each channel
-        self._taken_channels = []   # Stores the ids of selected channels
+        # Stores the ids of selected channels and their declared names
+        self._taken_channels = {}
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
         self._last_used = {}    # Last time each qubit was used, by basis
 
     @property
     def qubit_info(self):
         """Dictionary with the qubit's IDs and positions."""
-        return self._device.qubits
+        return self._register.qubits
 
     @property
     def declared_channels(self):
@@ -66,7 +80,8 @@ class Sequence:
     def available_channels(self):
         """Channels still available for declaration."""
         return {id: ch for id, ch in self._device.channels.items()
-                if id not in self._taken_channels}
+                if id not in self._taken_channels
+                or self._device == MockDevice}
 
     def current_phase_ref(self, qubit, basis='digital'):
         """Current phase reference of a specific qubit for a given basis.
@@ -114,12 +129,12 @@ class Sequence:
         if channel_id not in self._device.channels:
             raise ValueError("No channel %s in the device." % channel_id)
 
-        if channel_id in self._taken_channels:
-            raise ValueError("Channel %s has already been added." % channel_id)
+        if channel_id not in self.available_channels:
+            raise ValueError("Channel %s is not available." % channel_id)
 
         ch = self._device.channels[channel_id]
         self._channels[name] = ch
-        self._taken_channels.append(channel_id)
+        self._taken_channels[channel_id] = name
         self._schedule[name] = []
 
         if ch.basis not in self._phase_ref:
@@ -263,7 +278,7 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration (int): Time to delay (in ns).
+            duration (int): Time to delay (in multiples of 4 ns).
             channel (str): The channel's name provided when declared.
         """
         last = self._last(channel)
@@ -322,6 +337,37 @@ class Sequence:
             t = self._last_used[basis][q]
             new_phase = self._phase_ref[basis][q].last_phase + phi
             self._phase_ref[basis][q][t] = new_phase
+
+    def align(self, *channels):
+        """Aligns multiple channels in time.
+
+        Introduces delays that align the provided channels with the one that
+        finished the latest, such that the next action added to any of them
+        will start right after the latest channel has finished.
+
+        Args:
+            *channels (str): The names of the channels to align, as given upon
+                declaration.
+        """
+
+        ch_set = set(channels)
+        # channels have to be a subset of the declared channels
+        if not ch_set <= set(self._channels):
+            raise ValueError("All channel names must correspond to declared"
+                             " channels.")
+        if len(channels) != len(ch_set):
+            raise ValueError("The same channel was provided more than once.")
+
+        if len(channels) < 2:
+            raise ValueError("Needs at least two channels for alignment.")
+
+        last_ts = {id: self._last(id).tf for id in channels}
+        tf = max(last_ts.values())
+
+        for id in channels:
+            delta = tf - last_ts[id]
+            if delta > 0:
+                self.delay(delta, id)
 
     def draw(self):
         """Draws the sequence in its current sequence."""

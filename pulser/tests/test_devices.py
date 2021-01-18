@@ -12,40 +12,75 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import FrozenInstanceError
+from unittest.mock import patch
+
+import numpy as np
 import pytest
 
-from pulser import Register
+import pulser
 from pulser.devices import Chadoq2
+from pulser.register import Register
 
 
 def test_init():
-    with pytest.raises(TypeError):
-        Chadoq2([1, 2, 4])
-        Chadoq2('q1')
-        Chadoq2(('a', 'b', 'c'))
+    for dev in pulser.devices._valid_devices:
+        assert dev.dimensions in (2, 3)
+        assert dev.max_atom_num > 10
+        assert dev.max_radial_distance > 10
+        assert dev.min_atom_distance > 0
+        assert dev.interaction_coeff > 0
+        assert isinstance(dev.channels, dict)
+        with pytest.raises(FrozenInstanceError):
+            dev.name = "something else"
+    assert Chadoq2 in pulser.devices._valid_devices
+    assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
+    with patch('sys.stdout'):
+        Chadoq2.specs()
+    assert Chadoq2.__repr__() == 'Chadoq2'
 
-    qubits = dict(enumerate([(0, 0), (10, 0)]))
-    dev1 = Chadoq2(qubits)
-    reg = Register(qubits)
-    dev2 = Chadoq2(reg)
-    assert dev1.qubits == dev2.qubits
-    assert isinstance(dev1.channels, dict)
-    assert dev2.supported_bases == {'digital', 'ground-rydberg'}
+
+def test_mock():
+    dev = pulser.devices.MockDevice
+    assert dev.dimensions == 2
+    assert dev.max_atom_num > 1000
+    assert dev.min_atom_distance <= 1
+    assert dev.interaction_coeff == 5008713
+    names = ['Rydberg', 'Raman']
+    basis = ['ground-rydberg', 'digital']
+    for ch in dev.channels.values():
+        assert ch.name in names
+        assert ch.basis == basis[names.index(ch.name)]
+        assert ch.addressing in ['Local', 'Global']
+        assert ch.max_abs_detuning >= 1000
+        assert ch.max_amp >= 200
+        if ch.addressing == 'Local':
+            assert ch.retarget_time == 0
+            assert ch.max_targets > 1
+            assert ch.max_targets == int(ch.max_targets)
 
 
-def test_check_array():
+def test_rydberg_blockade():
+    dev = pulser.devices.MockDevice
+    assert np.isclose(dev.rydberg_blockade_radius(3*np.pi), 9)
+
+
+def test_validate_register():
     with pytest.raises(ValueError, match='Too many atoms'):
-        Chadoq2(Register.square(50))
+        Chadoq2.validate_register(Register.square(50))
 
     coords = [(100, 0), (-100, 0)]
-    with pytest.raises(ValueError, match='at most 50um away from the center'):
-        Chadoq2(Register.from_coordinates(coords))
+    with pytest.raises(TypeError):
+        Chadoq2.validate_register(coords)
+    with pytest.raises(ValueError, match='at most 50 um away from the center'):
+        Chadoq2.validate_register(Register.from_coordinates(coords))
 
     with pytest.raises(ValueError, match='must be 2D vectors'):
         coords += [(-10, 4, 0)]
-        Chadoq2(dict(enumerate(coords)))
+        Chadoq2.validate_register(Register(dict(enumerate(coords))))
 
     with pytest.raises(ValueError, match="don't respect the minimal distance"):
-        Chadoq2(Register.triangular_lattice(3, 4, spacing=3.9))
+        Chadoq2.validate_register(Register.triangular_lattice(
+                                                            3, 4, spacing=3.9))
 
-    Chadoq2(Register.rectangle(5, 10, spacing=5))
+    Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))

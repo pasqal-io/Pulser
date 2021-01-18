@@ -18,32 +18,34 @@ import numpy as np
 import pytest
 
 from pulser import Sequence, Pulse, Register
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
+from pulser.devices._pasqal_device import PasqalDevice
 from pulser.sequence import _TimeSlot
 from pulser.waveforms import BlackmanWaveform
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix='q')
-device = Chadoq2(reg)
+device = Chadoq2
 
 
 def test_init():
-    with pytest.raises(TypeError, match='has to be a PasqalDevice'):
-        Sequence(Chadoq2)
-        Sequence(np.random.rand(10, 2))
+    fake_device = PasqalDevice("fake", 2, 10, 10, 1, Chadoq2._channels)
+    with pytest.raises(ValueError, match='imported from pasqal.devices'):
+        Sequence(reg, fake_device)
 
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     assert seq.qubit_info == reg.qubits
     assert seq.declared_channels == {}
     assert seq.available_channels.keys() == device.channels.keys()
 
 
 def test_channel_declaration():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
+    available_channels = set(seq.available_channels)
     seq.declare_channel('ch0', 'rydberg_global')
     seq.declare_channel('ch1', 'raman_local')
     with pytest.raises(ValueError, match="No channel"):
         seq.declare_channel('ch2', 'raman')
-    with pytest.raises(ValueError, match="has already been added"):
+    with pytest.raises(ValueError, match="not available"):
         seq.declare_channel('ch2', 'rydberg_global')
     with pytest.raises(ValueError, match="name is already in use"):
         seq.declare_channel('ch0', 'raman_local')
@@ -51,12 +53,17 @@ def test_channel_declaration():
     chs = {'rydberg_global', 'raman_local'}
     assert seq._schedule['ch0'][-1] == _TimeSlot('target', -1, 0,
                                                  set(seq.qubit_info.keys()))
-    assert set(seq.available_channels) == {ch for ch in device.channels
-                                           if ch not in chs}
+    assert set(seq.available_channels) == available_channels - chs
+
+    seq2 = Sequence(reg, MockDevice)
+    available_channels = set(seq2.available_channels)
+    seq2.declare_channel('ch0', 'raman_local', initial_target='q1')
+    seq2.declare_channel('ch1', 'rydberg_global')
+    assert set(seq2.available_channels) == available_channels
 
 
 def test_target():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q1')
     seq.declare_channel('ch1', 'rydberg_global')
 
@@ -81,21 +88,27 @@ def test_target():
     assert seq._schedule['ch0'][-1] == _TimeSlot('target', retarget_t,
                                                  2*retarget_t, {'q20'})
 
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel('ch0', 'raman_local', initial_target={'q1', 'q10'})
+    seq2.phase_shift(1, 'q2')
+    with pytest.raises(ValueError, match="qubits with different phase"):
+        seq2.target({'q3', 'q1', 'q2'}, 'ch0')
+
 
 def test_delay():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local')
     with pytest.raises(ValueError, match='Use the name of a declared channel'):
         seq.delay(1e3, 'ch01')
     with pytest.raises(ValueError, match='channel has no target'):
         seq.delay(100, 'ch0')
     seq.target('q19', 'ch0')
-    seq.delay(389, 'ch0')
-    assert seq._last('ch0') == _TimeSlot('delay', 0, 389, {'q19'})
+    seq.delay(388, 'ch0')
+    assert seq._last('ch0') == _TimeSlot('delay', 0, 388, {'q19'})
 
 
 def test_phase():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
     seq.phase_shift(-1, 'q0', 'q1')
     with pytest.raises(ValueError, match="id of a qubit declared"):
@@ -121,8 +134,21 @@ def test_phase():
     assert seq.current_phase_ref('q10', 'digital') == 1
 
 
+def test_align():
+    seq = Sequence(reg, device)
+    seq.declare_channel('ch0', 'raman_local', initial_target='q0')
+    seq.declare_channel('ch1', 'rydberg_global')
+    with pytest.raises(ValueError, match="names must correspond to declared"):
+        seq.align('ch0', 'ch1', 'ch2')
+    with pytest.raises(ValueError, match="more than once"):
+        seq.align('ch0', 'ch1', 'ch0')
+    with pytest.raises(ValueError, match="at least two channels"):
+        seq.align()
+        seq.align('ch1')
+
+
 def test_str():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     seq.add(pulse, 'ch0')
@@ -137,7 +163,7 @@ def test_str():
 
 
 def test_sequence():
-    seq = Sequence(device)
+    seq = Sequence(reg, device)
     with pytest.raises(SystemError, match='empty sequence'):
         seq.draw()
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
@@ -152,10 +178,10 @@ def test_sequence():
     with pytest.raises(TypeError):
         seq.add([1, 5, 3], 'ch0')
     with pytest.raises(ValueError, match='amplitude goes over the maximum'):
-        seq.add(Pulse.ConstantPulse(10, 10, -100, 0), 'ch2')
+        seq.add(Pulse.ConstantPulse(20, 2*np.pi*10, -2*np.pi*100, 0), 'ch2')
     with pytest.raises(ValueError,
                        match='detuning values go out of the range'):
-        seq.add(Pulse.ConstantPulse(500, 1, -100, 0), 'ch0')
+        seq.add(Pulse.ConstantPulse(500, 2*np.pi, -2*np.pi*100, 0), 'ch0')
     with pytest.raises(ValueError, match='qubits with different phase ref'):
         seq.add(pulse2, 'ch2')
     with pytest.raises(ValueError, match='Invalid protocol'):
@@ -189,6 +215,9 @@ def test_sequence():
     assert seq._last('ch0').tf == 3000
     seq.add(pulse1, 'ch0', protocol='wait-for-all')
     assert seq._last('ch0').ti == 3500
+    assert seq._last('ch2').tf != seq._last('ch0').tf
+    seq.align('ch0', 'ch2')
+    assert seq._last('ch2').tf == seq._last('ch0').tf
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()
