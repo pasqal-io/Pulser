@@ -56,7 +56,7 @@ class SimulationResults:
 
     @property
     def states(self):
-        """ Returns list of `qutip.Qobj` for each state in the simulation"""
+        """Returns list of `qutip.Qobj` for each state in the simulation."""
         return list(self._states)
 
     def expect(self, obs_list):
