@@ -43,6 +43,7 @@ sim = Simulation(seq)
 results = sim.run()
 
 state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
+ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 
 
 def test_initialization():
@@ -52,10 +53,11 @@ def test_initialization():
         SimulationResults(state, 2, 2, 'ground-rydberg',
                           'wrong_measurement_basis')
 
-    assert results.dim == 2
-    assert results.size == 2
-    assert results.basis_name == 'ground-rydberg'
-    assert results.meas_basis == 'ground-rydberg'
+    assert results._dim == 2
+    assert results._size == 2
+    assert results._basis_name == 'ground-rydberg'
+    assert results._meas_basis == 'ground-rydberg'
+    assert results.states[0] == ground
 
 
 def test_expect():
@@ -79,7 +81,7 @@ def test_sample_final_state():
         results_no_meas.sample_final_state('wrong_measurement_basis')
     with pytest.raises(NotImplementedError, match="dimension > 3"):
         results_large_dim = deepcopy(results)
-        results_large_dim.dim = 7
+        results_large_dim._dim = 7
         results_large_dim.sample_final_state()
 
     sampling = results.sample_final_state(N_samples=1234)

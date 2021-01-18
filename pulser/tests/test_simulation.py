@@ -212,14 +212,21 @@ def test_empty_sequences():
 
 def test_run():
     sim = Simulation(seq)
-    false_initial = np.array([1.])
+    bad_initial = np.array([1.])
+    good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
+    good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)
+                                      for _ in range(sim._size)])
+
     with pytest.raises(ValueError,
                        match='Incompatible shape of initial_state'):
-        sim.run(false_initial)
+        sim.run(bad_initial)
     with pytest.raises(ValueError,
                        match='Incompatible shape of initial_state'):
-        sim.run(qutip.Qobj(false_initial))
-    sim.run()
+        sim.run(qutip.Qobj(bad_initial))
+
+    sim.run(initial_state=good_initial_array)
+    sim.run(initial_state=good_initial_qobj)
+
     assert not hasattr(sim._seq, '_measurement')
     seq.measure('ground-rydberg')
     sim.run()
