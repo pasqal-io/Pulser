@@ -259,18 +259,18 @@ class Simulation:
             if isinstance(initial_state, qutip.Qobj):
                 if initial_state.shape != (self.dim**self._size, 1):
                     raise ValueError("Incompatible shape of initial_state")
-                psi0 = initial_state
+                self._initial_state = initial_state
             else:
                 if initial_state.shape != (self.dim**self._size,):
                     raise ValueError("Incompatible shape of initial_state")
-                psi0 = qutip.Qobj(initial_state)
+                self._initial_state = qutip.Qobj(initial_state)
         else:
             # by default, initial state is "ground" state of g-r basis.
             all_ground = [self.basis['g'] for _ in range(self._size)]
-            psi0 = qutip.tensor(all_ground)
+            self._initial_state = qutip.tensor(all_ground)
 
         result = qutip.sesolve(self._hamiltonian,
-                               psi0,
+                               self._initial_state,
                                self._times,
                                progress_bar=progress_bar,
                                options=qutip.Options(max_step=5)
