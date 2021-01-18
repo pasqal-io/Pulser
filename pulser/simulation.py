@@ -162,8 +162,6 @@ class Simulation:
     def _construct_hamiltonian(self):
         def adapt(full_array):
             """Adapt list to correspond to sampling rate"""
-            if not isinstance(full_array, np.ndarray):
-                full_array = np.array(full_array)
             indexes = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
@@ -199,7 +197,7 @@ class Simulation:
             if addr == 'Global':
                 coeffs = [0.5*samples['amp'] * np.exp(-1j * samples['phase']),
                           -0.5 * samples['det']]
-                for coeff, op_id in zip(coeffs, op_ids):
+                for op_id, coeff in zip(op_ids, coeffs):
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
                         if op_id not in operators:
