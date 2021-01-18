@@ -62,9 +62,11 @@ class Simulation:
         )
 
         if not (0 < sampling_rate <= 1.0):
-            raise ValueError('`sampling_rate` has to lie between 0.05 and 1.0')
+            raise ValueError("`sampling_rate` must be positive and "
+                             "not larger than 1.0")
         if int(self._tot_duration*sampling_rate) < 4:
-            raise ValueError('`sampling_rate`is too small, less than 4 data points')
+            raise ValueError("`sampling_rate` is too small, less than 4 data "
+                             "points.")
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
@@ -160,8 +162,6 @@ class Simulation:
     def _construct_hamiltonian(self):
         def adapt(full_array):
             """Adapt list to correspond to sampling rate"""
-            if not isinstance(full_array, np.ndarray):
-                full_array = np.array(full_array)
             indexes = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
@@ -176,13 +176,10 @@ class Simulation:
             """
             vdw = 0
             # Get every pair without duplicates
-            min_dist = 2 * self._seq._device.max_radial_distance
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 dist = np.linalg.norm(
                     self._qdict[q1] - self._qdict[q2])
                 U = 0.5 * self._seq._device.interaction_coeff / dist**6
-                if dist < min_dist:
-                    min_dist = dist
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
             return vdw
 
@@ -200,7 +197,7 @@ class Simulation:
             if addr == 'Global':
                 coeffs = [0.5*samples['amp'] * np.exp(-1j * samples['phase']),
                           -0.5 * samples['det']]
-                for coeff, op_id in zip(coeffs, op_ids):
+                for op_id, coeff in zip(op_ids, coeffs):
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
                         if op_id not in operators:
@@ -262,24 +259,23 @@ class Simulation:
             if isinstance(initial_state, qutip.Qobj):
                 if initial_state.shape != (self.dim**self._size, 1):
                     raise ValueError("Incompatible shape of initial_state")
-                psi0 = initial_state
+                self._initial_state = initial_state
             else:
                 if initial_state.shape != (self.dim**self._size,):
                     raise ValueError("Incompatible shape of initial_state")
-                psi0 = qutip.Qobj(initial_state)
+                self._initial_state = qutip.Qobj(initial_state)
         else:
             # by default, initial state is "ground" state of g-r basis.
             all_ground = [self.basis['g'] for _ in range(self._size)]
-            psi0 = qutip.tensor(all_ground)
+            self._initial_state = qutip.tensor(all_ground)
 
         result = qutip.sesolve(self._hamiltonian,
-                               psi0,
+                               self._initial_state,
                                self._times,
                                progress_bar=progress_bar,
                                options=qutip.Options(max_step=5)
                                )
-                                #                     nsteps=2000)
-                               #)
+
         if hasattr(self._seq, '_measurement'):
             meas_basis = self._seq._measurement
         else:

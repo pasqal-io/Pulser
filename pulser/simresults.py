@@ -39,21 +39,31 @@ class SimulationResults:
             meas_basis (None or str): The basis in which a sampling measurement
                 is desired.
         """
-        self.states = run_output
-        self.dim = dim
-        self.size = size
+        self._states = run_output
+        self._dim = dim
+        self._size = size
         if basis_name not in {'ground-rydberg', 'digital', 'all'}:
             raise ValueError(
                 "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
                 )
-        self.basis_name = basis_name
-        self.meas_basis = meas_basis
+        self._basis_name = basis_name
+        if meas_basis:
+            if meas_basis not in {'ground-rydberg', 'digital'}:
+                raise ValueError(
+                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                    )
+        self._meas_basis = meas_basis
+
+    @property
+    def states(self):
+        """ Returns list of `qutip.Qobj` for each state in the simulation"""
+        return list(self._states)
 
     def expect(self, obs_list):
         """Calculate the expectation value of a list of observables.
 
         Args:
-            obs_list (array-like of qutip.Qobj or array-like of np.ndarray):
+            obs_list (array-like of qutip.Qobj or array-like of numpy.ndarray):
                 A list of observables whose expectation value will be
                 calculated. If necessary, each member will be transformed into
                 a qutip.Qobj instance.
@@ -63,13 +73,16 @@ class SimulationResults:
 
         qobj_list = []
         for obs in obs_list:
-            if obs.shape != (self.dim**self.size, self.dim**self.size):
+            if not (isinstance(obs, np.ndarray)
+                    or isinstance(obs, qutip.Qobj)):
+                raise TypeError("Incompatible type of observable")
+            if obs.shape != (self._dim**self._size, self._dim**self._size):
                 raise ValueError('Incompatible shape of observable')
             # Transfrom to qutip.Qobj and take dims from state
-            dim_list = [self.states[0].dims[0], self.states[0].dims[0]]
+            dim_list = [self._states[0].dims[0], self._states[0].dims[0]]
             qobj_list.append(qutip.Qobj(obs, dims=dim_list))
 
-        return [qutip.expect(qobj, self.states) for qobj in qobj_list]
+        return [qutip.expect(qobj, self._states) for qobj in qobj_list]
 
     def sample_final_state(self, meas_basis=None, N_samples=1000):
         """Returns the result of multiple measurement in a given basis.
@@ -90,23 +103,23 @@ class SimulationResults:
             N_samples (int, default=1000): Number of samples to take.
         """
         if meas_basis is None:
-            if self.meas_basis is None:
+            if self._meas_basis is None:
                 raise ValueError(
                     "Can't accept an undefined measurement basis because the "
                     "original sequence has no measurement."
                     )
-            meas_basis = self.meas_basis
+            meas_basis = self._meas_basis
 
         if meas_basis not in {'ground-rydberg', 'digital'}:
             raise ValueError(
                 "'meas_basis' can only be 'ground-rydberg' or 'digital'."
                 )
 
-        N = self.size
+        N = self._size
         self.N_samples = N_samples
-        probs = np.abs(self.states[-1])**2
-        if self.dim == 2:
-            if meas_basis == self.basis_name:
+        probs = np.abs(self._states[-1])**2
+        if self._dim == 2:
+            if meas_basis == self._basis_name:
                 # State vector ordered with r first for 'ground_rydberg'
                 # e.g. N=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
@@ -115,7 +128,7 @@ class SimulationResults:
                 return {'0' * N: int(N_samples)}
             weights = weights.flatten()
 
-        elif self.dim == 3:
+        elif self._dim == 3:
             if meas_basis == 'ground-rydberg':
                 one_state = 0       # 1 = |r>
                 ex_one = slice(1, 3)
