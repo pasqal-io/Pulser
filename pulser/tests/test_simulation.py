@@ -78,7 +78,7 @@ def test_initialization_and_construction_of_hamiltonian():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
     with pytest.raises(TypeError, match='sequence has to be a valid'):
         Simulation(fake_sequence)
-    sim = Simulation(seq, sampling_rate=0.9)
+    sim = Simulation(seq, sampling_rate=0.01)
     assert sim._seq == seq
     assert sim._qdict == seq.qubit_info
     assert sim._size == len(seq.qubit_info)
@@ -137,7 +137,7 @@ def test_extraction_of_sequences():
 
 def test_building_basis_and_projection_operators():
     # All three levels:
-    sim = Simulation(seq)
+    sim = Simulation(seq, sampling_rate=0.01)
     assert sim.basis_name == 'all'
     assert sim.dim == 3
     assert sim.basis == {'r': qutip.basis(3, 0),
@@ -158,7 +158,7 @@ def test_building_basis_and_projection_operators():
     seq2 = Sequence(reg, Chadoq2)
     seq2.declare_channel('global', 'rydberg_global')
     seq2.add(pi, 'global')
-    sim2 = Simulation(seq2)
+    sim2 = Simulation(seq2, sampling_rate=0.01)
     assert sim2.basis_name == 'ground-rydberg'
     assert sim2.dim == 2
     assert sim2.basis == {'r': qutip.basis(2, 0),
@@ -173,7 +173,7 @@ def test_building_basis_and_projection_operators():
     seq2b = Sequence(reg, Chadoq2)
     seq2b.declare_channel('local', 'raman_local', 'target')
     seq2b.add(pi, 'local')
-    sim2b = Simulation(seq2b)
+    sim2b = Simulation(seq2b, sampling_rate=0.01)
     assert sim2b.basis_name == 'digital'
     assert sim2b.dim == 2
     assert sim2b.basis == {'g': qutip.basis(2, 0),
@@ -188,7 +188,7 @@ def test_building_basis_and_projection_operators():
     seq2c = Sequence(reg, Chadoq2)
     seq2c.declare_channel('local_ryd', 'rydberg_local', 'target')
     seq2c.add(pi, 'local_ryd')
-    sim2c = Simulation(seq2c)
+    sim2c = Simulation(seq2c, sampling_rate=0.01)
     assert sim2c.basis_name == 'ground-rydberg'
     assert sim2c.dim == 2
     assert sim2c.basis == {'r': qutip.basis(2, 0),
@@ -211,7 +211,7 @@ def test_empty_sequences():
 
 
 def test_run():
-    sim = Simulation(seq)
+    sim = Simulation(seq, sampling_rate=0.001)
     bad_initial = np.array([1.])
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)
