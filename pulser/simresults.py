@@ -56,13 +56,14 @@ class SimulationResults:
 
     @property
     def states(self):
+        """ Returns list of `qutip.Qobj` for each state in the simulation"""
         return list(self._states)
 
     def expect(self, obs_list):
         """Calculate the expectation value of a list of observables.
 
         Args:
-            obs_list (array-like of qutip.Qobj or array-like of np.ndarray):
+            obs_list (array-like of qutip.Qobj or array-like of numpy.ndarray):
                 A list of observables whose expectation value will be
                 calculated. If necessary, each member will be transformed into
                 a qutip.Qobj instance.
@@ -72,7 +73,8 @@ class SimulationResults:
 
         qobj_list = []
         for obs in obs_list:
-            if not hasattr(obs, "shape"):
+            if not (isinstance(obs, np.ndarray)
+                    or isinstance(obs, qutip.Qobj)):
                 raise TypeError("Incompatible type of observable")
             if obs.shape != (self._dim**self._size, self._dim**self._size):
                 raise ValueError('Incompatible shape of observable')
