@@ -8,5 +8,8 @@ pytest-cov
 flake8
 
 # tutorials
+networkx
 notebook
 qutip
+scikit-optimize
+python-igraph

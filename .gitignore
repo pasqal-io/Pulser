@@ -4,6 +4,7 @@
 .pytest_cache/
 .idea/
 .coverage
+.spyproject/
 *.dat
 /*.ipynb
 *.ipynb_checkpoints
@@ -12,5 +13,5 @@ __pycache__/
 build/
 docs/build/
 dist/
-env-pasqal-qutip/
+env*
 pulser.egg-info/
