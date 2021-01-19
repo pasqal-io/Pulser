@@ -254,6 +254,9 @@ class Simulation:
                            qutip.Qobj instance.
             progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
                         will be shown.
+
+        Returns:
+            SimulationResults: Object containing the results of time evolution.
         """
         if initial_state is not None:
             if isinstance(initial_state, qutip.Qobj):

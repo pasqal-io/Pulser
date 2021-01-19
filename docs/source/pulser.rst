@@ -24,7 +24,6 @@ Pulse
 .. automodule:: pulser.pulse
    :members:
    :undoc-members:
-   :show-inheritance:
 
 Register
 ----------------------
@@ -32,7 +31,6 @@ Register
 .. automodule:: pulser.register
    :members:
    :undoc-members:
-   :show-inheritance:
 
 Sequence
 ----------------------
@@ -40,7 +38,20 @@ Sequence
 .. automodule:: pulser.sequence
    :members:
    :undoc-members:
-   :show-inheritance:
+
+Simulation
+----------------------
+
+.. automodule:: pulser.simulation
+   :members:
+   :undoc-members:
+
+Simulation Results
+----------------------
+
+.. automodule:: pulser.simresults
+   :members:
+   :undoc-members:
 
 
 Waveforms
