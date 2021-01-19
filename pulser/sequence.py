@@ -35,13 +35,14 @@ class Sequence:
     A sequence is composed by
 
         - The device in which we want to implement it
+        - The register of qubits on which to act
         - The device's channels that are used
         - The schedule of operations on each channel
 
     Args:
         register(Register): The atom register on which to apply the pulses.
         device(PasqalDevice): A valid device in which to execute the Sequence
-            (import it from the pulser.devices module).
+            (import it from ``pulser.devices``).
     """
     def __init__(self, register, device):
         """Initializes a new pulse sequence."""
@@ -113,8 +114,9 @@ class Sequence:
         Args:
             name (str): Unique name for the channel in the sequence.
             channel_id (str): How the channel is identified in the device.
-                Consult Sequence.available_channels to see which channel ID's
-                are still available and the associated channel's description.
+                Consult ``Sequence.available_channels`` to see which channel
+                ID's are still available and the associated channel's
+                description.
 
         Keyword Args:
             initial_target (set, default=None): For 'Local' adressing channels
@@ -307,14 +309,15 @@ class Sequence:
         self._measurement = basis
 
     def phase_shift(self, phi, *targets, basis='digital'):
-        """Shifts the phase of a qubit's reference by 'phi', for a given basis.
+        r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
-        This is equivalent to an Rz(phi) gate (i.e. a rotation of the target
-        qubit's state by an angle phi around the z-axis of the Bloch sphere).
+        This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
+        target qubit's state by an angle :math:`\phi` around the z-axis of the
+        Bloch sphere).
 
         Args:
             phi (float): The intended phase shift (in rads).
-            *targets: The ids of the qubits on which to apply the phase
+            targets: The ids of the qubits on which to apply the phase
                 shift.
 
         Keyword Args:
@@ -346,7 +349,7 @@ class Sequence:
         will start right after the latest channel has finished.
 
         Args:
-            *channels (str): The names of the channels to align, as given upon
+            channels (str): The names of the channels to align, as given upon
                 declaration.
         """
 

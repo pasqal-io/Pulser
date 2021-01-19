@@ -23,9 +23,12 @@ class Pulse:
 
     In Pulser, a Pulse is a modulation of a frequency signal in amplitude
     and/or frequency, with a specific phase, over a given duration. Amplitude
-    and frequency modulation are defined by objects of type pulser.Waveform.
+    and frequency modulation are defined by :class:`Waveform` child classes.
     Frequency modulation is determined by a detuning waveform, which describes
     the shift in frequency from the channel's central frequency over time.
+    If either quantity is constant throughout the entire pulse, use the
+    ``ConstantDetuning``, ``ConstantAmplitude`` or ``ConstantPulse`` class
+    method to create it.
 
     Args:
         amplitude (Waveform): The pulse amplitude waveform.
@@ -36,7 +39,7 @@ class Pulse:
         post_phase_shift (default=0): Optionally lets you add a phase shift
             (in rads) immediately after the end of the pulse. This allows for
             enconding of arbitrary single-qubit gates into a single pulse
-            (see Sequence.phase_shift() for more information).
+            (see ``Sequence.phase_shift()`` for more information).
     """
 
     def __init__(self, amplitude, detuning, phase, post_phase_shift=0):

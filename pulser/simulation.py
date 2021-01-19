@@ -30,22 +30,17 @@ class Simulation:
     state using the QuTiP solvers.
 
     Args:
-        sequence (pulser.Sequence): An instance of a Pulser Sequence that we
-                                    want to simulate.
+        sequence (Sequence): An instance of a Pulser Sequence that we
+            want to simulate.
+
+    Keyword Args:
+        sampling_rate (float): The fraction of samples that we wish to
+            extract from the pulse sequence to simulate. Has to be a
+            value between 0.05 and 1.0
     """
 
     def __init__(self, sequence, sampling_rate=1.0):
-        """Initialize the Simulation with a specific pulser.Sequence.
-
-        Args:
-            sequence (pulser.Sequence): Pulser sequence that we wish to
-                simulate.
-
-        Keyword Args:
-            sampling_rate (float): The fraction of samples that we wish to
-                extract from the pulse sequence to simulate. Has to be a
-                value between 0.05 and 1.0
-        """
+        """Initialize the Simulation with a specific pulser.Sequence."""
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
@@ -256,7 +251,7 @@ class Simulation:
                         will be shown.
 
         Returns:
-            SimulationResults: Object containing the results of time evolution.
+            SimulationResults: Object containing the time evolution results.
         """
         if initial_state is not None:
             if isinstance(initial_state, qutip.Qobj):
