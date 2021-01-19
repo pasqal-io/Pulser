@@ -7,16 +7,33 @@ Channels
 
 .. automodule:: pulser.channels
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Devices
 ---------------------
 
-.. automodule:: pulser.devices
+Structure of a Pasqal Device
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :class:`PasqalDevice` class sets the structure of every device instance.
+
+.. automodule:: pulser.devices._pasqal_device
    :members:
-   :undoc-members:
-   :show-inheritance:
+
+Physical Devices
+^^^^^^^^^^^^^^^^^^^
+Each device instance holds the characteristics of one of Pasqal's physical devices,
+which when associated with a :class:`pulser.Sequence` condition its development.
+
+.. autodata:: pulser.devices.Chadoq2
+
+The MockDevice
+^^^^^^^^^^^^^^^^
+A very permissive device that supports sequences which are currently unfeasible
+on physical devices. Unlike with physical devices, its channels remain available
+after declaration and can be declared again so as to have multiple channels
+with the same characteristics.
+
+.. autodata:: pulser.devices.MockDevice
 
 Pulse
 -------------------

@@ -36,7 +36,7 @@ def test_init():
     assert Chadoq2 in pulser.devices._valid_devices
     assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
     with patch('sys.stdout'):
-        Chadoq2.specs()
+        Chadoq2.print_specs()
     assert Chadoq2.__repr__() == 'Chadoq2'
 
 
@@ -72,7 +72,7 @@ def test_validate_register():
     coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
         Chadoq2.validate_register(coords)
-    with pytest.raises(ValueError, match='at most 50 um away from the center'):
+    with pytest.raises(ValueError, match='at most 50 μm away from the center'):
         Chadoq2.validate_register(Register.from_coordinates(coords))
 
     with pytest.raises(ValueError, match='must be 2D vectors'):
