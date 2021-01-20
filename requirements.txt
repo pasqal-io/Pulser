@@ -1,5 +1,6 @@
 matplotlib
 numpy
+qutip
 scipy
 
 # tests
@@ -10,6 +11,5 @@ flake8
 # tutorials
 networkx
 notebook
-qutip
 scikit-optimize
 python-igraph
