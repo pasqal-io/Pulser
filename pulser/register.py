@@ -53,7 +53,7 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
         if center:
-            coords -= np.mean(coords, axis=0)      # Centers the array
+            coords = coords - np.mean(coords, axis=0)      # Centers the array
         if prefix is not None:
             pre = str(prefix)
             qubits = {pre+str(i): pos for i, pos in enumerate(coords)}
