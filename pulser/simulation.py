@@ -240,7 +240,7 @@ class Simulation:
         self._hamiltonian = ham
 
     # Run Simulation Evolution using Qutip
-    def run(self, initial_state=None, progress_bar=None):
+    def run(self, initial_state=None, progress_bar=None, **options):
         """Simulate the sequence using QuTiP's solvers.
 
         Keyword Args:
@@ -271,7 +271,8 @@ class Simulation:
                                self._initial_state,
                                self._times,
                                progress_bar=progress_bar,
-                               options=qutip.Options(max_step=5)
+                               options=qutip.Options(max_step=5,
+                                                     **options)
                                )
 
         if hasattr(self._seq, '_measurement'):
