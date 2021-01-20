@@ -59,12 +59,18 @@ Sequence
 Simulation
 ----------------------
 
+The :class:`Simulation` class is responsible for the classical simulation of
+a :class:`Sequence`.
+
+
 .. automodule:: pulser.simulation
    :members:
    :undoc-members:
 
 Simulation Results
-----------------------
+^^^^^^^^^^^^^^^^^^^
+The :class:`SimulationResults` features methods for the calculation of
+expectation values or emulation of the sampling performed on physical devices.
 
 .. automodule:: pulser.simresults
    :members:
