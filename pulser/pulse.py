@@ -121,7 +121,7 @@ class Pulse:
                 f"phase={self.phase:.3g}, " +
                 f"post_phase_shift={self.post_phase_shift:.3g})")
 
-    def _chirps(self):
+    def _chirps(self, start_det=None):
         """Describes the detuning waveform as a series of linear chirps.
 
         Turns the detuning into segments of linear frequency chirps, with a
@@ -132,15 +132,26 @@ class Pulse:
             float, np.ndarray: The chirp rate, or an array of chirp rates,
                 describing the detuning waveform (in MHz/ns).
         """
-
+        clock_t = 4  # ns
         if isinstance(self.detuning, ConstantWaveform):
-            chirps = 0
+            if start_det is None or start_det == self.detuning.first_value:
+                return 0
+            else:
+                chirps = np.zeros(self.duration / clock_t, dtype=float)
+                second_value = self.detuning.first_value
+
         elif isinstance(self.detuning, RampWaveform):
-            chirps = self.detuning.slope
+            if start_det is None or start_det == self.detuning.first_value:
+                return self.detuning.slope
+            else:
+                chirps = np.full(self.duration / clock_t, self.detuning.slope)
+                second_value = self.detuning.slope * clock_t
         else:
-            clock_t = 4  # ns
             samples = self.detuning.samples
             chirps = samples[clock_t-1::clock_t] - samples[:-clock_t+1:clock_t]
             chirps = chirps / clock_t
+            if start_det is None or start_det == samples[0]:
+                return chirps
 
+        chirps[0] = (second_value - start_det) / clock_t
         return chirps
