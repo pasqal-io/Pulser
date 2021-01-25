@@ -145,7 +145,8 @@ class Pulse:
                 return self.detuning.slope
             else:
                 chirps = np.full(self.duration // clock_t, self.detuning.slope)
-                second_value = self.detuning.slope * clock_t
+                second_value = (self.detuning.slope * clock_t
+                                + self.detuning.first_value)
         else:
             samples = self.detuning.samples
             chirps = samples[clock_t-1::clock_t] - samples[:-clock_t+1:clock_t]
