@@ -137,14 +137,14 @@ class Pulse:
             if start_det is None or start_det == self.detuning.first_value:
                 return 0
             else:
-                chirps = np.zeros(self.duration / clock_t, dtype=float)
+                chirps = np.zeros(self.duration // clock_t, dtype=float)
                 second_value = self.detuning.first_value
 
         elif isinstance(self.detuning, RampWaveform):
             if start_det is None or start_det == self.detuning.first_value:
                 return self.detuning.slope
             else:
-                chirps = np.full(self.duration / clock_t, self.detuning.slope)
+                chirps = np.full(self.duration // clock_t, self.detuning.slope)
                 second_value = self.detuning.slope * clock_t
         else:
             samples = self.detuning.samples
