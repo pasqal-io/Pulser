@@ -152,6 +152,7 @@ class Pulse:
             chirps = chirps / clock_t
             if start_det is None or start_det == samples[0]:
                 return chirps
+            second_value = samples[clock_t-1]
 
         chirps[0] = (second_value - start_det) / clock_t
         return chirps
