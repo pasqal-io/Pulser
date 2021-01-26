@@ -121,7 +121,7 @@ class Pulse:
                 f"phase={self.phase:.3g}, " +
                 f"post_phase_shift={self.post_phase_shift:.3g})")
 
-    def _chirps(self, start_det=None):
+    def _chirps(self, end_det=None):
         """Describes the detuning waveform as a series of linear chirps.
 
         Turns the detuning into segments of linear frequency chirps, with a
@@ -134,26 +134,25 @@ class Pulse:
         """
         clock_t = 4  # ns
         if isinstance(self.detuning, ConstantWaveform):
-            if start_det is None or start_det == self.detuning.first_value:
+            if end_det is None or end_det == self.detuning.last_value:
                 return 0
             else:
                 chirps = np.zeros(self.duration // clock_t, dtype=float)
-                second_value = self.detuning.first_value
+                last_value = self.detuning.last_value
 
         elif isinstance(self.detuning, RampWaveform):
-            if start_det is None or start_det == self.detuning.first_value:
+            if end_det is None or end_det == self.detuning.last_value:
                 return self.detuning.slope
             else:
                 chirps = np.full(self.duration // clock_t, self.detuning.slope)
-                second_value = (self.detuning.slope * clock_t
-                                + self.detuning.first_value)
+                last_value = self.detuning.last_value
         else:
             samples = self.detuning.samples
-            chirps = samples[clock_t-1::clock_t] - samples[:-clock_t+1:clock_t]
-            chirps = chirps / clock_t
-            if start_det is None or start_det == samples[0]:
+            chirps = samples[clock_t::clock_t] - samples[:-clock_t:clock_t]
+            chirps = np.append(chirps / clock_t, 0.)
+            if end_det is None or end_det == samples[-1]:
                 return chirps
-            second_value = samples[clock_t-1]
+            last_value = samples[-1]
 
-        chirps[0] = (second_value - start_det) / clock_t
+        chirps[-1] = (end_det - last_value) / clock_t
         return chirps
