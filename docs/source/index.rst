@@ -5,6 +5,7 @@ Pulser
    :maxdepth: 2
    :caption: Contents:
 
+   overview
    installation
    getting_started
    pulser
