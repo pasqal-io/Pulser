@@ -15,7 +15,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.waveforms import Waveform, ConstantWaveform, RampWaveform
+from pulser.waveforms import Waveform, ConstantWaveform
 
 
 class Pulse:
