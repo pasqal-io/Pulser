@@ -1,8 +1,9 @@
-Pulser
-==============
+****************************************
+Review of the Neutral Atoms Architecture
+****************************************
 
 Programmable arrays of Rydberg atoms
--------------------------------------
+####################################
 
 With the rise in our capacity to control and explore synthetic quantum
 systems, the opportunity to use them to address questions of scientific and
@@ -20,8 +21,16 @@ lifetimes and large interaction strengths and are briefly called
 objective is to provide easy-to-use libraries for designing and simulating
 pulse sequences that act in programmable Rydberg atom arrays.
 
-Ising Hamiltonian
------------------
+Implementation and Theoretical Details
+######################################
+
+Hardware
+********
+(Add Hardware Information here)
+
+
+Quantum Hamiltonian
+*******************
 
 Let us call the initial state of the atoms their **ground state** and denote it
 by :math:`|g\rangle`. The incident laser field will then try to excite them to
@@ -40,10 +49,9 @@ detuning are the basic parameters that we will be able to tune and they
 define a **pulse**. In terms of the Hamiltonian of our system, a pulse on
 an atom :math:`i` results in the following term:
 
-.. math:: \frac{\hbar\Omega(t)}{2} \sigma_i^x + \hbar \delta(t) n_i,
+.. math:: \frac{\hbar\Omega(t)}{2} \sigma_i^x + \hbar \delta(t) \sigma_i^z,
 
-where :math:`\sigma^\alpha` for :math:`\alpha = x,y,z` are the Pauli matrices
-and :math:`n = (1+\sigma^z)/2` is the projector on the Rydberg state.
+where :math:`\sigma^\alpha` for :math:`\alpha = x,y,z` are the Pauli matrices.
 
 The interaction between two atoms at distance :math:`R` and at the same Rydberg
 level is described by the **Van der Waals force**, which scales as
@@ -65,7 +73,8 @@ both atoms are excited:
 
 .. math:: U_{ij} n_i n_j,
 
-where :math:`U_{ij} \propto R_{ij}^{-6}` and :math:`R_{ij}` is the distance
+where :math:`n = (1+\sigma^z)/2` is the projector on the Rydberg state,
+:math:`U_{ij} \propto R_{ij}^{-6}` and :math:`R_{ij}` is the distance
 between the atoms :math:`i` and :math:`j`. The proportionality constant is set
 by the chosen Rydberg level. If the atoms are excited simultaneously, only the
 entangled state :math:`(|gr\rangle + |rg\rangle)/\sqrt 2` is obtained.
@@ -75,20 +84,23 @@ Hamiltonian:
 
 .. math::
    H = \frac{\hbar}{2} \sum_i  \Omega_i(t) \sigma_i^x - \hbar \sum_i
-       \delta(t) n_i + \sum_{i<j} U_{ij} n_i n_j
+       \delta(t) \sigma_i^z + \sum_{i<j} U_{ij} n_i n_j
+
+Digital and Analog Approaches
+#############################
 
 Analog Approach
----------------
+***************
 
 In the analog simulation approach, the laser field acts on the entire array
 of atoms. This creates a **global** Hamiltonian of the form
 
 .. math::
    H = \frac{\hbar\Omega(t)}{2} \sum_i  \sigma_i^x - \hbar \delta(t) \sum_i
-        n_i + \sum_{i<j} U_{ij} n_i n_j
+        \sigma_i^z + \sum_{i<j} U_{ij} n_i n_j
 
 Digital Approach
-----------------
+****************
 
 Pulser provides an interface for constructing pulse-based quantum
 computation programs at the digital level. In this approach, we begin by

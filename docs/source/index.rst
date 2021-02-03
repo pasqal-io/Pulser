@@ -3,24 +3,40 @@ Pulser
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Introduction:
 
-   overview
+   neutral_atoms
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Installation and First Steps:
+
    installation
    getting_started
-   pulser
+   simulating
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Concepts:
+
+   review
 
 .. toctree::
    :maxdepth: 2
    :caption: Tutorials:
 
-   ryd_radius
    afm_prep
    1D_crystals
    phase_shifts_vz_gates
    cz_gate
    optimization
    qaoa_mis
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Documentation:
+
+   pulser
 
 
 Indices and tables
