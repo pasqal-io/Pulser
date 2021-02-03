@@ -74,11 +74,3 @@ def test_draw():
     pls_ = Pulse.ConstantDetuning(bwf, -10, 1, post_phase_shift=-np.pi)
     with patch('matplotlib.pyplot.show'):
         pls_.draw()
-
-
-def test_chirps():
-    assert pls4._chirps() == 0
-    assert Pulse.ConstantAmplitude(1, rwf, 1)._chirps() == 1/200
-    samples = bwf.samples
-    chirps = (samples[3::4] - samples[:-3:4]) / 4
-    assert np.all(pls._chirps() == chirps)
