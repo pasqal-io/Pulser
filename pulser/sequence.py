@@ -64,6 +64,7 @@ class Sequence:
         self._taken_channels = {}
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
         self._last_used = {}    # Last time each qubit was used, by basis
+        self._last_target = {}  # Last time a target happened, by channel
 
     @property
     def qubit_info(self):
@@ -135,6 +136,7 @@ class Sequence:
         self._channels[name] = ch
         self._taken_channels[channel_id] = name
         self._schedule[name] = []
+        self._last_target[name] = 0
 
         if ch.basis not in self._phase_ref:
             self._phase_ref[ch.basis] = {q: _PhaseTracker(0)
@@ -262,11 +264,20 @@ class Sequence:
                               "Skipping this target instruction.")
                 return
             ti = last.tf
-            tf = ti + self._channels[channel].retarget_time
+            retarget = self._channels[channel].retarget_time
+            elapsed = ti - self._last_target[channel]
+            delta = np.clip(retarget - elapsed, 0, retarget)
+            if delta != 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    delta = validate_duration(np.clip(delta, 16, np.inf))
+            tf = ti + delta
+
         except ValueError:
             ti = -1
             tf = 0
 
+        self._last_target[channel] = tf
         self._add_to_schedule(channel, TimeSlot('target', ti, tf, qs))
 
     def delay(self, duration, channel):

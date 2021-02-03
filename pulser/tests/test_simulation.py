@@ -39,17 +39,14 @@ seq.declare_channel('rydB', 'rydberg_local2', 'control2')
 seq.declare_channel('raman', 'raman_local', 'control1')
 
 d = 0  # Pulse Duration
-t = 0  # Retarget time raman
 
 # Prepare state 'hhh':
 seq.add(pi_Y, 'raman')
 d += 1
 seq.target('target', 'raman')
-t += 1
 seq.add(pi_Y, 'raman')
 d += 1
 seq.target('control2', 'raman')
-t += 1
 seq.add(pi_Y, 'raman')
 d += 1
 
@@ -82,8 +79,7 @@ def test_initialization_and_construction_of_hamiltonian():
     assert sim._seq == seq
     assert sim._qdict == seq.qubit_info
     assert sim._size == len(seq.qubit_info)
-    assert sim._tot_duration == (duration * d
-                                 + seq._channels['raman'].retarget_time * t)
+    assert sim._tot_duration == duration * d
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
 
     with pytest.raises(ValueError, match='too small, less than'):
