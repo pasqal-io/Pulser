@@ -8,7 +8,8 @@ Programmable arrays of Rydberg atoms
 With the rise in our capacity to control and explore synthetic quantum
 systems, the opportunity to use them to address questions of scientific and
 industrial interest has attracted the efforts of a large community of
-researchers. Today, the control of single atoms as well as the tuning of their interactions has been achieved to a high degree in several laboratories.
+researchers. Today, the control of single atoms as well as the tuning of their
+interactions has been achieved to a high degree in several laboratories.
 One of the leading architectures for constructing these *programmable* devices
 consists in arranging ensembles of individual (trapped) atoms separated by a
 few micrometers. In order to generate interactions between them, they are
@@ -24,9 +25,49 @@ pulse sequences that act in programmable Rydberg atom arrays.
 Implementation and Theoretical Details
 ######################################
 
-Hardware
-********
-(Add Hardware Information here)
+Hardware Characteristics
+**************************
+In a nutshell, neutral atom devices feature two main components:
+
+* The **Register**, a group of trapped atoms in a defined (but reconfigurable)
+  configuration. Each atom holds a specific quantum state encoded in specific
+  electronic levels. Usually these are two-level systems and we refer to them
+  as *qubits*.
+* The **Channels**, responsible for manipulating the state of the atoms by
+  addressing specific electronic transitions. These consist most often, but not
+  exclusively, of lasers.
+
+Each **Device** will impose specific restrictions on these components -- they define things
+like how many atoms a Register can hold and in what configurations they can be
+arranged in; what channels are available and what values they can reach, among others.
+For this reason, a **Sequence** is closely dependent on the **Device** it
+is meant to run on and shoulbe be created with it in mind from the start.
+
+This **Sequence** is the central object in Pulser and it consists essentially
+of a series of **Pulses** (and other instructions) that are sequentially
+allocated to channels.
+
+Each **Pulse** describes, over a finite duration, the modulation of a
+channel's output *amplitude*, *detuning* and *phase*. While the phase is constant
+throughout a pulse, the amplitude and detuning are described by **Waveforms**,
+which define these quantities values throughout the pulse.
+
+.. figure:: https://pasqal.io/wp-content/uploads/2021/02/pulser_animation.gif
+    :align: center
+    :alt: pulser_animation
+    :figclass: align-center
+
+    A pulse sequence and its execution on a given device.
+
+In the animation above, we find an example of a Sequence composed of three
+channels, each containing different pulses played at specific times. Upon
+execution, the channels emit this coordinated stream of pulses, which manipulate
+the state of the atoms in the register.
+
+Now, what is left to know is *how* these channels manipulate the state the atoms
+so that we can program them to do meaningful things. To do this, we have to dive
+into the physics and try to understand the underlying **Hamiltonian** of our
+systems.
 
 
 Quantum Hamiltonian
