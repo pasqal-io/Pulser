@@ -32,10 +32,11 @@ def test_creation():
     reg2 = Register.from_coordinates(coords, center=False, prefix='q')
     assert reg1.qubits == reg2.qubits
 
-    reg3 = Register.from_coordinates(coords, prefix='foo')
+    reg3 = Register.from_coordinates(np.array(coords), prefix='foo')
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
     assert reg3._ids == ['foo0', 'foo1']
     assert np.all(reg3._coords == coords_)
+    assert not np.all(coords_ == coords)
 
     reg4 = Register.rectangle(1, 2, spacing=1)
     assert np.all(reg4._coords == coords_)
