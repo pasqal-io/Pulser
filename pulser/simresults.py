@@ -56,11 +56,11 @@ class SimulationResults:
 
     @property
     def states(self):
-        """Returns list of `qutip.Qobj` for each state in the simulation."""
+        """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._states)
 
     def expect(self, obs_list):
-        """Calculate the expectation value of a list of observables.
+        """Calculates the expectation value of a list of observables.
 
         Args:
             obs_list (array-like of qutip.Qobj or array-like of numpy.ndarray):
@@ -75,9 +75,9 @@ class SimulationResults:
         for obs in obs_list:
             if not (isinstance(obs, np.ndarray)
                     or isinstance(obs, qutip.Qobj)):
-                raise TypeError("Incompatible type of observable")
+                raise TypeError("Incompatible type of observable.")
             if obs.shape != (self._dim**self._size, self._dim**self._size):
-                raise ValueError('Incompatible shape of observable')
+                raise ValueError("Incompatible shape of observable.")
             # Transfrom to qutip.Qobj and take dims from state
             dim_list = [self._states[0].dims[0], self._states[0].dims[0]]
             qobj_list.append(qutip.Qobj(obs, dims=dim_list))
@@ -85,22 +85,30 @@ class SimulationResults:
         return [qutip.expect(qobj, self._states) for qobj in qobj_list]
 
     def sample_final_state(self, meas_basis=None, N_samples=1000):
-        """Returns the result of multiple measurement in a given basis.
+        r"""Returns the result of multiple measurements in a given basis.
 
-        The enconding of the results depends on the meaurement basis. Namely:\n
-        'ground-rydberg' -> 1 = |r>, 0 = |g> or |h>\n
-        'digital' -> 1 = |h>, 0 = |g> or |r>\n
-        The results are presented using a big-endian representation, according
-        to the pre-established qubit ordering in the register. This means that
-        when sampling a register with qubits ('q0','q1',...), in this order,
-        the corresponding value, in binary, will be 0Bb0b1..., where b0 is
-        the outcome of measuring 'q0', 'b1' of measuring 'q1' and so on.
+        The enconding of the results depends on the meaurement basis. Namely:
+
+        - *ground-rydberg* : :math:`1 = |r\rangle;~ 0 = |g\rangle, |h\rangle`
+        - *digital* : :math:`1 = |h\rangle;~ 0 = |g\rangle, |r\rangle`
+
+        Note:
+            The results are presented using a big-endian representation,
+            according to the pre-established qubit ordering in the register.
+            This means that, when sampling a register with qubits ('q0','q1',
+            ...), in this order, the corresponding value, in binary, will be
+            0Bb0b1..., where b0 is the outcome of measuring 'q0', 'b1' of
+            measuring 'q1' and so on.
 
         Keyword Args:
             meas_basis (str, default=None): 'ground-rydberg' or 'digital'. If
                 left as None, uses the measurement basis defined in the
-                original sequence or raises a `ValueError` if there isn't one.
+                original sequence.
             N_samples (int, default=1000): Number of samples to take.
+
+        Raises:
+            ValueError: If trying to sample without a defined 'meas_basis' in
+                the arguments when the original sequence is not measured.
         """
         if meas_basis is None:
             if self._meas_basis is None:

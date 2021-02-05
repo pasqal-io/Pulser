@@ -21,7 +21,7 @@ class Register:
 
     Args:
         qubits (dict): Dictionary with the qubit names as keys and their
-            position coordinates (in um) as values
+            position coordinates (in μm) as values
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
@@ -35,6 +35,7 @@ class Register:
 
     @property
     def qubits(self):
+        """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))
 
     @classmethod
@@ -70,7 +71,7 @@ class Register:
             columns (int): Number of columns.
 
         Keyword args:
-            spacing(float): The distance between neighbouring qubits in um.
+            spacing(float): The distance between neighbouring qubits in μm.
             prefix (str): The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
@@ -88,7 +89,7 @@ class Register:
             side (int): Side of the square in number of qubits.
 
         Keyword args:
-            spacing(float): The distance between neighbouring qubits in um.
+            spacing(float): The distance between neighbouring qubits in μm.
             prefix (str): The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
@@ -108,7 +109,7 @@ class Register:
             atoms_per_row (int): Number of atoms per row.
 
         Keyword args:
-            spacing(float): The distance between neighbouring qubits in um.
+            spacing(float): The distance between neighbouring qubits in μm.
             prefix (str): The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).

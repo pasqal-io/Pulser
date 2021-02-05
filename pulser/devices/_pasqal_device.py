@@ -24,17 +24,18 @@ from pulser.register import Register
 
 @dataclass(frozen=True, repr=False)
 class PasqalDevice:
-    """Definition of a Pasqal Device.
+    r"""Definition of a Pasqal Device.
 
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
         max_atom_num: Maximum number of atoms supported in an array.
         max_radial_distance: The furthest away an atom can be from the center
-            of the array (in um).
-        min_atom_distance: The closest together two atoms can be (in um).
-        interaction_coeff: C_6/hbar (in MHz.um^6), which sets the van der Waals
-            interaction strength between atoms in the Rydberg state.
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        interaction_coeff: :math:`C_6/\hbar` (in MHz :math:`\cdot\mu m^6`),
+            which sets the van der Waals interaction strength between atoms in
+            the Rydberg state.
     """
 
     name: str
@@ -45,9 +46,13 @@ class PasqalDevice:
     _channels: Tuple[Tuple[str, Channel]]
     interaction_coeff: float = 5008713.
 
+    def __post_init__(self):
+        # Hack to override the docstring of an instance
+        self.__dict__["__doc__"] = self._specs(for_docs=True)
+
     @property
     def channels(self):
-        """Available channels on this device."""
+        """Dictionary of available channels on this device."""
         return dict(self._channels)
 
     @property
@@ -55,25 +60,12 @@ class PasqalDevice:
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channels.values()}
 
-    def specs(self):
+    def print_specs(self):
         """Prints the device specifications."""
         title = f"{self.name} Specifications"
-        lines = [
-            "-"*len(title),
-            title,
-            "-"*len(title),
-            "\nRegister requirements:",
-            f" - Dimensions: {self.dimensions}D",
-            f" - Maximum number of atoms: {self.max_atom_num}",
-            f" - Maximum distance from origin: {self.max_radial_distance} um",
-            (" - Minimum distance between neighbouring atoms: "
-             + f"{self.min_atom_distance} um"),
-            "\nChannels:"
-            ]
-        for name, ch in self._channels:
-            lines.append(f" - '{name}': {ch!r}")
-
-        print("\n".join(lines))
+        header = ["-"*len(title), title, "-"*len(title)]
+        print("\n".join(header))
+        print(self._specs())
 
     def __repr__(self):
         return self.name
@@ -85,7 +77,7 @@ class PasqalDevice:
             rabi_frequency(float): The rabi frequency, in MHz.
 
         Returns:
-            float: The rydberg blockade radius, in um.
+            float: The rydberg blockade radius, in μm.
         """
         return (self.interaction_coeff/rabi_frequency)**(1/6)
 
@@ -114,6 +106,38 @@ class PasqalDevice:
                                  "distance between atoms for this device.")
 
         if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
-            raise ValueError("All qubits must be at most {} um away from the "
+            raise ValueError("All qubits must be at most {} μm away from the "
                              "center of the array.".format(
                                                     self.max_radial_distance))
+
+    def _specs(self, for_docs=False):
+        lines = [
+            "\nRegister requirements:",
+            f" - Dimensions: {self.dimensions}D",
+            f" - Maximum number of atoms: {self.max_atom_num}",
+            f" - Maximum distance from origin: {self.max_radial_distance} μm",
+            (" - Minimum distance between neighbouring atoms: "
+             + f"{self.min_atom_distance} μm"),
+            "\nChannels:"
+            ]
+
+        ch_lines = []
+        for name, ch in self._channels:
+            if for_docs:
+                ch_lines += [
+                    f" - ID: '{name}'",
+                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
+                    f"\t- Addressing: {ch.addressing}",
+                    "\t" + rf"- Maximum :math:`\Omega`: {ch.max_amp:.4g} MHz",
+                    ("\t" + r"- Maximum :math:`|\delta|`:"
+                     + f" {ch.max_abs_detuning:.4g} MHz")
+                    ]
+                if ch.addressing == "Local":
+                    ch_lines += [
+                        f"\t- Time to retarget: {ch.retarget_time} ns",
+                        f"\t- Maximum simultaneous targets: {ch.max_targets}"
+                        ]
+            else:
+                ch_lines.append(f" - '{name}': {ch!r}")
+
+        return "\n".join(lines + ch_lines)
