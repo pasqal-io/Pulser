@@ -18,7 +18,15 @@ from typing import ClassVar
 
 @dataclass(init=False, repr=False, frozen=True)
 class Channel:
-    """Base class of a hardware channel."""
+    """Base class of a hardware channel.
+
+    Not to be initialized itself, but rather through a child class and the
+    ``Local`` or ``Global`` classmethods.
+
+    Example:
+        To create a channel targeting the 'ground-rydberg' transition globally,
+        call ``Rydberg.Global(...)``.
+    """
 
     name: ClassVar[str]
     basis: ClassVar[str]
@@ -34,13 +42,14 @@ class Channel:
 
         Args:
             max_abs_detuning (float): Maximum possible detuning (in MHz), in
-            absolute value.
+                absolute value.
             max_amp(float): Maximum pulse amplitude (in MHz).
             retarget_time (int): Time to change the target (in ns).
 
         Keyword Args:
-            max_targets (int, default=1): (For local channels only) How
-                many qubits can be addressed at once by the same beam."""
+            max_targets (int, default=1): How many qubits can be addressed at
+                once by the same beam.
+        """
 
         return cls('Local', max_abs_detuning, max_amp, max_targets=max_targets,
                    retarget_time=retarget_time)
@@ -51,8 +60,9 @@ class Channel:
 
         Args:
             max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
-            absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in MHz)."""
+                absolute value.
+            max_amp(tuple): Maximum pulse amplitude (in MHz).
+        """
 
         return cls('Global', max_abs_detuning, max_amp)
 

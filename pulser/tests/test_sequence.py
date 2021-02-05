@@ -20,7 +20,7 @@ import pytest
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._pasqal_device import PasqalDevice
-from pulser.sequence import TimeSlot
+from pulser.sequence import _TimeSlot
 from pulser.waveforms import BlackmanWaveform
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix='q')
@@ -51,8 +51,8 @@ def test_channel_declaration():
         seq.declare_channel('ch0', 'raman_local')
 
     chs = {'rydberg_global', 'raman_local'}
-    assert seq._schedule['ch0'][-1] == TimeSlot('target', -1, 0,
-                                                set(seq.qubit_info.keys()))
+    assert seq._schedule['ch0'][-1] == _TimeSlot('target', -1, 0,
+                                                 set(seq.qubit_info.keys()))
     assert set(seq.available_channels) == available_channels - chs
 
     seq2 = Sequence(reg, MockDevice)
@@ -77,16 +77,16 @@ def test_target():
     with pytest.raises(ValueError, match="can target at most 1 qubits"):
         seq.target(['q1', 'q5'], 'ch0')
 
-    assert seq._schedule['ch0'][-1] == TimeSlot('target', -1, 0, {'q1'})
+    assert seq._schedule['ch0'][-1] == _TimeSlot('target', -1, 0, {'q1'})
     seq.target('q4', 'ch0')
     retarget_t = seq.declared_channels['ch0'].retarget_time
-    assert seq._schedule['ch0'][-1] == TimeSlot('target', 0,
-                                                retarget_t, {'q4'})
+    assert seq._schedule['ch0'][-1] == _TimeSlot('target', 0,
+                                                 retarget_t, {'q4'})
     with pytest.warns(UserWarning):
         seq.target('q4', 'ch0')
     seq.target('q20', 'ch0')
-    assert seq._schedule['ch0'][-1] == TimeSlot('target', retarget_t,
-                                                2*retarget_t, {'q20'})
+    assert seq._schedule['ch0'][-1] == _TimeSlot('target', retarget_t,
+                                                 2*retarget_t, {'q20'})
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel('ch0', 'raman_local', initial_target={'q1', 'q10'})
@@ -104,7 +104,7 @@ def test_delay():
         seq.delay(100, 'ch0')
     seq.target('q19', 'ch0')
     seq.delay(388, 'ch0')
-    assert seq._last('ch0') == TimeSlot('delay', 0, 388, {'q19'})
+    assert seq._last('ch0') == _TimeSlot('delay', 0, 388, {'q19'})
 
 
 def test_phase():
