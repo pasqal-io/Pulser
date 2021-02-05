@@ -3,13 +3,13 @@ Pulser
 
 .. toctree::
    :maxdepth: 2
-   :caption: Introduction:
+   :caption: Introduction
 
-   neutral_atoms
+   introduction_rydberg_blockade
 
 .. toctree::
    :maxdepth: 2
-   :caption: Installation and First Steps:
+   :caption: Installation and First Steps
 
    installation
    getting_started
@@ -17,13 +17,13 @@ Pulser
 
 .. toctree::
    :maxdepth: 2
-   :caption: Concepts:
+   :caption: Concepts
 
    review
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials:
+   :caption: Tutorials
 
    afm_prep
    1D_crystals
@@ -34,7 +34,7 @@ Pulser
 
 .. toctree::
    :maxdepth: 2
-   :caption: Documentation:
+   :caption: Documentations
 
    pulser
 
