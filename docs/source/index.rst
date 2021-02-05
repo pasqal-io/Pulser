@@ -12,7 +12,7 @@ Pulser
    :caption: Installation and First Steps
 
    installation
-   getting_started
+   creating
    simulating
 
 .. toctree::
