@@ -447,7 +447,8 @@ class Sequence:
         if np.any(pulse.amplitude.samples > ch.max_amp):
             raise ValueError("The pulse's amplitude goes over the maximum "
                              "value allowed for the chosen channel.")
-        if np.any(np.abs(pulse.detuning.samples) > ch.max_abs_detuning):
+        if np.any(np.round(np.abs(pulse.detuning.samples),
+                           decimals=6) > ch.max_abs_detuning):
             raise ValueError("The pulse's detuning values go out of the range "
                              "allowed for the chosen channel.")
 
