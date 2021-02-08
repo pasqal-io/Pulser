@@ -87,6 +87,23 @@ def test_target():
     seq.target('q20', 'ch0')
     assert seq._schedule['ch0'][-1] == _TimeSlot('target', retarget_t,
                                                  2*retarget_t, {'q20'})
+    seq.delay(216, 'ch0')
+    seq.target('q2', 'ch0')
+    ti = 2*retarget_t + 216
+    tf = ti + 16
+    assert seq._schedule['ch0'][-1] == _TimeSlot('target', ti, tf, {'q2'})
+
+    seq.delay(220, 'ch0')
+    seq.target('q1', 'ch0')
+    ti = tf + 220
+    tf = ti
+    assert seq._schedule['ch0'][-1] == _TimeSlot('target', ti, tf, {'q1'})
+
+    seq.delay(100, 'ch0')
+    seq.target('q10', 'ch0')
+    ti = tf + 100
+    tf = ti + 120
+    assert seq._schedule['ch0'][-1] == _TimeSlot('target', ti, tf, {'q10'})
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel('ch0', 'raman_local', initial_target={'q1', 'q10'})
@@ -157,7 +174,7 @@ def test_str():
     seq.measure('digital')
     msg = ('Channel: ch0\nt: 0 | Initial targets: q0 | Phase Reference: 0.0 ' +
            '\nt: 0->500 | Pulse(Amp=2 MHz, Detuning=-10 MHz, Phase=0) | ' +
-           'Targets: q0\nt: 500->700 | Delay \nt: 700->800 | Target: q7 | ' +
+           'Targets: q0\nt: 500->700 | Delay \nt: 700->700 | Target: q7 | ' +
            'Phase Reference: 0.0\n\nMeasured in basis: digital')
     assert seq.__str__() == msg
 
@@ -207,9 +224,9 @@ def test_sequence():
     seq.phase_shift(np.pi/2, 'q1')
     seq.target('q1', 'ch0')
     assert seq._last_used['digital']['q1'] == 0
+    assert seq._last_target['ch0'] == 1000
     assert seq._last('ch0').ti == 1000
-    retarget_t = device.channels['raman_local'].retarget_time
-    assert seq._last('ch0').tf == 1000 + retarget_t
+    assert seq._last('ch0').tf == 1000
     seq.add(pulse1, 'ch0')
     assert seq._last('ch0').ti == 2500
     assert seq._last('ch0').tf == 3000

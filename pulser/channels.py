@@ -37,14 +37,15 @@ class Channel:
     max_targets: int = 1
 
     @classmethod
-    def Local(cls, max_abs_detuning, max_amp, retarget_time, max_targets=1):
+    def Local(cls, max_abs_detuning, max_amp, retarget_time=220,
+              max_targets=1):
         """Initializes the channel with local addressing.
 
         Args:
             max_abs_detuning (float): Maximum possible detuning (in MHz), in
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in MHz).
-            retarget_time (int): Time to change the target (in ns).
+            retarget_time (int): Maximum time to change the target (in ns).
 
         Keyword Args:
             max_targets (int, default=1): How many qubits can be addressed at

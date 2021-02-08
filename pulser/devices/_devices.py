@@ -25,9 +25,9 @@ Chadoq2 = PasqalDevice(
     max_radial_distance=50,
     min_atom_distance=4,
     _channels=(
-        ("rydberg_global", Rydberg.Global(2 * np.pi * 50, 2 * np.pi * 2.5)),
-        ("rydberg_local", Rydberg.Local(2 * np.pi * 50, 2 * np.pi * 10, 100)),
-        ("rydberg_local2", Rydberg.Local(2 * np.pi * 50, 2 * np.pi * 10, 100)),
-        ("raman_local", Raman.Local(2 * np.pi * 50, 2 * np.pi * 10, 100)),
+        ("rydberg_global", Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)),
+        ("rydberg_local", Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10)),
+        ("rydberg_local2", Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10)),
+        ("raman_local", Raman.Local(2 * np.pi * 20, 2 * np.pi * 10)),
     ),
 )
