@@ -113,7 +113,7 @@ def test_composite():
 
     wf = CompositeWaveform(blackman, constant)
     msg = ('BlackmanWaveform(40 ns, Area: 3.14), ' +
-           'ConstantWaveform(100 ns, -3 MHz)')
+           'ConstantWaveform(100 ns, -3 rad/µs)')
     assert wf.__str__() == f'Composite({msg})'
     assert wf.__repr__() == f'CompositeWaveform(140 ns, [{msg}])'
 

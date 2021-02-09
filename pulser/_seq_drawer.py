@@ -160,8 +160,8 @@ def draw_sequence(seq):
         b.plot(t, yb, color='indigo', linewidth=0.8)
         a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
         b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
-        a.set_ylabel('Amplitude (MHz)', fontsize=12, labelpad=10)
-        b.set_ylabel('Detuning (MHz)', fontsize=12)
+        a.set_ylabel(r'$\Omega$ (rad/µs)', fontsize=14, labelpad=10)
+        b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 
         target_regions = []     # [[start1, [targets1], end1],...]
         for coords in data[ch]['target']:

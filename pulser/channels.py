@@ -42,9 +42,9 @@ class Channel:
         """Initializes the channel with local addressing.
 
         Args:
-            max_abs_detuning (float): Maximum possible detuning (in MHz), in
+            max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
                 absolute value.
-            max_amp(float): Maximum pulse amplitude (in MHz).
+            max_amp(float): Maximum pulse amplitude (in rad/µs).
             retarget_time (int): Maximum time to change the target (in ns).
 
         Keyword Args:
@@ -60,15 +60,15 @@ class Channel:
         """Initializes the channel with global addressing.
 
         Args:
-            max_abs_detuning (tuple): Maximum possible detuning (in MHz), in
+            max_abs_detuning (tuple): Maximum possible detuning (in rad/µs), in
                 absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in MHz).
+            max_amp(tuple): Maximum pulse amplitude (in rad/µs).
         """
 
         return cls('Global', max_abs_detuning, max_amp)
 
     def __repr__(self):
-        s = ".{}(Max Absolute Detuning: {} MHz, Max Amplitude: {} MHz"
+        s = ".{}(Max Absolute Detuning: {} rad/µs, Max Amplitude: {} rad/µs"
         config = s.format(self.addressing, self.max_abs_detuning, self.max_amp)
         if self.addressing == 'Local':
             config += f", Target time: {self.retarget_time} ns"

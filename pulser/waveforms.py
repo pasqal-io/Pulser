@@ -61,14 +61,14 @@ class Waveform(ABC):
 
     @property
     def integral(self):
-        """Integral of the waveform (time in ns, value in MHz)."""
-        return np.sum(self.samples) * 1e-3  # ns * MHz = 1e-3
+        """Integral of the waveform (time in ns, value in rad/µs)."""
+        return np.sum(self.samples) * 1e-3  # ns * rad/µs = 1e-3
 
     def draw(self):
         """Draws the waveform."""
 
         fig, ax = plt.subplots()
-        self._plot(ax, "MHz")
+        self._plot(ax, "rad/µs")
 
         plt.show()
 
@@ -193,9 +193,9 @@ class CustomWaveform(Waveform):
     """A custom waveform.
 
     Args:
-        samples (array_like): The modulation values at each time step. The
-            number of samples dictates the duration, so its lenght has to be a
-            multiple of 4.
+        samples (array_like): The modulation values at each time step
+            (in rad/µs). The number of samples dictates the duration, so its
+            length has to be a multiple of 4.
     """
 
     def __init__(self, samples):
@@ -237,7 +237,7 @@ class ConstantWaveform(Waveform):
 
     Args:
         duration: The waveform duration (in multiples of 4 ns).
-        value: The modulation value.
+        value: The modulation value (in rad/µs).
     """
 
     def __init__(self, duration, value):
@@ -270,10 +270,11 @@ class ConstantWaveform(Waveform):
         return self._value
 
     def __str__(self):
-        return f"{self._value:.3g} MHz"
+        return f"{self._value:.3g} rad/µs"
 
     def __repr__(self):
-        return f"ConstantWaveform({self._duration} ns, {self._value:.3g} MHz)"
+        return (f"ConstantWaveform({self._duration} ns, "
+                + f"{self._value:.3g} rad/µs)")
 
 
 class RampWaveform(Waveform):
@@ -281,8 +282,8 @@ class RampWaveform(Waveform):
 
     Args:
         duration: The waveform duration (in multiples of 4 ns).
-        start: The initial value.
-        stop: The final value.
+        start: The initial value (in rad/µs).
+        stop: The final value (in rad/µs).
     """
 
     def __init__(self, duration, start, stop):
@@ -307,7 +308,7 @@ class RampWaveform(Waveform):
 
     @property
     def slope(self):
-        """Slope of the ramp, in MHz/ns."""
+        r"""Slope of the ramp, in :math:`s^{-15}`."""
         return (self._stop - self._start) / self._duration
 
     @property
@@ -321,11 +322,11 @@ class RampWaveform(Waveform):
         return self._stop
 
     def __str__(self):
-        return f"Ramp({self._start:.3g}->{self._stop:.3g} MHz)"
+        return f"Ramp({self._start:.3g}->{self._stop:.3g} rad/µs)"
 
     def __repr__(self):
         return (f"RampWaveform({self._duration} ns, " +
-                f"{self._start:.3g}->{self._stop:.3g} MHz)")
+                f"{self._start:.3g}->{self._stop:.3g} rad/µs)")
 
 
 class BlackmanWaveform(Waveform):
