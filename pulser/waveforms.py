@@ -95,12 +95,12 @@ class Waveform(ABC):
         ax.set_xlabel('t (ns)')
         ts = np.arange(self.duration)
         if color:
-            ax.set_ylabel(ylabel, color=color)
+            ax.set_ylabel(ylabel, color=color, fontsize=14)
             ax.plot(ts, self.samples, color=color)
             ax.tick_params(axis='y', labelcolor=color)
             ax.axhline(0, color=color, linestyle=':', linewidth=0.5)
         else:
-            ax.set_ylabel(ylabel)
+            ax.set_ylabel(ylabel, fontsize=14)
             ax.plot(ts, self.samples)
             ax.axhline(0, color='black', linestyle=':', linewidth=0.5)
 

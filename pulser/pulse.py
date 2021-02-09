@@ -114,8 +114,8 @@ class Pulse:
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
 
-        self.amplitude._plot(ax1, "Amplitude (rad/µs)", color="darkgreen")
-        self.detuning._plot(ax2, "Detuning (rad/µs)", color="indigo")
+        self.amplitude._plot(ax1, r"$\Omega$ (rad/µs)", color="darkgreen")
+        self.detuning._plot(ax2, r"$\delta$ (rad/µs)", color="indigo")
 
         fig.tight_layout()
         plt.show()
