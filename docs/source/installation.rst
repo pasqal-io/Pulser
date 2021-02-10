@@ -1,13 +1,12 @@
 Installation
 ==============
 
-..
-    Stable version
-    -----------------
-    To install the latest release of ``pulser``, have Python 3.7.0 or higher
-    installed, then use ``pip``: ::
+Stable version
+-----------------
+To install the latest release of ``pulser``, have Python 3.7.0 or higher
+installed, then use ``pip``: ::
 
-      pip install pulser
+  pip install pulser
 
 
 Latest version
