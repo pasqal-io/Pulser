@@ -1,9 +1,10 @@
 Pulser
 ==================================
 
-**Pulser** is an open-source software package written in Python. It provides
-easy-to-use libraries for designing and simulating pulse sequences that act on
-programmable arrays of neutral atoms.
+**Pulser** is an open-source Python software package. It provides easy-to-use 
+libraries for designing and simulating pulse sequences that act on
+programmable arrays of neutral atoms, a promising platform for quantum computation
+and simulation.
 
 **Online documentation**: `<https://pulser.readthedocs.io>`_
 
@@ -18,6 +19,13 @@ Overview
 Pulser is designed to let users create experiments that are tailored to a
 specific device. In this way, you can have maximal flexibility and control over
 the behaviour of relevant physical parameters, within the bounds set by the chosen device.
+
+.. figure:: https://pasqal.io/wp-content/uploads/2021/02/pulser_animation.gif
+    :align: center
+    :alt: pulser_animation
+    :figclass: align-center
+
+    Execution of a pulse sequence designed for a specific device.
 
 Consequently, Pulser breaks free from the paradigm of digital quantum computing
 and also allows the creation of **analog** quantum simulations, outside of the
