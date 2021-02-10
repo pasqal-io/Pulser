@@ -2,12 +2,24 @@
 
 Pulser is a framework for composing, simulating and executing **pulse** sequences for neutral-atom quantum devices.
 
-
-## Documentation and Installation
-
 Pulser documentation is available at https://pulser.readthedocs.io.
 
 The source code can be found at https://github.com/pasqal-io/Pulser.
+
+## Overview of Pulser
+
+Pulser is designed to let users create experiments that are tailored to specific neutral atom devices,
+like those developed at [Pasqal][pasqal].
+This reduces the level of abstraction and gives you maximal flexibility and control over the behaviour of the relevant physical parameters, within the bounds set by the chosen device.
+
+Consequently, Pulser breaks free from the paradigm of digital quantum computing
+and also allows the creation of **analog** quantum simulations, outside of the
+scope of traditional quantum circuit approaches. Whatever the type of experiment
+or paradigm, if it can be done on the device, it can be done with Pulser.
+
+Additionally, Pulser features built-in tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
+
+## Documentation and Installation
 
 To install the latest release of ``pulser``, have Python 3.7.0 or higher installed, then use ``pip``:
 
@@ -34,19 +46,6 @@ Then, you can do the following to run the test suite and report test coverage:
 ```bash
 pytest --cov pulser
 ```
-
-## Overview of Pulser
-
-Pulser is designed to let users create experiments that are tailored to specific neutral atom devices,
-like those developed at [Pasqal][pasqal].
-This reduces the level of abstraction and gives you maximal flexibility and control over the behaviour of the relevant physical parameters, within the bounds set by the chosen device.
-
-Consequently, Pulser breaks free from the paradigm of digital quantum computing
-and also allows the creation of **analog** quantum simulations, outside of the
-scope of traditional quantum circuit approaches. Whatever the type of experiment
-or paradigm, if it can be done on the device, it can be done with Pulser.
-
-Additionally, Pulser features built-in tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
 
 
 [pasqal]: https://pasqal.io/
