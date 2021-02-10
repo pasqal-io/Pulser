@@ -173,8 +173,8 @@ def test_str():
     seq.target('q7', 'ch0')
     seq.measure('digital')
     msg = ('Channel: ch0\nt: 0 | Initial targets: q0 | Phase Reference: 0.0 ' +
-           '\nt: 0->500 | Pulse(Amp=2 MHz, Detuning=-10 MHz, Phase=0) | ' +
-           'Targets: q0\nt: 500->700 | Delay \nt: 700->700 | Target: q7 | ' +
+           '\nt: 0->500 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) ' +
+           '| Targets: q0\nt: 500->700 | Delay \nt: 700->700 | Target: q7 | ' +
            'Phase Reference: 0.0\n\nMeasured in basis: digital')
     assert seq.__str__() == msg
 

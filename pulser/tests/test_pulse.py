@@ -56,16 +56,17 @@ def test_creation():
 
 
 def test_str():
-    assert pls2.__str__() == "Pulse(Amp=1 MHz, Detuning=-10 MHz, Phase=3.14)"
-    pls_ = Pulse(bwf, rwf, np.pi)
-    msg = "Pulse(Amp=Blackman(Area: 3), Detuning=Ramp(0->1 MHz), Phase=3.14)"
+    assert pls2.__str__() == ("Pulse(Amp=1 rad/µs, Detuning=-10 rad/µs, "
+                              + "Phase=3.14)")
+    pls_ = Pulse(bwf, rwf, 1)
+    msg = "Pulse(Amp=Blackman(Area: 3), Detuning=Ramp(0->1 rad/µs), Phase=1)"
     assert pls_.__str__() == msg
 
 
 def test_repr():
     pls_ = Pulse(bwf, rwf, 1, post_phase_shift=-np.pi)
     msg = ("Pulse(amp=BlackmanWaveform(200 ns, Area: 3), " +
-           "detuning=RampWaveform(200 ns, 0->1 MHz), " +
+           "detuning=RampWaveform(200 ns, 0->1 rad/µs), " +
            "phase=1, post_phase_shift=3.14)")
     assert pls_.__repr__() == msg
 

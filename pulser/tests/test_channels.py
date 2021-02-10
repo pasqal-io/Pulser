@@ -37,11 +37,11 @@ def test_device_channels():
 
 def test_repr():
     raman = Raman.Local(10, 2, retarget_time=1000, max_targets=4)
-    r1 = ("Raman.Local(Max Absolute Detuning: 10 MHz, Max Amplitude: 2 MHz,"
-          " Target time: 1000 ns, Max targets: 4, Basis: 'digital')")
+    r1 = ("Raman.Local(Max Absolute Detuning: 10 rad/µs, Max Amplitude: "
+          "2 rad/µs, Target time: 1000 ns, Max targets: 4, Basis: 'digital')")
     assert raman.__str__() == r1
 
     ryd = Rydberg.Global(50, 2.5)
-    r2 = ("Rydberg.Global(Max Absolute Detuning: 50 MHz, "
-          "Max Amplitude: 2.5 MHz, Basis: 'ground-rydberg')")
+    r2 = ("Rydberg.Global(Max Absolute Detuning: 50 rad/µs, "
+          "Max Amplitude: 2.5 rad/µs, Basis: 'ground-rydberg')")
     assert ryd.__str__() == r2

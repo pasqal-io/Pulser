@@ -1,5 +1,5 @@
 ****************************************
-Review of the Neutral Atoms Architecture
+Quantum Computing with Neutral Atoms
 ****************************************
 
 Programmable arrays of Rydberg atoms

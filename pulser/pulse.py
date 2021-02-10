@@ -19,7 +19,7 @@ from pulser.waveforms import Waveform, ConstantWaveform
 
 
 class Pulse:
-    """A generic pulse.
+    r"""A generic pulse.
 
     In Pulser, a Pulse is a modulation of a frequency signal in amplitude
     and/or frequency, with a specific phase, over a given duration. Amplitude
@@ -29,6 +29,11 @@ class Pulse:
     If either quantity is constant throughout the entire pulse, use the
     ``ConstantDetuning``, ``ConstantAmplitude`` or ``ConstantPulse`` class
     method to create it.
+
+    Note:
+        We define the ``amplitude`` of a pulse to be its Rabi frequency,
+        :math:`\Omega`, in rad/µs. Equivalently, the ``detuning`` is
+        :math:`\delta`, also in rad/µs.
 
     Args:
         amplitude (Waveform): The pulse amplitude waveform.
@@ -67,7 +72,7 @@ class Pulse:
 
         Args:
             amplitude (Waveform): The pulse amplitude waveform.
-            detuning (float): The detuning value (in MHz).
+            detuning (float): The detuning value (in rad/µs).
             phase (float): The pulse phase (in radians).
         """
 
@@ -79,7 +84,7 @@ class Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
 
         Args:
-            amplitude (float): The pulse amplitude value (in MHz).
+            amplitude (float): The pulse amplitude value (in rad/µs).
             detuning (Waveform): The pulse detuning waveform.
             phase (float): The pulse phase (in radians).
         """
@@ -94,8 +99,8 @@ class Pulse:
 
         Args:
             duration (int): The pulse duration (in multiples of 4 ns).
-            amplitude (float): The pulse amplitude value (in MHz).
-            detuning (float): The detuning value (in MHz).
+            amplitude (float): The pulse amplitude value (in rad/µs).
+            detuning (float): The detuning value (in rad/µs).
             phase (float): The pulse phase (in radians).
         """
 
@@ -109,8 +114,8 @@ class Pulse:
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
 
-        self.amplitude._plot(ax1, "Amplitude (MHz)", color="darkgreen")
-        self.detuning._plot(ax2, "Detuning (MHz)", color="indigo")
+        self.amplitude._plot(ax1, r"$\Omega$ (rad/µs)", color="darkgreen")
+        self.detuning._plot(ax2, r"$\delta$ (rad/µs)", color="indigo")
 
         fig.tight_layout()
         plt.show()

@@ -33,7 +33,7 @@ class PasqalDevice:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff: :math:`C_6/\hbar` (in MHz :math:`\cdot\mu m^6`),
+        interaction_coeff: :math:`C_6/\hbar` (in :math:`\mu m^6 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
             the Rydberg state.
     """
@@ -74,7 +74,7 @@ class PasqalDevice:
         """Calculates the Rydberg blockade radius for a given Rabi frequency.
 
         Args:
-            rabi_frequency(float): The rabi frequency, in MHz.
+            rabi_frequency(float): The Rabi frequency, in rad/µs.
 
         Returns:
             float: The rydberg blockade radius, in μm.
@@ -128,13 +128,14 @@ class PasqalDevice:
                     f" - ID: '{name}'",
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
                     f"\t- Addressing: {ch.addressing}",
-                    "\t" + rf"- Maximum :math:`\Omega`: {ch.max_amp:.4g} MHz",
+                    ("\t" + r"- Maximum :math:`\Omega`:"
+                     + f" {ch.max_amp:.4g} rad/µs"),
                     ("\t" + r"- Maximum :math:`|\delta|`:"
-                     + f" {ch.max_abs_detuning:.4g} MHz")
+                     + f" {ch.max_abs_detuning:.4g} rad/µs")
                     ]
                 if ch.addressing == "Local":
                     ch_lines += [
-                        f"\t- Time to retarget: {ch.retarget_time} ns",
+                        f"\t- Maximum time to retarget: {ch.retarget_time} ns",
                         f"\t- Maximum simultaneous targets: {ch.max_targets}"
                         ]
             else:
