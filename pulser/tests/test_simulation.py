@@ -34,41 +34,32 @@ pi_Y = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., -np.pi/2)
 seq = Sequence(reg, Chadoq2)
 
 # Declare Channels
-seq.declare_channel('rydA', 'rydberg_local', 'control1')
-seq.declare_channel('rydB', 'rydberg_local2', 'control2')
+seq.declare_channel('ryd', 'rydberg_local', 'control1')
 seq.declare_channel('raman', 'raman_local', 'control1')
 
 d = 0  # Pulse Duration
 
 # Prepare state 'hhh':
 seq.add(pi_Y, 'raman')
-d += 1
 seq.target('target', 'raman')
 seq.add(pi_Y, 'raman')
-d += 1
 seq.target('control2', 'raman')
 seq.add(pi_Y, 'raman')
-d += 1
+d += 3
 
 prep_state = qutip.tensor([qutip.basis(3, 2) for _ in range(3)])
 
 # Write CCZ sequence:
-seq.add(pi, 'rydA', 'wait-for-all')  # Wait for state preparation to finish.
-d += 1
-seq.align('rydA', 'rydB')
-seq.add(pi, 'rydB')
-d += 1
-seq.target('target', 'rydA')
-seq.align('rydA', 'rydB')
-seq.add(twopi, 'rydA')
-d += 1
-seq.align('rydA', 'rydB')
-seq.add(pi, 'rydB')
-d += 1
-seq.target('control1', 'rydA')
-seq.align('rydA', 'rydB')
-seq.add(pi, 'rydA')
-d += 1
+seq.add(pi, 'ryd', protocol='wait-for-all')
+seq.target('control2', 'ryd')
+seq.add(pi, 'ryd')
+seq.target('target', 'ryd')
+seq.add(twopi, 'ryd')
+seq.target('control2', 'ryd')
+seq.add(pi, 'ryd')
+seq.target('control1', 'ryd')
+seq.add(pi, 'ryd')
+d += 5
 
 
 def test_initialization_and_construction_of_hamiltonian():

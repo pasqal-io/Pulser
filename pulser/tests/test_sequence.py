@@ -186,7 +186,6 @@ def test_sequence():
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
     seq.declare_channel('ch1', 'rydberg_local', initial_target='q0')
     seq.declare_channel('ch2', 'rydberg_global')
-    seq.declare_channel('ch3', 'rydberg_local2')
     seq.phase_shift(np.pi, 'q0', basis='ground-rydberg')
 
     pulse1 = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
