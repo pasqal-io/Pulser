@@ -19,7 +19,7 @@ or paradigm, if it can be done on the device, it can be done with Pulser.
 
 Additionally, Pulser features built-in tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
 
-## Documentation and Installation
+## Installation
 
 To install the latest release of ``pulser``, have Python 3.7.0 or higher installed, then use ``pip``:
 
