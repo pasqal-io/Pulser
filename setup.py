@@ -14,9 +14,12 @@
 
 from setuptools import setup, find_packages
 
+__version__ = ''
+exec(open('pulser/_version.py').read())
+
 setup(
     name="pulser",
-    version="0.1.0",
+    version=__version__,
     install_requires=[
         "matplotlib",
         "numpy",
