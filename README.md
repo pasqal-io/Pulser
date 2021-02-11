@@ -46,7 +46,9 @@ Then, you can do the following to run the test suite and report test coverage:
 ```bash
 pytest --cov pulser
 ```
+## Contributing
 
+Want to contribute to Pulser? Great! See [How to Contribute](CONTRIBUTING.md) for information on how you can do so.
 
 [pasqal]: https://pasqal.io/
 [qutip]: http://qutip.org/
