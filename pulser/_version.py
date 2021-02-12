@@ -12,14 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A pulse-level composer for Pasqal's quantum devices."""
-
-from pulser._version import __version__
-
-from pulser.pulse import Pulse
-
-from pulser.register import Register
-
-from pulser.sequence import Sequence
-
-from pulser.simulation import Simulation
+__version__ = "0.1.0.dev"

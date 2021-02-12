@@ -1,14 +1,15 @@
 Pulser
 ==================================
 
-**Pulser** is an open-source Python software package. It provides easy-to-use 
+**Pulser** is an open-source Python software package. It provides easy-to-use
 libraries for designing and simulating pulse sequences that act on
 programmable arrays of neutral atoms, a promising platform for quantum computation
 and simulation.
 
 **Online documentation**: `<https://pulser.readthedocs.io>`_
 
-**Source code repository**: `<https://github.com/pasqal-io/Pulser>`_
+**Source code repository** (go `here <https://pulser.readthedocs.io/en/latest/>`_
+for the latest docs): `<https://github.com/pasqal-io/Pulser>`_
 
 **License**: Apache 2.0 -- see `LICENSE <https://github.com/pasqal-io/Pulser/blob/master/LICENSE>`_
 for details
