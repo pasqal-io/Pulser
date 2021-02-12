@@ -8,8 +8,8 @@ The steps to take will depend on what you want to do, but generally you'll want 
 
 1. Do a quick search for keywords over the existing issues to ensure yours has not been added yet.
 2. If you can't find your issue already listed, create a new one. Please try to be as clear and detailed as possible in your description.
-- If you just want to give a suggestion or report a bug that's already excellent and we thank you for it! Your issue will be listed and, hopefully, someone will take care of it some point. 
-- However, you may also want to be the one solving your issue, which would be even better! In these cases, you would proceed to preparing a [Pull Request](#making-a-pull-request).
+- If you just want to give a suggestion or report a bug, that's already excellent and we thank you for it! Your issue will be listed and, hopefully, someone will take care of it some point. 
+- However, you may also want to be the one solving your issue, which would be even better! In these cases, you would proceed by preparing a [Pull Request](#making-a-pull-request).
 
 
 ## Making a Pull Request
@@ -73,4 +73,3 @@ pip install -r requirements.txt
     ```bash
     flake8 .
     ```
-
