@@ -135,8 +135,8 @@ class Register:
                         [np.sin(theta), np.cos(theta)]])
         self._coords = [rot @ v for v in self._coords]
 
-    def draw(self, with_labels=True, blockade_radius=None, draw_radius=False,
-             draw_graph=False):
+    def draw(self, with_labels=True, blockade_radius=None, draw_graph=False,
+             draw_half_radius=False):
         """Draws the entire register.
 
         Keyword args:
@@ -144,18 +144,25 @@ class Register:
                 next to each qubit.
             blockade_radius(float, default=None): The distance (in μm) between
                 atoms below the Rydberg blockade effect occurs.
-            draw_radius(bool, default=False): Whether or not to draw the
-                blockade radius surrounding each atoms. If `True`, requires
-                `blockade_radius` to be defined.
+            draw_half_radius(bool, default=False): Whether or not to draw the
+                half the blockade radius surrounding each atoms. If `True`,
+                requires `blockade_radius` to be defined.
             draw_graph(bool, default=False): Whether or not to draw the
                 influence between atoms as edges in a graph. If `True`,
                 requires `blockade_radius` to be defined.
 
+        Note:
+            When drawing half the blockade radius, we say there is a blockade
+            effect between atoms whenever their respective circles overlap.
+            This representation is preferred over drawing the full Rydberg
+            radius because it helps in seeing the interactions between atoms.
         """
         pos = np.array(self._coords)
         diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
         diffs[diffs < 9] *= 1.5
         diffs[diffs < 9] += 2
+        if blockade_radius and draw_half_radius:
+            diffs[diffs < blockade_radius] = blockade_radius
         big_side = max(diffs)
         proportions = diffs / big_side
         Ls = proportions * min(big_side/4, 10)  # Figsize is, at most, (10,10)
@@ -173,16 +180,17 @@ class Register:
             for q, coords in zip(self._ids, self._coords):
                 ax.annotate(q, coords, fontsize=12, ha='left', va='bottom')
 
-        if draw_radius:
+        if draw_half_radius:
             if blockade_radius is None:
                 raise ValueError("Define 'blockade_radius' to draw.")
             if len(pos) == 1:
                 raise NotImplementedError("Needs more than one atom to draw "
                                           "the blockade radius.")
+
             delta_um = np.linalg.norm(pos[1] - pos[0])
             r_pts = np.linalg.norm(
                         np.subtract(*ax.transData.transform(pos[:2]).tolist())
-                        ) / delta_um * blockade_radius
+                        ) / delta_um * blockade_radius / 2
             # A 'scatter' marker of size s has area pi/4 * s
             ax.scatter(pos[:, 0], pos[:, 1], s=4*r_pts**2, alpha=0.1,
                        c='darkgreen')
