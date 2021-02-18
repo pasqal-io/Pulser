@@ -63,6 +63,12 @@ def test_mock():
 def test_rydberg_blockade():
     dev = pulser.devices.MockDevice
     assert np.isclose(dev.rydberg_blockade_radius(3*np.pi), 9)
+    assert np.isclose(dev.rabi_from_blockade(9), 3*np.pi)
+    rand_omega = np.random.rand() * 2*np.pi
+    assert np.isclose(
+        rand_omega,
+        dev.rabi_from_blockade(dev.rydberg_blockade_radius(rand_omega))
+        )
 
 
 def test_validate_register():

@@ -81,6 +81,17 @@ class PasqalDevice:
         """
         return (self.interaction_coeff/rabi_frequency)**(1/6)
 
+    def rabi_from_blockade(self, blockade_radius):
+        """The necessary Rabi frequency value to reach a given blockade radius.
+
+        Args:
+            blockade_radius(float): The Rydberg blockade radius, in µm.
+
+        Returns:
+            float: The maximum rabi frequency value, in rad/µs.
+        """
+        return self.interaction_coeff/blockade_radius**6
+
     def validate_register(self, register):
         """Checks if 'register' is compatible with this device.
 

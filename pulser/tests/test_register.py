@@ -62,3 +62,17 @@ def test_drawing():
     reg = Register.triangular_lattice(3, 8)
     with patch('matplotlib.pyplot.show'):
         reg.draw()
+
+    reg = Register.rectangle(1, 8)
+    with patch('matplotlib.pyplot.show'):
+        reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
+
+    with pytest.raises(ValueError, match="to draw the graph."):
+        reg.draw(draw_graph=True)
+
+    with pytest.raises(ValueError, match="'blockade_radius' to draw."):
+        reg.draw(draw_half_radius=True)
+
+    reg = Register.square(1)
+    with pytest.raises(NotImplementedError):
+        reg.draw(blockade_radius=5, draw_half_radius=True)
