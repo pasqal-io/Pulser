@@ -145,14 +145,13 @@ class Simulation:
         if global_op:
             return sum(self._build_operator(op_id, q_id)
                        for q_id in self._qdict)
-
         if len(set(qubit_ids)) < len(qubit_ids):
             raise ValueError("Duplicate atom ids in argument list.")
-        # List of identity matrices with shape of operator:
-        temp = [self.op_matrix['I'] for _ in range(self._size)]
-        for q_id in qubit_ids:
-            temp[self._qid_index[q_id]] = self.op_matrix[op_id]
-        return qutip.tensor(temp)
+        # List of identity operators, except for op_id where requested:
+        op_list = [self.op_matrix[op_id]
+                   if j in map(self._qid_index.get, qubit_ids)
+                   else self.op_matrix['I'] for j in range(self._size)]
+        return qutip.tensor(op_list)
 
     def _construct_hamiltonian(self):
         def adapt(full_array):
