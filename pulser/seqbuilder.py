@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 from collections import namedtuple
 from collections.abc import Iterable
 from functools import wraps
@@ -28,7 +29,7 @@ _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
 
 def _store(func):
-    @wraps
+    @wraps(func)
     def wrapper(self, *args, **kwargs):
         func(self, *args, **kwargs)
         self._calls.append(_Call(func.__name__, args, kwargs))
@@ -239,6 +240,13 @@ class SequenceBuilder:
 
         if len(channels) < 2:
             raise ValueError("Needs at least two channels for alignment.")
+
+    def build(self):
+        seq = copy.deepcopy(self._root)
+        for call in self._calls:
+            getattr(seq, call.name)(*call.args, **call.kwargs)
+
+        return seq
 
     def __str__(self):
         return self._calls
