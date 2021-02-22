@@ -19,7 +19,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.paramobj import Parametrized, ParamObj
-from pulser.variable import Variable
 from pulser.waveforms import Waveform, ConstantWaveform
 
 
@@ -54,7 +53,7 @@ class Pulse:
 
     def __new__(cls, *args, **kwargs):
         for x in itertools.chain(args, kwargs.values()):
-            if isinstance(x, (Variable, Parametrized)):
+            if isinstance(x, Parametrized):
                 return ParamObj(cls, *args, **kwargs)
         else:
             return object.__new__(cls)

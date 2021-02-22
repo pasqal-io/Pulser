@@ -16,12 +16,12 @@ import copy
 from collections import namedtuple
 from collections.abc import Iterable
 from functools import wraps
+from itertools import chain
 
-import numpy as np
-
-from pulser.pulse import Pulse
 from pulser.devices import MockDevice
+from pulser.paramobj import Parametrized
 from pulser.sequence import Sequence
+from pulser.variable import Variable
 
 # TODO: Reject channel declaration with initial target as variables
 
@@ -31,6 +31,18 @@ _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 def _store(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
+        for x in chain(args, kwargs.values()):
+            if isinstance(x, Parametrized):
+                for name, var in x.variables.items():
+                    if name not in self._variables:
+                        raise ValueError(f"Unknown variable '{name}'.")
+                    elif self._variables[name] is not var:
+                        raise ValueError(
+                            f"{x} has variables that don't come from this "
+                            "SequenceBuilder. Use only what's returned by "
+                            "this SequenceBuilder's 'declare_variable' method"
+                            " as your variables."
+                            )
         func(self, *args, **kwargs)
         self._calls.append(_Call(func.__name__, args, kwargs))
     return wrapper
@@ -55,6 +67,7 @@ class SequenceBuilder:
         """Initializes a new pulse sequence."""
         self._root = Sequence(register, device)
         self._calls = []    # Stores the calls that make the Sequence
+        self._variables = {}
 
     @property
     def qubit_info(self):
@@ -67,11 +80,22 @@ class SequenceBuilder:
         return dict(self._root._channels)
 
     @property
+    def declared_variables(self):
+        return dict(self._variables)
+
+    @property
     def available_channels(self):
         """Channels still available for declaration."""
         return {id: ch for id, ch in self._root._device.channels.items()
                 if id not in self._root._taken_channels
                 or self._root._device == MockDevice}
+
+    def declare_variable(self, name, size=1, dtype=float):
+        if name in self._variables:
+            raise ValueError("Name for variable is already being used.")
+        var = Variable(name, dtype, size=size)
+        self._variables[name] = var
+        return var
 
     def declare_channel(self, name, channel_id, initial_target=None):
         """Declares a new channel to the Sequence.
@@ -241,15 +265,39 @@ class SequenceBuilder:
         if len(channels) < 2:
             raise ValueError("Needs at least two channels for alignment.")
 
-    def build(self):
+    def build(self, **vars):
+        all_keys, given_keys = self._variables.keys(), vars.keys()
+        if given_keys != all_keys:
+            invalid_vars = given_keys - all_keys
+            if invalid_vars:
+                raise TypeError("No declared variables named: "
+                                + ", ".join(invalid_vars))
+            missing_vars = all_keys - given_keys
+            if missing_vars:
+                raise TypeError("Did not receive values for variables: "
+                                + ", ".join(missing_vars))
+
+        for name, value in vars.items():
+            self._variables[name]._assign(value)
+
         seq = copy.deepcopy(self._root)
         for call in self._calls:
-            getattr(seq, call.name)(*call.args, **call.kwargs)
+            args_ = [arg() if isinstance(arg, Parametrized) else arg
+                     for arg in call.args]
+            kwargs_ = {key: val() if isinstance(val, Parametrized)
+                       else val for key, val in call.kwargs.items()}
+            getattr(seq, call.name)(*args_, **kwargs_)
 
         return seq
 
     def __str__(self):
-        return self._calls
+        prelude = "Prelude\n-------\n" + str(self._root)
+        lines = ["Stored calls\n------------"]
+        for c in self._calls:
+            args = [str(a) for a in c.args]
+            kwargs = [f"{key}={str(value)}" for key, value in c.kwargs.items()]
+            lines.append(f"{c.name}({', '.join(args+kwargs)})")
+        return prelude + "\n".join(lines)
 
     def _validate_channel(self, channel):
         if channel not in self._root._channels:

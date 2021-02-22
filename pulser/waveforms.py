@@ -25,7 +25,6 @@ import numpy as np
 
 from pulser.paramobj import Parametrized, ParamObj
 from pulser.utils import validate_duration
-from pulser.variable import Variable
 
 
 class Waveform(ABC):
@@ -33,7 +32,7 @@ class Waveform(ABC):
 
     def __new__(cls, *args, **kwargs):
         for x in itertools.chain(args, kwargs.values()):
-            if isinstance(x, (Variable, Parametrized)):
+            if isinstance(x, Parametrized):
                 return ParamObj(cls, *args, **kwargs)
         else:
             return object.__new__(cls)
@@ -398,8 +397,5 @@ def copy_func(f):
 
 for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
     if m[1].__module__ == __name__:
-        # @functools.wraps(m[1].__init__)
-        # def new(cls, *args, **kwargs):
-        #     return m[1].__new__(cls, *args, **kwargs)
         new = copy_func(m[1].__new__)
         m[1].__new__ = functools.update_wrapper(new, m[1].__init__)
