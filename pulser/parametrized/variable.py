@@ -13,19 +13,27 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union
 
 import numpy as np
 
-from pulser.paramobj import Parametrized
+from pulser.parametrized import Parametrized
+from pulser.parametrized.paramobj import OpSupport
 
 
 @dataclass(frozen=True)
-class Variable(Parametrized):
+class Variable(Parametrized, OpSupport):
+    """A variable for parametrized sequence building.
+
+    Args:
+        name (str): Unique name for the variable.
+        dtype (type): Type of the variable's content. Supports `float`, `int`
+            and `float`.
+        size (int=1): The number of values stored. Defaults to a single value.
+    """
+
     name: str
     dtype: type
     size: int = 1
-    value: Union[int, float, str] = None
 
     def __post_init__(self):
         if not isinstance(self.name, str):
@@ -36,12 +44,13 @@ class Variable(Parametrized):
             raise TypeError("Given variable 'size' is not of type 'int'.")
         elif self.size < 1:
             raise ValueError("Variables must be of size 1 or larger.")
+        self._clear()
 
     @property
     def variables(self):
         return {self.name: self}
 
-    def clear(self):
+    def _clear(self):
         self.__dict__["value"] = None
 
     def _assign(self, value):
@@ -71,12 +80,14 @@ class Variable(Parametrized):
             raise TypeError(f"Variable '{self.name}' is not subscriptable.")
         if isinstance(key, int):
             if not -self.size <= key < self.size:
-                raise KeyError(f"'{key}' outside of range for '{self.name}'.")
+                raise IndexError(f"{key} outside of range for '{self.name}'.")
 
         return _VariableItem(self, key)
 
 
-class _VariableItem(Parametrized):
+class _VariableItem(Parametrized, OpSupport):
+    """Stores access to items of a variable with multiple values."""
+
     def __init__(self, var, key):
         if not isinstance(var, Variable):
             return TypeError("VariableItem requires a Variable instance.")

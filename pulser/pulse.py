@@ -18,7 +18,7 @@ import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.paramobj import Parametrized, ParamObj
+from pulser.parametrized import Parametrized, ParamObj
 from pulser.waveforms import Waveform, ConstantWaveform
 
 

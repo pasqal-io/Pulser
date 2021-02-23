@@ -19,9 +19,8 @@ from functools import wraps
 from itertools import chain
 
 from pulser.devices import MockDevice
-from pulser.paramobj import Parametrized
+from pulser.parametrized import Parametrized, Variable
 from pulser.sequence import Sequence
-from pulser.variable import Variable
 
 # TODO: Reject channel declaration with initial target as variables
 
@@ -266,6 +265,14 @@ class SequenceBuilder:
             raise ValueError("Needs at least two channels for alignment.")
 
     def build(self, **vars):
+        """Builds the sequence from the programmed instructions.
+
+        Keyword Args:
+            vars: The values for all the variables declared in this
+                SequenceBuilder instance, indexed by the name given upon
+                declaration. Check `SequenceBuilder.declared_variables` to see
+                all the variables.
+        """
         all_keys, given_keys = self._variables.keys(), vars.keys()
         if given_keys != all_keys:
             invalid_vars = given_keys - all_keys

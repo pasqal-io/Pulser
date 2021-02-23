@@ -23,7 +23,7 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.paramobj import Parametrized, ParamObj
+from pulser.parametrized import Parametrized, ParamObj
 from pulser.utils import validate_duration
 
 
