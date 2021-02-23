@@ -44,6 +44,7 @@ class Variable(Parametrized, OpSupport):
             raise TypeError("Given variable 'size' is not of type 'int'.")
         elif self.size < 1:
             raise ValueError("Variables must be of size 1 or larger.")
+        self.__dict__["_count"] = -1      # Counts the updates
         self._clear()
 
     @property
@@ -52,6 +53,7 @@ class Variable(Parametrized, OpSupport):
 
     def _clear(self):
         self.__dict__["value"] = None
+        self.__dict__["_count"] += 1
 
     def _assign(self, value):
         val = np.array(value, dtype=self.dtype)
@@ -60,6 +62,7 @@ class Variable(Parametrized, OpSupport):
                              + f"variable of size {self.size}.")
 
         self.__dict__["value"] = self.dtype(val) if self.size == 1 else val
+        self.__dict__["_count"] += 1
 
     def __call__(self):
         if self.value is None:

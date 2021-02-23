@@ -73,18 +73,22 @@ class ParamObj(Parametrized, OpSupport):
         self.args = args
         self.kwargs = kwargs
         self._instance = None
+        self._vars_state = {}
 
     @property
     def variables(self):
         return self._variables
 
     def __call__(self):
-        # Builds all Parametrized arguments before feeding them cls
-        args_ = [arg() if isinstance(arg, Parametrized) else arg
-                 for arg in self.args]
-        kwargs_ = {key: val() if isinstance(val, Parametrized)
-                   else val for key, val in self.kwargs.items()}
-        self._instance = self.cls(*args_, **kwargs_)
+        vars_state = {key: var._count for key, var in self._variables.items()}
+        if vars_state.items() != self._vars_state.items():
+            self._vars_state = vars_state
+            # Builds all Parametrized arguments before feeding them to cls
+            args_ = [arg() if isinstance(arg, Parametrized) else arg
+                     for arg in self.args]
+            kwargs_ = {key: val() if isinstance(val, Parametrized)
+                       else val for key, val in self.kwargs.items()}
+            self._instance = self.cls(*args_, **kwargs_)
         return self._instance
 
     def __getattr__(self, name):
@@ -112,10 +116,7 @@ class _ParamObjAttr(Parametrized, OpSupport):
         return self.param_obj.variables
 
     def __call__(self):
-        if isinstance(self.param_obj._instance, self.param_obj.cls):
-            return getattr(self.param_obj._instance, self.attr)
-        else:
-            return getattr(self.param_obj(), self.attr)
+        return getattr(self.param_obj(), self.attr)
 
     def __str__(self):
         return f"{str(self.param_obj)}.{self.attr}"

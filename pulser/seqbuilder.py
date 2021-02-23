@@ -300,11 +300,11 @@ class SequenceBuilder:
     def __str__(self):
         prelude = "Prelude\n-------\n" + str(self._root)
         lines = ["Stored calls\n------------"]
-        for c in self._calls:
+        for i, c in enumerate(self._calls):
             args = [str(a) for a in c.args]
             kwargs = [f"{key}={str(value)}" for key, value in c.kwargs.items()]
-            lines.append(f"{c.name}({', '.join(args+kwargs)})")
-        return prelude + "\n".join(lines)
+            lines.append(f"{i}. {c.name}({', '.join(args+kwargs)})")
+        return prelude + "\n\n".join(lines)
 
     def _validate_channel(self, channel):
         if channel not in self._root._channels:
