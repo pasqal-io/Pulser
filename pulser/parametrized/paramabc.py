@@ -25,6 +25,6 @@ class Parametrized(ABC):
         pass
 
     @abstractmethod
-    def __call__():
+    def build():
         """Builds the object."""
         pass

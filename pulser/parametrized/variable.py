@@ -64,7 +64,8 @@ class Variable(Parametrized, OpSupport):
         self.__dict__["value"] = self.dtype(val) if self.size == 1 else val
         self.__dict__["_count"] += 1
 
-    def __call__(self):
+    def build(self):
+        """Returns the variable's current value."""
         if self.value is None:
             raise ValueError(f"No value assigned to variable '{self.name}'.")
 
@@ -101,8 +102,9 @@ class _VariableItem(Parametrized, OpSupport):
     def variables(self):
         return self.var.variables
 
-    def __call__(self):
-        return self.var()[self.key]
+    def build(self):
+        """Return the variable's item(s) values."""
+        return self.var.build()[self.key]
 
     def __str__(self):
         if isinstance(self.key, slice):

@@ -67,6 +67,8 @@ class ParamObj(Parametrized, OpSupport):
         """
         self.cls = cls
         self._variables = {}
+        if isinstance(self.cls, Parametrized):
+            self._variables.update(self.cls.variables)
         for x in chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 self._variables.update(x.variables)
@@ -79,23 +81,28 @@ class ParamObj(Parametrized, OpSupport):
     def variables(self):
         return self._variables
 
-    def __call__(self):
+    def build(self):
         vars_state = {key: var._count for key, var in self._variables.items()}
         if vars_state.items() != self._vars_state.items():
             self._vars_state = vars_state
             # Builds all Parametrized arguments before feeding them to cls
-            args_ = [arg() if isinstance(arg, Parametrized) else arg
+            args_ = [arg.build() if isinstance(arg, Parametrized) else arg
                      for arg in self.args]
-            kwargs_ = {key: val() if isinstance(val, Parametrized)
+            kwargs_ = {key: val.build() if isinstance(val, Parametrized)
                        else val for key, val in self.kwargs.items()}
-            self._instance = self.cls(*args_, **kwargs_)
+            obj = (self.cls.build() if isinstance(self.cls, ParamObj)
+                   else self.cls)
+            self._instance = obj(*args_, **kwargs_)
         return self._instance
+
+    def __call__(self, *args, **kwargs):
+        return ParamObj(self, *args, **kwargs)
 
     def __getattr__(self, name):
         if hasattr(self.cls, name):
             return ParamObj(getattr, self, name)
         else:
-            AttributeError(f"No attribute named '{name}' in {self}.")
+            raise AttributeError(f"No attribute named '{name}' in {self}.")
 
     def __str__(self):
         args = [str(a) for a in self.args]

@@ -289,9 +289,9 @@ class SequenceBuilder:
 
         seq = copy.deepcopy(self._root)
         for call in self._calls:
-            args_ = [arg() if isinstance(arg, Parametrized) else arg
+            args_ = [arg.build() if isinstance(arg, Parametrized) else arg
                      for arg in call.args]
-            kwargs_ = {key: val() if isinstance(val, Parametrized)
+            kwargs_ = {key: val.build() if isinstance(val, Parametrized)
                        else val for key, val in call.kwargs.items()}
             getattr(seq, call.name)(*args_, **kwargs_)
 
