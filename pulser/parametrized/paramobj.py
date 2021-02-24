@@ -82,6 +82,7 @@ class ParamObj(Parametrized, OpSupport):
         return self._variables
 
     def build(self):
+        """Builds the object with it's variables last assigned values."""
         vars_state = {key: var._count for key, var in self._variables.items()}
         if vars_state.items() != self._vars_state.items():
             self._vars_state = vars_state

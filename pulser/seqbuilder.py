@@ -28,8 +28,10 @@ _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
 
 def _store(func):
+    """Stores a Sequence building call, potentially with Variable inputs."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
+        # Check if all Parametrized inputs stem from declared variables
         for x in chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 for name, var in x.variables.items():
@@ -50,17 +52,28 @@ def _store(func):
 class SequenceBuilder:
     """A blueprint for a Sequence.
 
-    A sequence is composed by
+    The SequenceBuilder is designed to replicate the process of building a
+    regular Sequence as closely as possible, while allowing the use of
+    variable parameters. These variables have to be obtained through
+    `SequenceBuilder.declare_variable()` and their values have to be
+    specified as arguments of `SequenceBuilder.build()`, which returns the
+    corresponding Sequence.
 
-        - The device in which we want to implement it
-        - The register of qubits on which to act
-        - The device's channels that are used
-        - The schedule of operations on each channel
+    The variables declared through a SequenceBuilder can be used to create
+    parametrized versions of Waveform and Pulse objects, which in turn can be
+    added to the SequenceBuilder. Additionally, simple arithmetic operations
+    involving variables are also supported and will return parametrized objects
+    that are functions of the involved variables.
 
     Args:
         register(Register): The atom register on which to apply the pulses.
         device(PasqalDevice): A valid device in which to execute the Sequence
             (import it from ``pulser.devices``).
+
+    Note:
+        The register, device and channel declarations do not support variable
+        parameters. As such, they are the same for all Sequences built by a
+        specific SequenceBuilder.
     """
     def __init__(self, register, device):
         """Initializes a new pulse sequence."""
@@ -75,11 +88,12 @@ class SequenceBuilder:
 
     @property
     def declared_channels(self):
-        """Channels declared in this Sequence."""
+        """Channels declared in this SequenceBuilder."""
         return dict(self._root._channels)
 
     @property
     def declared_variables(self):
+        """Variables declared in this SequenceBuilder."""
         return dict(self._variables)
 
     @property
@@ -90,6 +104,24 @@ class SequenceBuilder:
                 or self._root._device == MockDevice}
 
     def declare_variable(self, name, size=1, dtype=float):
+        """Declare a new variable within this SequenceBuilder.
+
+        Args:
+            name(str): The name for the variable. Must be unique within a
+                SequenceBuilder.
+
+        Keyword Args:
+            size(int=1): The number of entries stored in the variable.
+            dtype(default=float): The type of the data that will be assigned
+                to the variable. Must be `float`, `int` or `str`.
+
+        Returns:
+            Variable: The declared Variable instance.
+
+        Note:
+            To avoid confusion, it is recommended to store the returned
+            Variable instance in a Python variable with the same name.
+        """
         if name in self._variables:
             raise ValueError("Name for variable is already being used.")
         var = Variable(name, dtype, size=size)
@@ -102,8 +134,8 @@ class SequenceBuilder:
         Args:
             name (str): Unique name for the channel in the sequence.
             channel_id (str): How the channel is identified in the device.
-                Consult ``Sequence.available_channels`` to see which channel
-                ID's are still available and the associated channel's
+                Consult ``SequenceBuilder.available_channels`` to see which
+                channel ID's are still available and the associated channel's
                 description.
 
         Keyword Args:
@@ -203,7 +235,7 @@ class SequenceBuilder:
         """Measures in a valid basis.
 
         Args:
-            basis (str): Valid basis for measurement (consult the
+            basis(str): Valid basis for measurement (consult the
                 'supported_bases' attribute of the selected device for
                 the available options).
         """
@@ -272,6 +304,17 @@ class SequenceBuilder:
                 SequenceBuilder instance, indexed by the name given upon
                 declaration. Check `SequenceBuilder.declared_variables` to see
                 all the variables.
+
+        Returns:
+            Sequence: The Sequence built with the given variable values.
+
+        Example:
+            # Check which variables are declared
+            >>> print(seq_builder.declared_variables)
+            {'x': Variable(name='x', dtype=<class 'float'>, size=1),
+             'y': Variable(name='y', dtype=<class 'int'>, size=3)}
+            # Build a sequence with specific values for both variables
+            >>> seq = seq_builder.build(x=0.5, y=[1, 2, 3])
         """
         all_keys, given_keys = self._variables.keys(), vars.keys()
         if given_keys != all_keys:
