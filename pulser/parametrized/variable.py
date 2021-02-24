@@ -40,7 +40,7 @@ class Variable(Parametrized, OpSupport):
         if not isinstance(self.name, str):
             raise TypeError("Variable's 'name' has to be of type 'str'.")
         if self.dtype not in [int, float, str]:
-            raise TypeError("Invalid data type.")
+            raise TypeError(f"Invalid data type '{self.dtype}' for Variable.")
         if not isinstance(self.size, int):
             raise TypeError("Given variable 'size' is not of type 'int'.")
         elif self.size < 1:
