@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from typing import Union
 
 import numpy as np
 
@@ -20,7 +21,7 @@ from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Variable(Parametrized, OpSupport):
     """A variable for parametrized sequence building.
 
@@ -89,14 +90,12 @@ class Variable(Parametrized, OpSupport):
         return _VariableItem(self, key)
 
 
+@dataclass(frozen=True)
 class _VariableItem(Parametrized, OpSupport):
     """Stores access to items of a variable with multiple values."""
 
-    def __init__(self, var, key):
-        if not isinstance(var, Variable):
-            return TypeError("VariableItem requires a Variable instance.")
-        self.var = var
-        self.key = key
+    var: Variable
+    key: Union[int, slice]
 
     @property
     def variables(self):
