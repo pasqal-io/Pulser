@@ -93,7 +93,7 @@ class ParamObj(Parametrized, OpSupport):
 
     def __getattr__(self, name):
         if hasattr(self.cls, name):
-            return _ParamObjAttr(self, name)
+            return ParamObj(getattr, self, name)
         else:
             AttributeError(f"No attribute named '{name}' in {self}.")
 
@@ -101,22 +101,3 @@ class ParamObj(Parametrized, OpSupport):
         args = [str(a) for a in self.args]
         kwargs = [f"{key}={str(value)}" for key, value in self.kwargs.items()]
         return f"{self.cls.__name__}({', '.join(args+kwargs)})"
-
-
-class _ParamObjAttr(Parametrized, OpSupport):
-    """Stores the access to the attribute of a ParamObj's build."""
-    def __init__(self, param_obj, attr):
-        if not isinstance(param_obj, ParamObj):
-            return TypeError("ParamObjAttr requires a ParamObj instance.")
-        self.param_obj = param_obj
-        self.attr = attr
-
-    @property
-    def variables(self):
-        return self.param_obj.variables
-
-    def __call__(self):
-        return getattr(self.param_obj(), self.attr)
-
-    def __str__(self):
-        return f"{str(self.param_obj)}.{self.attr}"
