@@ -15,6 +15,7 @@
 from functools import partialmethod
 from itertools import chain
 import operator
+import warnings
 
 from pulser.parametrized import Parametrized
 
@@ -97,6 +98,12 @@ class ParamObj(Parametrized, OpSupport):
         return self._instance
 
     def __call__(self, *args, **kwargs):
+        obj = ParamObj(self, *args, **kwargs)
+        warnings.warn("Calls to methods of parametrized objects are only "
+                      "executed if they serve as arguments of other "
+                      "parametrized objects that are themselves built. If this"
+                      f" is not the case, the call to {obj} will not be "
+                      "executed upon sequence building.")
         return ParamObj(self, *args, **kwargs)
 
     def __getattr__(self, name):
@@ -108,4 +115,6 @@ class ParamObj(Parametrized, OpSupport):
     def __str__(self):
         args = [str(a) for a in self.args]
         kwargs = [f"{key}={str(value)}" for key, value in self.kwargs.items()]
-        return f"{self.cls.__name__}({', '.join(args+kwargs)})"
+        name = (str(self.cls) if isinstance(self.cls, Parametrized)
+                else self.cls.__name__)
+        return f"{name}({', '.join(args+kwargs)})"

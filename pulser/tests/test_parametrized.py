@@ -18,16 +18,17 @@ import numpy as np
 import pytest
 
 from pulser import Pulse
-from pulser.parametrized import Parametrized, ParamObj, Variable
+from pulser.parametrized import Variable
 from pulser.waveforms import BlackmanWaveform, CompositeWaveform
 
-import numpy as np
-import pytest
 
 a = Variable("a", float)
 b = Variable("b", int, size=2)
 b._assign([-1.5, 1.5])
 c = Variable("c", str)
+t = Variable("t", int)
+bwf = BlackmanWaveform(t, a)
+pulse = Pulse.ConstantDetuning(bwf, *b)
 
 
 def test_var():
@@ -80,3 +81,40 @@ def test_varitem():
     assert np.all(b01.build() == np.array([1, -1]))
     with pytest.raises(FrozenInstanceError):
         b1.key = 0
+
+
+def test_paramobj():
+    assert set(bwf.variables.keys()) == {"t", "a"}
+    assert set(pulse.variables.keys()) == {"t", "a", "b"}
+    assert str(bwf) == "BlackmanWaveform(t, a)"
+    assert str(pulse) == (f"Pulse({str(bwf)}, "
+                          + f"ConstantWaveform(getattr({str(bwf)}, duration), "
+                          + "b[0]), b[1], 0)")
+    with pytest.raises(AttributeError):
+        bwf._duration
+    time = bwf.duration
+    samps = bwf.samples
+    cwf = CompositeWaveform(bwf, bwf)
+    with pytest.warns(UserWarning):
+        append_call = cwf.append(bwf)
+
+    t._assign(1000)
+    a._assign(np.pi)
+    assert len(cwf.build().samples) == len(samps.build()) * 2
+    append_call.build()
+    assert time.build() == 1000
+    assert len(cwf.build().samples) == len(samps.build()) * 3
+    assert np.all(cwf.build().samples == np.array(samps.build().tolist() * 3))
+
+
+def test_opsupport():
+    a._assign(-2.0)
+    x = 5 + a
+    x = b - x       # x = [-4, -2]
+    x = x / 2
+    x = 8 * x      # x = [-16, -8]
+    x = -x // 3      # x = [5, 3]
+    assert np.all(x.build() == [5., 2.])
+    assert (a**a).build() == 0.25
+    assert abs(a).build() == 2.0
+    assert (3 % a).build() == -1.
