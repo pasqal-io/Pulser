@@ -60,8 +60,12 @@ def test_var():
     with pytest.raises(ValueError, match="No value"):
         a.build()
 
-    c._assign(3.14)
-    assert c.build() == "3.14"
+    with pytest.raises(TypeError, match="must be of type 'str'"):
+        c._assign(3.14)
+
+    d = Variable("d", str, size=2)
+    d._assign(["o", "k"])
+    assert np.all(d.build() == np.array(["o", "k"]))
 
     with pytest.raises(TypeError, match="Invalid key type"):
         b[[0, 1]]

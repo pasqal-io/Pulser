@@ -57,6 +57,12 @@ class Variable(Parametrized, OpSupport):
         self.__dict__["_count"] += 1
 
     def _assign(self, value):
+        if self.dtype == str:
+            if not (isinstance(value, str) if self.size == 1
+                    else all(isinstance(s, str) for s in value)):
+                raise TypeError(f"Provided values for variable '{self.name}' "
+                                "must be of type 'str'.")
+
         val = np.array(value, dtype=self.dtype)
         if val.size != self.size:
             raise ValueError(f"Can't assign array of size {val.size} to "

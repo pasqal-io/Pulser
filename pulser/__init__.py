@@ -22,4 +22,6 @@ from pulser.register import Register
 
 from pulser.sequence import Sequence
 
+from pulser.seqbuilder import SequenceBuilder
+
 from pulser.simulation import Simulation

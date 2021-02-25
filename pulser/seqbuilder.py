@@ -14,15 +14,12 @@
 
 import copy
 from collections import namedtuple
-from collections.abc import Iterable
 from functools import wraps
 from itertools import chain
 
 from pulser.devices import MockDevice
 from pulser.parametrized import Parametrized, Variable
 from pulser.sequence import Sequence
-
-# TODO: Reject channel declaration with initial target as variables
 
 _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
@@ -31,6 +28,9 @@ def _store(func):
     """Stores a Sequence building call, potentially with Variable inputs."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
+        if hasattr(self, "_measurement"):
+            raise SystemError("The sequence has been measured, no further "
+                              "changes are allowed.")
         # Check if all Parametrized inputs stem from declared variables
         for x in chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
@@ -146,11 +146,11 @@ class SequenceBuilder:
         """
 
         if initial_target is not None:
-            if (isinstance(initial_target, Iterable) and
-               not isinstance(initial_target, str)):
-                qs = set(initial_target)
-            else:
-                qs = {initial_target}
+            qubits = initial_target
+            try:
+                qs = set(qubits) if not isinstance(qubits, str) else {qubits}
+            except TypeError:
+                qs = {qubits}
 
             if not qs.issubset(self._root._qids):
                 raise ValueError("The initial target has to be a fixed qubit "
@@ -207,9 +207,9 @@ class SequenceBuilder:
 
         self._validate_channel(channel)
 
-        if isinstance(qubits, Iterable) and not isinstance(qubits, str):
-            qs = set(qubits)
-        else:
+        try:
+            qs = set(qubits) if not isinstance(qubits, str) else {qubits}
+        except TypeError:
             qs = {qubits}
 
         if self._root._channels[channel].addressing != 'Local':
@@ -244,9 +244,6 @@ class SequenceBuilder:
             raise ValueError(f"The basis '{basis}' is not supported by the "
                              "selected device. The available options are: "
                              + ", ".join(list(available)))
-
-        if hasattr(self, '_measurement'):
-            raise SystemError("The sequence has already been measured.")
 
         self._measurement = basis
 
@@ -343,7 +340,7 @@ class SequenceBuilder:
     def __str__(self):
         prelude = "Prelude\n-------\n" + str(self._root)
         lines = ["Stored calls\n------------"]
-        for i, c in enumerate(self._calls):
+        for i, c in enumerate(self._calls, 1):
             args = [str(a) for a in c.args]
             kwargs = [f"{key}={str(value)}" for key, value in c.kwargs.items()]
             lines.append(f"{i}. {c.name}({', '.join(args+kwargs)})")
