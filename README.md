@@ -48,7 +48,8 @@ pytest --cov pulser
 ```
 ## Contributing
 
-Want to contribute to Pulser? Great! See [How to Contribute](CONTRIBUTING.md) for information on how you can do so.
+Want to contribute to Pulser? Great! See [How to Contribute][contributing] for information on how you can do so.
 
 [pasqal]: https://pasqal.io/
 [qutip]: http://qutip.org/
+[contributing]: https://github.com/pasqal-io/Pulser/blob/master/CONTRIBUTING.md
