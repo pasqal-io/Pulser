@@ -125,7 +125,7 @@ class SimulationResults:
 
         N = self._size
         self.N_samples = N_samples
-        probs = np.abs(self._states[-1].data.toarray())**2
+        probs = np.abs(self._states[-1].full())**2
         if self._dim == 2:
             if meas_basis == self._basis_name:
                 # State vector ordered with r first for 'ground_rydberg'
