@@ -59,6 +59,53 @@ class SimulationResults:
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._states)
 
+    def get_final_state(self, reduce_to_basis=None, ignore_global_phase=True):
+        """Get the final state of the simulation.
+
+        Keyword Args:
+            reduce_to_basis(str, default=None): Reduces the full state vector
+                to the given basis ("ground-rydberg" or "digital"), if the
+                population of the states to be ignored is negligible.
+            ignore_global_phase(bool, default=True): If True, changes the
+                final state's global phase such that the largest term (in
+                absolute value) is real.
+
+        Returns:
+            qutip.Qobj: The resulting final state.
+
+        Raises:
+            TypeError: If trying to reduce to a basis that would eliminate
+                states with significant occupation probabilites.
+        """
+        final_state = self._states[-1].copy()
+        if ignore_global_phase:
+            full = final_state.full()
+            global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
+            final_state *= np.exp(-1j * global_ph)
+        if self._dim != 3:
+            if reduce_to_basis not in [None, self._basis_name]:
+                raise TypeError(f"Can't reduce a system in {self._basis_name}"
+                                + f" to the {reduce_to_basis} basis.")
+        elif reduce_to_basis is not None:
+            if reduce_to_basis == "ground-rydberg":
+                ex_state = "2"
+            elif reduce_to_basis == "digital":
+                ex_state = "0"
+            else:
+                raise ValueError("'reduce_to_basis' must be 'ground-rydberg' "
+                                 + f"or 'digital', not '{reduce_to_basis}'.")
+            ex_inds = [i for i in range(3**self._size) if ex_state in
+                       np.base_repr(i, base=3).zfill(self._size)]
+            ex_probs = np.abs(final_state.extract_states(ex_inds).full()) ** 2
+            if not np.all(np.isclose(ex_probs, 0)):
+                raise TypeError(
+                    "Can't reduce to chosen basis because the population of a "
+                    "state to eliminate is not negligible."
+                    )
+            final_state = final_state.eliminate_states(ex_inds, normalize=True)
+
+        return final_state.tidyup()
+
     def expect(self, obs_list):
         """Calculates the expectation value of a list of observables.
 
