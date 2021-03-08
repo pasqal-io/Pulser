@@ -105,10 +105,10 @@ class PasqalDevice:
         if len(atoms) > self.max_atom_num:
             raise ValueError("Too many atoms in the array, the device accepts "
                              "at most {} atoms.".format(self.max_atom_num))
-        for pos in atoms:
-            if len(pos) != self.dimensions:
-                raise ValueError("All qubit positions must be {}D "
-                                 "vectors.".format(self.dimensions))
+
+        if register._dim != self.dimensions:
+            raise ValueError("All qubit positions must be {}D "
+                             "vectors.".format(self.dimensions))
 
         if len(atoms) > 1:
             distances = pdist(atoms)  # Pairwise distance between atoms
