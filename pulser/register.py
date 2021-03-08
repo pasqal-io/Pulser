@@ -33,7 +33,13 @@ class Register:
             raise TypeError("The qubits have to be stored in a dictionary "
                             "matching qubit ids to position coordinates.")
         self._ids = list(qubits.keys())
-        self._coords = list(qubits.values())
+        coords = [np.array(v, dtype=float) for v in qubits.values()]
+        self._dim = coords[0].size
+        if (any(c.shape != (self._dim,) for c in coords) or
+           (self._dim != 2 and self._dim != 3)):
+            raise ValueError("All coordinates must be specified as vectors of"
+                             " size 2 or 3.")
+        self._coords = coords
 
     @property
     def qubits(self):
@@ -130,6 +136,8 @@ class Register:
         Args:
             degrees (float): The angle of rotation in degrees.
         """
+        if self._dim != 2:
+            raise NotImplementedError("Can only rotate arrays in 2D.")
         theta = np.deg2rad(degrees)
         rot = np.array([[np.cos(theta), -np.sin(theta)],
                         [np.sin(theta), np.cos(theta)]])
@@ -157,6 +165,8 @@ class Register:
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
+        if self._dim != 2:
+            raise NotImplementedError("Can only draw register layouts in 2D.")
         pos = np.array(self._coords)
         diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
         diffs[diffs < 9] *= 1.5
