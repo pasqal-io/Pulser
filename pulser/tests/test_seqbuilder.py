@@ -134,6 +134,15 @@ def test_build():
     assert seq._measurement == "ground-rydberg"
 
 
+def test_getattr():
+    sb = SequenceBuilder(reg, device)
+    with pytest.raises(AttributeError,
+                       match="attribute of 'Sequence' is not available"):
+        sb.draw()
+    with pytest.raises(AttributeError, match="has no attribute"):
+        sb.dra()
+
+
 def test_str():
     reg_ = Register.rectangle(2, 1, prefix="q")
     sb = SequenceBuilder(reg_, device)

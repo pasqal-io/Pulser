@@ -337,6 +337,15 @@ class SequenceBuilder:
 
         return seq
 
+    def __getattr__(self, name):
+        if hasattr(self._root, name):
+            raise AttributeError(f"'{name}' attribute of 'Sequence' is not "
+                                 "available in 'SequenceBuilder'.")
+        else:
+            raise AttributeError(
+                f"'SequenceBuilder' object has no attribute '{name}'."
+                )
+
     def __str__(self):
         prelude = "Prelude\n-------\n" + str(self._root)
         lines = ["Stored calls\n------------"]
