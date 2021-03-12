@@ -20,6 +20,7 @@ from copy import deepcopy
 
 from pulser import Pulse, Sequence
 from pulser.simresults import SimulationResults
+from pulser._sim_drawer import draw_simulation
 
 
 class Simulation:
@@ -73,6 +74,12 @@ class Simulation:
         self._extract_samples()
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
+        
+        
+
+    def draw(self):
+        """Draws the sequence of the simulation."""
+        draw_simulation(self)
 
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
