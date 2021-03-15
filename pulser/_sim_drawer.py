@@ -31,7 +31,6 @@ def gather_data(sim):
     # The sequence used in the simulation
     seq = sim._seq
     
-    
     # The minimum time axis length is 100 ns
     seq._total_duration = max([seq._last(ch).tf for ch in seq._schedule
                                if seq._schedule[ch]] + [100])
@@ -89,13 +88,8 @@ def draw_simulation(sim):
     
     # The sequence used in the simulation
     time_slices = (1000*sim._times).astype(int)
-    
     seq = sim._seq
     
-#    samples_a = sim.samples['Global']['ground-rydberg']['amp']
-#    samples_d = sim.samples['Global']['ground-rydberg']['det']
-#    samples_p = sim.samples['Global']['ground-rydberg']['phase']
-#    times = (1000*sim._times).astype(int)
     
 
     def phase_str(phi):
@@ -111,6 +105,7 @@ def draw_simulation(sim):
     n_channels = len(seq._channels)
     if not n_channels:
         raise SystemError("Can't draw an empty sequence.")
+        
     data = gather_data(sim)
     time_scale = 1e3 if seq._total_duration > 1e4 else 1
 
@@ -164,7 +159,6 @@ def draw_simulation(sim):
             yaeff += [ya[ti],ya[ti]]
             ybeff += [yb[ti],yb[ti]]
             
-        
         t_min = -t[-1]*0.03
         t_max = t[-1]*1.05
         a.set_xlim(t_min, t_max)
