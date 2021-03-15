@@ -154,7 +154,7 @@ def draw_simulation(sim):
         yaeff = []
         ybeff = []
         
-        for ti, tf in zip(time_slices,time_slices[1:]):
+        for ti, tf in zip(time_slices[1:],time_slices[2:]):
             teff += [t[ti],t[tf]]
             yaeff += [ya[ti],ya[ti]]
             ybeff += [yb[ti],yb[ti]]
