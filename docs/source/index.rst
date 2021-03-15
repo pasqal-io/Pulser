@@ -67,6 +67,7 @@ computers and simulators, check the pages in :doc:`review`.
    phase_shifts_vz_gates
    cz_gate
    optimization
+   qaoa_mis
 
 .. toctree::
    :maxdepth: 2
