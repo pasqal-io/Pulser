@@ -20,6 +20,7 @@ from copy import deepcopy
 
 from pulser import Pulse, Sequence
 from pulser.simresults import SimulationResults
+from pulser._sim_drawer import draw_simulation
 
 
 class Simulation:
@@ -73,6 +74,15 @@ class Simulation:
         self._extract_samples()
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
+        
+        
+
+    def draw(self):
+        """Draws the simulation, showing both the input sequence and
+        the effective, constant-by-part (sampled) sequence used in QuTip.
+        """
+    
+        draw_simulation(self)
 
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
