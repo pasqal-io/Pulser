@@ -334,14 +334,13 @@ class BlackmanWaveform(Waveform):
 
     Args:
         duration: The waveform duration (in multiples of 4 ns).
-        area: The area under the waveform.
+        area: The integral of the waveform. Can be negative, in which case it
+            takes the positive waveform and changes the sign of all its values.
     """
     def __init__(self, duration, area):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
-        if area <= 0:
-            raise ValueError("Area under the waveform needs to be positive.")
-        self._area = area
+        self._area = float(area)
 
     @property
     def duration(self):
