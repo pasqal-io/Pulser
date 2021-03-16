@@ -122,9 +122,10 @@ def test_composite():
 
 
 def test_custom():
-    wf = CustomWaveform(np.arange(16))
+    data = np.arange(16, dtype=float)
+    wf = CustomWaveform(data)
     assert wf.__str__() == 'Custom'
-    assert wf.__repr__() == f'CustomWaveform(16 ns, {np.arange(16)!r})'
+    assert wf.__repr__() == f'CustomWaveform(16 ns, {data!r})'
 
 
 def test_ramp():
@@ -149,3 +150,13 @@ def test_blackman():
     wf = BlackmanWaveform.from_max_val(-10, -np.pi)
     assert np.isclose(wf.integral, -np.pi)
     assert np.min(wf.samples) > -10
+
+
+def test_ops():
+    assert -constant == ConstantWaveform(100, 3)
+    assert ramp * 2 == RampWaveform(2e3, 10, 38)
+    assert --custom == custom
+    assert blackman / 2 == BlackmanWaveform(40, np.pi / 2)
+    assert composite * 1 == composite
+    with pytest.raises(ZeroDivisionError):
+        constant / 0
