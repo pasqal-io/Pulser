@@ -59,16 +59,21 @@ class SimulationResults:
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._states)
 
-    def get_final_state(self, reduce_to_basis=None, ignore_global_phase=True):
+    def get_final_state(self, reduce_to_basis=None, ignore_global_phase=True,
+                        tol=1e-6, normalize=True):
         """Get the final state of the simulation.
 
         Keyword Args:
-            reduce_to_basis(str, default=None): Reduces the full state vector
+            reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible.
-            ignore_global_phase(bool, default=True): If True, changes the
+            ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
+            tol (float, default=1e-6): Maximum allowed population of each
+                eliminated state.
+            normalize (bool, default=True): Whether to normalize the reduced
+                state.
 
         Returns:
             qutip.Qobj: The resulting final state.
@@ -97,12 +102,13 @@ class SimulationResults:
             ex_inds = [i for i in range(3**self._size) if ex_state in
                        np.base_repr(i, base=3).zfill(self._size)]
             ex_probs = np.abs(final_state.extract_states(ex_inds).full()) ** 2
-            if not np.all(np.isclose(ex_probs, 0)):
+            if not np.all(np.isclose(ex_probs, 0, atol=tol)):
                 raise TypeError(
                     "Can't reduce to chosen basis because the population of a "
-                    "state to eliminate is not negligible."
+                    "state to eliminate is above the allowed tolerance."
                     )
-            final_state = final_state.eliminate_states(ex_inds, normalize=True)
+            final_state = final_state.eliminate_states(
+                                                ex_inds, normalize=normalize)
 
         return final_state.tidyup()
 
