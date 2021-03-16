@@ -346,15 +346,45 @@ class BlackmanWaveform(Waveform):
     """A Blackman window of a specified duration and area.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        area: The area under the waveform.
+        duration (int): The waveform duration (in multiples of 4 ns).
+        area (float): The integral of the waveform. Can be negative, in which
+            case it takes the positive waveform and changes the sign of all its
+            values.
     """
     def __init__(self, duration, area):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
-        if area <= 0:
-            raise ValueError("Area under the waveform needs to be positive.")
-        self._area = area
+        self._area = float(area)
+        self._norm_samples = np.clip(np.blackman(self._duration), 0, np.inf)
+        self._scaling = self._area / np.sum(self._norm_samples) / 1e-3
+
+    @classmethod
+    def from_max_val(cls, max_val, area):
+        """Creates a Blackman waveform with a threshold on the maximum value.
+
+        Instead of defining a duration, the waveform is defined by its area and
+        the maximum value. The duration is chosen so that the maximum value is
+        not surpassed, but approached as closely as possible.
+
+        Args:
+            max_val (float): The maximum value threshold (in rad/µs). If
+                negative, it is taken as the lower bound i.e. the minimum
+                value that can be reached. The sign of `max_val` must match the
+                sign of `area`.
+            area (float): The area under the waveform.
+        """
+        if np.sign(max_val) != np.sign(area):
+            raise ValueError("The maximum value and the area must have "
+                             "matching signs.")
+        # A normalized Blackman waveform has an area of 0.42 * duration
+        duration = int(area / (0.42 * max_val) * 1e3)    # in ns
+        duration = 16 if duration < 16 else duration + (4 - duration % 4)
+        wf = cls(duration, area)
+        # Adjust for rounding errors to make sure max_val is not surpassed
+        while np.abs(wf._scaling) > np.abs(max_val):
+            duration += 4
+            wf = cls(duration, area)
+        return wf
 
     @property
     def duration(self):
@@ -368,9 +398,7 @@ class BlackmanWaveform(Waveform):
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        samples = np.clip(np.blackman(self._duration), 0, np.inf)
-        scaling = self._area / np.sum(samples) / 1e-3
-        return samples * scaling
+        return self._norm_samples * self._scaling
 
     @property
     def first_value(self):

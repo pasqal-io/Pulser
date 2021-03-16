@@ -28,9 +28,16 @@ def test_creation():
         Register(coords)
         Register(ids)
 
+    with pytest.raises(ValueError, match="vectors of size 2 or 3"):
+        Register.from_coordinates([(0, 1, 0, 1)])
+
+    with pytest.raises(ValueError, match="vectors of size 2 or 3"):
+        Register.from_coordinates([((1, 0),), ((-1, 0),)])
+
     reg1 = Register(qubits)
     reg2 = Register.from_coordinates(coords, center=False, prefix='q')
-    assert reg1.qubits == reg2.qubits
+    assert np.all(np.array(reg1._coords) == np.array(reg2._coords))
+    assert reg1._ids == reg2._ids
 
     reg3 = Register.from_coordinates(np.array(coords), prefix='foo')
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
@@ -52,6 +59,9 @@ def test_creation():
 
 
 def test_rotation():
+    with pytest.raises(NotImplementedError):
+        reg_ = Register.from_coordinates([(1, 0, 0), (0, 1, 4)])
+        reg_.rotate(20)
     reg = Register.square(2, spacing=np.sqrt(2))
     reg.rotate(45)
     coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
@@ -59,6 +69,9 @@ def test_rotation():
 
 
 def test_drawing():
+    with pytest.raises(NotImplementedError, match="register layouts in 2D."):
+        reg_ = Register.from_coordinates([(1, 0, 0), (0, 1, 4)])
+        reg_.draw()
     reg = Register.triangular_lattice(3, 8)
     with patch('matplotlib.pyplot.show'):
         reg.draw()
@@ -74,5 +87,5 @@ def test_drawing():
         reg.draw(draw_half_radius=True)
 
     reg = Register.square(1)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True)
