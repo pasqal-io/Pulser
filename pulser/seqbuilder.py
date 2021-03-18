@@ -16,8 +16,8 @@ import copy
 from collections import namedtuple
 from functools import wraps
 from itertools import chain
+import warnings
 
-from pulser.devices import MockDevice
 from pulser.parametrized import Parametrized, Variable
 from pulser.sequence import Sequence
 
@@ -26,6 +26,10 @@ _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
 def _store(func):
     """Stores a Sequence building call, potentially with Variable inputs."""
+    if not hasattr(Sequence, func.__name__):
+        raise AttributeError("Trying to store a call to a function that's not "
+                             "in Sequence.")
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         if hasattr(self, "_measurement"):
@@ -84,12 +88,12 @@ class SequenceBuilder:
     @property
     def qubit_info(self):
         """Dictionary with the qubit's IDs and positions."""
-        return self._root._register.qubits
+        return self._root.qubit_info
 
     @property
     def declared_channels(self):
         """Channels declared in this SequenceBuilder."""
-        return dict(self._root._channels)
+        return self._root.declared_channels
 
     @property
     def declared_variables(self):
@@ -99,9 +103,7 @@ class SequenceBuilder:
     @property
     def available_channels(self):
         """Channels still available for declaration."""
-        return {id: ch for id, ch in self._root._device.channels.items()
-                if id not in self._root._taken_channels
-                or self._root._device == MockDevice}
+        return self._root.available_channels
 
     def declare_variable(self, name, size=1, dtype=float):
         """Declare a new variable within this SequenceBuilder.
@@ -145,20 +147,16 @@ class SequenceBuilder:
                 first addition to this channel.
         """
 
-        if initial_target is not None:
-            qubits = initial_target
-            try:
-                qs = set(qubits) if not isinstance(qubits, str) else {qubits}
-            except TypeError:
-                qs = {qubits}
-
-            if not qs.issubset(self._root._qids):
-                raise ValueError("The initial target has to be a fixed qubit "
-                                 "ID belonging to the device. Use 'target' for"
-                                 " a variable initial target.")
-
-        self._root.declare_channel(name, channel_id,
-                                   initial_target=initial_target)
+        try:
+            self._root.declare_channel(name, channel_id,
+                                       initial_target=initial_target)
+        except ValueError as e:
+            if str(e) == "The given qubits have to belong to the device.":
+                raise TypeError("The initial target has to be a fixed qubit "
+                                "ID belonging to the device. Use 'target' for"
+                                " a variable initial target.")
+            else:
+                raise e
 
     @_store
     def add(self, pulse, channel, protocol='min-delay'):
@@ -317,8 +315,10 @@ class SequenceBuilder:
         if given_keys != all_keys:
             invalid_vars = given_keys - all_keys
             if invalid_vars:
-                raise TypeError("No declared variables named: "
-                                + ", ".join(invalid_vars))
+                warnings.warn("No declared variables named: "
+                              + ", ".join(invalid_vars))
+                for k in invalid_vars:
+                    vars.pop(k, None)
             missing_vars = all_keys - given_keys
             if missing_vars:
                 raise TypeError("Did not receive values for variables: "

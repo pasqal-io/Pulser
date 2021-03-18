@@ -18,9 +18,17 @@ import pytest
 from pulser import SequenceBuilder, Register, Pulse
 from pulser.devices import Chadoq2
 from pulser.parametrized import Variable
+from pulser.seqbuilder import _store
 
 reg = Register.rectangle(4, 3)
 device = Chadoq2
+
+
+def test_store():
+    with pytest.raises(AttributeError, match="not in Sequence"):
+        @_store
+        def f(self, a, b):
+            pass
 
 
 def test_properties():
@@ -49,8 +57,11 @@ def test_declarations():
     assert var2.dtype == str
     assert len(var2) == 4
 
-    with pytest.raises(ValueError, match="target has to be a fixed qubit"):
+    with pytest.raises(TypeError, match="target has to be a fixed qubit"):
         sb.declare_channel("ch2", "rydberg_local", var)
+
+    with pytest.raises(ValueError, match="No channel"):
+        sb.declare_channel("ch3", "rydberg", var)
 
 
 def test_stored_calls():
@@ -123,7 +134,7 @@ def test_build():
     sb.align("ch2", "ch1")
     sb.phase_shift(var, targ_var[0])
     sb.measure()
-    with pytest.raises(TypeError, match="No declared variables"):
+    with pytest.warns(UserWarning, match="No declared variables"):
         sb.build(t=100, var=2, targ_var=["q1", "q0"])
     with pytest.raises(TypeError, match="Did not receive values for"):
         sb.build(var=2)

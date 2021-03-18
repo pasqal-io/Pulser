@@ -28,7 +28,7 @@ class Variable(Parametrized, OpSupport):
     Args:
         name (str): Unique name for the variable.
         dtype (type): Type of the variable's content. Supports `float`, `int`
-            and `float`.
+            and `str`.
         size (int=1): The number of values stored. Defaults to a single value.
     """
 

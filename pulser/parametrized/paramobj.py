@@ -85,7 +85,7 @@ class ParamObj(Parametrized, OpSupport):
     def build(self):
         """Builds the object with it's variables last assigned values."""
         vars_state = {key: var._count for key, var in self._variables.items()}
-        if vars_state.items() != self._vars_state.items():
+        if vars_state != self._vars_state:
             self._vars_state = vars_state
             # Builds all Parametrized arguments before feeding them to cls
             args_ = [arg.build() if isinstance(arg, Parametrized) else arg
@@ -104,7 +104,7 @@ class ParamObj(Parametrized, OpSupport):
                       "parametrized objects that are themselves built. If this"
                       f" is not the case, the call to {obj} will not be "
                       "executed upon sequence building.")
-        return ParamObj(self, *args, **kwargs)
+        return obj
 
     def __getattr__(self, name):
         if hasattr(self.cls, name):
