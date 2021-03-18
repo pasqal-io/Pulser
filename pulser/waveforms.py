@@ -93,6 +93,19 @@ class Waveform(ABC):
     def __repr__(self):
         pass
 
+    @abstractmethod
+    def __mul__(self, other):
+        pass
+
+    def __neg__(self):
+        return self.__mul__(-1)
+
+    def __truediv__(self, other):
+        if other == 0:
+            raise ZeroDivisionError("Can't divide a waveform by zero.")
+        else:
+            return self.__mul__(1/other)
+
     def __eq__(self, other):
         if not isinstance(other, Waveform):
             return False
@@ -201,6 +214,9 @@ class CompositeWaveform(Waveform):
     def __repr__(self):
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
+    def __mul__(self, other):
+        return CompositeWaveform(*(wf * other for wf in self._waveforms))
+
 
 class CustomWaveform(Waveform):
     """A custom waveform.
@@ -213,7 +229,7 @@ class CustomWaveform(Waveform):
 
     def __init__(self, samples):
         """Initializes a custom waveform."""
-        samples_arr = np.array(samples)
+        samples_arr = np.array(samples, dtype=float)
         self._samples = samples_arr
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
@@ -243,6 +259,9 @@ class CustomWaveform(Waveform):
 
     def __repr__(self):
         return f'CustomWaveform({self.duration} ns, {self.samples!r})'
+
+    def __mul__(self, other):
+        return CustomWaveform(self._samples * float(other))
 
 
 class ConstantWaveform(Waveform):
@@ -288,6 +307,9 @@ class ConstantWaveform(Waveform):
     def __repr__(self):
         return (f"ConstantWaveform({self._duration} ns, "
                 + f"{self._value:.3g} rad/µs)")
+
+    def __mul__(self, other):
+        return ConstantWaveform(self._duration, self._value * float(other))
 
 
 class RampWaveform(Waveform):
@@ -340,6 +362,10 @@ class RampWaveform(Waveform):
     def __repr__(self):
         return (f"RampWaveform({self._duration} ns, " +
                 f"{self._start:.3g}->{self._stop:.3g} rad/µs)")
+
+    def __mul__(self, other):
+        k = float(other)
+        return RampWaveform(self._duration, self._start * k, self._stop * k)
 
 
 class BlackmanWaveform(Waveform):
@@ -415,6 +441,9 @@ class BlackmanWaveform(Waveform):
 
     def __repr__(self):
         return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
+
+    def __mul__(self, other):
+        return BlackmanWaveform(self._duration, self._area * float(other))
 
 
 # To replicate __init__'s signature in __new__ for every Waveform subclass
