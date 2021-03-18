@@ -12,16 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A pulse-level composer for Pasqal's quantum devices."""
+from abc import ABC, abstractmethod
 
-from pulser._version import __version__
 
-from pulser.pulse import Pulse
+class Parametrized(ABC):
+    """Abstract base class for a parametrized object."""
 
-from pulser.register import Register
+    @property
+    @abstractmethod
+    def variables(self):
+        """All the variables involved with this object."""
+        pass
 
-from pulser.sequence import Sequence
-
-from pulser.seqbuilder import SequenceBuilder
-
-from pulser.simulation import Simulation
+    @abstractmethod
+    def build():
+        """Builds the object."""
+        pass
