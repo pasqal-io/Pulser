@@ -13,16 +13,29 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+import functools
+import inspect
+import itertools
+import sys
+import types
 import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pulser.parametrized import Parametrized, ParamObj
 from pulser.utils import validate_duration
 
 
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
+
+    def __new__(cls, *args, **kwargs):
+        for x in itertools.chain(args, kwargs.values()):
+            if isinstance(x, Parametrized):
+                return ParamObj(cls, *args, **kwargs)
+        else:
+            return object.__new__(cls)
 
     def __init__(self, duration):
         """Initializes a waveform with a given duration.
@@ -431,3 +444,15 @@ class BlackmanWaveform(Waveform):
 
     def __mul__(self, other):
         return BlackmanWaveform(self._duration, self._area * float(other))
+
+
+# To replicate __init__'s signature in __new__ for every Waveform subclass
+def copy_func(f):
+    return types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                              argdefs=f.__defaults__, closure=f.__closure__)
+
+
+for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
+    if m[1].__module__ == __name__:
+        new = copy_func(m[1].__new__)
+        m[1].__new__ = functools.update_wrapper(new, m[1].__init__)

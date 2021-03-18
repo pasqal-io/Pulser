@@ -11,17 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Classes for parametrized pulse-sequence building."""
 
-"""A pulse-level composer for Pasqal's quantum devices."""
+from pulser.parametrized.paramabc import Parametrized
 
-from pulser._version import __version__
+from pulser.parametrized.paramobj import ParamObj
 
-from pulser.pulse import Pulse
-
-from pulser.register import Register
-
-from pulser.sequence import Sequence
-
-from pulser.seqbuilder import SequenceBuilder
-
-from pulser.simulation import Simulation
+from pulser.parametrized.variable import Variable

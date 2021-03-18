@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
+import itertools
+
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pulser.parametrized import Parametrized, ParamObj
 from pulser.waveforms import Waveform, ConstantWaveform
 
 
@@ -46,6 +50,13 @@ class Pulse:
             enconding of arbitrary single-qubit gates into a single pulse
             (see ``Sequence.phase_shift()`` for more information).
     """
+
+    def __new__(cls, *args, **kwargs):
+        for x in itertools.chain(args, kwargs.values()):
+            if isinstance(x, Parametrized):
+                return ParamObj(cls, *args, **kwargs)
+        else:
+            return object.__new__(cls)
 
     def __init__(self, amplitude, detuning, phase, post_phase_shift=0):
         """Initializes a new Pulse."""
@@ -128,3 +139,7 @@ class Pulse:
         return (f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, " +
                 f"phase={self.phase:.3g}, " +
                 f"post_phase_shift={self.post_phase_shift:.3g})")
+
+
+# Replicate __init__'s signature in __new__
+functools.update_wrapper(Pulse.__new__, Pulse.__init__)
