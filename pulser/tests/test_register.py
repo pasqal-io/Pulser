@@ -80,9 +80,6 @@ def test_drawing():
     with patch('matplotlib.pyplot.show'):
         reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
 
-    with pytest.raises(ValueError, match="to draw the graph."):
-        reg.draw(draw_graph=True)
-
     with pytest.raises(ValueError, match="'blockade_radius' to draw."):
         reg.draw(draw_half_radius=True)
 
