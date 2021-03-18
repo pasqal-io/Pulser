@@ -60,6 +60,41 @@ def test_initialization():
     assert results.states[0] == ground
 
 
+def test_get_final_state():
+    with pytest.raises(TypeError, match="Can't reduce"):
+        results.get_final_state(reduce_to_basis="digital")
+    assert results.get_final_state(
+            reduce_to_basis="ground-rydberg",
+            ignore_global_phase=False
+            ) == results.states[-1].tidyup()
+    assert np.all(np.isclose(np.abs(results.get_final_state().full()),
+                             np.abs(results.states[-1].full())))
+
+    seq_ = Sequence(reg, Chadoq2)
+    seq_.declare_channel('ryd', 'rydberg_global')
+    seq_.declare_channel('ram', 'raman_local', initial_target="A")
+    seq_.add(pi, 'ram')
+    seq_.add(pi, 'ram')
+    seq_.add(pi, 'ryd')
+
+    sim_ = Simulation(seq_)
+    results_ = sim_.run()
+
+    with pytest.raises(ValueError, match="'reduce_to_basis' must be"):
+        results_.get_final_state(reduce_to_basis="all")
+
+    with pytest.raises(TypeError, match="Can't reduce to chosen basis"):
+        results_.get_final_state(reduce_to_basis="digital")
+
+    h_states = results_.get_final_state(reduce_to_basis="digital", tol=1,
+                                        normalize=False).eliminate_states([0])
+    assert h_states.norm() < 3e-6
+
+    assert np.all(np.isclose(np.abs(results_.get_final_state(
+                                    reduce_to_basis="ground-rydberg").full()),
+                             np.abs(results.states[-1].full()), atol=1e-5))
+
+
 def test_expect():
     with pytest.raises(TypeError, match="must be a list"):
         results.expect('bad_observable')
