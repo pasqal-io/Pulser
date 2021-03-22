@@ -74,6 +74,11 @@ class Simulation:
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
 
+    @property
+    def hamiltonian(self):
+        '''Get the Hamiltonian QObjEvo created from the sequence'''
+        return self._hamiltonian
+
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
 
