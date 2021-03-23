@@ -13,8 +13,8 @@
 # limitations under the License.
 
 from collections import namedtuple
-from collections.abc import Iterable
 import copy
+from functools import wraps
 import warnings
 
 import numpy as np
@@ -27,6 +27,17 @@ from pulser.utils import validate_duration
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
+# Encodes a sequence building calls
+_Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
+
+
+def _save(func):
+    """Saves a Sequence building call for serialization."""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        func(self, *args, **kwargs)
+        self._calls.append(_Call(func.__name__, args, kwargs))
+    return wrapper
 
 
 class Sequence:
@@ -44,6 +55,7 @@ class Sequence:
         device(PasqalDevice): A valid device in which to execute the Sequence
             (import it from ``pulser.devices``).
     """
+    @_save
     def __init__(self, register, device):
         """Initializes a new pulse sequence."""
         cond1 = device not in pulser.devices._valid_devices
@@ -59,6 +71,7 @@ class Sequence:
 
         self._register = register
         self._device = device
+        self._calls = []
         self._channels = {}
         self._schedule = {}
         self._phase_ref = {}  # The phase reference of each channel
@@ -67,6 +80,11 @@ class Sequence:
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
         self._last_used = {}    # Last time each qubit was used, by basis
         self._last_target = {}  # Last time a target happened, by channel
+
+        # Parametrized Sequence related attributes
+        self._build_calls = []
+        self._parametrized = False
+        self._variables = {}
 
     @property
     def qubit_info(self):
@@ -109,6 +127,7 @@ class Sequence:
 
         return self._phase_ref[basis][qubit].last_phase
 
+    @_save
     def declare_channel(self, name, channel_id, initial_target=None):
         """Declares a new channel to the Sequence.
 
@@ -150,7 +169,10 @@ class Sequence:
             self._add_to_schedule(name, _TimeSlot('target', -1, 0, self._qids))
         elif initial_target is not None:
             self.target(initial_target, name)
+            # Delete this saved "target" call
+            self._calls.pop()
 
+    @_save
     def add(self, pulse, channel, protocol='min-delay'):
         """Adds a pulse to a channel.
 
@@ -174,15 +196,18 @@ class Sequence:
                     idles the channel until the end of the other channels'
                     latest pulse.
         """
-
-        last = self._last(channel)
-        self._validate_pulse(pulse, channel)
+        self._validate_channel(channel)
 
         valid_protocols = ['min-delay', 'no-delay', 'wait-for-all']
         if protocol not in valid_protocols:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
 
+        if self._parametrized:
+            return
+
+        last = self._last(channel)
+        self._validate_pulse(pulse, channel)
         t0 = last.tf    # Preliminary ti
         basis = self._channels[channel].basis
         phase_barriers = [self._phase_ref[basis][q].last_time
@@ -204,6 +229,7 @@ class Sequence:
         tf = ti + pulse.duration
         if ti > t0:
             self.delay(ti-t0, channel)
+            self._calls.pop()
 
         prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
         if len(prs) != 1:
@@ -227,7 +253,9 @@ class Sequence:
         if pulse.post_phase_shift:
             self.phase_shift(pulse.post_phase_shift, *last.targets,
                              basis=basis)
+            self._calls.pop()
 
+    @_save
     def target(self, qubits, channel):
         """Changes the target qubit of a 'Local' channel.
 
@@ -239,16 +267,12 @@ class Sequence:
                 a channel with 'Local' addressing.
          """
 
-        if channel not in self._channels:
-            raise ValueError("Use the name of a declared channel.")
+        self._validate_channel(channel)
 
-        if isinstance(qubits, Iterable) and not isinstance(qubits, str):
-            qs = set(qubits)
-        else:
+        try:
+            qs = set(qubits) if not isinstance(qubits, str) else {qubits}
+        except TypeError:
             qs = {qubits}
-
-        if not qs.issubset(self._qids):
-            raise ValueError("The given qubits have to belong to the device.")
 
         if self._channels[channel].addressing != 'Local':
             raise ValueError("Can only choose target of 'Local' channels.")
@@ -257,6 +281,12 @@ class Sequence:
                 "This channel can target at most "
                 f"{self._channels[channel].max_targets} qubits at a time"
             )
+
+        if self._parametrized:
+            return
+
+        if not qs.issubset(self._qids):
+            raise ValueError("The given qubits have to belong to the device.")
 
         basis = self._channels[channel].basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
@@ -287,6 +317,7 @@ class Sequence:
         self._last_target[channel] = tf
         self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qs))
 
+    @_save
     def delay(self, duration, channel):
         """Idles a given channel for a specific duration.
 
@@ -294,12 +325,17 @@ class Sequence:
             duration (int): Time to delay (in multiples of 4 ns).
             channel (str): The channel's name provided when declared.
         """
+        self._validate_channel(channel)
+        if self._parametrized:
+            return
+
         last = self._last(channel)
         ti = last.tf
         tf = ti + validate_duration(duration)
         self._add_to_schedule(channel,
                               _TimeSlot('delay', ti, tf, last.targets))
 
+    @_save
     def measure(self, basis='ground-rydberg'):
         """Measures in a valid basis.
 
@@ -319,6 +355,7 @@ class Sequence:
 
         self._measurement = basis
 
+    @_save
     def phase_shift(self, phi, *targets, basis='digital'):
         r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
@@ -336,6 +373,11 @@ class Sequence:
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
+        if basis not in self._phase_ref:
+            raise ValueError("No declared channel targets the given 'basis'.")
+        if self._parametrized:
+            return
+
         if phi % (2*np.pi) == 0:
             warnings.warn("A phase shift of 0 is meaningless, "
                           "it will be ommited.")
@@ -344,14 +386,12 @@ class Sequence:
             raise ValueError("All given targets have to be qubit ids declared"
                              " in this sequence's device.")
 
-        if basis not in self._phase_ref:
-            raise ValueError("No declared channel targets the given 'basis'.")
-
         for q in targets:
             t = self._last_used[basis][q]
             new_phase = self._phase_ref[basis][q].last_phase + phi
             self._phase_ref[basis][q][t] = new_phase
 
+    @_save
     def align(self, *channels):
         """Aligns multiple channels in time.
 
@@ -375,6 +415,9 @@ class Sequence:
         if len(channels) < 2:
             raise ValueError("Needs at least two channels for alignment.")
 
+        if self._parametrized:
+            return
+
         last_ts = {id: self._last(id).tf for id in channels}
         tf = max(last_ts.values())
 
@@ -382,6 +425,7 @@ class Sequence:
             delta = tf - last_ts[id]
             if delta > 0:
                 self.delay(delta, id)
+                self._calls.pop()
 
     def draw(self):
         """Draws the sequence in its current sequence."""
@@ -431,12 +475,14 @@ class Sequence:
 
     def _last(self, channel):
         """Shortcut to last element in the channel's schedule."""
-        if channel not in self._schedule:
-            raise ValueError("Use the name of a declared channel.")
         try:
             return self._schedule[channel][-1]
         except IndexError:
             raise ValueError("The chosen channel has no target.")
+
+    def _validate_channel(self, channel):
+        if channel not in self._channels:
+            raise ValueError("Use the name of a declared channel.")
 
     def _validate_pulse(self, pulse, channel):
         if not isinstance(pulse, Pulse):
