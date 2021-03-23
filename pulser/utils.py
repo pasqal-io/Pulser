@@ -15,6 +15,19 @@
 import warnings
 
 
+def obj_to_dict(obj, *args, _build=True, _module=None, _name=None, **kwargs):
+    d = {
+        "_build": _build,
+        "__module__": _module if _module else obj.__class__.__module__,
+        "__name__": _name if _name else obj.__class__.__name__,
+    }
+    if _build:
+        d["__args__"] = args
+        d["__kwargs__"] = kwargs
+
+    return d
+
+
 def validate_duration(duration, min_duration=16, max_duration=67108864):
     """Validates a time interval.
 

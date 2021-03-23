@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.parametrized import Parametrized, ParamObj
-from pulser.utils import validate_duration
+from pulser.utils import validate_duration, obj_to_dict
 
 
 class Waveform(ABC):
@@ -84,6 +84,10 @@ class Waveform(ABC):
         self._plot(ax, "rad/µs")
 
         plt.show()
+
+    @abstractmethod
+    def _to_dict():
+        pass
 
     @abstractmethod
     def __str__(self):
@@ -205,6 +209,9 @@ class CompositeWaveform(Waveform):
             raise TypeError("{!r} is not a valid waveform. Please provide a "
                             "valid Waveform.".format(waveform))
 
+    def _to_dict(self):
+        return obj_to_dict(self, *self._waveforms)
+
     def __str__(self):
         contents = ["{!r}"] * len(self._waveforms)
         contents = ", ".join(contents)
@@ -254,6 +261,9 @@ class CustomWaveform(Waveform):
         """
         return self._samples
 
+    def _to_dict(self):
+        return obj_to_dict(self, self._samples)
+
     def __str__(self):
         return 'Custom'
 
@@ -300,6 +310,9 @@ class ConstantWaveform(Waveform):
     def last_value(self):
         """The last value in the waveform."""
         return self._value
+
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._value)
 
     def __str__(self):
         return f"{self._value:.3g} rad/µs"
@@ -355,6 +368,9 @@ class RampWaveform(Waveform):
     def last_value(self):
         """The last value in the waveform."""
         return self._stop
+
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._start, self._stop)
 
     def __str__(self):
         return f"Ramp({self._start:.3g}->{self._stop:.3g} rad/µs)"
@@ -435,6 +451,9 @@ class BlackmanWaveform(Waveform):
     def last_value(self):
         """The last value in the waveform."""
         return 0
+
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._area)
 
     def __str__(self):
         return f"Blackman(Area: {self._area:.3g})"

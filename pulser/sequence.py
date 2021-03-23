@@ -25,7 +25,7 @@ from pulser.pulse import Pulse
 from pulser.devices import MockDevice
 from pulser.parametrized import Parametrized, Variable
 from pulser._seq_drawer import draw_sequence
-from pulser.utils import validate_duration
+from pulser.utils import validate_duration, obj_to_dict
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
@@ -597,6 +597,11 @@ class Sequence:
     def draw(self):
         """Draws the sequence in its current sequence."""
         draw_sequence(self)
+
+    def _to_dict(self):
+        d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
+        d["calls"] = self._calls[1:]
+        return d
 
     def __str__(self):
         full = ""

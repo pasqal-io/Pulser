@@ -19,6 +19,7 @@ import numpy as np
 
 from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
+from pulser.utils import obj_to_dict
 
 
 @dataclass(frozen=True, eq=False)
@@ -78,6 +79,11 @@ class Variable(Parametrized, OpSupport):
 
         return self.value
 
+    def _to_dict(self):
+        d = obj_to_dict(self, _build=False)
+        d["var_name"] = self.name
+        return d
+
     def __str__(self):
         return self.name
 
@@ -110,6 +116,10 @@ class _VariableItem(Parametrized, OpSupport):
     def build(self):
         """Return the variable's item(s) values."""
         return self.var.build()[self.key]
+
+    def _to_dict(self):
+        return obj_to_dict(self, self.var, self.key,
+                           _module="operator", _name="getitem")
 
     def __str__(self):
         if isinstance(self.key, slice):

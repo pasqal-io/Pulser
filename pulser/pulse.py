@@ -20,6 +20,7 @@ import numpy as np
 
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.waveforms import Waveform, ConstantWaveform
+from pulser.utils import obj_to_dict
 
 
 class Pulse:
@@ -130,6 +131,10 @@ class Pulse:
 
         fig.tight_layout()
         plt.show()
+
+    def _to_dict(self):
+        return obj_to_dict(self, self.amplitude, self.detuning, self.phase,
+                           post_phase_shift=self.post_phase_shift)
 
     def __str__(self):
         return "Pulse(Amp={!s}, Detuning={!s}, Phase={:.3g})".format(
