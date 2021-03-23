@@ -15,6 +15,7 @@
 from collections import namedtuple
 import copy
 from functools import wraps
+from itertools import chain
 import warnings
 
 import numpy as np
@@ -22,6 +23,7 @@ import numpy as np
 import pulser
 from pulser.pulse import Pulse
 from pulser.devices import MockDevice
+from pulser.parametrized import Parametrized, Variable
 from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration
 
@@ -32,11 +34,48 @@ _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
 
 def _save(func):
-    """Saves a Sequence building call for serialization."""
+    """Saves a regular Sequence building call for serialization."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         func(self, *args, **kwargs)
         self._calls.append(_Call(func.__name__, args, kwargs))
+    return wrapper
+
+
+def _screen(func):
+    """Blocks the call to a function if the Sequence is parametrized."""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not self._building:
+            raise RuntimeError(f"Sequence.{func.__name__} can't be called in"
+                               + " parametrized sequences.")
+        return func(self, *args, **kwargs)
+    return wrapper
+
+
+def _store(func):
+    """Stores any Sequence building call for defered execution."""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if self._is_measured and not self._building:
+            raise SystemError("The sequence has been measured, no further "
+                              "changes are allowed.")
+        # Check if all Parametrized inputs stem from declared variables
+        for x in chain(args, kwargs.values()):
+            if isinstance(x, Parametrized):
+                for name, var in x.variables.items():
+                    if name not in self._variables:
+                        raise ValueError(f"Unknown variable '{name}'.")
+                    elif self._variables[name] is not var:
+                        raise ValueError(
+                            f"{x} has variables that don't come from this "
+                            "Sequence. Use only what's returned by this"
+                            "Sequence's 'declare_variable' method as your"
+                            "variables."
+                            )
+        storage = self._calls if self._building else self._to_build_calls
+        func(self, *args, **kwargs)
+        storage.append(_Call(func.__name__, args, kwargs))
     return wrapper
 
 
@@ -81,10 +120,8 @@ class Sequence:
         self._last_used = {}    # Last time each qubit was used, by basis
         self._last_target = {}  # Last time a target happened, by channel
 
-        # Parametrized Sequence related attributes
-        self._build_calls = []
-        self._parametrized = False
-        self._variables = {}
+        # Initializes all parametrized Sequence related attributes
+        self._reset_parametrized()
 
     @property
     def qubit_info(self):
@@ -97,12 +134,18 @@ class Sequence:
         return dict(self._channels)
 
     @property
+    def declared_variables(self):
+        """Variables declared in this SequenceBuilder."""
+        return dict(self._variables)
+
+    @property
     def available_channels(self):
         """Channels still available for declaration."""
         return {id: ch for id, ch in self._device.channels.items()
                 if id not in self._taken_channels
                 or self._device == MockDevice}
 
+    @_screen
     def current_phase_ref(self, qubit, basis='digital'):
         """Current phase reference of a specific qubit for a given basis.
 
@@ -172,7 +215,35 @@ class Sequence:
             # Delete this saved "target" call
             self._calls.pop()
 
-    @_save
+    def declare_variable(self, name, size=1, dtype=float):
+        """Declare a new variable within this Sequence.
+
+        Args:
+            name(str): The name for the variable. Must be unique within a
+                Sequence.
+
+        Keyword Args:
+            size(int=1): The number of entries stored in the variable.
+            dtype(default=float): The type of the data that will be assigned
+                to the variable. Must be `float`, `int` or `str`.
+
+        Returns:
+            Variable: The declared Variable instance.
+
+        Note:
+            To avoid confusion, it is recommended to store the returned
+            Variable instance in a Python variable with the same name.
+        """
+        if name in self._variables:
+            raise ValueError("Name for variable is already being used.")
+        var = Variable(name, dtype, size=size)
+        self._variables[name] = var
+        self._building = False
+        self._var_calls.append(
+            _Call("declare_variable", (name, dtype), {"size": size}))
+        return var
+
+    @_store
     def add(self, pulse, channel, protocol='min-delay'):
         """Adds a pulse to a channel.
 
@@ -203,7 +274,7 @@ class Sequence:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
 
-        if self._parametrized:
+        if not self._building:
             return
 
         last = self._last(channel)
@@ -255,7 +326,7 @@ class Sequence:
                              basis=basis)
             self._calls.pop()
 
-    @_save
+    @_store
     def target(self, qubits, channel):
         """Changes the target qubit of a 'Local' channel.
 
@@ -282,7 +353,7 @@ class Sequence:
                 f"{self._channels[channel].max_targets} qubits at a time"
             )
 
-        if self._parametrized:
+        if not self._building:
             return
 
         if not qs.issubset(self._qids):
@@ -317,7 +388,7 @@ class Sequence:
         self._last_target[channel] = tf
         self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qs))
 
-    @_save
+    @_store
     def delay(self, duration, channel):
         """Idles a given channel for a specific duration.
 
@@ -326,7 +397,7 @@ class Sequence:
             channel (str): The channel's name provided when declared.
         """
         self._validate_channel(channel)
-        if self._parametrized:
+        if not self._building:
             return
 
         last = self._last(channel)
@@ -335,7 +406,7 @@ class Sequence:
         self._add_to_schedule(channel,
                               _TimeSlot('delay', ti, tf, last.targets))
 
-    @_save
+    @_store
     def measure(self, basis='ground-rydberg'):
         """Measures in a valid basis.
 
@@ -350,12 +421,15 @@ class Sequence:
                              "selected device. The available options are: "
                              + ", ".join(list(available)))
 
-        if hasattr(self, '_measurement'):
+        if hasattr(self, "_measurement"):
             raise SystemError("The sequence has already been measured.")
 
-        self._measurement = basis
+        if self._building:
+            self._measurement = basis
+        else:
+            self._is_measured = True
 
-    @_save
+    @_store
     def phase_shift(self, phi, *targets, basis='digital'):
         r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
@@ -375,7 +449,7 @@ class Sequence:
         """
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
-        if self._parametrized:
+        if not self._building:
             return
 
         if phi % (2*np.pi) == 0:
@@ -391,7 +465,7 @@ class Sequence:
             new_phase = self._phase_ref[basis][q].last_phase + phi
             self._phase_ref[basis][q][t] = new_phase
 
-    @_save
+    @_store
     def align(self, *channels):
         """Aligns multiple channels in time.
 
@@ -415,7 +489,7 @@ class Sequence:
         if len(channels) < 2:
             raise ValueError("Needs at least two channels for alignment.")
 
-        if self._parametrized:
+        if not self._building:
             return
 
         last_ts = {id: self._last(id).tf for id in channels}
@@ -427,6 +501,61 @@ class Sequence:
                 self.delay(delta, id)
                 self._calls.pop()
 
+    def build(self, **vars):
+        """Builds a sequence from the programmed instructions.
+
+        Keyword Args:
+            vars: The values for all the variables declared in this
+                Sequence instance, indexed by the name given upon declaration
+                Check `Sequence.declared_variables` to see all then variables.
+
+        Returns:
+            Sequence: The Sequence built with the given variable values.
+
+        Example:
+            # Check which variables are declared
+            >>> print(seq.declared_variables)
+            {'x': Variable(name='x', dtype=<class 'float'>, size=1),
+             'y': Variable(name='y', dtype=<class 'int'>, size=3)}
+            # Build a sequence with specific values for both variables
+            >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
+
+        Warns:
+            UserWarning: If building a regular, no
+        """
+        if self._building:
+            warnings.warn("Building a non-parametrized sequence simply returns"
+                          " a copy of itself.")
+            return copy.copy(self)
+        all_keys, given_keys = self._variables.keys(), vars.keys()
+        if given_keys != all_keys:
+            invalid_vars = given_keys - all_keys
+            if invalid_vars:
+                warnings.warn("No declared variables named: "
+                              + ", ".join(invalid_vars))
+                for k in invalid_vars:
+                    vars.pop(k, None)
+            missing_vars = all_keys - given_keys
+            if missing_vars:
+                raise TypeError("Did not receive values for variables: "
+                                + ", ".join(missing_vars))
+
+        for name, value in vars.items():
+            self._variables[name]._assign(value)
+
+        seq = copy.copy(self)
+        seq._reset_parametrized()
+
+        for call in self._to_build_calls:
+            args_ = [arg.build() if isinstance(arg, Parametrized) else arg
+                     for arg in call.args]
+            kwargs_ = {key: val.build() if isinstance(val, Parametrized)
+                       else val for key, val in call.kwargs.items()}
+            getattr(seq, call.name)(*args_, **kwargs_)
+
+        return seq
+
+    @_screen
     def draw(self):
         """Draws the sequence in its current sequence."""
         draw_sequence(self)
@@ -459,14 +588,24 @@ class Sequence:
                     else:
                         full += target_line.format(ts.ti, ts.tf, tgt_txt,
                                                    phase)
-
             full += "\n"
 
         if hasattr(self, "_measurement"):
             full += f"Measured in basis: {self._measurement}"
 
+        if not self._building:
+            prelude = "Prelude\n-------\n" + full
+            lines = ["Stored calls\n------------"]
+            for i, c in enumerate(self._to_build_calls, 1):
+                args = [str(a) for a in c.args]
+                kwargs = [f"{key}={str(value)}"
+                          for key, value in c.kwargs.items()]
+                lines.append(f"{i}. {c.name}({', '.join(args+kwargs)})")
+            full = prelude + "\n\n".join(lines)
+
         return full
 
+    @_screen
     def _add_to_schedule(self, channel, timeslot):
         if hasattr(self, "_measurement"):
             raise SystemError("The sequence has already been measured. "
@@ -484,6 +623,7 @@ class Sequence:
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
 
+    @_screen
     def _validate_pulse(self, pulse, channel):
         if not isinstance(pulse, Pulse):
             raise TypeError("pulse input must be of type Pulse, not of type "
@@ -497,6 +637,14 @@ class Sequence:
                            decimals=6) > ch.max_abs_detuning):
             raise ValueError("The pulse's detuning values go out of the range "
                              "allowed for the chosen channel.")
+
+    def _reset_parametrized(self):
+        """Resets all attributes related to parametrization."""
+        self._building = True
+        self._is_measured = False
+        self._variables = {}
+        self._var_calls = []
+        self._to_build_calls = []
 
 
 class _PhaseTracker:
