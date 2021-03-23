@@ -74,11 +74,6 @@ class Simulation:
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
 
-    @property
-    def hamiltonian(self):
-        '''Get the Hamiltonian QObjEvo created from the sequence'''
-        return self._hamiltonian
-
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
 
@@ -242,6 +237,19 @@ class Simulation:
         ham.compress()
 
         self._hamiltonian = ham
+
+    def get_hamiltonian(self, time):
+        """Get the Hamiltonian created from the sequence at a fixed time.
+
+        Args:
+            time (float): The specific time in which we want to extract the
+                    Hamiltonian (in ns).
+        """
+        if time > 1000 * self._times[-1]:
+            raise ValueError("Provided time is larger than sequence duration.")
+        if time < 0:
+            raise ValueError("Provided time is negative.")
+        return self._hamiltonian(time/1000).copy()
 
     # Run Simulation Evolution using Qutip
     def run(self, initial_state=None, progress_bar=None, **options):
