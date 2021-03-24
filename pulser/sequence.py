@@ -135,7 +135,7 @@ class Sequence:
 
     @property
     def declared_variables(self):
-        """Variables declared in this SequenceBuilder."""
+        """Variables declared in this Sequence."""
         return dict(self._variables)
 
     @property
@@ -212,8 +212,9 @@ class Sequence:
             self._add_to_schedule(name, _TimeSlot('target', -1, 0, self._qids))
         elif initial_target is not None:
             self.target(initial_target, name)
-            # Delete this saved "target" call
-            self._calls.pop()
+            if self._building:
+                # Delete this saved "target" call
+                self._calls.pop()
 
     def declare_variable(self, name, size=1, dtype=float):
         """Declare a new variable within this Sequence.
@@ -543,8 +544,10 @@ class Sequence:
         for name, value in vars.items():
             self._variables[name]._assign(value)
 
+        # Can't deepcopy with stored parametrized objects due to recursiveness
         seq = copy.copy(self)
         seq._reset_parametrized()
+        seq = copy.deepcopy(seq)
 
         for call in self._to_build_calls:
             args_ = [arg.build() if isinstance(arg, Parametrized) else arg
@@ -605,7 +608,6 @@ class Sequence:
 
         return full
 
-    @_screen
     def _add_to_schedule(self, channel, timeslot):
         if hasattr(self, "_measurement"):
             raise SystemError("The sequence has already been measured. "

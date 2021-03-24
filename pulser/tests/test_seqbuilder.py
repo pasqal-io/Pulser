@@ -15,39 +15,23 @@
 import copy
 import pytest
 
-from pulser import SequenceBuilder, Register, Pulse
+from pulser import Sequence, Register, Pulse
 from pulser.devices import Chadoq2
 from pulser.parametrized import Variable
-from pulser.seqbuilder import _store
 
 reg = Register.rectangle(4, 3)
 device = Chadoq2
 
 
-def test_store():
-    with pytest.raises(AttributeError, match="not in Sequence"):
-        @_store
-        def f(self, a, b):
-            pass
-
-
-def test_properties():
-    sb = SequenceBuilder(reg, device)
-    assert sb.qubit_info.keys() == set(range(12))
-    assert sb.declared_channels == {}
-    assert sb.available_channels.keys() == Chadoq2.channels.keys()
-    sb.declare_channel("ch1", "rydberg_local")
-    assert sb.declared_channels == {"ch1": Chadoq2.channels["rydberg_local"]}
-    assert sb.available_channels.keys() == (Chadoq2.channels.keys()
-                                            - {"rydberg_local"})
+def test_var_declarations():
+    sb = Sequence(reg, device)
+    assert sb._building is True
+    assert sb._var_calls == []
     assert sb.declared_variables == {}
     var = sb.declare_variable("var")
     assert sb.declared_variables == {"var": var}
-
-
-def test_declarations():
-    sb = SequenceBuilder(reg, device)
-    var = sb.declare_variable("var")
+    assert len(sb._var_calls) == 1
+    assert sb._building is False
     assert isinstance(var, Variable)
     assert var.dtype == float
     assert len(var) == 1
@@ -57,29 +41,27 @@ def test_declarations():
     assert var2.dtype == str
     assert len(var2) == 4
 
-    with pytest.raises(TypeError, match="target has to be a fixed qubit"):
-        sb.declare_channel("ch2", "rydberg_local", var)
-
-    with pytest.raises(ValueError, match="No channel"):
-        sb.declare_channel("ch3", "rydberg", var)
-
 
 def test_stored_calls():
-    sb = SequenceBuilder(reg, device)
+    sb = Sequence(reg, device)
+    assert sb._calls[-1].name == "__init__"
     var = sb.declare_variable("var")
-    sb.declare_channel("ch1", "rydberg_local")
-    assert sb._calls == []
+    assert sb._to_build_calls == []
+    sb.declare_channel("ch1", "rydberg_local", initial_target=7)
+    assert sb._calls[-1].name == "declare_channel"
+    assert sb._to_build_calls[-1].name == "target"
+    assert sb._to_build_calls[-1].args == (7, "ch1")
     with pytest.raises(ValueError, match="name of a declared channel"):
         sb.delay(1000, "rydberg_local")
     x = Variable("x", str)
     var_ = copy.deepcopy(var)
     with pytest.raises(ValueError, match="Unknown variable 'x'"):
         sb.target(x, "ch1")
-    with pytest.raises(ValueError, match="come from this SequenceBuilder"):
+    with pytest.raises(ValueError, match="come from this Sequence"):
         sb.target(var_, "ch1")
 
     sb.delay(var, "ch1")
-    call = sb._calls[0]
+    call = sb._to_build_calls[1]
     assert call.name == "delay"
     assert call.args == (var, "ch1")
     assert call.kwargs == {}
@@ -88,15 +70,17 @@ def test_stored_calls():
 
     with pytest.raises(ValueError, match="Invalid protocol 'last'"):
         sb.add(pls, "ch1", protocol="last")
-    assert sb._calls[-1] == call
+    assert sb._to_build_calls[-1] == call
     sb.add(pls, "ch1", protocol="wait-for-all")
-    call = sb._calls[1]
+    call = sb._to_build_calls[2]
     assert call.name == "add"
     assert call.args == (pls, "ch1")
     assert call.kwargs == {"protocol": "wait-for-all"}
 
     q_var = sb.declare_variable("q_var", size=5, dtype=str)
     sb.declare_channel("ch2", "rydberg_global")
+    assert len(sb._calls) == 3
+    assert sb._calls[-1].name == "declare_channel"
     with pytest.raises(ValueError, match="'Local' channels"):
         sb.target(0, "ch2")
     with pytest.raises(ValueError, match="target at most 1 qubits"):
@@ -121,16 +105,15 @@ def test_stored_calls():
 
 def test_build():
     reg_ = Register.rectangle(2, 1, prefix="q")
-    sb = SequenceBuilder(reg_, device)
+    sb = Sequence(reg_, device)
     var = sb.declare_variable("var")
     targ_var = sb.declare_variable("targ_var", size=2, dtype=str)
     sb.declare_channel("ch1", "rydberg_local")
-    sb.declare_channel("ch2", "raman_local")
+    sb.declare_channel("ch2", "raman_local", initial_target=targ_var[0])
     sb.target(targ_var[1], "ch1")
     pls = Pulse.ConstantPulse(var*100, var, var, var)
     sb.add(pls, "ch1")
     sb.delay(var*50, "ch1")
-    sb.target(targ_var[0], "ch2")
     sb.align("ch2", "ch1")
     sb.phase_shift(var, targ_var[0])
     sb.measure()
@@ -145,18 +128,9 @@ def test_build():
     assert seq._measurement == "ground-rydberg"
 
 
-def test_getattr():
-    sb = SequenceBuilder(reg, device)
-    with pytest.raises(AttributeError,
-                       match="attribute of 'Sequence' is not available"):
-        sb.draw()
-    with pytest.raises(AttributeError, match="has no attribute"):
-        sb.dra()
-
-
 def test_str():
     reg_ = Register.rectangle(2, 1, prefix="q")
-    sb = SequenceBuilder(reg_, device)
+    sb = Sequence(reg_, device)
     sb.declare_channel("ch1", "rydberg_global")
     seq = sb.build()
     var = sb.declare_variable("var")
@@ -166,3 +140,12 @@ def test_str():
          + "1. add(Pulse(ConstantWaveform(mul(var, 100), var), "
          + "ConstantWaveform(mul(var, 100), -1), var, 0), ch1)")
     assert s == str(sb)
+
+
+def test_screen():
+    sb = Sequence(reg, device)
+    sb.declare_channel("ch1", "rydberg_global")
+    assert sb.current_phase_ref(4, basis="ground-rydberg") == 0
+    sb.declare_variable("var")
+    with pytest.raises(RuntimeError, match="can't be called in parametrized"):
+        sb.current_phase_ref(4, basis="ground-rydberg")
