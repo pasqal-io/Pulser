@@ -301,11 +301,12 @@ class Sequence:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
 
-        if not isinstance(pulse, Parametrized):
-            self._validate_pulse(pulse, channel)
-
         if not self._building:
+            if not isinstance(pulse, Parametrized):
+                self._validate_pulse(pulse, channel)
             return
+        else:
+            self._validate_pulse(pulse, channel)
 
         last = self._last(channel)
         t0 = last.tf    # Preliminary ti
