@@ -301,11 +301,13 @@ class Sequence:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
 
+        if not isinstance(pulse, Parametrized):
+            self._validate_pulse(pulse, channel)
+
         if not self._building:
             return
 
         last = self._last(channel)
-        self._validate_pulse(pulse, channel)
         t0 = last.tf    # Preliminary ti
         basis = self._channels[channel].basis
         phase_barriers = [self._phase_ref[basis][q].last_time
@@ -381,10 +383,14 @@ class Sequence:
             )
 
         if not self._building:
+            for q in qs:
+                if q not in self._qids and not isinstance(q, Parametrized):
+                    raise ValueError("All non-variable qubits must belong to "
+                                     "the register.")
             return
 
-        if not qs.issubset(self._qids):
-            raise ValueError("The given qubits have to belong to the device.")
+        elif not qs.issubset(self._qids):
+            raise ValueError("All given qubits must belong to the register.")
 
         basis = self._channels[channel].basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
@@ -477,15 +483,20 @@ class Sequence:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
         if not self._building:
+            for t in targets:
+                if t not in self._qids and not isinstance(t, Parametrized):
+                    raise ValueError("All non-variable targets must belong to "
+                                     "the register.")
             return
+
+        elif not set(targets) <= self._qids:
+            raise ValueError("All given targets have to be qubit ids declared"
+                             " in this sequence's register.")
 
         if phi % (2*np.pi) == 0:
             warnings.warn("A phase shift of 0 is meaningless, "
                           "it will be ommited.")
             return
-        if not set(targets) <= self._qids:
-            raise ValueError("All given targets have to be qubit ids declared"
-                             " in this sequence's device.")
 
         for q in targets:
             t = self._last_used[basis][q]
@@ -648,7 +659,6 @@ class Sequence:
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
 
-    @_screen
     def _validate_pulse(self, pulse, channel):
         if not isinstance(pulse, Pulse):
             raise TypeError("pulse input must be of type Pulse, not of type "

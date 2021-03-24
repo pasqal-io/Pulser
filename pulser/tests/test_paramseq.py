@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import copy
+
+import numpy as np
 import pytest
 
 from pulser import Sequence, Register, Pulse
@@ -60,6 +62,9 @@ def test_stored_calls():
     with pytest.raises(ValueError, match="come from this Sequence"):
         sb.target(var_, "ch1")
 
+    with pytest.raises(ValueError, match="non-variable qubits must belong"):
+        sb.target('q20', "ch1")
+
     sb.delay(var, "ch1")
     call = sb._to_build_calls[1]
     assert call.name == "delay"
@@ -70,6 +75,13 @@ def test_stored_calls():
 
     with pytest.raises(ValueError, match="Invalid protocol 'last'"):
         sb.add(pls, "ch1", protocol="last")
+
+    with pytest.raises(ValueError, match='amplitude goes over the maximum'):
+        sb.add(Pulse.ConstantPulse(20, 2*np.pi*100, -2*np.pi*100, 0), 'ch1')
+    with pytest.raises(ValueError,
+                       match='detuning values go out of the range'):
+        sb.add(Pulse.ConstantPulse(500, 2*np.pi, -2*np.pi*100, 0), 'ch1')
+
     assert sb._to_build_calls[-1] == call
     sb.add(pls, "ch1", protocol="wait-for-all")
     call = sb._to_build_calls[2]
@@ -88,6 +100,9 @@ def test_stored_calls():
 
     with pytest.raises(ValueError, match="targets the given 'basis'"):
         sb.phase_shift(var, *q_var)
+
+    with pytest.raises(ValueError, match="non-variable targets must belong"):
+        sb.phase_shift(var, *q_var, "q1", basis="ground-rydberg")
 
     with pytest.raises(ValueError, match="correspond to declared channels"):
         sb.align("ch1", var)
