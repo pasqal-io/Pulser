@@ -89,10 +89,32 @@ class Sequence:
         - The device's channels that are used
         - The schedule of operations on each channel
 
+    A Sequence also supports variable parameters, which have to be obtained
+    through `Sequence.declare_variable()`. From the moment a variable is
+    declared, a `Sequence` becomes "parametrized" and stops being built on the
+    fly, instead storing the sequence building calls for later execution. This
+    forgoes some specific functionalities of a "regular" `Sequence`, like the
+    ability to validate a `Pulse` or to `draw` the sequence as it is being
+    built. Instead, all validation happens upon building (through
+    `Sequence.build()`), where values for all declared variables have to be
+    specified and a "regular" `Sequence` is created and returned. By changing
+    the values given to the variables, multiple sequences can be generated from
+    a single "parametrized" `Sequence`.
+
     Args:
         register(Register): The atom register on which to apply the pulses.
         device(PasqalDevice): A valid device in which to execute the Sequence
             (import it from ``pulser.devices``).
+
+    Notes:
+        The declared variables can be used to create parametrized versions of
+        Waveform and Pulse objects, which in turn can be added to the Sequence.
+        Additionally, simple arithmetic operations involving variables are also
+        supported and will return parametrized objects that are dependent on
+        the involved variables.
+
+        The register and device do not support variable parameters. As such,
+        they are the same for all Sequences built from a parametrized Sequence.
     """
     @_save
     def __init__(self, register, device):
@@ -231,7 +253,11 @@ class Sequence:
         Returns:
             Variable: The declared Variable instance.
 
-        Note:
+        Notes:
+            Declaring a variable will turn the sequence into a "parametrized"
+            Sequence, which will require building (through `Sequence.build()`)
+            to obtain the final sequence.
+
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
@@ -506,9 +532,9 @@ class Sequence:
         """Builds a sequence from the programmed instructions.
 
         Keyword Args:
-            vars: The values for all the variables declared in this
-                Sequence instance, indexed by the name given upon declaration
-                Check `Sequence.declared_variables` to see all then variables.
+            vars: The values for all the variables declared in this Sequence
+                instance, indexed by the name given upon declaration. Check
+                `Sequence.declared_variables` to see all the variables.
 
         Returns:
             Sequence: The Sequence built with the given variable values.
@@ -520,9 +546,6 @@ class Sequence:
              'y': Variable(name='y', dtype=<class 'int'>, size=3)}
             # Build a sequence with specific values for both variables
             >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
-
-        Warns:
-            UserWarning: If building a regular, no
         """
         if self._building:
             warnings.warn("Building a non-parametrized sequence simply returns"

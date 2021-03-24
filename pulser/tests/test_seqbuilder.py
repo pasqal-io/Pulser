@@ -132,7 +132,8 @@ def test_str():
     reg_ = Register.rectangle(2, 1, prefix="q")
     sb = Sequence(reg_, device)
     sb.declare_channel("ch1", "rydberg_global")
-    seq = sb.build()
+    with pytest.warns(UserWarning, match="Building a non-parametrized"):
+        seq = sb.build()
     var = sb.declare_variable("var")
     pls = Pulse.ConstantPulse(var*100, var, -1, var)
     sb.add(pls, "ch1")
