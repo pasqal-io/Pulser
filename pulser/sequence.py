@@ -33,15 +33,6 @@ _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
 _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
 
-def _save(func):
-    """Saves a regular Sequence building call for serialization."""
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        func(self, *args, **kwargs)
-        self._calls.append(_Call(func.__name__, args, kwargs))
-    return wrapper
-
-
 def _screen(func):
     """Blocks the call to a function if the Sequence is parametrized."""
     @wraps(func)
@@ -116,7 +107,6 @@ class Sequence:
         The register and device do not support variable parameters. As such,
         they are the same for all Sequences built from a parametrized Sequence.
     """
-    @_save
     def __init__(self, register, device):
         """Initializes a new pulse sequence."""
         cond1 = device not in pulser.devices._valid_devices
@@ -132,7 +122,7 @@ class Sequence:
 
         self._register = register
         self._device = device
-        self._calls = []
+        self._calls = [_Call("__init__", (register, device), {})]
         self._channels = {}
         self._schedule = {}
         self._phase_ref = {}  # The phase reference of each channel
@@ -192,7 +182,6 @@ class Sequence:
 
         return self._phase_ref[basis][qubit].last_phase
 
-    @_save
     def declare_channel(self, name, channel_id, initial_target=None):
         """Declares a new channel to the Sequence.
 
@@ -235,8 +224,18 @@ class Sequence:
         elif initial_target is not None:
             self.target(initial_target, name)
             if self._building:
-                # Delete this saved "target" call
+                # Delete the saved "target" call
                 self._calls.pop()
+            else:
+                # Do not store "initial_target" in a _call when parametrized
+                # It is stored as a _to_build_call when target is called
+                initial_target = None
+
+        # Manually store the channel declaration as a regular call
+        self._calls.append(_Call(
+                            "declare_channel",
+                            (name, channel_id),
+                            {"initial_target": initial_target}))
 
     def declare_variable(self, name, size=1, dtype=float):
         """Declare a new variable within this Sequence.
@@ -266,8 +265,6 @@ class Sequence:
         var = Variable(name, dtype, size=size)
         self._variables[name] = var
         self._building = False
-        self._var_calls.append(
-            _Call("declare_variable", (name, dtype), {"size": size}))
         return var
 
     @_store
@@ -601,6 +598,8 @@ class Sequence:
     def _to_dict(self):
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
         d["calls"] = self._calls[1:]
+        d["vars"] = self._variables
+        d["to_build_calls"] = self._to_build_calls
         return d
 
     def __str__(self):
@@ -684,7 +683,6 @@ class Sequence:
         self._building = True
         self._is_measured = False
         self._variables = {}
-        self._var_calls = []
         self._to_build_calls = []
 
 

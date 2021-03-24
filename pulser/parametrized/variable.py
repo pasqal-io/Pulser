@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
+import dataclasses
 from typing import Union
 
 import numpy as np
@@ -22,7 +22,7 @@ from pulser.parametrized.paramobj import OpSupport
 from pulser.utils import obj_to_dict
 
 
-@dataclass(frozen=True, eq=False)
+@dataclasses.dataclass(frozen=True, eq=False)
 class Variable(Parametrized, OpSupport):
     """A variable for parametrized sequence building.
 
@@ -81,7 +81,7 @@ class Variable(Parametrized, OpSupport):
 
     def _to_dict(self):
         d = obj_to_dict(self, _build=False)
-        d["var_name"] = self.name
+        d.update(dataclasses.asdict(self))
         return d
 
     def __str__(self):
@@ -102,7 +102,7 @@ class Variable(Parametrized, OpSupport):
         return _VariableItem(self, key)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class _VariableItem(Parametrized, OpSupport):
     """Stores access to items of a variable with multiple values."""
 
