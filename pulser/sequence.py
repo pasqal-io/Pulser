@@ -16,6 +16,7 @@ from collections import namedtuple
 import copy
 from functools import wraps
 from itertools import chain
+import json
 import warnings
 
 import numpy as np
@@ -23,6 +24,7 @@ import numpy as np
 import pulser
 from pulser.pulse import Pulse
 from pulser.devices import MockDevice
+from pulser._json_coders import PulserEncoder, PulserDecoder
 from pulser.parametrized import Parametrized, Variable
 from pulser._seq_drawer import draw_sequence
 from pulser.utils import validate_duration, obj_to_dict
@@ -589,6 +591,47 @@ class Sequence:
             getattr(seq, call.name)(*args_, **kwargs_)
 
         return seq
+
+    def serialize(self, **kwargs):
+        """Serializes the Sequence into a JSON formatted string.
+
+        Other Parameters:
+            kwargs: Valid keyword-arguments for `json.dumps()`, except for
+                `cls`.
+
+        Returns:
+            str: The sequence encoded in a JSON formatted string.
+
+        See also:
+            json.dumps: Built-in function for serialization to a JSON formatted
+                string.
+        """
+        return json.dumps(self, cls=PulserEncoder, **kwargs)
+
+    @staticmethod
+    def deserialize(obj, **kwargs):
+        """Deserializes a JSON formatted string.
+
+        Args:
+            obj(str): The JSON formatted string to deserialize, coming from the
+                serialization of a `Sequence` through `Sequence.serialize()`.
+
+        Other Parameters:
+            kwargs: Valid keyword-arguments for `json.loads()`, except for
+                `cls` and `object_hook`.
+
+        Returns:
+            Sequence: The deserialized Sequence object.
+
+        See also:
+            json.loads: Built-in function for deserialization from a JSON
+                formatted string.
+        """
+        if "Sequence" not in obj:
+            warnings.warn("The given JSON formatted string does not encode a "
+                          "Sequence.")
+
+        return json.loads(obj, cls=PulserDecoder, **kwargs)
 
     @_screen
     def draw(self):
