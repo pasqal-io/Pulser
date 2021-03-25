@@ -20,6 +20,7 @@ import pytest
 from pulser import Sequence, Register, Pulse
 from pulser.devices import Chadoq2
 from pulser.parametrized import Variable
+from pulser.waveforms import BlackmanWaveform
 
 reg = Register.rectangle(4, 3)
 device = Chadoq2
@@ -28,11 +29,9 @@ device = Chadoq2
 def test_var_declarations():
     sb = Sequence(reg, device)
     assert sb._building is True
-    assert sb._var_calls == []
     assert sb.declared_variables == {}
     var = sb.declare_variable("var")
     assert sb.declared_variables == {"var": var}
-    assert len(sb._var_calls) == 1
     assert sb._building is False
     assert isinstance(var, Variable)
     assert var.dtype == float
@@ -126,21 +125,28 @@ def test_build():
     sb.declare_channel("ch1", "rydberg_local")
     sb.declare_channel("ch2", "raman_local", initial_target=targ_var[0])
     sb.target(targ_var[1], "ch1")
-    pls = Pulse.ConstantPulse(var*100, var, var, var)
+    wf = BlackmanWaveform(var*100, np.pi)
+    pls = Pulse.ConstantDetuning(wf, var, var)
     sb.add(pls, "ch1")
     sb.delay(var*50, "ch1")
     sb.align("ch2", "ch1")
     sb.phase_shift(var, targ_var[0])
+    pls2 = Pulse.ConstantPulse(wf.duration, var, var, 0)
+    sb.add(pls2, "ch2")
     sb.measure()
     with pytest.warns(UserWarning, match="No declared variables"):
         sb.build(t=100, var=2, targ_var=["q1", "q0"])
     with pytest.raises(TypeError, match="Did not receive values for"):
         sb.build(var=2)
     seq = sb.build(var=2, targ_var=["q1", "q0"])
-    assert seq._schedule["ch2"][-1].tf == 300
+    assert seq._schedule["ch2"][-1].tf == 500
     assert seq.current_phase_ref("q1") == 2.0
     assert seq.current_phase_ref("q0") == 0.
     assert seq._measurement == "ground-rydberg"
+
+    s = sb.serialize()
+    sb_ = Sequence.deserialize(s)
+    assert str(sb) == str(sb_)
 
 
 def test_str():

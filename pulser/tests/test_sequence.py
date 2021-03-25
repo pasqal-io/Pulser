@@ -250,3 +250,7 @@ def test_sequence():
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()
+
+    s = seq.serialize()
+    seq_ = Sequence.deserialize(s)
+    assert str(seq) == str(seq_)
