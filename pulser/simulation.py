@@ -238,6 +238,24 @@ class Simulation:
 
         self._hamiltonian = ham
 
+    def get_hamiltonian(self, time):
+        """Get the Hamiltonian created from the sequence at a fixed time.
+
+        Args:
+            time (float): The specific time in which we want to extract the
+                    Hamiltonian (in ns).
+
+        Returns:
+            Qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
+                    extracted from the effective sequence (determined by
+                    `self.sampling_rate`) at the specified time.
+        """
+        if time > 1000 * self._times[-1]:
+            raise ValueError("Provided time is larger than sequence duration.")
+        if time < 0:
+            raise ValueError("Provided time is negative.")
+        return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
+
     # Run Simulation Evolution using Qutip
     def run(self, initial_state=None, progress_bar=None, **options):
         """Simulate the sequence using QuTiP's solvers.
