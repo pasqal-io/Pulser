@@ -226,13 +226,20 @@ class Sequence:
         if ch.addressing == 'Global':
             self._add_to_schedule(name, _TimeSlot('target', -1, 0, self._qids))
         elif initial_target is not None:
-            self.target(initial_target, name)
+            try:
+                cond = any(isinstance(t, Parametrized) for t in initial_target)
+            except TypeError:
+                cond = isinstance(initial_target, Parametrized)
+            if cond:
+                self._building = False
+
             if self._building:
-                # Delete the saved "target" call
-                self._calls.pop()
+                # "_target" call is not saved
+                self._target(initial_target, name)
             else:
                 # Do not store "initial_target" in a _call when parametrized
                 # It is stored as a _to_build_call when target is called
+                self.target(initial_target, name)
                 initial_target = None
 
         # Manually store the channel declaration as a regular call
@@ -324,8 +331,7 @@ class Sequence:
         ti = current_max_t
         tf = ti + pulse.duration
         if ti > t0:
-            self.delay(ti-t0, channel)
-            self._calls.pop()
+            self._delay(ti-t0, channel)
 
         prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
         if len(prs) != 1:
@@ -347,9 +353,8 @@ class Sequence:
                 self._last_used[basis][q] = tf
 
         if pulse.post_phase_shift:
-            self.phase_shift(pulse.post_phase_shift, *last.targets,
-                             basis=basis)
-            self._calls.pop()
+            self._phase_shift(pulse.post_phase_shift, *last.targets,
+                              basis=basis)
 
     @_store
     def target(self, qubits, channel):
@@ -362,60 +367,7 @@ class Sequence:
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
          """
-
-        self._validate_channel(channel)
-
-        try:
-            qs = set(qubits) if not isinstance(qubits, str) else {qubits}
-        except TypeError:
-            qs = {qubits}
-
-        if self._channels[channel].addressing != 'Local':
-            raise ValueError("Can only choose target of 'Local' channels.")
-        elif len(qs) > self._channels[channel].max_targets:
-            raise ValueError(
-                "This channel can target at most "
-                f"{self._channels[channel].max_targets} qubits at a time"
-            )
-
-        if not self._building:
-            for q in qs:
-                if q not in self._qids and not isinstance(q, Parametrized):
-                    raise ValueError("All non-variable qubits must belong to "
-                                     "the register.")
-            return
-
-        elif not qs.issubset(self._qids):
-            raise ValueError("All given qubits must belong to the register.")
-
-        basis = self._channels[channel].basis
-        phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
-        if len(phase_refs) != 1:
-            raise ValueError("Cannot target multiple qubits with different "
-                             "phase references for the same basis.")
-
-        try:
-            last = self._last(channel)
-            if last.targets == qs:
-                warnings.warn("The provided qubits are already the target. "
-                              "Skipping this target instruction.")
-                return
-            ti = last.tf
-            retarget = self._channels[channel].retarget_time
-            elapsed = ti - self._last_target[channel]
-            delta = np.clip(retarget - elapsed, 0, retarget)
-            if delta != 0:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    delta = validate_duration(np.clip(delta, 16, np.inf))
-            tf = ti + delta
-
-        except ValueError:
-            ti = -1
-            tf = 0
-
-        self._last_target[channel] = tf
-        self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qs))
+        self._target(qubits, channel)
 
     @_store
     def delay(self, duration, channel):
@@ -425,15 +377,7 @@ class Sequence:
             duration (int): Time to delay (in multiples of 4 ns).
             channel (str): The channel's name provided when declared.
         """
-        self._validate_channel(channel)
-        if not self._building:
-            return
-
-        last = self._last(channel)
-        ti = last.tf
-        tf = ti + validate_duration(duration)
-        self._add_to_schedule(channel,
-                              _TimeSlot('delay', ti, tf, last.targets))
+        self._delay(duration, channel)
 
     @_store
     def measure(self, basis='ground-rydberg'):
@@ -476,28 +420,7 @@ class Sequence:
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
-        if basis not in self._phase_ref:
-            raise ValueError("No declared channel targets the given 'basis'.")
-        if not self._building:
-            for t in targets:
-                if t not in self._qids and not isinstance(t, Parametrized):
-                    raise ValueError("All non-variable targets must belong to "
-                                     "the register.")
-            return
-
-        elif not set(targets) <= self._qids:
-            raise ValueError("All given targets have to be qubit ids declared"
-                             " in this sequence's register.")
-
-        if phi % (2*np.pi) == 0:
-            warnings.warn("A phase shift of 0 is meaningless, "
-                          "it will be ommited.")
-            return
-
-        for q in targets:
-            t = self._last_used[basis][q]
-            new_phase = self._phase_ref[basis][q].last_phase + phi
-            self._phase_ref[basis][q][t] = new_phase
+        self._phase_shift(phi, *targets, basis=basis)
 
     @_store
     def align(self, *channels):
@@ -532,8 +455,7 @@ class Sequence:
         for id in channels:
             delta = tf - last_ts[id]
             if delta > 0:
-                self.delay(delta, id)
-                self._calls.pop()
+                self._delay(delta, id)
 
     def build(self, **vars):
         """Builds a sequence from the programmed instructions.
@@ -635,6 +557,96 @@ class Sequence:
     def draw(self):
         """Draws the sequence in its current sequence."""
         draw_sequence(self)
+
+    def _target(self, qubits, channel):
+        self._validate_channel(channel)
+
+        try:
+            qs = set(qubits) if not isinstance(qubits, str) else {qubits}
+        except TypeError:
+            qs = {qubits}
+
+        if self._channels[channel].addressing != 'Local':
+            raise ValueError("Can only choose target of 'Local' channels.")
+        elif len(qs) > self._channels[channel].max_targets:
+            raise ValueError(
+                "This channel can target at most "
+                f"{self._channels[channel].max_targets} qubits at a time"
+            )
+
+        if not self._building:
+            for q in qs:
+                if q not in self._qids and not isinstance(q, Parametrized):
+                    raise ValueError("All non-variable qubits must belong to "
+                                     "the register.")
+            return
+
+        elif not qs.issubset(self._qids):
+            raise ValueError("All given qubits must belong to the register.")
+
+        basis = self._channels[channel].basis
+        phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
+        if len(phase_refs) != 1:
+            raise ValueError("Cannot target multiple qubits with different "
+                             "phase references for the same basis.")
+
+        try:
+            last = self._last(channel)
+            if last.targets == qs:
+                warnings.warn("The provided qubits are already the target. "
+                              "Skipping this target instruction.")
+                return
+            ti = last.tf
+            retarget = self._channels[channel].retarget_time
+            elapsed = ti - self._last_target[channel]
+            delta = np.clip(retarget - elapsed, 0, retarget)
+            if delta != 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    delta = validate_duration(np.clip(delta, 16, np.inf))
+            tf = ti + delta
+
+        except ValueError:
+            ti = -1
+            tf = 0
+
+        self._last_target[channel] = tf
+        self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qs))
+
+    def _delay(self, duration, channel):
+        self._validate_channel(channel)
+        if not self._building:
+            return
+
+        last = self._last(channel)
+        ti = last.tf
+        tf = ti + validate_duration(duration)
+        self._add_to_schedule(channel,
+                              _TimeSlot('delay', ti, tf, last.targets))
+
+    def _phase_shift(self, phi, *targets, basis='digital'):
+        if basis not in self._phase_ref:
+            raise ValueError("No declared channel targets the given 'basis'.")
+        if not self._building:
+            for t in targets:
+                if t not in self._qids and not isinstance(t, Parametrized):
+                    raise ValueError("All non-variable targets must belong to "
+                                     "the register.")
+            return
+
+        elif not set(targets) <= self._qids:
+            raise ValueError("All given targets have to be qubit ids declared"
+                             " in this sequence's register.")
+
+        if phi % (2*np.pi) == 0:
+            warnings.warn("A phase shift of 0 is meaningless, "
+                          "it will be ommited.")
+            return
+
+        for q in targets:
+            t = self._last_used[basis][q]
+            new_phase = self._phase_ref[basis][q].last_phase + phi
+            self._phase_ref[basis][q][t] = new_phase
 
     def _to_dict(self):
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
