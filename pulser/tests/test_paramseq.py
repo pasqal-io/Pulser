@@ -28,11 +28,9 @@ device = Chadoq2
 
 def test_var_declarations():
     sb = Sequence(reg, device)
-    assert sb._building is True
     assert sb.declared_variables == {}
     var = sb.declare_variable("var")
     assert sb.declared_variables == {"var": var}
-    assert sb._building is False
     assert isinstance(var, Variable)
     assert var.dtype == float
     assert len(var) == 1
@@ -48,10 +46,10 @@ def test_stored_calls():
     assert sb._calls[-1].name == "__init__"
     var = sb.declare_variable("var")
     assert sb._to_build_calls == []
-    sb.declare_channel("ch1", "rydberg_local", initial_target=7)
+    sb.declare_channel("ch1", "rydberg_local", initial_target=var)
     assert sb._calls[-1].name == "declare_channel"
     assert sb._to_build_calls[-1].name == "target"
-    assert sb._to_build_calls[-1].args == (7, "ch1")
+    assert sb._to_build_calls[-1].args == (var, "ch1")
     with pytest.raises(ValueError, match="name of a declared channel"):
         sb.delay(1000, "rydberg_local")
     x = Variable("x", str)
@@ -168,6 +166,7 @@ def test_screen():
     sb = Sequence(reg, device)
     sb.declare_channel("ch1", "rydberg_global")
     assert sb.current_phase_ref(4, basis="ground-rydberg") == 0
-    sb.declare_variable("var")
+    var = sb.declare_variable("var")
+    sb.delay(var, "ch1")
     with pytest.raises(RuntimeError, match="can't be called in parametrized"):
         sb.current_phase_ref(4, basis="ground-rydberg")

@@ -56,6 +56,8 @@ def _store(func):
         # Check if all Parametrized inputs stem from declared variables
         for x in chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
+                # If not already, the sequence becomes parametrized
+                self._building = False
                 for name, var in x.variables.items():
                     if name not in self._variables:
                         raise ValueError(f"Unknown variable '{name}'.")
@@ -255,10 +257,6 @@ class Sequence:
             Variable: The declared Variable instance.
 
         Notes:
-            Declaring a variable will turn the sequence into a "parametrized"
-            Sequence, which will require building (through `Sequence.build()`)
-            to obtain the final sequence.
-
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
@@ -266,7 +264,6 @@ class Sequence:
             raise ValueError("Name for variable is already being used.")
         var = Variable(name, dtype, size=size)
         self._variables[name] = var
-        self._building = False
         return var
 
     @_store
@@ -304,9 +301,8 @@ class Sequence:
             if not isinstance(pulse, Parametrized):
                 self._validate_pulse(pulse, channel)
             return
-        else:
-            self._validate_pulse(pulse, channel)
 
+        self._validate_pulse(pulse, channel)
         last = self._last(channel)
         t0 = last.tf    # Preliminary ti
         basis = self._channels[channel].basis
@@ -578,9 +574,11 @@ class Sequence:
         for name, value in vars.items():
             self._variables[name]._assign(value)
 
-        # Can't deepcopy with stored parametrized objects due to recursiveness
+        # Shallow copy with stored parametrized objects
         seq = copy.copy(self)
+        # Eliminates the source of recursiveness errors
         seq._reset_parametrized()
+        # Deepcopy the base sequence (what remains)
         seq = copy.deepcopy(seq)
 
         for call in self._to_build_calls:
@@ -723,6 +721,7 @@ class Sequence:
 
     def _reset_parametrized(self):
         """Resets all attributes related to parametrization."""
+        # Signals the sequence as actively "building" ie not parametrized
         self._building = True
         self._is_measured = False
         self._variables = {}
