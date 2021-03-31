@@ -40,7 +40,7 @@ def _screen(func):
     """Blocks the call to a function if the Sequence is parametrized."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        if not self._building:
+        if self.is_parametrized():
             raise RuntimeError(f"Sequence.{func.__name__} can't be called in"
                                + " parametrized sequences.")
         return func(self, *args, **kwargs)
@@ -48,7 +48,7 @@ def _screen(func):
 
 
 def _store(func):
-    """Stores any Sequence building call for defered execution."""
+    """Stores any Sequence building call for deferred execution."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         def verify_variable(x):
@@ -70,7 +70,7 @@ def _store(func):
                 for y in x:
                     verify_variable(y)
 
-        if self._is_measured and not self._building:
+        if self._is_measured and self.is_parametrized():
             raise SystemError("The sequence has been measured, no further "
                               "changes are allowed.")
         # Check if all Parametrized inputs stem from declared variables
@@ -169,6 +169,16 @@ class Sequence:
                 if id not in self._taken_channels
                 or self._device == MockDevice}
 
+    def is_parametrized(self):
+        """States whether the sequence is parametrized.
+
+        A parametrized sequence is one that depends on the values assigned to
+        variables declared within it. Sequence-building calls are not executed
+        right away, but rather stored for deferred execution when all variables
+        are given a value (when`Sequence.build()` is called).
+        """
+        return not self._building
+
     @_screen
     def current_phase_ref(self, qubit, basis='digital'):
         """Current phase reference of a specific qubit for a given basis.
@@ -241,14 +251,14 @@ class Sequence:
             if cond:
                 self._building = False
 
-            if self._building:
-                # "_target" call is not saved
-                self._target(initial_target, name)
-            else:
+            if self.is_parametrized():
                 # Do not store "initial_target" in a _call when parametrized
                 # It is stored as a _to_build_call when target is called
                 self.target(initial_target, name)
                 initial_target = None
+            else:
+                # "_target" call is not saved
+                self._target(initial_target, name)
 
         # Manually store the channel declaration as a regular call
         self._calls.append(_Call(
@@ -312,7 +322,7 @@ class Sequence:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
 
-        if not self._building:
+        if self.is_parametrized():
             if not isinstance(pulse, Parametrized):
                 self._validate_pulse(pulse, channel)
             return
@@ -405,10 +415,10 @@ class Sequence:
         if hasattr(self, "_measurement"):
             raise SystemError("The sequence has already been measured.")
 
-        if self._building:
-            self._measurement = basis
-        else:
+        if self.is_parametrized():
             self._is_measured = True
+        else:
+            self._measurement = basis
 
     @_store
     def phase_shift(self, phi, *targets, basis='digital'):
@@ -454,7 +464,7 @@ class Sequence:
         if len(channels) < 2:
             raise ValueError("Needs at least two channels for alignment.")
 
-        if not self._building:
+        if self.is_parametrized():
             return
 
         last_ts = {id: self._last(id).tf for id in channels}
@@ -484,7 +494,7 @@ class Sequence:
             # Build a sequence with specific values for both variables
             >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
         """
-        if self._building:
+        if not self.is_parametrized():
             warnings.warn("Building a non-parametrized sequence simply returns"
                           " a copy of itself.")
             return copy.copy(self)
@@ -582,7 +592,7 @@ class Sequence:
                 f"{self._channels[channel].max_targets} qubits at a time"
             )
 
-        if not self._building:
+        if self.is_parametrized():
             for q in qs:
                 if q not in self._qids and not isinstance(q, Parametrized):
                     raise ValueError("All non-variable qubits must belong to "
@@ -623,7 +633,7 @@ class Sequence:
 
     def _delay(self, duration, channel):
         self._validate_channel(channel)
-        if not self._building:
+        if self.is_parametrized():
             return
 
         last = self._last(channel)
@@ -635,7 +645,7 @@ class Sequence:
     def _phase_shift(self, phi, *targets, basis='digital'):
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
-        if not self._building:
+        if self.is_parametrized():
             for t in targets:
                 if t not in self._qids and not isinstance(t, Parametrized):
                     raise ValueError("All non-variable targets must belong to "
@@ -696,7 +706,7 @@ class Sequence:
         if hasattr(self, "_measurement"):
             full += f"Measured in basis: {self._measurement}"
 
-        if not self._building:
+        if self.is_parametrized():
             prelude = "Prelude\n-------\n" + full
             lines = ["Stored calls\n------------"]
             for i, c in enumerate(self._to_build_calls, 1):
