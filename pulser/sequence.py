@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from collections import namedtuple
+from collections.abc import Iterable
 import copy
 from functools import wraps
 from itertools import chain
@@ -50,11 +51,7 @@ def _store(func):
     """Stores any Sequence building call for defered execution."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        if self._is_measured and not self._building:
-            raise SystemError("The sequence has been measured, no further "
-                              "changes are allowed.")
-        # Check if all Parametrized inputs stem from declared variables
-        for x in chain(args, kwargs.values()):
+        def verify_variable(x):
             if isinstance(x, Parametrized):
                 # If not already, the sequence becomes parametrized
                 self._building = False
@@ -68,6 +65,17 @@ def _store(func):
                             "Sequence's 'declare_variable' method as your"
                             "variables."
                             )
+            elif isinstance(x, Iterable) and not isinstance(x, str):
+                # Recursively look for parametrized objs inside the arguments
+                for y in x:
+                    verify_variable(y)
+
+        if self._is_measured and not self._building:
+            raise SystemError("The sequence has been measured, no further "
+                              "changes are allowed.")
+        # Check if all Parametrized inputs stem from declared variables
+        for x in chain(args, kwargs.values()):
+            verify_variable(x)
         storage = self._calls if self._building else self._to_build_calls
         func(self, *args, **kwargs)
         storage.append(_Call(func.__name__, args, kwargs))

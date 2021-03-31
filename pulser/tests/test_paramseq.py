@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from pulser import Sequence, Register, Pulse
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
 from pulser.parametrized import Variable
 from pulser.waveforms import BlackmanWaveform
 
@@ -94,6 +94,15 @@ def test_stored_calls():
         sb.target(0, "ch2")
     with pytest.raises(ValueError, match="target at most 1 qubits"):
         sb.target(q_var, "ch1")
+
+    sb2 = Sequence(reg, MockDevice)
+    sb2.declare_channel("ch1", "rydberg_local", initial_target={3, 4, 5})
+    q_var2 = sb2.declare_variable("q_var2", size=5, dtype=str)
+    var2 = sb2.declare_variable("var2")
+    assert sb2._building
+    sb2.target({var2, 7, 9, 10}, "ch1")
+    assert not sb2._building
+    sb2.target(q_var2, "ch1")
 
     with pytest.raises(ValueError, match="targets the given 'basis'"):
         sb.phase_shift(var, *q_var)
