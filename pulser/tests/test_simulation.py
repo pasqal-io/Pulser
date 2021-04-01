@@ -19,7 +19,7 @@ import qutip
 
 from pulser import Sequence, Pulse, Register, Simulation
 from pulser.devices import Chadoq2
-from pulser.waveforms import BlackmanWaveform, RampWaveform
+from pulser.waveforms import BlackmanWaveform, , RampWaveform, ConstantWaveform
 
 q_dict = {"control1": np.array([-4., 0.]),
           "target": np.array([0., 4.]),
@@ -212,6 +212,16 @@ def test_get_hamiltonian():
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
     assert (simple_ham[0, 0] == Chadoq2.interaction_coeff / 10**6 - 2 * detun)
+
+
+def test_single_atom_simulation():
+    one_reg = Register.from_coordinates([(0, 0)], 'atom')
+    one_seq = Sequence(one_reg, Chadoq2)
+    one_seq.declare_channel('ch0', 'rydberg_global')
+    one_seq.add(Pulse.ConstantDetuning(ConstantWaveform(16, 1.), 1., 0), 'ch0')
+    one_sim = Simulation(seq)
+    one_res = one_sim.run()
+    assert(one_res._size == one_sim._size)
 
 
 def test_run():
