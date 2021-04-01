@@ -19,7 +19,7 @@ import qutip
 
 from pulser import Sequence, Pulse, Register, Simulation
 from pulser.devices import Chadoq2
-from pulser.waveforms import BlackmanWaveform, , RampWaveform, ConstantWaveform
+from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
 
 q_dict = {"control1": np.array([-4., 0.]),
           "target": np.array([0., 4.]),
