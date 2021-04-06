@@ -154,7 +154,7 @@ def draw_simulation(sim):
         yaeff = []
         ybeff = []
         
-        for ti, tf in zip(time_slices[1:],time_slices[2:]):
+        for ti, tf in zip(time_slices,time_slices[1:]):
             teff += [t[ti],t[tf]]
             yaeff += [ya[ti],ya[ti]]
             ybeff += [yb[ti],yb[ti]]
@@ -177,12 +177,12 @@ def draw_simulation(sim):
         det_bottom = det_min - det_range * 0.05
         b.set_ylim(det_bottom, det_top)
 
-        a.plot(t, ya, color="darkgreen", linewidth=0.8)
-        b.plot(t, yb, color='indigo', linewidth=0.8)
-        a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
-        a.plot(teff, yaeff, color="limegreen", linewidth=0.8, ls='-')
-        b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
-        b.plot(teff, ybeff, color="blueviolet", linewidth=0.8, ls='-')
+        a.plot(t, ya, color="limegreen", linewidth=0.6)
+        b.plot(t, yb, color='blueviolet', linewidth=0.6)
+        a.plot(teff, yaeff, color="darkgreen", linewidth=0.8)
+        a.fill_between(teff, 0, yaeff, color="darkgreen", alpha=0.3)
+        b.plot(teff, ybeff, color="indigo", linewidth=0.8, ls='-')
+        b.fill_between(teff, 0, ybeff, color="indigo", alpha=0.3)
         a.set_ylabel(r'$\Omega$ (rad/µs)', fontsize=14, labelpad=10)
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 
