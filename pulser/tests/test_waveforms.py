@@ -127,7 +127,25 @@ def test_custom():
     assert wf.__repr__() == f'CustomWaveform(16 ns, {np.arange(16)!r})'
 
 
+def test_ramp():
+    assert ramp.slope == 7e-3
+
+
 def test_blackman():
-    with pytest.raises(ValueError, match='Area under the waveform'):
-        BlackmanWaveform(100, -100)
-        BlackmanWaveform(10, 0)
+    with pytest.raises(TypeError):
+        BlackmanWaveform(100, np.array([1, 2]))
+    wf = BlackmanWaveform(100, -2)
+    assert np.isclose(wf.integral, -2)
+    assert np.all(wf.samples <= 0)
+    assert wf == BlackmanWaveform(100, np.array([-2]))
+
+    with pytest.raises(ValueError, match="matching signs"):
+        BlackmanWaveform.from_max_val(-10, np.pi)
+
+    wf = BlackmanWaveform.from_max_val(10, 2*np.pi)
+    assert np.isclose(wf.integral, 2*np.pi)
+    assert np.max(wf.samples) < 10
+
+    wf = BlackmanWaveform.from_max_val(-10, -np.pi)
+    assert np.isclose(wf.integral, -np.pi)
+    assert np.min(wf.samples) > -10

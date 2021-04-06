@@ -143,7 +143,7 @@ class Register:
                         [np.sin(theta), np.cos(theta)]])
         self._coords = [rot @ v for v in self._coords]
 
-    def draw(self, with_labels=True, blockade_radius=None, draw_graph=False,
+    def draw(self, with_labels=True, blockade_radius=None, draw_graph=True,
              draw_half_radius=False):
         """Draws the entire register.
 
@@ -155,9 +155,9 @@ class Register:
             draw_half_radius(bool, default=False): Whether or not to draw the
                 half the blockade radius surrounding each atoms. If `True`,
                 requires `blockade_radius` to be defined.
-            draw_graph(bool, default=False): Whether or not to draw the
-                influence between atoms as edges in a graph. If `True`,
-                requires `blockade_radius` to be defined.
+            draw_graph(bool, default=True): Whether or not to draw the
+                interaction between atoms as edges in a graph. Will only draw
+                if the `blockade_radius` is defined.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -204,9 +204,7 @@ class Register:
             # A 'scatter' marker of size s has area pi/4 * s
             ax.scatter(pos[:, 0], pos[:, 1], s=4*r_pts**2, alpha=0.1,
                        c='darkgreen')
-        if draw_graph:
-            if blockade_radius is None:
-                raise ValueError("Define 'blockade_radius' to draw the graph.")
+        if draw_graph and blockade_radius is not None:
             epsilon = 1e-9      # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
             lines = pos[(tuple(edges),)]
