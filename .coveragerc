@@ -1,0 +1,10 @@
+# .coveragerc to control coverage.py
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    # Don't test abstractmethods
+    @abstractmethod
+
+omit = pulser/tests/*
