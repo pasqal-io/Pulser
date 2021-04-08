@@ -53,9 +53,16 @@ class PulserDecoder(JSONDecoder):
             var_name = obj["name"]
             try:
                 var = self.vars[var_name]
-                assert var.name == var_name
-                assert var.dtype == obj["dtype"]
-                assert var.size == obj["size"]
+                assert var.name == var_name, (f"Variable {var.name} already "
+                                              + f"declared under {var_name}.")
+                assert var.dtype == obj["dtype"], (
+                    "Mismatching variable types for variables under the name "
+                    + f"'{var_name}'."
+                    )
+                assert var.size == obj["size"], (
+                    "Mismatching sizes for variables under the name "
+                    + f"'{var_name}'."
+                    )
             except KeyError:
                 var = Variable(var_name, obj["dtype"], obj["size"])
                 self.vars[var_name] = var
@@ -74,7 +81,8 @@ class PulserDecoder(JSONDecoder):
                 getattr(seq, name)(*args, **kwargs)
             seq._building = obj["vars"] == {}
             for name, var in obj["vars"].items():
-                assert name not in seq._variables
+                assert name not in seq._variables, ("Multiples variables with"
+                                                    + f" the name '{name}'.")
                 seq._variables[name] = var
             for name, args, kwargs in obj["to_build_calls"]:
                 getattr(seq, name)(*args, **kwargs)
