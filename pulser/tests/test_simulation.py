@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
@@ -226,6 +228,8 @@ def test_single_atom_simulation():
 
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
+    with patch('matplotlib.pyplot.show'):
+        sim.draw()
     bad_initial = np.array([1.])
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)

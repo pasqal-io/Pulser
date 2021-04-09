@@ -74,11 +74,16 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq):
+def draw_sequence(seq, time_slices=np.array([])):
     """Draw the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
+
+    Keyword args:
+        time_slices(numpy.ndarray): The time slices at wich the sequence is
+        to be sampled. If this is provided, the constant-by-part Sequence
+        defined on these slices is also drawn.
     """
 
     def phase_str(phi):
@@ -138,6 +143,16 @@ def draw_sequence(seq):
         ya = data[ch]['amp']
         yb = data[ch]['detuning']
 
+        if len(time_slices) > 0:
+            teff = []
+            yaeff = []
+            ybeff = []
+
+            for ti, tf in zip(time_slices, time_slices[1:]):
+                teff += [t[ti], t[tf]]
+                yaeff += [ya[ti], ya[ti]]
+                ybeff += [yb[ti], yb[ti]]
+
         t_min = -t[-1]*0.03
         t_max = t[-1]*1.05
         a.set_xlim(t_min, t_max)
@@ -158,8 +173,14 @@ def draw_sequence(seq):
 
         a.plot(t, ya, color="darkgreen", linewidth=0.8)
         b.plot(t, yb, color='indigo', linewidth=0.8)
-        a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
-        b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
+        if len(time_slices) > 0:
+            a.plot(teff, yaeff, color="darkgreen", linewidth=0.8)
+            b.plot(teff, ybeff, color="indigo", linewidth=0.8, ls='-')
+            a.fill_between(teff, 0, yaeff, color="darkgreen", alpha=0.3)
+            b.fill_between(teff, 0, ybeff, color="indigo", alpha=0.3)
+        else:
+            a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
+            b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
         a.set_ylabel(r'$\Omega$ (rad/µs)', fontsize=14, labelpad=10)
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 

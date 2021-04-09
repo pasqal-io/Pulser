@@ -74,6 +74,17 @@ class Simulation:
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
 
+    def draw(self):
+        """Draws the simulation, showing both the input sequence and
+        the effective, constant-by-part (sampled) sequence used in QuTip.
+        """
+
+        # The effective time steps
+        time_slices = (1000*self._times).astype(int)
+
+        draw_sequence(self, time_slices)
+
+
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
 
