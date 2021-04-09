@@ -92,7 +92,7 @@ def draw_sequence(seq, time_slices=np.array([])):
         if value == -1:
             return r"$\pi$"
         elif value == 0:
-            return "0"
+            return "0"      # pragma: no cover - just for safety
         else:
             return r"{:.2g}$\pi$".format(value)
 

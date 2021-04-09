@@ -46,4 +46,4 @@ jobs:
           pip install -e .
           pip install -r requirements.txt
       - name: Run the unit tests & generate coverage report
-        run: pytest --cov pulser
+        run: pytest --cov --cov-fail-under=100 pulser
