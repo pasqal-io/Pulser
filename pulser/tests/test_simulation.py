@@ -228,9 +228,6 @@ def test_single_atom_simulation():
 
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
-
-    print((1000*sim._times).astype(int))
-
     with patch('matplotlib.pyplot.show'):
         sim.draw()
     bad_initial = np.array([1.])
