@@ -20,7 +20,7 @@ from copy import deepcopy
 
 from pulser import Pulse, Sequence
 from pulser.simresults import SimulationResults
-from pulser._sim_drawer import draw_simulation
+from pulser._seq_drawer import draw_sequence
 
 
 class Simulation:
@@ -80,7 +80,10 @@ class Simulation:
         the effective, constant-by-part (sampled) sequence used in QuTip.
         """
 
-        draw_simulation(self)
+        # The effective time steps
+        time_slices = (1000*self._times).astype(int)
+
+        draw_sequence(self, time_slices)
 
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
