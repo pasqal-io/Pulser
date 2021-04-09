@@ -148,10 +148,13 @@ def draw_sequence(seq, time_slices=np.array([])):
             yaeff = []
             ybeff = []
 
+            current_t = 0
             for ti, tf in zip(time_slices, time_slices[1:]):
-                teff += [t[ti], t[tf]]
-                yaeff += [ya[ti], ya[ti]]
-                ybeff += [yb[ti], yb[ti]]
+                while t[current_t] < tf:
+                    current_t += 1
+                teff += [ti, tf]
+                yaeff += [ya[current_t], ya[current_t]]
+                ybeff += [yb[current_t], yb[current_t]]
 
         t_min = -t[-1]*0.03
         t_max = t[-1]*1.05
