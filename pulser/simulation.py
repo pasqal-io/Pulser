@@ -83,7 +83,7 @@ class Simulation:
         # The effective time steps
         time_slices = (1000*self._times).astype(int)
 
-        draw_sequence(self, time_slices)
+        draw_sequence(self._seq, time_slices)
 
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
