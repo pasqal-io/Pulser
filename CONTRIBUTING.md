@@ -8,7 +8,7 @@ The steps to take will depend on what you want to do, but generally you'll want 
 
 1. Do a quick search for keywords over the existing issues to ensure yours has not been added yet.
 2. If you can't find your issue already listed, create a new one. Please try to be as clear and detailed as possible in your description.
-- If you just want to give a suggestion or report a bug, that's already excellent and we thank you for it! Your issue will be listed and, hopefully, someone will take care of it some point. 
+- If you just want to give a suggestion or report a bug, that's already excellent and we thank you for it! Your issue will be listed and, hopefully, someone will take care of it at some point.
 - However, you may also want to be the one solving your issue, which would be even better! In these cases, you would proceed by preparing a [Pull Request](#making-a-pull-request).
 
 
@@ -22,7 +22,7 @@ We're thrilled that you want to contribute to Pulser. Here are the steps you sho
     ```
     **Note**: `USERNAME` should be replaced by your own GitHub ID.
 
-1. Have the related issue assigned to you. We suggest that you work only on issues that have been assigned to you; by doing this, you make sure to be the only one working on this and we prevent everyone from doing duplicate work. If a related issue does not exist yet, consult the [section above](#reporting-a-bug-or-suggesting-a-feature) to see how to proceed. 
+1. Have the related issue assigned to you. We suggest that you work only on issues that have been assigned to you; by doing this, you make sure to be the only one working on this and we prevent everyone from doing duplicate work. If a related issue does not exist yet, consult the [section above](#reporting-a-bug-or-suggesting-a-feature) to see how to proceed.
 
 2. You'll want to create a new branch where you will do your changes. **Do not push changes to your fork's `master` branch**, it should be used only to keep your fork in sync with Pulser's `master` branch (more on how to do this later). Go to the location where you cloned your fork and do:
     ```bash
@@ -33,7 +33,7 @@ We're thrilled that you want to contribute to Pulser. Here are the steps you sho
 
 3. Do your work and commit changes to this new branch.
 
-4. At this point, your fork's `master` branch might have drifted out of sync with Pulser's `master` branch (the `upstream`). The following lines will sync your local repo's `master` with `upstream/master` and then merge the local `master` with your working branch, at which point you'll have to solve any merge conflicts that may arise. 
+4. At this point, your fork's `master` branch might have drifted out of sync with Pulser's `master` branch (the `upstream`). The following lines will sync your local repo's `master` with `upstream/master` and then merge the local `master` with your working branch, at which point you'll have to solve any merge conflicts that may arise.
     ```shell
     # Track the upstream repo (you only have to do this one time):
     git remote add upstream https://github.com/pasqal-io/Pulser.git
@@ -50,10 +50,10 @@ We're thrilled that you want to contribute to Pulser. Here are the steps you sho
     ```bash
     git push origin branch-name-here
     ```
-    
+
 6. Once you're happy with your changes, go over to [Pulser's repo page](https://github.com/pasqal-io/Pulser) and start a new Pull Request from `USERNAME:branch-name-here` to `pasqal-io:master`. Before you do this, make sure your code is obeying the [continuous integration requirements](#continuous-integration-requirements).
 
-7. At this point, you've successfully started the review process. The code reviewers might ask you to perform some changes, which you should push to your local branch in the same way you've done before. You'll see they'll automatically show up in your open PR everyime you do this.
+7. At this point, you've successfully started the review process. The code reviewers might ask you to perform some changes, which you should push to your local branch in the same way you've done before. You'll see they'll automatically show up in your open PR every time you do this.
 
 ## Continuous Integration Requirements
 
@@ -64,11 +64,13 @@ cd Pulser
 pip install -r requirements.txt
 ```
 
-- **Tests**: We use [pytest](https://docs.pytest.org/en/latest/) to run unit tests on our code. If your changes break existing tests, you'll have to update these tests accordingly. Additionally, we try to aim for 100% coverage over our code, although we do not enforce it. Try to cover all the new lines of code with simple tests, which should be placed in the`Pulser/pulser/tests` folder. To run all tests and check coverage, run:
+- **Tests**: We use [pytest](https://docs.pytest.org/en/latest/) to run unit tests on our code. If your changes break existing tests, you'll have to update these tests accordingly. Additionally, we aim for 100% coverage over our code. Try to cover all the new lines of code with simple tests, which should be placed in the `Pulser/pulser/tests` folder. To run all tests and check coverage, run:
     ```bash
-    pytest --cov
+    pytest --cov pulser
     ```
-    
+All lines that are not meant to be tested must be tagged with `# pragma: no cover`. Use it sparingly,
+every decision to leave a line uncovered must be well justified.
+
 - **Style**: We use [flake8](https://flake8.pycqa.org/en/latest/) to enforce PEP8 style guidelines. To lint your code with `flake8`, simply run:
     ```bash
     flake8 .
