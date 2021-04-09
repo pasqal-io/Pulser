@@ -68,8 +68,8 @@ pip install -r requirements.txt
     ```bash
     pytest --cov pulser
     ```
-All lines that are not meant to be tested must be tagged with `# pragma: no cover`. Use it sparingly,
-every decision to leave a line uncovered must be well justified.
+    All lines that are not meant to be tested must be tagged with `# pragma: no cover`. Use it sparingly,
+    every decision to leave a line uncovered must be well justified.
 
 - **Style**: We use [flake8](https://flake8.pycqa.org/en/latest/) to enforce PEP8 style guidelines. To lint your code with `flake8`, simply run:
     ```bash
