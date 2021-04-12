@@ -189,6 +189,9 @@ def test_sequence():
     seq.declare_channel('ch2', 'rydberg_global')
     seq.phase_shift(np.pi, 'q0', basis='ground-rydberg')
 
+    with patch('matplotlib.pyplot.show'):
+        seq.draw()
+
     pulse1 = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     pulse2 = Pulse.ConstantDetuning(BlackmanWaveform(1e3, np.pi/4), 25, np.pi,
                                     post_phase_shift=1)
