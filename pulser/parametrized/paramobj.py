@@ -18,6 +18,7 @@ import operator
 import warnings
 
 from pulser.parametrized import Parametrized
+from pulser.utils import obj_to_dict
 
 # Availabe operations on parameterized objects with OpSupport
 reversible_ops = [
@@ -96,6 +97,14 @@ class ParamObj(Parametrized, OpSupport):
                    else self.cls)
             self._instance = obj(*args_, **kwargs_)
         return self._instance
+
+    def _to_dict(self):
+        if isinstance(self.cls, Parametrized):
+            cls_dict = self.cls._to_dict()
+        else:
+            cls_dict = obj_to_dict(self, _build=False, _name=self.cls.__name__,
+                                   _module=self.cls.__module__)
+        return obj_to_dict(self, cls_dict, *self.args, **self.kwargs)
 
     def __call__(self, *args, **kwargs):
         obj = ParamObj(self, *args, **kwargs)

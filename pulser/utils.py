@@ -15,6 +15,36 @@
 import warnings
 
 
+def obj_to_dict(obj, *args, _build=True, _module=None, _name=None, **kwargs):
+    """Encodes an object in a dictionary for serialization.
+
+    Args:
+        obj: The object to encode in the dictionary.
+
+    Other parameters:
+        _build (bool): Whether the object is to be built on deserialization.
+        _module (str): Custom name for the module containing the object.
+        _name (str): Custom name of the object.
+        args: If the object is to be built, the arguments to give on creation.
+        kwargs: If the object is to be built, the keyword arguments to give on
+            creation.
+
+    Returns:
+        dict: The dictionary encoding the object.
+    """
+
+    d = {
+        "_build": _build,
+        "__module__": _module if _module else obj.__class__.__module__,
+        "__name__": _name if _name else obj.__class__.__name__,
+    }
+    if _build:
+        d["__args__"] = args
+        d["__kwargs__"] = kwargs
+
+    return d
+
+
 def validate_duration(duration, min_duration=16, max_duration=67108864):
     """Validates a time interval.
 
