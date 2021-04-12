@@ -63,6 +63,10 @@ seq.target('control1', 'ryd')
 seq.add(pi, 'ryd')
 d += 5
 
+# Add a ConstantWaveform part to testout the drawing procedure
+seq.add(Pulse.ConstantPulse(duration, 0, 0, 0), 'ryd')
+d += 1
+
 
 def test_initialization_and_construction_of_hamiltonian():
     fake_sequence = {'pulse1': 'fake', 'pulse2': "fake"}
