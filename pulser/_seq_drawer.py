@@ -46,7 +46,7 @@ def gather_data(seq):
                 detuning += [0]
                 continue
             if slot.type in ['delay', 'target']:
-                time += [slot.ti, slot.tf-1]
+                time += [slot.ti, slot.tf-1 if slot.tf > slot.ti else slot.tf]
                 amp += [0, 0]
                 detuning += [0, 0]
                 if slot.type == 'target':
@@ -92,7 +92,7 @@ def draw_sequence(seq, drawinterp=False):
         if value == -1:
             return r"$\pi$"
         elif value == 0:
-            return "0"
+            return "0"      # pragma: no cover - just for safety
         else:
             return r"{:.2g}$\pi$".format(value)
 
