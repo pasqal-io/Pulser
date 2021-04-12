@@ -80,10 +80,7 @@ class Simulation:
         the effective, constant-by-part (sampled) sequence used in QuTip.
         """
 
-        # The effective time steps
-        time_slices = (1000*self._times).astype(int)
-
-        draw_sequence(self._seq, time_slices)
+        draw_sequence(self._seq, True)
 
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""

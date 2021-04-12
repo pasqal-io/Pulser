@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.waveforms import ConstantWaveform
+from scipy.interpolate import CubicSpline
 
 
 def gather_data(seq):
@@ -74,16 +75,15 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq, time_slices=np.array([])):
+def draw_sequence(seq, drawinterp=False):
     """Draw the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
 
     Keyword args:
-        time_slices(numpy.ndarray): The time slices at wich the sequence is
-        to be sampled. If this is provided, the constant-by-part Sequence
-        defined on these slices is also drawn.
+        drawinterp(logical): Whether to plot the effective pulse used by
+        the solver.
     """
 
     def phase_str(phi):
@@ -137,24 +137,62 @@ def draw_sequence(seq, time_slices=np.array([])):
                 unit = 'ns' if time_scale == 1 else r'$\mu s$'
                 ax.set_xlabel(f't ({unit})', fontsize=12)
 
+    if drawinterp:
+        solver_time = np.arange(seq._total_duration, dtype=np.double)/1000
+        delta_t = np.diff(solver_time)[0]
+        # Compare pulse with an interpolated pulse with 100 times more samples
+        teff = np.arange(0, max(solver_time), delta_t/100)
+
+        cs_amp = {}
+        cs_detuning = {}
+        for ch, sch in seq._schedule.items():
+            print(ch)
+            solver_amp = []
+            solver_detuning = []
+            for slot in sch:
+                if slot.ti == -1:
+                    solver_amp += [0]
+                    solver_detuning += [0]
+                    continue
+                pulse = slot.type
+                print(pulse, ' - ', slot.ti, ' - ', slot.tf - 1)
+                pulse_length = slot.tf-1 - slot.ti
+                print('pulse length =', pulse_length)
+                if pulse in ['delay', 'target']:
+                    solver_amp += [0] * pulse_length
+                    solver_detuning += [0] * pulse_length
+                    continue
+                if (isinstance(pulse.amplitude, ConstantWaveform) and
+                        isinstance(pulse.detuning, ConstantWaveform)):
+                    cste_amplitude = pulse.amplitude._value
+                    cste_detuning = pulse.detuning._value
+                    solver_amp += [cste_amplitude] * pulse_length
+                    solver_detuning += [cste_detuning] * pulse_length
+                else:
+                    solver_amp += pulse.amplitude.samples.tolist()
+                    solver_detuning += pulse.detuning.samples.tolist()
+            pulse_end = len(solver_amp)
+            if pulse_end < len(solver_time):
+                pulse_length = len(solver_time) - pulse_end
+                solver_amp += [0] * pulse_length
+                solver_detuning += [0] * pulse_length
+
+            print('------- LENGTHS ---------',
+                  len(solver_time),
+                  len(solver_amp),
+                  len(solver_detuning))
+            cs_amp[ch] = CubicSpline(solver_time, solver_amp)
+            cs_detuning[ch] = CubicSpline(solver_time, solver_detuning)
+
     for ch, (a, b) in ch_axes.items():
         basis = seq._channels[ch].basis
         t = np.array(data[ch]['time']) / time_scale
         ya = data[ch]['amp']
         yb = data[ch]['detuning']
 
-        if len(time_slices) > 0:
-            teff = []
-            yaeff = []
-            ybeff = []
-
-            current_t = 0
-            for ti, tf in zip(time_slices, time_slices[1:]):
-                while t[current_t] < tf:
-                    current_t += 1
-                teff += [ti, tf]
-                yaeff += [ya[current_t], ya[current_t]]
-                ybeff += [yb[current_t], yb[current_t]]
+        if drawinterp:
+            yaeff = cs_amp[ch](teff)
+            ybeff = cs_detuning[ch](teff)
 
         t_min = -t[-1]*0.03
         t_max = t[-1]*1.05
@@ -176,7 +214,7 @@ def draw_sequence(seq, time_slices=np.array([])):
 
         a.plot(t, ya, color="darkgreen", linewidth=0.8)
         b.plot(t, yb, color='indigo', linewidth=0.8)
-        if len(time_slices) > 0:
+        if drawinterp:
             a.plot(teff, yaeff, color="darkgreen", linewidth=0.8)
             b.plot(teff, ybeff, color="indigo", linewidth=0.8, ls='-')
             a.fill_between(teff, 0, yaeff, color="darkgreen", alpha=0.3)
