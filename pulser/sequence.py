@@ -668,6 +668,7 @@ class Sequence:
 
     def _to_dict(self):
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
+        d["__version__"] = pulser.__version__
         d["calls"] = self._calls[1:]
         d["vars"] = self._variables
         d["to_build_calls"] = self._to_build_calls

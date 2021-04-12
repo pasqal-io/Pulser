@@ -37,6 +37,7 @@ class PulserEncoder(JSONEncoder):
 
 class PulserDecoder(JSONDecoder):
     def __init__(self, *args, **kwargs):
+        # TODO: Check version compatibility (stored at the Sequence level)
         self.vars = {}
         super().__init__(object_hook=self.object_hook, *args, **kwargs)
 
