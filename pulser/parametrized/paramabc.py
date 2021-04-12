@@ -25,6 +25,11 @@ class Parametrized(ABC):
         pass
 
     @abstractmethod
-    def build():
+    def build(self):
         """Builds the object."""
+        pass
+
+    @abstractmethod
+    def _to_dict(self):
+        """Serializes the object in a dictionary."""
         pass

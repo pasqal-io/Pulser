@@ -17,6 +17,8 @@ from matplotlib import collections as mc
 import numpy as np
 from scipy.spatial import KDTree
 
+from pulser.utils import obj_to_dict
+
 
 class Register:
     """A quantum register containing a set of qubits.
@@ -217,3 +219,7 @@ class Register:
             ax.axhline(0, c='grey', alpha=0.5, linestyle=':')
 
         plt.show()
+
+    def _to_dict(self):
+        qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
+        return obj_to_dict(self, qs)

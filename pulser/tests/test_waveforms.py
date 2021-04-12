@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+from pulser._json_coders import PulserEncoder, PulserDecoder
 from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
                               CustomWaveform, CompositeWaveform)
 
@@ -160,3 +162,9 @@ def test_ops():
     assert composite * 1 == composite
     with pytest.raises(ZeroDivisionError):
         constant / 0
+
+
+def test_serialization():
+    for wf in [constant, ramp, custom, blackman, composite]:
+        s = json.dumps(wf, cls=PulserEncoder)
+        assert wf == json.loads(s, cls=PulserDecoder)
