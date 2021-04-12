@@ -176,11 +176,6 @@ def draw_sequence(seq, drawinterp=False):
                 pulse_length = len(solver_time) - pulse_end
                 solver_amp += [0] * pulse_length
                 solver_detuning += [0] * pulse_length
-
-            print('------- LENGTHS ---------',
-                  len(solver_time),
-                  len(solver_amp),
-                  len(solver_detuning))
             cs_amp[ch] = CubicSpline(solver_time, solver_amp)
             cs_detuning[ch] = CubicSpline(solver_time, solver_detuning)
 
