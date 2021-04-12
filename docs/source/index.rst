@@ -54,18 +54,24 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Concepts
+   :caption: Fundamental Concepts
 
    review
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials
+   :caption: Advanced Features
 
+   phase_shifts_vz_gates
+   composite_wfs
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Applications
+
+   cz_gate
    afm_prep
    1D_crystals
-   phase_shifts_vz_gates
-   cz_gate
    optimization
    qaoa_mis
 
