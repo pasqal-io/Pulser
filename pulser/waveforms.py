@@ -184,26 +184,6 @@ class CompositeWaveform(Waveform):
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
 
-    def insert(self, waveform, where=0):
-        """Insert a new waveform into the CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-
-        Keyword Args:
-            where (default=0): Index before which the waveform is inserted.
-        """
-        self._validate(waveform)
-        self._waveforms.insert(where, waveform)
-
-    def append(self, waveform):
-        """Append a new waveform to the end of a CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-        """
-        self.insert(waveform, where=len(self._waveforms))
-
     def _validate(self, waveform):
         if not isinstance(waveform, Waveform):
             raise TypeError("{!r} is not a valid waveform. Please provide a "
