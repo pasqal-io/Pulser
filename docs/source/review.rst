@@ -90,7 +90,7 @@ detuning are the basic parameters that we will be able to tune and they
 define a **pulse**. In terms of the Hamiltonian of our system, a pulse on
 an atom :math:`i` results in the following term:
 
-.. math:: \frac{\hbar\Omega(t)}{2} \sigma_i^x + \hbar \delta(t) \sigma_i^z,
+.. math:: \frac{\hbar\Omega(t)}{2} \sigma_i^x - \frac{\hbar}{2} \delta(t) \sigma_i^z,
 
 where :math:`\sigma^\alpha` for :math:`\alpha = x,y,z` are the Pauli matrices.
 

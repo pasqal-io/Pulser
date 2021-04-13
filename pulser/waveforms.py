@@ -58,7 +58,7 @@ class Waveform(ABC):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         pass
 
@@ -446,12 +446,12 @@ class BlackmanWaveform(Waveform):
 
 
 # To replicate __init__'s signature in __new__ for every Waveform subclass
-def copy_func(f):
+def _copy_func(f):
     return types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
                               argdefs=f.__defaults__, closure=f.__closure__)
 
 
 for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
     if m[1].__module__ == __name__:
-        new = copy_func(m[1].__new__)
-        m[1].__new__ = functools.update_wrapper(new, m[1].__init__)
+        _new = _copy_func(m[1].__new__)
+        m[1].__new__ = functools.update_wrapper(_new, m[1].__init__)

@@ -74,6 +74,7 @@ computers and simulators, check the pages in :doc:`review`.
    1D_crystals
    optimization
    qaoa_mis
+   qaoa_param_seq
 
 .. toctree::
    :maxdepth: 2
