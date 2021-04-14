@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.parametrized import Parametrized, ParamObj
+from pulser.parametrized.decorators import parametrize
 from pulser.utils import validate_duration, obj_to_dict
 
 
@@ -401,6 +402,7 @@ class BlackmanWaveform(Waveform):
         self._scaling = self._area / np.sum(self._norm_samples) / 1e-3
 
     @classmethod
+    @parametrize
     def from_max_val(cls, max_val, area):
         """Creates a Blackman waveform with a threshold on the maximum value.
 
@@ -415,10 +417,6 @@ class BlackmanWaveform(Waveform):
                 sign of `area`.
             area (float): The area under the waveform.
         """
-
-        if isinstance(max_val, Parametrized) or isinstance(area, Parametrized):
-            return ParamObj(cls.from_max_val, max_val, area)
-
         if np.sign(max_val) != np.sign(area):
             raise ValueError("The maximum value and the area must have "
                              "matching signs.")
