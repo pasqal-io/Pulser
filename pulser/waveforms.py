@@ -395,6 +395,10 @@ class BlackmanWaveform(Waveform):
                 sign of `area`.
             area (float): The area under the waveform.
         """
+
+        if isinstance(max_val, Parametrized) or isinstance(area, Parametrized):
+            return ParamObj(cls.from_max_val, max_val, area)
+
         if np.sign(max_val) != np.sign(area):
             raise ValueError("The maximum value and the area must have "
                              "matching signs.")
