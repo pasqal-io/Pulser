@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 
 from pulser._json_coders import PulserEncoder, PulserDecoder
+from pulser.parametrized import Variable, ParamObj
 from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
                               CustomWaveform, CompositeWaveform)
 
@@ -152,6 +153,12 @@ def test_blackman():
     wf = BlackmanWaveform.from_max_val(-10, -np.pi)
     assert np.isclose(wf.integral, -np.pi)
     assert np.min(wf.samples) > -10
+
+    var = Variable("var", float)
+    wf_var = BlackmanWaveform.from_max_val(-10, var)
+    assert isinstance(wf_var, ParamObj)
+    var._assign(-np.pi)
+    assert wf_var.build() == wf
 
 
 def test_ops():
