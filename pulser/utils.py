@@ -15,7 +15,8 @@
 import warnings
 
 
-def obj_to_dict(obj, *args, _build=True, _module=None, _name=None, **kwargs):
+def obj_to_dict(obj, *args, _build=True, _module=None, _name=None,
+                _submodule=None, **kwargs):
     """Encodes an object in a dictionary for serialization.
 
     Args:
@@ -25,6 +26,8 @@ def obj_to_dict(obj, *args, _build=True, _module=None, _name=None, **kwargs):
         _build (bool): Whether the object is to be built on deserialization.
         _module (str): Custom name for the module containing the object.
         _name (str): Custom name of the object.
+        _submodule(str): Name of a submodule (e.g. the class holding a
+                         classmethod). Only used when defined.
         args: If the object is to be built, the arguments to give on creation.
         kwargs: If the object is to be built, the keyword arguments to give on
             creation.
@@ -41,6 +44,8 @@ def obj_to_dict(obj, *args, _build=True, _module=None, _name=None, **kwargs):
     if _build:
         d["__args__"] = args
         d["__kwargs__"] = kwargs
+    if _submodule:
+        d["__submodule__"] = _submodule
 
     return d
 

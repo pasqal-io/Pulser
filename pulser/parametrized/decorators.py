@@ -18,7 +18,13 @@ from pulser.parametrized import Parametrized, ParamObj
 
 
 def parametrize(func):
-    """Makes a function support parametrized arguments."""
+    """Makes a function support parametrized arguments.
+
+    Note:
+        Designed for use in class methods. Should work for static methods, but
+        usage in instance methods is not supported, and in regular functions is
+        not tested.
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         for x in chain(args, kwargs.values()):

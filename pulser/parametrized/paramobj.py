@@ -14,6 +14,7 @@
 
 from functools import partialmethod
 from itertools import chain
+import inspect
 import operator
 import warnings
 
@@ -99,12 +100,30 @@ class ParamObj(Parametrized, OpSupport):
         return self._instance
 
     def _to_dict(self):
+        def class_to_dict(cls):
+            return obj_to_dict(self, _build=False, _name=cls.__name__,
+                               _module=cls.__module__)
+
+        args = list(self.args)
         if isinstance(self.cls, Parametrized):
             cls_dict = self.cls._to_dict()
+        elif (hasattr(args[0], self.cls.__name__)
+              and inspect.isfunction(self.cls)):
+            # Check for parametrized methods
+            if inspect.isclass(self.args[0]):
+                # staticmethod or classmethod
+                cls_dict = obj_to_dict(self, _build=False,
+                                       _name=self.cls.__name__,
+                                       _module=self.args[0].__module__,
+                                       _submodule=self.args[0].__name__)
+                args[0] = class_to_dict(self.args[0])
+            else:
+                raise NotImplementedError("Instance method serialization is "
+                                          "not supported.")
         else:
-            cls_dict = obj_to_dict(self, _build=False, _name=self.cls.__name__,
-                                   _module=self.cls.__module__)
-        return obj_to_dict(self, cls_dict, *self.args, **self.kwargs)
+            cls_dict = class_to_dict(self.cls)
+
+        return obj_to_dict(self, cls_dict, *args, **self.kwargs)
 
     def __call__(self, *args, **kwargs):
         obj = ParamObj(self, *args, **kwargs)
@@ -124,6 +143,13 @@ class ParamObj(Parametrized, OpSupport):
     def __str__(self):
         args = [str(a) for a in self.args]
         kwargs = [f"{key}={str(value)}" for key, value in self.kwargs.items()]
-        name = (str(self.cls) if isinstance(self.cls, Parametrized)
-                else self.cls.__name__)
+        if isinstance(self.cls, Parametrized):
+            name = str(self.cls)
+        elif (hasattr(self.args[0], self.cls.__name__)
+              and inspect.isfunction(self.cls)
+              and inspect.isclass(self.args[0])):
+            name = f"{self.args[0].__name__}.{self.cls.__name__}"
+            args = args[1:]
+        else:
+            name = self.cls.__name__
         return f"{name}({', '.join(args+kwargs)})"

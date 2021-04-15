@@ -17,9 +17,11 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser import Sequence, Pulse, Register
+from pulser import Sequence, Register
 from pulser.devices import Chadoq2
 from pulser._json_coders import PulserEncoder, PulserDecoder
+from pulser.parametrized.decorators import parametrize
+from pulser.waveforms import BlackmanWaveform
 
 
 def encode(obj):
@@ -42,18 +44,23 @@ def test_encoder():
 
 
 def test_rare_cases():
-    seq = Sequence(Register.square(4), Chadoq2)
+    reg = Register.square(4)
+    seq = Sequence(reg, Chadoq2)
     var = seq.declare_variable("var")
-    pls = Pulse.ConstantPulse(100, 10, var, 0)
-    s = encode(pls.draw())
+    wf = BlackmanWaveform(100, var)
+    s = encode(wf.draw())
     with pytest.warns(UserWarning, match="not encode a Sequence"):
-        pls_ = Sequence.deserialize(s)
+        wf_ = Sequence.deserialize(s)
 
     var._assign(-10)
     with pytest.raises(ValueError, match="No value assigned"):
-        pls_.build()
+        wf_.build()
 
-    var_ = pls_._variables["var"]
+    var_ = wf_._variables["var"]
     var_._assign(-10)
     with patch('matplotlib.pyplot.show'):
-        pls_.build()
+        wf_.build()
+
+    rotated_reg = parametrize(Register.rotate)(reg, var)
+    with pytest.raises(NotImplementedError):
+        encode(rotated_reg)
