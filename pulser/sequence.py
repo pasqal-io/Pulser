@@ -182,7 +182,7 @@ class Sequence:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
-            qubit (str): The id of the qubit whose phase shift is desired.
+            qubit (hashable): The id of the qubit whose phase shift is desired.
 
         Keyword args:
             basis (str): The basis (i.e. electronic transition) the phase
@@ -306,7 +306,8 @@ class Sequence:
         Keyword Args:
             protocol (default='min-delay'): Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
-                of having to channels act on the same target simultaneously.
+                of having multiple channels act on the same target
+                simultaneously.
 
                 - ``'min-delay'``
                     Before adding the pulse, introduces the smallest
@@ -434,8 +435,8 @@ class Sequence:
 
         Args:
             phi (float): The intended phase shift (in rads).
-            targets: The ids of the qubits on which to apply the phase
-                shift.
+            targets (hashable): The ids of the qubits on which to apply the
+                phase shift.
 
         Keyword Args:
             basis(str): The basis (i.e. electronic transition) to associate
@@ -580,7 +581,7 @@ class Sequence:
 
     @_screen
     def draw(self):
-        """Draws the sequence in its current sequence."""
+        """Draws the sequence in its current state."""
         draw_sequence(self)
 
     def _target(self, qubits, channel):

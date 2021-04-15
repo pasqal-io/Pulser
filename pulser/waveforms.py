@@ -258,8 +258,8 @@ class ConstantWaveform(Waveform):
     """A waveform of constant value.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        value: The modulation value (in rad/µs).
+        duration (int): The waveform duration (in multiples of 4 ns).
+        value (float): The modulation value (in rad/µs).
     """
 
     def __init__(self, duration, value):
@@ -309,9 +309,9 @@ class RampWaveform(Waveform):
     """A linear ramp waveform.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        start: The initial value (in rad/µs).
-        stop: The final value (in rad/µs).
+        duration (int): The waveform duration (in multiples of 4 ns).
+        start (float): The initial value (in rad/µs).
+        stop (float): The final value (in rad/µs).
     """
 
     def __init__(self, duration, start, stop):
