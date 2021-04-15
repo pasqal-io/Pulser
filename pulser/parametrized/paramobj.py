@@ -111,15 +111,15 @@ class ParamObj(Parametrized, OpSupport):
               and inspect.isfunction(self.cls)):
             # Check for parametrized methods
             if inspect.isclass(self.args[0]):
-                # staticmethod or classmethod
+                # classmethod
                 cls_dict = obj_to_dict(self, _build=False,
                                        _name=self.cls.__name__,
                                        _module=self.args[0].__module__,
                                        _submodule=self.args[0].__name__)
                 args[0] = class_to_dict(self.args[0])
             else:
-                raise NotImplementedError("Instance method serialization is "
-                                          "not supported.")
+                raise NotImplementedError("Instance or static method "
+                                          "serialization is not supported.")
         else:
             cls_dict = class_to_dict(self.cls)
 

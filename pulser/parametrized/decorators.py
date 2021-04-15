@@ -21,9 +21,8 @@ def parametrize(func):
     """Makes a function support parametrized arguments.
 
     Note:
-        Designed for use in class methods. Should work for static methods, but
-        usage in instance methods is not supported, and in regular functions is
-        not tested.
+        Designed for use in class methods. Usage in instance or static methods
+        is not supported, and in regular functions is not tested.
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
