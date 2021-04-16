@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import importlib
+import inspect
 from json import JSONEncoder, JSONDecoder
 
 import numpy as np
@@ -71,7 +72,13 @@ class PulserDecoder(JSONDecoder):
             return var
 
         module = importlib.import_module(module_str)
-        cls = getattr(module, obj_name)
+        if "__submodule__" in obj:
+            submodule = getattr(module, obj["__submodule__"])
+            cls = getattr(submodule, obj_name)
+            if inspect.ismethod(cls):
+                cls = cls.__func__      # Use the unbound function by default
+        else:
+            cls = getattr(module, obj_name)
 
         if not build:
             return cls

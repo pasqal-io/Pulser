@@ -155,6 +155,10 @@ def test_build():
     sb_ = Sequence.deserialize(s)
     assert str(sb) == str(sb_)
 
+    s2 = sb_.serialize()
+    sb_2 = Sequence.deserialize(s2)
+    assert str(sb) == str(sb_2)
+
 
 def test_str():
     reg_ = Register.rectangle(2, 1, prefix="q")
@@ -166,8 +170,7 @@ def test_str():
     pls = Pulse.ConstantPulse(var*100, var, -1, var)
     sb.add(pls, "ch1")
     s = (f"Prelude\n-------\n{str(seq)}Stored calls\n------------\n\n"
-         + "1. add(Pulse(ConstantWaveform(mul(var, 100), var), "
-         + "ConstantWaveform(mul(var, 100), -1), var, 0), ch1)")
+         + "1. add(Pulse.ConstantPulse(mul(var, 100), var, -1, var), ch1)")
     assert s == str(sb)
 
 
