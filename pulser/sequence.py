@@ -549,7 +549,7 @@ class Sequence:
 
         See also:
             ``json.dumps``: Built-in function for serialization to a JSON
-                formatted string.
+            formatted string.
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
