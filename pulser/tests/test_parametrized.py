@@ -99,16 +99,10 @@ def test_paramobj():
     time = bwf.duration
     samps = bwf.samples
     cwf = CompositeWaveform(bwf, bwf)
-    with pytest.warns(UserWarning):
-        append_call = cwf.append(bwf)
-
     t._assign(1000)
     a._assign(np.pi)
     assert len(cwf.build().samples) == len(samps.build()) * 2
-    append_call.build()
     assert time.build() == 1000
-    assert len(cwf.build().samples) == len(samps.build()) * 3
-    assert np.all(cwf.build().samples == np.array(samps.build().tolist() * 3))
 
 
 def test_opsupport():

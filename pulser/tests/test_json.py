@@ -45,7 +45,9 @@ def test_rare_cases():
     seq = Sequence(Register.square(4), Chadoq2)
     var = seq.declare_variable("var")
     pls = Pulse.ConstantPulse(100, 10, var, 0)
-    s = encode(pls.draw())
+    with pytest.warns(UserWarning, match="Calls to methods of parametrized "
+                      "objects"):
+        s = encode(pls.draw())
     with pytest.warns(UserWarning, match="not encode a Sequence"):
         pls_ = Sequence.deserialize(s)
 
