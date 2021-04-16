@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+import pulser
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._pasqal_device import PasqalDevice
@@ -69,7 +70,7 @@ def test_target():
 
     with pytest.raises(ValueError, match='name of a declared channel'):
         seq.target('q0', 'ch2')
-    with pytest.raises(ValueError, match='qubits have to belong'):
+    with pytest.raises(ValueError, match='qubits must belong'):
         seq.target(0, 'ch0')
         seq.target('0', 'ch1')
     with pytest.raises(ValueError, match="Can only choose target of 'Local'"):
@@ -188,6 +189,9 @@ def test_sequence():
     seq.declare_channel('ch2', 'rydberg_global')
     seq.phase_shift(np.pi, 'q0', basis='ground-rydberg')
 
+    with patch('matplotlib.pyplot.show'):
+        seq.draw()
+
     pulse1 = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     pulse2 = Pulse.ConstantDetuning(BlackmanWaveform(1e3, np.pi/4), 25, np.pi,
                                     post_phase_shift=1)
@@ -250,3 +254,8 @@ def test_sequence():
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()
+
+    s = seq.serialize()
+    assert json.loads(s)["__version__"] == pulser.__version__
+    seq_ = Sequence.deserialize(s)
+    assert str(seq) == str(seq_)

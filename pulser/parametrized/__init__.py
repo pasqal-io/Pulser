@@ -11,5 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Classes for parametrized pulse-sequence building."""
 
-__version__ = "0.2.0"
+from pulser.parametrized.paramabc import Parametrized
+
+from pulser.parametrized.paramobj import ParamObj
+
+from pulser.parametrized.variable import Variable

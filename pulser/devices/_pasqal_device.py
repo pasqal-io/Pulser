@@ -20,6 +20,7 @@ from scipy.spatial.distance import pdist
 
 from pulser.channels import Channel
 from pulser.register import Register
+from pulser.utils import obj_to_dict
 
 
 @dataclass(frozen=True, repr=False)
@@ -82,7 +83,7 @@ class PasqalDevice:
         return (self.interaction_coeff/rabi_frequency)**(1/6)
 
     def rabi_from_blockade(self, blockade_radius):
-        """The necessary Rabi frequency value to reach a given blockade radius.
+        """The maximum Rabi frequency value to enforce a given blockade radius.
 
         Args:
             blockade_radius(float): The Rydberg blockade radius, in µm.
@@ -153,3 +154,7 @@ class PasqalDevice:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
         return "\n".join(lines + ch_lines)
+
+    def _to_dict(self):
+        return obj_to_dict(self, _build=False, _module="pulser.devices",
+                           _name=self.name)

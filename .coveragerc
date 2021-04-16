@@ -1,0 +1,12 @@
+# .coveragerc to control coverage.py
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    # Don't test pass statements
+    pass
+
+omit = pulser/tests/*
+
+show_missing = True

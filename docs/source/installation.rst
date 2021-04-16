@@ -12,10 +12,17 @@ installed, then use ``pip``: ::
 Latest version
 ---------------
 For the latest version of Pulser, you can install Pulser from source by
-cloning the `Pulser Github repository <https://github.com/pasqal-io/Pulser>`_
-and, within the repository, run: ::
+cloning the `Pulser Github repository <https://github.com/pasqal-io/Pulser>`_,
+and entering your freshly created ``Pulser`` directory. There, you'll checkout
+the ``develop`` branch - which holds the latest (unstable) version of Pulser -
+and install from source by running: ::
 
+  git checkout develop
   pip install -e .
+
+Bear in mind that your installation will track the contents of your local
+Pulser repository folder, so if you checkout a different branch (e.g. ``master``),
+your installation will change accordingly.
 
 If you want to install the development requirements, follow up by running: ::
 

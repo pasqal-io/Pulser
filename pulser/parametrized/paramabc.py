@@ -12,4 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.2.0"
+from abc import ABC, abstractmethod
+
+
+class Parametrized(ABC):
+    """Abstract base class for a parametrized object."""
+
+    @property
+    @abstractmethod
+    def variables(self):
+        """All the variables involved with this object."""
+        pass
+
+    @abstractmethod
+    def build(self):
+        """Builds the object."""
+        pass
+
+    @abstractmethod
+    def _to_dict(self):
+        """Serializes the object in a dictionary."""
+        pass

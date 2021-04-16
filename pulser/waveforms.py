@@ -13,16 +13,30 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+import functools
+import inspect
+import itertools
+import sys
+import types
 import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.utils import validate_duration
+from pulser.parametrized import Parametrized, ParamObj
+from pulser.parametrized.decorators import parametrize
+from pulser.utils import validate_duration, obj_to_dict
 
 
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
+
+    def __new__(cls, *args, **kwargs):
+        for x in itertools.chain(args, kwargs.values()):
+            if isinstance(x, Parametrized):
+                return ParamObj(cls, *args, **kwargs)
+        else:
+            return object.__new__(cls)
 
     def __init__(self, duration):
         """Initializes a waveform with a given duration.
@@ -45,7 +59,7 @@ class Waveform(ABC):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         pass
 
@@ -73,12 +87,29 @@ class Waveform(ABC):
         plt.show()
 
     @abstractmethod
+    def _to_dict():
+        pass
+
+    @abstractmethod
     def __str__(self):
         pass
 
     @abstractmethod
     def __repr__(self):
         pass
+
+    @abstractmethod
+    def __mul__(self, other):
+        pass
+
+    def __neg__(self):
+        return self.__mul__(-1)
+
+    def __truediv__(self, other):
+        if other == 0:
+            raise ZeroDivisionError("Can't divide a waveform by zero.")
+        else:
+            return self.__mul__(1/other)
 
     def __eq__(self, other):
         if not isinstance(other, Waveform):
@@ -154,30 +185,13 @@ class CompositeWaveform(Waveform):
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
 
-    def insert(self, waveform, where=0):
-        """Insert a new waveform into the CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-
-        Keyword Args:
-            where (default=0): Index before which the waveform is inserted.
-        """
-        self._validate(waveform)
-        self._waveforms.insert(where, waveform)
-
-    def append(self, waveform):
-        """Append a new waveform to the end of a CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-        """
-        self.insert(waveform, where=len(self._waveforms))
-
     def _validate(self, waveform):
         if not isinstance(waveform, Waveform):
             raise TypeError("{!r} is not a valid waveform. Please provide a "
                             "valid Waveform.".format(waveform))
+
+    def _to_dict(self):
+        return obj_to_dict(self, *self._waveforms)
 
     def __str__(self):
         contents = ["{!r}"] * len(self._waveforms)
@@ -187,6 +201,9 @@ class CompositeWaveform(Waveform):
 
     def __repr__(self):
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
+
+    def __mul__(self, other):
+        return CompositeWaveform(*(wf * other for wf in self._waveforms))
 
 
 class CustomWaveform(Waveform):
@@ -200,7 +217,7 @@ class CustomWaveform(Waveform):
 
     def __init__(self, samples):
         """Initializes a custom waveform."""
-        samples_arr = np.array(samples)
+        samples_arr = np.array(samples, dtype=float)
         self._samples = samples_arr
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
@@ -225,19 +242,25 @@ class CustomWaveform(Waveform):
         """
         return self._samples
 
+    def _to_dict(self):
+        return obj_to_dict(self, self._samples)
+
     def __str__(self):
         return 'Custom'
 
     def __repr__(self):
         return f'CustomWaveform({self.duration} ns, {self.samples!r})'
 
+    def __mul__(self, other):
+        return CustomWaveform(self._samples * float(other))
+
 
 class ConstantWaveform(Waveform):
     """A waveform of constant value.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        value: The modulation value (in rad/µs).
+        duration (int): The waveform duration (in multiples of 4 ns).
+        value (float): The modulation value (in rad/µs).
     """
 
     def __init__(self, duration, value):
@@ -269,6 +292,9 @@ class ConstantWaveform(Waveform):
         """The last value in the waveform."""
         return self._value
 
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._value)
+
     def __str__(self):
         return f"{self._value:.3g} rad/µs"
 
@@ -276,14 +302,17 @@ class ConstantWaveform(Waveform):
         return (f"ConstantWaveform({self._duration} ns, "
                 + f"{self._value:.3g} rad/µs)")
 
+    def __mul__(self, other):
+        return ConstantWaveform(self._duration, self._value * float(other))
+
 
 class RampWaveform(Waveform):
     """A linear ramp waveform.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        start: The initial value (in rad/µs).
-        stop: The final value (in rad/µs).
+        duration (int): The waveform duration (in multiples of 4 ns).
+        start (float): The initial value (in rad/µs).
+        stop (float): The final value (in rad/µs).
     """
 
     def __init__(self, duration, start, stop):
@@ -321,12 +350,19 @@ class RampWaveform(Waveform):
         """The last value in the waveform."""
         return self._stop
 
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._start, self._stop)
+
     def __str__(self):
         return f"Ramp({self._start:.3g}->{self._stop:.3g} rad/µs)"
 
     def __repr__(self):
         return (f"RampWaveform({self._duration} ns, " +
                 f"{self._start:.3g}->{self._stop:.3g} rad/µs)")
+
+    def __mul__(self, other):
+        k = float(other)
+        return RampWaveform(self._duration, self._start * k, self._stop * k)
 
 
 class BlackmanWaveform(Waveform):
@@ -346,6 +382,7 @@ class BlackmanWaveform(Waveform):
         self._scaling = self._area / np.sum(self._norm_samples) / 1e-3
 
     @classmethod
+    @parametrize
     def from_max_val(cls, max_val, area):
         """Creates a Blackman waveform with a threshold on the maximum value.
 
@@ -397,8 +434,26 @@ class BlackmanWaveform(Waveform):
         """The last value in the waveform."""
         return 0
 
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._area)
+
     def __str__(self):
         return f"Blackman(Area: {self._area:.3g})"
 
     def __repr__(self):
         return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
+
+    def __mul__(self, other):
+        return BlackmanWaveform(self._duration, self._area * float(other))
+
+
+# To replicate __init__'s signature in __new__ for every Waveform subclass
+def _copy_func(f):
+    return types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                              argdefs=f.__defaults__, closure=f.__closure__)
+
+
+for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
+    if m[1].__module__ == __name__:
+        _new = _copy_func(m[1].__new__)
+        m[1].__new__ = functools.update_wrapper(_new, m[1].__init__)

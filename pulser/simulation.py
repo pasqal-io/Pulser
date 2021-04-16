@@ -36,7 +36,7 @@ class Simulation:
     Keyword Args:
         sampling_rate (float): The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
-            value between 0.05 and 1.0
+            value between 0.05 and 1.0.
     """
 
     def __init__(self, sequence, sampling_rate=1.0):
@@ -238,6 +238,24 @@ class Simulation:
 
         self._hamiltonian = ham
 
+    def get_hamiltonian(self, time):
+        """Get the Hamiltonian created from the sequence at a fixed time.
+
+        Args:
+            time (float): The specific time in which we want to extract the
+                    Hamiltonian (in ns).
+
+        Returns:
+            qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
+            extracted from the effective sequence (determined by
+            `self.sampling_rate`) at the specified time.
+        """
+        if time > 1000 * self._times[-1]:
+            raise ValueError("Provided time is larger than sequence duration.")
+        if time < 0:
+            raise ValueError("Provided time is negative.")
+        return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
+
     # Run Simulation Evolution using Qutip
     def run(self, initial_state=None, progress_bar=None, **options):
         """Simulate the sequence using QuTiP's solvers.
@@ -245,9 +263,9 @@ class Simulation:
         Keyword Args:
             initial_state (array): The initial quantum state of the
                            evolution. Will be transformed into a
-                           qutip.Qobj instance.
-            progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
-                        will be shown.
+                           ``qutip.Qobj`` instance.
+            progress_bar (bool): If True, the progress bar of QuTiP's
+                ``qutip.sesolve()`` will be shown.
 
         Returns:
             SimulationResults: Object containing the time evolution results.

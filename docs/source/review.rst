@@ -18,9 +18,14 @@ principal quantum number. At the Rydberg state, the atoms present long
 lifetimes and large interaction strengths and are briefly called
 **Rydberg atoms**.
 
-**Pulser** is an open-source software package written in Python whose main
-objective is to provide easy-to-use libraries for designing and simulating
-pulse sequences that act in programmable Rydberg atom arrays.
+This page gives brief insight into the concepts behind **Pulser** and
+the use of neutral-atom devices for quantum computation and simulation. For
+more details, see `Quantum 4, 327 (2020) <https://quantum-journal.org/papers/q-2020-09-21-327/>`_
+for a comprehensive overview of quantum computing with neutral atoms,
+`Nature Physics volume 16, pages132–142(2020) <https://www.nature.com/articles/s41567-019-0733-z>`_
+for a review that's more focused on their use as a quantum simulation, or even
+`M Saffman 2016 J. Phys. B: At. Mol. Opt. Phys. 49 202001 <https://iopscience.iop.org/article/10.1088/0953-4075/49/20/202001>`_.
+
 
 Implementation and Theoretical Details
 ######################################
@@ -41,7 +46,7 @@ Each **Device** will impose specific restrictions on these components -- they de
 like how many atoms a Register can hold and in what configurations they can be
 arranged in; what channels are available and what values they can reach, among others.
 For this reason, a **Sequence** is closely dependent on the **Device** it
-is meant to run on and shoulbe be created with it in mind from the start.
+is meant to run on and should be created with it in mind from the start.
 
 This **Sequence** is the central object in Pulser and it consists essentially
 of a series of **Pulses** (and other instructions) that are sequentially
@@ -70,33 +75,51 @@ into the physics and try to understand the underlying **Hamiltonian** of our
 systems.
 
 
-Quantum Hamiltonian
-*******************
+Driving two-level transitions
+******************************
 
-Let us call the initial state of the atoms their **ground state** and denote it
-by :math:`|g\rangle`. The incident laser field will then try to excite them to
-a Rydberg level, which we shall write as :math:`|r\rangle`. These two states
-can be thought of as the two levels of a quantum spin.
+Each channel is tuned such that each of its pulses coherently drives a
+specific electronic transition between two energy levels of an atom.
+For instance, when addressing the ``ground-rydberg`` transition, we have that
+our targeted levels are the ground state, :math:`|g\rangle`, and the Rydberg
+state, :math:`|r\rangle`. These two states can be thought of as the two levels
+of a quantum spin.
 
 .. image:: files/ground_rydberg.png
   :align: center
   :width: 400
   :alt: The ground and Rydberg levels become the states of a spin system.
 
-The laser can be characterized by its **Rabi frequency** :math:`\Omega(t)`
-(which is in general a function of time). It can also be **detuned** from the
-resonance frequency by an amount :math:`\delta(t)``. Both Rabi frequency and
-detuning are the basic parameters that we will be able to tune and they
-define a **pulse**. In terms of the Hamiltonian of our system, a pulse on
-an atom :math:`i` results in the following term:
+In this system, a pulse acting on an atom :math:`i`, with **Rabi frequency**
+:math:`\Omega(t)`, **detuning** :math:`\delta(t)` and a fixed phase :math:`\phi`,
+will have the Hamiltonian terms:
 
-.. math:: \frac{\hbar\Omega(t)}{2} \sigma_i^x + \hbar \delta(t) \sigma_i^z,
+.. math:: \frac{\hbar\Omega(t)}{2} (\cos(\phi)\sigma_i^x - \sin(\phi)\sigma_i^y) - \frac{\hbar}{2} \delta(t) \sigma_i^z,
 
 where :math:`\sigma^\alpha` for :math:`\alpha = x,y,z` are the Pauli matrices.
+Alternatively, one can rewrite this term as:
 
-The interaction between two atoms at distance :math:`R` and at the same Rydberg
-level is described by the **Van der Waals force**, which scales as
-:math:`R^{-6}`. This interaction can be exploited to create fast and
+.. math:: \frac{\hbar}{2} \mathbf{\Omega}(t)\cdot \boldsymbol{\sigma}_i,
+
+where :math:`\mathbf{\Omega}(t) = (\Omega(t) \cos(\phi),-\Omega(t) \sin(\phi),-\delta(t))^T`
+and :math:`\boldsymbol{\sigma}` is the vector of Pauli matrices. In the Bloch sphere representation,
+for each instant :math:`t`, this Hamiltonian describes a rotation around the axis
+:math:`\mathbf{\Omega}` with angular velocity :math:`\Omega_{eff} = |\mathbf{\Omega}| = \sqrt{\Omega^2 + \delta^2}`,
+as illustrated in the figure below.
+
+.. image:: files/bloch_rotation.png
+  :align: center
+  :width: 400
+  :alt: Representation of the dynamics induced by a pulse as a rotation in the
+        Bloch sphere.
+
+Rydberg states
+******************************
+
+In neutral atom devices, atoms are driven to Rydberg states as a way to make
+them interact over large distances. The interaction between two atoms at distance
+:math:`R` and at the same Rydberg level is described by the **Van der Waals force**,
+which scales as :math:`R^{-6}`. This interaction can be exploited to create fast and
 robust quantum gates, using the so-called **Rydberg Blockade Effect** between
 them. This effect consists on the shift in energy between the doubly excited
 Rydberg state of nearby atoms and their ground state, making it non-resonant
@@ -120,11 +143,11 @@ between the atoms :math:`i` and :math:`j`. The proportionality constant is set
 by the chosen Rydberg level. If the atoms are excited simultaneously, only the
 entangled state :math:`(|gr\rangle + |rg\rangle)/\sqrt 2` is obtained.
 
-The entire array of interacting atoms can be represented as an Ising-like
-Hamiltonian:
+An entire array of interacting atoms, acted on by the same pulse, can be
+represented as an Ising-like Hamiltonian:
 
 .. math::
-   H = \frac{\hbar}{2} \sum_i  \Omega_i(t) \sigma_i^x - \hbar \sum_i
+   H = \frac{\hbar}{2} \sum_i  \Omega_i(t) \sigma_i^x - \frac{\hbar}{2} \sum_i
        \delta(t) \sigma_i^z + \sum_{i<j} U_{ij} n_i n_j
 
 Digital and Analog Approaches
@@ -137,23 +160,41 @@ In the analog simulation approach, the laser field acts on the entire array
 of atoms. This creates a **global** Hamiltonian of the form
 
 .. math::
-   H = \frac{\hbar\Omega(t)}{2} \sum_i  \sigma_i^x - \hbar \delta(t) \sum_i
+   H = \frac{\hbar\Omega(t)}{2} \sum_i  \sigma_i^x - \frac{\hbar\delta(t)}{2} \sum_i
         \sigma_i^z + \sum_{i<j} U_{ij} n_i n_j
+
+Through the continuous manipulation of :math:`\Omega(t)` and :math:`\delta(t)`,
+one has a very high degree of control over the system's dynamics and properties.
+In this way, the analog approach enables the quantum simulation of many-body
+quantum systems, but also provides novel ways of solving combinatorial problems
+that can be mapped onto the hamiltonian above.
 
 Digital Approach
 ****************
 
-Pulser provides an interface for constructing pulse-based quantum
-computation programs at the digital level. In this approach, we begin by
-selecting another level close to :math:`|g\rangle` which we call the
-**hyperfine** state and is denoted :math:`|h\rangle`. An atom can go from one
-state to the other via Raman transitions, generated by a **local** laser pulse
-with parameters :math:`\Omega, \delta`. The Rydberg level is now used
-ancilliary in order to generate a conditional logic on the atoms by attempting
-an excitation which will be blocked (or not) depending on the distance and
-current levels of the involved atoms.
+In opposition to the analog approach stands the digital approach, in which
+a system's state evolves through a series of discrete manipulations of its qubits'
+states, also known as quantum gates. This is the underlying approach in quantum
+circuits and it can be replicated on neutral-atom devices at the pulse-level. To
+this extent, the qubit states are encoded in two hyperfine ground states of the
+system, named `ground`, :math:`|g\rangle`, and `hyperfine`, :math:`|h\rangle`. In
+Pulser, these states form the ``digital`` basis, which is addressed by ``Raman``
+channels. In the digital approach, these channels are usually `Local`, meaning they
+target individual qubits instead of the entire system.
+
+Since the Rydberg blockade effect is not present when atoms are in :math:`|g\rangle` or :math:`|h\rangle`,
+the dynamics of each qubit's state are just determined by the driving pulses,
+already illustrated above as rotations on the Bloch sphere. By tuning the parameters of a pulse,
+we can achieve any arbitrary single-qubit unitary, as is shown in :doc:`phase_shifts_vz_gates`.
 
 .. image:: files/digital.png
   :align: center
   :width: 400
   :alt: The three levels involved in the digital-level approach.
+
+However, without the interaction introduced by the Rydberg blockade effect, it is not
+possible to do multi-qubit gates. Therefore, the Rydberg level is used
+ancillarily in order to generate a conditional logic on the atoms by attempting
+an excitation which will be blocked (or not) depending on the distance and
+current levels of the involved atoms. This is the key behind the `CZ gate`, whose
+implementation is detailed in :doc:`cz_gate`.

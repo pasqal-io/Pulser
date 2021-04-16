@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+from pulser._json_coders import PulserEncoder, PulserDecoder
+from pulser.parametrized import Variable, ParamObj
 from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
                               CustomWaveform, CompositeWaveform)
 
@@ -107,24 +110,18 @@ def test_composite():
 
     assert composite.waveforms == [blackman, constant, custom]
 
-    wf = CompositeWaveform(blackman, custom)
-    wf.insert(constant, where=1)
-    assert composite == wf
-
     wf = CompositeWaveform(blackman, constant)
     msg = ('BlackmanWaveform(40 ns, Area: 3.14), ' +
            'ConstantWaveform(100 ns, -3 rad/µs)')
     assert wf.__str__() == f'Composite({msg})'
     assert wf.__repr__() == f'CompositeWaveform(140 ns, [{msg}])'
 
-    wf.append(custom)
-    assert composite == wf
-
 
 def test_custom():
-    wf = CustomWaveform(np.arange(16))
+    data = np.arange(16, dtype=float)
+    wf = CustomWaveform(data)
     assert wf.__str__() == 'Custom'
-    assert wf.__repr__() == f'CustomWaveform(16 ns, {np.arange(16)!r})'
+    assert wf.__repr__() == f'CustomWaveform(16 ns, {data!r})'
 
 
 def test_ramp():
@@ -149,3 +146,25 @@ def test_blackman():
     wf = BlackmanWaveform.from_max_val(-10, -np.pi)
     assert np.isclose(wf.integral, -np.pi)
     assert np.min(wf.samples) > -10
+
+    var = Variable("var", float)
+    wf_var = BlackmanWaveform.from_max_val(-10, var)
+    assert isinstance(wf_var, ParamObj)
+    var._assign(-np.pi)
+    assert wf_var.build() == wf
+
+
+def test_ops():
+    assert -constant == ConstantWaveform(100, 3)
+    assert ramp * 2 == RampWaveform(2e3, 10, 38)
+    assert --custom == custom
+    assert blackman / 2 == BlackmanWaveform(40, np.pi / 2)
+    assert composite * 1 == composite
+    with pytest.raises(ZeroDivisionError):
+        constant / 0
+
+
+def test_serialization():
+    for wf in [constant, ramp, custom, blackman, composite]:
+        s = json.dumps(wf, cls=PulserEncoder)
+        assert wf == json.loads(s, cls=PulserDecoder)
