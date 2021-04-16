@@ -548,8 +548,8 @@ class Sequence:
             str: The sequence encoded in a JSON formatted string.
 
         See also:
-            ``json.dumps``: Built-in function for serialization to a JSON formatted
-            string.
+            ``json.dumps``: Built-in function for serialization to a JSON
+                formatted string.
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
