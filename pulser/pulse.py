@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.parametrized import Parametrized, ParamObj
+from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
 from pulser.utils import obj_to_dict
 
@@ -79,6 +80,7 @@ class Pulse:
         self.post_phase_shift = float(post_phase_shift) % (2 * np.pi)
 
     @classmethod
+    @parametrize
     def ConstantDetuning(cls, amplitude, detuning, phase, post_phase_shift=0):
         """Pulse with an amplitude waveform and a constant detuning.
 
@@ -92,6 +94,7 @@ class Pulse:
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
+    @parametrize
     def ConstantAmplitude(cls, amplitude, detuning, phase, post_phase_shift=0):
         """Pulse with a constant amplitude and a detuning waveform.
 
@@ -105,6 +108,7 @@ class Pulse:
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
+    @parametrize
     def ConstantPulse(cls, duration, amplitude, detuning, phase,
                       post_phase_shift=0):
         """Pulse with a constant amplitude and a constant detuning.
