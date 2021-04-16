@@ -18,7 +18,7 @@ principal quantum number. At the Rydberg state, the atoms present long
 lifetimes and large interaction strengths and are briefly called
 **Rydberg atoms**.
 
-This pages page gives brief insight into the concepts behind **Pulser** and
+This page gives brief insight into the concepts behind **Pulser** and
 the use of neutral-atom devices for quantum computation and simulation. For
 more details, see `Quantum 4, 327 (2020) <https://quantum-journal.org/papers/q-2020-09-21-327/>`_
 for a comprehensive overview of quantum computing with neutral atoms,
@@ -78,8 +78,8 @@ systems.
 Driving two-level transitions
 ******************************
 
-Each channel is tuned such each of its pulses coherently drives a
-specific electronic transition between two specific energy levels of an atom.
+Each channel is tuned such that each of its pulses coherently drives a
+specific electronic transition between two energy levels of an atom.
 For instance, when addressing the ``ground-rydberg`` transition, we have that
 our targeted levels are the ground state, :math:`|g\rangle`, and the Rydberg
 state, :math:`|r\rangle`. These two states can be thought of as the two levels
@@ -179,13 +179,13 @@ circuits and it can be replicated on neutral-atom devices at the pulse-level. To
 this extent, the qubit states are encoded in two hyperfine ground states of the
 system, named `ground`, :math:`|g\rangle`, and `hyperfine`, :math:`|h\rangle`. In
 Pulser, these states form the ``digital`` basis, which is addressed by ``Raman``
-channels. In the digital approach, these channels are usual `Local`, meaning they
+channels. In the digital approach, these channels are usually `Local`, meaning they
 target individual qubits instead of the entire system.
 
 Since the Rydberg blockade effect is not present when atoms are in :math:`|g\rangle` or :math:`|h\rangle`,
 the dynamics of each qubit's state are just determined by the driving pulses,
-already illustrated above as rotations on the Block sphere. By tuning the parameters of a pulse,
-we can achieve any arbitrary single-qubit unitary, as is show in :doc:`phase_shifts_vz_gates`.
+already illustrated above as rotations on the Bloch sphere. By tuning the parameters of a pulse,
+we can achieve any arbitrary single-qubit unitary, as is shown in :doc:`phase_shifts_vz_gates`.
 
 .. image:: files/digital.png
   :align: center
