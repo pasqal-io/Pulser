@@ -78,7 +78,7 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Documentations
+   :caption: Documentation
 
    pulser
 

@@ -2,15 +2,13 @@
 
 Pulser is a framework for composing, simulating and executing **pulse** sequences for neutral-atom quantum devices.
 
-**Documentation** for the [latest release](https://pypi.org/project/pulser/) of `pulser` is available at https://pulser.readthedocs.io (for the docs tracking the `master` branch of this repository, visit https://pulser.readthedocs.io/en/latest instead).
+**Documentation** for the [latest release](https://pypi.org/project/pulser/) of `pulser` is available at https://pulser.readthedocs.io (for the docs tracking the `develop` branch of this repository, visit https://pulser.readthedocs.io/en/latest instead).
 
 The source code can be found at https://github.com/pasqal-io/Pulser.
 
 ## Overview of Pulser
 
-Pulser is designed to let users create experiments that are tailored to specific neutral atom devices,
-like those developed at [Pasqal][pasqal].
-This reduces the level of abstraction and gives you maximal flexibility and control over the behaviour of the relevant physical parameters, within the bounds set by the chosen device.
+Pulser is designed to let users create experiments that are tailored to specific neutral-atom devices. This reduces the level of abstraction and gives you maximal flexibility and control over the behaviour of the relevant physical parameters, within the bounds set by the chosen device.
 
 Consequently, Pulser breaks free from the paradigm of digital quantum computing
 and also allows the creation of **analog** quantum simulations, outside of the
@@ -27,11 +25,16 @@ To install the latest release of ``pulser``, have Python 3.7.0 or higher install
 pip install pulser
 ```
 
-If you wish to **install Pulser from source** instead, do the following from within this repository after cloning it:
+If you wish to **install the development version of Pulser from source** instead, do the following from within this repository after cloning it:
 
 ```bash
+git checkout develop
 pip install -e .
 ```
+
+Bear in mind that this installation will track the contents of your local
+Pulser repository folder, so if you checkout a different branch (e.g. ``master``),
+your installation will change accordingly.
 
 ### Development Requirements (Optional)
 
@@ -50,6 +53,5 @@ pytest --cov pulser
 
 Want to contribute to Pulser? Great! See [How to Contribute][contributing] for information on how you can do so.
 
-[pasqal]: https://pasqal.io/
 [qutip]: http://qutip.org/
 [contributing]: https://github.com/pasqal-io/Pulser/blob/master/CONTRIBUTING.md
