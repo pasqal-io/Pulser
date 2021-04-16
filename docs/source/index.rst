@@ -64,6 +64,7 @@ computers and simulators, check the pages in :doc:`review`.
 
    phase_shifts_vz_gates
    composite_wfs
+   paramseqs
    serialization
 
 .. toctree::
