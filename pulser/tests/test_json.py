@@ -47,8 +47,12 @@ def test_rare_cases():
     reg = Register.square(4)
     seq = Sequence(reg, Chadoq2)
     var = seq.declare_variable("var")
+
     wf = BlackmanWaveform(100, var)
-    s = encode(wf.draw())
+    with pytest.warns(UserWarning, match="Calls to methods of parametrized "
+                      "objects"):
+        s = encode(wf.draw())
+
     with pytest.warns(UserWarning, match="not encode a Sequence"):
         wf_ = Sequence.deserialize(s)
 

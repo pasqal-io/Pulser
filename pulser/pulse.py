@@ -29,7 +29,7 @@ class Pulse:
 
     In Pulser, a Pulse is a modulation of a frequency signal in amplitude
     and/or frequency, with a specific phase, over a given duration. Amplitude
-    and frequency modulation are defined by :class:`Waveform` child classes.
+    and frequency modulations are defined by :class:`Waveform` child classes.
     Frequency modulation is determined by a detuning waveform, which describes
     the shift in frequency from the channel's central frequency over time.
     If either quantity is constant throughout the entire pulse, use the

@@ -92,30 +92,25 @@ class Sequence:
         - The device's channels that are used
         - The schedule of operations on each channel
 
+
     A Sequence also supports variable parameters, which have to be obtained
-    through `Sequence.declare_variable()`. From the moment a variable is
-    declared, a `Sequence` becomes "parametrized" and stops being built on the
-    fly, instead storing the sequence building calls for later execution. This
-    forgoes some specific functionalities of a "regular" `Sequence`, like the
-    ability to validate a `Pulse` or to `draw` the sequence as it is being
-    built. Instead, all validation happens upon building (through
-    `Sequence.build()`), where values for all declared variables have to be
-    specified and a "regular" `Sequence` is created and returned. By changing
-    the values given to the variables, multiple sequences can be generated from
-    a single "parametrized" `Sequence`.
+    through ``Sequence.declare_variable()``. From the moment a variable is
+    declared, a ``Sequence`` becomes **parametrized** and stops being built on
+    the fly, instead storing the sequence building calls for later execution.
+    This forgoes some specific functionalities of a "regular" ``Sequence``,
+    like the ability to validate a ``Pulse`` or to draw the sequence as it is
+    being built. Instead, all validation happens upon building (through
+    ``Sequence.build()``), where values for all declared variables have to be
+    specified and a "regular" ``Sequence`` is created and returned. By
+    changing the values given to the variables, multiple sequences can be
+    generated from a single "parametrized" ``Sequence``.
 
     Args:
         register(Register): The atom register on which to apply the pulses.
         device(PasqalDevice): A valid device in which to execute the Sequence
             (import it from ``pulser.devices``).
 
-    Notes:
-        The declared variables can be used to create parametrized versions of
-        Waveform and Pulse objects, which in turn can be added to the Sequence.
-        Additionally, simple arithmetic operations involving variables are also
-        supported and will return parametrized objects that are dependent on
-        the involved variables.
-
+    Note:
         The register and device do not support variable parameters. As such,
         they are the same for all Sequences built from a parametrized Sequence.
     """
@@ -175,7 +170,10 @@ class Sequence:
         A parametrized sequence is one that depends on the values assigned to
         variables declared within it. Sequence-building calls are not executed
         right away, but rather stored for deferred execution when all variables
-        are given a value (when`Sequence.build()` is called).
+        are given a value (when ``Sequence.build()`` is called).
+
+        Returns:
+            bool: Whether the sequence is parametrized.
         """
         return not self._building
 
@@ -184,7 +182,7 @@ class Sequence:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
-            qubit (str): The id of the qubit whose phase shift is desired.
+            qubit (hashable): The id of the qubit whose phase shift is desired.
 
         Keyword args:
             basis (str): The basis (i.e. electronic transition) the phase
@@ -215,7 +213,7 @@ class Sequence:
                 description.
 
         Keyword Args:
-            initial_target (set, default=None): For 'Local' adressing channels
+            initial_target (set, default=None): For 'Local' addressing channels
                 only. Declares the initial target of the channel. If left as
                 None, the initial target will have to be set manually as the
                 first addition to this channel.
@@ -269,6 +267,12 @@ class Sequence:
     def declare_variable(self, name, size=1, dtype=float):
         """Declare a new variable within this Sequence.
 
+        The declared variables can be used to create parametrized versions of
+        ``Waveform`` and ``Pulse`` objects, which in turn can be added to the
+        ``Sequence``. Additionally, simple arithmetic operations involving
+        variables are also supported and will return parametrized objects that
+        are dependent on the involved variables.
+
         Args:
             name(str): The name for the variable. Must be unique within a
                 Sequence.
@@ -276,12 +280,12 @@ class Sequence:
         Keyword Args:
             size(int=1): The number of entries stored in the variable.
             dtype(default=float): The type of the data that will be assigned
-                to the variable. Must be `float`, `int` or `str`.
+                to the variable. Must be ``float``, ``int`` or ``str``.
 
         Returns:
             Variable: The declared Variable instance.
 
-        Notes:
+        Note:
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
@@ -302,15 +306,16 @@ class Sequence:
         Keyword Args:
             protocol (default='min-delay'): Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
-                of having to channels act on the same target simultaneously.
+                of having multiple channels act on the same target
+                simultaneously.
 
-                - 'min-delay'
+                - ``'min-delay'``
                     Before adding the pulse, introduces the smallest
                     possible delay that avoids all exisiting conflicts.
-                - 'no-delay'
+                - ``'no-delay'``
                     Adds the pulse to the channel, regardless of
                     existing conflicts.
-                - 'wait-for-all'
+                - ``'wait-for-all'``
                     Before adding the pulse, adds a delay that
                     idles the channel until the end of the other channels'
                     latest pulse.
@@ -381,7 +386,7 @@ class Sequence:
         Args:
             qubits (hashable, iterable): The new target for this channel. Must
                 correspond to a qubit ID in device or an iterable of qubit IDs,
-                when multi-qubit adressing is possible.
+                when multi-qubit addressing is possible.
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
          """
@@ -403,7 +408,7 @@ class Sequence:
 
         Args:
             basis (str): Valid basis for measurement (consult the
-                'supported_bases' attribute of the selected device for
+                ``supported_bases`` attribute of the selected device for
                 the available options).
         """
         available = self._device.supported_bases
@@ -430,8 +435,8 @@ class Sequence:
 
         Args:
             phi (float): The intended phase shift (in rads).
-            targets: The ids of the qubits on which to apply the phase
-                shift.
+            targets (hashable): The ids of the qubits on which to apply the
+                phase shift.
 
         Keyword Args:
             basis(str): The basis (i.e. electronic transition) to associate
@@ -481,18 +486,20 @@ class Sequence:
         Keyword Args:
             vars: The values for all the variables declared in this Sequence
                 instance, indexed by the name given upon declaration. Check
-                `Sequence.declared_variables` to see all the variables.
+                ``Sequence.declared_variables`` to see all the variables.
 
         Returns:
             Sequence: The Sequence built with the given variable values.
 
         Example:
-            # Check which variables are declared
-            >>> print(seq.declared_variables)
-            {'x': Variable(name='x', dtype=<class 'float'>, size=1),
-             'y': Variable(name='y', dtype=<class 'int'>, size=3)}
-            # Build a sequence with specific values for both variables
-            >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
+            ::
+
+                # Check which variables are declared
+                >>> print(seq.declared_variables)
+                {'x': Variable(name='x', dtype=<class 'float'>, size=1),
+                 'y': Variable(name='y', dtype=<class 'int'>, size=3)}
+                # Build a sequence with specific values for both variables
+                >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
         """
         if not self.is_parametrized():
             warnings.warn("Building a non-parametrized sequence simply returns"
@@ -534,15 +541,15 @@ class Sequence:
         """Serializes the Sequence into a JSON formatted string.
 
         Other Parameters:
-            kwargs: Valid keyword-arguments for `json.dumps()`, except for
-                `cls`.
+            kwargs: Valid keyword-arguments for ``json.dumps()``, except for
+                ``cls``.
 
         Returns:
             str: The sequence encoded in a JSON formatted string.
 
         See also:
-            json.dumps: Built-in function for serialization to a JSON formatted
-                string.
+            ``json.dumps``: Built-in function for serialization to a JSON
+            formatted string.
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
@@ -552,18 +559,19 @@ class Sequence:
 
         Args:
             obj(str): The JSON formatted string to deserialize, coming from the
-                serialization of a `Sequence` through `Sequence.serialize()`.
+                serialization of a ``Sequence`` through
+                ``Sequence.serialize()``.
 
         Other Parameters:
-            kwargs: Valid keyword-arguments for `json.loads()`, except for
-                `cls` and `object_hook`.
+            kwargs: Valid keyword-arguments for ``json.loads()``, except for
+                ``cls`` and ``object_hook``.
 
         Returns:
             Sequence: The deserialized Sequence object.
 
         See also:
-            json.loads: Built-in function for deserialization from a JSON
-                formatted string.
+            ``json.loads``: Built-in function for deserialization from a JSON
+            formatted string.
         """
         if "Sequence" not in obj:
             warnings.warn("The given JSON formatted string does not encode a "
@@ -573,7 +581,7 @@ class Sequence:
 
     @_screen
     def draw(self):
-        """Draws the sequence in its current sequence."""
+        """Draws the sequence in its current state."""
         draw_sequence(self)
 
     def _target(self, qubits, channel):

@@ -60,9 +60,9 @@ class Channel:
         """Initializes the channel with global addressing.
 
         Args:
-            max_abs_detuning (tuple): Maximum possible detuning (in rad/µs), in
+            max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
                 absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in rad/µs).
+            max_amp(float): Maximum pulse amplitude (in rad/µs).
         """
 
         return cls('Global', max_abs_detuning, max_amp)

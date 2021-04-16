@@ -59,7 +59,7 @@ class Waveform(ABC):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         pass
 
@@ -185,26 +185,6 @@ class CompositeWaveform(Waveform):
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
 
-    def insert(self, waveform, where=0):
-        """Insert a new waveform into the CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-
-        Keyword Args:
-            where (default=0): Index before which the waveform is inserted.
-        """
-        self._validate(waveform)
-        self._waveforms.insert(where, waveform)
-
-    def append(self, waveform):
-        """Append a new waveform to the end of a CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-        """
-        self.insert(waveform, where=len(self._waveforms))
-
     def _validate(self, waveform):
         if not isinstance(waveform, Waveform):
             raise TypeError("{!r} is not a valid waveform. Please provide a "
@@ -279,8 +259,8 @@ class ConstantWaveform(Waveform):
     """A waveform of constant value.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        value: The modulation value (in rad/µs).
+        duration (int): The waveform duration (in multiples of 4 ns).
+        value (float): The modulation value (in rad/µs).
     """
 
     def __init__(self, duration, value):
@@ -330,9 +310,9 @@ class RampWaveform(Waveform):
     """A linear ramp waveform.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        start: The initial value (in rad/µs).
-        stop: The final value (in rad/µs).
+        duration (int): The waveform duration (in multiples of 4 ns).
+        start (float): The initial value (in rad/µs).
+        stop (float): The final value (in rad/µs).
     """
 
     def __init__(self, duration, start, stop):
@@ -468,12 +448,12 @@ class BlackmanWaveform(Waveform):
 
 
 # To replicate __init__'s signature in __new__ for every Waveform subclass
-def copy_func(f):
+def _copy_func(f):
     return types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
                               argdefs=f.__defaults__, closure=f.__closure__)
 
 
 for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
     if m[1].__module__ == __name__:
-        new = copy_func(m[1].__new__)
-        m[1].__new__ = functools.update_wrapper(new, m[1].__init__)
+        _new = _copy_func(m[1].__new__)
+        m[1].__new__ = functools.update_wrapper(_new, m[1].__init__)
