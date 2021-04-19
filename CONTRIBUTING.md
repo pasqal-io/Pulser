@@ -18,37 +18,37 @@ We're thrilled that you want to contribute to Pulser! For general contributions,
 
 Here are the steps you should follow to make your contribution:
 
-0. Fork the Pulser repository. You only have to do this once and you do so by clicking the "Fork" button at the upper right corner of the [repo page](https://github.com/pasqal-io/Pulser). This will create a new GitHub repo at `https://github.com/USERNAME/Pulser`, where `USERNAME` is your GitHub ID. Then, `cd` into the folder where you would like to place your new fork and clone it by doing:
+0. Fork the Pulser repository and add the main Pulser repository as the `upstream`. You only have to do this once and you do so by clicking the "Fork" button at the upper right corner of the [repo page](https://github.com/pasqal-io/Pulser). This will create a new GitHub repo at `https://github.com/USERNAME/Pulser`, where `USERNAME` is your GitHub ID. Then, `cd` into the folder where you would like to place your new fork and clone it by doing:
     ```bash
     git clone https://github.com/USERNAME/Pulser.git
     ```
     **Note**: `USERNAME` should be replaced by your own GitHub ID.
 
+   Then, you'll want to go into the directory of your brand new Pulser fork and add the main Pulser repository as the `upstream` by running:
+   ```bash
+   git remote add upstream https://github.com/pasqal-io/Pulser.git
+   ```
+
 1. Have the related issue assigned to you. We suggest that you work only on issues that have been assigned to you; by doing this, you make sure to be the only one working on this and we prevent everyone from doing duplicate work. If a related issue does not exist yet, consult the [section above](#reporting-a-bug-or-suggesting-a-feature) to see how to proceed.
 
-2. You'll want to create a new branch where you will do your changes. **Do not push changes to your fork's `develop` branch**, it should be used only to keep your fork in sync with Pulser's `develop` branch (more on how to do this later). Go to the location where you cloned your fork and do:
+2. You'll want to create a new branch where you will do your changes. The starting point will be `upstream/develop`, which is where you'll ultimately merge your changes. Inside your fork's root folder, run:
     ```bash
-    git checkout develop
-    git checkout -b branch-name-here
-    ```
-    This will create and checkout the new branch where you will do your changes.
-
-3. Do your work and commit changes to this new branch.
-
-4. At this point, your fork's `develop` branch might have drifted out of sync with Pulser's `develop` branch (the `upstream`). The following lines will sync your local repo's `develop` with `upstream/develop` and then merge the local `develop` with your working branch, at which point you'll have to solve any merge conflicts that may arise.
-    ```shell
-    # Track the upstream repo (you only have to do this one time):
-    git remote add upstream https://github.com/pasqal-io/Pulser.git
-
-    # Update your local develop.
     git fetch upstream
-    git checkout develop
-    git merge upstream/develop
-    # Merge local develop into your branch.
-    git checkout branch-name-here
-    git merge develop
+    git checkout -b branch-name-here upstream/develop
     ```
-5. Finally, you push your code to your new branch:
+    This will create and checkout the new branch, where you will do your changes.
+    
+    **Note**: `branch-name-here` should be replaced by the name you'll give your branch. Try to be descriptive, pick a name that identifies your new feature.
+
+3. Do your work and commit the changes to this new branch. Try to make the first line of your commit messages short but informative; in case you want to go into more detail, you have the option to do so in the next lines.
+
+4. At this point, your branch might have drifted out of sync with Pulser's `develop` branch (the `upstream`). By running
+    ```shell
+    git pull upstream develop
+    ```
+   you will fetch the latest changes in `upstream/develop` and merge them with your working branch, at which point you'll have to solve any merge conflicts that may    arise. This will keep your working branch in sync with `upstream/develop`.
+   
+5. Finally, you push your code to your local branch:
     ```bash
     git push origin branch-name-here
     ```
