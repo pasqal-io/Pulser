@@ -4,11 +4,11 @@ on:
   pull_request:
     branches:
       - master
-      - 'v0.*'
+      - develop
   push:
     branches:
       - master
-      - 'v0.*'
+      - develop
 
 jobs:
   style:
