@@ -266,6 +266,9 @@ class Simulation:
                            ``qutip.Qobj`` instance.
             progress_bar (bool): If True, the progress bar of QuTiP's
                 ``qutip.sesolve()`` will be shown.
+            options (Keyword Arguments): Any additional options. These
+                    correspond to the `options` keyword arguments from the
+                    ``qutip.sesolve` method.
 
         Returns:
             SimulationResults: Object containing the time evolution results.
