@@ -262,10 +262,13 @@ class Simulation:
 
         Keyword Args:
             initial_state (array): The initial quantum state of the
-                           evolution. Will be transformed into a
-                           ``qutip.Qobj`` instance.
+                evolution. Will be transformed into a ``qutip.Qobj`` instance.
             progress_bar (bool): If True, the progress bar of QuTiP's
                 ``qutip.sesolve()`` will be shown.
+        Other Parameters:
+            options: Additional simulation settings. These correspond to the
+                keyword arguments of ``qutip.solver.Options`` for
+                the ``qutip.sesolve()`` method.
 
         Returns:
             SimulationResults: Object containing the time evolution results.
