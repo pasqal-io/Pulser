@@ -121,7 +121,7 @@ class Sequence:
         if cond1 and cond2:
             names = [d.name for d in pulser.devices._valid_devices]
             error_msg = ("The Sequence's device has to be imported from "
-                         + "pasqal.devices. Choose 'MockDevice' or between the"
+                         + "pulser.devices. Choose 'MockDevice' or between the"
                          + " following real devices:\n" + "\n".join(names))
             raise ValueError(error_msg)
         # Checks if register is compatible with the device

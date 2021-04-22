@@ -25,7 +25,7 @@ from pulser.utils import obj_to_dict
 
 @dataclass(frozen=True, repr=False)
 class Device:
-    r"""Definition of a Pasqal Device.
+    r"""Definition of a neutral-atom device.
 
     Attributes:
         name: The name of the device.

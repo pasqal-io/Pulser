@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pulser.devices._pasqal_device import Device
+from pulser.devices._device_datacls import Device
 from pulser.channels import Rydberg, Raman
 
 

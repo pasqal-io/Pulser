@@ -20,7 +20,7 @@ import pytest
 import pulser
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
-from pulser.devices._pasqal_device import Device
+from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
 from pulser.waveforms import BlackmanWaveform
 
@@ -30,7 +30,7 @@ device = Chadoq2
 
 def test_init():
     fake_device = Device("fake", 2, 10, 10, 1, Chadoq2._channels)
-    with pytest.raises(ValueError, match='imported from pasqal.devices'):
+    with pytest.raises(ValueError, match='imported from pulser.devices'):
         Sequence(reg, fake_device)
 
     seq = Sequence(reg, device)
