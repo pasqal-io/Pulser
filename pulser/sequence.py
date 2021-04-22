@@ -25,6 +25,7 @@ import numpy as np
 import pulser
 from pulser.pulse import Pulse
 from pulser.devices import MockDevice
+from pulser.devices._device_datacls import Device
 from pulser._json_coders import PulserEncoder, PulserDecoder
 from pulser.parametrized import Parametrized, Variable
 from pulser._seq_drawer import draw_sequence
@@ -116,14 +117,19 @@ class Sequence:
     """
     def __init__(self, register, device):
         """Initializes a new pulse sequence."""
+        if not isinstance(device, Device):
+            raise TypeError("'device' must be of type 'Device'. Import a valid"
+                            " device from 'pulser.devices'.")
         cond1 = device not in pulser.devices._valid_devices
         cond2 = device != MockDevice
         if cond1 and cond2:
             names = [d.name for d in pulser.devices._valid_devices]
-            error_msg = ("The Sequence's device has to be imported from "
-                         + "pulser.devices. Choose 'MockDevice' or between the"
-                         + " following real devices:\n" + "\n".join(names))
-            raise ValueError(error_msg)
+            warns_msg = ("The Sequence's device should be imported from "
+                         + "'pulser.devices'. Correct operation is not ensured"
+                         + " for custom devices. Choose 'MockDevice' or one of"
+                         + " the following real devices:\n" + "\n".join(names))
+            warnings.warn(warns_msg)
+
         # Checks if register is compatible with the device
         device.validate_register(register)
 

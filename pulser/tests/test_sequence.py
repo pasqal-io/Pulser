@@ -29,8 +29,11 @@ device = Chadoq2
 
 
 def test_init():
-    fake_device = Device("fake", 2, 10, 10, 1, Chadoq2._channels)
-    with pytest.raises(ValueError, match='imported from pulser.devices'):
+    with pytest.raises(TypeError, match="must be of type 'Device'"):
+        Sequence(reg, Device)
+
+    fake_device = Device("fake", 2, 100, 100, 1, Chadoq2._channels)
+    with pytest.warns(UserWarning, match="imported from 'pulser.devices'"):
         Sequence(reg, fake_device)
 
     seq = Sequence(reg, device)
