@@ -14,11 +14,11 @@
 """Definitions of Pasqal's devices."""
 import numpy as np
 
-from pulser.devices._pasqal_device import PasqalDevice
+from pulser.devices._pasqal_device import Device
 from pulser.channels import Raman, Rydberg
 
 
-Chadoq2 = PasqalDevice(
+Chadoq2 = Device(
     name="Chadoq2",
     dimensions=2,
     max_atom_num=100,

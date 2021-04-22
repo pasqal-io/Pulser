@@ -24,7 +24,7 @@ from pulser.utils import obj_to_dict
 
 
 @dataclass(frozen=True, repr=False)
-class PasqalDevice:
+class Device:
     r"""Definition of a Pasqal Device.
 
     Attributes:

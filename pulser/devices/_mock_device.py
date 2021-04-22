@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pulser.devices._pasqal_device import PasqalDevice
+from pulser.devices._pasqal_device import Device
 from pulser.channels import Rydberg, Raman
 
 
-MockDevice = PasqalDevice(
+MockDevice = Device(
             name="MockDevice",
             dimensions=2,
             max_atom_num=2000,

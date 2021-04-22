@@ -107,8 +107,8 @@ class Sequence:
 
     Args:
         register(Register): The atom register on which to apply the pulses.
-        device(PasqalDevice): A valid device in which to execute the Sequence
-            (import it from ``pulser.devices``).
+        device(Device): A valid device in which to execute the Sequence (import
+            it from ``pulser.devices``).
 
     Note:
         The register and device do not support variable parameters. As such,

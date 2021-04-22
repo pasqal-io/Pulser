@@ -14,7 +14,7 @@ Devices
 
 Structure of a Pasqal Device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The :class:`PasqalDevice` class sets the structure of every device instance.
+The :class:`Device` class sets the structure of every device instance.
 
 .. automodule:: pulser.devices._pasqal_device
    :members:
