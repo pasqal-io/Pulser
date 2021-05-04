@@ -55,3 +55,9 @@ Want to contribute to Pulser? Great! See [How to Contribute][contributing] for i
 
 [qutip]: http://qutip.org/
 [contributing]: https://github.com/pasqal-io/Pulser/blob/master/CONTRIBUTING.md
+
+## Citing Pulser
+
+Citation references are generated through Zenodo. Click the badge below to get the citation to the latest Pulser release.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4707943.svg)](https://doi.org/10.5281/zenodo.4707943)
