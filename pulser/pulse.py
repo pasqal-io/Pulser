@@ -19,7 +19,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.parametrized import Parametrized, ParamObj
+from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
+from pulser.utils import obj_to_dict
 
 
 class Pulse:
@@ -27,7 +29,7 @@ class Pulse:
 
     In Pulser, a Pulse is a modulation of a frequency signal in amplitude
     and/or frequency, with a specific phase, over a given duration. Amplitude
-    and frequency modulation are defined by :class:`Waveform` child classes.
+    and frequency modulations are defined by :class:`Waveform` child classes.
     Frequency modulation is determined by a detuning waveform, which describes
     the shift in frequency from the channel's central frequency over time.
     If either quantity is constant throughout the entire pulse, use the
@@ -78,6 +80,7 @@ class Pulse:
         self.post_phase_shift = float(post_phase_shift) % (2 * np.pi)
 
     @classmethod
+    @parametrize
     def ConstantDetuning(cls, amplitude, detuning, phase, post_phase_shift=0):
         """Pulse with an amplitude waveform and a constant detuning.
 
@@ -91,6 +94,7 @@ class Pulse:
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
+    @parametrize
     def ConstantAmplitude(cls, amplitude, detuning, phase, post_phase_shift=0):
         """Pulse with a constant amplitude and a detuning waveform.
 
@@ -104,6 +108,7 @@ class Pulse:
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
+    @parametrize
     def ConstantPulse(cls, duration, amplitude, detuning, phase,
                       post_phase_shift=0):
         """Pulse with a constant amplitude and a constant detuning.
@@ -130,6 +135,10 @@ class Pulse:
 
         fig.tight_layout()
         plt.show()
+
+    def _to_dict(self):
+        return obj_to_dict(self, self.amplitude, self.detuning, self.phase,
+                           post_phase_shift=self.post_phase_shift)
 
     def __str__(self):
         return "Pulse(Amp={!s}, Detuning={!s}, Phase={:.3g})".format(
