@@ -63,7 +63,12 @@ def test_channel_declaration():
     available_channels = set(seq2.available_channels)
     seq2.declare_channel('ch0', 'raman_local', initial_target='q1')
     seq2.declare_channel('ch1', 'rydberg_global')
+    seq2.declare_channel('ch2', 'rydberg_global')
     assert set(seq2.available_channels) == available_channels
+    assert seq2._taken_channels == {'ch0': 'raman_local',
+                                    'ch1': 'rydberg_global',
+                                    'ch2': 'rydberg_global'}
+    assert seq2._taken_channels.keys() == seq2._channels.keys()
 
 
 def test_target():

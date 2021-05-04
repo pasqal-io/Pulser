@@ -139,7 +139,7 @@ class Sequence:
         self._channels = {}
         self._schedule = {}
         self._phase_ref = {}  # The phase reference of each channel
-        # Stores the ids of selected channels and their declared names
+        # Stores the names and corresponding ids of declared channels
         self._taken_channels = {}
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
         self._last_used = {}    # Last time each qubit was used, by basis
@@ -167,7 +167,7 @@ class Sequence:
     def available_channels(self):
         """Channels still available for declaration."""
         return {id: ch for id, ch in self._device.channels.items()
-                if id not in self._taken_channels
+                if id not in self._taken_channels.values()
                 or self._device == MockDevice}
 
     def is_parametrized(self):
@@ -236,7 +236,7 @@ class Sequence:
 
         ch = self._device.channels[channel_id]
         self._channels[name] = ch
-        self._taken_channels[channel_id] = name
+        self._taken_channels[name] = channel_id
         self._schedule[name] = []
         self._last_target[name] = 0
 
@@ -751,18 +751,7 @@ class Sequence:
             raise ValueError("Use the name of a declared channel.")
 
     def _validate_pulse(self, pulse, channel):
-        if not isinstance(pulse, Pulse):
-            raise TypeError("pulse input must be of type Pulse, not of type "
-                            "{}.".format(type(pulse)))
-
-        ch = self._channels[channel]
-        if np.any(pulse.amplitude.samples > ch.max_amp):
-            raise ValueError("The pulse's amplitude goes over the maximum "
-                             "value allowed for the chosen channel.")
-        if np.any(np.round(np.abs(pulse.detuning.samples),
-                           decimals=6) > ch.max_abs_detuning):
-            raise ValueError("The pulse's detuning values go out of the range "
-                             "allowed for the chosen channel.")
+        self._device.validate_pulse(pulse, self._taken_channels[channel])
 
     def _reset_parametrized(self):
         """Resets all attributes related to parametrization."""
