@@ -733,6 +733,14 @@ class Sequence:
 
         return full
 
+    def get_duration(self):
+        """Check current duration of Sequence."""
+        timeslots_per_channel = [0]
+        for ch, seq in self._schedule.items():
+            for ts in seq:
+                timeslots_per_channel.append(ts.tf)
+        return max(timeslots_per_channel)
+
     def _add_to_schedule(self, channel, timeslot):
         if hasattr(self, "_measurement"):
             raise SystemError("The sequence has already been measured. "
