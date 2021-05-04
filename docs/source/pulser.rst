@@ -12,16 +12,16 @@ Channels
 Devices
 ---------------------
 
-Structure of a Pasqal Device
+Structure of a Device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The :class:`PasqalDevice` class sets the structure of every device instance.
+The :class:`Device` class sets the structure of every device instance.
 
-.. automodule:: pulser.devices._pasqal_device
+.. automodule:: pulser.devices._device_datacls
    :members:
 
 Physical Devices
 ^^^^^^^^^^^^^^^^^^^
-Each device instance holds the characteristics of one of Pasqal's physical devices,
+Each device instance holds the characteristics of a physical device,
 which when associated with a :class:`pulser.Sequence` condition its development.
 
 .. autodata:: pulser.devices.Chadoq2
