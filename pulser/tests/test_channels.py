@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 import pulser
 from pulser.channels import Raman, Rydberg
 
@@ -28,11 +30,25 @@ def test_device_channels():
             assert ch.addressing in ['Local', 'Global']
             assert ch.max_abs_detuning >= 0
             assert ch.max_amp > 0
+            assert ch.clock_period >= 1
+            assert ch.min_duration >= 1
             if ch.addressing == 'Local':
                 assert ch.retarget_time >= 0
                 assert ch.retarget_time == int(ch.retarget_time)
                 assert ch.max_targets >= 1
                 assert ch.max_targets == int(ch.max_targets)
+
+
+def test_validate_duration():
+    ch = Rydberg.Local(20, 10, min_duration=16, max_duration=1000)
+    with pytest.raises(TypeError, match="castable to an int"):
+        ch.validate_duration("twenty")
+    with pytest.raises(ValueError, match="at least 16 ns"):
+        ch.validate_duration(10)
+    with pytest.raises(ValueError, match="at most 1000 ns"):
+        ch.validate_duration(1e5)
+    with pytest.warns(UserWarning, match="nearest multiple of 4 ns"):
+        ch.validate_duration(31.4)
 
 
 def test_repr():
