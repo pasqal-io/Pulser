@@ -21,6 +21,11 @@ from pulser import Register
 
 
 def test_creation():
+    empty_dict = {} 
+    with pytest.raises(ValueError,
+            match="Cannot create a Register with an empty qubit"):
+        Register(empty_dict)
+
     coords = [(0, 0), (1, 0)]
     ids = ['q0', 'q1']
     qubits = dict(zip(ids, coords))
