@@ -29,7 +29,7 @@ from pulser.devices._device_datacls import Device
 from pulser._json_coders import PulserEncoder, PulserDecoder
 from pulser.parametrized import Parametrized, Variable
 from pulser._seq_drawer import draw_sequence
-from pulser.utils import validate_duration, obj_to_dict
+from pulser.utils import obj_to_dict
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
@@ -635,7 +635,9 @@ class Sequence:
             if delta != 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    delta = validate_duration(np.clip(delta, 16, np.inf))
+                    delta = self._channels[channel].validate_duration(
+                        np.clip(delta, 16, np.inf)
+                        )
             tf = ti + delta
 
         except ValueError:
@@ -652,7 +654,7 @@ class Sequence:
 
         last = self._last(channel)
         ti = last.tf
-        tf = ti + validate_duration(duration)
+        tf = ti + self._channels[channel].validate_duration(duration)
         self._add_to_schedule(channel,
                               _TimeSlot('delay', ti, tf, last.targets))
 

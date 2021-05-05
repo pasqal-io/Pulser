@@ -23,9 +23,19 @@ MockDevice = Device(
             max_radial_distance=1000,
             min_atom_distance=1,
             _channels=(
-                ("rydberg_global", Rydberg.Global(1000, 200)),
-                ("rydberg_local", Rydberg.Local(1000, 200, 0, 2000)),
-                ("raman_global", Raman.Global(1000, 200)),
-                ("raman_local", Raman.Local(1000, 200, 0, 2000)),
+                ("rydberg_global", Rydberg.Global(1000, 200,
+                                                  clock_period=1,
+                                                  min_duration=1)),
+                ("rydberg_local", Rydberg.Local(1000, 200, 0,
+                                                max_targets=2000,
+                                                clock_period=1,
+                                                min_duration=1)),
+                ("raman_global", Raman.Global(1000, 200,
+                                              clock_period=1,
+                                              min_duration=1)),
+                ("raman_local", Raman.Local(1000, 200, 0,
+                                            max_targets=2000,
+                                            clock_period=1,
+                                            min_duration=1)),
                 )
             )
