@@ -21,7 +21,7 @@ from pulser import Register
 
 
 def test_creation():
-    empty_dict = {} 
+    empty_dict = {}
     with pytest.raises(ValueError,
             match="Cannot create a Register with an empty qubit"):
         Register(empty_dict)
