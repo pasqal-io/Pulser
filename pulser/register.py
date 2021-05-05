@@ -35,7 +35,8 @@ class Register:
             raise TypeError("The qubits have to be stored in a dictionary "
                             "matching qubit ids to position coordinates.")
         if not qubits:
-            raise ValueError("Cannot create a Register with an empty qubit dictionary")
+            raise ValueError("Cannot create a Register with an empty qubit "
+                             "dictionary.")
         self._ids = list(qubits.keys())
         coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = coords[0].size
