@@ -18,7 +18,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser._json_coders import PulserEncoder, PulserDecoder
+from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.parametrized import Variable, ParamObj
 from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
                               CustomWaveform, CompositeWaveform)

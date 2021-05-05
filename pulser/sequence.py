@@ -26,10 +26,10 @@ import pulser
 from pulser.pulse import Pulse
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
-from pulser._json_coders import PulserEncoder, PulserDecoder
+from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser._seq_drawer import draw_sequence
-from pulser.utils import obj_to_dict
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])

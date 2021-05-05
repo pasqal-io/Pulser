@@ -19,7 +19,7 @@ import numpy as np
 
 from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
-from pulser.utils import obj_to_dict
+from pulser.json.utils import obj_to_dict
 
 
 @dataclasses.dataclass(frozen=True, eq=False)

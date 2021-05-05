@@ -21,7 +21,7 @@ import numpy as np
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
-from pulser.utils import obj_to_dict
+from pulser.json.utils import obj_to_dict
 
 
 class Pulse:

@@ -17,7 +17,7 @@ from matplotlib import collections as mc
 import numpy as np
 from scipy.spatial import KDTree
 
-from pulser.utils import obj_to_dict
+from pulser.json.utils import obj_to_dict
 
 
 class Register:

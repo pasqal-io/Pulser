@@ -20,7 +20,7 @@ from scipy.spatial.distance import pdist
 
 from pulser import Pulse, Register
 from pulser.channels import Channel
-from pulser.utils import obj_to_dict
+from pulser.json.utils import obj_to_dict
 
 
 @dataclass(frozen=True, repr=False)
