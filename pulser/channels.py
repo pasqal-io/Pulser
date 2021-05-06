@@ -102,10 +102,10 @@ class Channel:
                              + f"{self.max_duration} ns.")
 
         if duration % self.clock_period != 0:
-            _duration -= _duration % self.clock_period
-            warnings.warn("The given duration is not a multiple of the "
-                          "channel's clock period. It was rounded down to the "
-                          f"nearest multiple of {self.clock_period} ns.")
+            _duration += _duration % self.clock_period
+            warnings.warn(f"A duration of {duration} ns is not a multiple of "
+                          f"the channel's clock period ({self.clock_period} "
+                          f"ns). It was rounded up to {_duration} ns.")
         return _duration
 
     def __repr__(self):
