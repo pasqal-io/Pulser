@@ -98,6 +98,15 @@ class Waveform(ABC):
 
         plt.show()
 
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not support"
+                                  " modifications to its duration.")
+
     @abstractmethod
     def _to_dict():
         pass
@@ -296,6 +305,17 @@ class ConstantWaveform(Waveform):
         """The last value in the waveform."""
         return self._value
 
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            ConstantWaveform: The new waveform with the given duration.
+        """
+        return ConstantWaveform(new_duration, self._value)
+
     def _to_dict(self):
         return obj_to_dict(self, self._duration, self._value)
 
@@ -353,6 +373,17 @@ class RampWaveform(Waveform):
     def last_value(self):
         """The last value in the waveform."""
         return self._stop
+
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            RampWaveform: The new waveform with the given duration.
+        """
+        return RampWaveform(new_duration, self._start, self._stop)
 
     def _to_dict(self):
         return obj_to_dict(self, self._duration, self._start, self._stop)
@@ -436,6 +467,18 @@ class BlackmanWaveform(Waveform):
     def last_value(self):
         """The last value in the waveform."""
         return 0
+
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            BlackmanWaveform: The new waveform with the same area but a new
+                duration.
+        """
+        return BlackmanWaveform(new_duration, self._area)
 
     def _to_dict(self):
         return obj_to_dict(self, self._duration, self._area)

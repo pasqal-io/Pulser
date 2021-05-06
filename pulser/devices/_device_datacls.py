@@ -18,7 +18,7 @@ from typing import Tuple
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from pulser import Pulse, Register
+from pulser import Register
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
 
@@ -130,10 +130,6 @@ class Device:
             channel_id (str): The channel ID used to index the chosen channel
                 on this device.
         """
-        if not isinstance(pulse, Pulse):
-            raise TypeError("pulse input must be of type Pulse, not of type "
-                            "{}.".format(type(pulse)))
-
         ch = self.channels[channel_id]
         if np.any(pulse.amplitude.samples > ch.max_amp):
             raise ValueError("The pulse's amplitude goes over the maximum "

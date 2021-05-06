@@ -338,10 +338,28 @@ class Sequence:
                 self._validate_pulse(pulse, channel)
             return
 
+        if not isinstance(pulse, Pulse):
+            raise TypeError("pulse input must be of type Pulse, not of type "
+                            "{}.".format(type(pulse)))
+
+        channel_obj = self._channels[channel]
+        _duration = channel_obj.validate_duration(pulse.duration)
+        if _duration != pulse.duration:
+            try:
+                pulse = Pulse(pulse.amplitude.change_duration(_duration),
+                              pulse.detuning.change_duration(_duration),
+                              pulse.phase,
+                              pulse.post_phase_shift)
+            except NotImplementedError:
+                raise ValueError("The pulse's waveform cannot be automatically"
+                                 " adjusted to the channel's constraints. "
+                                 "Choose a duration that is a multiple of "
+                                 f"{channel_obj.clock_period} ns.")
+
         self._validate_pulse(pulse, channel)
         last = self._last(channel)
         t0 = last.tf    # Preliminary ti
-        basis = self._channels[channel].basis
+        basis = channel_obj.basis
         phase_barriers = [self._phase_ref[basis][q].last_time
                           for q in last.targets]
         current_max_t = max(t0, *phase_barriers)
