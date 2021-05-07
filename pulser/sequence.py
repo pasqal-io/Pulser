@@ -135,6 +135,7 @@ class Sequence:
 
         self._register = register
         self._device = device
+        self._in_xy = False
         self._calls = [_Call("__init__", (register, device), {})]
         self._channels = {}
         self._schedule = {}
@@ -167,8 +168,10 @@ class Sequence:
     def available_channels(self):
         """Channels still available for declaration."""
         return {id: ch for id, ch in self._device.channels.items()
-                if id not in self._taken_channels
-                or self._device == MockDevice}
+                if (id not in self._taken_channel
+                or self._device == MockDevice)
+                and (ch.basis == "xy" if self._in_xy else ch.basis != "xy")
+                }
 
     def is_parametrized(self):
         """States whether the sequence is parametrized.
