@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
@@ -60,6 +62,10 @@ seq.add(pi, 'ryd')
 seq.target('control1', 'ryd')
 seq.add(pi, 'ryd')
 d += 5
+
+# Add a ConstantWaveform part to testout the drawing procedure
+seq.add(Pulse.ConstantPulse(duration, 0, 0, 0), 'ryd')
+d += 1
 
 
 def test_initialization_and_construction_of_hamiltonian():
@@ -226,6 +232,8 @@ def test_single_atom_simulation():
 
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
+    with patch('matplotlib.pyplot.show'):
+        sim.draw()
     bad_initial = np.array([1.])
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)
