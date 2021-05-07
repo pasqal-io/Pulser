@@ -19,7 +19,7 @@ import pytest
 
 from pulser import Sequence, Register
 from pulser.devices import Chadoq2
-from pulser._json_coders import PulserEncoder, PulserDecoder
+from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import BlackmanWaveform
 

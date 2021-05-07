@@ -18,9 +18,9 @@ from typing import Tuple
 import numpy as np
 from scipy.spatial.distance import pdist
 
+from pulser import Register
 from pulser.channels import Channel
-from pulser.register import Register
-from pulser.utils import obj_to_dict
+from pulser.json.utils import obj_to_dict
 
 
 @dataclass(frozen=True, repr=False)
@@ -121,6 +121,23 @@ class Device:
             raise ValueError("All qubits must be at most {} μm away from the "
                              "center of the array.".format(
                                                     self.max_radial_distance))
+
+    def validate_pulse(self, pulse, channel_id):
+        """Checks if a pulse can be executed on a specific device channel.
+
+        Args:
+            pulse (Pulse): The pulse to validate.
+            channel_id (str): The channel ID used to index the chosen channel
+                on this device.
+        """
+        ch = self.channels[channel_id]
+        if np.any(pulse.amplitude.samples > ch.max_amp):
+            raise ValueError("The pulse's amplitude goes over the maximum "
+                             "value allowed for the chosen channel.")
+        if np.any(np.round(np.abs(pulse.detuning.samples),
+                           decimals=6) > ch.max_abs_detuning):
+            raise ValueError("The pulse's detuning values go out of the range "
+                             "allowed for the chosen channel.")
 
     def _specs(self, for_docs=False):
         lines = [
