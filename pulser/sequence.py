@@ -26,10 +26,10 @@ import pulser
 from pulser.pulse import Pulse
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
-from pulser._json_coders import PulserEncoder, PulserDecoder
+from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser._seq_drawer import draw_sequence
-from pulser.utils import validate_duration, obj_to_dict
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
@@ -139,7 +139,7 @@ class Sequence:
         self._channels = {}
         self._schedule = {}
         self._phase_ref = {}  # The phase reference of each channel
-        # Stores the ids of selected channels and their declared names
+        # Stores the names and corresponding ids of declared channels
         self._taken_channels = {}
         self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
         self._last_used = {}    # Last time each qubit was used, by basis
@@ -167,7 +167,7 @@ class Sequence:
     def available_channels(self):
         """Channels still available for declaration."""
         return {id: ch for id, ch in self._device.channels.items()
-                if id not in self._taken_channels
+                if id not in self._taken_channels.values()
                 or self._device == MockDevice}
 
     def is_parametrized(self):
@@ -236,7 +236,7 @@ class Sequence:
 
         ch = self._device.channels[channel_id]
         self._channels[name] = ch
-        self._taken_channels[channel_id] = name
+        self._taken_channels[name] = channel_id
         self._schedule[name] = []
         self._last_target[name] = 0
 
@@ -338,10 +338,28 @@ class Sequence:
                 self._validate_pulse(pulse, channel)
             return
 
+        if not isinstance(pulse, Pulse):
+            raise TypeError("pulse input must be of type Pulse, not of type "
+                            "{}.".format(type(pulse)))
+
+        channel_obj = self._channels[channel]
+        _duration = channel_obj.validate_duration(pulse.duration)
+        if _duration != pulse.duration:
+            try:
+                pulse = Pulse(pulse.amplitude.change_duration(_duration),
+                              pulse.detuning.change_duration(_duration),
+                              pulse.phase,
+                              pulse.post_phase_shift)
+            except NotImplementedError:
+                raise TypeError("Failed to automatically adjust one of the "
+                                "pulse's waveforms to the channel duration "
+                                "constraints. Choose a duration that is a "
+                                f"multiple of {channel_obj.clock_period} ns.")
+
         self._validate_pulse(pulse, channel)
         last = self._last(channel)
         t0 = last.tf    # Preliminary ti
-        basis = self._channels[channel].basis
+        basis = channel_obj.basis
         phase_barriers = [self._phase_ref[basis][q].last_time
                           for q in last.targets]
         current_max_t = max(t0, *phase_barriers)
@@ -635,7 +653,9 @@ class Sequence:
             if delta != 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    delta = validate_duration(np.clip(delta, 16, np.inf))
+                    delta = self._channels[channel].validate_duration(
+                        np.clip(delta, 16, np.inf)
+                        )
             tf = ti + delta
 
         except ValueError:
@@ -652,7 +672,7 @@ class Sequence:
 
         last = self._last(channel)
         ti = last.tf
-        tf = ti + validate_duration(duration)
+        tf = ti + self._channels[channel].validate_duration(duration)
         self._add_to_schedule(channel,
                               _TimeSlot('delay', ti, tf, last.targets))
 
@@ -751,18 +771,7 @@ class Sequence:
             raise ValueError("Use the name of a declared channel.")
 
     def _validate_pulse(self, pulse, channel):
-        if not isinstance(pulse, Pulse):
-            raise TypeError("pulse input must be of type Pulse, not of type "
-                            "{}.".format(type(pulse)))
-
-        ch = self._channels[channel]
-        if np.any(pulse.amplitude.samples > ch.max_amp):
-            raise ValueError("The pulse's amplitude goes over the maximum "
-                             "value allowed for the chosen channel.")
-        if np.any(np.round(np.abs(pulse.detuning.samples),
-                           decimals=6) > ch.max_abs_detuning):
-            raise ValueError("The pulse's detuning values go out of the range "
-                             "allowed for the chosen channel.")
+        self._device.validate_pulse(pulse, self._taken_channels[channel])
 
     def _reset_parametrized(self):
         """Resets all attributes related to parametrization."""

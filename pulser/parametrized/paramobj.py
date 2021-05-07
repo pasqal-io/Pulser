@@ -19,7 +19,7 @@ import operator
 import warnings
 
 from pulser.parametrized import Parametrized
-from pulser.utils import obj_to_dict
+from pulser.json.utils import obj_to_dict
 
 # Availabe operations on parameterized objects with OpSupport
 reversible_ops = [
