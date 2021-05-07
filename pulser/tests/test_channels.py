@@ -47,7 +47,7 @@ def test_validate_duration():
         ch.validate_duration(10)
     with pytest.raises(ValueError, match="at most 1000 ns"):
         ch.validate_duration(1e5)
-    with pytest.warns(UserWarning, match="nearest multiple of 4 ns"):
+    with pytest.warns(UserWarning, match="not a multiple"):
         ch.validate_duration(31.4)
 
 

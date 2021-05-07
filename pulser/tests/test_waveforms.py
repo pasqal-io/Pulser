@@ -50,6 +50,23 @@ def test_duration():
     assert composite.duration == 192
 
 
+def test_change_duration():
+    with pytest.raises(NotImplementedError):
+        custom.change_duration(53)
+
+    new_cte = constant.change_duration(103)
+    assert constant.duration == 100
+    assert new_cte.duration == 103
+
+    new_blackman = blackman.change_duration(30)
+    assert np.isclose(new_blackman.integral, blackman.integral)
+    assert new_blackman != blackman
+
+    new_ramp = ramp.change_duration(100)
+    assert new_ramp.duration == 100
+    assert new_ramp != ramp
+
+
 def test_samples():
     assert np.all(constant.samples == -3)
     bm_samples = np.clip(np.blackman(40), 0, np.inf)

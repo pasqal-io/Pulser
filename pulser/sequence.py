@@ -351,10 +351,10 @@ class Sequence:
                               pulse.phase,
                               pulse.post_phase_shift)
             except NotImplementedError:
-                raise ValueError("The pulse's waveform cannot be automatically"
-                                 " adjusted to the channel's constraints. "
-                                 "Choose a duration that is a multiple of "
-                                 f"{channel_obj.clock_period} ns.")
+                raise TypeError("Failed to automatically adjust one of the "
+                                "pulse's waveforms to the channel duration "
+                                "constraints. Choose a duration that is a "
+                                f"multiple of {channel_obj.clock_period} ns.")
 
         self._validate_pulse(pulse, channel)
         last = self._last(channel)

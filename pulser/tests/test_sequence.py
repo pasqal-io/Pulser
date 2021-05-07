@@ -22,7 +22,7 @@ from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
-from pulser.waveforms import BlackmanWaveform
+from pulser.waveforms import BlackmanWaveform, CompositeWaveform, RampWaveform
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix='q')
 device = Chadoq2
@@ -215,7 +215,14 @@ def test_sequence():
     with pytest.raises(ValueError, match='Invalid protocol'):
         seq.add(pulse1, 'ch0', protocol='now')
 
-    seq.add(pulse1, 'ch0')
+    wf_ = CompositeWaveform(BlackmanWaveform(30, 1), RampWaveform(15, 0, 2))
+    with pytest.raises(TypeError, match="Failed to automatically adjust"):
+        with pytest.warns(UserWarning, match="rounded up to 48 ns"):
+            seq.add(Pulse.ConstantAmplitude(1, wf_, 0), 'ch0')
+
+    pulse1_ = Pulse.ConstantPulse(499, 2, -10, 0, post_phase_shift=np.pi)
+    with pytest.warns(UserWarning, match="rounded up to 500 ns"):
+        seq.add(pulse1_, 'ch0')
     seq.add(pulse1, 'ch1')
     seq.add(pulse2, 'ch2')
 

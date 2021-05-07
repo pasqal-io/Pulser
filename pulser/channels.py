@@ -102,7 +102,7 @@ class Channel:
                              + f"{self.max_duration} ns.")
 
         if duration % self.clock_period != 0:
-            _duration += _duration % self.clock_period
+            _duration += self.clock_period - _duration % self.clock_period
             warnings.warn(f"A duration of {duration} ns is not a multiple of "
                           f"the channel's clock period ({self.clock_period} "
                           f"ns). It was rounded up to {_duration} ns.")
