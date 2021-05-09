@@ -156,8 +156,12 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
 
+        if n_qubits > device.max_atom_num:
+            raise ValueError(
+                "Number of qubits greater than the maximum number of atoms supported by the device.")
+
         return cls.triangular_lattice(2, n_qubits // 2, spacing=spacing, prefix=prefix)
-        
+
     def rotate(self, degrees):
         """Rotates the array around the origin by the given angle.
 
@@ -227,8 +231,8 @@ class Register:
 
             delta_um = np.linalg.norm(pos[1] - pos[0])
             r_pts = np.linalg.norm(
-                        np.subtract(*ax.transData.transform(pos[:2]).tolist())
-                        ) / delta_um * blockade_radius / 2
+                np.subtract(*ax.transData.transform(pos[:2]).tolist())
+            ) / delta_um * blockade_radius / 2
             # A 'scatter' marker of size s has area pi/4 * s
             ax.scatter(pos[:, 0], pos[:, 1], s=4*r_pts**2, alpha=0.1,
                        c='darkgreen')
