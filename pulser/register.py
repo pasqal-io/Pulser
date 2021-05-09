@@ -158,7 +158,7 @@ class Register:
 
         if n_qubits > device.max_atom_num:
             raise ValueError(
-                "Number of qubits greater than the maximum number of atoms supported by the device.")
+                "Number of qubits is greater than the maximum number of atoms supported by the device.")
 
         return cls.triangular_lattice(2, n_qubits // 2, spacing=spacing, prefix=prefix)
 
