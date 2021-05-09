@@ -274,3 +274,13 @@ def test_sequence():
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence.deserialize(s)
     assert str(seq) == str(seq_)
+
+    total_duration = seq.get_duration()
+    assert total_duration == 4000
+
+    channel1_duration = seq.get_duration(channel="ch1")
+    assert channel1_duration == 3500
+
+    with pytest.raises(ValueError, match="Channel non_existing_channel was "
+                                         "not found."):
+        seq.get_duration("non_existing_channel")

@@ -170,6 +170,37 @@ class Sequence:
                 if id not in self._taken_channels.values()
                 or self._device == MockDevice}
 
+    def get_duration(self, channel=None):
+        """Duration of a sequence or channel.
+
+            Keyword Args:
+                channel (str): Unique name for the channel in the sequence.
+
+            Returns:
+                duration (int): Duration of the sequence (or channel) in
+                nanoseconds.
+
+            Example:
+                ::
+
+                    # Get total duration of a sequence:
+                    >>> self.get_duration()
+                    6316
+
+                    # Get duration of a specific channel:
+                    >>> self.get_duration(channel="ch1")
+                    5516
+            """
+
+        if channel is None:
+            return max([self._last(ch).tf for ch in self._schedule])
+
+        else:
+            if channel not in self._channels.keys():
+                raise ValueError(f"Channel {channel} was not found.")
+
+            return self._last(channel).tf
+
     def is_parametrized(self):
         """States whether the sequence is parametrized.
 
