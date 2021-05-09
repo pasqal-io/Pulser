@@ -135,6 +135,29 @@ class Register:
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
+    @classmethod
+    def max_connectivity(cls, n_qubits, device, rows, spacing=4, prefix=None):
+        """Initializes the register with maximum connectivity (triangular lattice) while obeying the constraints of a given device.
+
+        Initializes the qubits in a triangular lattice pattern, more
+        specifically a triangular lattice with horizontal rows, meaning the
+        triangles are pointing up and down.
+
+        Args:
+            n_qubits (int): Number of qubits.
+            device (Device): The device whose constraints must be obeyed.
+            rows (int): Number of rows.
+            atoms_per_row (int): Number of atoms per row.
+
+        Keyword args:
+            spacing(float): The distance between neighbouring qubits in μm.
+            prefix (str): The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+        """
+
+        return cls.triangular_lattice(2, n_qubits // 2, spacing=spacing, prefix=prefix)
+        
     def rotate(self, degrees):
         """Rotates the array around the origin by the given angle.
 
