@@ -64,11 +64,21 @@ def test_channel_declaration():
     seq2.declare_channel('ch0', 'raman_local', initial_target='q1')
     seq2.declare_channel('ch1', 'rydberg_global')
     seq2.declare_channel('ch2', 'rydberg_global')
-    assert set(seq2.available_channels) == available_channels
+    assert set(seq2.available_channels) == available_channels - {'mw_global'}
     assert seq2._taken_channels == {'ch0': 'raman_local',
                                     'ch1': 'rydberg_global',
                                     'ch2': 'rydberg_global'}
     assert seq2._taken_channels.keys() == seq2._channels.keys()
+    with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
+        seq2.declare_channel('ch3', 'mw_global')
+
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel('ch0', 'mw_global')
+    assert set(seq2.available_channels) == {'mw_global'}
+    with pytest.raises(
+            ValueError,
+            match="cannot work simultaneously with the declared 'Microwave'"):
+        seq2.declare_channel('ch3', 'rydberg_global')
 
 
 def test_target():

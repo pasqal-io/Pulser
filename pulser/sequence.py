@@ -167,11 +167,16 @@ class Sequence:
     @property
     def available_channels(self):
         """Channels still available for declaration."""
-        return {id: ch for id, ch in self._device.channels.items()
-                if (id not in self._taken_channel.values()
-                or self._device == MockDevice)
-                and (ch.basis == "xy" if self._in_xy else ch.basis != "xy")
-                }
+        # Show all channels if none are declared, otherwise filter depending
+        # on whether the sequence is working on XY mode
+        if not self._channels:
+            return dict(self._device.channels)
+        else:
+            return {id: ch for id, ch in self._device.channels.items()
+                    if (id not in self._taken_channels.values()
+                    or self._device == MockDevice)
+                    and (ch.basis == "xy" if self._in_xy else ch.basis != "xy")
+                    }
 
     def is_parametrized(self):
         """States whether the sequence is parametrized.
@@ -234,10 +239,20 @@ class Sequence:
         if channel_id not in self._device.channels:
             raise ValueError("No channel %s in the device." % channel_id)
 
-        if channel_id not in self.available_channels:
-            raise ValueError("Channel %s is not available." % channel_id)
-
         ch = self._device.channels[channel_id]
+        if channel_id not in self.available_channels:
+            if self._in_xy and ch.basis != "xy":
+                raise ValueError(f"Channel '{ch}' cannot work simultaneously "
+                                 "with the declared 'Microwave' channel."
+                                 )
+            elif not self._in_xy and ch.basis == "xy":
+                raise ValueError("Channel of type 'Microwave' cannot work "
+                                 "simultaneously with the declared channels.")
+            else:
+                raise ValueError(f"Channel {channel_id} is not available.")
+
+        if ch.basis == "xy" and not self._in_xy:
+            self._in_xy = True
         self._channels[name] = ch
         self._taken_channels[name] = channel_id
         self._schedule[name] = []
