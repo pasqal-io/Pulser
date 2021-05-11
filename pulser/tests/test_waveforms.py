@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.parametrized import Variable, ParamObj
 from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
                               CustomWaveform, CompositeWaveform)
 
@@ -35,22 +38,33 @@ def test_duration():
         ConstantWaveform("s", -1)
         RampWaveform([0, 1, 3], 1, 0)
 
-    with pytest.raises(ValueError, match='at least 16 ns'):
+    with pytest.raises(ValueError, match='positive duration'):
         ConstantWaveform(15, -10)
         RampWaveform(-20, 3, 4)
-
-    with pytest.raises(ValueError, match='at most 4194304 ns'):
-        BlackmanWaveform(2**23, np.pi/2)
-
-    with pytest.raises(ValueError, match='waveform of invalid duration'):
-        CustomWaveform(np.random.random(50))
 
     with pytest.warns(UserWarning):
         wf = BlackmanWaveform(np.pi*10, 1)
 
-    assert wf.duration == 28
+    assert wf.duration == 31
     assert custom.duration == 52
     assert composite.duration == 192
+
+
+def test_change_duration():
+    with pytest.raises(NotImplementedError):
+        custom.change_duration(53)
+
+    new_cte = constant.change_duration(103)
+    assert constant.duration == 100
+    assert new_cte.duration == 103
+
+    new_blackman = blackman.change_duration(30)
+    assert np.isclose(new_blackman.integral, blackman.integral)
+    assert new_blackman != blackman
+
+    new_ramp = ramp.change_duration(100)
+    assert new_ramp.duration == 100
+    assert new_ramp != ramp
 
 
 def test_samples():
@@ -107,18 +121,11 @@ def test_composite():
 
     assert composite.waveforms == [blackman, constant, custom]
 
-    wf = CompositeWaveform(blackman, custom)
-    wf.insert(constant, where=1)
-    assert composite == wf
-
     wf = CompositeWaveform(blackman, constant)
     msg = ('BlackmanWaveform(40 ns, Area: 3.14), ' +
            'ConstantWaveform(100 ns, -3 rad/µs)')
     assert wf.__str__() == f'Composite({msg})'
     assert wf.__repr__() == f'CompositeWaveform(140 ns, [{msg}])'
-
-    wf.append(custom)
-    assert composite == wf
 
 
 def test_custom():
@@ -151,6 +158,12 @@ def test_blackman():
     assert np.isclose(wf.integral, -np.pi)
     assert np.min(wf.samples) > -10
 
+    var = Variable("var", float)
+    wf_var = BlackmanWaveform.from_max_val(-10, var)
+    assert isinstance(wf_var, ParamObj)
+    var._assign(-np.pi)
+    assert wf_var.build() == wf
+
 
 def test_ops():
     assert -constant == ConstantWaveform(100, 3)
@@ -160,3 +173,9 @@ def test_ops():
     assert composite * 1 == composite
     with pytest.raises(ZeroDivisionError):
         constant / 0
+
+
+def test_serialization():
+    for wf in [constant, ramp, custom, blackman, composite]:
+        s = json.dumps(wf, cls=PulserEncoder)
+        assert wf == json.loads(s, cls=PulserDecoder)

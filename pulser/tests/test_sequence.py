@@ -11,25 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+import pulser
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
-from pulser.devices._pasqal_device import PasqalDevice
+from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
-from pulser.waveforms import BlackmanWaveform
+from pulser.waveforms import BlackmanWaveform, CompositeWaveform, RampWaveform
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix='q')
 device = Chadoq2
 
 
 def test_init():
-    fake_device = PasqalDevice("fake", 2, 10, 10, 1, Chadoq2._channels)
-    with pytest.raises(ValueError, match='imported from pasqal.devices'):
+    with pytest.raises(TypeError, match="must be of type 'Device'"):
+        Sequence(reg, Device)
+
+    fake_device = Device("fake", 2, 100, 100, 1, Chadoq2._channels)
+    with pytest.warns(UserWarning, match="imported from 'pulser.devices'"):
         Sequence(reg, fake_device)
 
     seq = Sequence(reg, device)
@@ -59,7 +63,12 @@ def test_channel_declaration():
     available_channels = set(seq2.available_channels)
     seq2.declare_channel('ch0', 'raman_local', initial_target='q1')
     seq2.declare_channel('ch1', 'rydberg_global')
+    seq2.declare_channel('ch2', 'rydberg_global')
     assert set(seq2.available_channels) == available_channels
+    assert seq2._taken_channels == {'ch0': 'raman_local',
+                                    'ch1': 'rydberg_global',
+                                    'ch2': 'rydberg_global'}
+    assert seq2._taken_channels.keys() == seq2._channels.keys()
 
 
 def test_target():
@@ -69,7 +78,7 @@ def test_target():
 
     with pytest.raises(ValueError, match='name of a declared channel'):
         seq.target('q0', 'ch2')
-    with pytest.raises(ValueError, match='qubits have to belong'):
+    with pytest.raises(ValueError, match='qubits must belong'):
         seq.target(0, 'ch0')
         seq.target('0', 'ch1')
     with pytest.raises(ValueError, match="Can only choose target of 'Local'"):
@@ -206,7 +215,14 @@ def test_sequence():
     with pytest.raises(ValueError, match='Invalid protocol'):
         seq.add(pulse1, 'ch0', protocol='now')
 
-    seq.add(pulse1, 'ch0')
+    wf_ = CompositeWaveform(BlackmanWaveform(30, 1), RampWaveform(15, 0, 2))
+    with pytest.raises(TypeError, match="Failed to automatically adjust"):
+        with pytest.warns(UserWarning, match="rounded up to 48 ns"):
+            seq.add(Pulse.ConstantAmplitude(1, wf_, 0), 'ch0')
+
+    pulse1_ = Pulse.ConstantPulse(499, 2, -10, 0, post_phase_shift=np.pi)
+    with pytest.warns(UserWarning, match="rounded up to 500 ns"):
+        seq.add(pulse1_, 'ch0')
     seq.add(pulse1, 'ch1')
     seq.add(pulse2, 'ch2')
 
@@ -253,3 +269,8 @@ def test_sequence():
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()
+
+    s = seq.serialize()
+    assert json.loads(s)["__version__"] == pulser.__version__
+    seq_ = Sequence.deserialize(s)
+    assert str(seq) == str(seq_)

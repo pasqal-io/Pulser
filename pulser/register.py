@@ -17,6 +17,8 @@ from matplotlib import collections as mc
 import numpy as np
 from scipy.spatial import KDTree
 
+from pulser.json.utils import obj_to_dict
+
 
 class Register:
     """A quantum register containing a set of qubits.
@@ -32,6 +34,9 @@ class Register:
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary "
                             "matching qubit ids to position coordinates.")
+        if not qubits:
+            raise ValueError("Cannot create a Register with an empty qubit "
+                             "dictionary.")
         self._ids = list(qubits.keys())
         coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = coords[0].size
@@ -217,3 +222,7 @@ class Register:
             ax.axhline(0, c='grey', alpha=0.5, linestyle=':')
 
         plt.show()
+
+    def _to_dict(self):
+        qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
+        return obj_to_dict(self, qs)

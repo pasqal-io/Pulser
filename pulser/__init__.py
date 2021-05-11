@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A pulse-level composer for Pasqal's quantum devices."""
+"""A pulse-level composer for neutral-atom quantum devices."""
 
 from pulser._version import __version__
 
@@ -21,7 +21,5 @@ from pulser.pulse import Pulse
 from pulser.register import Register
 
 from pulser.sequence import Sequence
-
-from pulser.seqbuilder import SequenceBuilder
 
 from pulser.simulation import Simulation

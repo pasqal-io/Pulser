@@ -14,6 +14,7 @@
 
 from dataclasses import dataclass
 from typing import ClassVar
+import warnings
 
 
 @dataclass(init=False, repr=False, frozen=True)
@@ -22,6 +23,21 @@ class Channel:
 
     Not to be initialized itself, but rather through a child class and the
     ``Local`` or ``Global`` classmethods.
+
+    Attributes:
+        name: The name of channel.
+        basis: The addressed basis name.
+        addressing: "Local" or "Global".
+        max_abs_detuning: Maximum possible detuning (in rad/µs), in absolute
+            value.
+        max_amp: Maximum pulse amplitude (in rad/µs).
+        retarget_time: Maximum time to change the target (in ns).
+        max_targets: How many qubits can be addressed at once by the same beam.
+        clock_period: The duration of a clock cycle (in ns). The duration of a
+            pulse or delay instruction is enforced to be a multiple of the
+            clock cycle.
+        min_duration: The shortest duration an instruction can take.
+        max_duration: The longest duration an instruction can take.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -35,10 +51,12 @@ class Channel:
     max_amp: float
     retarget_time: int = None
     max_targets: int = 1
+    clock_period: int = 4       # ns
+    min_duration: int = 16      # ns
+    max_duration: int = 67108864        # ns
 
     @classmethod
-    def Local(cls, max_abs_detuning, max_amp, retarget_time=220,
-              max_targets=1):
+    def Local(cls, max_abs_detuning, max_amp, retarget_time=220, **kwargs):
         """Initializes the channel with local addressing.
 
         Args:
@@ -46,26 +64,49 @@ class Channel:
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
             retarget_time (int): Maximum time to change the target (in ns).
-
-        Keyword Args:
-            max_targets (int, default=1): How many qubits can be addressed at
-                once by the same beam.
         """
 
-        return cls('Local', max_abs_detuning, max_amp, max_targets=max_targets,
-                   retarget_time=retarget_time)
+        return cls('Local', max_abs_detuning, max_amp,
+                   retarget_time=retarget_time, **kwargs)
 
     @classmethod
-    def Global(cls, max_abs_detuning, max_amp):
+    def Global(cls, max_abs_detuning, max_amp, **kwargs):
         """Initializes the channel with global addressing.
 
         Args:
-            max_abs_detuning (tuple): Maximum possible detuning (in rad/µs), in
+            max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
                 absolute value.
-            max_amp(tuple): Maximum pulse amplitude (in rad/µs).
+            max_amp(float): Maximum pulse amplitude (in rad/µs).
         """
 
-        return cls('Global', max_abs_detuning, max_amp)
+        return cls('Global', max_abs_detuning, max_amp, **kwargs)
+
+    def validate_duration(self, duration):
+        """Validates and adapts the duration of an instruction on this channel.
+
+        Args:
+            duration (int): The duration to validate.
+        """
+        try:
+            _duration = int(duration)
+        except (TypeError, ValueError):
+            raise TypeError("duration needs to be castable to an int but "
+                            "type %s was provided" % type(duration))
+
+        if duration < self.min_duration:
+            raise ValueError("duration has to be at least "
+                             + f"{self.min_duration} ns.")
+
+        if duration > self.max_duration:
+            raise ValueError("duration can be at most "
+                             + f"{self.max_duration} ns.")
+
+        if duration % self.clock_period != 0:
+            _duration += self.clock_period - _duration % self.clock_period
+            warnings.warn(f"A duration of {duration} ns is not a multiple of "
+                          f"the channel's clock period ({self.clock_period} "
+                          f"ns). It was rounded up to {_duration} ns.")
+        return _duration
 
     def __repr__(self):
         s = ".{}(Max Absolute Detuning: {} rad/µs, Max Amplitude: {} rad/µs"

@@ -292,9 +292,9 @@ class Simulation:
                     Hamiltonian (in ns).
 
         Returns:
-            Qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
-                    extracted from the effective sequence (determined by
-                    `self.sampling_rate`) at the specified time.
+            qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
+            extracted from the effective sequence (determined by
+            `self.sampling_rate`) at the specified time.
         """
         if time > 1000 * self._times[-1]:
             raise ValueError("Provided time is larger than sequence duration.")
@@ -308,10 +308,13 @@ class Simulation:
 
         Keyword Args:
             initial_state (array): The initial quantum state of the
-                           evolution. Will be transformed into a
-                           qutip.Qobj instance.
-            progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
-                        will be shown.
+                evolution. Will be transformed into a ``qutip.Qobj`` instance.
+            progress_bar (bool): If True, the progress bar of QuTiP's
+                ``qutip.sesolve()`` will be shown.
+        Other Parameters:
+            options: Additional simulation settings. These correspond to the
+                keyword arguments of ``qutip.solver.Options`` for
+                the ``qutip.sesolve()`` method.
 
         Returns:
             SimulationResults: Object containing the time evolution results.

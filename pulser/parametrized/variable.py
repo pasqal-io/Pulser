@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
+import dataclasses
 from typing import Union
 
 import numpy as np
 
 from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
+from pulser.json.utils import obj_to_dict
 
 
-@dataclass(frozen=True, eq=False)
+@dataclasses.dataclass(frozen=True, eq=False)
 class Variable(Parametrized, OpSupport):
     """A variable for parametrized sequence building.
 
@@ -78,6 +79,11 @@ class Variable(Parametrized, OpSupport):
 
         return self.value
 
+    def _to_dict(self):
+        d = obj_to_dict(self, _build=False)
+        d.update(dataclasses.asdict(self))
+        return d
+
     def __str__(self):
         return self.name
 
@@ -96,7 +102,7 @@ class Variable(Parametrized, OpSupport):
         return _VariableItem(self, key)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class _VariableItem(Parametrized, OpSupport):
     """Stores access to items of a variable with multiple values."""
 
@@ -110,6 +116,10 @@ class _VariableItem(Parametrized, OpSupport):
     def build(self):
         """Return the variable's item(s) values."""
         return self.var.build()[self.key]
+
+    def _to_dict(self):
+        return obj_to_dict(self, self.var, self.key,
+                           _module="operator", _name="getitem")
 
     def __str__(self):
         if isinstance(self.key, slice):
