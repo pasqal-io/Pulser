@@ -17,6 +17,7 @@ from matplotlib import collections as mc
 import numpy as np
 from scipy.spatial import KDTree
 
+import pulser
 from pulser.json.utils import obj_to_dict
 
 
@@ -136,18 +137,48 @@ class Register:
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     @classmethod
-    def max_connectivity(cls, n_qubits, device, rows, spacing=4, prefix=None):
-        """Initializes the register with maximum connectivity (triangular lattice) while obeying the constraints of a given device.
-
-        Initializes the qubits in a triangular lattice pattern, more
-        specifically a triangular lattice with horizontal rows, meaning the
-        triangles are pointing up and down.
+    def __hexagon_full_layers(cls, layers: int, spacing: float):
+        """Helper function for building hexagonal arrays.
 
         Args:
-            n_qubits (int): Number of qubits.
-            device (Device): The device whose constraints must be obeyed.
-            rows (int): Number of rows.
-            atoms_per_row (int): Number of atoms per row.
+            layers (int): Number of layers around a central atom.
+
+        Keyword args:
+            spacing(float): The distance between neighbouring qubits in μm.
+            prefix (str): The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+        """
+        # y coordinates of the top vertex of a triangle
+        crest_y = np.sqrt(3) / 2.0
+
+        # Coordinates of vertices
+        start_x = np.array([-1.0, -0.5, 0.5, 1.0, 0.5, -0.5], dtype=float)
+        start_y = np.array([0.0, crest_y, crest_y, 0, -crest_y, -crest_y],
+                           dtype=float)
+
+        # Steps to place atoms, starting from a vertex
+        delta_x = np.array([0.5, 1.0, 0.5, -0.5, -1.0, -0.5], dtype=float)
+        delta_y = np.array([crest_y, 0.0, -crest_y, -crest_y, 0.0, crest_y],
+                           dtype=float)
+
+        coords = np.array([(start_x[side] * layer + atom * delta_x[side],
+                           start_y[side] * layer + atom * delta_y[side])
+                           for layer in range(1, layers + 1)
+                           for side in range(6)
+                           for atom in range(layer)], dtype=float)
+
+        coords *= spacing
+        coords = np.concatenate(([(0.0, 0.0)], coords))
+
+        return coords
+
+    @classmethod
+    def hexagon(cls, layers: int, spacing: float = 4.0, prefix: str = None):
+        """Initializes the register with the qubits in a hexagonal array.
+
+        Args:
+            layers (int): Number of layers around a central atom.
 
         Keyword args:
             spacing(float): The distance between neighbouring qubits in μm.
@@ -156,11 +187,107 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
 
-        if n_qubits > device.max_atom_num:
-            raise ValueError(
-                "Number of qubits is greater than the maximum number of atoms supported by the device.")
+        # The number of layers must be 1 or above
+        if layers is None or layers < 1:
+            raise ValueError("The number of layers must be 1 or above.")
 
-        return cls.triangular_lattice(2, n_qubits // 2, spacing=spacing, prefix=prefix)
+        # Spacing must be above 0.0
+        if spacing is None or spacing < 0.0:
+            raise ValueError("Spacing must be above 0.0.")
+
+        coords = cls.__hexagon_full_layers(layers, spacing)
+        return cls.from_coordinates(coords, center=False, prefix=prefix)
+
+    @ classmethod
+    def max_connectivity(cls, n_qubits: int, device, spacing: float = None,
+                         prefix: str = None):
+        """Initializes the register with maximum connectivity for a given device.
+
+        In order to maximize connectivity, the basic pattern is the triangle.
+        Atoms are first arranged as layers of hexagons around a central atom.
+        Extra atoms are placed in such a manner that C3 and C6 rotational
+        symmetries are enforced as often as possible.
+
+        Args:
+            n_qubits (int): Number of qubits.
+            device (Device): The device whose constraints must be obeyed.
+            atoms_per_row (int): Number of atoms per row.
+
+        Keyword args:
+            spacing(float): The distance between neighbouring qubits in μm.
+                If omitted, the minimal distance for the device is used.
+            prefix (str): The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+        """
+
+        # The device must be an instance of Device
+        if not isinstance(device, pulser.devices._device_datacls.Device):
+            raise TypeError("'device' must be of type 'Device'. Import a valid"
+                            " device from 'pulser.devices'.")
+
+        # The number of qubits must not be greater than the max number of atoms
+        if n_qubits is None or n_qubits > device.max_atom_num:
+            raise ValueError(f"The number of qubits ({n_qubits})"
+                             " must not be greater than the maximum number of"
+                             " atoms supported by this device"
+                             f" ({device.max_atom_num}).")
+
+        if spacing is None:
+            spacing = device.min_atom_distance
+        elif spacing < device.min_atom_distance:
+            # Spacing can not be smaller than the min distance between atoms
+            raise ValueError("Spacing for this device must be"
+                             f" {device.min_atom_distance} or above.")
+
+        if n_qubits == 1:
+            return cls.from_coordinates(np.array([(0.0, 0.0)], dtype=float),
+                                        center=False, prefix=prefix)
+
+        full_layers = int((-3.0 + np.sqrt(9 + 12 * (n_qubits - 1))) / 6.0)
+        atoms_left = n_qubits - 1 - (full_layers**2 + full_layers) * 3
+
+        # If all layers are full, return a standard hexagon
+        if atoms_left == 0:
+            return cls.hexagon(full_layers, spacing, prefix)
+
+        coords_full_layers = cls.__hexagon_full_layers(full_layers, spacing)
+        layer = full_layers + 1
+        min_atoms_per_side = atoms_left // 6
+        # Extra atoms after balancing all sides
+        atoms_left -= (min_atoms_per_side * 6)
+
+        # y coordinates of the top vertex of a triangle
+        crest_y = np.sqrt(3) / 2.0
+
+        # Coordinates of vertices
+        start_x = np.array([-1.0, -0.5, 0.5, 1.0, 0.5, -0.5], dtype=float)
+        start_y = np.array([0.0, crest_y, crest_y, 0, -crest_y, -crest_y],
+                           dtype=float)
+
+        # Steps to place atoms, starting from a vertex
+        delta_x = np.array([0.5, 1.0, 0.5, -0.5, -1.0, -0.5], dtype=float)
+        delta_y = np.array([crest_y, 0.0, -crest_y, -crest_y, 0.0, crest_y],
+                           dtype=float)
+
+        # Order for placing left atoms
+        # Top-Left, Top-Right, Bottom (C3 symmetry)...
+        # ...Top, Bottom-Right, Bottom-Left (C6 symmetry)
+        sides_order = [0, 3, 1, 4, 2, 5]
+
+        coords = np.array([(start_x[side] * layer + atom * delta_x[side],
+                           start_y[side] * layer + atom * delta_y[side])
+                           for side in range(6)
+                           for atom in range(1, min_atoms_per_side + 2
+                                             if atoms_left > sides_order[side]
+                                             else min_atoms_per_side + 1)],
+                          dtype=float)
+
+        coords *= spacing
+        coords = np.concatenate((coords_full_layers, coords))
+
+        return cls.from_coordinates(coords, center=False,
+                                    prefix=prefix)
 
     def rotate(self, degrees):
         """Rotates the array around the origin by the given angle.
