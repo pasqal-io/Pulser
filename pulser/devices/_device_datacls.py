@@ -18,13 +18,14 @@ from typing import Tuple
 import numpy as np
 from scipy.spatial.distance import pdist
 
+from pulser import Register
 from pulser.channels import Channel
-from pulser.register import Register
+from pulser.json.utils import obj_to_dict
 
 
 @dataclass(frozen=True, repr=False)
-class PasqalDevice:
-    r"""Definition of a Pasqal Device.
+class Device:
+    r"""Definition of a neutral-atom device.
 
     Attributes:
         name: The name of the device.
@@ -82,7 +83,7 @@ class PasqalDevice:
         return (self.interaction_coeff/rabi_frequency)**(1/6)
 
     def rabi_from_blockade(self, blockade_radius):
-        """The necessary Rabi frequency value to reach a given blockade radius.
+        """The maximum Rabi frequency value to enforce a given blockade radius.
 
         Args:
             blockade_radius(float): The Rydberg blockade radius, in µm.
@@ -121,6 +122,23 @@ class PasqalDevice:
                              "center of the array.".format(
                                                     self.max_radial_distance))
 
+    def validate_pulse(self, pulse, channel_id):
+        """Checks if a pulse can be executed on a specific device channel.
+
+        Args:
+            pulse (Pulse): The pulse to validate.
+            channel_id (str): The channel ID used to index the chosen channel
+                on this device.
+        """
+        ch = self.channels[channel_id]
+        if np.any(pulse.amplitude.samples > ch.max_amp):
+            raise ValueError("The pulse's amplitude goes over the maximum "
+                             "value allowed for the chosen channel.")
+        if np.any(np.round(np.abs(pulse.detuning.samples),
+                           decimals=6) > ch.max_abs_detuning):
+            raise ValueError("The pulse's detuning values go out of the range "
+                             "allowed for the chosen channel.")
+
     def _specs(self, for_docs=False):
         lines = [
             "\nRegister requirements:",
@@ -153,3 +171,7 @@ class PasqalDevice:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
         return "\n".join(lines + ch_lines)
+
+    def _to_dict(self):
+        return obj_to_dict(self, _build=False, _module="pulser.devices",
+                           _name=self.name)

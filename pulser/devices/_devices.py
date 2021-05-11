@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Definitions of Pasqal's devices."""
+"""Definitions of real devices."""
 import numpy as np
 
-from pulser.devices._pasqal_device import PasqalDevice
+from pulser.devices._device_datacls import Device
 from pulser.channels import Raman, Rydberg
 
 
-Chadoq2 = PasqalDevice(
+Chadoq2 = Device(
     name="Chadoq2",
     dimensions=2,
     max_atom_num=100,

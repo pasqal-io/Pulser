@@ -14,44 +14,46 @@ The steps to take will depend on what you want to do, but generally you'll want 
 
 ## Making a Pull Request
 
-We're thrilled that you want to contribute to Pulser. Here are the steps you should follow to make your contribution:
+We're thrilled that you want to contribute to Pulser! For general contributions, we use a combination of two Git workflows: the [Forking workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow) and the [Gitflow workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow). If you don't know what any of this means, don't worry, you should still be able to make your contribution just by following the instructions detailed below. Nonetheless, in a nutshell, this workflow will have you making a fork from the main Pulser repository and working off a branch from `develop` (**not** `master`). Thus, you'll start your branch from `develop` and end with a pull request that merges your branch back to `develop`. The only exception to this rule is when making a `hotfix`, but in these cases the Pulser development team will take care of it for you.
 
-0. Fork the Pulser repository. You only have to do this once and you do so by clicking the "Fork" button at the upper right corner of the [repo page](https://github.com/pasqal-io/Pulser). This will create a new GitHub repo at `https://github.com/USERNAME/Pulser`, where `USERNAME` is your GitHub ID. Then, `cd` into the folder where you would like to place your new fork and clone it by doing:
+Here are the steps you should follow to make your contribution:
+
+0. Fork the Pulser repository and add the main Pulser repository as the `upstream`. You only have to do this once and you do so by clicking the "Fork" button at the upper right corner of the [repo page](https://github.com/pasqal-io/Pulser). This will create a new GitHub repo at `https://github.com/USERNAME/Pulser`, where `USERNAME` is your GitHub ID. Then, `cd` into the folder where you would like to place your new fork and clone it by doing:
     ```bash
     git clone https://github.com/USERNAME/Pulser.git
     ```
     **Note**: `USERNAME` should be replaced by your own GitHub ID.
 
+   Then, you'll want to go into the directory of your brand new Pulser fork and add the main Pulser repository as the `upstream` by running:
+   ```bash
+   git remote add upstream https://github.com/pasqal-io/Pulser.git
+   ```
+
 1. Have the related issue assigned to you. We suggest that you work only on issues that have been assigned to you; by doing this, you make sure to be the only one working on this and we prevent everyone from doing duplicate work. If a related issue does not exist yet, consult the [section above](#reporting-a-bug-or-suggesting-a-feature) to see how to proceed.
 
-2. You'll want to create a new branch where you will do your changes. **Do not push changes to your fork's `master` branch**, it should be used only to keep your fork in sync with Pulser's `master` branch (more on how to do this later). Go to the location where you cloned your fork and do:
+2. You'll want to create a new branch where you will do your changes. The starting point will be `upstream/develop`, which is where you'll ultimately merge your changes. Inside your fork's root folder, run:
     ```bash
-    cd Pulser
-    git checkout -b branch-name-here
-    ```
-    This will create and checkout the new branch where you will do your changes.
-
-3. Do your work and commit changes to this new branch.
-
-4. At this point, your fork's `master` branch might have drifted out of sync with Pulser's `master` branch (the `upstream`). The following lines will sync your local repo's `master` with `upstream/master` and then merge the local `master` with your working branch, at which point you'll have to solve any merge conflicts that may arise.
-    ```shell
-    # Track the upstream repo (you only have to do this one time):
-    git remote add upstream https://github.com/pasqal-io/Pulser.git
-
-    # Update your local master.
     git fetch upstream
-    git checkout master
-    git merge upstream/master
-    # Merge local master into your branch.
-    git checkout branch-name-here
-    git merge master
+    git checkout -b branch-name-here upstream/develop
     ```
-5. Finally, you push your code to your new branch:
+    This will create and checkout the new branch, where you will do your changes.
+    
+    **Note**: `branch-name-here` should be replaced by the name you'll give your branch. Try to be descriptive, pick a name that identifies your new feature.
+
+3. Do your work and commit the changes to this new branch. Try to make the first line of your commit messages short but informative; in case you want to go into more detail, you have the option to do so in the next lines.
+
+4. At this point, your branch might have drifted out of sync with Pulser's `develop` branch (the `upstream`). By running
+    ```shell
+    git pull upstream develop
+    ```
+   you will fetch the latest changes in `upstream/develop` and merge them with your working branch, at which point you'll have to solve any merge conflicts that may    arise. This will keep your working branch in sync with `upstream/develop`.
+   
+5. Finally, you push your code to your local branch:
     ```bash
     git push origin branch-name-here
     ```
 
-6. Once you're happy with your changes, go over to [Pulser's repo page](https://github.com/pasqal-io/Pulser) and start a new Pull Request from `USERNAME:branch-name-here` to `pasqal-io:master`. Before you do this, make sure your code is obeying the [continuous integration requirements](#continuous-integration-requirements).
+6. Once you're happy with your changes, go over to [Pulser's repo page](https://github.com/pasqal-io/Pulser) and start a new Pull Request from `USERNAME:branch-name-here` to `pasqal-io:develop`. Before you do this, make sure your code is obeying the [continuous integration requirements](#continuous-integration-requirements).
 
 7. At this point, you've successfully started the review process. The code reviewers might ask you to perform some changes, which you should push to your local branch in the same way you've done before. You'll see they'll automatically show up in your open PR every time you do this.
 
@@ -60,7 +62,6 @@ We're thrilled that you want to contribute to Pulser. Here are the steps you sho
 We enforce some continuous integration standards in order to maintain the quality of Pulser's code. Make sure you follow them, otherwise your pull requests will be blocked until you fix them. To check if your changes pass all CI tests before you make the PR, you'll need additional packages, which you can install by running
 
 ```shell
-cd Pulser
 pip install -r requirements.txt
 ```
 
@@ -75,3 +76,4 @@ pip install -r requirements.txt
     ```bash
     flake8 .
     ```
+To help you keep your code compliant with PEP8 guidelines effortlessly, we suggest you look into installing a linter for your text editor of choice.

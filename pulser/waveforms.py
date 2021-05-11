@@ -24,7 +24,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.parametrized import Parametrized, ParamObj
-from pulser.utils import validate_duration
+from pulser.parametrized.decorators import parametrize
+from pulser.json.utils import obj_to_dict
 
 
 class Waveform(ABC):
@@ -41,15 +42,27 @@ class Waveform(ABC):
         """Initializes a waveform with a given duration.
 
         Args:
-            duration (int): The waveforms duration (in multiples of 4 ns).
+            duration (int): The waveforms duration (in ns).
         """
-        self._duration = validate_duration(duration, min_duration=16,
-                                           max_duration=4194304)
+        try:
+            _duration = int(duration)
+        except (TypeError, ValueError):
+            raise TypeError("duration needs to be castable to an int but "
+                            "type %s was provided" % type(duration))
+        if _duration <= 0:
+            raise ValueError("A waveform has to have a positive duration, "
+                             + f"not {duration}.")
+        elif duration - _duration != 0:
+            warnings.warn(f"A waveform duration of {duration} ns is below the"
+                          " supported precision of 1 ns. It was rounded down "
+                          + f"to {_duration} ns.")
+
+        self._duration = _duration
 
     @property
     @abstractmethod
     def duration(self):
-        """The duration of the pulse (in multiples of 4 ns)."""
+        """The duration of the pulse (in ns)."""
         pass
 
     @property
@@ -58,7 +71,7 @@ class Waveform(ABC):
         """The value at each time step that describes the waveform.
 
         Returns:
-            samples(np.ndarray): A numpy array with a value for each time step.
+            np.ndarray: A numpy array with a value for each time step.
         """
         pass
 
@@ -84,6 +97,19 @@ class Waveform(ABC):
         self._plot(ax, "rad/µs")
 
         plt.show()
+
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not support"
+                                  " modifications to its duration.")
+
+    @abstractmethod
+    def _to_dict():
+        pass
 
     @abstractmethod
     def __str__(self):
@@ -150,7 +176,7 @@ class CompositeWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in multiples of 4 ns)."""
+        """The duration of the pulse (in ns)."""
         duration = 0
         for wf in self._waveforms:
             duration += wf.duration
@@ -180,30 +206,13 @@ class CompositeWaveform(Waveform):
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
 
-    def insert(self, waveform, where=0):
-        """Insert a new waveform into the CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-
-        Keyword Args:
-            where (default=0): Index before which the waveform is inserted.
-        """
-        self._validate(waveform)
-        self._waveforms.insert(where, waveform)
-
-    def append(self, waveform):
-        """Append a new waveform to the end of a CompositeWaveform.
-
-        Args:
-            waveform: A valid waveform.
-        """
-        self.insert(waveform, where=len(self._waveforms))
-
     def _validate(self, waveform):
         if not isinstance(waveform, Waveform):
             raise TypeError("{!r} is not a valid waveform. Please provide a "
                             "valid Waveform.".format(waveform))
+
+    def _to_dict(self):
+        return obj_to_dict(self, *self._waveforms)
 
     def __str__(self):
         contents = ["{!r}"] * len(self._waveforms)
@@ -223,26 +232,18 @@ class CustomWaveform(Waveform):
 
     Args:
         samples (array_like): The modulation values at each time step
-            (in rad/µs). The number of samples dictates the duration, so its
-            length has to be a multiple of 4.
+            (in rad/µs). The number of samples dictates the duration, in ns.
     """
 
     def __init__(self, samples):
         """Initializes a custom waveform."""
         samples_arr = np.array(samples, dtype=float)
         self._samples = samples_arr
-        with warnings.catch_warnings():
-            warnings.filterwarnings("error")
-            try:
-                super().__init__(len(samples))
-            except UserWarning:
-                raise ValueError("The provided samples correspond to a "
-                                 "waveform of invalid duration. Please give"
-                                 " samples whose size is a multiple of 4.")
+        super().__init__(len(samples))
 
     @property
     def duration(self):
-        """The duration of the pulse (in multiples of 4 ns)."""
+        """The duration of the pulse (in ns)."""
         return self._duration
 
     @property
@@ -253,6 +254,9 @@ class CustomWaveform(Waveform):
             numpy.ndarray: A numpy array with a value for each time step.
         """
         return self._samples
+
+    def _to_dict(self):
+        return obj_to_dict(self, self._samples)
 
     def __str__(self):
         return 'Custom'
@@ -268,8 +272,8 @@ class ConstantWaveform(Waveform):
     """A waveform of constant value.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        value: The modulation value (in rad/µs).
+        duration (int): The waveform duration (in ns).
+        value (float): The modulation value (in rad/µs).
     """
 
     def __init__(self, duration, value):
@@ -279,7 +283,7 @@ class ConstantWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in multiples of 4 ns)."""
+        """The duration of the pulse (in ns)."""
         return self._duration
 
     @property
@@ -301,6 +305,20 @@ class ConstantWaveform(Waveform):
         """The last value in the waveform."""
         return self._value
 
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            ConstantWaveform: The new waveform with the given duration.
+        """
+        return ConstantWaveform(new_duration, self._value)
+
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._value)
+
     def __str__(self):
         return f"{self._value:.3g} rad/µs"
 
@@ -316,9 +334,9 @@ class RampWaveform(Waveform):
     """A linear ramp waveform.
 
     Args:
-        duration: The waveform duration (in multiples of 4 ns).
-        start: The initial value (in rad/µs).
-        stop: The final value (in rad/µs).
+        duration (int): The waveform duration (in ns).
+        start (float): The initial value (in rad/µs).
+        stop (float): The final value (in rad/µs).
     """
 
     def __init__(self, duration, start, stop):
@@ -329,7 +347,7 @@ class RampWaveform(Waveform):
 
     @property
     def duration(self):
-        """The duration of the pulse (in multiples of 4 ns)."""
+        """The duration of the pulse (in ns)."""
         return self._duration
 
     @property
@@ -356,6 +374,20 @@ class RampWaveform(Waveform):
         """The last value in the waveform."""
         return self._stop
 
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            RampWaveform: The new waveform with the given duration.
+        """
+        return RampWaveform(new_duration, self._start, self._stop)
+
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._start, self._stop)
+
     def __str__(self):
         return f"Ramp({self._start:.3g}->{self._stop:.3g} rad/µs)"
 
@@ -372,7 +404,7 @@ class BlackmanWaveform(Waveform):
     """A Blackman window of a specified duration and area.
 
     Args:
-        duration (int): The waveform duration (in multiples of 4 ns).
+        duration (int): The waveform duration (in ns).
         area (float): The integral of the waveform. Can be negative, in which
             case it takes the positive waveform and changes the sign of all its
             values.
@@ -385,6 +417,7 @@ class BlackmanWaveform(Waveform):
         self._scaling = self._area / np.sum(self._norm_samples) / 1e-3
 
     @classmethod
+    @parametrize
     def from_max_val(cls, max_val, area):
         """Creates a Blackman waveform with a threshold on the maximum value.
 
@@ -403,18 +436,17 @@ class BlackmanWaveform(Waveform):
             raise ValueError("The maximum value and the area must have "
                              "matching signs.")
         # A normalized Blackman waveform has an area of 0.42 * duration
-        duration = int(area / (0.42 * max_val) * 1e3)    # in ns
-        duration = 16 if duration < 16 else duration + (4 - duration % 4)
+        duration = np.ceil(area / (0.42 * max_val) * 1e3)    # in ns
         wf = cls(duration, area)
         # Adjust for rounding errors to make sure max_val is not surpassed
         while np.abs(wf._scaling) > np.abs(max_val):
-            duration += 4
+            duration += 1
             wf = cls(duration, area)
         return wf
 
     @property
     def duration(self):
-        """The duration of the pulse (in multiples of 4 ns)."""
+        """The duration of the pulse (in ns)."""
         return self._duration
 
     @property
@@ -436,6 +468,21 @@ class BlackmanWaveform(Waveform):
         """The last value in the waveform."""
         return 0
 
+    def change_duration(self, new_duration):
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            BlackmanWaveform: The new waveform with the same area but a new
+                duration.
+        """
+        return BlackmanWaveform(new_duration, self._area)
+
+    def _to_dict(self):
+        return obj_to_dict(self, self._duration, self._area)
+
     def __str__(self):
         return f"Blackman(Area: {self._area:.3g})"
 
@@ -447,12 +494,12 @@ class BlackmanWaveform(Waveform):
 
 
 # To replicate __init__'s signature in __new__ for every Waveform subclass
-def copy_func(f):
+def _copy_func(f):
     return types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
                               argdefs=f.__defaults__, closure=f.__closure__)
 
 
 for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
     if m[1].__module__ == __name__:
-        new = copy_func(m[1].__new__)
-        m[1].__new__ = functools.update_wrapper(new, m[1].__init__)
+        _new = _copy_func(m[1].__new__)
+        m[1].__new__ = functools.update_wrapper(_new, m[1].__init__)

@@ -29,6 +29,7 @@ c = Variable("c", str)
 t = Variable("t", int)
 bwf = BlackmanWaveform(t, a)
 pulse = Pulse.ConstantDetuning(bwf, *b)
+pulse2 = Pulse(bwf, bwf, 1)
 
 
 def test_var():
@@ -91,24 +92,17 @@ def test_paramobj():
     assert set(bwf.variables.keys()) == {"t", "a"}
     assert set(pulse.variables.keys()) == {"t", "a", "b"}
     assert str(bwf) == "BlackmanWaveform(t, a)"
-    assert str(pulse) == (f"Pulse({str(bwf)}, "
-                          + f"ConstantWaveform(getattr({str(bwf)}, duration), "
-                          + "b[0]), b[1], 0)")
+    assert str(pulse) == f"Pulse.ConstantDetuning({str(bwf)}, b[0], b[1])"
+    assert str(pulse2) == f"Pulse({str(bwf)}, {str(bwf)}, 1)"
     with pytest.raises(AttributeError):
         bwf._duration
     time = bwf.duration
     samps = bwf.samples
     cwf = CompositeWaveform(bwf, bwf)
-    with pytest.warns(UserWarning):
-        append_call = cwf.append(bwf)
-
     t._assign(1000)
     a._assign(np.pi)
     assert len(cwf.build().samples) == len(samps.build()) * 2
-    append_call.build()
     assert time.build() == 1000
-    assert len(cwf.build().samples) == len(samps.build()) * 3
-    assert np.all(cwf.build().samples == np.array(samps.build().tolist() * 3))
 
 
 def test_opsupport():
