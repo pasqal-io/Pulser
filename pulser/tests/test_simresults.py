@@ -29,6 +29,7 @@ q_dict = {"A": np.array([0., 0.]),
 reg = Register(q_dict)
 
 duration = 1000
+number_of_meas = duration
 pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., 0)
 
 seq = Sequence(reg, Chadoq2)
@@ -104,7 +105,8 @@ def test_expect():
         results.expect([np.array(3)])
     op = [qutip.tensor(qutip.qeye(2),
                        qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
-    assert len(results.expect(op)[0]) == duration
+    # only initial and final times are evaluated
+    assert len(results.expect(op)[0]) == number_of_meas
 
 
 def test_sample_final_state():

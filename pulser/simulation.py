@@ -38,9 +38,14 @@ class Simulation:
         sampling_rate (float): The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
             value between 0.05 and 1.0
+        evaluation_times (str/list): The list of times at which the quantum
+            state should be evaluated. If 'Full' is provided, this list is
+            set to be the one used to define the Hamiltonian to the solver.
+            If 'Minimal' is provided, the list is set to only contain the
+            initial and the final times
     """
 
-    def __init__(self, sequence, sampling_rate=1.0):
+    def __init__(self, sequence, sampling_rate=1.0, evaluation_times=None):
         """Initialize the Simulation with a specific pulser.Sequence."""
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
@@ -74,6 +79,39 @@ class Simulation:
         self._extract_samples()
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
+
+        if isinstance(evaluation_times, str):
+            if evaluation_times == 'Full':
+                self.eval_times = deepcopy(self._times)
+            elif evaluation_times == 'Minimal':
+                self.eval_times = np.array([self._times[0], self._times[-1]])
+            else:
+                raise ValueError("Wrong evaluation time label ")
+        elif isinstance(evaluation_times, (list, tuple, np.ndarray)):
+            #            all(isinstance(n, int) for n in lst)
+            t_max = np.max(evaluation_times)
+            t_min = np.min(evaluation_times)
+            if t_max > 1000 * self._times[-1]:
+                raise ValueError("Provided evaluation-time list extends "
+                                 "further than sequence duration.")
+            if t_min < 0:
+                raise ValueError("Provided evaluation-time list contains "
+                                 "negative values.")
+            # Ensure the list of times is sorted
+            eval_times = np.array(np.sort(evaluation_times))
+            if t_min > 0:
+                eval_times = np.insert(eval_times, 0, 0.)
+            if t_max < self._times[-1]:
+                eval_times = np.append(eval_times, self._times[-1])
+            self.eval_times = eval_times
+            # always include initial and final times
+        elif isinstance(evaluation_times, type(None)):
+            # Default set to Minimal (could be changed)
+            # self.eval_times = np.array([self._times[0], self._times[-1]])
+            self.eval_times = deepcopy(self._times)
+        else:
+            raise ValueError("`evaluation_times` must be a list of times "
+                             "or `Full` or `Minimal`")
 
     def draw(self):
         """Draws the simulation, showing both the input sequence and
@@ -294,7 +332,7 @@ class Simulation:
 
         result = qutip.sesolve(self._hamiltonian,
                                self._initial_state,
-                               self._times,
+                               self.eval_times,
                                progress_bar=progress_bar,
                                options=qutip.Options(max_step=5,
                                                      **options)

@@ -64,7 +64,7 @@ seq.add(pi, 'ryd')
 d += 5
 
 # Add a ConstantWaveform part to testout the drawing procedure
-seq.add(Pulse.ConstantPulse(duration, 0, 0, 0), 'ryd')
+seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), 'ryd')
 d += 1
 
 
@@ -225,9 +225,12 @@ def test_single_atom_simulation():
     one_seq = Sequence(one_reg, Chadoq2)
     one_seq.declare_channel('ch0', 'rydberg_global')
     one_seq.add(Pulse.ConstantDetuning(ConstantWaveform(16, 1.), 1., 0), 'ch0')
-    one_sim = Simulation(seq)
+    one_sim = Simulation(one_seq)
     one_res = one_sim.run()
     assert(one_res._size == one_sim._size)
+    one_sim = Simulation(one_seq, evaluation_times='Minimal')
+    one_resb = one_sim.run()
+    assert(one_resb._size == one_sim._size)
 
 
 def test_run():
@@ -253,3 +256,32 @@ def test_run():
     seq.measure('ground-rydberg')
     sim.run()
     assert sim._seq._measurement == 'ground-rydberg'
+
+    with pytest.raises(ValueError,
+                       match="`evaluation_times` must be a list of times "
+                             "or `Full` or `Minimal`"):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times=-1)
+    with pytest.raises(ValueError,
+                       match="Wrong evaluation time label "):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times='Best')
+
+    with pytest.raises(ValueError,
+                       match="Provided evaluation-time list contains "
+                             "negative values."):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times=[-1, 0, duration])
+
+    with pytest.raises(ValueError,
+                       match="Provided evaluation-time list extends "
+                             "further than sequence duration."):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times=[0, 200*duration])
+
+    sim = Simulation(seq, sampling_rate=1., evaluation_times='Full')
+    sim = Simulation(seq, sampling_rate=1., evaluation_times='Minimal')
+    sim = Simulation(seq, sampling_rate=1.,
+                     evaluation_times=[0, duration/5, duration/3])
+    sim = Simulation(seq, sampling_rate=1.,
+                     evaluation_times=[duration/3000, duration/2000])

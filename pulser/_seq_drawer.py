@@ -75,15 +75,16 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq, drawinterp=False):
+def draw_sequence(seq, sampling_rate=None):
     """Draw the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
 
     Keyword args:
-        drawinterp(logical): Whether to plot the effective pulse used by
-        the solver.
+        sampling_rate(float): Sampling rate of the effective pulse used by
+        the solver. If present, plots the effective pulse alongside the input
+        pulse.
     """
 
     def phase_str(phi):
@@ -137,8 +138,11 @@ def draw_sequence(seq, drawinterp=False):
                 unit = 'ns' if time_scale == 1 else r'$\mu s$'
                 ax.set_xlabel(f't ({unit})', fontsize=12)
 
-    if drawinterp:
-        solver_time = np.arange(seq._total_duration, dtype=np.double)/1000
+    if sampling_rate:
+        # Solver_time = np.arange(seq._total_duration, dtype=np.double)/1000
+        solver_time = np.linspace(0, seq._total_duration-1,
+                                  int(sampling_rate*seq._total_duration),
+                                  dtype=int)
         delta_t = np.diff(solver_time)[0]
         # Compare pulse with an interpolated pulse with 100 times more samples
         teff = np.arange(0, max(solver_time), delta_t/100)
@@ -146,21 +150,21 @@ def draw_sequence(seq, drawinterp=False):
         cs_amp = {}
         cs_detuning = {}
         for ch, sch in seq._schedule.items():
-            print(ch)
+            # print(ch)
             solver_amp = []
             solver_detuning = []
             for slot in sch:
                 if slot.ti == -1:
-                    solver_amp += [0]
-                    solver_detuning += [0]
+                    solver_amp += [0.]
+                    solver_detuning += [0.]
                     continue
                 pulse = slot.type
-                print(pulse, ' - ', slot.ti, ' - ', slot.tf - 1)
+                # print(pulse, ' - ', slot.ti, ' - ', slot.tf - 1)
                 pulse_length = slot.tf-1 - slot.ti
-                print('pulse length =', pulse_length)
+                # print('pulse length =', pulse_length)
                 if pulse in ['delay', 'target']:
-                    solver_amp += [0] * pulse_length
-                    solver_detuning += [0] * pulse_length
+                    solver_amp += [0.] * pulse_length
+                    solver_detuning += [0.] * pulse_length
                     continue
                 if (isinstance(pulse.amplitude, ConstantWaveform) and
                         isinstance(pulse.detuning, ConstantWaveform)):
@@ -177,7 +181,8 @@ def draw_sequence(seq, drawinterp=False):
                 solver_amp += [0] * pulse_length
                 solver_detuning += [0] * pulse_length
             cs_amp[ch] = CubicSpline(solver_time, solver_amp)
-            cs_detuning[ch] = CubicSpline(solver_time, solver_detuning)
+            cs_detuning[ch] = CubicSpline(solver_time,
+                                          solver_detuning)
 
     for ch, (a, b) in ch_axes.items():
         basis = seq._channels[ch].basis
@@ -185,7 +190,7 @@ def draw_sequence(seq, drawinterp=False):
         ya = data[ch]['amp']
         yb = data[ch]['detuning']
 
-        if drawinterp:
+        if sampling_rate:
             yaeff = cs_amp[ch](teff)
             ybeff = cs_detuning[ch](teff)
 
@@ -209,7 +214,7 @@ def draw_sequence(seq, drawinterp=False):
 
         a.plot(t, ya, color="darkgreen", linewidth=0.8)
         b.plot(t, yb, color='indigo', linewidth=0.8)
-        if drawinterp:
+        if sampling_rate:
             a.plot(teff, yaeff, color="darkgreen", linewidth=0.8)
             b.plot(teff, ybeff, color="indigo", linewidth=0.8, ls='-')
             a.fill_between(teff, 0, yaeff, color="darkgreen", alpha=0.3)
