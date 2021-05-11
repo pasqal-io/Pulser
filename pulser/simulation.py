@@ -118,7 +118,7 @@ class Simulation:
         the effective, constant-by-part (sampled) sequence used in QuTip.
         """
 
-        draw_sequence(self._seq, True)
+        draw_sequence(self._seq, self.sampling_rate)
 
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""

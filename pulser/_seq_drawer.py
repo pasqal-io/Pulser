@@ -149,48 +149,23 @@ def draw_sequence(seq, sampling_rate=None):
 
         cs_amp = {}
         cs_detuning = {}
-        for ch, sch in seq._schedule.items():
-            # print(ch)
-            solver_amp = []
-            solver_detuning = []
-            for slot in sch:
-                if slot.ti == -1:
-                    solver_amp += [0.]
-                    solver_detuning += [0.]
-                    continue
-                pulse = slot.type
-                # print(pulse, ' - ', slot.ti, ' - ', slot.tf - 1)
-                pulse_length = slot.tf-1 - slot.ti
-                # print('pulse length =', pulse_length)
-                if pulse in ['delay', 'target']:
-                    solver_amp += [0.] * pulse_length
-                    solver_detuning += [0.] * pulse_length
-                    continue
-                if (isinstance(pulse.amplitude, ConstantWaveform) and
-                        isinstance(pulse.detuning, ConstantWaveform)):
-                    cste_amplitude = pulse.amplitude._value
-                    cste_detuning = pulse.detuning._value
-                    solver_amp += [cste_amplitude] * pulse_length
-                    solver_detuning += [cste_detuning] * pulse_length
-                else:
-                    solver_amp += pulse.amplitude.samples.tolist()
-                    solver_detuning += pulse.detuning.samples.tolist()
-            pulse_end = len(solver_amp)
-            if pulse_end < len(solver_time):
-                pulse_length = len(solver_time) - pulse_end
-                solver_amp += [0] * pulse_length
-                solver_detuning += [0] * pulse_length
-            cs_amp[ch] = CubicSpline(solver_time, solver_amp)
-            cs_detuning[ch] = CubicSpline(solver_time,
-                                          solver_detuning)
 
     for ch, (a, b) in ch_axes.items():
         basis = seq._channels[ch].basis
         t = np.array(data[ch]['time']) / time_scale
         ya = data[ch]['amp']
         yb = data[ch]['detuning']
-
         if sampling_rate:
+            t2 = 0
+            ya2 = []
+            yb2 = []
+            for t_solv in solver_time:
+                while t_solv > t[t2]:
+                    t2 += 1
+                ya2.append(ya[t2])
+                yb2.append(yb[t2])
+            cs_amp[ch] = CubicSpline(solver_time, ya2)
+            cs_detuning[ch] = CubicSpline(solver_time, yb2)
             yaeff = cs_amp[ch](teff)
             ybeff = cs_detuning[ch](teff)
 
