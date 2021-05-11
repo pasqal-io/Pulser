@@ -172,6 +172,7 @@ class Sequence:
         if not self._channels:
             return dict(self._device.channels)
         else:
+            # MockDevice channels can be declared multiple times
             return {id: ch for id, ch in self._device.channels.items()
                     if (id not in self._taken_channels.values()
                     or self._device == MockDevice)
@@ -218,6 +219,17 @@ class Sequence:
 
     def declare_channel(self, name, channel_id, initial_target=None):
         """Declares a new channel to the Sequence.
+
+        The first declared channel implicitly defines the sequence's mode of
+        operation (i.e. the underlying Hamiltonian). In particular, if the
+        first declared channel is of type ``Microwave``, the sequence will work
+        in "XY Mode" and will not allow declaration of channels that do not
+        address the 'xy' basis. Inversely, declaration of a channel of another
+        type will block the declaration of ``Microwave`` channels.
+
+        Note:
+            Regular devices only allow a channel to be declared once, but
+            ``MockDevice`` channels can be repeatedly declared if needed.
 
         Args:
             name (str): Unique name for the channel in the sequence.
