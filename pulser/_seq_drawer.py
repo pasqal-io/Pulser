@@ -140,9 +140,11 @@ def draw_sequence(seq, sampling_rate=None):
 
     if sampling_rate:
         # Solver_time = np.arange(seq._total_duration, dtype=np.double)/1000
-        solver_time = np.linspace(0, seq._total_duration-1,
-                                  int(sampling_rate*seq._total_duration),
-                                  dtype=int)
+        indexes = np.linspace(0, seq._total_duration-1,
+                              int(sampling_rate*seq._total_duration),
+                              dtype=int)
+        times = np.arange(seq._total_duration, dtype=np.double)/time_scale
+        solver_time = times[indexes]
         delta_t = np.diff(solver_time)[0]
         # Compare pulse with an interpolated pulse with 100 times more samples
         teff = np.arange(0, max(solver_time), delta_t/100)
@@ -156,12 +158,16 @@ def draw_sequence(seq, sampling_rate=None):
         ya = data[ch]['amp']
         yb = data[ch]['detuning']
         if sampling_rate:
-            t2 = 0
+            nt = len(t)
+            t2 = 1
             ya2 = []
             yb2 = []
             for t_solv in solver_time:
                 while t_solv > t[t2]:
                     t2 += 1
+                    if t2+1 < nt:
+                        if t[t2+1] == t[t2]:
+                            t2 += 1
                 ya2.append(ya[t2])
                 yb2.append(yb[t2])
             cs_amp[ch] = CubicSpline(solver_time, ya2)
