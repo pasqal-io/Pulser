@@ -21,7 +21,7 @@ from copy import deepcopy
 from pulser import Sequence, Pulse, Register, Simulation
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
-from pulser.simresults import SimulationResults
+from pulser.simulation.simresults import SimulationResults
 
 q_dict = {"A": np.array([0., 0.]),
           "B": np.array([0., 10.]),
