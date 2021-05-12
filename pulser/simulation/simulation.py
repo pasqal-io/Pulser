@@ -19,7 +19,7 @@ import numpy as np
 from copy import deepcopy
 
 from pulser import Pulse, Sequence
-from pulser.simresults import SimulationResults
+from pulser.simulation.simresults import SimulationResults
 
 
 class Simulation:
