@@ -64,11 +64,21 @@ def test_channel_declaration():
     seq2.declare_channel('ch0', 'raman_local', initial_target='q1')
     seq2.declare_channel('ch1', 'rydberg_global')
     seq2.declare_channel('ch2', 'rydberg_global')
-    assert set(seq2.available_channels) == available_channels
+    assert set(seq2.available_channels) == available_channels - {'mw_global'}
     assert seq2._taken_channels == {'ch0': 'raman_local',
                                     'ch1': 'rydberg_global',
                                     'ch2': 'rydberg_global'}
     assert seq2._taken_channels.keys() == seq2._channels.keys()
+    with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
+        seq2.declare_channel('ch3', 'mw_global')
+
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel('ch0', 'mw_global')
+    assert set(seq2.available_channels) == {'mw_global'}
+    with pytest.raises(
+            ValueError,
+            match="cannot work simultaneously with the declared 'Microwave'"):
+        seq2.declare_channel('ch3', 'rydberg_global')
 
 
 def test_target():
@@ -173,6 +183,27 @@ def test_align():
         seq.align('ch1')
 
 
+def test_measure():
+    pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel('ch0', 'rydberg_global')
+    assert 'XY' in MockDevice.supported_bases
+    with pytest.raises(ValueError, match='not supported'):
+        seq.measure(basis='XY')
+    seq.measure()
+    with pytest.raises(SystemError, match='already been measured'):
+        seq.measure(basis='digital')
+    with pytest.raises(SystemError, match='Nothing more can be added.'):
+        seq.add(pulse, 'ch0')
+
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel('ch0', 'mw_global')
+    assert 'digital' in MockDevice.supported_bases
+    with pytest.raises(ValueError, match='not supported'):
+        seq.measure(basis='digital')
+    seq.measure(basis='XY')
+
+
 def test_str():
     seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
@@ -259,13 +290,7 @@ def test_sequence():
 
     assert seq._total_duration == 4000
 
-    with pytest.raises(ValueError, match='not supported'):
-        seq.measure(basis='computational')
     seq.measure(basis='digital')
-    with pytest.raises(SystemError, match='already been measured'):
-        seq.measure(basis='digital')
-    with pytest.raises(SystemError, match='Nothing more can be added.'):
-        seq.add(pulse1, 'ch0')
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()

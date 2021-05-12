@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pulser.devices._device_datacls import Device
-from pulser.channels import Rydberg, Raman
+from pulser.channels import Rydberg, Raman, Microwave
 
 
 MockDevice = Device(
@@ -37,5 +37,8 @@ MockDevice = Device(
                                             max_targets=2000,
                                             clock_period=1,
                                             min_duration=1)),
+                ("mw_global", Microwave.Global(1000, 200,
+                                               clock_period=1,
+                                               min_duration=1))
                 )
             )
