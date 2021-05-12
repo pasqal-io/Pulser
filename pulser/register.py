@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from __future__ import annotations
+
+from typing import Optional
+
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
@@ -30,7 +35,7 @@ class Register:
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits):
+    def __init__(self, qubits: dict):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary "
@@ -53,7 +58,8 @@ class Register:
         return dict(zip(self._ids, self._coords))
 
     @classmethod
-    def from_coordinates(cls, coords, center=True, prefix=None):
+    def from_coordinates(cls, coords: np.ndarray, center: bool = True,
+                         prefix: Optional[str] = None) -> Register:
         """Creates the register from an array of coordinates.
 
         Args:
@@ -77,7 +83,8 @@ class Register:
         return cls(qubits)
 
     @classmethod
-    def rectangle(cls, rows, columns, spacing=4, prefix=None):
+    def rectangle(cls, rows: int, columns: int, spacing: float = 4.0,
+                  prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a rectangular array.
 
         Args:
@@ -90,13 +97,28 @@ class Register:
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
         """
+        # Check rows
+        if rows < 1:
+            raise ValueError(
+                f"The number of rows ({rows}) must be 1 or above.")
+
+        # Check columns
+        if columns < 1:
+            raise ValueError(
+                f"The number of columns ({columns}) must be 1 or above.")
+
+        # Check spacing
+        if spacing <= 0.0:
+            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
+
         coords = np.array([(x, y) for y in range(rows)
                            for x in range(columns)], dtype=float) * spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     @classmethod
-    def square(cls, side, spacing=4, prefix=None):
+    def square(cls, side: int, spacing: float = 4.0,
+               prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a square array.
 
         Args:
@@ -108,10 +130,21 @@ class Register:
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
+        # Check side
+        if side < 1:
+            raise ValueError(
+                f"The number of atoms per side ({side}) must be 1 or above.")
+
+        # Check spacing
+        if spacing <= 0.0:
+            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
+
         return cls.rectangle(side, side, spacing=spacing, prefix=prefix)
 
     @classmethod
-    def triangular_lattice(cls, rows, atoms_per_row, spacing=4, prefix=None):
+    def triangular_lattice(cls, rows: int, atoms_per_row: int,
+                           spacing: float = 4.0,
+                           prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a triangular lattice.
 
         Initializes the qubits in a triangular lattice pattern, more
@@ -128,6 +161,22 @@ class Register:
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
+
+        # Check rows
+        if rows < 1:
+            raise ValueError(
+                f"The number of rows ({rows}) must be 1 or above.")
+
+        # Check atoms per row
+        if atoms_per_row < 1:
+            raise ValueError(
+                f"The number of atoms per row ({atoms_per_row})"
+                " must be 1 or above.")
+
+        # Check spacing
+        if spacing <= 0.0:
+            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
+
         coords = np.array([(x, y) for y in range(rows)
                            for x in range(atoms_per_row)], dtype=float)
         coords[:, 0] += 0.5 * np.mod(coords[:, 1], 2)
@@ -137,7 +186,7 @@ class Register:
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     @classmethod
-    def __hexagon_full_layers(cls, layers: int, spacing: float):
+    def __hexagon_full_layers(cls, layers: int, spacing: float) -> np.ndarray:
         """Helper function for building hexagonal arrays.
 
         Args:
@@ -174,7 +223,8 @@ class Register:
         return coords
 
     @classmethod
-    def hexagon(cls, layers: int, spacing: float = 4.0, prefix: str = None):
+    def hexagon(cls, layers: int, spacing: float = 4.0,
+                prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a hexagonal array.
 
         Args:
@@ -187,20 +237,23 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
 
-        # The number of layers must be 1 or above
-        if layers is None or layers < 1:
-            raise ValueError("The number of layers must be 1 or above.")
+        # Check layers
+        if layers < 1:
+            raise ValueError(
+                f"The number of layers ({layers}) must be 1 or above.")
 
-        # Spacing must be above 0.0
-        if spacing is None or spacing < 0.0:
-            raise ValueError("Spacing must be above 0.0.")
+        # Check spacing
+        if spacing <= 0.0:
+            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
 
         coords = cls.__hexagon_full_layers(layers, spacing)
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
     @ classmethod
-    def max_connectivity(cls, n_qubits: int, device, spacing: float = None,
-                         prefix: str = None):
+    def max_connectivity(cls, n_qubits: int,
+                         device: pulser.devices._device_datacls.Device,
+                         spacing: float = None,
+                         prefix: str = None) -> Register:
         """Initializes the register with maximum connectivity for a given device.
 
         In order to maximize connectivity, the basic pattern is the triangle.
@@ -221,23 +274,28 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
         """
 
-        # The device must be an instance of Device
+        # Check device
         if not isinstance(device, pulser.devices._device_datacls.Device):
             raise TypeError("'device' must be of type 'Device'. Import a valid"
                             " device from 'pulser.devices'.")
 
-        # The number of qubits must not be greater than the max number of atoms
-        if n_qubits is None or n_qubits > device.max_atom_num:
+        # Check number of qubits (1 or above)
+        if n_qubits < 1:
+            raise ValueError(
+                f"The number of qubits ({n_qubits}) must be 1 or above.")
+
+        # Check number of qubits (less than the max number of atoms)
+        if n_qubits > device.max_atom_num:
             raise ValueError(f"The number of qubits ({n_qubits})"
-                             " must not be greater than the maximum number of"
+                             " can not exceed the maximum number of"
                              " atoms supported by this device"
                              f" ({device.max_atom_num}).")
 
+        # Default spacing or check minimal distance
         if spacing is None:
             spacing = device.min_atom_distance
         elif spacing < device.min_atom_distance:
-            # Spacing can not be smaller than the min distance between atoms
-            raise ValueError("Spacing for this device must be"
+            raise ValueError(f"Spacing ({spacing}) for this device must be"
                              f" {device.min_atom_distance} or above.")
 
         if n_qubits == 1:
@@ -289,7 +347,7 @@ class Register:
         return cls.from_coordinates(coords, center=False,
                                     prefix=prefix)
 
-    def rotate(self, degrees):
+    def rotate(self, degrees: float) -> None:
         """Rotates the array around the origin by the given angle.
 
         Args:
@@ -302,8 +360,9 @@ class Register:
                         [np.sin(theta), np.cos(theta)]])
         self._coords = [rot @ v for v in self._coords]
 
-    def draw(self, with_labels=True, blockade_radius=None, draw_graph=True,
-             draw_half_radius=False):
+    def draw(self, with_labels: bool = True,
+             blockade_radius: Optional[float] = None, draw_graph: bool = True,
+             draw_half_radius: bool = False) -> None:
         """Draws the entire register.
 
         Keyword args:
@@ -324,8 +383,16 @@ class Register:
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
+
+        # Check dimensions
         if self._dim != 2:
             raise NotImplementedError("Can only draw register layouts in 2D.")
+
+        # Check spacing
+        if blockade_radius is not None and blockade_radius <= 0.0:
+            raise ValueError(
+                f"Blockade radius ({blockade_radius}) must be above 0.0.")
+
         pos = np.array(self._coords)
         diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
         diffs[diffs < 9] *= 1.5
@@ -377,6 +444,6 @@ class Register:
 
         plt.show()
 
-    def _to_dict(self):
+    def _to_dict(self) -> dict:
         qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
         return obj_to_dict(self, qs)

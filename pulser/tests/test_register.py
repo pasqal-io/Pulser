@@ -63,13 +63,51 @@ def test_creation():
     assert np.all(np.array(reg6._coords) == coords_)
 
 
+def test_rectangle():
+    # Check rows
+    with pytest.raises(ValueError, match="The number of rows"):
+        reg = Register.rectangle(0, 2)
+
+    # Check columns
+    with pytest.raises(ValueError, match="The number of columns"):
+        reg = Register.rectangle(2, 0)
+
+    # Check spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        reg = Register.rectangle(2, 2, 0.0)
+
+
+def test_square():
+    # Check side
+    with pytest.raises(ValueError, match="The number of atoms per side"):
+        reg = Register.square(0)
+
+    # Check spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        reg = Register.square(2, 0.0)
+
+
+def test_triangular_lattice():
+    # Check rows
+    with pytest.raises(ValueError, match="The number of rows"):
+        reg = Register.triangular_lattice(0, 2)
+
+    # Check columns
+    with pytest.raises(ValueError, match="The number of atoms per row"):
+        reg = Register.triangular_lattice(2, 0)
+
+    # Check spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        reg = Register.triangular_lattice(2, 2, 0.0)
+
+
 def test_hexagon():
     # Check number of layers
     with pytest.raises(ValueError, match="The number of layers"):
         reg = Register.hexagon(0)
 
     # Check spacing
-    with pytest.raises(ValueError, match="Spacing must be above 0.0."):
+    with pytest.raises(ValueError, match="Spacing "):
         reg = Register.hexagon(1, spacing=-1.0)
 
     # Check small hexagon (1 layer)
@@ -108,15 +146,18 @@ def test_max_connectivity():
     with pytest.raises(TypeError):
         reg = Register.max_connectivity(2, None)
 
+    # Check min number of atoms
+    with pytest.raises(ValueError, match=r"The number of qubits(.+)or above"):
+        reg = Register.max_connectivity(0, device)
+
     # Check max number of atoms
-    reg = Register.max_connectivity(max_atom_num, device)
-    with pytest.raises(ValueError, match="The number of qubits"):
+    with pytest.raises(ValueError, match=r"The number of qubits(.+)exceed"):
         reg = Register.max_connectivity(max_atom_num + 1, device)
 
     # Check spacing
     reg = Register.max_connectivity(
         max_atom_num, device, spacing=spacing)
-    with pytest.raises(ValueError, match="Spacing for this device"):
+    with pytest.raises(ValueError, match="Spacing "):
         reg = Register.max_connectivity(max_atom_num, device,
                                         spacing=spacing - 1.0)
 
@@ -186,6 +227,11 @@ def test_drawing():
     with pytest.raises(NotImplementedError, match="register layouts in 2D."):
         reg_ = Register.from_coordinates([(1, 0, 0), (0, 1, 4)])
         reg_.draw()
+
+    with pytest.raises(ValueError, match="Blockade radius"):
+        reg = Register.from_coordinates([(1, 0), (0, 1)])
+        reg.draw(blockade_radius=0.0)
+
     reg = Register.triangular_lattice(3, 8)
     with patch('matplotlib.pyplot.show'):
         reg.draw()
