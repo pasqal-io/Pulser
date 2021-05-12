@@ -176,7 +176,7 @@ class Sequence:
             return {id: ch for id, ch in self._device.channels.items()
                     if (id not in self._taken_channels.values()
                     or self._device == MockDevice)
-                    and (ch.basis == "xy" if self._in_xy else ch.basis != "xy")
+                    and (ch.basis == 'XY' if self._in_xy else ch.basis != 'XY')
                     }
 
     def is_parametrized(self):
@@ -224,7 +224,7 @@ class Sequence:
         operation (i.e. the underlying Hamiltonian). In particular, if the
         first declared channel is of type ``Microwave``, the sequence will work
         in "XY Mode" and will not allow declaration of channels that do not
-        address the 'xy' basis. Inversely, declaration of a channel of another
+        address the 'XY' basis. Inversely, declaration of a channel of another
         type will block the declaration of ``Microwave`` channels.
 
         Note:
@@ -253,17 +253,17 @@ class Sequence:
 
         ch = self._device.channels[channel_id]
         if channel_id not in self.available_channels:
-            if self._in_xy and ch.basis != "xy":
+            if self._in_xy and ch.basis != 'XY':
                 raise ValueError(f"Channel '{ch}' cannot work simultaneously "
                                  "with the declared 'Microwave' channel."
                                  )
-            elif not self._in_xy and ch.basis == "xy":
+            elif not self._in_xy and ch.basis == 'XY':
                 raise ValueError("Channel of type 'Microwave' cannot work "
                                  "simultaneously with the declared channels.")
             else:
                 raise ValueError(f"Channel {channel_id} is not available.")
 
-        if ch.basis == "xy" and not self._in_xy:
+        if ch.basis == 'XY' and not self._in_xy:
             self._in_xy = True
         self._channels[name] = ch
         self._taken_channels[name] = channel_id

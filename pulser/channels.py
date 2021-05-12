@@ -146,7 +146,7 @@ class Microwave(Channel):
     """Microwave adressing channel.
 
     Channel targeting the transition between two rydberg states, thus encoding
-    the 'xy' basis. See base class.
+    the 'XY' basis. See base class.
     """
     name: ClassVar[str] = 'Microwave'
-    basis: ClassVar[str] = 'xy'
+    basis: ClassVar[str] = 'XY'
