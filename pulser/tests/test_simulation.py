@@ -18,7 +18,7 @@ import pytest
 import qutip
 
 from pulser import Sequence, Pulse, Register
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
 from pulser.simulation import Simulation
 from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
 
