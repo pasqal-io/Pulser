@@ -183,6 +183,27 @@ def test_align():
         seq.align('ch1')
 
 
+def test_measure():
+    pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel('ch0', 'rydberg_global')
+    assert 'XY' in MockDevice.supported_bases
+    with pytest.raises(ValueError, match='not supported'):
+        seq.measure(basis='XY')
+    seq.measure()
+    with pytest.raises(SystemError, match='already been measured'):
+        seq.measure(basis='digital')
+    with pytest.raises(SystemError, match='Nothing more can be added.'):
+        seq.add(pulse, 'ch0')
+
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel('ch0', 'mw_global')
+    assert 'digital' in MockDevice.supported_bases
+    with pytest.raises(ValueError, match='not supported'):
+        seq.measure(basis='digital')
+    seq.measure(basis='XY')
+
+
 def test_str():
     seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
@@ -269,13 +290,7 @@ def test_sequence():
 
     assert seq._total_duration == 4000
 
-    with pytest.raises(ValueError, match='not supported'):
-        seq.measure(basis='computational')
     seq.measure(basis='digital')
-    with pytest.raises(SystemError, match='already been measured'):
-        seq.measure(basis='digital')
-    with pytest.raises(SystemError, match='Nothing more can be added.'):
-        seq.add(pulse1, 'ch0')
 
     with patch('matplotlib.pyplot.show'):
         seq.draw()

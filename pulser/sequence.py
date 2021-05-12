@@ -460,15 +460,24 @@ class Sequence:
     def measure(self, basis='ground-rydberg'):
         """Measures in a valid basis.
 
+        Note:
+            In addition to the supported bases of the selected device, allowed
+            measurement bases will depend on the mode of operation. In
+            particular, if using ``Microwave`` channels (XY mode), only
+            measuring in the 'XY' basis is allowed. Inversely, it is not
+            possible to measure in the 'XY' basis outside of XY mode.
+
         Args:
             basis (str): Valid basis for measurement (consult the
                 ``supported_bases`` attribute of the selected device for
                 the available options).
         """
-        available = self._device.supported_bases
+        available = (self._device.supported_bases - {'XY'} if not self._in_xy
+                     else {'XY'})
         if basis not in available:
             raise ValueError(f"The basis '{basis}' is not supported by the "
-                             "selected device. The available options are: "
+                             "selected device and operation mode. The "
+                             "available options are: "
                              + ", ".join(list(available)))
 
         if hasattr(self, "_measurement"):
