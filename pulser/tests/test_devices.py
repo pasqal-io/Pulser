@@ -46,8 +46,8 @@ def test_mock():
     assert dev.max_atom_num > 1000
     assert dev.min_atom_distance <= 1
     assert dev.interaction_coeff == 5008713
-    names = ['Rydberg', 'Raman']
-    basis = ['ground-rydberg', 'digital']
+    names = ['Rydberg', 'Raman', 'Microwave']
+    basis = ['ground-rydberg', 'digital', 'XY']
     for ch in dev.channels.values():
         assert ch.name in names
         assert ch.basis == basis[names.index(ch.name)]

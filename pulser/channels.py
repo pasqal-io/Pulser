@@ -139,3 +139,14 @@ class Rydberg(Channel):
     """
     name: ClassVar[str] = 'Rydberg'
     basis: ClassVar[str] = 'ground-rydberg'
+
+
+@dataclass(init=True, repr=False, frozen=True)
+class Microwave(Channel):
+    """Microwave adressing channel.
+
+    Channel targeting the transition between two rydberg states, thus encoding
+    the 'XY' basis. See base class.
+    """
+    name: ClassVar[str] = 'Microwave'
+    basis: ClassVar[str] = 'XY'

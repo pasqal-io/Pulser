@@ -17,8 +17,9 @@ import pytest
 
 import qutip
 
-from pulser import Sequence, Pulse, Register, Simulation
-from pulser.devices import Chadoq2
+from pulser import Sequence, Pulse, Register
+from pulser.devices import Chadoq2, MockDevice
+from pulser.simulation import Simulation
 from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
 
 q_dict = {"control1": np.array([-4., 0.]),
@@ -187,12 +188,17 @@ def test_building_basis_and_projection_operators():
 
 
 def test_empty_sequences():
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, MockDevice)
     with pytest.raises(ValueError, match='no declared channels'):
         Simulation(seq)
+    seq.declare_channel("ch0", "mw_global")
+    with pytest.raises(NotImplementedError):
+        Simulation(seq)
+
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel('test', 'rydberg_local', 'target')
+    seq.declare_channel("test2", "rydberg_global")
     with pytest.raises(ValueError, match='No instructions given'):
-        seq.declare_channel('test', 'rydberg_local', 'target')
-        seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
 
 
