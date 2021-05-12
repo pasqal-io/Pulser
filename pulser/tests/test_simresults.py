@@ -18,9 +18,10 @@ import pytest
 import qutip
 from copy import deepcopy
 
-from pulser import Sequence, Pulse, Register, Simulation
+from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
+from pulser.simulation import Simulation
 from pulser.simulation.simresults import SimulationResults
 
 q_dict = {"A": np.array([0., 0.]),
