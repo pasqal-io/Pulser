@@ -46,7 +46,7 @@ def gather_data(seq):
                 detuning += [0]
                 continue
             if slot.type in ['delay', 'target']:
-                time += [slot.ti, slot.tf-1 if slot.tf > slot.ti else slot.tf]
+                time += [slot.ti, slot.tf-1 if slot.tf > slot.ti else slot.ti]
                 amp += [0, 0]
                 detuning += [0, 0]
                 if slot.type == 'target':
