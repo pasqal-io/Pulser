@@ -215,7 +215,7 @@ class Register:
                            start_y[side] * layer + atom * delta_y[side])
                            for layer in range(1, layers + 1)
                            for side in range(6)
-                           for atom in range(layer)], dtype=float)
+                           for atom in range(1, layer + 1)], dtype=float)
 
         coords *= spacing
         coords = np.concatenate(([(0.0, 0.0)], coords))

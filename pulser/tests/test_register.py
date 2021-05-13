@@ -116,24 +116,24 @@ def test_hexagon():
     atoms = list(reg.qubits.values())
     crest_y = np.sqrt(3) / 2
     assert(np.all(np.isclose(atoms[0], [0.0, 0.0])))
-    assert(np.all(np.isclose(atoms[1], [-1.0, 0.0])))
-    assert(np.all(np.isclose(atoms[2], [-0.5, crest_y])))
-    assert(np.all(np.isclose(atoms[3], [0.5, crest_y])))
-    assert(np.all(np.isclose(atoms[4], [1.0, 0.0])))
-    assert(np.all(np.isclose(atoms[5], [0.5, -crest_y])))
-    assert(np.all(np.isclose(atoms[6], [-0.5, -crest_y])))
+    assert(np.all(np.isclose(atoms[1], [-0.5, crest_y])))
+    assert(np.all(np.isclose(atoms[2], [0.5, crest_y])))
+    assert(np.all(np.isclose(atoms[3], [1.0, 0.0])))
+    assert(np.all(np.isclose(atoms[4], [0.5, -crest_y])))
+    assert(np.all(np.isclose(atoms[5], [-0.5, -crest_y])))
+    assert(np.all(np.isclose(atoms[6], [-1.0, 0.0])))
 
     # Check a few atoms for a bigger hexagon (2 layers)
     reg = Register.hexagon(2, spacing=1.0)
     assert (len(reg.qubits) == 19)
     atoms = list(reg.qubits.values())
     crest_y = np.sqrt(3) / 2.0
-    assert(np.all(np.isclose(atoms[7], [-2.0, 0.0])))
-    assert(np.all(np.isclose(atoms[8], [-1.5, crest_y])))
-    assert(np.all(np.isclose(atoms[9], [-1.0, 2.0 * crest_y])))
-    assert(np.all(np.isclose(atoms[13], [2.0, 0.0])))
-    assert(np.all(np.isclose(atoms[14], [1.5, -crest_y])))
-    assert(np.all(np.isclose(atoms[15], [1.0, 2.0 * -crest_y])))
+    assert(np.all(np.isclose(atoms[7], [-1.5, crest_y])))
+    assert(np.all(np.isclose(atoms[8], [-1.0, 2.0 * crest_y])))
+    assert(np.all(np.isclose(atoms[9], [-0.0, 2.0 * crest_y])))
+    assert(np.all(np.isclose(atoms[13], [1.5, -crest_y])))
+    assert(np.all(np.isclose(atoms[14], [1.0, -2.0 * crest_y])))
+    assert(np.all(np.isclose(atoms[15], [0.0, -2.0 * crest_y])))
 
 
 def test_max_connectivity():
@@ -172,24 +172,22 @@ def test_max_connectivity():
     assert (len(reg.qubits) == 7)
     atoms = list(reg.qubits.values())
     assert(np.all(np.isclose(atoms[0], [0.0, 0.0])))
-    assert(np.all(np.isclose(atoms[1], [-1.0 * spacing, 0.0])))
-    assert(np.all(np.isclose(atoms[2], [-0.5 * spacing, crest_y * spacing])))
-    assert(np.all(np.isclose(atoms[3], [0.5 * spacing, crest_y * spacing])))
-    assert(np.all(np.isclose(atoms[4], [1.0 * spacing, 0.0])))
-    assert(np.all(np.isclose(atoms[5], [0.5 * spacing, -crest_y * spacing])))
-    assert(np.all(np.isclose(atoms[6], [-0.5 * spacing, -crest_y * spacing])))
+    assert(np.all(np.isclose(atoms[1], [-0.5 * spacing, crest_y * spacing])))
+    assert(np.all(np.isclose(atoms[2], [0.5 * spacing, crest_y * spacing])))
+    assert(np.all(np.isclose(atoms[3], [1.0 * spacing, 0.0])))
+    assert(np.all(np.isclose(atoms[4], [0.5 * spacing, -crest_y * spacing])))
+    assert(np.all(np.isclose(atoms[5], [-0.5 * spacing, -crest_y * spacing])))
+    assert(np.all(np.isclose(atoms[6], [-1.0 * spacing, 0.0])))
 
     # Check full layers for a bigger hexagon (2 layers)
     reg = Register.max_connectivity(19, device)
     assert (len(reg.qubits) == 19)
     atoms = list(reg.qubits.values())
-    assert(np.all(np.isclose(atoms[7], [-2.0 * spacing, 0.0])))
-    assert(np.all(np.isclose(atoms[8], [-1.5 * spacing, crest_y * spacing])))
-    assert(np.all(np.isclose(atoms[9],
+    assert(np.all(np.isclose(atoms[7], [-1.5 * spacing, crest_y * spacing])))
+    assert(np.all(np.isclose(atoms[8],
                              [-1.0 * spacing, 2.0 * crest_y * spacing])))
-    assert(np.all(np.isclose(atoms[13], [2.0 * spacing, 0.0])))
-    assert(np.all(np.isclose(atoms[14], [1.5 * spacing, -crest_y * spacing])))
-    assert(np.all(np.isclose(atoms[15],
+    assert(np.all(np.isclose(atoms[13], [1.5 * spacing, -crest_y * spacing])))
+    assert(np.all(np.isclose(atoms[14],
                              [1.0 * spacing, -2.0 * crest_y * spacing])))
 
     # Check extra atoms (2 full layers + 7 extra atoms)
