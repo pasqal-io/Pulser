@@ -135,6 +135,7 @@ class Sequence:
 
         self._register = register
         self._device = device
+        self._in_xy = False
         self._calls = [_Call("__init__", (register, device), {})]
         self._channels = {}
         self._schedule = {}
@@ -166,9 +167,17 @@ class Sequence:
     @property
     def available_channels(self):
         """Channels still available for declaration."""
-        return {id: ch for id, ch in self._device.channels.items()
-                if id not in self._taken_channels.values()
-                or self._device == MockDevice}
+        # Show all channels if none are declared, otherwise filter depending
+        # on whether the sequence is working on XY mode
+        if not self._channels:
+            return dict(self._device.channels)
+        else:
+            # MockDevice channels can be declared multiple times
+            return {id: ch for id, ch in self._device.channels.items()
+                    if (id not in self._taken_channels.values()
+                    or self._device == MockDevice)
+                    and (ch.basis == 'XY' if self._in_xy else ch.basis != 'XY')
+                    }
 
     def is_parametrized(self):
         """States whether the sequence is parametrized.
@@ -211,6 +220,17 @@ class Sequence:
     def declare_channel(self, name, channel_id, initial_target=None):
         """Declares a new channel to the Sequence.
 
+        The first declared channel implicitly defines the sequence's mode of
+        operation (i.e. the underlying Hamiltonian). In particular, if the
+        first declared channel is of type ``Microwave``, the sequence will work
+        in "XY Mode" and will not allow declaration of channels that do not
+        address the 'XY' basis. Inversely, declaration of a channel of another
+        type will block the declaration of ``Microwave`` channels.
+
+        Note:
+            Regular devices only allow a channel to be declared once, but
+            ``MockDevice`` channels can be repeatedly declared if needed.
+
         Args:
             name (str): Unique name for the channel in the sequence.
             channel_id (str): How the channel is identified in the device.
@@ -231,10 +251,20 @@ class Sequence:
         if channel_id not in self._device.channels:
             raise ValueError("No channel %s in the device." % channel_id)
 
-        if channel_id not in self.available_channels:
-            raise ValueError("Channel %s is not available." % channel_id)
-
         ch = self._device.channels[channel_id]
+        if channel_id not in self.available_channels:
+            if self._in_xy and ch.basis != 'XY':
+                raise ValueError(f"Channel '{ch}' cannot work simultaneously "
+                                 "with the declared 'Microwave' channel."
+                                 )
+            elif not self._in_xy and ch.basis == 'XY':
+                raise ValueError("Channel of type 'Microwave' cannot work "
+                                 "simultaneously with the declared channels.")
+            else:
+                raise ValueError(f"Channel {channel_id} is not available.")
+
+        if ch.basis == 'XY' and not self._in_xy:
+            self._in_xy = True
         self._channels[name] = ch
         self._taken_channels[name] = channel_id
         self._schedule[name] = []
@@ -430,15 +460,24 @@ class Sequence:
     def measure(self, basis='ground-rydberg'):
         """Measures in a valid basis.
 
+        Note:
+            In addition to the supported bases of the selected device, allowed
+            measurement bases will depend on the mode of operation. In
+            particular, if using ``Microwave`` channels (XY mode), only
+            measuring in the 'XY' basis is allowed. Inversely, it is not
+            possible to measure in the 'XY' basis outside of XY mode.
+
         Args:
             basis (str): Valid basis for measurement (consult the
                 ``supported_bases`` attribute of the selected device for
                 the available options).
         """
-        available = self._device.supported_bases
+        available = (self._device.supported_bases - {'XY'} if not self._in_xy
+                     else {'XY'})
         if basis not in available:
             raise ValueError(f"The basis '{basis}' is not supported by the "
-                             "selected device. The available options are: "
+                             "selected device and operation mode. The "
+                             "available options are: "
                              + ", ".join(list(available)))
 
         if hasattr(self, "_measurement"):
