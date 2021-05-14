@@ -66,49 +66,49 @@ def test_creation():
 def test_rectangle():
     # Check rows
     with pytest.raises(ValueError, match="The number of rows"):
-        reg = Register.rectangle(0, 2)
+        Register.rectangle(0, 2)
 
     # Check columns
     with pytest.raises(ValueError, match="The number of columns"):
-        reg = Register.rectangle(2, 0)
+        Register.rectangle(2, 0)
 
     # Check spacing
     with pytest.raises(ValueError, match="Spacing"):
-        reg = Register.rectangle(2, 2, 0.0)
+        Register.rectangle(2, 2, 0.0)
 
 
 def test_square():
     # Check side
     with pytest.raises(ValueError, match="The number of atoms per side"):
-        reg = Register.square(0)
+        Register.square(0)
 
     # Check spacing
     with pytest.raises(ValueError, match="Spacing"):
-        reg = Register.square(2, 0.0)
+        Register.square(2, 0.0)
 
 
 def test_triangular_lattice():
     # Check rows
     with pytest.raises(ValueError, match="The number of rows"):
-        reg = Register.triangular_lattice(0, 2)
+        Register.triangular_lattice(0, 2)
 
     # Check columns
     with pytest.raises(ValueError, match="The number of atoms per row"):
-        reg = Register.triangular_lattice(2, 0)
+        Register.triangular_lattice(2, 0)
 
     # Check spacing
     with pytest.raises(ValueError, match="Spacing"):
-        reg = Register.triangular_lattice(2, 2, 0.0)
+        Register.triangular_lattice(2, 2, 0.0)
 
 
 def test_hexagon():
     # Check number of layers
     with pytest.raises(ValueError, match="The number of layers"):
-        reg = Register.hexagon(0)
+        Register.hexagon(0)
 
     # Check spacing
     with pytest.raises(ValueError, match="Spacing "):
-        reg = Register.hexagon(1, spacing=-1.0)
+        Register.hexagon(1, spacing=-1.0)
 
     # Check small hexagon (1 layer)
     reg = Register.hexagon(1, spacing=1.0)
