@@ -158,6 +158,7 @@ def draw_sequence(seq, sampling_rate=None):
             ya2 = []
             yb2 = []
             for t_solv in solver_time:
+                # find the intervall [t[t2],t[t2+1]] containing t_solv
                 while t_solv > t[t2]:
                     t2 += 1
                 ya2.append(ya[t2])
