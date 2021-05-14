@@ -17,9 +17,8 @@ import pytest
 
 import qutip
 
-from pulser import Sequence, Pulse, Register
-from pulser.devices import Chadoq2, MockDevice
-from pulser.simulation import Simulation
+from pulser import Sequence, Pulse, Register, Simulation
+from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
 
 q_dict = {"control1": np.array([-4., 0.]),
@@ -188,17 +187,12 @@ def test_building_basis_and_projection_operators():
 
 
 def test_empty_sequences():
-    seq = Sequence(reg, MockDevice)
+    seq = Sequence(reg, Chadoq2)
     with pytest.raises(ValueError, match='no declared channels'):
         Simulation(seq)
-    seq.declare_channel("ch0", "mw_global")
-    with pytest.raises(NotImplementedError):
-        Simulation(seq)
-
-    seq = Sequence(reg, MockDevice)
-    seq.declare_channel('test', 'rydberg_local', 'target')
-    seq.declare_channel("test2", "rydberg_global")
     with pytest.raises(ValueError, match='No instructions given'):
+        seq.declare_channel('test', 'rydberg_local', 'target')
+        seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
 
 
@@ -239,15 +233,26 @@ def test_run():
 
     with pytest.raises(ValueError,
                        match='Incompatible shape of initial_state'):
-        sim.run(bad_initial)
+        sim.config('initial_state', bad_initial)
+
     with pytest.raises(ValueError,
                        match='Incompatible shape of initial_state'):
-        sim.run(qutip.Qobj(bad_initial))
+        sim.config('initial_state', qutip.Qobj(bad_initial))
 
-    sim.run(initial_state=good_initial_array)
-    sim.run(initial_state=good_initial_qobj)
+    sim.config('initial_state', good_initial_array)
+    sim.run()
+    sim.config('initial_state', good_initial_qobj)
+    sim.run()
 
-    assert not hasattr(sim._seq, '_measurement')
+    # assert not hasattr(sim._seq, '_measurement')
     seq.measure('ground-rydberg')
     sim.run()
     assert sim._seq._measurement == 'ground-rydberg'
+
+
+def test_noise():
+    sim = Simulation(seq, sampling_rate=0.01)
+    sim.add_noise('amplitude')
+    sim.remove_all_noise()
+    sim.set_noise('SPAM', 'doppler')
+    assert sim._noise == ['SPAM', 'doppler']
