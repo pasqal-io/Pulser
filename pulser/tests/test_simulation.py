@@ -263,7 +263,8 @@ def test_run():
         sim = Simulation(seq, sampling_rate=1.,
                          evaluation_times=-1)
     with pytest.raises(ValueError,
-                       match="Wrong evaluation time label "):
+                       match="Wrong evaluation time label. It should "
+                             "be `Full` or `Minimal`"):
         sim = Simulation(seq, sampling_rate=1.,
                          evaluation_times='Best')
 
@@ -271,17 +272,32 @@ def test_run():
                        match="Provided evaluation-time list contains "
                              "negative values."):
         sim = Simulation(seq, sampling_rate=1.,
-                         evaluation_times=[-1, 0, duration])
+                         evaluation_times=[-1, 0, sim._times[-2]])
 
     with pytest.raises(ValueError,
                        match="Provided evaluation-time list extends "
                              "further than sequence duration."):
         sim = Simulation(seq, sampling_rate=1.,
-                         evaluation_times=[0, 200*duration])
+                         evaluation_times=[0, sim._times[-1]+10])
 
     sim = Simulation(seq, sampling_rate=1., evaluation_times='Full')
+    np.testing.assert_almost_equal(sim.eval_times, sim._times)
+
     sim = Simulation(seq, sampling_rate=1., evaluation_times='Minimal')
+    np.testing.assert_almost_equal(sim.eval_times,
+                                   np.array([sim._times[0], sim._times[-1]])
+                                   )
+
     sim = Simulation(seq, sampling_rate=1.,
-                     evaluation_times=[0, duration/5, duration/3])
+                     evaluation_times=[0, sim._times[-3], sim._times[-1]])
+    np.testing.assert_almost_equal(sim.eval_times,
+                                   np.array([0, sim._times[-3],
+                                             sim._times[-1]])
+                                   )
+
     sim = Simulation(seq, sampling_rate=1.,
-                     evaluation_times=[duration/3000, duration/2000])
+                     evaluation_times=[sim._times[-10], sim._times[-3]])
+    np.testing.assert_almost_equal(sim.eval_times,
+                                   np.array([0, sim._times[-10],
+                                             sim._times[-3], sim._times[-1]])
+                                   )

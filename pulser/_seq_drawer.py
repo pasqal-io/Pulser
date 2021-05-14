@@ -83,8 +83,8 @@ def draw_sequence(seq, sampling_rate=None):
 
     Keyword args:
         sampling_rate(float): Sampling rate of the effective pulse used by
-        the solver. If present, plots the effective pulse alongside the input
-        pulse.
+            the solver. If present, plots the effective pulse alongside the
+            input pulse.
     """
 
     def phase_str(phi):
@@ -139,7 +139,6 @@ def draw_sequence(seq, sampling_rate=None):
                 ax.set_xlabel(f't ({unit})', fontsize=12)
 
     if sampling_rate:
-        # Solver_time = np.arange(seq._total_duration, dtype=np.double)/1000
         indexes = np.linspace(0, seq._total_duration-1,
                               int(sampling_rate*seq._total_duration),
                               dtype=int)
@@ -149,31 +148,24 @@ def draw_sequence(seq, sampling_rate=None):
         # Compare pulse with an interpolated pulse with 100 times more samples
         teff = np.arange(0, max(solver_time), delta_t/100)
 
-        cs_amp = {}
-        cs_detuning = {}
-
     for ch, (a, b) in ch_axes.items():
         basis = seq._channels[ch].basis
         t = np.array(data[ch]['time']) / time_scale
         ya = data[ch]['amp']
         yb = data[ch]['detuning']
         if sampling_rate:
-            nt = len(t)
             t2 = 1
             ya2 = []
             yb2 = []
             for t_solv in solver_time:
                 while t_solv > t[t2]:
                     t2 += 1
-                    if t2+1 < nt:
-                        if t[t2+1] == t[t2]:
-                            t2 += 1
                 ya2.append(ya[t2])
                 yb2.append(yb[t2])
-            cs_amp[ch] = CubicSpline(solver_time, ya2)
-            cs_detuning[ch] = CubicSpline(solver_time, yb2)
-            yaeff = cs_amp[ch](teff)
-            ybeff = cs_detuning[ch](teff)
+            cs_amp = CubicSpline(solver_time, ya2)
+            cs_detuning = CubicSpline(solver_time, yb2)
+            yaeff = cs_amp(teff)
+            ybeff = cs_detuning(teff)
 
         t_min = -t[-1]*0.03
         t_max = t[-1]*1.05
