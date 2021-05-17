@@ -118,7 +118,8 @@ class Device:
                                  "distance between atoms for this device.")
 
         if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
-            raise ValueError(f"All qubits must be at most {self.max_radial_distance} μm away from the "
+            raise ValueError("All qubits must be at most "
+                             f"{self.max_radial_distance} μm away from the "
                              "center of the array.")
 
     def validate_pulse(self, pulse, channel_id):
