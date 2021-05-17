@@ -41,7 +41,7 @@ class Simulation:
         evaluation_times (str,list): The list of times at which the quantum
             state should be evaluated, in μs. If 'Full' is provided, this list
             is set to be the one used to define the Hamiltonian to the solver.
-            The inital and final times are always included, so that f 'Minimal'
+            The initial and final times are always included, so that if 'Minimal'
             is provided, the list is set to only contain the initial and the
             final times.
     """
