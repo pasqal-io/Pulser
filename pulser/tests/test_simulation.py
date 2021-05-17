@@ -275,3 +275,5 @@ def test_noise():
         sim.set_spam(epsilon232=1.5)
     sim.set_doppler_sigma(3)
     sim.run()
+    sim.set_noise('doppler')
+    sim.run()
