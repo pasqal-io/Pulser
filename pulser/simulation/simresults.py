@@ -28,7 +28,7 @@ class SimulationResults(ABC):
     """
 
     def __init__(self, run_output, dim, size, basis_name,
-                 meas_basis="ground-rydberg"):
+                 meas_basis):
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -72,7 +72,7 @@ class SimulationResults(ABC):
         pass
 
     @abstractmethod
-    def sample_state(self, t=-1, meas_basis='ground-rydberg', N_samples=1000):
+    def sample_state(self, t=-1, meas_basis=None, N_samples=1000):
         r"""Returns the result of multiple measurements in a given basis.
 
         The enconding of the results depends on the meaurement basis. Namely:
@@ -101,7 +101,7 @@ class SimulationResults(ABC):
         pass
 
     @abstractmethod
-    def sample_final_state(self, meas_basis='ground-rydberg', N_samples=1000):
+    def sample_final_state(self, meas_basis=None, N_samples=1000):
         pass
 
 
@@ -116,8 +116,7 @@ class NoisyResults(SimulationResults):
     information from them.
     """
 
-    def __init__(self, run_output, size, basis_name,
-                 meas_basis="ground-rydberg", dim=2):
+    def __init__(self, run_output, size, basis_name, meas_basis, dim=2):
         """
         Initializes a new NoisyResults instance.
 
@@ -139,7 +138,13 @@ class NoisyResults(SimulationResults):
             meas_basis (None or str): The basis in which a sampling measurement
                 is desired.
         """
-        super().__init__(run_output, dim, size, basis_name, meas_basis)
+        super().__init__(run_output, dim, size, basis_name,
+                         meas_basis)
+
+    @property
+    def states(self):
+        """Probability distribution of the bitstrings"""
+        return self._states
 
     def get_final_state(self):
         """Get the final state (density matrix here !) of the simulation.
@@ -149,6 +154,7 @@ class NoisyResults(SimulationResults):
         """
         def _proj_from_bitstring(bitstring):
             # In the digital case, |h> = |1> = qutip.basis()
+            # 'all' basis is unacceptable here after projection on bitstrings
             if self._meas_basis == 'digital':
                 proj = qutip.tensor([qutip.basis(2, int(i)).proj() for i
                                      in bitstring])
@@ -188,12 +194,11 @@ class NoisyResults(SimulationResults):
 
         return [qutip.expect(qobj, density_matrix) for qobj in qobj_list]
 
-    def sample_state(self, meas_basis=None, N_samples=1000):
-        r"""Returns the result of multiple measurements in a given basis.
+    def sample_state(self, N_samples=1000):
+        r"""Returns the result of multiple measurements. No notion of
+            measurement basis here, since states have already been projected
+            onto bitstrings.
         Keyword Args:
-            meas_basis (str, default=None): 'ground-rydberg' or 'digital'. If
-                left as None, uses the measurement basis defined in the
-                original sequence.
             N_samples (int, default=1000): Number of samples to take.
             t (int, default=-1) : Time at which the system is measured.
 
@@ -201,19 +206,6 @@ class NoisyResults(SimulationResults):
             ValueError: If trying to sample without a defined 'meas_basis' in
                 the arguments when the original sequence is not measured.
         """
-        if meas_basis is None:
-            if self._meas_basis is None:
-                raise ValueError(
-                    "Can't accept an undefined measurement basis because the "
-                    "original sequence has no measurement."
-                    )
-            meas_basis = self._meas_basis
-
-        if meas_basis not in {'ground-rydberg', 'digital'}:
-            raise ValueError(
-                "`meas_basis` can only be 'ground-rydberg' or 'digital'."
-                )
-
         N = self._size
         self.N_samples = N_samples
         # need all bitstrings to accurately represent states : else some would
@@ -225,8 +217,8 @@ class NoisyResults(SimulationResults):
         return Counter(
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
 
-    def sample_final_state(self, meas_basis='ground-rydberg', N_samples=1000):
-        return self.sample_state(meas_basis, N_samples)
+    def sample_final_state(self, N_samples=1000):
+        return self.sample_state(N_samples)
 
 
 class CleanResults(SimulationResults):
@@ -237,7 +229,7 @@ class CleanResults(SimulationResults):
     """
 
     def __init__(self, run_output, dim, size, basis_name,
-                 meas_basis="ground-rydberg"):
+                 meas_basis):
         """Initializes a new CleanResults instance.
 
         Args:
@@ -363,14 +355,8 @@ class CleanResults(SimulationResults):
             ValueError: If trying to sample without a defined 'meas_basis' in
                 the arguments when the original sequence is not measured.
         """
-        if meas_basis is None:
-            if self._meas_basis is None:
-                raise ValueError(
-                    "Can't accept an undefined measurement basis because the "
-                    "original sequence has no measurement."
-                    )
+        if not meas_basis:
             meas_basis = self._meas_basis
-
         if meas_basis not in {'ground-rydberg', 'digital'}:
             raise ValueError(
                 "`meas_basis` can only be 'ground-rydberg' or 'digital'."
@@ -426,7 +412,7 @@ class CleanResults(SimulationResults):
         return Counter(
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
 
-    def sample_final_state(self, meas_basis='ground-rydberg', N_samples=1000):
+    def sample_final_state(self, meas_basis=None, N_samples=1000):
         return self.sample_state(-1, meas_basis, N_samples)
 
     def detection_SPAM_independent(self, t=-1,

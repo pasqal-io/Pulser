@@ -22,7 +22,7 @@ from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
 from pulser.simulation import Simulation
-from pulser.simulation.simresults import SimulationResults
+from pulser.simulation.simresults import CleanResults, NoisyResults
 
 q_dict = {"A": np.array([0., 0.]),
           "B": np.array([0., 10.]),
@@ -38,10 +38,14 @@ seq = Sequence(reg, Chadoq2)
 seq.declare_channel('ryd', 'rydberg_global')
 seq.add(pi, 'ryd')
 seq_no_meas = deepcopy(seq)
+seq_no_meas_noisy = deepcopy(seq)
 seq.measure('ground-rydberg')
 
 sim = Simulation(seq)
+sim_noisy = Simulation(seq)
+sim_noisy.set_noise('SPAM', 'doppler', 'amplitude')
 results = sim.run()
+results_noisy = sim.run()
 
 state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
 ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
@@ -49,10 +53,10 @@ ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 
 def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
-        SimulationResults(state, 2, 2, 'bad_basis')
+        CleanResults(state, 2, 2, 'bad_basis', None)
     with pytest.raises(ValueError, match="`meas_basis` must be"):
-        SimulationResults(state, 2, 2, 'ground-rydberg',
-                          'wrong_measurement_basis')
+        NoisyResults(state, 2, 'ground-rydberg',
+                     'wrong_measurement_basis')
 
     assert results._dim == 2
     assert results._size == 2
@@ -96,6 +100,18 @@ def test_get_final_state():
                              np.abs(results.states[-1].full()), atol=1e-5))
 
 
+def test_get_final_state_noisy():
+    seq_ = Sequence(reg, Chadoq2)
+    seq_.declare_channel('ryd', 'rydberg_global')
+    seq_.declare_channel('ram', 'raman_local', initial_target="A")
+    seq_.add(pi, 'ram')
+    seq_.add(pi, 'ram')
+    seq_.add(pi, 'ryd')
+
+    sim_noisy_ = Simulation(seq_)
+    sim_noisy_.run()
+
+
 def test_expect():
     with pytest.raises(TypeError, match="must be a list"):
         results.expect('bad_observable')
@@ -108,11 +124,22 @@ def test_expect():
     assert len(results.expect(op)[0]) == duration
 
 
+def test_expect_noisy():
+    with pytest.raises(TypeError, match="must be a list"):
+        results_noisy.expect('bad_observable')
+    with pytest.raises(TypeError, match="Incompatible type"):
+        results_noisy.expect(['bad_observable'])
+    with pytest.raises(ValueError, match="Incompatible shape"):
+        results_noisy.expect([np.array(3)])
+    op = [qutip.tensor(qutip.qeye(2),
+                       qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
+    results_noisy.expect(op)
+
+
 def test_sample_final_state():
-    with pytest.raises(ValueError, match="undefined measurement basis"):
-        sim_no_meas = Simulation(seq_no_meas)
-        results_no_meas = sim_no_meas.run()
-        results_no_meas.sample_final_state()
+    sim_no_meas = Simulation(seq_no_meas)
+    results_no_meas = sim_no_meas.run()
+    results_no_meas.sample_final_state()
     with pytest.raises(ValueError, match="can only be"):
         results_no_meas.sample_final_state('wrong_measurement_basis')
     with pytest.raises(NotImplementedError, match="dimension > 3"):
@@ -138,3 +165,15 @@ def test_sample_final_state():
                                 meas_basis='ground-rydberg')
     # Global Rydberg will affect both:
     assert len(sampling_three_levelB) == 4
+
+
+def test_sample_final_state_noisy():
+    sampling = results_noisy.sample_final_state(N_samples=1234)
+    assert results_noisy.N_samples == 1234
+    assert len(sampling) == 4  # Check that all states were observed.
+    results_noisy.sample_final_state(N_samples=911)
+    seq_no_meas_noisy.declare_channel('raman', 'raman_local', 'B')
+    seq_no_meas_noisy.add(pi, 'raman')
+    res_3level = Simulation(seq_no_meas_noisy)
+    res_3level.set_noise('SPAM', 'doppler')
+    print(res_3level.run().sample_final_state())
