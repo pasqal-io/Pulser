@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.waveforms import ConstantWaveform
+from scipy.interpolate import CubicSpline
 
 
 def gather_data(seq):
@@ -45,7 +46,7 @@ def gather_data(seq):
                 detuning += [0]
                 continue
             if slot.type in ['delay', 'target']:
-                time += [slot.ti, slot.tf-1]
+                time += [slot.ti, slot.tf-1 if slot.tf > slot.ti else slot.ti]
                 amp += [0, 0]
                 detuning += [0, 0]
                 if slot.type == 'target':
@@ -74,11 +75,16 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq):
+def draw_sequence(seq, sampling_rate=None):
     """Draw the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
+
+    Keyword args:
+        sampling_rate(float): Sampling rate of the effective pulse used by
+            the solver. If present, plots the effective pulse alongside the
+            input pulse.
     """
 
     def phase_str(phi):
@@ -132,11 +138,35 @@ def draw_sequence(seq):
                 unit = 'ns' if time_scale == 1 else r'$\mu s$'
                 ax.set_xlabel(f't ({unit})', fontsize=12)
 
+    if sampling_rate:
+        indexes = np.linspace(0, seq._total_duration-1,
+                              int(sampling_rate*seq._total_duration),
+                              dtype=int)
+        times = np.arange(seq._total_duration, dtype=np.double)/time_scale
+        solver_time = times[indexes]
+        delta_t = np.diff(solver_time)[0]
+        # Compare pulse with an interpolated pulse with 100 times more samples
+        teff = np.arange(0, max(solver_time), delta_t/100)
+
     for ch, (a, b) in ch_axes.items():
         basis = seq._channels[ch].basis
         t = np.array(data[ch]['time']) / time_scale
         ya = data[ch]['amp']
         yb = data[ch]['detuning']
+        if sampling_rate:
+            t2 = 1
+            ya2 = []
+            yb2 = []
+            for t_solv in solver_time:
+                # find the intervall [t[t2],t[t2+1]] containing t_solv
+                while t_solv > t[t2]:
+                    t2 += 1
+                ya2.append(ya[t2])
+                yb2.append(yb[t2])
+            cs_amp = CubicSpline(solver_time, ya2)
+            cs_detuning = CubicSpline(solver_time, yb2)
+            yaeff = cs_amp(teff)
+            ybeff = cs_detuning(teff)
 
         t_min = -t[-1]*0.03
         t_max = t[-1]*1.05
@@ -158,8 +188,14 @@ def draw_sequence(seq):
 
         a.plot(t, ya, color="darkgreen", linewidth=0.8)
         b.plot(t, yb, color='indigo', linewidth=0.8)
-        a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
-        b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
+        if sampling_rate:
+            a.plot(teff, yaeff, color="darkgreen", linewidth=0.8)
+            b.plot(teff, ybeff, color="indigo", linewidth=0.8, ls='-')
+            a.fill_between(teff, 0, yaeff, color="darkgreen", alpha=0.3)
+            b.fill_between(teff, 0, ybeff, color="indigo", alpha=0.3)
+        else:
+            a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
+            b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
         a.set_ylabel(r'$\Omega$ (rad/µs)', fontsize=14, labelpad=10)
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 
