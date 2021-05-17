@@ -20,7 +20,7 @@ from copy import deepcopy
 
 from pulser import Pulse, Sequence
 from pulser._seq_drawer import draw_sequence
-from pulser.simresults import SimulationResults
+from pulser.simulation.simresults import SimulationResults
 
 
 class Simulation:
