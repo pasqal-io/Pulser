@@ -208,8 +208,6 @@ def test_max_connectivity():
     assert(np.all(np.isclose(atoms[25],
                              [-2.0 * spacing, -2.0 * crest_y * spacing])))
 
-    return
-
 
 def test_rotation():
     with pytest.raises(NotImplementedError):
