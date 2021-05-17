@@ -19,8 +19,8 @@ import numpy as np
 from copy import deepcopy
 
 from pulser import Pulse, Sequence
-from pulser._seq_drawer import draw_sequence
 from pulser.simulation.simresults import SimulationResults
+from pulser._seq_drawer import draw_sequence
 
 
 class Simulation:
@@ -48,11 +48,17 @@ class Simulation:
 
     def __init__(self, sequence, sampling_rate=1.0, evaluation_times='Full'):
         """Initialize the Simulation with a specific pulser.Sequence."""
+        supported_bases = {"ground-rydberg", "digital"}
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
+        not_supported = (set(ch.basis for ch in sequence._channels.values())
+                         - supported_bases)
+        if not_supported:
+            raise NotImplementedError("Sequence with unsupported bases: "
+                                      + "".join(not_supported))
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
             raise ValueError("No instructions given for the channels in the "
                              "sequence.")
