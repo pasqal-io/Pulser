@@ -250,9 +250,28 @@ def test_run():
     assert sim._seq._measurement == 'ground-rydberg'
 
 
+def test_config():
+    sim = Simulation(seq, sampling_rate=0.01)
+    sim.reset_config()
+    with pytest.raises(ValueError,
+                       match='Not a valid setting'):
+        sim.config('bad_setting', 3)
+    sim.config('samples_per_run', 10)
+    sim.show_config()
+
+
 def test_noise():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.add_noise('amplitude')
     sim.remove_all_noise()
     sim.set_noise('SPAM', 'doppler')
     assert sim._noise == ['SPAM', 'doppler']
+    sim.set_spam(eta=0.98)
+    with pytest.raises(ValueError,
+                       match='Not a valid noise type'):
+        sim.add_noise('bad_noise_type')
+    with pytest.raises(ValueError,
+                       match='Not a valid SPAM parameter'):
+        sim.set_spam(epsilon232=1.5)
+    sim.set_doppler_sigma(3)
+    sim.run()

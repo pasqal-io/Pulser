@@ -367,10 +367,10 @@ class CleanResults(SimulationResults):
         final_state = self._states[t]
         # Case of a density matrix
         # Don't take the modulus square in this case !
-        if final_state.type != "ket":
-            probs = np.abs(final_state.diag())
-        else:
-            probs = np.abs(final_state.full())**2
+        # if final_state.type != "ket":
+        #    probs = np.abs(final_state.diag())
+        # else:
+        probs = np.abs(final_state.full())**2
 
         if self._dim == 2:
             if meas_basis == self._basis_name:

@@ -45,7 +45,7 @@ sim = Simulation(seq)
 sim_noisy = Simulation(seq)
 sim_noisy.set_noise('SPAM', 'doppler', 'amplitude')
 results = sim.run()
-results_noisy = sim.run()
+results_noisy = sim_noisy.run()
 
 state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
 ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
@@ -107,9 +107,9 @@ def test_get_final_state_noisy():
     seq_.add(pi, 'ram')
     seq_.add(pi, 'ram')
     seq_.add(pi, 'ryd')
-
     sim_noisy_ = Simulation(seq_)
-    sim_noisy_.run()
+    sim_noisy_.set_noise('SPAM', 'doppler')
+    sim_noisy_.run().get_final_state()
 
 
 def test_expect():
@@ -168,12 +168,17 @@ def test_sample_final_state():
 
 
 def test_sample_final_state_noisy():
-    sampling = results_noisy.sample_final_state(N_samples=1234)
+    results_noisy.sample_final_state(N_samples=1234)
     assert results_noisy.N_samples == 1234
-    assert len(sampling) == 4  # Check that all states were observed.
     results_noisy.sample_final_state(N_samples=911)
     seq_no_meas_noisy.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas_noisy.add(pi, 'raman')
     res_3level = Simulation(seq_no_meas_noisy)
     res_3level.set_noise('SPAM', 'doppler')
-    print(res_3level.run().sample_final_state())
+    res_3lvl_noisy = res_3level.run()
+    assert len(res_3lvl_noisy.sample_final_state()) == len(
+        res_3lvl_noisy.states)
+
+
+def test_spam_independent():
+    results.detection_SPAM_independent()
