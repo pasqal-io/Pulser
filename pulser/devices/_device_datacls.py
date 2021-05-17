@@ -105,11 +105,11 @@ class Device:
         atoms = list(register.qubits.values())
         if len(atoms) > self.max_atom_num:
             raise ValueError("Too many atoms in the array, the device accepts "
-                             "at most {} atoms.".format(self.max_atom_num))
+                             f"at most {self.max_atom_num} atoms.")
 
         if register._dim != self.dimensions:
-            raise ValueError("All qubit positions must be {}D "
-                             "vectors.".format(self.dimensions))
+            raise ValueError(f"All qubit positions must be {self.dimensions}D "
+                             "vectors.")
 
         if len(atoms) > 1:
             distances = pdist(atoms)  # Pairwise distance between atoms
@@ -118,9 +118,8 @@ class Device:
                                  "distance between atoms for this device.")
 
         if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
-            raise ValueError("All qubits must be at most {} μm away from the "
-                             "center of the array.".format(
-                                                    self.max_radial_distance))
+            raise ValueError(f"All qubits must be at most {self.max_radial_distance} μm away from the "
+                             "center of the array.")
 
     def validate_pulse(self, pulse, channel_id):
         """Checks if a pulse can be executed on a specific device channel.

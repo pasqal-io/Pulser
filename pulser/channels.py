@@ -109,8 +109,11 @@ class Channel:
         return _duration
 
     def __repr__(self):
-        s = ".{}(Max Absolute Detuning: {} rad/µs, Max Amplitude: {} rad/µs"
-        config = s.format(self.addressing, self.max_abs_detuning, self.max_amp)
+        config = (
+            f".{self.addressing}(Max Absolute Detuning: "
+            f"{self.max_abs_detuning} rad/µs, Max Amplitude: "
+            f"{self.max_amp} rad/µs"
+        )
         if self.addressing == 'Local':
             config += f", Target time: {self.retarget_time} ns"
             if self.max_targets > 1:
