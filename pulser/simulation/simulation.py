@@ -71,6 +71,7 @@ class Simulation:
                         for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
         self._noise = []
+        self._collapse_ops = []
         self._build_hamiltonian()
         self._init_config()
 
@@ -322,7 +323,7 @@ class Simulation:
                         epsilon_prime: false negatives
         """
         # Check proper input:
-        noise_dict_set = {'doppler', 'amplitude', 'SPAM'}
+        noise_dict_set = {'doppler', 'amplitude', 'SPAM', 'dephasing'}
         if noise_type not in noise_dict_set:
             raise ValueError('Not a valid noise type')
 
@@ -333,6 +334,11 @@ class Simulation:
             self._prepare_spam_detune()
         if noise_type == 'doppler':
             self.init_doppler_sigma()
+        if noise_type == 'dephasing':
+            if self.basis_name == 'digital':
+                raise ValueError("Cannot include dephasing noise in digital "
+                                 "basis.")
+            self.init_dephasing()
         # Register added noise(s)
         self._noise.append(noise_type)
         # Reset any previous sequence:
@@ -365,6 +371,13 @@ class Simulation:
     def init_spam(self):
         self.spam_dict = {'eta': 0.005, 'epsilon': 0.01,
                           'epsilon_prime': 0.05}
+
+    def init_dephasing(self):
+        self.dephasing_prob = 0.05  # Probability of phase (Z) flip
+        self._collapse_ops += [
+            np.sqrt(1 - self.dephasing_prob) * self.op_matrix['I'],
+            np.sqrt(self.dephasing_prob) * (self.op_matrix['sigma_rr']
+                                            - self.op_matrix['sigma_gg'])]
 
     def set_noise(self, *noise_param):
         """Sets noise parameters as those in argument"""
@@ -453,7 +466,7 @@ class Simulation:
             result = qutip.mesolve(self._hamiltonian,
                                    self._config['initial_state'],
                                    time_list,
-                                   c_ops=[],
+                                   c_ops=self._collapse_ops,
                                    progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,
                                                          **options)
