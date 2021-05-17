@@ -106,7 +106,6 @@ def test_expect():
         results.expect([np.array(3)])
     op = [qutip.tensor(qutip.qeye(2),
                        qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
-    # only initial and final times are evaluated
     assert len(results.expect(op)[0]) == number_of_meas
 
 
