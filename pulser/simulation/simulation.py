@@ -13,13 +13,14 @@
 # limitations under the License.
 
 import itertools
-import qutip
-import numpy as np
+from collections import Counter, namedtuple
 from copy import deepcopy
 
+import qutip
+import numpy as np
 from pulser import Pulse, Sequence
 from pulser.simulation.simresults import CleanResults, NoisyResults
-from collections import Counter, namedtuple
+
 
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
 
@@ -89,22 +90,22 @@ class Simulation:
                 on the qubit's id qid"""
             noise_det = 0
             noise_amp = 1
-            # detuning offset related to bad preparation, value = ?
+            # detuning offset related to bad preparation
             # not too large, or else ODE integration errors
             det_spam = 150
             for noise in self._noise:
                 if noise == 'doppler':
                     # sigma = k_eff \Delta v
-                    # effective formula
                     noise_det += np.random.normal(0, self.doppler_sigma)
 
                 # qubit qid badly prepared
                 if noise == 'SPAM' and self.spam_detune[qid]:
                     noise_det += det_spam
 
+                # gaussian beam for global pulses
                 if noise == 'amplitude':
                     position = self._qdict[qid]
-                    # Gaussian beam for global pulses
+
                     r = np.linalg.norm(position)
                     w0 = 175.
                     noise_amp = np.random.normal(1, 1e-3) * np.exp(-(r/w0)**2)
@@ -298,7 +299,6 @@ class Simulation:
         """
         # Refresh the hamiltonian
         self._build_hamiltonian()
-
         if time > 1000 * self._times[-1]:
             raise ValueError("Provided time is larger than sequence duration.")
         if time < 0:
@@ -326,6 +326,9 @@ class Simulation:
         noise_dict_set = {'doppler', 'amplitude', 'SPAM', 'dephasing'}
         if noise_type not in noise_dict_set:
             raise ValueError('Not a valid noise type')
+        if noise_type in set(self._noise):
+            print("Noise type already in place. Skipping instruction.")
+            return
 
         # Add noise/error:
         if noise_type == 'SPAM':
@@ -336,8 +339,8 @@ class Simulation:
             self.init_doppler_sigma()
         if noise_type == 'dephasing':
             if self.basis_name == 'digital' or self.basis_name == 'all':
-                raise ValueError("Cannot include dephasing noise in digital "
-                                 "basis.")
+                raise ValueError("Cannot include dephasing noise in digital-"
+                                 "or all-basis.")
             self.init_dephasing()
         # Register added noise(s)
         self._noise.append(noise_type)

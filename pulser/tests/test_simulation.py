@@ -276,6 +276,21 @@ def test_noise():
     sim.set_doppler_sigma(3)
     sim.run()
     sim.set_noise('doppler')
+    sim.add_noise('doppler')
     sim.run()
-    sim.set_noise('dephasing')
+    with pytest.raises(ValueError,
+                       match='Cannot include'):
+        sim.set_noise('dephasing')
     sim.run().sample_final_state()
+
+
+def test_dephasing():
+    reg = Register.from_coordinates([(0, 0)], prefix='q')
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel('ch0', 'rydberg_global')
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0.*2*np.pi, 0)
+    seq.add(pulse, 'ch0')
+    sim = Simulation(seq, sampling_rate=0.01)
+    sim.add_noise('dephasing')
+    sim.run().sample_state()

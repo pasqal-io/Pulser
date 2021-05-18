@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-import pytest
-
-import qutip
 from copy import deepcopy
 
+import numpy as np
+import pytest
+import qutip
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform

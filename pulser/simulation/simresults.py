@@ -12,23 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import qutip
-import numpy as np
-
 from collections import Counter
 from abc import ABC, abstractmethod
 
+import qutip
+import numpy as np
+
 
 class SimulationResults(ABC):
-    """Results of a simulation run of a pulse sequence. Parent class for
-    NoisyResults and CleanResults.
+    """Results of a simulation run of a pulse sequence.
+
+    Parent class for NoisyResults and CleanResults.
 
     Contains methods for studying the states and extracting useful information
     from them.
     """
 
-    def __init__(self, run_output, dim, size, basis_name,
-                 meas_basis):
+    def __init__(self, run_output, dim, size, basis_name, meas_basis):
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -106,21 +106,21 @@ class SimulationResults(ABC):
 
 
 class NoisyResults(SimulationResults):
-    """
-    Results of a noisy simulation run of a pulse sequence. Contrary to a
-    CleanResults object, this object contains a unique Counter describing the
-    state distribution at the time it was created by using
-    sim.run(spam=True, t).
+    """Results of a noisy simulation run of a pulse sequence.
+
+    Contrary to a CleanResults object, this object contains a unique Counter
+    describing the state distribution at the time it was created by using
+    Simulation.run() with a noisy simulation.
 
     Contains methods for studying the populations and extracting useful
     information from them.
     """
 
     def __init__(self, run_output, size, basis_name, meas_basis, dim=2):
-        """
-        Initializes a new NoisyResults instance.
+        """Initializes a new NoisyResults instance.
 
-        Warning : Can't have single-atom Hilbert spaces with dimension bigger
+        Warning :
+            Can't have single-atom Hilbert spaces with dimension bigger
             than 2 for NoisyResults objects.
             This is not the case for a CleanResults object, containing states
             in Hilbert space, but NoisyResults contains a probability
@@ -138,8 +138,7 @@ class NoisyResults(SimulationResults):
             meas_basis (None or str): The basis in which a sampling measurement
                 is desired.
         """
-        super().__init__(run_output, dim, size, basis_name,
-                         meas_basis)
+        super().__init__(run_output, dim, size, basis_name, meas_basis)
 
     @property
     def states(self):
@@ -147,10 +146,12 @@ class NoisyResults(SimulationResults):
         return self._states
 
     def get_final_state(self):
-        """Get the final state (density matrix here !) of the simulation.
+        """Get the final state of the simulation as a diagonal density matrix.
+        This is not the density matrix of the system, but is a convenient way
+        of computing expectation values of observables.
 
         Returns:
-            qutip.Qobj: The resulting final state as a density matrix.
+            qutip.Qobj: States probability distribution as a density matrix.
         """
         def _proj_from_bitstring(bitstring):
             # In the digital case, |h> = |1> = qutip.basis()
@@ -208,8 +209,6 @@ class NoisyResults(SimulationResults):
         """
         N = self._size
         self.N_samples = N_samples
-        # need all bitstrings to accurately represent states : else some would
-        # be missing
         bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
         probs = [self._states[b] for b in bitstrings]
 
@@ -365,12 +364,12 @@ class CleanResults(SimulationResults):
         N = self._size
         self.N_samples = N_samples
         final_state = self._states[t]
+        final_state = self._states[t]
         # Case of a density matrix
-        # Don't take the modulus square in this case !
-        # if final_state.type != "ket":
-        #    probs = np.abs(final_state.diag())
-        # else:
-        probs = np.abs(final_state.full())**2
+        if final_state.type != "ket":
+            probs = np.abs(final_state.diag())
+        else:
+            probs = np.abs(final_state.full())**2
 
         if self._dim == 2:
             if meas_basis == self._basis_name:
@@ -437,8 +436,7 @@ class CleanResults(SimulationResults):
         results = self.sample_state(t, meas_basis)
 
         def _build_P_tilde(self):
-            """
-                Builds the ideal (SPAM-error-free) probability distribution
+            """Builds the ideal (SPAM-error-free) probability distribution
                 from the simulation results.
                 Returns P_tilde (np.array) : P_tilde[i, s] is the
                 ideal probability for atom i to be in state s
@@ -453,8 +451,7 @@ class CleanResults(SimulationResults):
             return P_tilde
 
         def _calculate_P(self, P_tilde):
-            """
-                Returns the measured probability P (np.array)
+            """Returns the measured probability P (np.array)
                 (taking into account SPAM errors) such that P[i, s]
                 is the measured probability for atom i to be in state s.
 
@@ -468,7 +465,6 @@ class CleanResults(SimulationResults):
             eps_p = spam["epsilon_prime"]
             P = np.zeros((N, 2))
             for i in range(N):
-                # see Sylvain's paper for the formula
                 P[i, 0] = eta*(1-eps) + (1-eta)*(1-eps) * \
                     (P_tilde[i, 0] + eps_p*P_tilde[i, 1])
                 P[i, 1] = eta*eps + (1-eta) * (eps * P_tilde[i, 0] +
@@ -477,8 +473,7 @@ class CleanResults(SimulationResults):
             return P
 
         def _build_joint_prob(self, P):
-            """
-                Rebuilds joint probability of finding a given bitstring when
+            """Rebuilds joint probability of finding a given bitstring when
                 taking into account SPAM errors, using per-atom probability
                 dictionnary P.
 
