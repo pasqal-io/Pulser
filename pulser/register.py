@@ -74,7 +74,7 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed on coordinates.
+            Register: A register with qubits placed on the given coordinates.
         """
         if center:
             coords = coords - np.mean(coords, axis=0)      # Centers the array
@@ -101,7 +101,7 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
         Returns:
-            Register: A register with qubits placed in a rectangular way.
+            Register: A register with qubits placed in a rectangular array.
         """
         # Check rows
         if rows < 1:
@@ -137,16 +137,12 @@ class Register:
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed in a square way.
+            Register: A register with qubits placed in a square array.
         """
         # Check side
         if side < 1:
             raise ValueError(
                 f"The number of atoms per side ({side}) must be 1 or above.")
-
-        # Check spacing
-        if spacing <= 0.0:
-            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
 
         return cls.rectangle(side, side, spacing=spacing, prefix=prefix)
 
@@ -263,7 +259,7 @@ class Register:
     @classmethod
     def hexagon(cls, layers: int, spacing: float = 4.0,
                 prefix: Optional[str] = None) -> Register:
-        """Initializes the register with the qubits in a hexagonal array.
+        """Initializes the register with the qubits in a hexagonal layout.
 
         Args:
             layers (int): Number of layers around a central atom.
@@ -289,7 +285,7 @@ class Register:
 
         return cls._hexagon_helper(layers, 0, spacing, prefix)
 
-    @ classmethod
+    @classmethod
     def max_connectivity(cls, n_qubits: int,
                          device: pulser.devices._device_datacls.Device,
                          spacing: float = None,
