@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import itertools
-from collections import Counter, namedtuple
+from collections import Counter
 from copy import deepcopy
 
 import qutip
@@ -48,7 +48,6 @@ class Simulation:
 
     def __init__(self, sequence, sampling_rate=1.0, evaluation_times='Full'):
         """Initialize the Simulation with a specific pulser.Sequence."""
-        supported_bases = {"ground-rydberg", "digital"}
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")

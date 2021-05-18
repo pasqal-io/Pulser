@@ -305,6 +305,7 @@ def test_run():
                                              sim._times[-3], sim._times[-1]])
                                    )
 
+
 def test_config():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.reset_config()
