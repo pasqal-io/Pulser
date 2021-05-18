@@ -20,9 +20,7 @@ import qutip
 import numpy as np
 from pulser import Pulse, Sequence
 from pulser.simulation.simresults import CleanResults, NoisyResults
-
-
-_TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
+from pulser._seq_drawer import draw_sequence
 
 
 class Simulation:
@@ -39,12 +37,18 @@ class Simulation:
     Keyword Args:
         sampling_rate (float): The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
-            value between 0.05 and 1.0.
+            value between 0.05 and 1.0
+        evaluation_times (str,list): The list of times at which the quantum
+            state should be evaluated, in μs. If 'Full' is provided, this list
+            is set to be the one used to define the Hamiltonian to the solver.
+            The initial and final times are always included, so that if
+            'Minimal' is provided, the list is set to only contain the initial
+            and the final times.
     """
 
-    def __init__(self, sequence, sampling_rate=1.0):
-        """Initialize the Simulation with a specific pulser.Sequence.
-        """
+    def __init__(self, sequence, sampling_rate=1.0, evaluation_times='Full'):
+        """Initialize the Simulation with a specific pulser.Sequence."""
+        supported_bases = {"ground-rydberg", "digital"}
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
@@ -75,6 +79,40 @@ class Simulation:
         self._collapse_ops = []
         self._build_hamiltonian()
         self._init_config()
+
+        if isinstance(evaluation_times, str):
+            if evaluation_times == 'Full':
+                self.eval_times = deepcopy(self._times)
+            elif evaluation_times == 'Minimal':
+                self.eval_times = np.array([self._times[0], self._times[-1]])
+            else:
+                raise ValueError("Wrong evaluation time label. It should "
+                                 "be `Full` or `Minimal`")
+        elif isinstance(evaluation_times, (list, tuple, np.ndarray)):
+            t_max = np.max(evaluation_times)
+            t_min = np.min(evaluation_times)
+            if t_max > self._times[-1]:
+                raise ValueError("Provided evaluation-time list extends "
+                                 "further than sequence duration.")
+            if t_min < 0:
+                raise ValueError("Provided evaluation-time list contains "
+                                 "negative values.")
+            # Ensure the list of times is sorted
+            eval_times = np.array(np.sort(evaluation_times))
+            if t_min > 0:
+                eval_times = np.insert(eval_times, 0, 0.)
+            if t_max < self._times[-1]:
+                eval_times = np.append(eval_times, self._times[-1])
+            self.eval_times = eval_times
+            # always include initial and final times
+        else:
+            raise ValueError("`evaluation_times` must be a list of times "
+                             "or `Full` or `Minimal`")
+
+    def draw(self):
+        """Draws the input sequence and the one used in QuTip."""
+
+        draw_sequence(self._seq, self.sampling_rate)
 
     def _extract_samples(self):
         """Populate samples dictionary with every pulse in the sequence."""
@@ -465,10 +503,9 @@ class Simulation:
                 self._build_hamiltonian()
                 measurement_basis = _assign_meas_basis()
 
-            time_list = t_list if t_list else self._times
             result = qutip.mesolve(self._hamiltonian,
                                    self._config['initial_state'],
-                                   time_list,
+                                   self.eval_times,
                                    c_ops=self._collapse_ops,
                                    progress_bar=progress_bar,
                                    options=qutip.Options(max_step=5,

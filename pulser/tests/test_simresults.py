@@ -29,6 +29,7 @@ q_dict = {"A": np.array([0., 0.]),
 reg = Register(q_dict)
 
 duration = 1000
+number_of_meas = duration
 pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., 0)
 
 seq = Sequence(reg, Chadoq2)
@@ -120,7 +121,7 @@ def test_expect():
         results.expect([np.array(3)])
     op = [qutip.tensor(qutip.qeye(2),
                        qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
-    assert len(results.expect(op)[0]) == duration
+    assert len(results.expect(op)[0]) == number_of_meas
 
 
 def test_expect_noisy():

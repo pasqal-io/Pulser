@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
@@ -60,6 +62,10 @@ seq.add(pi, 'ryd')
 seq.target('control1', 'ryd')
 seq.add(pi, 'ryd')
 d += 5
+
+# Add a ConstantWaveform part to testout the drawing procedure
+seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), 'ryd')
+d += 1
 
 
 def test_initialization_and_construction_of_hamiltonian():
@@ -219,13 +225,18 @@ def test_single_atom_simulation():
     one_seq = Sequence(one_reg, Chadoq2)
     one_seq.declare_channel('ch0', 'rydberg_global')
     one_seq.add(Pulse.ConstantDetuning(ConstantWaveform(16, 1.), 1., 0), 'ch0')
-    one_sim = Simulation(seq)
+    one_sim = Simulation(one_seq)
     one_res = one_sim.run()
     assert(one_res._size == one_sim._size)
+    one_sim = Simulation(one_seq, evaluation_times='Minimal')
+    one_resb = one_sim.run()
+    assert(one_resb._size == one_sim._size)
 
 
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
+    with patch('matplotlib.pyplot.show'):
+        sim.draw()
     bad_initial = np.array([1.])
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)
@@ -249,6 +260,50 @@ def test_run():
     sim.run()
     assert sim._seq._measurement == 'ground-rydberg'
 
+    with pytest.raises(ValueError,
+                       match="`evaluation_times` must be a list of times "
+                             "or `Full` or `Minimal`"):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times=-1)
+    with pytest.raises(ValueError,
+                       match="Wrong evaluation time label. It should "
+                             "be `Full` or `Minimal`"):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times='Best')
+
+    with pytest.raises(ValueError,
+                       match="Provided evaluation-time list contains "
+                             "negative values."):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times=[-1, 0, sim._times[-2]])
+
+    with pytest.raises(ValueError,
+                       match="Provided evaluation-time list extends "
+                             "further than sequence duration."):
+        sim = Simulation(seq, sampling_rate=1.,
+                         evaluation_times=[0, sim._times[-1]+10])
+
+    sim = Simulation(seq, sampling_rate=1., evaluation_times='Full')
+    np.testing.assert_almost_equal(sim.eval_times, sim._times)
+
+    sim = Simulation(seq, sampling_rate=1., evaluation_times='Minimal')
+    np.testing.assert_almost_equal(sim.eval_times,
+                                   np.array([sim._times[0], sim._times[-1]])
+                                   )
+
+    sim = Simulation(seq, sampling_rate=1.,
+                     evaluation_times=[0, sim._times[-3], sim._times[-1]])
+    np.testing.assert_almost_equal(sim.eval_times,
+                                   np.array([0, sim._times[-3],
+                                             sim._times[-1]])
+                                   )
+
+    sim = Simulation(seq, sampling_rate=1.,
+                     evaluation_times=[sim._times[-10], sim._times[-3]])
+    np.testing.assert_almost_equal(sim.eval_times,
+                                   np.array([0, sim._times[-10],
+                                             sim._times[-3], sim._times[-1]])
+                                   )
 
 def test_config():
     sim = Simulation(seq, sampling_rate=0.01)
