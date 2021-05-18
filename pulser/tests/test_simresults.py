@@ -178,10 +178,3 @@ def test_sample_final_state_noisy():
     res_3lvl_noisy = res_3level.run()
     assert len(res_3lvl_noisy.sample_final_state()) == len(
         res_3lvl_noisy.states)
-
-
-def test_spam_independent():
-    with pytest.raises(TypeError,
-                       match='`spam` must be a dictionary'):
-        results.detection_SPAM_independent(spam=123)
-    results.detection_SPAM_independent()
