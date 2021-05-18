@@ -141,8 +141,10 @@ class Pulse:
                            post_phase_shift=self.post_phase_shift)
 
     def __str__(self):
-        return "Pulse(Amp={!s}, Detuning={!s}, Phase={:.3g})".format(
-            self.amplitude, self.detuning, self.phase)
+        return (
+            f"Pulse(Amp={self.amplitude!s}, Detuning={self.detuning!s}, "
+            f"Phase={self.phase:.3g})"
+        )
 
     def __repr__(self):
         return (f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, " +

@@ -370,7 +370,7 @@ class Sequence:
 
         if not isinstance(pulse, Pulse):
             raise TypeError("pulse input must be of type Pulse, not of type "
-                            "{}.".format(type(pulse)))
+                            f"{type(pulse)}.")
 
         channel_obj = self._channels[channel]
         _duration = channel_obj.validate_duration(pulse.duration)
