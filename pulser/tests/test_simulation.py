@@ -277,3 +277,5 @@ def test_noise():
     sim.run()
     sim.set_noise('doppler')
     sim.run()
+    sim.set_noise('dephasing')
+    sim.run().sample_final_state()

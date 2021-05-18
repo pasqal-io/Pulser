@@ -335,7 +335,7 @@ class Simulation:
         if noise_type == 'doppler':
             self.init_doppler_sigma()
         if noise_type == 'dephasing':
-            if self.basis_name == 'digital':
+            if self.basis_name == 'digital' or self.basis_name == 'all':
                 raise ValueError("Cannot include dephasing noise in digital "
                                  "basis.")
             self.init_dephasing()
