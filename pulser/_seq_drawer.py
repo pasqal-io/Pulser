@@ -95,7 +95,7 @@ def draw_sequence(seq, sampling_rate=None):
         elif value == 0:
             return "0"      # pragma: no cover - just for safety
         else:
-            return r"{:.2g}$\pi$".format(value)
+            return fr"{value:.2g}$\pi$"
 
     n_channels = len(seq._channels)
     if not n_channels:
