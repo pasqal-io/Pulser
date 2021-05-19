@@ -86,7 +86,7 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area (bool): Whether phase and area values need to be shown
-            as text on the plot.
+            as text on the plot, defaults to False.
     """
 
     def phase_str(phi):
@@ -202,16 +202,23 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 
         if draw_phase_area:
-            a.set_title(fr"Phase: $\phi$, Area: A", fontsize=16)
+            a.set_title(r"Phase: $\phi$, Area: A", fontsize=16)
             for seq_ in seq._schedule[ch]:
-                if not isinstance(seq_.type, str):  # Select only `Pulse` objects
+                # Select only `Pulse` objects
+                if not isinstance(seq_.type, str):
                     phase_val = seq_.type.phase / np.pi
                     area_val = seq_.type.amplitude.integral / np.pi
                     # X and Y coordinates for placing text
                     x_plot = (seq_.ti + seq_.tf) / 2
                     y_plot = np.max(seq_.type.amplitude.samples)
-                    a.text(x_plot, y_plot+8, fr"$\phi$ = {phase_val:.3g}$\pi$", fontsize=14, ha="center", va="center")  # remove: replace redundant ha, va with a dict??
-                    a.text(x_plot, y_plot+2, fr"A = {area_val:3g}$\pi$", fontsize=14, ha="center", va="center")
+                    a.text(
+                        x_plot, y_plot+8, fr"$\phi$ = {phase_val:.3g}$\pi$",
+                        fontsize=14, ha="center", va="center",
+                    )
+                    a.text(
+                        x_plot, y_plot+2, fr"A = {area_val:3g}$\pi$",
+                        fontsize=14, ha="center", va="center",
+                    )
 
         target_regions = []     # [[start1, [targets1], end1],...]
         for coords in data[ch]['target']:

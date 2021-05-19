@@ -621,8 +621,8 @@ class Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
-            obj (str): The JSON formatted string to deserialize, coming from the
-                serialization of a ``Sequence`` through
+            obj (str): The JSON formatted string to deserialize, coming from
+                the serialization of a ``Sequence`` through
                 ``Sequence.serialize()``.
 
         Other Parameters:
@@ -645,7 +645,9 @@ class Sequence:
     @_screen
     def draw(self, sampling_rate=None, draw_phase_area=False):
         """Draws the sequence in its current state."""
-        draw_sequence(self, sampling_rate=sampling_rate, draw_phase_area=draw_phase_area)
+        draw_sequence(
+            self, sampling_rate=sampling_rate, draw_phase_area=draw_phase_area,
+        )
 
     def _target(self, qubits, channel):
         self._validate_channel(channel)
