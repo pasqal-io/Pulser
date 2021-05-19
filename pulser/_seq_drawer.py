@@ -75,16 +75,18 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq, sampling_rate=None):
+def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
     """Draw the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
 
     Keyword args:
-        sampling_rate(float): Sampling rate of the effective pulse used by
+        sampling_rate (float): Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
+        draw_phase_area (bool): Whether phase and area values need to be shown
+            as text on the plot.
     """
 
     def phase_str(phi):
@@ -108,7 +110,7 @@ def draw_sequence(seq, sampling_rate=None):
     ph_box = dict(boxstyle="round", facecolor='ghostwhite')
 
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
-    gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
+    gs = fig.add_gridspec(n_channels, 1, hspace=0.1)
 
     ch_axes = {}
     for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
@@ -158,7 +160,7 @@ def draw_sequence(seq, sampling_rate=None):
             ya2 = []
             yb2 = []
             for t_solv in solver_time:
-                # find the intervall [t[t2],t[t2+1]] containing t_solv
+                # Find the interval [t[t2],t[t2+1]] containing t_solv
                 while t_solv > t[t2]:
                     t2 += 1
                 ya2.append(ya[t2])
@@ -198,6 +200,18 @@ def draw_sequence(seq, sampling_rate=None):
             b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
         a.set_ylabel(r'$\Omega$ (rad/µs)', fontsize=14, labelpad=10)
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
+
+        if draw_phase_area:
+            a.set_title(fr"Phase: $\phi$, Area: A", fontsize=16)
+            for seq_ in seq._schedule[ch]:
+                if not isinstance(seq_.type, str):  # Select only `Pulse` objects
+                    phase_val = seq_.type.phase / np.pi
+                    area_val = seq_.type.amplitude.integral / np.pi
+                    # X and Y coordinates for placing text
+                    x_plot = (seq_.ti + seq_.tf) / 2
+                    y_plot = np.max(seq_.type.amplitude.samples)
+                    a.text(x_plot, y_plot+8, fr"$\phi$ = {phase_val:.3g}$\pi$", fontsize=14, ha="center", va="center")  # remove: replace redundant ha, va with a dict??
+                    a.text(x_plot, y_plot+2, fr"A = {area_val:3g}$\pi$", fontsize=14, ha="center", va="center")
 
         target_regions = []     # [[start1, [targets1], end1],...]
         for coords in data[ch]['target']:
