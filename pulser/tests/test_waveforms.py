@@ -26,7 +26,7 @@ from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
 np.random.seed(20201105)
 
 constant = ConstantWaveform(100, -3)
-ramp = RampWaveform(2e3, 5, 19)
+ramp = RampWaveform(2000, 5, 19)
 arb_samples = np.random.random(52)
 custom = CustomWaveform(arb_samples)
 blackman = BlackmanWaveform(40, np.pi)
