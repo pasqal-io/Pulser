@@ -167,6 +167,19 @@ def test_max_connectivity():
     atoms = list(reg.qubits.values())
     assert(np.all(np.isclose(atoms[0], [0.0, 0.0])))
 
+    # Check for less than 7 atoms:
+    for i in range(1, 6):
+        hex_coords = np.array([(0.0, 0.0), (1.0, 0.0), (0.5, np.sqrt(3/4)),
+                               (1.5, np.sqrt(3/4)), (2.0, 0.0),
+                               (0.5, -np.sqrt(3/4))])
+        reg = Register.max_connectivity(i, device)
+        reg2 = Register.from_coordinates(4 * hex_coords[:i])  # Use min spacing
+        assert (len(reg.qubits) == i)
+        atoms = list(reg.qubits.values())
+        atoms2 = list(reg2.qubits.values())
+        for k in range(i):
+            assert(np.all(np.isclose(atoms[k], atoms2[k])))
+
     # Check full layers on a small hexagon (1 layer)
     reg = Register.max_connectivity(7, device)
     assert (len(reg.qubits) == 7)

@@ -336,9 +336,12 @@ class Register:
             raise ValueError(f"Spacing ({spacing}) for this device must be"
                              f" {device.min_atom_distance} or above.")
 
-        if n_qubits == 1:
-            return cls.from_coordinates(np.array([(0.0, 0.0)], dtype=float),
-                                        center=False, prefix=prefix)
+        if n_qubits < 7:
+            hex_coords = np.array([(0.0, 0.0), (1.0, 0.0), (0.5, np.sqrt(3/4)),
+                                   (1.5, np.sqrt(3/4)), (2.0, 0.0),
+                                   (0.5, -np.sqrt(3/4))])
+            return cls.from_coordinates(spacing * hex_coords[:n_qubits],
+                                        prefix=prefix)
 
         full_layers = int((-3.0 + np.sqrt(9 + 12 * (n_qubits - 1))) / 6.0)
         atoms_left = n_qubits - 1 - (full_layers**2 + full_layers) * 3
