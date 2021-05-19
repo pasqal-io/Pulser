@@ -207,7 +207,7 @@ class CompositeWaveform(Waveform):
         return self._waveforms[-1].last_value
 
     @property
-    def waveforms(self) -> list:
+    def waveforms(self) -> list[Waveform]:
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
 
