@@ -78,7 +78,9 @@ class Simulation:
         self._collapse_ops = []
         self._build_hamiltonian()
         self._init_config()
+        self.config('eval_t', evaluation_times)
 
+    def _set_eval_times(self, evaluation_times):
         if isinstance(evaluation_times, str):
             if evaluation_times == 'Full':
                 self.eval_times = deepcopy(self._times)
@@ -319,7 +321,8 @@ class Simulation:
     def _init_config(self):
         """Sets default configuration for the Simulation."""
         all_ground = qutip.tensor([self.basis['g'] for _ in range(self._size)])
-        self._config = {'eval_t': -1, 'runs': 1, 'samples_per_run': 10,
+        self._set_eval_times('Full')
+        self._config = {'eval_t': 'Full', 'runs': 1, 'samples_per_run': 10,
                         'initial_state': all_ground}
 
     def get_hamiltonian(self, time):
@@ -433,7 +436,9 @@ class Simulation:
             'initial_state (array)': The initial quantum state of the
                 evolution. Will be transformed into a
                 qutip.Qobj instance.
-            'eval_t' (int): Time at which the results are to be returned.
+            'eval_t' (str / array): Time at which the results are to be
+                returned. Allowed values : 'Full', 'Minimal', or an array of
+                times.
             'samples_per_run' (int): number of samples per noisy run. Useful
                 for cutting down on computing time, but unrealistic.
             'runs' (int): number of runs needed : each run
@@ -455,6 +460,8 @@ class Simulation:
                     self._config[parameter] = qutip.Qobj(value)
             else:
                 self._config[parameter] = value
+                if parameter == 'eval_t':
+                    self._set_eval_times(value)
 
     def show_config(self):
         print(self._config)
@@ -471,19 +478,13 @@ class Simulation:
         self._construct_hamiltonian()
 
     # Run Simulation Evolution using Qutip
-    def run(self, t_list=None, progress_bar=None, **options):
+    def run(self, progress_bar=None, **options):
         """Simulate the sequence using QuTiP's solvers. Only clean results
             are returned.
 
         Keyword Args:
             progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
                 will be shown.
-            t_list (list): Times at which results are returned. Only used in
-                noiseless runs.
-
-        Returns:
-            CleanResults: Object containing the time evolution results. Its
-            _states attribute contains QuTiP quantum states, not a Counter.
         """
         def _assign_meas_basis():
             if hasattr(self._seq, '_measurement'):
@@ -494,8 +495,12 @@ class Simulation:
                 else:
                     return 'ground-rydberg'
 
-        def _run_solver(t_list=None, as_subroutine=False,
+        def _run_solver(as_subroutine=False,
                         measurement_basis=None):
+            """Returns:
+                CleanResults: Object containing the time evolution results. Its
+                _states attribute contains QuTiP quantum states, not Counters.
+            """
             if not as_subroutine:
                 # CLEAN SIMULATION:
                 # Build (clean) hamiltonian
@@ -516,7 +521,8 @@ class Simulation:
         if self._noise:
             # NOISY SIMULATION:
             # We run the system multiple times
-            total_count = Counter()
+            time_indices = range(len(self.eval_times))
+            total_count = np.array([Counter() for _ in time_indices])
             for _ in range(self._config['runs']):
                 # At each run, new random noise
                 if 'SPAM' in self._noise:
@@ -529,20 +535,24 @@ class Simulation:
                 # Extract statistics at eval time (final time by default):
                 if 'SPAM' in self._noise:
                     total_count += \
-                        res_with_noise.sampling_with_detection_errors(
-                                self.spam_dict,
-                                t=self._config['eval_t'],
-                                meas_basis=meas_basis,
-                                N_samples=self._config['samples_per_run'])
+                        [res_with_noise.sampling_with_detection_errors(
+                            self.spam_dict,
+                            t=t,
+                            meas_basis=meas_basis,
+                            N_samples=self._config['samples_per_run'])
+                         for t in time_indices]
                 else:
-                    total_count += res_with_noise.sample_state(
-                                t=self._config['eval_t'],
-                                meas_basis=meas_basis,
-                                N_samples=self._config['samples_per_run'])
-            prob = Counter({k: v / (self._config['runs']
-                                    * self._config['samples_per_run'])
-                            for k, v in total_count.items()})
+                    total_count += \
+                        [res_with_noise.sample_state(
+                            t=t,
+                            meas_basis=meas_basis,
+                            N_samples=self._config['samples_per_run'])
+                         for t in time_indices]
+            prob = [Counter({k: v / (self._config['runs']
+                            * self._config['samples_per_run'])
+                            for k, v in total_count[t].items()})
+                    for t in time_indices]
             return NoisyResults(prob, self._size, self.basis_name,
                                 meas_basis=meas_basis)
         else:
-            return _run_solver(t_list)
+            return _run_solver()

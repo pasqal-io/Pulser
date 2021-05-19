@@ -260,46 +260,50 @@ def test_run():
     sim.run()
     assert sim._seq._measurement == 'ground-rydberg'
 
+
+def test_eval_times():
     with pytest.raises(ValueError,
                        match="`evaluation_times` must be a list of times "
                              "or `Full` or `Minimal`"):
-        sim = Simulation(seq, sampling_rate=1.,
-                         evaluation_times=-1)
+        sim = Simulation(seq, sampling_rate=1.)
+        sim.config('eval_t', -1)
     with pytest.raises(ValueError,
                        match="Wrong evaluation time label. It should "
                              "be `Full` or `Minimal`"):
-        sim = Simulation(seq, sampling_rate=1.,
-                         evaluation_times='Best')
+        sim = Simulation(seq, sampling_rate=1.)
+        sim.config('eval_t', 'Best')
 
     with pytest.raises(ValueError,
                        match="Provided evaluation-time list contains "
                              "negative values."):
-        sim = Simulation(seq, sampling_rate=1.,
-                         evaluation_times=[-1, 0, sim._times[-2]])
+        sim = Simulation(seq, sampling_rate=1.)
+        sim.config('eval_t', [-1, 0, sim._times[-2]])
 
     with pytest.raises(ValueError,
                        match="Provided evaluation-time list extends "
                              "further than sequence duration."):
-        sim = Simulation(seq, sampling_rate=1.,
-                         evaluation_times=[0, sim._times[-1]+10])
+        sim = Simulation(seq, sampling_rate=1.)
+        sim.config('eval_t', [0, sim._times[-1]+10])
 
-    sim = Simulation(seq, sampling_rate=1., evaluation_times='Full')
+    sim = Simulation(seq, sampling_rate=1.)
+    sim.config('eval_t', 'Full')
     np.testing.assert_almost_equal(sim.eval_times, sim._times)
 
-    sim = Simulation(seq, sampling_rate=1., evaluation_times='Minimal')
+    sim = Simulation(seq, sampling_rate=1.)
+    sim.config('eval_t', 'Minimal')
     np.testing.assert_almost_equal(sim.eval_times,
                                    np.array([sim._times[0], sim._times[-1]])
                                    )
 
-    sim = Simulation(seq, sampling_rate=1.,
-                     evaluation_times=[0, sim._times[-3], sim._times[-1]])
+    sim = Simulation(seq, sampling_rate=1.)
+    sim.config('eval_t', [0, sim._times[-3], sim._times[-1]])
     np.testing.assert_almost_equal(sim.eval_times,
                                    np.array([0, sim._times[-3],
                                              sim._times[-1]])
                                    )
 
-    sim = Simulation(seq, sampling_rate=1.,
-                     evaluation_times=[sim._times[-10], sim._times[-3]])
+    sim = Simulation(seq, sampling_rate=1.)
+    sim.config('eval_t', [sim._times[-10], sim._times[-3]])
     np.testing.assert_almost_equal(sim.eval_times,
                                    np.array([0, sim._times[-10],
                                              sim._times[-3], sim._times[-1]])
@@ -322,7 +326,7 @@ def test_noise():
     sim.remove_all_noise()
     sim.set_noise('SPAM', 'doppler')
     assert sim._noise == ['SPAM', 'doppler']
-    sim.set_spam(eta=0.98)
+    sim.set_spam(eta=0.9)
     with pytest.raises(ValueError,
                        match='Not a valid noise type'):
         sim.add_noise('bad_noise_type')

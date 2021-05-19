@@ -127,8 +127,10 @@ class NoisyResults(SimulationResults):
             distribution of bitstrings, not atomic states
 
         Args:
-            run_output (Counter) : Counter returning the probability of each
-                multi-qubits state, represented as a bitstring.
+            run_output (Counter List): Each Counter contains the
+                probability distribution of a multi-qubits state,
+                represented as a bitstring. There is one Counter for each time
+                the simulation was asked to return a result.
             dim (int): The dimension of the local space of each atom (2 or 3).
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
@@ -145,10 +147,14 @@ class NoisyResults(SimulationResults):
         """Probability distribution of the bitstrings"""
         return self._states
 
-    def get_final_state(self):
-        """Get the final state of the simulation as a diagonal density matrix.
+    def get_state(self, t):
+        """Get the state at time t of the simulation as a diagonal density
+        matrix.
         This is not the density matrix of the system, but is a convenient way
         of computing expectation values of observables.
+
+        Args:
+            t (int): index of the state to be returned.
 
         Returns:
             qutip.Qobj: States probability distribution as a density matrix.
@@ -166,7 +172,17 @@ class NoisyResults(SimulationResults):
             return proj
 
         return sum(v * _proj_from_bitstring(b) for
-                   b, v in self._states.items())
+                   b, v in self._states[t].items())
+
+    def get_final_state(self):
+        """Get the final state of the simulation as a diagonal density matrix.
+        This is not the density matrix of the system, but is a convenient way
+        of computing expectation values of observables.
+
+        Returns:
+            qutip.Qobj: States probability distribution as a density matrix.
+        """
+        return self.get_state(-1)
 
     def expect(self, obs_list):
         """Calculates the expectation value of a list of observables.
@@ -179,8 +195,8 @@ class NoisyResults(SimulationResults):
         Returns:
             list: the list of expectation values of each operator.
         """
-
-        density_matrix = self.get_final_state()
+        density_matrices = [self.get_state(t) for
+                            t in range(len(self._states))]
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators")
 
@@ -193,9 +209,9 @@ class NoisyResults(SimulationResults):
                 raise ValueError("Incompatible shape of observable.")
             qobj_list.append(qutip.Qobj(obs))
 
-        return [qutip.expect(qobj, density_matrix) for qobj in qobj_list]
+        return qutip.expect(qobj_list, density_matrices)
 
-    def sample_state(self, N_samples=1000):
+    def sample_state(self, t=-1, N_samples=1000):
         r"""Returns the result of multiple measurements. No notion of
             measurement basis here, since states have already been projected
             onto bitstrings.
@@ -210,14 +226,14 @@ class NoisyResults(SimulationResults):
         N = self._size
         self.N_samples = N_samples
         bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
-        probs = [self._states[b] for b in bitstrings]
+        probs = [self._states[t][b] for b in bitstrings]
 
         dist = np.random.multinomial(N_samples, probs)
         return Counter(
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
 
     def sample_final_state(self, N_samples=1000):
-        return self.sample_state(N_samples)
+        return self.sample_state(N_samples=N_samples)
 
 
 class CleanResults(SimulationResults):
@@ -363,13 +379,12 @@ class CleanResults(SimulationResults):
 
         N = self._size
         self.N_samples = N_samples
-        final_state = self._states[t]
-        final_state = self._states[t]
+        final_state = self._states[t].unit()
         # Case of a density matrix
         if final_state.type != "ket":
             probs = np.abs(final_state.diag())
         else:
-            probs = np.abs(final_state.full())**2
+            probs = (np.abs(final_state.full())**2).flatten()
 
         if self._dim == 2:
             if meas_basis == self._basis_name:
@@ -379,7 +394,6 @@ class CleanResults(SimulationResults):
                 weights = probs if meas_basis == 'digital' else probs[::-1]
             else:
                 return {'0' * N: int(N_samples)}
-            weights = weights.flatten()
 
         elif self._dim == 3:
             if meas_basis == 'ground-rydberg':
@@ -389,7 +403,7 @@ class CleanResults(SimulationResults):
                 one_state = 2       # 1 = |h>
                 ex_one = slice(0, 2)
             probs = probs.reshape([3]*N)
-            weights = []
+            weights = np.zeros(2**N)
             for dec_val in range(2**N):
                 ind = []
                 for v in np.binary_repr(dec_val, width=N):
@@ -401,12 +415,14 @@ class CleanResults(SimulationResults):
                 # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
                 # We sum all probabilites that correspond to measuring 11010,
                 # namely hhghg, hhrhg, hhghr, hhrhr
-                weights.append(np.sum(probs[tuple(ind)]))
+                weights[dec_val] = np.sum(probs[tuple(ind)])
         else:
             raise NotImplementedError(
                 "Cannot sample system with single-atom state vectors of "
                 "dimension > 3."
                 )
+        # Takes care of potential numerical artefacts in case sum(weights) != 1
+        weights /= sum(weights)
         dist = np.random.multinomial(N_samples, weights)
         return Counter(
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
@@ -445,7 +461,7 @@ class CleanResults(SimulationResults):
         return Counter(detected_dict)
 
     def sampling_with_detection_errors(self, spam, t=-1,
-                                       meas_basis='ground-rydberg',
+                                       meas_basis=None,
                                        N_samples=1000):
         """Returns the distribution of states really detected instead of
         sampled_state. Doesn't take state preparation errors into account.
