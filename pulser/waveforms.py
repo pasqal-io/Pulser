@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from abc import ABC, abstractmethod
 import functools
@@ -129,7 +129,7 @@ class Waveform(ABC):
         pass
 
     def __neg__(self) -> Waveform:
-        return self.__mul__(-1)
+        return self.__mul__(-1.)
 
     def __truediv__(self, other: float) -> Waveform:
         if other == 0:
@@ -143,7 +143,7 @@ class Waveform(ABC):
         elif self.duration != other.duration:
             return False
         else:
-            return np.all(np.isclose(self.samples, other.samples)) == np.True_
+            return bool(np.all(np.isclose(self.samples, other.samples)))
 
     def __hash__(self) -> int:
         return hash(tuple(self.samples))
@@ -170,7 +170,7 @@ class CompositeWaveform(Waveform):
         waveforms(Waveform): Two or more waveforms to combine.
     """
 
-    def __init__(self, *waveforms):
+    def __init__(self, *waveforms: Waveform):
         """Initializes a waveform from multiple waveforms."""
         if len(waveforms) < 2:
             raise ValueError("Needs at least two waveforms to form a "
@@ -416,7 +416,7 @@ class BlackmanWaveform(Waveform):
             values.
     """
 
-    def __init__(self, duration, area):
+    def __init__(self, duration: int, area: float):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
         self._area = float(area)
