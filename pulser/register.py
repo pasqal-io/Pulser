@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Iterable, Optional, cast
 
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
@@ -82,7 +82,7 @@ class Register:
             pre = str(prefix)
             qubits = {pre+str(i): pos for i, pos in enumerate(coords)}
         else:
-            qubits = dict(enumerate(coords))
+            qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
     @classmethod
