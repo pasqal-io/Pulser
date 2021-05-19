@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from collections import namedtuple
 from collections.abc import Iterable
 import copy
 from functools import wraps
 from itertools import chain
 import json
+from pulser.channels import Channel
+from pulser.register import Register
+from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 import warnings
 
 import numpy as np
@@ -37,7 +42,7 @@ _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
 _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
 
-def _screen(func):
+def _screen(func: Callable) -> Callable:
     """Blocks the call to a function if the Sequence is parametrized."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -48,7 +53,7 @@ def _screen(func):
     return wrapper
 
 
-def _store(func):
+def _store(func: Callable) -> Callable:
     """Stores any Sequence building call for deferred execution."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -65,7 +70,7 @@ def _store(func):
                             "Sequence. Use only what's returned by this"
                             "Sequence's 'declare_variable' method as your"
                             "variables."
-                            )
+                        )
             elif isinstance(x, Iterable) and not isinstance(x, str):
                 # Recursively look for parametrized objs inside the arguments
                 for y in x:
@@ -115,7 +120,8 @@ class Sequence:
         The register and device do not support variable parameters. As such,
         they are the same for all Sequences built from a parametrized Sequence.
     """
-    def __init__(self, register, device):
+
+    def __init__(self, register: Register, device: Device):
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
             raise TypeError("'device' must be of type 'Device'. Import a valid"
@@ -133,39 +139,46 @@ class Sequence:
         # Checks if register is compatible with the device
         device.validate_register(register)
 
-        self._register = register
-        self._device = device
-        self._in_xy = False
+        self._register: Register = register
+        self._device: Device = device
+        self._in_xy: bool = False
         self._calls = [_Call("__init__", (register, device), {})]
-        self._channels = {}
-        self._schedule = {}
-        self._phase_ref = {}  # The phase reference of each channel
+        self._channels: Dict[str, Channel] = {}
+        self._schedule: Dict[str, List[_TimeSlot]] = {}
+        # The phase reference of each channel
+        self._phase_ref: Dict[str, Dict[str, _PhaseTracker]] = {}
         # Stores the names and corresponding ids of declared channels
-        self._taken_channels = {}
-        self._qids = set(self.qubit_info.keys())  # IDs of all qubits in device
-        self._last_used = {}    # Last time each qubit was used, by basis
-        self._last_target = {}  # Last time a target happened, by channel
+        self._taken_channels: Dict[str, str] = {}
+        # IDs of all qubits in device
+        self._qids = set(self.qubit_info.keys())
+        # Last time each qubit was used, by basis
+        self._last_used: Dict[str, Dict[str, int]] = {}
+        # Last time a target happened, by channel
+        self._last_target: Dict[str, int] = {}
+        self._variables: Dict[str, Variable] = {}
+        self._to_build_calls: List[Any] = []
+        self._building: bool = True
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
 
     @property
-    def qubit_info(self):
+    def qubit_info(self) -> dict[str, Tuple[float, float]]:
         """Dictionary with the qubit's IDs and positions."""
         return self._register.qubits
 
     @property
-    def declared_channels(self):
+    def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
         return dict(self._channels)
 
     @property
-    def declared_variables(self):
+    def declared_variables(self) -> dict[str, Variable]:
         """Variables declared in this Sequence."""
         return dict(self._variables)
 
     @property
-    def available_channels(self):
+    def available_channels(self) -> dict[str, Channel]:
         """Channels still available for declaration."""
         # Show all channels if none are declared, otherwise filter depending
         # on whether the sequence is working on XY mode
@@ -179,7 +192,7 @@ class Sequence:
                     and (ch.basis == 'XY' if self._in_xy else ch.basis != 'XY')
                     }
 
-    def is_parametrized(self):
+    def is_parametrized(self) -> bool:
         """States whether the sequence is parametrized.
 
         A parametrized sequence is one that depends on the values assigned to
@@ -193,7 +206,8 @@ class Sequence:
         return not self._building
 
     @_screen
-    def current_phase_ref(self, qubit, basis='digital'):
+    def current_phase_ref(self, qubit: str,
+                          basis: str = 'digital') -> float:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
@@ -217,7 +231,8 @@ class Sequence:
 
         return self._phase_ref[basis][qubit].last_phase
 
-    def declare_channel(self, name, channel_id, initial_target=None):
+    def declare_channel(self, name: str, channel_id: str,
+                        initial_target: Optional[set] = None) -> None:
         """Declares a new channel to the Sequence.
 
         The first declared channel implicitly defines the sequence's mode of
@@ -296,11 +311,12 @@ class Sequence:
 
         # Manually store the channel declaration as a regular call
         self._calls.append(_Call(
-                            "declare_channel",
-                            (name, channel_id),
-                            {"initial_target": initial_target}))
+            "declare_channel",
+            (name, channel_id),
+            {"initial_target": initial_target}))
 
-    def declare_variable(self, name, size=1, dtype=float):
+    def declare_variable(self, name: str, size: int = 1,
+                         dtype: type = float) -> Variable:
         """Declare a new variable within this Sequence.
 
         The declared variables can be used to create parametrized versions of
@@ -332,7 +348,8 @@ class Sequence:
         return var
 
     @_store
-    def add(self, pulse, channel, protocol='min-delay'):
+    def add(self, pulse: Pulse, channel: str,
+            protocol: str = 'min-delay') -> None:
         """Adds a pulse to a channel.
 
         Args:
@@ -434,7 +451,7 @@ class Sequence:
                               basis=basis)
 
     @_store
-    def target(self, qubits, channel):
+    def target(self, qubits: Union[Iterable, str], channel: str) -> None:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
@@ -447,7 +464,7 @@ class Sequence:
         self._target(qubits, channel)
 
     @_store
-    def delay(self, duration, channel):
+    def delay(self, duration: int, channel: str) -> None:
         """Idles a given channel for a specific duration.
 
         Args:
@@ -457,7 +474,7 @@ class Sequence:
         self._delay(duration, channel)
 
     @_store
-    def measure(self, basis='ground-rydberg'):
+    def measure(self, basis: str = 'ground-rydberg') -> None:
         """Measures in a valid basis.
 
         Note:
@@ -489,7 +506,8 @@ class Sequence:
             self._measurement = basis
 
     @_store
-    def phase_shift(self, phi, *targets, basis='digital'):
+    def phase_shift(self, phi: float, *targets: str,
+                    basis: str = 'digital') -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
         This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
@@ -509,7 +527,7 @@ class Sequence:
         self._phase_shift(phi, *targets, basis=basis)
 
     @_store
-    def align(self, *channels):
+    def align(self, *channels: str) -> None:
         """Aligns multiple channels in time.
 
         Introduces delays that align the provided channels with the one that
@@ -543,7 +561,7 @@ class Sequence:
             if delta > 0:
                 self._delay(delta, id)
 
-    def build(self, **vars):
+    def build(self, **vars: Any) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
         Keyword Args:
@@ -600,7 +618,7 @@ class Sequence:
 
         return seq
 
-    def serialize(self, **kwargs):
+    def serialize(self, **kwargs) -> str:
         """Serializes the Sequence into a JSON formatted string.
 
         Other Parameters:
@@ -617,7 +635,7 @@ class Sequence:
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
     @staticmethod
-    def deserialize(obj, **kwargs):
+    def deserialize(obj: str, **kwargs) -> Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
@@ -647,7 +665,7 @@ class Sequence:
         """Draws the sequence in its current state."""
         draw_sequence(self)
 
-    def _target(self, qubits, channel):
+    def _target(self, qubits: Union[Iterable, str], channel: str) -> None:
         self._validate_channel(channel)
 
         try:
@@ -694,7 +712,7 @@ class Sequence:
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
                         np.clip(delta, 16, np.inf)
-                        )
+                    )
             tf = ti + delta
 
         except ValueError:
@@ -704,7 +722,7 @@ class Sequence:
         self._last_target[channel] = tf
         self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qs))
 
-    def _delay(self, duration, channel):
+    def _delay(self, duration: int, channel: str) -> None:
         self._validate_channel(channel)
         if self.is_parametrized():
             return
@@ -715,7 +733,8 @@ class Sequence:
         self._add_to_schedule(channel,
                               _TimeSlot('delay', ti, tf, last.targets))
 
-    def _phase_shift(self, phi, *targets, basis='digital'):
+    def _phase_shift(self, phi: float, *targets: str,
+                     basis: str = 'digital') -> None:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
         if self.is_parametrized():
@@ -734,12 +753,12 @@ class Sequence:
                           "it will be ommited.")
             return
 
-        for q in targets:
-            t = self._last_used[basis][q]
-            new_phase = self._phase_ref[basis][q].last_phase + phi
-            self._phase_ref[basis][q][t] = new_phase
+        for qubit in targets:
+            last_used = self._last_used[basis][qubit]
+            new_phase = self._phase_ref[basis][qubit].last_phase + phi
+            self._phase_ref[basis][qubit][last_used] = new_phase
 
-    def _to_dict(self):
+    def _to_dict(self) -> dict:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
         d["__version__"] = pulser.__version__
         d["calls"] = self._calls[1:]
@@ -747,7 +766,7 @@ class Sequence:
         d["to_build_calls"] = self._to_build_calls
         return d
 
-    def __str__(self):
+    def __str__(self) -> str:
         full = ""
         pulse_line = "t: {}->{} | {} | Targets: {}\n"
         target_line = "t: {}->{} | Target: {} | Phase Reference: {}\n"
@@ -792,27 +811,27 @@ class Sequence:
 
         return full
 
-    def _add_to_schedule(self, channel, timeslot):
+    def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
         if hasattr(self, "_measurement"):
             raise SystemError("The sequence has already been measured. "
                               "Nothing more can be added.")
         self._schedule[channel].append(timeslot)
 
-    def _last(self, channel):
+    def _last(self, channel: str) -> _TimeSlot:
         """Shortcut to last element in the channel's schedule."""
         try:
             return self._schedule[channel][-1]
         except IndexError:
             raise ValueError("The chosen channel has no target.")
 
-    def _validate_channel(self, channel):
+    def _validate_channel(self, channel: str) -> None:
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
 
-    def _validate_pulse(self, pulse, channel):
+    def _validate_pulse(self, pulse: Pulse, channel: str) -> None:
         self._device.validate_pulse(pulse, self._taken_channels[channel])
 
-    def _reset_parametrized(self):
+    def _reset_parametrized(self) -> None:
         """Resets all attributes related to parametrization."""
         # Signals the sequence as actively "building" ie not parametrized
         self._building = True
@@ -824,39 +843,39 @@ class Sequence:
 class _PhaseTracker:
     """Tracks a phase reference over time."""
 
-    def __init__(self, initial_phase):
-        self._times = [0]
-        self._phases = [self._format(initial_phase)]
+    def __init__(self, initial_phase: float):
+        self._times: List[int] = [0]
+        self._phases: List[float] = [self._format(initial_phase)]
 
     @property
-    def last_time(self):
+    def last_time(self) -> int:
         return self._times[-1]
 
     @property
-    def last_phase(self):
+    def last_phase(self) -> float:
         return self._phases[-1]
 
-    def changes(self, ti, tf, time_scale=1):
+    def changes(self, ti: float, tf: float, time_scale: float = 1.):
         """Changes in phases within ]ti, tf]."""
         start, end = np.searchsorted(
-                self._times, (ti * time_scale, tf * time_scale), side='right')
+            self._times, (ti * time_scale, tf * time_scale), side='right')
         for i in range(start, end):
             change = self._phases[i] - self._phases[i-1]
             yield (self._times[i] / time_scale, change)
 
-    def _format(self, phi):
+    def _format(self, phi: float) -> float:
         return phi % (2 * np.pi)
 
-    def __setitem__(self, t, phi):
+    def __setitem__(self, t: int, phi: float) -> None:
         phase = self._format(phi)
         if t in self._times:
             ind = self._times.index(t)
             self._phases[ind] = phase
         else:
-            ind = np.searchsorted(self._times, t, side='right')
+            ind = int(np.searchsorted(self._times, t, side='right'))
             self._times.insert(ind, t)
             self._phases.insert(ind, phase)
 
-    def __getitem__(self, t):
-        ind = np.searchsorted(self._times, t, side='right') - 1
+    def __getitem__(self, t: int) -> float:
+        ind = int(np.searchsorted(self._times, t, side='right')) - 1
         return self._phases[ind]
