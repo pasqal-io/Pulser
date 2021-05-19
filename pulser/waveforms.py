@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional
-
 from abc import ABC, abstractmethod
 import functools
 import inspect
 import itertools
 import sys
-import types
+from types import FunctionType
+from typing import Optional
 import warnings
 
 from matplotlib.axes import Axes
@@ -501,9 +500,9 @@ class BlackmanWaveform(Waveform):
 
 
 # To replicate __init__'s signature in __new__ for every Waveform subclass
-def _copy_func(f) -> Callable:
-    return types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
-                              argdefs=f.__defaults__, closure=f.__closure__)
+def _copy_func(f: FunctionType) -> FunctionType:
+    return FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                        argdefs=f.__defaults__, closure=f.__closure__)
 
 
 for m in inspect.getmembers(sys.modules[__name__], inspect.isclass):
