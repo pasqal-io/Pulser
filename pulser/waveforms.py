@@ -20,7 +20,7 @@ import inspect
 import itertools
 import sys
 from types import FunctionType
-from typing import List, Optional
+from typing import cast, List, Optional, Union
 import warnings
 
 from matplotlib.axes import Axes
@@ -42,12 +42,13 @@ class Waveform(ABC):
         else:
             return object.__new__(cls)
 
-    def __init__(self, duration: int):
+    def __init__(self, duration: Union[int, Parametrized]):
         """Initializes a waveform with a given duration.
 
         Args:
             duration (int): The waveforms duration (in ns).
         """
+        duration = cast(int, duration)
         try:
             _duration = int(duration)
         except (TypeError, ValueError):
@@ -424,7 +425,8 @@ class BlackmanWaveform(Waveform):
 
     @classmethod
     @parametrize
-    def from_max_val(cls, max_val: float, area: float) -> BlackmanWaveform:
+    def from_max_val(cls, max_val: Union[float, Parametrized],
+                     area: Union[float, Parametrized]) -> BlackmanWaveform:
         """Creates a Blackman waveform with a threshold on the maximum value.
 
         Instead of defining a duration, the waveform is defined by its area and
@@ -438,6 +440,8 @@ class BlackmanWaveform(Waveform):
                 sign of `area`.
             area (float): The area under the waveform.
         """
+        max_val = cast(float, max_val)
+        area = cast(float, area)
         if np.sign(max_val) != np.sign(area):
             raise ValueError("The maximum value and the area must have "
                              "matching signs.")
