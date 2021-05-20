@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Tuple, Dict, Set
 
 import numpy as np
-from scipy.spatial.distance import pdist #type: ignore
+from scipy.spatial.distance import pdist
 
 from pulser import Register, Pulse
 from pulser.channels import Channel
@@ -139,7 +139,7 @@ class Device:
             raise ValueError("The pulse's detuning values go out of the range "
                              "allowed for the chosen channel.")
 
-    def _specs(self, for_docs: bool=False) -> str:
+    def _specs(self, for_docs: bool = False) -> str:
         lines = [
             "\nRegister requirements:",
             f" - Dimensions: {self.dimensions}D",

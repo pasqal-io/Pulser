@@ -23,6 +23,7 @@ from pulser.parametrized import Variable
 
 from typing import Dict, Any
 
+
 class PulserEncoder(JSONEncoder):
     def default(self, o: Any) -> Dict:
         if hasattr(o, "_to_dict"):
