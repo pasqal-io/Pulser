@@ -15,12 +15,11 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Optional, cast
-
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 from scipy.spatial import KDTree
+from typing import Iterable, Optional, cast
 
 import pulser
 from pulser.json.utils import obj_to_dict

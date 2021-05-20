@@ -108,7 +108,7 @@ class Waveform(ABC):
                                   " modifications to its duration.")
 
     @abstractmethod
-    def _to_dict():
+    def _to_dict(self):
         pass
 
     @abstractmethod
