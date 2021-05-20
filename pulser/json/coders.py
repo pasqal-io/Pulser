@@ -21,9 +21,10 @@ import numpy as np
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Variable
 
+from typing import Dict, Any
 
 class PulserEncoder(JSONEncoder):
-    def default(self, o):
+    def default(self, o: Any) -> Dict:
         if hasattr(o, "_to_dict"):
             return o._to_dict()
         elif type(o) == type:
@@ -37,12 +38,12 @@ class PulserEncoder(JSONEncoder):
 
 
 class PulserDecoder(JSONDecoder):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         # TODO: Check version compatibility (stored at the Sequence level)
-        self.vars = {}
+        self.vars: Dict = {}
         super().__init__(object_hook=self.object_hook, *args, **kwargs)
 
-    def object_hook(self, obj):
+    def object_hook(self, obj: Dict) -> Dict:
         try:
             build = obj["_build"]
             obj_name = obj["__name__"]
