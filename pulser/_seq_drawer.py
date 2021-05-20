@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.waveforms import ConstantWaveform
+from pulser.pulse import Pulse
 from scipy.interpolate import CubicSpline
 
 
@@ -107,10 +108,13 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor='orange')
-    ph_box = dict(boxstyle="round", facecolor='ghostwhite')
+    ph_box = dict(boxstyle="round", facecolor='ghostwhite', alpha=0.5)
 
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
-    gs = fig.add_gridspec(n_channels, 1, hspace=0.1)
+    gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
+
+    if draw_phase_area:
+        fig.suptitle(r"$\phi$: Phase, A: Area", fontsize=14)
 
     ch_axes = {}
     for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
@@ -202,22 +206,18 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 
         if draw_phase_area:
-            a.set_title(r"Phase: $\phi$, Area: A", fontsize=16)
             for seq_ in seq._schedule[ch]:
                 # Select only `Pulse` objects
-                if not isinstance(seq_.type, str):
+                if isinstance(seq_.type, Pulse):
                     phase_val = seq_.type.phase / np.pi
                     area_val = seq_.type.amplitude.integral / np.pi
                     # X and Y coordinates for placing text
                     x_plot = (seq_.ti + seq_.tf) / 2
-                    y_plot = np.max(seq_.type.amplitude.samples)
+                    y_plot = np.max(seq_.type.amplitude.samples) / 2
                     a.text(
-                        x_plot, y_plot+8, fr"$\phi$ = {phase_val:.3g}$\pi$",
-                        fontsize=14, ha="center", va="center",
-                    )
-                    a.text(
-                        x_plot, y_plot+2, fr"A = {area_val:3g}$\pi$",
-                        fontsize=14, ha="center", va="center",
+                        x_plot, y_plot, fr"$\phi$: {phase_str(phase_val)}"
+                        + "\n" + fr"A: {area_val:.2g}$\pi$", fontsize=10,
+                        ha="center", va="center", bbox=ph_box,
                     )
 
         target_regions = []     # [[start1, [targets1], end1],...]
