@@ -20,12 +20,13 @@ import inspect
 import itertools
 import sys
 from types import FunctionType
-from typing import cast, List, Optional, Union
+from typing import cast, List, Optional, Tuple, Union
 import warnings
 
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.typing import ArrayLike
 
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
@@ -170,11 +171,12 @@ class CompositeWaveform(Waveform):
         waveforms(Waveform): Two or more waveforms to combine.
     """
 
-    def __init__(self, *waveforms: Waveform):
+    def __init__(self, *waveforms: Union[Parametrized, Waveform]):
         """Initializes a waveform from multiple waveforms."""
         if len(waveforms) < 2:
             raise ValueError("Needs at least two waveforms to form a "
                              "CompositeWaveform.")
+        waveforms = cast(Tuple[Waveform], waveforms)
         for wf in waveforms:
             self._validate(wf)
 
@@ -241,11 +243,11 @@ class CustomWaveform(Waveform):
             (in rad/µs). The number of samples dictates the duration, in ns.
     """
 
-    def __init__(self, samples: np.ndarray):
+    def __init__(self, samples: ArrayLike):
         """Initializes a custom waveform."""
         samples_arr = np.array(samples, dtype=float)
         self._samples = samples_arr
-        super().__init__(len(samples))
+        super().__init__(len(samples_arr))
 
     @property
     def duration(self) -> int:
@@ -282,9 +284,11 @@ class ConstantWaveform(Waveform):
         value (float): The modulation value (in rad/µs).
     """
 
-    def __init__(self, duration: int, value: float):
+    def __init__(self, duration: Union[int, Parametrized],
+                 value: Union[float, Parametrized]):
         """Initializes a constant waveform."""
         super().__init__(duration)
+        value = cast(float, value)
         self._value = float(value)
 
     @property
@@ -345,10 +349,14 @@ class RampWaveform(Waveform):
         stop (float): The final value (in rad/µs).
     """
 
-    def __init__(self, duration: int, start: float, stop: float):
+    def __init__(self, duration: Union[int, Parametrized],
+                 start: Union[float, Parametrized],
+                 stop: Union[float, Parametrized]):
         """Initializes a ramp waveform."""
         super().__init__(duration)
+        start = cast(float, start)
         self._start = float(start)
+        stop = cast(float, stop)
         self._stop = float(stop)
 
     @property
@@ -416,9 +424,11 @@ class BlackmanWaveform(Waveform):
             values.
     """
 
-    def __init__(self, duration: int, area: float):
+    def __init__(self, duration: Union[int, Parametrized],
+                 area: Union[float, Parametrized]):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
+        area = cast(float, area)
         self._area = float(area)
         self._norm_samples = np.clip(np.blackman(self._duration), 0, np.inf)
         self._scaling = self._area / np.sum(self._norm_samples) / 1e-3
