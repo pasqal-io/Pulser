@@ -208,8 +208,8 @@ class CompositeWaveform(Waveform):
 
     def _validate(self, waveform):
         if not isinstance(waveform, Waveform):
-            raise TypeError("{!r} is not a valid waveform. Please provide a "
-                            "valid Waveform.".format(waveform))
+            raise TypeError(f"{waveform!r} is not a valid waveform. "
+                            "Please provide a valid Waveform.")
 
     def _to_dict(self):
         return obj_to_dict(self, *self._waveforms)
