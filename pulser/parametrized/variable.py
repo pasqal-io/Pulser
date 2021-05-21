@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import dataclasses
-from typing import Union
+from typing import Union, Dict, List, cast
 
 import numpy as np
 
@@ -32,12 +32,11 @@ class Variable(Parametrized, OpSupport):
             and `str`.
         size (int=1): The number of values stored. Defaults to a single value.
     """
-
     name: str
     dtype: type
     size: int = 1
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.name, str):
             raise TypeError("Variable's 'name' has to be of type 'str'.")
         if self.dtype not in [int, float, str]:
@@ -50,14 +49,14 @@ class Variable(Parametrized, OpSupport):
         self._clear()
 
     @property
-    def variables(self):
+    def variables(self) -> Dict:
         return {self.name: self}
 
-    def _clear(self):
+    def _clear(self) -> None:
         self.__dict__["value"] = None
         self.__dict__["_count"] += 1
 
-    def _assign(self, value):
+    def _assign(self, value: List) -> None:
         if self.dtype == str:
             if not (isinstance(value, str) if self.size == 1
                     else all(isinstance(s, str) for s in value)):
@@ -71,26 +70,27 @@ class Variable(Parametrized, OpSupport):
 
         self.__dict__["value"] = self.dtype(val) if self.size == 1 else val
         self.__dict__["_count"] += 1
-
-    def build(self):
+    
+    def build(self) -> Union[List, float, None]:
         """Returns the variable's current value."""
-        if self.value is None:
+        self.value: Union[List, float, None]
+        if self.value is None: 
             raise ValueError(f"No value assigned to variable '{self.name}'.")
 
-        return self.value
+        return self.value 
 
-    def _to_dict(self):
+    def _to_dict(self) -> Dict:
         d = obj_to_dict(self, _build=False)
         d.update(dataclasses.asdict(self))
         return d
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.size
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Union[int, slice]) -> '_VariableItem':
         if not isinstance(key, (int, slice)):
             raise TypeError(f"Invalid key type {type(key)} for '{self.name}'.")
         if self.size == 1:
@@ -110,18 +110,18 @@ class _VariableItem(Parametrized, OpSupport):
     key: Union[int, slice]
 
     @property
-    def variables(self):
+    def variables(self) -> Dict:
         return self.var.variables
 
-    def build(self):
+    def build(self) -> Union[List, float, None]:
         """Return the variable's item(s) values."""
-        return self.var.build()[self.key]
+        return cast(List, self.var.build())[self.key]
 
-    def _to_dict(self):
+    def _to_dict(self) -> Dict:
         return obj_to_dict(self, self.var, self.key,
                            _module="operator", _name="getitem")
 
-    def __str__(self):
+    def __str__(self) -> str:
         if isinstance(self.key, slice):
             items = ["" if x is None else str(x)
                      for x in [self.key.start, self.key.stop, self.key.step]]

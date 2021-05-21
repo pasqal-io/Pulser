@@ -13,23 +13,23 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-
+from typing import Dict, Union, List
 
 class Parametrized(ABC):
     """Abstract base class for a parametrized object."""
 
     @property
     @abstractmethod
-    def variables(self):
+    def variables(self) -> Dict:
         """All the variables involved with this object."""
         pass
 
     @abstractmethod
-    def build(self):
+    def build(self) -> Union[List, float, None]:
         """Builds the object."""
         pass
 
     @abstractmethod
-    def _to_dict(self):
+    def _to_dict(self) -> Dict:
         """Serializes the object in a dictionary."""
         pass
