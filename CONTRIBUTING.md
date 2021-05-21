@@ -77,3 +77,13 @@ pip install -r requirements.txt
     flake8 .
     ```
 To help you keep your code compliant with PEP8 guidelines effortlessly, we suggest you look into installing a linter for your text editor of choice.
+
+- **Type hints**: We use [mypy](http://mypy-lang.org/) to type check the code. Your code should have type
+annotations and pass the type checks from running:
+    ```bash
+    mypy
+    ```
+    In case `mypy` produces a false positive, you can ignore the respective line by adding the `# type: ignore` annotation.
+
+    **Note**: Type hints for `numpy` have only been added in version 1.20. Make sure you have `numpy >= 1.20`
+    installed before running the type checks.
