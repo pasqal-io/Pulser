@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, Any
 
 
 class Parametrized(ABC):
@@ -21,7 +21,7 @@ class Parametrized(ABC):
 
     @property
     @abstractmethod
-    def variables(self) -> Dict:
+    def variables(self):
         """All the variables involved with this object."""
         pass
 
@@ -31,6 +31,6 @@ class Parametrized(ABC):
         pass
 
     @abstractmethod
-    def _to_dict(self) -> Dict:
+    def _to_dict(self) -> Dict[str, Any]:
         """Serializes the object in a dictionary."""
         pass

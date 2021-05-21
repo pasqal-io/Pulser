@@ -17,7 +17,7 @@ from itertools import chain
 import inspect
 import operator
 import warnings
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Union
 
 from pulser.parametrized import Parametrized
 from pulser.json.utils import obj_to_dict
@@ -37,16 +37,16 @@ reversible_ops = [
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
-    def _do_op(self, op_name: str, other: Any) -> Callable:
+    def _do_op(self, op_name: str, other: Union[int, float]) -> 'ParamObj':
         return ParamObj(getattr(operator, op_name), self, other)
 
-    def _do_rop(self, op_name: str, other: Any) -> Callable:
+    def _do_rop(self, op_name: str, other: Union[int, float]) -> 'ParamObj':
         return ParamObj(getattr(operator, op_name), other, self)
 
-    def __neg__(self) -> Callable:
+    def __neg__(self) -> 'ParamObj':
         return ParamObj(operator.neg, self)
 
-    def __abs__(self) -> Callable:
+    def __abs__(self) -> 'ParamObj':
         return ParamObj(operator.abs, self)
 
 
@@ -70,7 +70,7 @@ class ParamObj(Parametrized, OpSupport):
             kwargs: The kwargs for calling `cls`.
         """
         self.cls = cls
-        self._variables: Dict = {}
+        self._variables: Dict[str, 'ParamObj'] = {}
         if isinstance(self.cls, Parametrized):
             self._variables.update(self.cls.variables)
         for x in chain(args, kwargs.values()):
@@ -79,10 +79,10 @@ class ParamObj(Parametrized, OpSupport):
         self.args = args
         self.kwargs = kwargs
         self._instance = None
-        self._vars_state: Dict = {}
+        self._vars_state: Dict[str, int] = {}
 
     @property
-    def variables(self) -> Dict:
+    def variables(self) -> Dict[str, 'ParamObj']:
         return self._variables
 
     def build(self):
@@ -100,7 +100,7 @@ class ParamObj(Parametrized, OpSupport):
             self._instance = obj(*args_, **kwargs_)
         return self._instance
 
-    def _to_dict(self) -> Dict:
+    def _to_dict(self) -> Dict[str, Any]:
         def class_to_dict(cls):
             return obj_to_dict(self, _build=False, _name=cls.__name__,
                                _module=cls.__module__)
@@ -126,7 +126,7 @@ class ParamObj(Parametrized, OpSupport):
 
         return obj_to_dict(self, cls_dict, *args, **self.kwargs)
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
+    def __call__(self, *args: Any, **kwargs: Any) -> 'ParamObj':
         obj = ParamObj(self, *args, **kwargs)
         warnings.warn("Calls to methods of parametrized objects are only "
                       "executed if they serve as arguments of other "
@@ -135,7 +135,7 @@ class ParamObj(Parametrized, OpSupport):
                       "executed upon sequence building.")
         return obj
 
-    def __getattr__(self, name: str) -> Callable:
+    def __getattr__(self, name: str) -> 'ParamObj':
         if hasattr(self.cls, name):
             return ParamObj(getattr, self, name)
         else:

@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import dataclasses
-from typing import Union, Dict, List
+from typing import Union, Dict, Any, cast
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
@@ -49,17 +50,17 @@ class Variable(Parametrized, OpSupport):
         self._clear()
 
     @property
-    def variables(self) -> Dict:
+    def variables(self) -> Dict[str, 'Variable']:
         return {self.name: self}
 
     def _clear(self) -> None:
         self.__dict__["value"] = None
         self.__dict__["_count"] += 1
 
-    def _assign(self, value: List) -> None:
+    def _assign(self, value: Union[ArrayLike, str, float, int]) -> None:
         if self.dtype == str:
             if not (isinstance(value, str) if self.size == 1
-                    else all(isinstance(s, str) for s in value)):
+                    else all(isinstance(s, str) for s in cast(list, value))):
                 raise TypeError(f"Provided values for variable '{self.name}' "
                                 "must be of type 'str'.")
 
@@ -71,14 +72,14 @@ class Variable(Parametrized, OpSupport):
         self.__dict__["value"] = self.dtype(val) if self.size == 1 else val
         self.__dict__["_count"] += 1
 
-    def build(self) -> List:
+    def build(self) -> Union[ArrayLike, str, float, int]:
         """Returns the variable's current value."""
-        self.value: List
+        self.value: Union[ArrayLike, str, float, int]
         if self.value is None:
             raise ValueError(f"No value assigned to variable '{self.name}'.")
         return self.value
 
-    def _to_dict(self) -> Dict:
+    def _to_dict(self) -> Dict[str, Any]:
         d = obj_to_dict(self, _build=False)
         d.update(dataclasses.asdict(self))
         return d
@@ -109,14 +110,14 @@ class _VariableItem(Parametrized, OpSupport):
     key: Union[int, slice]
 
     @property
-    def variables(self) -> Dict:
+    def variables(self) -> Dict[str, Variable]:
         return self.var.variables
 
-    def build(self) -> List:
+    def build(self) -> Union[ArrayLike, str, float, int]:
         """Return the variable's item(s) values."""
-        return self.var.build()[self.key]
+        return cast(list, self.var.build())[self.key]
 
-    def _to_dict(self) -> Dict:
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self.var, self.key,
                            _module="operator", _name="getitem")
 
