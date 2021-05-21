@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 import dataclasses
-from typing import Union, Dict, Any, cast
+from typing import Union, Dict, Any, cast, Iterable, Sequence
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -50,7 +51,7 @@ class Variable(Parametrized, OpSupport):
         self._clear()
 
     @property
-    def variables(self) -> Dict[str, 'Variable']:
+    def variables(self) -> Dict[str, Variable]:
         return {self.name: self}
 
     def _clear(self) -> None:
@@ -60,7 +61,8 @@ class Variable(Parametrized, OpSupport):
     def _assign(self, value: Union[ArrayLike, str, float, int]) -> None:
         if self.dtype == str:
             if not (isinstance(value, str) if self.size == 1
-                    else all(isinstance(s, str) for s in cast(list, value))):
+                    else all(isinstance(s, str)
+                    for s in cast(Iterable, value))):
                 raise TypeError(f"Provided values for variable '{self.name}' "
                                 "must be of type 'str'.")
 
@@ -90,7 +92,7 @@ class Variable(Parametrized, OpSupport):
     def __len__(self) -> int:
         return self.size
 
-    def __getitem__(self, key: Union[int, slice]) -> '_VariableItem':
+    def __getitem__(self, key: Union[int, slice]) -> _VariableItem:
         if not isinstance(key, (int, slice)):
             raise TypeError(f"Invalid key type {type(key)} for '{self.name}'.")
         if self.size == 1:
@@ -115,7 +117,7 @@ class _VariableItem(Parametrized, OpSupport):
 
     def build(self) -> Union[ArrayLike, str, float, int]:
         """Return the variable's item(s) values."""
-        return cast(list, self.var.build())[self.key]
+        return cast(Sequence, self.var.build())[self.key]
 
     def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self.var, self.key,
