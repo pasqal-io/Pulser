@@ -17,13 +17,13 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser import Sequence
+import pulser
 from pulser.waveforms import ConstantWaveform
 from scipy.interpolate import CubicSpline
 from typing import Any, cast, Dict, Optional, Tuple, Union
 
 
-def gather_data(seq: Sequence) -> Dict:
+def gather_data(seq: pulser.sequence.Sequence) -> Dict:
     """Collects the whole sequence data for plotting.
 
     Args:
@@ -79,7 +79,7 @@ def gather_data(seq: Sequence) -> Dict:
     return data
 
 
-def draw_sequence(seq: Sequence,
+def draw_sequence(seq: pulser.sequence.Sequence,
                   sampling_rate: Optional[float] = None) -> None:
     """Draw the entire sequence.
 
