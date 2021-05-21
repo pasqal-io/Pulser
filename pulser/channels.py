@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Optional
 import warnings
 
 
@@ -49,14 +51,15 @@ class Channel:
     addressing: str
     max_abs_detuning: float
     max_amp: float
-    retarget_time: int = None
+    retarget_time: Optional[int] = None
     max_targets: int = 1
     clock_period: int = 4       # ns
     min_duration: int = 16      # ns
     max_duration: int = 67108864        # ns
 
     @classmethod
-    def Local(cls, max_abs_detuning, max_amp, retarget_time=220, **kwargs):
+    def Local(cls, max_abs_detuning: float, max_amp: float,
+              retarget_time: int = 220, **kwargs) -> Channel:
         """Initializes the channel with local addressing.
 
         Args:
@@ -67,10 +70,11 @@ class Channel:
         """
 
         return cls('Local', max_abs_detuning, max_amp,
-                   retarget_time=retarget_time, **kwargs)
+                   retarget_time, **kwargs)  # type: ignore
 
     @classmethod
-    def Global(cls, max_abs_detuning, max_amp, **kwargs):
+    def Global(cls, max_abs_detuning: float,
+               max_amp: float, **kwargs) -> Channel:
         """Initializes the channel with global addressing.
 
         Args:
@@ -79,9 +83,10 @@ class Channel:
             max_amp(float): Maximum pulse amplitude (in rad/µs).
         """
 
-        return cls('Global', max_abs_detuning, max_amp, **kwargs)
+        return cls('Global', max_abs_detuning, max_amp,
+                   **kwargs)  # type: ignore
 
-    def validate_duration(self, duration):
+    def validate_duration(self, duration: int) -> int:
         """Validates and adapts the duration of an instruction on this channel.
 
         Args:
@@ -108,7 +113,7 @@ class Channel:
                           f"ns). It was rounded up to {_duration} ns.")
         return _duration
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
             f"{self.max_abs_detuning} rad/µs, Max Amplitude: "
