@@ -17,7 +17,7 @@ from itertools import chain
 import inspect
 import operator
 import warnings
-from typing import Callable, Dict, Any, cast, List, Union
+from typing import Callable, Dict, Any
 
 from pulser.parametrized import Parametrized
 from pulser.json.utils import obj_to_dict
@@ -85,7 +85,7 @@ class ParamObj(Parametrized, OpSupport):
     def variables(self) -> Dict:
         return self._variables
 
-    def build(self) -> Union[List, float, None]:
+    def build(self):
         """Builds the object with it's variables last assigned values."""
         vars_state = {key: var._count for key, var in self._variables.items()}
         if vars_state != self._vars_state:
@@ -95,7 +95,7 @@ class ParamObj(Parametrized, OpSupport):
                      for arg in self.args]
             kwargs_ = {key: val.build() if isinstance(val, Parametrized)
                        else val for key, val in self.kwargs.items()}
-            obj  = (cast('ParamObj',self.cls).build() if isinstance(self.cls, ParamObj)
+            obj = (self.cls.build() if isinstance(self.cls, ParamObj)
                    else self.cls)
             self._instance = obj(*args_, **kwargs_)
         return self._instance

@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Dict, Union, List
+from typing import Dict
+
 
 class Parametrized(ABC):
     """Abstract base class for a parametrized object."""
@@ -25,7 +26,7 @@ class Parametrized(ABC):
         pass
 
     @abstractmethod
-    def build(self) -> Union[List, float, None]:
+    def build(self):
         """Builds the object."""
         pass
 

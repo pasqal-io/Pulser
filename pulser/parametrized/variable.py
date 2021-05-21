@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import dataclasses
-from typing import Union, Dict, List, cast
+from typing import Union, Dict, List
 
 import numpy as np
 
@@ -70,14 +70,13 @@ class Variable(Parametrized, OpSupport):
 
         self.__dict__["value"] = self.dtype(val) if self.size == 1 else val
         self.__dict__["_count"] += 1
-    
-    def build(self) -> Union[List, float, None]:
-        """Returns the variable's current value."""
-        self.value: Union[List, float, None]
-        if self.value is None: 
-            raise ValueError(f"No value assigned to variable '{self.name}'.")
 
-        return self.value 
+    def build(self) -> List:
+        """Returns the variable's current value."""
+        self.value: List
+        if self.value is None:
+            raise ValueError(f"No value assigned to variable '{self.name}'.")
+        return self.value
 
     def _to_dict(self) -> Dict:
         d = obj_to_dict(self, _build=False)
@@ -113,9 +112,9 @@ class _VariableItem(Parametrized, OpSupport):
     def variables(self) -> Dict:
         return self.var.variables
 
-    def build(self) -> Union[List, float, None]:
+    def build(self) -> List:
         """Return the variable's item(s) values."""
-        return cast(List, self.var.build())[self.key]
+        return self.var.build()[self.key]
 
     def _to_dict(self) -> Dict:
         return obj_to_dict(self, self.var, self.key,
