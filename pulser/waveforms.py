@@ -220,7 +220,7 @@ class CompositeWaveform(Waveform):
             raise TypeError(f"{waveform!r} is not a valid waveform. "
                             "Please provide a valid Waveform.")
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, *self._waveforms)
 
     def __str__(self) -> str:
@@ -264,7 +264,7 @@ class CustomWaveform(Waveform):
         """
         return self._samples
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self._samples)
 
     def __str__(self) -> str:
@@ -327,7 +327,7 @@ class ConstantWaveform(Waveform):
         """
         return ConstantWaveform(new_duration, self._value)
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self._duration, self._value)
 
     def __str__(self) -> str:
@@ -400,7 +400,7 @@ class RampWaveform(Waveform):
         """
         return RampWaveform(new_duration, self._start, self._stop)
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self._duration, self._start, self._stop)
 
     def __str__(self) -> str:
@@ -429,11 +429,12 @@ class BlackmanWaveform(Waveform):
                  area: Union[float, Parametrized]):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
-        self._area: float = cast(float, area)
-        self._norm_samples: np.ndarray = np.clip(
-            np.blackman(self._duration), 0, np.inf)
-        self._scaling: float = self._area / \
-            float(np.sum(self._norm_samples)) / 1e-3
+        if isinstance(area, float):
+            self._area: float = area
+            self._norm_samples: np.ndarray = np.clip(
+                np.blackman(self._duration), 0, np.inf)
+            self._scaling: float = self._area / \
+                float(np.sum(self._norm_samples)) / 1e-3
 
     @classmethod
     @parametrize
@@ -502,7 +503,7 @@ class BlackmanWaveform(Waveform):
         """
         return BlackmanWaveform(new_duration, self._area)
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self._duration, self._area)
 
     def __str__(self) -> str:
