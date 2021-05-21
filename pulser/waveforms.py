@@ -428,7 +428,8 @@ class BlackmanWaveform(Waveform):
     def __init__(self, duration: Union[int, Parametrized],
                  area: Union[float, Parametrized]):
         """Initializes a Blackman waveform."""
-        super().__init__(cast(int, duration))
+        duration = cast(int, duration)
+        super().__init__(duration)
         self._area: float = cast(float, area)
         self._norm_samples: np.ndarray = np.clip(
             np.blackman(self._duration), 0, np.inf)
