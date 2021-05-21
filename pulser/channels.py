@@ -19,7 +19,7 @@ from typing import ClassVar, Optional
 import warnings
 
 
-@dataclass(init=False, repr=False, frozen=True)
+@dataclass(init=True, repr=False, frozen=True)
 class Channel:
     """Base class of a hardware channel.
 
@@ -70,7 +70,7 @@ class Channel:
         """
 
         return cls('Local', max_abs_detuning, max_amp,
-                   retarget_time, **kwargs)  # type: ignore
+                   retarget_time, **kwargs)
 
     @classmethod
     def Global(cls, max_abs_detuning: float,
@@ -84,7 +84,7 @@ class Channel:
         """
 
         return cls('Global', max_abs_detuning, max_amp,
-                   **kwargs)  # type: ignore
+                   **kwargs)
 
     def validate_duration(self, duration: int) -> int:
         """Validates and adapts the duration of an instruction on this channel.
