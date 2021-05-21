@@ -11,9 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any, Dict, Optional
 
+<<<<<<< HEAD
 def obj_to_dict(obj, *args, _build=True, _module=None, _name=None,
                 _submodule=None, **kwargs) -> dict:
+=======
+
+def obj_to_dict(obj, *args,
+                _build: bool = True,
+                _module: Optional[str] = None,
+                _name: Optional[str] = None,
+                _submodule: Optional[str] = None,
+                **kwargs) -> Dict[str, Any]:
+>>>>>>> 9c38118f07fb16e575c12339ad5734b011a92783
     """Encodes an object in a dictionary for serialization.
 
     Args:

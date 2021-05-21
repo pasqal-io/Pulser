@@ -15,12 +15,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
+from typing import Any, Dict, Iterable, Optional, Mapping, cast
 
 import pulser
 from pulser.json.utils import obj_to_dict
@@ -35,7 +35,7 @@ class Register:
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: dict):
+    def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary "
@@ -53,7 +53,7 @@ class Register:
         self._coords = coords
 
     @property
-    def qubits(self) -> dict:
+    def qubits(self) -> Dict[Any, np.ndarray]:
         """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))
 
@@ -82,7 +82,7 @@ class Register:
             pre = str(prefix)
             qubits = {pre+str(i): pos for i, pos in enumerate(coords)}
         else:
-            qubits = dict(enumerate(coords))
+            qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
     @classmethod
@@ -336,9 +336,12 @@ class Register:
             raise ValueError(f"Spacing ({spacing}) for this device must be"
                              f" {device.min_atom_distance} or above.")
 
-        if n_qubits == 1:
-            return cls.from_coordinates(np.array([(0.0, 0.0)], dtype=float),
-                                        center=False, prefix=prefix)
+        if n_qubits < 7:
+            hex_coords = np.array([(0.0, 0.0), (1.0, 0.0), (0.5, np.sqrt(3/4)),
+                                   (1.5, np.sqrt(3/4)), (2.0, 0.0),
+                                   (0.5, -np.sqrt(3/4))])
+            return cls.from_coordinates(spacing * hex_coords[:n_qubits],
+                                        prefix=prefix)
 
         full_layers = int((-3.0 + np.sqrt(9 + 12 * (n_qubits - 1))) / 6.0)
         atoms_left = n_qubits - 1 - (full_layers**2 + full_layers) * 3

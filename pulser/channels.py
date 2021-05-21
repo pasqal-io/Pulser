@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Optional
 import warnings
 
 
@@ -49,7 +49,7 @@ class Channel:
     addressing: str
     max_abs_detuning: float
     max_amp: float
-    retarget_time: int = None
+    retarget_time: Optional[int] = None
     max_targets: int = 1
     clock_period: int = 4       # ns
     min_duration: int = 16      # ns
