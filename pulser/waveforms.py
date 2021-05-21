@@ -54,7 +54,7 @@ class Waveform(ABC):
             _duration = int(duration)
         except (TypeError, ValueError):
             raise TypeError("duration needs to be castable to an int but "
-                            "type %s was provided" % type(duration))
+                            f"type {type(duration)} was provided.")
         if _duration <= 0:
             raise ValueError("A waveform has to have a positive duration, "
                              + f"not {duration}.")
@@ -433,12 +433,12 @@ class BlackmanWaveform(Waveform):
             self._area: float = float(cast(float, area))
         except (TypeError, ValueError):
             raise TypeError("area needs to be castable to an float but "
-                            "type %s was provided" % type(area))
+                            f"type {type(area)} was provided.")
 
         self._norm_samples: np.ndarray = np.clip(
             np.blackman(self._duration), 0, np.inf)
-        self._scaling: float = self._area / \
-            float(np.sum(self._norm_samples)) / 1e-3
+        self._scaling: float = self._area / float(
+            np.sum(self._norm_samples)) / 1e-3
 
     @classmethod
     @parametrize
