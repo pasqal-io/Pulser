@@ -13,7 +13,7 @@
 # limitations under the License.
 
 def obj_to_dict(obj, *args, _build=True, _module=None, _name=None,
-                _submodule=None, **kwargs):
+                _submodule=None, **kwargs) -> dict:
     """Encodes an object in a dictionary for serialization.
 
     Args:

@@ -84,12 +84,12 @@ class Waveform(ABC):
     @property
     def first_value(self) -> float:
         """The first value in the waveform."""
-        return self.samples[0]
+        return cast(float, self.samples[0])
 
     @property
     def last_value(self) -> float:
         """The last value in the waveform."""
-        return self.samples[-1]
+        return cast(float, self.samples[-1])
 
     @property
     def integral(self) -> float:
@@ -197,7 +197,8 @@ class CompositeWaveform(Waveform):
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return np.concatenate([wf.samples for wf in self._waveforms])
+        return cast(np.ndarray,
+                    np.concatenate([wf.samples for wf in self._waveforms]))
 
     @property
     def first_value(self) -> float:
@@ -427,11 +428,12 @@ class BlackmanWaveform(Waveform):
     def __init__(self, duration: Union[int, Parametrized],
                  area: Union[float, Parametrized]):
         """Initializes a Blackman waveform."""
-        super().__init__(duration)
-        area = cast(float, area)
-        self._area = float(area)
-        self._norm_samples = np.clip(np.blackman(self._duration), 0, np.inf)
-        self._scaling = self._area / np.sum(self._norm_samples) / 1e-3
+        super().__init__(cast(int, duration))
+        self._area: float = cast(float, area)
+        self._norm_samples: np.ndarray = np.clip(
+            np.blackman(self._duration), 0, np.inf)
+        self._scaling: float = self._area / \
+            float(np.sum(self._norm_samples)) / 1e-3
 
     @classmethod
     @parametrize
@@ -476,17 +478,17 @@ class BlackmanWaveform(Waveform):
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return self._norm_samples * self._scaling
+        return cast(np.ndarray, self._norm_samples * self._scaling)
 
     @property
     def first_value(self) -> float:
         """The first value in the waveform."""
-        return 0
+        return 0.
 
     @property
     def last_value(self) -> float:
         """The last value in the waveform."""
-        return 0
+        return 0.
 
     def change_duration(self, new_duration: int) -> BlackmanWaveform:
         """Returns a new waveform with modified duration.
