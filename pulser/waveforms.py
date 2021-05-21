@@ -429,12 +429,16 @@ class BlackmanWaveform(Waveform):
                  area: Union[float, Parametrized]):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
-        if isinstance(area, float):
-            self._area: float = area
-            self._norm_samples: np.ndarray = np.clip(
-                np.blackman(self._duration), 0, np.inf)
-            self._scaling: float = self._area / \
-                float(np.sum(self._norm_samples)) / 1e-3
+        try:
+            self._area: float = float(cast(float, area))
+        except (TypeError, ValueError):
+            raise TypeError("area needs to be castable to an float but "
+                            "type %s was provided" % type(area))
+
+        self._norm_samples: np.ndarray = np.clip(
+            np.blackman(self._duration), 0, np.inf)
+        self._scaling: float = self._area / \
+            float(np.sum(self._norm_samples)) / 1e-3
 
     @classmethod
     @parametrize
