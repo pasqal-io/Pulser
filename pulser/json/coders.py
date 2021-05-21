@@ -16,7 +16,7 @@ from __future__ import annotations
 import importlib
 import inspect
 from json import JSONEncoder, JSONDecoder
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 import numpy as np
 
@@ -25,7 +25,7 @@ from pulser.parametrized import Variable
 
 
 class PulserEncoder(JSONEncoder):
-    def default(self, o: Any) -> Dict[str, Any]:
+    def default(self, o: Any) -> Union[Dict[str, Any], Any]:
         if hasattr(o, "_to_dict"):
             return o._to_dict()
         elif type(o) == type:
