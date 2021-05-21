@@ -22,7 +22,7 @@ setup(
     version=__version__,
     install_requires=[
         "matplotlib",
-        "numpy",
+        "numpy>=1.20",
         "scipy",
         "qutip",
     ],
