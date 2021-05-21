@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pulser import Sequence
 from pulser.waveforms import ConstantWaveform
 from scipy.interpolate import CubicSpline
+from typing import Any, cast, Dict, Optional, Tuple, Union
 
 
-def gather_data(seq):
+def gather_data(seq: Sequence) -> Dict:
     """Collects the whole sequence data for plotting.
 
     Args:
@@ -36,7 +40,7 @@ def gather_data(seq):
         time = [-1]     # To not break the "time[-1]" later on
         amp = []
         detuning = []
-        target = {}
+        target: Dict[Union[str, Tuple[int, int]], Any] = {}
         # phase_shift = {}
         for slot in sch:
             if slot.ti == -1:
@@ -75,7 +79,8 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq, sampling_rate=None):
+def draw_sequence(seq: Sequence,
+                  sampling_rate: Optional[float] = None) -> None:
     """Draw the entire sequence.
 
     Args:
@@ -87,7 +92,7 @@ def draw_sequence(seq, sampling_rate=None):
             input pulse.
     """
 
-    def phase_str(phi):
+    def phase_str(phi: float) -> str:
         """Formats a phase value for printing."""
         value = (((phi + np.pi) % (2*np.pi)) - np.pi) / np.pi
         if value == -1:
@@ -237,10 +242,11 @@ def draw_sequence(seq, sampling_rate=None):
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(t[-1])
-        for start, targets, end in target_regions:
+        for start, targets, end in target_regions:  # type: ignore
             q = targets[0]  # All targets have the same ref, so we pick
             ref = seq._phase_ref[basis][q]
             if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
+                end = cast(int, end)
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
                 conf = dict(linestyle='--', linewidth=1.5, color='black')

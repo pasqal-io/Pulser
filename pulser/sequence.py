@@ -65,7 +65,7 @@ def _store(func):
                             "Sequence. Use only what's returned by this"
                             "Sequence's 'declare_variable' method as your"
                             "variables."
-                            )
+                        )
             elif isinstance(x, Iterable) and not isinstance(x, str):
                 # Recursively look for parametrized objs inside the arguments
                 for y in x:
@@ -115,6 +115,9 @@ class Sequence:
         The register and device do not support variable parameters. As such,
         they are the same for all Sequences built from a parametrized Sequence.
     """
+
+    _total_duration: int
+
     def __init__(self, register, device):
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
@@ -296,9 +299,9 @@ class Sequence:
 
         # Manually store the channel declaration as a regular call
         self._calls.append(_Call(
-                            "declare_channel",
-                            (name, channel_id),
-                            {"initial_target": initial_target}))
+            "declare_channel",
+            (name, channel_id),
+            {"initial_target": initial_target}))
 
     def declare_variable(self, name, size=1, dtype=float):
         """Declare a new variable within this Sequence.
@@ -694,7 +697,7 @@ class Sequence:
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
                         np.clip(delta, 16, np.inf)
-                        )
+                    )
             tf = ti + delta
 
         except ValueError:
@@ -839,7 +842,7 @@ class _PhaseTracker:
     def changes(self, ti, tf, time_scale=1):
         """Changes in phases within ]ti, tf]."""
         start, end = np.searchsorted(
-                self._times, (ti * time_scale, tf * time_scale), side='right')
+            self._times, (ti * time_scale, tf * time_scale), side='right')
         for i in range(start, end):
             change = self._phases[i] - self._phases[i-1]
             yield (self._times[i] / time_scale, change)
