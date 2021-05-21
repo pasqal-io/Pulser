@@ -20,7 +20,7 @@ import inspect
 import itertools
 import sys
 from types import FunctionType
-from typing import cast, List, Optional, Tuple, Union
+from typing import Any, cast, Dict, List, Optional, Tuple, Union
 import warnings
 
 from matplotlib.axes import Axes
@@ -84,12 +84,12 @@ class Waveform(ABC):
     @property
     def first_value(self) -> float:
         """The first value in the waveform."""
-        return cast(float, self.samples[0])
+        return float(self.samples[0])
 
     @property
     def last_value(self) -> float:
         """The last value in the waveform."""
-        return cast(float, self.samples[-1])
+        return float(self.samples[-1])
 
     @property
     def integral(self) -> float:
@@ -114,7 +114,7 @@ class Waveform(ABC):
                                   " modifications to its duration.")
 
     @abstractmethod
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> Dict[str, Any]:
         pass
 
     @abstractmethod
@@ -428,7 +428,6 @@ class BlackmanWaveform(Waveform):
     def __init__(self, duration: Union[int, Parametrized],
                  area: Union[float, Parametrized]):
         """Initializes a Blackman waveform."""
-        duration = cast(int, duration)
         super().__init__(duration)
         self._area: float = cast(float, area)
         self._norm_samples: np.ndarray = np.clip(
