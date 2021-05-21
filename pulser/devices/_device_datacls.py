@@ -44,7 +44,7 @@ class Device:
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
-    _channels: Tuple[Tuple[str, Channel]]
+    _channels: Tuple[Tuple[str, Channel], ...]
     interaction_coeff: float = 5008713.
 
     def __post_init__(self):
