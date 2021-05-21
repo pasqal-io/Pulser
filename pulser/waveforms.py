@@ -432,7 +432,7 @@ class BlackmanWaveform(Waveform):
         try:
             self._area: float = float(cast(float, area))
         except (TypeError, ValueError):
-            raise TypeError("area needs to be castable to an float but "
+            raise TypeError("area needs to be castable to a float but "
                             f"type {type(area)} was provided.")
 
         self._norm_samples: np.ndarray = np.clip(
