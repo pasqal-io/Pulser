@@ -14,9 +14,10 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING
 
-from pulser.parametrized.variable import Variable
+if TYPE_CHECKING:
+    from pulser.parametrized import Variable
 
 
 class Parametrized(ABC):
