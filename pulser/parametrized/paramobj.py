@@ -21,8 +21,9 @@ import warnings
 from typing import Callable, Dict, Any, Union, TYPE_CHECKING
 
 from pulser.json.utils import obj_to_dict
+from pulser.parametrized import Parametrized
 if TYPE_CHECKING:
-    from pulser.parametrized import Parametrized, Variable
+    from pulser.parametrized import Variable
 
 # Available operations on parametrized objects with OpSupport
 reversible_ops = [
