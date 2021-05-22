@@ -23,7 +23,7 @@ from typing import Callable, Dict, Any, Union
 from pulser.parametrized import Parametrized, Variable
 from pulser.json.utils import obj_to_dict
 
-# Availabe operations on parameterized objects with OpSupport
+# Available operations on parametrized objects with OpSupport
 reversible_ops = [
     "__add__",
     "__sub__",
@@ -87,7 +87,7 @@ class ParamObj(Parametrized, OpSupport):
         return self._variables
 
     def build(self):
-        """Builds the object with it's variables last assigned values."""
+        """Builds the object with its variables last assigned values."""
         vars_state = {key: var._count for key, var in self._variables.items()}
         if vars_state != self._vars_state:
             self._vars_state = vars_state
