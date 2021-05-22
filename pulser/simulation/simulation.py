@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+from typing import Optional, List, Union, Dict, Any, cast, Iterable
 import itertools
+from collections import namedtuple
 
 import qutip
 import numpy as np
@@ -21,6 +24,8 @@ from copy import deepcopy
 from pulser import Pulse, Sequence
 from pulser.simulation.simresults import SimulationResults
 from pulser._seq_drawer import draw_sequence
+
+_TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
 
 
 class Simulation:
@@ -46,7 +51,8 @@ class Simulation:
             and the final times.
     """
 
-    def __init__(self, sequence, sampling_rate=1.0, evaluation_times='Full'):
+    def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
+                 evaluation_times: Union[str, List[int]] = 'Full') -> None:
         """Initialize the Simulation with a specific pulser.Sequence."""
         supported_bases = {"ground-rydberg", "digital"}
         if not isinstance(sequence, Sequence):
@@ -78,9 +84,10 @@ class Simulation:
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
-        self.samples = {addr: {basis: {}
-                               for basis in ['ground-rydberg', 'digital']}
-                        for addr in ['Global', 'Local']}
+        self.samples: Dict[str, Any] = {addr: {basis: {}
+                                        for basis in
+                                        ['ground-rydberg', 'digital']}
+                                        for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
 
         self._extract_samples()
@@ -89,7 +96,7 @@ class Simulation:
 
         if isinstance(evaluation_times, str):
             if evaluation_times == 'Full':
-                self.eval_times = deepcopy(self._times)
+                self.eval_times = cast(np.ndarray, deepcopy(self._times))
             elif evaluation_times == 'Minimal':
                 self.eval_times = np.array([self._times[0], self._times[-1]])
             else:
@@ -116,21 +123,22 @@ class Simulation:
             raise ValueError("`evaluation_times` must be a list of times "
                              "or `Full` or `Minimal`")
 
-    def draw(self):
+    def draw(self) -> None:
         """Draws the input sequence and the one used in QuTip."""
 
         draw_sequence(self._seq, self.sampling_rate)
 
-    def _extract_samples(self):
+    def _extract_samples(self) -> None:
         """Populate samples dictionary with every pulse in the sequence."""
 
-        def prepare_dict():
+        def prepare_dict() -> Dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
             return {'amp': np.zeros(self._tot_duration),
                     'det': np.zeros(self._tot_duration),
                     'phase': np.zeros(self._tot_duration)}
 
-        def write_samples(slot, samples_dict):
+        def write_samples(slot: _TimeSlot,
+                          samples_dict: Dict[str, Any]) -> None:
             samples_dict['amp'][slot.ti:slot.tf] += slot.type.amplitude.samples
             samples_dict['det'][slot.ti:slot.tf] += slot.type.detuning.samples
             samples_dict['phase'][slot.ti:slot.tf] = slot.type.phase
@@ -158,7 +166,7 @@ class Simulation:
 
             self.samples[addr][basis] = samples_dict
 
-    def _build_basis_and_op_matrices(self):
+    def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
         # No samples => Empty dict entry => False
         if (not self.samples['Global']['digital']
@@ -179,7 +187,8 @@ class Simulation:
             basis = ['r', 'g', 'h']
             projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
 
-        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
+        self.basis = {b: qutip.basis(self.dim, i)
+                      for i, b in enumerate(basis)}
         self.op_matrix = {'I': qutip.qeye(self.dim)}
 
         for proj in projectors:
@@ -187,7 +196,8 @@ class Simulation:
                 self.basis[proj[0]] * self.basis[proj[1]].dag()
             )
 
-    def _build_operator(self, op_id, *qubit_ids, global_op=False):
+    def _build_operator(self, op_id: str, *qubit_ids: List[str],
+                        global_op: bool = False) -> qutip.Qobj:
         """Create qutip.Qobj with nontrivial action at *qubit_ids."""
         if global_op:
             return sum(self._build_operator(op_id, q_id)
@@ -200,15 +210,15 @@ class Simulation:
                    else self.op_matrix['I'] for j in range(self._size)]
         return qutip.tensor(op_list)
 
-    def _construct_hamiltonian(self):
-        def adapt(full_array):
+    def _construct_hamiltonian(self) -> None:
+        def adapt(full_array: np.ndarray) -> Any:
             """Adapt list to correspond to sampling rate"""
             indexes = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
             return full_array[indexes]
 
-        def make_vdw_term():
+        def make_vdw_term() -> float:
             """Construct the Van der Waals interaction Term.
 
             For each pair of qubits, calculate the distance between them, then
@@ -224,7 +234,7 @@ class Simulation:
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
             return vdw
 
-        def build_coeffs_ops(basis, addr):
+        def build_coeffs_ops(basis: str, addr: str) -> List[List[Any]]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
             samples = self.samples[addr][basis]
             operators = self.operators[addr][basis]
@@ -274,7 +284,8 @@ class Simulation:
         for addr in self.samples:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
-                    qobj_list += build_coeffs_ops(basis, addr)
+                    qobj_list += cast(Iterable[float],
+                                      build_coeffs_ops(basis, addr))
 
         self._times = adapt(np.arange(self._tot_duration,
                                       dtype=np.double)/1000)
@@ -285,7 +296,7 @@ class Simulation:
 
         self._hamiltonian = ham
 
-    def get_hamiltonian(self, time):
+    def get_hamiltonian(self, time: float) -> qutip.Qobj:
         """Get the Hamiltonian created from the sequence at a fixed time.
 
         Args:
@@ -304,7 +315,10 @@ class Simulation:
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
     # Run Simulation Evolution using Qutip
-    def run(self, initial_state=None, progress_bar=None, **options):
+    def run(self,
+            initial_state: Optional[Union[np.ndarray, qutip.Qobj]] = None,
+            progress_bar: Optional[bool] = None,
+            **options: qutip.solver.Options) -> SimulationResults:
         """Simulate the sequence using QuTiP's solvers.
 
         Keyword Args:
