@@ -16,7 +16,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 
-from pulser.parametrized import Variable
+from pulser.parametrized.variable import Variable
 
 
 class Parametrized(ABC):
