@@ -18,10 +18,11 @@ from itertools import chain
 import inspect
 import operator
 import warnings
-from typing import Callable, Dict, Any, Union
+from typing import Callable, Dict, Any, Union, TYPE_CHECKING
 
-from pulser.parametrized import Parametrized, Variable
 from pulser.json.utils import obj_to_dict
+if TYPE_CHECKING:
+    from pulser.parametrized import Parametrized, Variable
 
 # Available operations on parametrized objects with OpSupport
 reversible_ops = [
