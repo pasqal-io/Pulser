@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pulser.parametrized import Variable
+    from pulser.parametrized import Variable  # pragma: no cover
 
 
 class Parametrized(ABC):
