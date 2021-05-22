@@ -20,7 +20,7 @@ import operator
 import warnings
 from typing import Callable, Dict, Any, Union
 
-from pulser.parametrized import Parametrized
+from pulser.parametrized import Parametrized, Variable
 from pulser.json.utils import obj_to_dict
 
 # Availabe operations on parameterized objects with OpSupport
@@ -71,7 +71,7 @@ class ParamObj(Parametrized, OpSupport):
             kwargs: The kwargs for calling `cls`.
         """
         self.cls = cls
-        self._variables: Dict[str, ParamObj] = {}
+        self._variables: Dict[str, Variable] = {}
         if isinstance(self.cls, Parametrized):
             self._variables.update(self.cls.variables)
         for x in chain(args, kwargs.values()):
@@ -83,7 +83,7 @@ class ParamObj(Parametrized, OpSupport):
         self._vars_state: Dict[str, int] = {}
 
     @property
-    def variables(self) -> Dict[str, ParamObj]:
+    def variables(self) -> Dict[str, Variable]:
         return self._variables
 
     def build(self):

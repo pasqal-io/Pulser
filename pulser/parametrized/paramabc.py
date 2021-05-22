@@ -15,13 +15,15 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 
+from pulser.parametrized import Variable
+
 
 class Parametrized(ABC):
     """Abstract base class for a parametrized object."""
 
     @property
     @abstractmethod
-    def variables(self):
+    def variables(self) -> Dict[str, Variable]:
         """All the variables involved with this object."""
         pass
 
