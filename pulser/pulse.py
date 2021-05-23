@@ -25,7 +25,7 @@ from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
 from pulser.json.utils import obj_to_dict
 
-from typing import cast, Dict, Union
+from typing import Any, cast, Dict, Union
 
 
 class Pulse:
@@ -64,9 +64,10 @@ class Pulse:
         else:
             return object.__new__(cls)
 
-    def __init__(self, amplitude: Waveform, detuning: Waveform,
+    def __init__(self, amplitude: Union[Parametrized, Waveform],
+                 detuning: Union[Parametrized, Waveform],
                  phase: Union[float, Parametrized],
-                 post_phase_shift: Union[float, Parametrized] = 0):
+                 post_phase_shift: Union[float, Parametrized] = 0.):
         """Initializes a new Pulse."""
 
         if not (isinstance(amplitude, Waveform) and
@@ -156,7 +157,7 @@ class Pulse:
         fig.tight_layout()
         plt.show()
 
-    def _to_dict(self) -> Dict[str, Union[float, Waveform]]:
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self.amplitude, self.detuning, self.phase,
                            post_phase_shift=self.post_phase_shift)
 
