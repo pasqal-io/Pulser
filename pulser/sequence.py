@@ -164,7 +164,7 @@ class Sequence:
         self._reset_parametrized()
 
     @property
-    def qubit_info(self) -> dict[str, Tuple[float, float]]:
+    def qubit_info(self) -> Dict[str, Any]:
         """Dictionary with the qubit's IDs and positions."""
         return self._register.qubits
 
@@ -233,7 +233,8 @@ class Sequence:
         return self._phase_ref[basis][qubit].last_phase
 
     def declare_channel(self, name: str, channel_id: str,
-                        initial_target: Optional[set] = None) -> None:
+                        initial_target: Optional[Union[set,
+                                                       str]] = None) -> None:
         """Declares a new channel to the Sequence.
 
         The first declared channel implicitly defines the sequence's mode of
@@ -765,7 +766,7 @@ class Sequence:
         d["calls"] = self._calls[1:]
         d["vars"] = self._variables
         d["to_build_calls"] = self._to_build_calls
-        return cast(Dict[str, Any], d)
+        return d
 
     def __str__(self) -> str:
         full = ""
