@@ -22,7 +22,8 @@ from itertools import chain
 import json
 from pulser.channels import Channel
 from pulser.register import Register
-from typing import Any, Callable, Dict, List, Optional, Union, Tuple
+from typing import Any, Callable, Generator, cast, Dict, List, Optional, Union
+from typing import Tuple
 import warnings
 
 import numpy as np
@@ -618,7 +619,7 @@ class Sequence:
 
         return seq
 
-    def serialize(self, **kwargs) -> str:
+    def serialize(self, **kwargs: Any) -> str:
         """Serializes the Sequence into a JSON formatted string.
 
         Other Parameters:
@@ -635,7 +636,7 @@ class Sequence:
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
     @staticmethod
-    def deserialize(obj: str, **kwargs) -> Sequence:
+    def deserialize(obj: str, **kwargs: Any) -> Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
@@ -658,10 +659,10 @@ class Sequence:
             warnings.warn("The given JSON formatted string does not encode a "
                           "Sequence.")
 
-        return json.loads(obj, cls=PulserDecoder, **kwargs)
+        return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
-    @_screen
-    def draw(self):
+    @ _screen
+    def draw(self) -> None:
         """Draws the sequence in its current state."""
         draw_sequence(self)
 
@@ -758,13 +759,13 @@ class Sequence:
             new_phase = self._phase_ref[basis][qubit].last_phase + phi
             self._phase_ref[basis][qubit][last_used] = new_phase
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> Dict[str, Any]:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
         d["__version__"] = pulser.__version__
         d["calls"] = self._calls[1:]
         d["vars"] = self._variables
         d["to_build_calls"] = self._to_build_calls
-        return d
+        return cast(Dict[str, Any], d)
 
     def __str__(self) -> str:
         full = ""
@@ -847,15 +848,17 @@ class _PhaseTracker:
         self._times: List[int] = [0]
         self._phases: List[float] = [self._format(initial_phase)]
 
-    @property
+    @ property
     def last_time(self) -> int:
         return self._times[-1]
 
-    @property
+    @ property
     def last_phase(self) -> float:
         return self._phases[-1]
 
-    def changes(self, ti: float, tf: float, time_scale: float = 1.):
+    def changes(self, ti: float, tf: float,
+                time_scale: float = 1.) -> Generator[Tuple[float, float],
+                                                     None, None]:
         """Changes in phases within ]ti, tf]."""
         start, end = np.searchsorted(
             self._times, (ti * time_scale, tf * time_scale), side='right')
