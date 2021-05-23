@@ -12,16 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 from functools import partialmethod
 from itertools import chain
 import inspect
 import operator
 import warnings
+from typing import Callable, Dict, Any, Union, TYPE_CHECKING
 
-from pulser.parametrized import Parametrized
 from pulser.json.utils import obj_to_dict
+from pulser.parametrized import Parametrized
+if TYPE_CHECKING:
+    from pulser.parametrized import Variable  # pragma: no cover
 
-# Availabe operations on parameterized objects with OpSupport
+# Available operations on parametrized objects with OpSupport
 reversible_ops = [
     "__add__",
     "__sub__",
@@ -36,16 +40,16 @@ reversible_ops = [
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
-    def _do_op(self, op_name, other):
+    def _do_op(self, op_name: str, other: Union[int, float]) -> ParamObj:
         return ParamObj(getattr(operator, op_name), self, other)
 
-    def _do_rop(self, op_name, other):
+    def _do_rop(self, op_name: str, other: Union[int, float]) -> ParamObj:
         return ParamObj(getattr(operator, op_name), other, self)
 
-    def __neg__(self):
+    def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
 
-    def __abs__(self):
+    def __abs__(self) -> ParamObj:
         return ParamObj(operator.abs, self)
 
 
@@ -57,7 +61,7 @@ for method in reversible_ops:
 
 
 class ParamObj(Parametrized, OpSupport):
-    def __init__(self, cls, *args, **kwargs):
+    def __init__(self, cls: Callable, *args: Any, **kwargs: Any) -> None:
         """Holds a call to a given class.
 
         When called, a ParamObj instance returns `cls(*args, **kwargs)`.
@@ -69,7 +73,7 @@ class ParamObj(Parametrized, OpSupport):
             kwargs: The kwargs for calling `cls`.
         """
         self.cls = cls
-        self._variables = {}
+        self._variables: Dict[str, Variable] = {}
         if isinstance(self.cls, Parametrized):
             self._variables.update(self.cls.variables)
         for x in chain(args, kwargs.values()):
@@ -78,14 +82,14 @@ class ParamObj(Parametrized, OpSupport):
         self.args = args
         self.kwargs = kwargs
         self._instance = None
-        self._vars_state = {}
+        self._vars_state: Dict[str, int] = {}
 
     @property
-    def variables(self):
+    def variables(self) -> Dict[str, Variable]:
         return self._variables
 
     def build(self):
-        """Builds the object with it's variables last assigned values."""
+        """Builds the object with its variables last assigned values."""
         vars_state = {key: var._count for key, var in self._variables.items()}
         if vars_state != self._vars_state:
             self._vars_state = vars_state
@@ -99,7 +103,7 @@ class ParamObj(Parametrized, OpSupport):
             self._instance = obj(*args_, **kwargs_)
         return self._instance
 
-    def _to_dict(self):
+    def _to_dict(self) -> Dict[str, Any]:
         def class_to_dict(cls):
             return obj_to_dict(self, _build=False, _name=cls.__name__,
                                _module=cls.__module__)
@@ -125,7 +129,7 @@ class ParamObj(Parametrized, OpSupport):
 
         return obj_to_dict(self, cls_dict, *args, **self.kwargs)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> ParamObj:
         obj = ParamObj(self, *args, **kwargs)
         warnings.warn("Calls to methods of parametrized objects are only "
                       "executed if they serve as arguments of other "
@@ -134,13 +138,13 @@ class ParamObj(Parametrized, OpSupport):
                       "executed upon sequence building.")
         return obj
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> ParamObj:
         if hasattr(self.cls, name):
             return ParamObj(getattr, self, name)
         else:
             raise AttributeError(f"No attribute named '{name}' in {self}.")
 
-    def __str__(self):
+    def __str__(self) -> str:
         args = [str(a) for a in self.args]
         kwargs = [f"{key}={str(value)}" for key, value in self.kwargs.items()]
         if isinstance(self.cls, Parametrized):
