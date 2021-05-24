@@ -293,7 +293,7 @@ def test_sequence():
     seq.measure(basis='digital')
 
     with patch('matplotlib.pyplot.show'):
-        seq.draw()
+        seq.draw(draw_phase_area=True)
 
     s = seq.serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
