@@ -112,9 +112,6 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
 
-    if draw_phase_area:
-        fig.suptitle(r"$\phi$: Phase, A: Area", fontsize=14)
-
     ch_axes = {}
     for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
         ax = fig.add_subplot(gs_)
@@ -211,13 +208,21 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                     phase_val = seq_.type.phase / np.pi
                     area_val = seq_.type.amplitude.integral / np.pi
                     x_plot = (seq_.ti + seq_.tf) / 2
-                    if pulse_num % 2 == 0:
+                    if (
+                        seq._schedule[ch][pulse_num-1].type == "target"
+                        or pulse_num % 2 == 0
+                    ):
                         y_plot = np.max(seq_.type.amplitude.samples) / 2
                     else:
                         y_plot = np.max(seq_.type.amplitude.samples)
+                    if phase_val == 0:
+                        txt = fr"A: {area_val:.2g}$\pi$"
+                    else:
+                        phase_fmt = fr"$\phi$: {phase_str(phase_val)}"
+                        area_fmt = fr"A: {area_val:.2g}$\pi$"
+                        txt = "\n".join([phase_fmt, area_fmt])
                     a.text(
-                        x_plot, y_plot, fr"$\phi$: {phase_str(phase_val)}"
-                        + "\n" + fr"A: {area_val:.2g}$\pi$", fontsize=10,
+                        x_plot, y_plot, txt, fontsize=10,
                         ha="center", va="center", bbox=ph_box,
                     )
 
