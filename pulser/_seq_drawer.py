@@ -213,8 +213,8 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                 if isinstance(seq_.type, Pulse):
                     if sampling_rate:
                         area_val = np.sum(
-                            yaeff[seq_.ti*time_scale:seq_.tf*time_scale+1]
-                        ) / time_scale / np.pi
+                            yaeff[int(seq_.ti*1e-3):int(seq_.tf*1e-3)]
+                        ) / 1e3 / np.pi
                     else:
                         area_val = seq_.type.amplitude.integral / np.pi
                     phase_val = seq_.type.phase / np.pi
