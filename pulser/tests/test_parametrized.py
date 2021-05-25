@@ -28,7 +28,7 @@ b._assign([-1.5, 1.5])
 c = Variable("c", str)
 t = Variable("t", int)
 bwf = BlackmanWaveform(t, a)
-pulse = Pulse.ConstantDetuning(bwf, *b)
+pulse = Pulse.ConstantDetuning(bwf, b[0], b[1])
 pulse2 = Pulse(bwf, bwf, 1)
 
 
