@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import functools
 import itertools
 
@@ -22,6 +24,8 @@ from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
 from pulser.json.utils import obj_to_dict
+
+from typing import Any, cast, Dict, Union
 
 
 class Pulse:
@@ -60,7 +64,10 @@ class Pulse:
         else:
             return object.__new__(cls)
 
-    def __init__(self, amplitude, detuning, phase, post_phase_shift=0):
+    def __init__(self, amplitude: Union[Waveform, Parametrized],
+                 detuning: Union[Waveform, Parametrized],
+                 phase: Union[float, Parametrized],
+                 post_phase_shift: Union[float, Parametrized] = 0.):
         """Initializes a new Pulse."""
 
         if not (isinstance(amplitude, Waveform) and
@@ -76,12 +83,18 @@ class Pulse:
                              "non-negative.")
         self.amplitude = amplitude
         self.detuning = detuning
+        phase = cast(float, phase)
         self.phase = float(phase) % (2 * np.pi)
+        post_phase_shift = cast(float, post_phase_shift)
         self.post_phase_shift = float(post_phase_shift) % (2 * np.pi)
 
     @classmethod
     @parametrize
-    def ConstantDetuning(cls, amplitude, detuning, phase, post_phase_shift=0):
+    def ConstantDetuning(cls, amplitude: Union[Waveform, Parametrized],
+                         detuning: Union[float, Parametrized],
+                         phase: Union[float, Parametrized],
+                         post_phase_shift: Union[float, Parametrized]
+                         = 0.) -> Pulse:
         """Pulse with an amplitude waveform and a constant detuning.
 
         Args:
@@ -90,12 +103,17 @@ class Pulse:
             phase (float): The pulse phase (in radians).
         """
 
-        detuning_wf = ConstantWaveform(amplitude.duration, detuning)
+        detuning_wf = ConstantWaveform(
+            cast(Waveform, amplitude).duration, detuning)
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
     @parametrize
-    def ConstantAmplitude(cls, amplitude, detuning, phase, post_phase_shift=0):
+    def ConstantAmplitude(cls, amplitude: Union[float, Parametrized],
+                          detuning: Union[Waveform, Parametrized],
+                          phase: Union[float, Parametrized],
+                          post_phase_shift: Union[float, Parametrized]
+                          = 0.) -> Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
 
         Args:
@@ -104,13 +122,18 @@ class Pulse:
             phase (float): The pulse phase (in radians).
         """
 
-        amplitude_wf = ConstantWaveform(detuning.duration, amplitude)
+        amplitude_wf = ConstantWaveform(
+            cast(Waveform, detuning).duration, amplitude)
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
     @parametrize
-    def ConstantPulse(cls, duration, amplitude, detuning, phase,
-                      post_phase_shift=0):
+    def ConstantPulse(cls, duration: Union[int, Parametrized],
+                      amplitude: Union[float, Parametrized],
+                      detuning: Union[float, Parametrized],
+                      phase: Union[float, Parametrized],
+                      post_phase_shift: Union[float, Parametrized]
+                      = 0.) -> Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
         Args:
@@ -124,7 +147,7 @@ class Pulse:
         detuning_wf = ConstantWaveform(duration, detuning)
         return cls(amplitude_wf, detuning_wf, phase, post_phase_shift)
 
-    def draw(self):
+    def draw(self) -> None:
         """Draws the pulse's amplitude and frequency waveforms."""
 
         fig, ax1 = plt.subplots()
@@ -136,17 +159,17 @@ class Pulse:
         fig.tight_layout()
         plt.show()
 
-    def _to_dict(self):
+    def _to_dict(self) -> Dict[str, Any]:
         return obj_to_dict(self, self.amplitude, self.detuning, self.phase,
                            post_phase_shift=self.post_phase_shift)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Pulse(Amp={self.amplitude!s}, Detuning={self.detuning!s}, "
             f"Phase={self.phase:.3g})"
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, " +
                 f"phase={self.phase:.3g}, " +
                 f"post_phase_shift={self.post_phase_shift:.3g})")
