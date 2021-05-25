@@ -20,22 +20,26 @@ import copy
 from functools import wraps
 from itertools import chain
 import json
-from pulser.channels import Channel
-from pulser.register import Register
-from typing import Any, Callable, Generator, cast, Dict, List, Optional, Union
-from typing import Tuple
+from typing import (Any, Callable, Generator, cast, Dict,
+                    List, Optional, Union, Tuple)
+
 import warnings
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 import pulser
+from pulser._seq_drawer import draw_sequence
+from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
-from pulser._seq_drawer import draw_sequence
+from pulser.register import Register
+
+QubitId = Union[float, int, str]
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
@@ -143,28 +147,28 @@ class Sequence:
         self._register: Register = register
         self._device: Device = device
         self._in_xy: bool = False
-        self._calls = [_Call("__init__", (register, device), {})]
+        self._calls: List[_Call] = [_Call("__init__", (register, device), {})]
         self._channels: Dict[str, Channel] = {}
         self._schedule: Dict[str, List[_TimeSlot]] = {}
         # The phase reference of each channel
-        self._phase_ref: Dict[str, Dict[str, _PhaseTracker]] = {}
+        self._phase_ref: Dict[str, Dict[QubitId, _PhaseTracker]] = {}
         # Stores the names and corresponding ids of declared channels
         self._taken_channels: Dict[str, str] = {}
         # IDs of all qubits in device
         self._qids = set(self.qubit_info.keys())
         # Last time each qubit was used, by basis
-        self._last_used: Dict[str, Dict[str, int]] = {}
+        self._last_used: Dict[str, Dict[QubitId, int]] = {}
         # Last time a target happened, by channel
         self._last_target: Dict[str, int] = {}
         self._variables: Dict[str, Variable] = {}
-        self._to_build_calls: List[Any] = []
+        self._to_build_calls: List[_Call] = []
         self._building: bool = True
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
 
     @property
-    def qubit_info(self) -> Dict[str, Any]:
+    def qubit_info(self) -> Dict[QubitId, ArrayLike]:
         """Dictionary with the qubit's IDs and positions."""
         return self._register.qubits
 
@@ -207,7 +211,7 @@ class Sequence:
         return not self._building
 
     @_screen
-    def current_phase_ref(self, qubit: str,
+    def current_phase_ref(self, qubit: QubitId,
                           basis: str = 'digital') -> float:
         """Current phase reference of a specific qubit for a given basis.
 
@@ -233,8 +237,9 @@ class Sequence:
         return self._phase_ref[basis][qubit].last_phase
 
     def declare_channel(self, name: str, channel_id: str,
-                        initial_target: Optional[Union[set,
-                                                       str]] = None) -> None:
+                        initial_target: Optional[Union[set[QubitId],
+                                                       QubitId]] = None
+                        ) -> None:
         """Declares a new channel to the Sequence.
 
         The first declared channel implicitly defines the sequence's mode of
@@ -350,8 +355,9 @@ class Sequence:
         return var
 
     @_store
-    def add(self, pulse: Pulse, channel: str,
-            protocol: str = 'min-delay') -> None:
+    def add(self, pulse: Union[Pulse, Parametrized],
+            channel: Union[str, Parametrized],
+            protocol: Union[str, Parametrized] = 'min-delay') -> None:
         """Adds a pulse to a channel.
 
         Args:
@@ -375,6 +381,9 @@ class Sequence:
                     idles the channel until the end of the other channels'
                     latest pulse.
         """
+        pulse = cast(Pulse, pulse)
+        channel = cast(str, channel)
+
         self._validate_channel(channel)
 
         valid_protocols = ['min-delay', 'no-delay', 'wait-for-all']
@@ -444,16 +453,17 @@ class Sequence:
 
         self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
 
-        for q in last.targets:
-            if self._last_used[basis][q] < tf:
-                self._last_used[basis][q] = tf
+        for qubit in last.targets:
+            if self._last_used[basis][qubit] < tf:
+                self._last_used[basis][qubit] = tf
 
         if pulse.post_phase_shift:
             self._phase_shift(pulse.post_phase_shift, *last.targets,
                               basis=basis)
 
     @_store
-    def target(self, qubits: Union[Iterable, str], channel: str) -> None:
+    def target(self, qubits: Union[QubitId, Parametrized],
+               channel: Union[str, Parametrized]) -> None:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
@@ -463,20 +473,28 @@ class Sequence:
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
          """
+        qubits = cast(QubitId, qubits)
+        channel = cast(str, channel)
+
         self._target(qubits, channel)
 
     @_store
-    def delay(self, duration: int, channel: str) -> None:
+    def delay(self, duration: Union[int, Parametrized],
+              channel: Union[str, Parametrized]) -> None:
         """Idles a given channel for a specific duration.
 
         Args:
             duration (int): Time to delay (in multiples of 4 ns).
             channel (str): The channel's name provided when declared.
         """
+        duration = cast(int, duration)
+        channel = cast(str, channel)
+
         self._delay(duration, channel)
 
     @_store
-    def measure(self, basis: str = 'ground-rydberg') -> None:
+    def measure(self,
+                basis: Union[str, Parametrized] = 'ground-rydberg') -> None:
         """Measures in a valid basis.
 
         Note:
@@ -508,8 +526,9 @@ class Sequence:
             self._measurement = basis
 
     @_store
-    def phase_shift(self, phi: float, *targets: str,
-                    basis: str = 'digital') -> None:
+    def phase_shift(self, phi: Union[float, Parametrized],
+                    *targets: Union[QubitId, Parametrized],
+                    basis: Union[str, Parametrized] = 'digital') -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
         This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
@@ -526,10 +545,14 @@ class Sequence:
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
+        phi = cast(float, phi)
+        basis = cast(str, basis)
+        targets = cast(Tuple[QubitId], targets)
+
         self._phase_shift(phi, *targets, basis=basis)
 
     @_store
-    def align(self, *channels: str) -> None:
+    def align(self, *channels: Union[str, Parametrized]) -> None:
         """Aligns multiple channels in time.
 
         Introduces delays that align the provided channels with the one that
@@ -555,15 +578,15 @@ class Sequence:
         if self.is_parametrized():
             return
 
-        last_ts = {id: self._last(id).tf for id in channels}
+        last_ts = {id: self._last(cast(str, id)).tf for id in channels}
         tf = max(last_ts.values())
 
         for id in channels:
             delta = tf - last_ts[id]
             if delta > 0:
-                self._delay(delta, id)
+                self._delay(delta, cast(str, id))
 
-    def build(self, **vars: Any) -> Sequence:
+    def build(self, **vars: Union[ArrayLike, float, int, str]) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
         Keyword Args:
@@ -662,12 +685,12 @@ class Sequence:
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
-    @ _screen
+    @_screen
     def draw(self) -> None:
         """Draws the sequence in its current state."""
         draw_sequence(self)
 
-    def _target(self, qubits: Union[Iterable, str], channel: str) -> None:
+    def _target(self, qubits: Union[Iterable, QubitId], channel: str) -> None:
         self._validate_channel(channel)
 
         try:
@@ -735,7 +758,7 @@ class Sequence:
         self._add_to_schedule(channel,
                               _TimeSlot('delay', ti, tf, last.targets))
 
-    def _phase_shift(self, phi: float, *targets: str,
+    def _phase_shift(self, phi: float, *targets: QubitId,
                      basis: str = 'digital') -> None:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
@@ -849,15 +872,15 @@ class _PhaseTracker:
         self._times: List[int] = [0]
         self._phases: List[float] = [self._format(initial_phase)]
 
-    @ property
+    @property
     def last_time(self) -> int:
         return self._times[-1]
 
-    @ property
+    @property
     def last_phase(self) -> float:
         return self._phases[-1]
 
-    def changes(self, ti: float, tf: float,
+    def changes(self, ti: Union[float, int], tf: Union[float, int],
                 time_scale: float = 1.) -> Generator[Tuple[float, float],
                                                      None, None]:
         """Changes in phases within ]ti, tf]."""

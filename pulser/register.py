@@ -20,10 +20,12 @@ from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, Dict, Iterable, Optional, Mapping, cast
+from typing import Any, cast, Dict, Iterable, Optional, Mapping, Union
 
 import pulser
 from pulser.json.utils import obj_to_dict
+
+QubitId = Union[float, int, str]
 
 
 class Register:
@@ -53,7 +55,7 @@ class Register:
         self._coords = coords
 
     @property
-    def qubits(self) -> Dict[Any, np.ndarray]:
+    def qubits(self) -> Dict[QubitId, ArrayLike]:
         """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))
 
