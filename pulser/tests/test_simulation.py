@@ -333,7 +333,7 @@ def test_noise():
     with pytest.raises(ValueError,
                        match='Not a valid SPAM parameter'):
         sim.set_spam(epsilon232=1.5)
-    sim.set_doppler_sigma(3)
+    sim.doppler_sigma = 3
     sim.run()
     sim.set_noise('doppler')
     sim.add_noise('doppler')
@@ -342,6 +342,7 @@ def test_noise():
                        match='Cannot include'):
         sim.set_noise('dephasing')
     sim.run().sample_final_state()
+    sim.spam_dict
 
 
 def test_dephasing():
@@ -354,3 +355,10 @@ def test_dephasing():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.add_noise('dephasing')
     sim.run().sample_state()
+
+
+def test_temperature():
+    sim = Simulation(seq)
+    sim.temperature = 40
+    sim.temperature
+    sim.doppler_sigma

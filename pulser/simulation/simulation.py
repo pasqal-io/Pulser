@@ -76,6 +76,7 @@ class Simulation:
         self.operators = deepcopy(self.samples)
         self._noise = []
         self._collapse_ops = []
+        self._temperature = 50e-6
         self._build_hamiltonian()
         self._init_config()
         self.config('eval_t', evaluation_times)
@@ -134,17 +135,13 @@ class Simulation:
             det_spam = 150
             for noise in self._noise:
                 if noise == 'doppler':
-                    # sigma = k_eff \Delta v
-                    noise_det += np.random.normal(0, self.doppler_sigma)
-
+                    noise_det += np.random.normal(0, self._doppler_sigma)
                 # qubit qid badly prepared
                 if noise == 'SPAM' and self.spam_detune[qid]:
                     noise_det += det_spam
-
                 # gaussian beam for global pulses
                 if noise == 'amplitude':
                     position = self._qdict[qid]
-
                     r = np.linalg.norm(position)
                     w0 = 175.
                     noise_amp = np.random.normal(1, 1e-3) * np.exp(-(r/w0)**2)
@@ -348,8 +345,43 @@ class Simulation:
     def _prepare_spam_detune(self):
         """Choose atoms that will be badly prepared"""
         # Tag True if atom is badly prepared
-        self.spam_detune = {qid: (np.random.uniform() < self.spam_dict['eta'])
+        self.spam_detune = {qid: (np.random.uniform() < self._spam_dict['eta'])
                             for qid in self._qid_index}
+
+    @property
+    def doppler_sigma(self):
+        return self._doppler_sigma
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @property
+    def spam_dict(self):
+        return self._spam_dict
+
+    @temperature.setter
+    def temperature(self, value):
+        # value set in microkelvin
+        self._temperature = value * 10**-6
+        self._calc_sigma_doppler()
+
+    def _calc_sigma_doppler(self):
+        # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
+        self._doppler_sigma = 8.7 * np.sqrt(1.38e-23 * self._temperature /
+                                            1.45e-25)
+
+    @doppler_sigma.setter
+    def doppler_sigma(self, value):
+        self._doppler_sigma = value
+
+    def init_doppler_sigma(self):
+        self._doppler_sigma = 8.7 * np.sqrt(1.38e-23 * 50e-6 /
+                                            1.45e-25)
+
+    def init_spam(self):
+        self._spam_dict = {'eta': 0.005, 'epsilon': 0.01,
+                           'epsilon_prime': 0.05}
 
     def add_noise(self, noise_type):
         """Adds a noise model to the Simulation instance.
@@ -403,17 +435,7 @@ class Simulation:
         for param in values:
             if param not in {'eta', 'epsilon', 'epsilon_prime'}:
                 raise ValueError('Not a valid SPAM parameter')
-            self.spam_dict[param] = values[param]
-
-    def init_doppler_sigma(self):
-        self.doppler_sigma = 2*np.pi*0.12
-
-    def set_doppler_sigma(self, sigma):
-        self.doppler_sigma = sigma
-
-    def init_spam(self):
-        self.spam_dict = {'eta': 0.005, 'epsilon': 0.01,
-                          'epsilon_prime': 0.05}
+            self._spam_dict[param] = values[param]
 
     def init_dephasing(self):
         self.dephasing_prob = 0.05  # Probability of phase (Z) flip
@@ -516,7 +538,8 @@ class Simulation:
                                                          **options)
                                    )
             return CleanResults(result.states, self.dim, self._size,
-                                self.basis_name, measurement_basis)
+                                self.basis_name, measurement_basis,
+                                self.eval_times)
 
         if self._noise:
             # NOISY SIMULATION:
@@ -530,29 +553,29 @@ class Simulation:
                 self._build_hamiltonian()
                 meas_basis = _assign_meas_basis()
                 # Get CleanResults instance from sequence with added noise:
-                res_with_noise = _run_solver(as_subroutine=True,
-                                             measurement_basis=meas_basis)
+                clean_res_noisy_seq = _run_solver(as_subroutine=True,
+                                                  measurement_basis=meas_basis)
                 # Extract statistics at eval time (final time by default):
                 if 'SPAM' in self._noise:
                     total_count += \
-                        [res_with_noise.sampling_with_detection_errors(
-                            self.spam_dict,
+                        [clean_res_noisy_seq.sampling_with_detection_errors(
+                            self._spam_dict,
                             t=t,
                             meas_basis=meas_basis,
                             N_samples=self._config['samples_per_run'])
                          for t in time_indices]
                 else:
                     total_count += \
-                        [res_with_noise.sample_state(
+                        [clean_res_noisy_seq.sample_state(
                             t=t,
                             meas_basis=meas_basis,
                             N_samples=self._config['samples_per_run'])
                          for t in time_indices]
-            prob = [Counter({k: v / (self._config['runs']
-                            * self._config['samples_per_run'])
-                            for k, v in total_count[t].items()})
-                    for t in time_indices]
-            return NoisyResults(prob, self._size, self.basis_name,
-                                meas_basis=meas_basis)
+            N_measures = self._config['runs'] * self._config['samples_per_run']
+            total_run_prob = [Counter({k: v / N_measures
+                                      for k, v in total_count[t].items()})
+                              for t in time_indices]
+            return NoisyResults(total_run_prob, self._size, self.basis_name,
+                                meas_basis, self.eval_times, N_measures)
         else:
             return _run_solver()

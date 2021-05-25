@@ -15,6 +15,7 @@
 from collections import Counter
 from abc import ABC, abstractmethod
 
+import matplotlib.pyplot as plt
 import qutip
 import numpy as np
 
@@ -28,7 +29,8 @@ class SimulationResults(ABC):
     from them.
     """
 
-    def __init__(self, run_output, dim, size, basis_name, meas_basis):
+    def __init__(self, run_output, dim, size, basis_name, meas_basis,
+                 sim_times):
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -39,6 +41,8 @@ class SimulationResults(ABC):
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
+            sim_times (array): Array of times when simulation results are
+                returned.
 
         Keyword Args:
             meas_basis (None or str): The basis in which a sampling measurement
@@ -58,6 +62,7 @@ class SimulationResults(ABC):
                     "`meas_basis` must be 'ground-rydberg' or 'digital'."
                     )
         self._meas_basis = meas_basis
+        self.sim_times = sim_times
 
     @abstractmethod
     def expect(self, obs_list):
@@ -104,6 +109,10 @@ class SimulationResults(ABC):
     def sample_final_state(self, meas_basis=None, N_samples=1000):
         pass
 
+    @abstractmethod
+    def plot(self, op, fmt=''):
+        pass
+
 
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
@@ -116,7 +125,8 @@ class NoisyResults(SimulationResults):
     information from them.
     """
 
-    def __init__(self, run_output, size, basis_name, meas_basis, dim=2):
+    def __init__(self, run_output, size, basis_name, meas_basis, sim_times,
+                 N_measures, dim=2):
         """Initializes a new NoisyResults instance.
 
         Warning :
@@ -139,8 +149,12 @@ class NoisyResults(SimulationResults):
         Keyword Args:
             meas_basis (None or str): The basis in which a sampling measurement
                 is desired.
+            N_measures (int): number of measurements needed to compute this
+                result when doing the simulation.
         """
-        super().__init__(run_output, dim, size, basis_name, meas_basis)
+        super().__init__(run_output, dim, size, basis_name, meas_basis,
+                         sim_times)
+        self.N_measures = N_measures
 
     @property
     def states(self):
@@ -235,6 +249,29 @@ class NoisyResults(SimulationResults):
     def sample_final_state(self, N_samples=1000):
         return self.sample_state(N_samples=N_samples)
 
+    def _standard_dev(self, op):
+        """Returns the square root of the variance of operator op."""
+        density_mats = [self.get_state(t) for t in range(len(self._states))]
+        return np.sqrt(qutip.variance(op, density_mats) / self.N_measures)
+
+    def _get_error_bars(self, op):
+        moy = self.expect([op])[0]
+        st = self._standard_dev(op)
+        return moy, st
+
+    def plot(self, op, error_bars=True, fmt='.'):
+        """Plots the expectation results of operator op, computing error bars
+            if wanted.
+        Args:
+            op (Qobj): QuTiP operator which expectation value is to be plotted.
+            error_bars (bool): display error bars or not.
+        """
+        if error_bars:
+            moy, st = self._get_error_bars(op)
+            plt.errorbar(self.sim_times, moy, st, fmt=fmt)
+        else:
+            plt.plot(self.sim_times, self.expect([op])[0], fmt)
+
 
 class CleanResults(SimulationResults):
     """Results of an ideal simulation run of a pulse sequence.
@@ -244,7 +281,7 @@ class CleanResults(SimulationResults):
     """
 
     def __init__(self, run_output, dim, size, basis_name,
-                 meas_basis):
+                 meas_basis, sim_times):
         """Initializes a new CleanResults instance.
 
         Args:
@@ -260,7 +297,8 @@ class CleanResults(SimulationResults):
             meas_basis (None or str): The basis in which a sampling measurement
                 is desired.
         """
-        super().__init__(run_output, dim, size, basis_name, meas_basis)
+        super().__init__(run_output, dim, size, basis_name, meas_basis,
+                         sim_times)
 
     @property
     def states(self):
@@ -481,3 +519,6 @@ class CleanResults(SimulationResults):
             detected_sample_dict += dict_state
 
         return detected_sample_dict
+
+    def plot(self, op, fmt=''):
+        plt.plot(self.sim_times, self.expect([op])[0], fmt)

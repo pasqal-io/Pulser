@@ -53,10 +53,10 @@ ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 
 def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
-        CleanResults(state, 2, 2, 'bad_basis', None)
+        CleanResults(state, 2, 2, 'bad_basis', None, [0])
     with pytest.raises(ValueError, match="`meas_basis` must be"):
         NoisyResults(state, 2, 'ground-rydberg',
-                     'wrong_measurement_basis')
+                     'wrong_measurement_basis', [0], 1)
 
     assert results._dim == 2
     assert results._size == 2
@@ -134,6 +134,14 @@ def test_expect_noisy():
     op = [qutip.tensor(qutip.qeye(2),
                        qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
     results_noisy.expect(op)
+
+
+def test_plot():
+    op = qutip.tensor(qutip.qeye(2),
+                      qutip.basis(2, 1)*qutip.basis(2, 0).dag())
+    results_noisy.plot(op)
+    results_noisy.plot(op, error_bars=False)
+    results.plot(op)
 
 
 def test_sample_final_state():
