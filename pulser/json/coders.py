@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 import importlib
 import inspect
 from json import JSONEncoder, JSONDecoder
+from typing import Dict, Any, cast
 
 import numpy as np
 
@@ -23,9 +25,9 @@ from pulser.parametrized import Variable
 
 
 class PulserEncoder(JSONEncoder):
-    def default(self, o):
+    def default(self, o: Any) -> Dict[str, Any]:
         if hasattr(o, "_to_dict"):
-            return o._to_dict()
+            return cast(dict, o._to_dict())
         elif type(o) == type:
             return obj_to_dict(o, _build=False, _name=o.__name__)
         elif isinstance(o, np.ndarray):
@@ -33,16 +35,16 @@ class PulserEncoder(JSONEncoder):
         elif isinstance(o, set):
             return obj_to_dict(o, list(o))
         else:
-            return JSONEncoder.default(self, o)
+            return cast(dict, JSONEncoder.default(self, o))
 
 
 class PulserDecoder(JSONDecoder):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         # TODO: Check version compatibility (stored at the Sequence level)
-        self.vars = {}
+        self.vars: Dict[str, Variable] = {}
         super().__init__(object_hook=self.object_hook, *args, **kwargs)
 
-    def object_hook(self, obj):
+    def object_hook(self, obj: Dict[str, Any]) -> Any:
         try:
             build = obj["_build"]
             obj_name = obj["__name__"]
