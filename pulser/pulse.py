@@ -64,8 +64,8 @@ class Pulse:
         else:
             return object.__new__(cls)
 
-    def __init__(self, amplitude: Union[Parametrized, Waveform],
-                 detuning: Union[Parametrized, Waveform],
+    def __init__(self, amplitude: Union[Waveform, Parametrized],
+                 detuning: Union[Waveform, Parametrized],
                  phase: Union[float, Parametrized],
                  post_phase_shift: Union[float, Parametrized] = 0.):
         """Initializes a new Pulse."""
@@ -90,7 +90,7 @@ class Pulse:
 
     @classmethod
     @parametrize
-    def ConstantDetuning(cls, amplitude: Waveform,
+    def ConstantDetuning(cls, amplitude: Union[Waveform, Parametrized],
                          detuning: Union[float, Parametrized],
                          phase: Union[float, Parametrized],
                          post_phase_shift: Union[float, Parametrized]
@@ -103,13 +103,14 @@ class Pulse:
             phase (float): The pulse phase (in radians).
         """
 
-        detuning_wf = ConstantWaveform(amplitude.duration, detuning)
+        detuning_wf = ConstantWaveform(
+            cast(Waveform, amplitude).duration, detuning)
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
     @parametrize
     def ConstantAmplitude(cls, amplitude: Union[float, Parametrized],
-                          detuning: Waveform,
+                          detuning: Union[Waveform, Parametrized],
                           phase: Union[float, Parametrized],
                           post_phase_shift: Union[float, Parametrized]
                           = 0.) -> Pulse:
@@ -121,7 +122,8 @@ class Pulse:
             phase (float): The pulse phase (in radians).
         """
 
-        amplitude_wf = ConstantWaveform(detuning.duration, amplitude)
+        amplitude_wf = ConstantWaveform(
+            cast(Waveform, detuning).duration, amplitude)
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
