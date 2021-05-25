@@ -211,9 +211,14 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
             for pulse_num, seq_ in enumerate(seq._schedule[ch]):
                 # Select only `Pulse` objects
                 if isinstance(seq_.type, Pulse):
+                    if sampling_rate:
+                        area_val = np.sum(
+                            yaeff[seq_.ti*time_scale:seq_.tf*time_scale+1]
+                        ) / time_scale / np.pi
+                    else:
+                        area_val = seq_.type.amplitude.integral / np.pi
                     phase_val = seq_.type.phase / np.pi
-                    area_val = seq_.type.amplitude.integral / np.pi
-                    x_plot = (seq_.ti + seq_.tf) / 2
+                    x_plot = (seq_.ti + seq_.tf) / 2 / time_scale
                     if (
                         seq._schedule[ch][pulse_num-1].type == "target"
                         or not top
@@ -223,11 +228,11 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                     elif top:
                         y_plot = np.max(seq_.type.amplitude.samples)
                         top = False  # Next box at the center.
+                    area_fmt = fr"A: {area_val:.2g}$\pi$"
                     if not draw_phase:
-                        txt = fr"A: {area_val:.2g}$\pi$"
+                        txt = area_fmt
                     else:
                         phase_fmt = fr"$\phi$: {phase_str(phase_val)}"
-                        area_fmt = fr"A: {area_val:.2g}$\pi$"
                         txt = "\n".join([phase_fmt, area_fmt])
                     a.text(
                         x_plot, y_plot, txt, fontsize=10,
