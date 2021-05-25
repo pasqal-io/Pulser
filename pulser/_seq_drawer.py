@@ -106,8 +106,9 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
     time_scale = 1e3 if seq._total_duration > 1e4 else 1
 
     # Boxes for qubit and phase text
-    q_box = dict(boxstyle="round", facecolor='orange', alpha=0.7)
-    ph_box = dict(boxstyle="round", facecolor='ghostwhite', alpha=0.7)
+    q_box = dict(boxstyle="round", facecolor='orange')
+    ph_box = dict(boxstyle="round", facecolor='ghostwhite')
+    area_ph_box = dict(boxstyle='round', facecolor='ghostwhite')
 
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
@@ -202,6 +203,7 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 
         if draw_phase_area:
+            top = False  # Variable to track position of box, top or center.
             for pulse_num, seq_ in enumerate(seq._schedule[ch]):
                 # Select only `Pulse` objects
                 if isinstance(seq_.type, Pulse):
@@ -210,11 +212,13 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                     x_plot = (seq_.ti + seq_.tf) / 2
                     if (
                         seq._schedule[ch][pulse_num-1].type == "target"
-                        or pulse_num % 2 == 0
+                        or not top
                     ):
                         y_plot = np.max(seq_.type.amplitude.samples) / 2
-                    else:
+                        top = True  # Next box at the top.
+                    elif top:
                         y_plot = np.max(seq_.type.amplitude.samples)
+                        top = False  # Next box at the center.
                     if phase_val == 0:
                         txt = fr"A: {area_val:.2g}$\pi$"
                     else:
@@ -223,7 +227,7 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                         txt = "\n".join([phase_fmt, area_fmt])
                     a.text(
                         x_plot, y_plot, txt, fontsize=10,
-                        ha="center", va="center", bbox=ph_box,
+                        ha="center", va="center", bbox=area_ph_box,
                     )
 
         target_regions = []     # [[start1, [targets1], end1],...]

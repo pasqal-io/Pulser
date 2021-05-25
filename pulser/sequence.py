@@ -643,10 +643,10 @@ class Sequence:
         return json.loads(obj, cls=PulserDecoder, **kwargs)
 
     @_screen
-    def draw(self, sampling_rate=None, draw_phase_area=False):
+    def draw(self, draw_phase_area=False):
         """Draws the sequence in its current state."""
         draw_sequence(
-            self, sampling_rate=sampling_rate, draw_phase_area=draw_phase_area,
+            self, draw_phase_area=draw_phase_area,
         )
 
     def _target(self, qubits, channel):
