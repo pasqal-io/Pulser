@@ -204,6 +204,10 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
 
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
+            draw_phase = any(
+                seq_.type.phase != 0 for seq_ in seq._schedule[ch]
+                if isinstance(seq_.type, Pulse)
+            )
             for pulse_num, seq_ in enumerate(seq._schedule[ch]):
                 # Select only `Pulse` objects
                 if isinstance(seq_.type, Pulse):
@@ -219,7 +223,7 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                     elif top:
                         y_plot = np.max(seq_.type.amplitude.samples)
                         top = False  # Next box at the center.
-                    if phase_val == 0:
+                    if not draw_phase:
                         txt = fr"A: {area_val:.2g}$\pi$"
                     else:
                         phase_fmt = fr"$\phi$: {phase_str(phase_val)}"

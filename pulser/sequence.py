@@ -644,7 +644,12 @@ class Sequence:
 
     @_screen
     def draw(self, draw_phase_area=False):
-        """Draws the sequence in its current state."""
+        """Draws the sequence in its current state.
+
+        Keyword args:
+            draw_phase_area (bool): Whether phase and area values need
+                to be shown as text on the plot, defaults to False.
+        """
         draw_sequence(
             self, draw_phase_area=draw_phase_area,
         )
