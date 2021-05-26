@@ -424,13 +424,10 @@ class Register:
                 raise NotImplementedError("Needs more than one atom to draw "
                                           "the blockade radius.")
 
-            delta_um = np.linalg.norm(pos[1] - pos[0])
-            r_pts = np.linalg.norm(
-                np.subtract(*ax.transData.transform(pos[:2]).tolist())
-            ) / delta_um * blockade_radius / 2
-            # A 'scatter' marker of size s has area pi/4 * s
-            ax.scatter(pos[:, 0], pos[:, 1], s=4*r_pts**2, alpha=0.1,
-                       c='darkgreen')
+            for p in pos:
+                circle = plt.Circle(tuple(p), blockade_radius/2, alpha=0.1,
+                                    color='darkgreen')
+                ax.add_patch(circle)
         if draw_graph and blockade_radius is not None:
             epsilon = 1e-9      # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
