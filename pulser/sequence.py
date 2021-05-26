@@ -20,7 +20,7 @@ import copy
 from functools import wraps
 from itertools import chain
 import json
-from typing import (Any, Callable, Generator, cast, Dict,
+from typing import (AbstractSet, Any, Callable, Generator, cast, Dict,
                     List, Optional, Union, Tuple)
 
 import warnings
@@ -39,7 +39,7 @@ from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.register import Register
 
-QubitId = Union[float, int, str]
+QubitId = Union[int, str]
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
@@ -301,7 +301,8 @@ class Sequence:
             self._add_to_schedule(name, _TimeSlot('target', -1, 0, self._qids))
         elif initial_target is not None:
             try:
-                cond = any(isinstance(t, Parametrized) for t in initial_target)
+                cond = any(isinstance(t, Parametrized)
+                           for t in cast(Iterable, initial_target))
             except TypeError:
                 cond = isinstance(initial_target, Parametrized)
             if cond:
@@ -694,7 +695,8 @@ class Sequence:
         self._validate_channel(channel)
 
         try:
-            qs = set(qubits) if not isinstance(qubits, str) else {qubits}
+            qs = set(cast(AbstractSet, qubits)) if not isinstance(
+                qubits, str) else {qubits}
         except TypeError:
             qs = {qubits}
 

@@ -25,7 +25,7 @@ from typing import Any, cast, Dict, Iterable, Optional, Mapping, Union
 import pulser
 from pulser.json.utils import obj_to_dict
 
-QubitId = Union[float, int, str]
+QubitId = Union[int, str]
 
 
 class Register:
