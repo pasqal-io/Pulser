@@ -212,9 +212,11 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                 # Select only `Pulse` objects
                 if isinstance(seq_.type, Pulse):
                     if sampling_rate:
-                        area_val = np.sum(cs_amp(
-                            np.arange(seq_.ti, seq_.tf)
-                        )) * 1e-3 / np.pi
+                        area_val = (
+                            np.sum(
+                                cs_amp(np.arange(seq_.ti, seq_.tf)/time_scale)
+                            ) * 1e-3 / np.pi
+                        )
                     else:
                         area_val = seq_.type.amplitude.integral / np.pi
                     phase_val = seq_.type.phase / np.pi
