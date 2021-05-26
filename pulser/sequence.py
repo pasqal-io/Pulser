@@ -20,8 +20,8 @@ import copy
 from functools import wraps
 from itertools import chain
 import json
-from typing import (AbstractSet, Any, Callable, Generator, cast, Dict,
-                    List, Optional, Union, Tuple)
+from typing import (AbstractSet, Any, Callable, Generator, cast,
+                    Optional, Union)
 
 import warnings
 
@@ -147,28 +147,28 @@ class Sequence:
         self._register: Register = register
         self._device: Device = device
         self._in_xy: bool = False
-        self._calls: List[_Call] = [_Call("__init__", (register, device), {})]
-        self._channels: Dict[str, Channel] = {}
-        self._schedule: Dict[str, List[_TimeSlot]] = {}
+        self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
+        self._channels: dict[str, Channel] = {}
+        self._schedule: dict[str, list[_TimeSlot]] = {}
         # The phase reference of each channel
-        self._phase_ref: Dict[str, Dict[QubitId, _PhaseTracker]] = {}
-        # Stores the names and corresponding ids of declared channels
-        self._taken_channels: Dict[str, str] = {}
+        self._phase_ref: dict[str, dict[QubitId, _PhaseTracker]] = {}
+        # Stores the names and dict ids of declared channels
+        self._taken_channels: dict[str, str] = {}
         # IDs of all qubits in device
         self._qids = set(self.qubit_info.keys())
         # Last time each qubit was used, by basis
-        self._last_used: Dict[str, Dict[QubitId, int]] = {}
+        self._last_used: dict[str, dict[QubitId, int]] = {}
         # Last time a target happened, by channel
-        self._last_target: Dict[str, int] = {}
-        self._variables: Dict[str, Variable] = {}
-        self._to_build_calls: List[_Call] = []
+        self._last_target: dict[str, int] = {}
+        self._variables: dict[str, Variable] = {}
+        self._to_build_calls: list[_Call] = []
         self._building: bool = True
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
 
     @property
-    def qubit_info(self) -> Dict[QubitId, ArrayLike]:
+    def qubit_info(self) -> dict[QubitId, ArrayLike]:
         """Dictionary with the qubit's IDs and positions."""
         return self._register.qubits
 
@@ -548,7 +548,7 @@ class Sequence:
         """
         phi = cast(float, phi)
         basis = cast(str, basis)
-        targets = cast(Tuple[QubitId], targets)
+        targets = cast(tuple[QubitId], targets)
 
         self._phase_shift(phi, *targets, basis=basis)
 
@@ -785,7 +785,7 @@ class Sequence:
             new_phase = self._phase_ref[basis][qubit].last_phase + phi
             self._phase_ref[basis][qubit][last_used] = new_phase
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
         d["__version__"] = pulser.__version__
         d["calls"] = self._calls[1:]
@@ -871,8 +871,8 @@ class _PhaseTracker:
     """Tracks a phase reference over time."""
 
     def __init__(self, initial_phase: float):
-        self._times: List[int] = [0]
-        self._phases: List[float] = [self._format(initial_phase)]
+        self._times: list[int] = [0]
+        self._phases: list[float] = [self._format(initial_phase)]
 
     @property
     def last_time(self) -> int:
@@ -883,7 +883,7 @@ class _PhaseTracker:
         return self._phases[-1]
 
     def changes(self, ti: Union[float, int], tf: Union[float, int],
-                time_scale: float = 1.) -> Generator[Tuple[float, float],
+                time_scale: float = 1.) -> Generator[tuple[float, float],
                                                      None, None]:
         """Changes in phases within ]ti, tf]."""
         start, end = np.searchsorted(
