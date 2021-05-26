@@ -694,8 +694,7 @@ class Sequence:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
         """
-        draw_sequence(
-            self, draw_phase_area=draw_phase_area)
+        draw_sequence(self, draw_phase_area=draw_phase_area)
 
     def _target(self, qubits: Union[Iterable, QubitId], channel: str) -> None:
         self._validate_channel(channel)
