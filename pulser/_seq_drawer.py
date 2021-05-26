@@ -14,8 +14,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from pulser.waveforms import ConstantWaveform
+from pulser.pulse import Pulse
 from scipy.interpolate import CubicSpline
 
 
@@ -75,16 +75,18 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq, sampling_rate=None):
+def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
     """Draw the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
 
     Keyword args:
-        sampling_rate(float): Sampling rate of the effective pulse used by
+        sampling_rate (float): Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
+        draw_phase_area (bool): Whether phase and area values need to be shown
+            as text on the plot, defaults to False.
     """
 
     def phase_str(phi):
@@ -106,6 +108,7 @@ def draw_sequence(seq, sampling_rate=None):
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor='orange')
     ph_box = dict(boxstyle="round", facecolor='ghostwhite')
+    area_ph_box = dict(boxstyle='round', facecolor='ghostwhite', alpha=0.7)
 
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
@@ -158,7 +161,7 @@ def draw_sequence(seq, sampling_rate=None):
             ya2 = []
             yb2 = []
             for t_solv in solver_time:
-                # find the intervall [t[t2],t[t2+1]] containing t_solv
+                # Find the interval [t[t2],t[t2+1]] containing t_solv
                 while t_solv > t[t2]:
                     t2 += 1
                 ya2.append(ya[t2])
@@ -198,6 +201,46 @@ def draw_sequence(seq, sampling_rate=None):
             b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
         a.set_ylabel(r'$\Omega$ (rad/µs)', fontsize=14, labelpad=10)
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
+
+        if draw_phase_area:
+            top = False  # Variable to track position of box, top or center.
+            draw_phase = any(
+                seq_.type.phase != 0 for seq_ in seq._schedule[ch]
+                if isinstance(seq_.type, Pulse)
+            )
+            for pulse_num, seq_ in enumerate(seq._schedule[ch]):
+                # Select only `Pulse` objects
+                if isinstance(seq_.type, Pulse):
+                    if sampling_rate:
+                        area_val = (
+                            np.sum(
+                                cs_amp(np.arange(seq_.ti, seq_.tf)/time_scale)
+                            ) * 1e-3 / np.pi
+                        )
+                    else:
+                        area_val = seq_.type.amplitude.integral / np.pi
+                    phase_val = seq_.type.phase / np.pi
+                    x_plot = (seq_.ti + seq_.tf) / 2 / time_scale
+                    if (
+                        seq._schedule[ch][pulse_num-1].type == "target"
+                        or not top
+                    ):
+                        y_plot = np.max(seq_.type.amplitude.samples) / 2
+                        top = True  # Next box at the top.
+                    elif top:
+                        y_plot = np.max(seq_.type.amplitude.samples)
+                        top = False  # Next box at the center.
+                    area_fmt = (r"A: $\pi$" if round(area_val, 2) == 1
+                                else fr"A: {area_val:.2g}$\pi$")
+                    if not draw_phase:
+                        txt = area_fmt
+                    else:
+                        phase_fmt = fr"$\phi$: {phase_str(phase_val)}"
+                        txt = "\n".join([phase_fmt, area_fmt])
+                    a.text(
+                        x_plot, y_plot, txt, fontsize=10,
+                        ha="center", va="center", bbox=area_ph_box,
+                    )
 
         target_regions = []     # [[start1, [targets1], end1],...]
         for coords in data[ch]['target']:
