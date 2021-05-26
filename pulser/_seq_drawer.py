@@ -108,7 +108,7 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor='orange')
     ph_box = dict(boxstyle="round", facecolor='ghostwhite')
-    area_ph_box = dict(boxstyle='round', facecolor='ghostwhite')
+    area_ph_box = dict(boxstyle='round', facecolor='ghostwhite', alpha=0.7)
 
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
@@ -212,9 +212,9 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                 # Select only `Pulse` objects
                 if isinstance(seq_.type, Pulse):
                     if sampling_rate:
-                        area_val = np.sum(
-                            np.abs(yaeff[int(seq_.ti):int(seq_.tf)])
-                        ) / 1e3 / np.pi
+                        area_val = np.sum(cs_amp(
+                            np.arange(seq_.ti, seq_.tf)
+                        )) * 1e-3 / np.pi
                     else:
                         area_val = seq_.type.amplitude.integral / np.pi
                     phase_val = seq_.type.phase / np.pi
@@ -228,7 +228,8 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
                     elif top:
                         y_plot = np.max(seq_.type.amplitude.samples)
                         top = False  # Next box at the center.
-                    area_fmt = fr"A: {area_val:.2g}$\pi$"
+                    area_fmt = (r"A: $\pi$" if round(area_val, 2) == 1
+                                else fr"A: {area_val:.2g}$\pi$")
                     if not draw_phase:
                         txt = area_fmt
                     else:
