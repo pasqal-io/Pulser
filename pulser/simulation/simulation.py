@@ -13,19 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Optional, List, Union, Dict, Any, cast, Iterable
+from typing import Optional, Union, cast, Any, List
 import itertools
-from collections import namedtuple
 
 import qutip
 import numpy as np
+from numpy.typing import ArrayLike
 from copy import deepcopy
 
 from pulser import Pulse, Sequence
 from pulser.simulation.simresults import SimulationResults
 from pulser._seq_drawer import draw_sequence
-
-_TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
+from pulser.sequence import _TimeSlot
 
 
 class Simulation:
@@ -52,7 +51,7 @@ class Simulation:
     """
 
     def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
-                 evaluation_times: Union[str, List[int]] = 'Full') -> None:
+                 evaluation_times: Union[str, ArrayLike] = 'Full') -> None:
         """Initialize the Simulation with a specific pulser.Sequence."""
         supported_bases = {"ground-rydberg", "digital"}
         if not isinstance(sequence, Sequence):
@@ -84,10 +83,12 @@ class Simulation:
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
-        self.samples: Dict[str, Any] = {addr: {basis: {}
-                                        for basis in
-                                        ['ground-rydberg', 'digital']}
-                                        for addr in ['Global', 'Local']}
+        self.samples: dict[str, dict[str, dict]] = {addr: {basis: {}
+                                                    for basis in
+                                                    ['ground-rydberg',
+                                                    'digital']}
+                                                    for addr in ['Global',
+                                                    'Local']}
         self.operators = deepcopy(self.samples)
 
         self._extract_samples()
@@ -96,7 +97,7 @@ class Simulation:
 
         if isinstance(evaluation_times, str):
             if evaluation_times == 'Full':
-                self.eval_times = cast(np.ndarray, deepcopy(self._times))
+                self.eval_times = deepcopy(self._times)
             elif evaluation_times == 'Minimal':
                 self.eval_times = np.array([self._times[0], self._times[-1]])
             else:
@@ -131,14 +132,14 @@ class Simulation:
     def _extract_samples(self) -> None:
         """Populate samples dictionary with every pulse in the sequence."""
 
-        def prepare_dict() -> Dict[str, np.ndarray]:
+        def prepare_dict() -> dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
             return {'amp': np.zeros(self._tot_duration),
                     'det': np.zeros(self._tot_duration),
                     'phase': np.zeros(self._tot_duration)}
 
         def write_samples(slot: _TimeSlot,
-                          samples_dict: Dict[str, Any]) -> None:
+                          samples_dict: dict[str, np.ndarray]) -> None:
             samples_dict['amp'][slot.ti:slot.tf] += slot.type.amplitude.samples
             samples_dict['det'][slot.ti:slot.tf] += slot.type.detuning.samples
             samples_dict['phase'][slot.ti:slot.tf] = slot.type.phase
@@ -187,8 +188,7 @@ class Simulation:
             basis = ['r', 'g', 'h']
             projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
 
-        self.basis = {b: qutip.basis(self.dim, i)
-                      for i, b in enumerate(basis)}
+        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
         self.op_matrix = {'I': qutip.qeye(self.dim)}
 
         for proj in projectors:
@@ -196,7 +196,7 @@ class Simulation:
                 self.basis[proj[0]] * self.basis[proj[1]].dag()
             )
 
-    def _build_operator(self, op_id: str, *qubit_ids: List[str],
+    def _build_operator(self, op_id: str, *qubit_ids: Union[str, int],
                         global_op: bool = False) -> qutip.Qobj:
         """Create qutip.Qobj with nontrivial action at *qubit_ids."""
         if global_op:
@@ -234,7 +234,7 @@ class Simulation:
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
             return vdw
 
-        def build_coeffs_ops(basis: str, addr: str) -> List[List[Any]]:
+        def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
             samples = self.samples[addr][basis]
             operators = self.operators[addr][basis]
@@ -284,8 +284,7 @@ class Simulation:
         for addr in self.samples:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
-                    qobj_list += cast(Iterable[float],
-                                      build_coeffs_ops(basis, addr))
+                    qobj_list += cast(List, build_coeffs_ops(basis, addr))
 
         self._times = adapt(np.arange(self._tot_duration,
                                       dtype=np.double)/1000)
