@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Tuple, Dict, Set, Any
+from typing import Tuple, Set, Any
 
 import numpy as np
 from scipy.spatial.distance import pdist
@@ -53,7 +53,7 @@ class Device:
         self.__dict__["__doc__"] = self._specs(for_docs=True)
 
     @property
-    def channels(self) -> Dict[str, Channel]:
+    def channels(self) -> dict[str, Channel]:
         """Dictionary of available channels on this device."""
         return dict(self._channels)
 
@@ -173,6 +173,6 @@ class Device:
 
         return "\n".join(lines + ch_lines)
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, _build=False, _module="pulser.devices",
                            _name=self.name)

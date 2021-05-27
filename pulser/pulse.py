@@ -25,7 +25,7 @@ from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
 from pulser.json.utils import obj_to_dict
 
-from typing import Any, cast, Dict, Union
+from typing import Any, cast, Union
 
 
 class Pulse:
@@ -159,7 +159,7 @@ class Pulse:
         fig.tight_layout()
         plt.show()
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self.amplitude, self.detuning, self.phase,
                            post_phase_shift=self.post_phase_shift)
 

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 import dataclasses
-from typing import Union, Dict, Any, cast, Iterable, Sequence
+from typing import Union, Any, cast, Iterable, Sequence
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -51,7 +51,7 @@ class Variable(Parametrized, OpSupport):
         self._clear()
 
     @property
-    def variables(self) -> Dict[str, Variable]:
+    def variables(self) -> dict[str, Variable]:
         return {self.name: self}
 
     def _clear(self) -> None:
@@ -81,7 +81,7 @@ class Variable(Parametrized, OpSupport):
             raise ValueError(f"No value assigned to variable '{self.name}'.")
         return self.value
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, _build=False)
         d.update(dataclasses.asdict(self))
         return d
@@ -112,14 +112,14 @@ class _VariableItem(Parametrized, OpSupport):
     key: Union[int, slice]
 
     @property
-    def variables(self) -> Dict[str, Variable]:
+    def variables(self) -> dict[str, Variable]:
         return self.var.variables
 
     def build(self) -> Union[ArrayLike, str, float, int]:
         """Return the variable's item(s) values."""
         return cast(Sequence, self.var.build())[self.key]
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self.var, self.key,
                            _module="operator", _name="getitem")
 

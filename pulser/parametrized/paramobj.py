@@ -18,7 +18,7 @@ from itertools import chain
 import inspect
 import operator
 import warnings
-from typing import Callable, Dict, Any, Union, TYPE_CHECKING
+from typing import Callable, Any, Union, TYPE_CHECKING
 
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
@@ -73,7 +73,7 @@ class ParamObj(Parametrized, OpSupport):
             kwargs: The kwargs for calling `cls`.
         """
         self.cls = cls
-        self._variables: Dict[str, Variable] = {}
+        self._variables: dict[str, Variable] = {}
         if isinstance(self.cls, Parametrized):
             self._variables.update(self.cls.variables)
         for x in chain(args, kwargs.values()):
@@ -82,10 +82,10 @@ class ParamObj(Parametrized, OpSupport):
         self.args = args
         self.kwargs = kwargs
         self._instance = None
-        self._vars_state: Dict[str, int] = {}
+        self._vars_state: dict[str, int] = {}
 
     @property
-    def variables(self) -> Dict[str, Variable]:
+    def variables(self) -> dict[str, Variable]:
         return self._variables
 
     def build(self):
@@ -103,7 +103,7 @@ class ParamObj(Parametrized, OpSupport):
             self._instance = obj(*args_, **kwargs_)
         return self._instance
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         def class_to_dict(cls):
             return obj_to_dict(self, _build=False, _name=cls.__name__,
                                _module=cls.__module__)
