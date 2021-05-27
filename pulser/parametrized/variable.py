@@ -14,8 +14,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 import dataclasses
-from typing import Union, Any, cast, Iterable, Sequence
+from typing import Union, Any, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
