@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import importlib
 import inspect
 from json import JSONEncoder, JSONDecoder

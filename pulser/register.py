@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from __future__ import annotations
+
 from collections.abc import Mapping
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
