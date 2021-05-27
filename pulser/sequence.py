@@ -20,7 +20,8 @@ import copy
 from functools import wraps
 from itertools import chain
 import json
-from typing import Any, cast, get_args, Literal, Optional, Tuple, Union
+from typing import (Any, cast, Literal, NamedTuple,
+                    Optional, Tuple, Union)
 
 import warnings
 
@@ -42,7 +43,10 @@ QubitId = Union[int, str]
 PROTOCOLS = Literal['min-delay', 'no-delay', 'wait-for-all']
 
 # Auxiliary class to store the information in the schedule
-_TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
+_TimeSlot: NamedTuple('_TimeSlot', [('type', str), ('ti', int), ('tf', int), (
+    'targets', Iterable[QubitId])]) = namedtuple(
+        '_TimeSlot', ['type', 'ti',
+                      'tf', 'targets'])
 # Encodes a sequence building calls
 _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
@@ -389,7 +393,7 @@ class Sequence:
 
         self._validate_channel(channel)
 
-        valid_protocols = get_args(PROTOCOLS)
+        valid_protocols = ['min-delay', 'no-delay', 'wait-for-all']
         if protocol not in valid_protocols:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
