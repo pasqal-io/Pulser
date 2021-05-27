@@ -20,7 +20,7 @@ import inspect
 import itertools
 import sys
 from types import FunctionType
-from typing import Any, cast, List, Optional, Tuple, Union
+from typing import Any, cast, Optional, Tuple, Union
 import warnings
 
 from matplotlib.axes import Axes
@@ -211,7 +211,7 @@ class CompositeWaveform(Waveform):
         return self._waveforms[-1].last_value
 
     @property
-    def waveforms(self) -> List[Waveform]:
+    def waveforms(self) -> list[Waveform]:
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
 
