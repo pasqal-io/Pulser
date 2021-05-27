@@ -59,7 +59,7 @@ class Channel:
 
     @classmethod
     def Local(cls, max_abs_detuning: float, max_amp: float,
-              retarget_time: int = 220, **kwargs) -> Channel:
+              retarget_time: int = 220, **kwargs: int) -> Channel:
         """Initializes the channel with local addressing.
 
         Args:
@@ -74,7 +74,7 @@ class Channel:
 
     @classmethod
     def Global(cls, max_abs_detuning: float,
-               max_amp: float, **kwargs) -> Channel:
+               max_amp: float, **kwargs: int) -> Channel:
         """Initializes the channel with global addressing.
 
         Args:

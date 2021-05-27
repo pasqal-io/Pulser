@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import functools
 import itertools
+from typing import Any, cast, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,8 +25,6 @@ from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
 from pulser.json.utils import obj_to_dict
-
-from typing import Any, cast, Union
 
 
 class Pulse:
