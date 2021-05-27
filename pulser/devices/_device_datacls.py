@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Tuple, Set, Any
+from typing import Any
 
 import numpy as np
 from scipy.spatial.distance import pdist
@@ -45,7 +45,7 @@ class Device:
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
-    _channels: Tuple[Tuple[str, Channel], ...]
+    _channels: tuple[tuple[str, Channel], ...]
     interaction_coeff: float = 5008713.
 
     def __post_init__(self) -> None:
@@ -58,7 +58,7 @@ class Device:
         return dict(self._channels)
 
     @property
-    def supported_bases(self) -> Set[str]:
+    def supported_bases(self) -> set[str]:
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channels.values()}
 
