@@ -124,7 +124,6 @@ class Simulation:
             raise ValueError("`evaluation_times` must be a list of times "
                              "or `Full` or `Minimal`")
 
-
     def draw(self, draw_phase_area=False):
         """Draws the input sequence and the one used in QuTip.
 
