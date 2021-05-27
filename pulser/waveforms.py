@@ -20,7 +20,7 @@ import inspect
 import itertools
 import sys
 from types import FunctionType
-from typing import Any, cast, Dict, List, Optional, Tuple, Union
+from typing import Any, cast, Optional, Tuple, Union
 import warnings
 
 from matplotlib.axes import Axes
@@ -114,7 +114,7 @@ class Waveform(ABC):
                                   " modifications to its duration.")
 
     @abstractmethod
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         pass
 
     @abstractmethod
@@ -211,7 +211,7 @@ class CompositeWaveform(Waveform):
         return self._waveforms[-1].last_value
 
     @property
-    def waveforms(self) -> List[Waveform]:
+    def waveforms(self) -> list[Waveform]:
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
 
@@ -220,7 +220,7 @@ class CompositeWaveform(Waveform):
             raise TypeError(f"{waveform!r} is not a valid waveform. "
                             "Please provide a valid Waveform.")
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, *self._waveforms)
 
     def __str__(self) -> str:
@@ -264,7 +264,7 @@ class CustomWaveform(Waveform):
         """
         return self._samples
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._samples)
 
     def __str__(self) -> str:
@@ -327,7 +327,7 @@ class ConstantWaveform(Waveform):
         """
         return ConstantWaveform(new_duration, self._value)
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._value)
 
     def __str__(self) -> str:
@@ -400,7 +400,7 @@ class RampWaveform(Waveform):
         """
         return RampWaveform(new_duration, self._start, self._stop)
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._start, self._stop)
 
     def __str__(self) -> str:
@@ -507,7 +507,7 @@ class BlackmanWaveform(Waveform):
         """
         return BlackmanWaveform(new_duration, self._area)
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._area)
 
     def __str__(self) -> str:

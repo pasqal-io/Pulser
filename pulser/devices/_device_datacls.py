@@ -13,8 +13,9 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Tuple, Dict, Set, Any
+from typing import Any
 
 import numpy as np
 from scipy.spatial.distance import pdist
@@ -45,7 +46,7 @@ class Device:
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
-    _channels: Tuple[Tuple[str, Channel], ...]
+    _channels: tuple[tuple[str, Channel], ...]
     interaction_coeff: float = 5008713.
 
     def __post_init__(self) -> None:
@@ -53,12 +54,12 @@ class Device:
         self.__dict__["__doc__"] = self._specs(for_docs=True)
 
     @property
-    def channels(self) -> Dict[str, Channel]:
+    def channels(self) -> dict[str, Channel]:
         """Dictionary of available channels on this device."""
         return dict(self._channels)
 
     @property
-    def supported_bases(self) -> Set[str]:
+    def supported_bases(self) -> set[str]:
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channels.values()}
 
@@ -173,6 +174,6 @@ class Device:
 
         return "\n".join(lines + ch_lines)
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, _build=False, _module="pulser.devices",
                            _name=self.name)
