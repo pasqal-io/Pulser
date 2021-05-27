@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from __future__ import annotations
 
+from collections.abc import Mapping
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, Dict, Iterable, Optional, Mapping, cast
+from typing import Any, cast, Iterable, Optional, Union
 
 import pulser
 from pulser.json.utils import obj_to_dict
+
+QubitId = Union[int, str]
 
 
 class Register:
@@ -53,7 +55,7 @@ class Register:
         self._coords = coords
 
     @property
-    def qubits(self) -> Dict[Any, np.ndarray]:
+    def qubits(self) -> dict[QubitId, np.ndarray]:
         """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))
 
@@ -362,7 +364,8 @@ class Register:
         self._coords = [rot @ v for v in self._coords]
 
     def draw(self, with_labels: bool = True,
-             blockade_radius: Optional[float] = None, draw_graph: bool = True,
+             blockade_radius: Optional[float] = None,
+             draw_graph: bool = True,
              draw_half_radius: bool = False) -> None:
         """Draws the entire register.
 
@@ -442,6 +445,6 @@ class Register:
 
         plt.show()
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> dict[str, Any]:
         qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
         return obj_to_dict(self, qs)
