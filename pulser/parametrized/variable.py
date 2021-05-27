@@ -35,7 +35,7 @@ class Variable(Parametrized, OpSupport):
         size (int=1): The number of values stored. Defaults to a single value.
     """
     name: str
-    dtype: type
+    dtype: Union[type[float], type[int], type[str]]
     size: int = 1
 
     def __post_init__(self) -> None:
