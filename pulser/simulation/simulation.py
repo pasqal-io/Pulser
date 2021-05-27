@@ -38,12 +38,14 @@ class Simulation:
         sampling_rate (float): The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
             value between 0.05 and 1.0
-        evaluation_times (str,list): The list of times at which the quantum
+        evaluation_times (str,list,float):
+            The list of times at which the quantum
             state should be evaluated, in μs. If 'Full' is provided, this list
             is set to be the one used to define the Hamiltonian to the solver.
             The initial and final times are always included, so that if
             'Minimal' is provided, the list is set to only contain the initial
-            and the final times.
+            and the final times. Use a float to act as a sampling rate for
+            the resulting state.
     """
 
     def __init__(self, sequence, sampling_rate=1.0, evaluation_times='Full'):
@@ -77,7 +79,7 @@ class Simulation:
         self._noise = []
         self._collapse_ops = []
         self._temperature = 50e-6
-        self._build_hamiltonian()
+        self._build_hamiltonian_from_seq()
         self._init_config()
         self.config('eval_t', evaluation_times)
 
@@ -90,6 +92,13 @@ class Simulation:
             else:
                 raise ValueError("Wrong evaluation time label. It should "
                                  "be `Full` or `Minimal`")
+        elif isinstance(evaluation_times, float):
+            if evaluation_times > 1 or evaluation_times <= 0:
+                raise ValueError("evaluation_time float must be in [0,1).")
+            indices = np.linspace(0, len(self._times)-1,
+                                  int(evaluation_times * len(self._times)),
+                                  dtype=int)
+            self.eval_times = self._times[indices]
         elif isinstance(evaluation_times, (list, tuple, np.ndarray)):
             t_max = np.max(evaluation_times)
             t_min = np.min(evaluation_times)
@@ -108,12 +117,11 @@ class Simulation:
             self.eval_times = eval_times
             # always include initial and final times
         else:
-            raise ValueError("`evaluation_times` must be a list of times "
-                             "or `Full` or `Minimal`")
+            raise ValueError("`evaluation_times` must be a list of times, "
+                             "a float or `Full` or `Minimal`")
 
     def draw(self):
         """Draws the input sequence and the one used in QuTip."""
-
         draw_sequence(self._seq, self.sampling_rate)
 
     def _extract_samples(self):
@@ -167,6 +175,7 @@ class Simulation:
                 self.samples[addr][basis] = samples_dict
 
             # any noise : global becomes local for each qubit in the reg
+            # since coefficients are modified locally by all noises
             elif addr == 'Global':
                 samples_dict = self.samples['Local'][basis]
                 for slot in self._seq._schedule[channel]:
@@ -231,12 +240,14 @@ class Simulation:
         return qutip.tensor(op_list)
 
     def _construct_hamiltonian(self):
+        """Constructs hamiltonian term after all sequences have been extracted.
+        """
         def adapt(full_array):
             """Adapt list to correspond to sampling rate"""
-            indexes = np.linspace(0, self._tot_duration-1,
+            indices = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
-            return full_array[indexes]
+            return full_array[indices]
 
         def make_vdw_term():
             """Construct the Van der Waals interaction Term.
@@ -335,7 +346,7 @@ class Simulation:
             `self.sampling_rate`) at the specified time.
         """
         # Refresh the hamiltonian
-        self._build_hamiltonian()
+        self._build_hamiltonian_from_seq()
         if time > 1000 * self._times[-1]:
             raise ValueError("Provided time is larger than sequence duration.")
         if time < 0:
@@ -422,8 +433,10 @@ class Simulation:
     def remove_all_noise(self):
         """Removes noise from simulation"""
         self._noise = []
-        # Reset any previously sequence:
+        # Reset any previous sequence:
         self.reset_sequence()
+        self._collapse_ops = []
+        self.init_spam()
 
     def reset_sequence(self):
         self.samples = {addr: {basis: {}
@@ -459,8 +472,8 @@ class Simulation:
                 evolution. Will be transformed into a
                 qutip.Qobj instance.
             'eval_t' (str / array): Time at which the results are to be
-                returned. Allowed values : 'Full', 'Minimal', or an array of
-                times.
+                returned. Allowed values : 'Full', 'Minimal', an array of
+                times, or a float (do not use dephasing if you change this)
             'samples_per_run' (int): number of samples per noisy run. Useful
                 for cutting down on computing time, but unrealistic.
             'runs' (int): number of runs needed : each run
@@ -492,7 +505,7 @@ class Simulation:
         self._init_config()
         print('Configuration has been set to default')
 
-    def _build_hamiltonian(self):
+    def _build_hamiltonian_from_seq(self):
         """Extracts the sequence samples, builds default operators and
         builds the hamiltonian from those coefficients and operators."""
         self._extract_samples()
@@ -526,17 +539,27 @@ class Simulation:
             if not as_subroutine:
                 # CLEAN SIMULATION:
                 # Build (clean) hamiltonian
-                self._build_hamiltonian()
+                self._build_hamiltonian_from_seq()
                 measurement_basis = _assign_meas_basis()
-
-            result = qutip.mesolve(self._hamiltonian,
-                                   self._config['initial_state'],
-                                   self.eval_times,
-                                   c_ops=self._collapse_ops,
-                                   progress_bar=progress_bar,
-                                   options=qutip.Options(max_step=5,
-                                                         **options)
-                                   )
+            if self._collapse_ops:
+                # temporary workaround due to a qutip bug when using mesolve
+                liouvillian = qutip.liouvillian(self._hamiltonian,
+                                                self._collapse_ops)
+                result = qutip.mesolve(liouvillian,
+                                       self._config['initial_state'],
+                                       self.eval_times,
+                                       progress_bar=progress_bar,
+                                       options=qutip.Options(max_step=5,
+                                                             **options)
+                                       )
+            else:
+                result = qutip.sesolve(self._hamiltonian,
+                                       self._config['initial_state'],
+                                       self.eval_times,
+                                       progress_bar=progress_bar,
+                                       options=qutip.Options(max_step=5,
+                                                             **options)
+                                       )
             return CleanResults(result.states, self.dim, self._size,
                                 self.basis_name, measurement_basis,
                                 self.eval_times)
@@ -550,7 +573,7 @@ class Simulation:
                 # At each run, new random noise
                 if 'SPAM' in self._noise:
                     self._prepare_spam_detune()
-                self._build_hamiltonian()
+                self._build_hamiltonian_from_seq()
                 meas_basis = _assign_meas_basis()
                 # Get CleanResults instance from sequence with added noise:
                 clean_res_noisy_seq = _run_solver(as_subroutine=True,

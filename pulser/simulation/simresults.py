@@ -145,6 +145,8 @@ class NoisyResults(SimulationResults):
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
+            sim_times (list): times at which Simulation object returned the
+                results.
 
         Keyword Args:
             meas_basis (None or str): The basis in which a sampling measurement
@@ -259,7 +261,7 @@ class NoisyResults(SimulationResults):
         st = self._standard_dev(op)
         return moy, st
 
-    def plot(self, op, error_bars=True, fmt='.'):
+    def plot(self, op, error_bars=True, fmt='.', label=''):
         """Plots the expectation results of operator op, computing error bars
             if wanted.
         Args:
@@ -268,9 +270,13 @@ class NoisyResults(SimulationResults):
         """
         if error_bars:
             moy, st = self._get_error_bars(op)
-            plt.errorbar(self.sim_times, moy, st, fmt=fmt)
+            plt.errorbar(self.sim_times, moy, st, fmt=fmt, lw=1, capsize=3,
+                         label=label)
         else:
-            plt.plot(self.sim_times, self.expect([op])[0], fmt)
+            plt.plot(self.sim_times, self.expect([op])[0], fmt,
+                     label=label)
+        plt.xlabel('Time (µs)')
+        plt.ylabel('Expectation value')
 
 
 class CleanResults(SimulationResults):
@@ -520,5 +526,7 @@ class CleanResults(SimulationResults):
 
         return detected_sample_dict
 
-    def plot(self, op, fmt=''):
-        plt.plot(self.sim_times, self.expect([op])[0], fmt)
+    def plot(self, op, fmt='', label=''):
+        plt.plot(self.sim_times, self.expect([op])[0], fmt, label=label)
+        plt.xlabel('Time (µs)')
+        plt.ylabel('Expectation value')
