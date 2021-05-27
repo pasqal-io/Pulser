@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Optional, List, Union, Dict, cast
+from typing import Optional, Union, cast
 
 import qutip
 import numpy as np
@@ -27,7 +27,7 @@ class SimulationResults:
     from them.
     """
 
-    def __init__(self, run_output: List[qutip.Qobj], dim: int, size: int,
+    def __init__(self, run_output: list[qutip.Qobj], dim: int, size: int,
                  basis_name: str, meas_basis: Optional[str] = None) -> None:
         """Initializes a new SimulationResults instance.
 
@@ -60,7 +60,7 @@ class SimulationResults:
         self._meas_basis = meas_basis
 
     @property
-    def states(self) -> List[List[qutip.Qobj]]:
+    def states(self) -> list[qutip.Qobj]:
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._states)
 
@@ -118,7 +118,7 @@ class SimulationResults:
 
         return final_state.tidyup()
 
-    def expect(self, obs_list: List[Union[qutip, np.ndarray]]
+    def expect(self, obs_list: list[Union[qutip, np.ndarray]]
                ) -> Union[ArrayLike, float]:
         """Calculates the expectation value of a list of observables.
 
@@ -144,7 +144,7 @@ class SimulationResults:
         return [qutip.expect(qobj, self._states) for qobj in qobj_list]
 
     def sample_final_state(self, meas_basis: Optional[str] = None,
-                           N_samples: int = 1000) -> Dict[str, int]:
+                           N_samples: int = 1000) -> dict[str, int]:
         r"""Returns the result of multiple measurements in a given basis.
 
         The enconding of the results depends on the meaurement basis. Namely:
