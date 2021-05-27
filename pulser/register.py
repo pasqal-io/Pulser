@@ -14,13 +14,13 @@
 
 
 from __future__ import annotations
-
+from collections.abc import Mapping
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, Iterable, Optional, Mapping, cast
+from typing import Any, Iterable, Optional, cast
 
 import pulser
 from pulser.json.utils import obj_to_dict
