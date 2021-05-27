@@ -316,7 +316,7 @@ class Sequence:
                 initial_target = None
             else:
                 # "_target" call is not saved
-                self._target(cast(Union[Iterable[QubitId],
+                self._target(cast(Union[Iterable,
                                         QubitId], initial_target), name)
 
         # Manually store the channel declaration as a regular call
@@ -389,7 +389,6 @@ class Sequence:
 
         self._validate_channel(channel)
 
-        # ['min-delay', 'no-delay', 'wait-for-all']
         valid_protocols = get_args(PROTOCOLS)
         if protocol not in valid_protocols:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
@@ -699,8 +698,8 @@ class Sequence:
         """
         draw_sequence(self, draw_phase_area=draw_phase_area)
 
-    def _target(self, qubits: Union[Iterable[Union[QubitId]],
-                                    Union[QubitId]], channel: str) -> None:
+    def _target(self, qubits: Union[Iterable[QubitId],
+                                    QubitId], channel: str) -> None:
         self._validate_channel(channel)
 
         try:
