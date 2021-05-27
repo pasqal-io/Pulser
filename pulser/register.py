@@ -55,7 +55,6 @@ class Register:
         self._coords = coords
 
     @property
-
     def qubits(self) -> dict[QubitId, np.ndarray]:
         """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))

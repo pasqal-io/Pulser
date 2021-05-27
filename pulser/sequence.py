@@ -15,13 +15,12 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from collections.abc import Iterable
+from collections.abc import Callable, Generator, Iterable
 import copy
 from functools import wraps
 from itertools import chain
 import json
-from typing import (AbstractSet, Any, Callable, Generator, cast,
-                    Optional, Tuple, Union)
+from typing import Any, cast, get_args, Literal, Optional, Tuple, Union
 
 import warnings
 
@@ -40,6 +39,7 @@ from pulser.parametrized import Parametrized, Variable
 from pulser.register import Register
 
 QubitId = Union[int, str]
+PROTOCOLS = Literal['min-delay', 'no-delay', 'wait-for-all']
 
 # Auxiliary class to store the information in the schedule
 _TimeSlot = namedtuple('_TimeSlot', ['type', 'ti', 'tf', 'targets'])
@@ -155,7 +155,7 @@ class Sequence:
         # Stores the names and dict ids of declared channels
         self._taken_channels: dict[str, str] = {}
         # IDs of all qubits in device
-        self._qids = set(self.qubit_info.keys())
+        self._qids: set[QubitId] = set(self.qubit_info.keys())
         # Last time each qubit was used, by basis
         self._last_used: dict[str, dict[QubitId, int]] = {}
         # Last time a target happened, by channel
@@ -168,7 +168,7 @@ class Sequence:
         self._reset_parametrized()
 
     @property
-    def qubit_info(self) -> dict[QubitId, ArrayLike]:
+    def qubit_info(self) -> dict[QubitId, np.ndarray]:
         """Dictionary with the qubit's IDs and positions."""
         return self._register.qubits
 
@@ -237,8 +237,9 @@ class Sequence:
         return self._phase_ref[basis][qubit].last_phase
 
     def declare_channel(self, name: str, channel_id: str,
-                        initial_target: Optional[Union[set[QubitId],
-                                                       QubitId]] = None
+                        initial_target: Optional[
+                            Union[Iterable[Union[QubitId, Parametrized]],
+                                  Union[QubitId, Parametrized]]] = None
                         ) -> None:
         """Declares a new channel to the Sequence.
 
@@ -261,10 +262,10 @@ class Sequence:
                 description.
 
         Keyword Args:
-            initial_target (set, default=None): For 'Local' addressing channels
-                only. Declares the initial target of the channel. If left as
-                None, the initial target will have to be set manually as the
-                first addition to this channel.
+            initial_target (Iterable, default=None): For 'Local' addressing
+                channels only. Declares the initial target of the channel.
+                If left as None, the initial target will have to be set
+                manually as the first addition to this channel.
         """
 
         if name in self._channels:
@@ -315,16 +316,17 @@ class Sequence:
                 initial_target = None
             else:
                 # "_target" call is not saved
-                self._target(initial_target, name)
+                self._target(cast(Union[Iterable[QubitId],
+                                        QubitId], initial_target), name)
 
         # Manually store the channel declaration as a regular call
-        self._calls.append(_Call(
-            "declare_channel",
-            (name, channel_id),
-            {"initial_target": initial_target}))
+        self._calls.append(_Call("declare_channel", (name, channel_id),
+                                 {"initial_target": initial_target}))
 
     def declare_variable(self, name: str, size: int = 1,
-                         dtype: type = float) -> Variable:
+                         dtype: Union[type[int],
+                                      type[float],
+                                      type[str]] = float) -> Variable:
         """Declare a new variable within this Sequence.
 
         The declared variables can be used to create parametrized versions of
@@ -358,7 +360,7 @@ class Sequence:
     @_store
     def add(self, pulse: Union[Pulse, Parametrized],
             channel: Union[str, Parametrized],
-            protocol: Union[str, Parametrized] = 'min-delay') -> None:
+            protocol: PROTOCOLS = 'min-delay') -> None:
         """Adds a pulse to a channel.
 
         Args:
@@ -387,7 +389,8 @@ class Sequence:
 
         self._validate_channel(channel)
 
-        valid_protocols = ['min-delay', 'no-delay', 'wait-for-all']
+        # ['min-delay', 'no-delay', 'wait-for-all']
+        valid_protocols = get_args(PROTOCOLS)
         if protocol not in valid_protocols:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
@@ -463,7 +466,7 @@ class Sequence:
                               basis=basis)
 
     @_store
-    def target(self, qubits: Union[QubitId, Parametrized],
+    def target(self, qubits: Union[QubitId, Iterable[QubitId], Parametrized],
                channel: Union[str, Parametrized]) -> None:
         """Changes the target qubit of a 'Local' channel.
 
@@ -696,11 +699,12 @@ class Sequence:
         """
         draw_sequence(self, draw_phase_area=draw_phase_area)
 
-    def _target(self, qubits: Union[Iterable, QubitId], channel: str) -> None:
+    def _target(self, qubits: Union[Iterable[Union[QubitId]],
+                                    Union[QubitId]], channel: str) -> None:
         self._validate_channel(channel)
 
         try:
-            qs = set(cast(AbstractSet, qubits)) if not isinstance(
+            qs = set(cast(Iterable, qubits)) if not isinstance(
                 qubits, str) else {qubits}
         except TypeError:
             qs = {qubits}
