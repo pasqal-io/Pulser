@@ -32,7 +32,7 @@ class SimulationResults:
         """Initializes a new SimulationResults instance.
 
         Args:
-            run_output (List[qutip.Qobj]): List of ``qutip.Qobj`` corresponding
+            run_output (list[qutip.Qobj]): List of ``qutip.Qobj`` corresponding
                 to the states at each time step after the evolution has been
                 simulated.
             dim (int): The dimension of the local space of each atom (2 or 3).

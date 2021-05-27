@@ -124,10 +124,17 @@ class Simulation:
             raise ValueError("`evaluation_times` must be a list of times "
                              "or `Full` or `Minimal`")
 
-    def draw(self) -> None:
-        """Draws the input sequence and the one used in QuTip."""
 
-        draw_sequence(self._seq, self.sampling_rate)
+    def draw(self, draw_phase_area=False):
+        """Draws the input sequence and the one used in QuTip.
+
+        Keyword args:
+            draw_phase_area (bool): Whether phase and area values need
+                to be shown as text on the plot, defaults to False.
+        """
+        draw_sequence(
+            self._seq, self.sampling_rate, draw_phase_area=draw_phase_area
+        )
 
     def _extract_samples(self) -> None:
         """Populate samples dictionary with every pulse in the sequence."""

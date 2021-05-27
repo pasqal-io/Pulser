@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from __future__ import annotations
 
+from collections.abc import Mapping
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, Dict, Iterable, Optional, Mapping, cast
+from typing import Any, cast, Iterable, Optional, Union
 
 import pulser
 from pulser.json.utils import obj_to_dict
+
+QubitId = Union[int, str]
 
 
 class Register:
@@ -53,7 +55,7 @@ class Register:
         self._coords = coords
 
     @property
-    def qubits(self) -> Dict[Any, np.ndarray]:
+    def qubits(self) -> dict[QubitId, np.ndarray]:
         """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))
 
@@ -362,7 +364,8 @@ class Register:
         self._coords = [rot @ v for v in self._coords]
 
     def draw(self, with_labels: bool = True,
-             blockade_radius: Optional[float] = None, draw_graph: bool = True,
+             blockade_radius: Optional[float] = None,
+             draw_graph: bool = True,
              draw_half_radius: bool = False) -> None:
         """Draws the entire register.
 
@@ -424,13 +427,10 @@ class Register:
                 raise NotImplementedError("Needs more than one atom to draw "
                                           "the blockade radius.")
 
-            delta_um = np.linalg.norm(pos[1] - pos[0])
-            r_pts = np.linalg.norm(
-                np.subtract(*ax.transData.transform(pos[:2]).tolist())
-            ) / delta_um * blockade_radius / 2
-            # A 'scatter' marker of size s has area pi/4 * s
-            ax.scatter(pos[:, 0], pos[:, 1], s=4*r_pts**2, alpha=0.1,
-                       c='darkgreen')
+            for p in pos:
+                circle = plt.Circle(tuple(p), blockade_radius/2, alpha=0.1,
+                                    color='darkgreen')
+                ax.add_patch(circle)
         if draw_graph and blockade_radius is not None:
             epsilon = 1e-9      # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
@@ -445,6 +445,6 @@ class Register:
 
         plt.show()
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> dict[str, Any]:
         qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
         return obj_to_dict(self, qs)

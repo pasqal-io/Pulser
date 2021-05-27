@@ -310,12 +310,12 @@ class Sequence:
         are dependent on the involved variables.
 
         Args:
-            name(str): The name for the variable. Must be unique within a
+            name (str): The name for the variable. Must be unique within a
                 Sequence.
 
         Keyword Args:
-            size(int=1): The number of entries stored in the variable.
-            dtype(default=float): The type of the data that will be assigned
+            size (int=1): The number of entries stored in the variable.
+            dtype (default=float): The type of the data that will be assigned
                 to the variable. Must be ``float``, ``int`` or ``str``.
 
         Returns:
@@ -502,7 +502,7 @@ class Sequence:
                 phase shift.
 
         Keyword Args:
-            basis(str): The basis (i.e. electronic transition) to associate
+            basis (str): The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
@@ -621,8 +621,8 @@ class Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
-            obj(str): The JSON formatted string to deserialize, coming from the
-                serialization of a ``Sequence`` through
+            obj (str): The JSON formatted string to deserialize, coming from
+                the serialization of a ``Sequence`` through
                 ``Sequence.serialize()``.
 
         Other Parameters:
@@ -643,9 +643,16 @@ class Sequence:
         return json.loads(obj, cls=PulserDecoder, **kwargs)
 
     @_screen
-    def draw(self):
-        """Draws the sequence in its current state."""
-        draw_sequence(self)
+    def draw(self, draw_phase_area=False):
+        """Draws the sequence in its current state.
+
+        Keyword args:
+            draw_phase_area (bool): Whether phase and area values need
+                to be shown as text on the plot, defaults to False.
+        """
+        draw_sequence(
+            self, draw_phase_area=draw_phase_area,
+        )
 
     def _target(self, qubits, channel):
         self._validate_channel(channel)
