@@ -21,7 +21,7 @@ from functools import wraps
 from itertools import chain
 import json
 from typing import (AbstractSet, Any, Callable, Generator, cast,
-                    Optional, Union)
+                    Optional, Tuple, Union)
 
 import warnings
 
@@ -548,7 +548,7 @@ class Sequence:
         """
         phi = cast(float, phi)
         basis = cast(str, basis)
-        targets = cast(tuple[QubitId], targets)
+        targets = cast(Tuple[QubitId], targets)
 
         self._phase_shift(phi, *targets, basis=basis)
 
