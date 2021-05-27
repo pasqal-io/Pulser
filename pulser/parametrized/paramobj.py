@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
+from collections.abc import Callable
 from functools import partialmethod
 from itertools import chain
 import inspect
 import operator
 import warnings
-from typing import Callable, Any, Union, TYPE_CHECKING
+from typing import Any, Union, TYPE_CHECKING
 
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
