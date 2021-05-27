@@ -20,8 +20,9 @@ import copy
 from functools import wraps
 from itertools import chain
 import json
-from typing import (Any, cast, Literal, NamedTuple,
+from typing import (Any, cast, NamedTuple,
                     Optional, Tuple, Union)
+from typing_extensions import Literal
 
 import warnings
 
