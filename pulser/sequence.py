@@ -26,6 +26,7 @@ import warnings
 
 import numpy as np
 from numpy.typing import ArrayLike
+
 import pulser
 from pulser.channels import Channel
 from pulser.devices import MockDevice
