@@ -246,7 +246,7 @@ class Sequence:
 
     def declare_channel(self, name: str, channel_id: str,
                         initial_target: Optional[
-                            Union[Set[Union[QubitId, Parametrized]],
+                            Union[Iterable[Union[QubitId, Parametrized]],
                                   Union[QubitId, Parametrized]]] = None
                         ) -> None:
         """Declares a new channel to the Sequence.
@@ -324,7 +324,7 @@ class Sequence:
                 initial_target = None
             else:
                 # "_target" call is not saved
-                self._target(cast(Union[Set[QubitId],
+                self._target(cast(Union[Iterable[QubitId],
                                         QubitId], initial_target), name)
 
         # Manually store the channel declaration as a regular call
@@ -706,7 +706,7 @@ class Sequence:
         """
         draw_sequence(self, draw_phase_area=draw_phase_area)
 
-    def _target(self, qubits: Union[Set[QubitId],
+    def _target(self, qubits: Union[Iterable[QubitId],
                                     QubitId], channel: str) -> None:
         self._validate_channel(channel)
 
