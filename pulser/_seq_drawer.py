@@ -61,8 +61,8 @@ def gather_data(seq: pulser.sequence.Sequence) -> Dict:
             if (isinstance(pulse.amplitude, ConstantWaveform) and
                     isinstance(pulse.detuning, ConstantWaveform)):
                 time += [slot.ti, slot.tf-1]
-                amp += [pulse.amplitude._value] * 2
-                detuning += [pulse.detuning._value] * 2
+                amp += [int(pulse.amplitude._value)] * 2
+                detuning += [int(pulse.detuning._value)] * 2
             else:
                 time += list(range(slot.ti, slot.tf))
                 amp += pulse.amplitude.samples.tolist()
