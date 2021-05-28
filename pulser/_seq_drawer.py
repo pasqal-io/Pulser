@@ -57,7 +57,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> Dict:
                 if slot.type == 'target':
                     target[(slot.ti, slot.tf-1)] = slot.targets
                 continue
-            pulse = slot.type
+            pulse = cast(Pulse, slot.type)
             if (isinstance(pulse.amplitude, ConstantWaveform) and
                     isinstance(pulse.detuning, ConstantWaveform)):
                 time += [slot.ti, slot.tf-1]
@@ -293,7 +293,9 @@ def draw_sequence(seq: pulser.sequence.Sequence,
             if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
                 end = cast(int, end)
                 end += 1 / time_scale
-            for t_, delta in ref.changes(start, end, time_scale=time_scale):
+            for t_, delta in ref.changes(cast(int, start),
+                                         cast(int, end),
+                                         time_scale=time_scale):
                 conf = dict(linestyle='--', linewidth=1.5, color='black')
                 a.axvline(t_, **conf)
                 b.axvline(t_, **conf)
