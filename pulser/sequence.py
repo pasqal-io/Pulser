@@ -20,23 +20,23 @@ import copy
 from functools import wraps
 from itertools import chain
 import json
+from numpy.typing import ArrayLike
+import numpy as np
+from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
 
-from pulser.register import Register
-from pulser.parametrized import Parametrized, Variable
-from pulser.json.utils import obj_to_dict
-from pulser.json.coders import PulserEncoder, PulserDecoder
-from pulser.devices._device_datacls import Device
-from pulser.devices import MockDevice
-from pulser.pulse import Pulse
-from pulser.channels import Channel
-from pulser._seq_drawer import draw_sequence
 import pulser
-from numpy.typing import ArrayLike
-import numpy as np
+from pulser.channels import Channel
+from pulser.devices import MockDevice
+from pulser.devices._device_datacls import Device
+from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.json.utils import obj_to_dict
+from pulser.parametrized import Parametrized, Variable
+from pulser.pulse import Pulse
+from pulser.register import Register
+from pulser._seq_drawer import draw_sequence
 
-from sys import version_info
 if version_info[:2] == (3, 7):  # pragma: no cover
     try:
         from typing_extensions import Literal, get_args
