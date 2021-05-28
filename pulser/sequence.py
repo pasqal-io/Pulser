@@ -20,12 +20,12 @@ import copy
 from functools import wraps
 from itertools import chain
 import json
-from numpy.typing import ArrayLike
-import numpy as np
 from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
 
+import numpy as np
+from numpy.typing import ArrayLike
 import pulser
 from pulser.channels import Channel
 from pulser.devices import MockDevice
