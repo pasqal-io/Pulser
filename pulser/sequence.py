@@ -15,13 +15,12 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, Set
 import copy
 from functools import wraps
 from itertools import chain
 import json
-from typing import (Any, cast, NamedTuple,
-                    Optional, Tuple, Union)
+from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 from typing_extensions import Literal
 
 import warnings
@@ -43,11 +42,15 @@ from pulser.register import Register
 QubitId = Union[int, str]
 PROTOCOLS = Literal['min-delay', 'no-delay', 'wait-for-all']
 
-# Auxiliary class to store the information in the schedule
-_TimeSlot: NamedTuple('_TimeSlot', [('type', str), ('ti', int), ('tf', int), (
-    'targets', Iterable[QubitId])]) = namedtuple(
-        '_TimeSlot', ['type', 'ti',
-                      'tf', 'targets'])
+
+class _TimeSlot(NamedTuple):
+    # Auxiliary class to store the information in the schedule
+    type: Union[Pulse, str]
+    ti: int
+    tf: int
+    targets: Set[QubitId]
+
+
 # Encodes a sequence building calls
 _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 
@@ -243,7 +246,7 @@ class Sequence:
 
     def declare_channel(self, name: str, channel_id: str,
                         initial_target: Optional[
-                            Union[Iterable[Union[QubitId, Parametrized]],
+                            Union[Set[Union[QubitId, Parametrized]],
                                   Union[QubitId, Parametrized]]] = None
                         ) -> None:
         """Declares a new channel to the Sequence.
@@ -321,7 +324,7 @@ class Sequence:
                 initial_target = None
             else:
                 # "_target" call is not saved
-                self._target(cast(Union[Iterable,
+                self._target(cast(Union[Set[QubitId],
                                         QubitId], initial_target), name)
 
         # Manually store the channel declaration as a regular call
@@ -703,55 +706,55 @@ class Sequence:
         """
         draw_sequence(self, draw_phase_area=draw_phase_area)
 
-    def _target(self, qubits: Union[Iterable[QubitId],
+    def _target(self, qubits: Union[Set[QubitId],
                                     QubitId], channel: str) -> None:
         self._validate_channel(channel)
 
         try:
-            qs = set(cast(Iterable, qubits)) if not isinstance(
+            qubits_set = set(cast(Iterable, qubits)) if not isinstance(
                 qubits, str) else {qubits}
         except TypeError:
-            qs = {qubits}
+            qubits_set = {qubits}
 
         if self._channels[channel].addressing != 'Local':
             raise ValueError("Can only choose target of 'Local' channels.")
-        elif len(qs) > self._channels[channel].max_targets:
+        elif len(qubits_set) > self._channels[channel].max_targets:
             raise ValueError(
                 "This channel can target at most "
                 f"{self._channels[channel].max_targets} qubits at a time"
             )
 
         if self.is_parametrized():
-            for q in qs:
+            for q in qubits_set:
                 if q not in self._qids and not isinstance(q, Parametrized):
                     raise ValueError("All non-variable qubits must belong to "
                                      "the register.")
             return
 
-        elif not qs.issubset(self._qids):
+        elif not qubits_set.issubset(self._qids):
             raise ValueError("All given qubits must belong to the register.")
 
         basis = self._channels[channel].basis
-        phase_refs = {self._phase_ref[basis][q].last_phase for q in qs}
+        phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
         if len(phase_refs) != 1:
             raise ValueError("Cannot target multiple qubits with different "
                              "phase references for the same basis.")
 
         try:
             last = self._last(channel)
-            if last.targets == qs:
+            if last.targets == qubits_set:
                 warnings.warn("The provided qubits are already the target. "
                               "Skipping this target instruction.")
                 return
             ti = last.tf
-            retarget = self._channels[channel].retarget_time
+            retarget = cast(int, self._channels[channel].retarget_time)
             elapsed = ti - self._last_target[channel]
-            delta = np.clip(retarget - elapsed, 0, retarget)
+            delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
             if delta != 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
-                        np.clip(delta, 16, np.inf)
+                        cast(int, np.clip(delta, 16, np.inf))
                     )
             tf = ti + delta
 
@@ -760,7 +763,7 @@ class Sequence:
             tf = 0
 
         self._last_target[channel] = tf
-        self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qs))
+        self._add_to_schedule(channel, _TimeSlot('target', ti, tf, qubits_set))
 
     def _delay(self, duration: int, channel: str) -> None:
         self._validate_channel(channel)
