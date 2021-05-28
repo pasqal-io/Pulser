@@ -12,8 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def obj_to_dict(obj, *args, _build=True, _module=None, _name=None,
-                _submodule=None, **kwargs):
+from __future__ import annotations
+
+from typing import Any, Optional
+
+
+def obj_to_dict(obj, *args,
+                _build: bool = True,
+                _module: Optional[str] = None,
+                _name: Optional[str] = None,
+                _submodule: Optional[str] = None,
+                **kwargs) -> dict[str, Any]:
     """Encodes an object in a dictionary for serialization.
 
     Args:

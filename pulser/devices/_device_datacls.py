@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Any
 
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from pulser import Register
+from pulser import Register, Pulse
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
 
@@ -44,34 +46,34 @@ class Device:
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
-    _channels: Tuple[Tuple[str, Channel]]
+    _channels: tuple[tuple[str, Channel], ...]
     interaction_coeff: float = 5008713.
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
         self.__dict__["__doc__"] = self._specs(for_docs=True)
 
     @property
-    def channels(self):
+    def channels(self) -> dict[str, Channel]:
         """Dictionary of available channels on this device."""
         return dict(self._channels)
 
     @property
-    def supported_bases(self):
+    def supported_bases(self) -> set[str]:
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channels.values()}
 
-    def print_specs(self):
+    def print_specs(self) -> None:
         """Prints the device specifications."""
         title = f"{self.name} Specifications"
         header = ["-"*len(title), title, "-"*len(title)]
         print("\n".join(header))
         print(self._specs())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
-    def rydberg_blockade_radius(self, rabi_frequency):
+    def rydberg_blockade_radius(self, rabi_frequency: float) -> float:
         """Calculates the Rydberg blockade radius for a given Rabi frequency.
 
         Args:
@@ -82,7 +84,7 @@ class Device:
         """
         return (self.interaction_coeff/rabi_frequency)**(1/6)
 
-    def rabi_from_blockade(self, blockade_radius):
+    def rabi_from_blockade(self, blockade_radius: float) -> float:
         """The maximum Rabi frequency value to enforce a given blockade radius.
 
         Args:
@@ -93,7 +95,7 @@ class Device:
         """
         return self.interaction_coeff/blockade_radius**6
 
-    def validate_register(self, register):
+    def validate_register(self, register: Register) -> None:
         """Checks if 'register' is compatible with this device.
 
         Args:
@@ -122,7 +124,7 @@ class Device:
                              f"{self.max_radial_distance} μm away from the "
                              "center of the array.")
 
-    def validate_pulse(self, pulse, channel_id):
+    def validate_pulse(self, pulse: Pulse, channel_id: str) -> None:
         """Checks if a pulse can be executed on a specific device channel.
 
         Args:
@@ -139,7 +141,7 @@ class Device:
             raise ValueError("The pulse's detuning values go out of the range "
                              "allowed for the chosen channel.")
 
-    def _specs(self, for_docs=False):
+    def _specs(self, for_docs: bool = False) -> str:
         lines = [
             "\nRegister requirements:",
             f" - Dimensions: {self.dimensions}D",
@@ -172,6 +174,6 @@ class Device:
 
         return "\n".join(lines + ch_lines)
 
-    def _to_dict(self):
+    def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, _build=False, _module="pulser.devices",
                            _name=self.name)
