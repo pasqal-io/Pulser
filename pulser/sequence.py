@@ -44,7 +44,7 @@ PROTOCOLS = Literal['min-delay', 'no-delay', 'wait-for-all']
 
 
 class _TimeSlot(NamedTuple):
-    # Auxiliary class to store the information in the schedule
+    """Auxiliary class to store the information in the schedule."""
     type: Union[Pulse, str]
     ti: int
     tf: int
