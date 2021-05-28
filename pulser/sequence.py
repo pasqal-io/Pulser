@@ -324,7 +324,7 @@ class Sequence:
                 initial_target = None
             else:
                 # "_target" call is not saved
-                self._target(cast(Union[Iterable[QubitId],
+                self._target(cast(Union[Iterable,
                                         QubitId], initial_target), name)
 
         # Manually store the channel declaration as a regular call
