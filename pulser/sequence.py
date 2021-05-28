@@ -13,6 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
+from pulser.register import Register
+from pulser.parametrized import Parametrized, Variable
+from pulser.json.utils import obj_to_dict
+from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.devices._device_datacls import Device
+from pulser.devices import MockDevice
+from pulser.pulse import Pulse
+from pulser.channels import Channel
+from pulser._seq_drawer import draw_sequence
+import pulser
+from numpy.typing import ArrayLike
+import numpy as np
 
 from collections import namedtuple
 from collections.abc import Callable, Generator, Iterable, Set
@@ -21,23 +33,20 @@ from functools import wraps
 from itertools import chain
 import json
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
-from typing_extensions import Literal
-
 import warnings
 
-import numpy as np
-from numpy.typing import ArrayLike
+from sys import version_info
+if version_info[:2] == (3, 7):  # pragma: no cover
+    try:
+        from typing_extensions import Literal, get_args
+    except ImportError:
+        raise ImportError(
+            "Using pulser with Python version 3.7 requires the"
+            " `typing_extensions` module. Install it by running"
+            " `pip install typing-extensions`.")
+else:
+    from typing import Literal, get_args  # type: ignore
 
-import pulser
-from pulser._seq_drawer import draw_sequence
-from pulser.channels import Channel
-from pulser.pulse import Pulse
-from pulser.devices import MockDevice
-from pulser.devices._device_datacls import Device
-from pulser.json.coders import PulserEncoder, PulserDecoder
-from pulser.json.utils import obj_to_dict
-from pulser.parametrized import Parametrized, Variable
-from pulser.register import Register
 
 QubitId = Union[int, str]
 PROTOCOLS = Literal['min-delay', 'no-delay', 'wait-for-all']
@@ -397,7 +406,7 @@ class Sequence:
 
         self._validate_channel(channel)
 
-        valid_protocols = ['min-delay', 'no-delay', 'wait-for-all']
+        valid_protocols = get_args(PROTOCOLS)
         if protocol not in valid_protocols:
             raise ValueError(f"Invalid protocol '{protocol}', only accepts "
                              "protocols: " + ", ".join(valid_protocols))
