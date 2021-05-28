@@ -13,6 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from collections import namedtuple
+from collections.abc import Callable, Generator, Iterable, Set
+import copy
+from functools import wraps
+from itertools import chain
+import json
+from typing import Any, cast, NamedTuple, Optional, Tuple, Union
+import warnings
+
 from pulser.register import Register
 from pulser.parametrized import Parametrized, Variable
 from pulser.json.utils import obj_to_dict
@@ -26,15 +36,6 @@ import pulser
 from numpy.typing import ArrayLike
 import numpy as np
 
-from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable, Set
-import copy
-from functools import wraps
-from itertools import chain
-import json
-from typing import Any, cast, NamedTuple, Optional, Tuple, Union
-import warnings
-
 from sys import version_info
 if version_info[:2] == (3, 7):  # pragma: no cover
     try:
@@ -44,7 +45,7 @@ if version_info[:2] == (3, 7):  # pragma: no cover
             "Using pulser with Python version 3.7 requires the"
             " `typing_extensions` module. Install it by running"
             " `pip install typing-extensions`.")
-else:
+else:  # pragma: no cover
     from typing import Literal, get_args  # type: ignore
 
 
