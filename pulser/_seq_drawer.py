@@ -288,12 +288,12 @@ def draw_sequence(seq: pulser.sequence.Sequence,
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(t[-1])
-        for start, targets, end in target_regions:
+        for start, targets_, end in target_regions:
             start = cast(float, start)
-            targets = cast(list, targets)
+            targets_ = cast(list, targets_)
             end = cast(float, end)
             # All targets have the same ref, so we pick
-            q = targets[0]
+            q = targets_[0]
             ref = seq._phase_ref[basis][q]
             if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
                 end += 1 / time_scale
