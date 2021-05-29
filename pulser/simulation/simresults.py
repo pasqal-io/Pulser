@@ -12,8 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import Optional, Union
+from collections.abc import Sequence
+
 import qutip
 import numpy as np
+from numpy.typing import ArrayLike
 
 
 class SimulationResults:
@@ -23,7 +29,8 @@ class SimulationResults:
     from them.
     """
 
-    def __init__(self, run_output, dim, size, basis_name, meas_basis=None):
+    def __init__(self, run_output: Sequence[qutip.Qobj], dim: int, size: int,
+                 basis_name: str, meas_basis: Optional[str] = None) -> None:
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -55,12 +62,13 @@ class SimulationResults:
         self._meas_basis = meas_basis
 
     @property
-    def states(self):
+    def states(self) -> list[qutip.Qobj]:
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._states)
 
-    def get_final_state(self, reduce_to_basis=None, ignore_global_phase=True,
-                        tol=1e-6, normalize=True):
+    def get_final_state(self, reduce_to_basis: Optional[str] = None,
+                        ignore_global_phase: bool = True, tol: float = 1e-6,
+                        normalize: bool = True) -> qutip.Qobj:
         """Get the final state of the simulation.
 
         Keyword Args:
@@ -112,13 +120,15 @@ class SimulationResults:
 
         return final_state.tidyup()
 
-    def expect(self, obs_list):
+    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+               ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
         Args:
-            obs_list (Array[qutip, numpy.ndarray]): A list of observables whose
-                expectation value will be calculated. If necessary, each member
-                will be transformed into a ``qutip.Qobj`` instance.
+            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): A list of
+                observables whose expectation value will be calculated.
+                If necessary, each member will be transformed into a
+                ``qutip.Qobj`` instance.
         """
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators")
@@ -136,7 +146,8 @@ class SimulationResults:
 
         return [qutip.expect(qobj, self._states) for qobj in qobj_list]
 
-    def sample_final_state(self, meas_basis=None, N_samples=1000):
+    def sample_final_state(self, meas_basis: Optional[str] = None,
+                           N_samples: int = 1000) -> dict[str, int]:
         r"""Returns the result of multiple measurements in a given basis.
 
         The enconding of the results depends on the meaurement basis. Namely:
@@ -199,7 +210,7 @@ class SimulationResults:
             probs = probs.reshape([3]*N)
             weights = []
             for dec_val in range(2**N):
-                ind = []
+                ind: list[Union[int, slice]] = []
                 for v in np.binary_repr(dec_val, width=N):
                     if v == '0':
                         ind.append(ex_one)
