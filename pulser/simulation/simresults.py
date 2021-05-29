@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, cast
+from typing import Optional, Union
 from collections.abc import Sequence
 
 import qutip
@@ -210,12 +210,12 @@ class SimulationResults:
             probs = probs.reshape([3]*N)
             weights = []
             for dec_val in range(2**N):
-                ind = []
+                ind: list[Union[int, slice]] = []
                 for v in np.binary_repr(dec_val, width=N):
                     if v == '0':
                         ind.append(ex_one)
                     else:
-                        ind.append(cast(slice, one_state))
+                        ind.append(one_state)
                 # Eg: 'digital' basis => |1> = index 2, |0> = index 0, 1 = 0:2
                 # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
                 # We sum all probabilites that correspond to measuring 11010,
