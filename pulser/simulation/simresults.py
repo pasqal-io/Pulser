@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from typing import Optional, Union, cast
+from collections.abc import Sequence
 
 import qutip
 import numpy as np
@@ -27,7 +29,7 @@ class SimulationResults:
     from them.
     """
 
-    def __init__(self, run_output: list[qutip.Qobj], dim: int, size: int,
+    def __init__(self, run_output: Sequence[qutip.Qobj], dim: int, size: int,
                  basis_name: str, meas_basis: Optional[str] = None) -> None:
         """Initializes a new SimulationResults instance.
 
@@ -118,14 +120,15 @@ class SimulationResults:
 
         return final_state.tidyup()
 
-    def expect(self, obs_list: list[Union[qutip, np.ndarray]]
-               ) -> Union[ArrayLike, float]:
+    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+               ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
         Args:
-            obs_list (List[Union[qutip, np.ndarray]]): A list of observables
-                whose expectation value will be calculated. If necessary, each
-                member will be transformed into a ``qutip.Qobj`` instance.
+            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): A list of
+                observables whose expectation value will be calculated.
+                If necessary, each member will be transformed into a
+                ``qutip.Qobj`` instance.
         """
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators")
