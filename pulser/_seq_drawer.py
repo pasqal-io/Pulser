@@ -14,17 +14,18 @@
 
 from __future__ import annotations
 
+from typing import Any, cast, Optional, Union
+
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import CubicSpline
 
 import pulser
 from pulser.waveforms import ConstantWaveform
 from pulser.pulse import Pulse
-from scipy.interpolate import CubicSpline
-from typing import Any, cast, Dict, Optional, Tuple, Union
 
 
-def gather_data(seq: pulser.sequence.Sequence) -> Dict:
+def gather_data(seq: pulser.sequence.Sequence) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
@@ -41,7 +42,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> Dict:
         time = [-1]     # To not break the "time[-1]" later on
         amp = []
         detuning = []
-        target: Dict[Union[str, Tuple[int, int]], Any] = {}
+        target: dict[Union[str, tuple[int, int]], Any] = {}
         # phase_shift = {}
         for slot in sch:
             if slot.ti == -1:
@@ -61,8 +62,8 @@ def gather_data(seq: pulser.sequence.Sequence) -> Dict:
             if (isinstance(pulse.amplitude, ConstantWaveform) and
                     isinstance(pulse.detuning, ConstantWaveform)):
                 time += [slot.ti, slot.tf-1]
-                amp += [int(pulse.amplitude._value)] * 2
-                detuning += [int(pulse.detuning._value)] * 2
+                amp += [float(pulse.amplitude._value)] * 2
+                detuning += [float(pulse.detuning._value)] * 2
             else:
                 time += list(range(slot.ti, slot.tf))
                 amp += pulse.amplitude.samples.tolist()
@@ -287,14 +288,13 @@ def draw_sequence(seq: pulser.sequence.Sequence,
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(t[-1])
-        for start, targets, end in target_regions:  # type: ignore
+        for start, targets, end in target_regions:
             q = targets[0]  # All targets have the same ref, so we pick
             ref = seq._phase_ref[basis][q]
             if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
-                end = cast(int, end)
                 end += 1 / time_scale
-            for t_, delta in ref.changes(cast(int, start),
-                                         cast(int, end),
+            for t_, delta in ref.changes(start,
+                                         end,
                                          time_scale=time_scale):
                 conf = dict(linestyle='--', linewidth=1.5, color='black')
                 a.axvline(t_, **conf)
