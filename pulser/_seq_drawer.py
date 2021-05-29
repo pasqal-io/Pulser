@@ -48,13 +48,13 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
             if slot.ti == -1:
                 target['initial'] = slot.targets
                 time += [0]
-                amp += [0]
-                detuning += [0]
+                amp += [0.]
+                detuning += [0.]
                 continue
             if slot.type in ['delay', 'target']:
                 time += [slot.ti, slot.tf-1 if slot.tf > slot.ti else slot.ti]
-                amp += [0, 0]
-                detuning += [0, 0]
+                amp += [0., 0.]
+                detuning += [0., 0.]
                 if slot.type == 'target':
                     target[(slot.ti, slot.tf-1)] = slot.targets
                 continue
@@ -289,7 +289,11 @@ def draw_sequence(seq: pulser.sequence.Sequence,
         if target_regions:
             target_regions[-1].append(t[-1])
         for start, targets, end in target_regions:
-            q = targets[0]  # All targets have the same ref, so we pick
+            start = cast(float, start)
+            targets = cast(list, targets)
+            end = cast(float, end)
+            # All targets have the same ref, so we pick
+            q = targets[0]
             ref = seq._phase_ref[basis][q]
             if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
                 end += 1 / time_scale
