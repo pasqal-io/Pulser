@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Optional, Union, cast, Any, List
+
+from typing import Optional, Union, cast, Any
+from collections.abc import Mapping
 import itertools
 
 import qutip
@@ -83,12 +85,10 @@ class Simulation:
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
-        self.samples: dict[str, dict[str, dict]] = {addr: {basis: {}
-                                                    for basis in
-                                                    ['ground-rydberg',
-                                                    'digital']}
-                                                    for addr in ['Global',
-                                                    'Local']}
+        self.samples: dict[str, dict[str, dict]] = {
+            addr: {basis: {} for basis in ['ground-rydberg', 'digital']}
+            for addr in ['Global', 'Local']
+        }
         self.operators = deepcopy(self.samples)
 
         self._extract_samples()
@@ -124,7 +124,7 @@ class Simulation:
             raise ValueError("`evaluation_times` must be a list of times "
                              "or `Full` or `Minimal`")
 
-    def draw(self, draw_phase_area=False):
+    def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the input sequence and the one used in QuTip.
 
         Keyword args:
@@ -145,7 +145,7 @@ class Simulation:
                     'phase': np.zeros(self._tot_duration)}
 
         def write_samples(slot: _TimeSlot,
-                          samples_dict: dict[str, np.ndarray]) -> None:
+                          samples_dict: Mapping[str, np.ndarray]) -> None:
             samples_dict['amp'][slot.ti:slot.tf] += slot.type.amplitude.samples
             samples_dict['det'][slot.ti:slot.tf] += slot.type.detuning.samples
             samples_dict['phase'][slot.ti:slot.tf] = slot.type.phase
@@ -290,7 +290,7 @@ class Simulation:
         for addr in self.samples:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
-                    qobj_list += cast(List, build_coeffs_ops(basis, addr))
+                    qobj_list += cast(list, build_coeffs_ops(basis, addr))
 
         self._times = adapt(np.arange(self._tot_duration,
                                       dtype=np.double)/1000)
