@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, cast, Any
+from typing import Optional, Union, cast
 from collections.abc import Mapping
 import itertools
 
@@ -146,9 +146,10 @@ class Simulation:
 
         def write_samples(slot: _TimeSlot,
                           samples_dict: Mapping[str, np.ndarray]) -> None:
-            samples_dict['amp'][slot.ti:slot.tf] += slot.type.amplitude.samples
-            samples_dict['det'][slot.ti:slot.tf] += slot.type.detuning.samples
-            samples_dict['phase'][slot.ti:slot.tf] = slot.type.phase
+            _pulse = cast(Pulse, slot.type)
+            samples_dict['amp'][slot.ti:slot.tf] += _pulse.amplitude.samples
+            samples_dict['det'][slot.ti:slot.tf] += _pulse.detuning.samples
+            samples_dict['phase'][slot.ti:slot.tf] = _pulse.phase
 
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
@@ -217,12 +218,12 @@ class Simulation:
         return qutip.tensor(op_list)
 
     def _construct_hamiltonian(self) -> None:
-        def adapt(full_array: np.ndarray) -> Any:
+        def adapt(full_array: np.ndarray) -> np.ndarray:
             """Adapt list to correspond to sampling rate"""
             indexes = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
-            return full_array[indexes]
+            return cast(np.ndarray, full_array[indexes])
 
         def make_vdw_term() -> float:
             """Construct the Van der Waals interaction Term.
@@ -360,9 +361,9 @@ class Simulation:
                                options=qutip.Options(max_step=5,
                                                      **options)
                                )
-
+        meas_basis: Optional[str]
         if hasattr(self._seq, '_measurement'):
-            meas_basis = self._seq._measurement
+            meas_basis = cast(str, self._seq._measurement)
         else:
             meas_basis = None
 
