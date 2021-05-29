@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import Any, cast, Optional, Union
+
 import matplotlib.pyplot as plt
 import numpy as np
-from pulser.waveforms import ConstantWaveform
-from pulser.pulse import Pulse
 from scipy.interpolate import CubicSpline
 
+import pulser
+from pulser.waveforms import ConstantWaveform
+from pulser.pulse import Pulse
 
-def gather_data(seq):
+
+def gather_data(seq: pulser.sequence.Sequence) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
@@ -36,28 +42,28 @@ def gather_data(seq):
         time = [-1]     # To not break the "time[-1]" later on
         amp = []
         detuning = []
-        target = {}
+        target: dict[Union[str, tuple[int, int]], Any] = {}
         # phase_shift = {}
         for slot in sch:
             if slot.ti == -1:
                 target['initial'] = slot.targets
                 time += [0]
-                amp += [0]
-                detuning += [0]
+                amp += [0.]
+                detuning += [0.]
                 continue
             if slot.type in ['delay', 'target']:
                 time += [slot.ti, slot.tf-1 if slot.tf > slot.ti else slot.ti]
-                amp += [0, 0]
-                detuning += [0, 0]
+                amp += [0., 0.]
+                detuning += [0., 0.]
                 if slot.type == 'target':
                     target[(slot.ti, slot.tf-1)] = slot.targets
                 continue
-            pulse = slot.type
+            pulse = cast(Pulse, slot.type)
             if (isinstance(pulse.amplitude, ConstantWaveform) and
                     isinstance(pulse.detuning, ConstantWaveform)):
                 time += [slot.ti, slot.tf-1]
-                amp += [pulse.amplitude._value] * 2
-                detuning += [pulse.detuning._value] * 2
+                amp += [float(pulse.amplitude._value)] * 2
+                detuning += [float(pulse.detuning._value)] * 2
             else:
                 time += list(range(slot.ti, slot.tf))
                 amp += pulse.amplitude.samples.tolist()
@@ -75,7 +81,9 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
+def draw_sequence(seq: pulser.sequence.Sequence,
+                  sampling_rate: Optional[float] = None,
+                  draw_phase_area: bool = False) -> None:
     """Draw the entire sequence.
 
     Args:
@@ -89,7 +97,7 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
             as text on the plot, defaults to False.
     """
 
-    def phase_str(phi):
+    def phase_str(phi: float) -> str:
         """Formats a phase value for printing."""
         value = (((phi + np.pi) % (2*np.pi)) - np.pi) / np.pi
         if value == -1:
@@ -280,12 +288,18 @@ def draw_sequence(seq, sampling_rate=None, draw_phase_area=False):
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(t[-1])
-        for start, targets, end in target_regions:
-            q = targets[0]  # All targets have the same ref, so we pick
+        for start, targets_, end in target_regions:
+            start = cast(float, start)
+            targets_ = cast(list, targets_)
+            end = cast(float, end)
+            # All targets have the same ref, so we pick
+            q = targets_[0]
             ref = seq._phase_ref[basis][q]
             if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
                 end += 1 / time_scale
-            for t_, delta in ref.changes(start, end, time_scale=time_scale):
+            for t_, delta in ref.changes(start,
+                                         end,
+                                         time_scale=time_scale):
                 conf = dict(linestyle='--', linewidth=1.5, color='black')
                 a.axvline(t_, **conf)
                 b.axvline(t_, **conf)
