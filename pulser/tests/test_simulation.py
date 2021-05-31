@@ -236,7 +236,7 @@ def test_single_atom_simulation():
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
     with patch('matplotlib.pyplot.show'):
-        sim.draw()
+        sim.draw(draw_phase_area=True)
     bad_initial = np.array([1.])
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)

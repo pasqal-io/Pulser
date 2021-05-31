@@ -11,13 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
+from collections.abc import Callable
 from functools import wraps
 from itertools import chain
 
 from pulser.parametrized import Parametrized, ParamObj
 
 
-def parametrize(func):
+def parametrize(func: Callable) -> Callable:
     """Makes a function support parametrized arguments.
 
     Note:

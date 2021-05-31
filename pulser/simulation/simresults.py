@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 from collections import Counter
 from abc import ABC, abstractmethod
+from typing import Optional, Union
+from collections.abc import Sequence
 
 import matplotlib.pyplot as plt
 import qutip
 import numpy as np
+from numpy.typing import ArrayLike
 
 
 class SimulationResults(ABC):
@@ -29,12 +33,13 @@ class SimulationResults(ABC):
     from them.
     """
 
-    def __init__(self, run_output, dim, size, basis_name, meas_basis,
-                 sim_times):
+    def __init__(self, run_output: Sequence[Union[Counter, qutip.Qobj]],
+                 dim: int, size: int, basis_name: str, meas_basis: str,
+                 sim_times: ArrayLike) -> None:
         """Initializes a new SimulationResults instance.
 
         Args:
-            run_output (List[qutip.Qobj]): List of ``qutip.Qobj`` corresponding
+            run_output (list[qutip.Qobj]): List of ``qutip.Qobj`` corresponding
                 to the states at each time step after the evolution has been
                 simulated.
             dim (int): The dimension of the local space of each atom (2 or 3).
@@ -307,12 +312,13 @@ class CleanResults(SimulationResults):
                          sim_times)
 
     @property
-    def states(self):
+    def states(self) -> list[qutip.Qobj]:
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._states)
 
-    def get_final_state(self, reduce_to_basis=None, ignore_global_phase=True,
-                        tol=1e-6, normalize=True):
+    def get_final_state(self, reduce_to_basis: Optional[str] = None,
+                        ignore_global_phase: bool = True, tol: float = 1e-6,
+                        normalize: bool = True) -> qutip.Qobj:
         """Get the final state of the simulation.
 
         Keyword Args:
@@ -364,13 +370,15 @@ class CleanResults(SimulationResults):
 
         return final_state.tidyup()
 
-    def expect(self, obs_list):
+    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+               ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
         Args:
-            obs_list (Array[qutip, numpy.ndarray]): A list of observables whose
-                expectation value will be calculated. If necessary, each member
-                will be transformed into a ``qutip.Qobj`` instance.
+            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): A list of
+                observables whose expectation value will be calculated.
+                If necessary, each member will be transformed into a
+                ``qutip.Qobj`` instance.
         """
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators")
@@ -388,7 +396,8 @@ class CleanResults(SimulationResults):
 
         return [qutip.expect(qobj, self._states) for qobj in qobj_list]
 
-    def sample_state(self, t=-1, meas_basis=None, N_samples=1000):
+    def sample_state(self, t: int = -1, meas_basis: Optional[str] = None,
+                     N_samples: int = 1000) -> dict[str, int]:
         r"""Returns the result of multiple measurements in a given basis.
 
         The encoding of the results depends on the meaurement basis. Namely:
@@ -449,7 +458,7 @@ class CleanResults(SimulationResults):
             probs = probs.reshape([3]*N)
             weights = np.zeros(2**N)
             for dec_val in range(2**N):
-                ind = []
+                ind: list[Union[int, slice]] = []
                 for v in np.binary_repr(dec_val, width=N):
                     if v == '0':
                         ind.append(ex_one)

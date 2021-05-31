@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pulser.parametrized import Variable  # pragma: no cover
 
 
 class Parametrized(ABC):
@@ -20,7 +26,7 @@ class Parametrized(ABC):
 
     @property
     @abstractmethod
-    def variables(self):
+    def variables(self) -> dict[str, Variable]:
         """All the variables involved with this object."""
         pass
 
@@ -30,6 +36,6 @@ class Parametrized(ABC):
         pass
 
     @abstractmethod
-    def _to_dict(self):
+    def _to_dict(self) -> dict[str, Any]:
         """Serializes the object in a dictionary."""
         pass

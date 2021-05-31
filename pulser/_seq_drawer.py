@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import Any, cast, Optional, Union
+
 import matplotlib.pyplot as plt
 import numpy as np
-
-from pulser.waveforms import ConstantWaveform
 from scipy.interpolate import CubicSpline
 
+import pulser
+from pulser.waveforms import ConstantWaveform
+from pulser.pulse import Pulse
 
-def gather_data(seq):
+
+def gather_data(seq: pulser.sequence.Sequence) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
@@ -36,28 +42,28 @@ def gather_data(seq):
         time = [-1]     # To not break the "time[-1]" later on
         amp = []
         detuning = []
-        target = {}
+        target: dict[Union[str, tuple[int, int]], Any] = {}
         # phase_shift = {}
         for slot in sch:
             if slot.ti == -1:
                 target['initial'] = slot.targets
                 time += [0]
-                amp += [0]
-                detuning += [0]
+                amp += [0.]
+                detuning += [0.]
                 continue
             if slot.type in ['delay', 'target']:
                 time += [slot.ti, slot.tf-1 if slot.tf > slot.ti else slot.ti]
-                amp += [0, 0]
-                detuning += [0, 0]
+                amp += [0., 0.]
+                detuning += [0., 0.]
                 if slot.type == 'target':
                     target[(slot.ti, slot.tf-1)] = slot.targets
                 continue
-            pulse = slot.type
+            pulse = cast(Pulse, slot.type)
             if (isinstance(pulse.amplitude, ConstantWaveform) and
                     isinstance(pulse.detuning, ConstantWaveform)):
                 time += [slot.ti, slot.tf-1]
-                amp += [pulse.amplitude._value] * 2
-                detuning += [pulse.detuning._value] * 2
+                amp += [float(pulse.amplitude._value)] * 2
+                detuning += [float(pulse.detuning._value)] * 2
             else:
                 time += list(range(slot.ti, slot.tf))
                 amp += pulse.amplitude.samples.tolist()
@@ -75,19 +81,23 @@ def gather_data(seq):
     return data
 
 
-def draw_sequence(seq, sampling_rate=None):
+def draw_sequence(seq: pulser.sequence.Sequence,
+                  sampling_rate: Optional[float] = None,
+                  draw_phase_area: bool = False) -> None:
     """Draw the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
 
     Keyword args:
-        sampling_rate(float): Sampling rate of the effective pulse used by
+        sampling_rate (float): Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
+        draw_phase_area (bool): Whether phase and area values need to be shown
+            as text on the plot, defaults to False.
     """
 
-    def phase_str(phi):
+    def phase_str(phi: float) -> str:
         """Formats a phase value for printing."""
         value = (((phi + np.pi) % (2*np.pi)) - np.pi) / np.pi
         if value == -1:
@@ -106,6 +116,7 @@ def draw_sequence(seq, sampling_rate=None):
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor='orange')
     ph_box = dict(boxstyle="round", facecolor='ghostwhite')
+    area_ph_box = dict(boxstyle='round', facecolor='ghostwhite', alpha=0.7)
 
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5*n_channels))
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
@@ -158,7 +169,7 @@ def draw_sequence(seq, sampling_rate=None):
             ya2 = []
             yb2 = []
             for t_solv in solver_time:
-                # find the intervall [t[t2],t[t2+1]] containing t_solv
+                # Find the interval [t[t2],t[t2+1]] containing t_solv
                 while t_solv > t[t2]:
                     t2 += 1
                 ya2.append(ya[t2])
@@ -199,6 +210,46 @@ def draw_sequence(seq, sampling_rate=None):
         a.set_ylabel(r'$\Omega$ (rad/µs)', fontsize=14, labelpad=10)
         b.set_ylabel(r'$\delta$ (rad/µs)', fontsize=14)
 
+        if draw_phase_area:
+            top = False  # Variable to track position of box, top or center.
+            draw_phase = any(
+                seq_.type.phase != 0 for seq_ in seq._schedule[ch]
+                if isinstance(seq_.type, Pulse)
+            )
+            for pulse_num, seq_ in enumerate(seq._schedule[ch]):
+                # Select only `Pulse` objects
+                if isinstance(seq_.type, Pulse):
+                    if sampling_rate:
+                        area_val = (
+                            np.sum(
+                                cs_amp(np.arange(seq_.ti, seq_.tf)/time_scale)
+                            ) * 1e-3 / np.pi
+                        )
+                    else:
+                        area_val = seq_.type.amplitude.integral / np.pi
+                    phase_val = seq_.type.phase / np.pi
+                    x_plot = (seq_.ti + seq_.tf) / 2 / time_scale
+                    if (
+                        seq._schedule[ch][pulse_num-1].type == "target"
+                        or not top
+                    ):
+                        y_plot = np.max(seq_.type.amplitude.samples) / 2
+                        top = True  # Next box at the top.
+                    elif top:
+                        y_plot = np.max(seq_.type.amplitude.samples)
+                        top = False  # Next box at the center.
+                    area_fmt = (r"A: $\pi$" if round(area_val, 2) == 1
+                                else fr"A: {area_val:.2g}$\pi$")
+                    if not draw_phase:
+                        txt = area_fmt
+                    else:
+                        phase_fmt = fr"$\phi$: {phase_str(phase_val)}"
+                        txt = "\n".join([phase_fmt, area_fmt])
+                    a.text(
+                        x_plot, y_plot, txt, fontsize=10,
+                        ha="center", va="center", bbox=area_ph_box,
+                    )
+
         target_regions = []     # [[start1, [targets1], end1],...]
         for coords in data[ch]['target']:
             targets = list(data[ch]['target'][coords])
@@ -237,12 +288,18 @@ def draw_sequence(seq, sampling_rate=None):
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(t[-1])
-        for start, targets, end in target_regions:
-            q = targets[0]  # All targets have the same ref, so we pick
+        for start, targets_, end in target_regions:
+            start = cast(float, start)
+            targets_ = cast(list, targets_)
+            end = cast(float, end)
+            # All targets have the same ref, so we pick
+            q = targets_[0]
             ref = seq._phase_ref[basis][q]
             if end != seq._total_duration - 1 or 'measurement' not in data[ch]:
                 end += 1 / time_scale
-            for t_, delta in ref.changes(start, end, time_scale=time_scale):
+            for t_, delta in ref.changes(start,
+                                         end,
+                                         time_scale=time_scale):
                 conf = dict(linestyle='--', linewidth=1.5, color='black')
                 a.axvline(t_, **conf)
                 b.axvline(t_, **conf)
