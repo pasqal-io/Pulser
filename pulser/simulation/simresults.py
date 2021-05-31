@@ -49,13 +49,13 @@ class SimulationResults:
         self._states = run_output
         self._dim = dim
         self._size = size
-        if basis_name not in {'ground-rydberg', 'digital', 'all'}:
+        if basis_name not in {'ground-rydberg', 'digital', 'all', 'XY'}:
             raise ValueError(
                 "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
                 )
         self._basis_name = basis_name
         if meas_basis:
-            if meas_basis not in {'ground-rydberg', 'digital'}:
+            if meas_basis not in {'ground-rydberg', 'digital', 'XY'}:
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg' or 'digital'."
                     )
@@ -95,6 +95,7 @@ class SimulationResults:
             full = final_state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
             final_state *= np.exp(-1j * global_ph)
+
         if self._dim != 3:
             if reduce_to_basis not in [None, self._basis_name]:
                 raise TypeError(f"Can't reduce a system in {self._basis_name}"
@@ -102,11 +103,13 @@ class SimulationResults:
         elif reduce_to_basis is not None:
             if reduce_to_basis == "ground-rydberg":
                 ex_state = "2"
+            elif reduce_to_basis == "XY":
+                ex_state = "2"
             elif reduce_to_basis == "digital":
                 ex_state = "0"
             else:
                 raise ValueError("'reduce_to_basis' must be 'ground-rydberg' "
-                                 + f"or 'digital', not '{reduce_to_basis}'.")
+                                 + f"'digital' or 'XY', not '{reduce_to_basis}'.")
             ex_inds = [i for i in range(3**self._size) if ex_state in
                        np.base_repr(i, base=3).zfill(self._size)]
             ex_probs = np.abs(final_state.extract_states(ex_inds).full()) ** 2
@@ -181,9 +184,9 @@ class SimulationResults:
                     )
             meas_basis = self._meas_basis
 
-        if meas_basis not in {'ground-rydberg', 'digital'}:
+        if meas_basis not in {'ground-rydberg', 'digital', 'XY'}:
             raise ValueError(
-                "'meas_basis' can only be 'ground-rydberg' or 'digital'."
+                "'meas_basis' can only be 'ground-rydberg', digital' or 'XY'."
                 )
 
         N = self._size

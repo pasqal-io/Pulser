@@ -198,7 +198,7 @@ def test_empty_sequences():
     with pytest.raises(ValueError, match='no declared channels'):
         Simulation(seq)
     seq.declare_channel("ch0", "mw_global")
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match='No instructions given'):
         Simulation(seq)
 
     seq = Sequence(reg, MockDevice)
