@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 from collections import Counter
-from abc import ABC, abstractmethod
-from typing import Optional, Union
+from abc import ABC
+from typing import Optional, Union, cast, Tuple
 from collections.abc import Sequence
 
 import matplotlib.pyplot as plt
@@ -69,60 +69,11 @@ class SimulationResults(ABC):
         self._meas_basis = meas_basis
         self.sim_times = sim_times
 
-    @abstractmethod
-    def expect(self, obs_list):
-        """Calculates the expectation value of a list of observables.
-
-        Args:
-            obs_list (array-like of qutip.Qobj or array-like of numpy.ndarray):
-                A list of observables whose expectation value will be
-                calculated. If necessary, each member will be transformed into
-                a qutip.Qobj instance.
-        """
-        pass
-
-    @abstractmethod
-    def sample_state(self, t=-1, meas_basis=None, N_samples=1000):
-        r"""Returns the result of multiple measurements in a given basis.
-
-        The enconding of the results depends on the meaurement basis. Namely:
-
-        - *ground-rydberg* : :math:`1 = |r\rangle;~ 0 = |g\rangle, |h\rangle`
-        - *digital* : :math:`1 = |h\rangle;~ 0 = |g\rangle, |r\rangle`
-
-        Note:
-            The results are presented using a big-endian representation,
-            according to the pre-established qubit ordering in the register.
-            This means that, when sampling a register with qubits ('q0','q1',
-            ...), in this order, the corresponding value, in binary, will be
-            0Bb0b1..., where b0 is the outcome of measuring 'q0', 'b1' of
-            measuring 'q1' and so on.
-
-        Keyword Args:
-            meas_basis (str, default=None): 'ground-rydberg' or 'digital'. If
-                left as None, uses the measurement basis defined in the
-                original sequence.
-            N_samples (int, default=1000): Number of samples to take.
-
-        Raises:
-            ValueError: If trying to sample without a defined 'meas_basis' in
-                the arguments when the original sequence is not measured.
-        """
-        pass
-
-    @abstractmethod
-    def sample_final_state(self, meas_basis=None, N_samples=1000):
-        pass
-
-    @abstractmethod
-    def plot(self, op, fmt=''):
-        pass
-
 
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
 
-    Contrary to a CleanResults object, this object contains a unique Counter
+    Contrary to a CleanResults object, this object contains a list of Counter
     describing the state distribution at the time it was created by using
     Simulation.run() with a noisy simulation.
 
@@ -130,8 +81,9 @@ class NoisyResults(SimulationResults):
     information from them.
     """
 
-    def __init__(self, run_output, size, basis_name, meas_basis, sim_times,
-                 N_measures, dim=2):
+    def __init__(self, run_output: Sequence[Counter],
+                 size: int, basis_name: str, meas_basis: str,
+                 sim_times: ArrayLike, N_measures: int, dim: int = 2) -> None:
         """Initializes a new NoisyResults instance.
 
         Warning :
@@ -164,11 +116,11 @@ class NoisyResults(SimulationResults):
         self.N_measures = N_measures
 
     @property
-    def states(self):
+    def states(self) -> Sequence[Counter]:
         """Probability distribution of the bitstrings"""
         return self._states
 
-    def get_state(self, t):
+    def get_state(self, t: int) -> qutip.Qobj:
         """Get the state at time t of the simulation as a diagonal density
         matrix.
         This is not the density matrix of the system, but is a convenient way
@@ -180,7 +132,7 @@ class NoisyResults(SimulationResults):
         Returns:
             qutip.Qobj: States probability distribution as a density matrix.
         """
-        def _proj_from_bitstring(bitstring):
+        def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
             # In the digital case, |h> = |1> = qutip.basis()
             # 'all' basis is unacceptable here after projection on bitstrings
             if self._meas_basis == 'digital':
@@ -195,7 +147,7 @@ class NoisyResults(SimulationResults):
         return sum(v * _proj_from_bitstring(b) for
                    b, v in self._states[t].items())
 
-    def get_final_state(self):
+    def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
         This is not the density matrix of the system, but is a convenient way
         of computing expectation values of observables.
@@ -205,7 +157,8 @@ class NoisyResults(SimulationResults):
         """
         return self.get_state(-1)
 
-    def expect(self, obs_list):
+    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+               ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
         Args:
@@ -232,7 +185,8 @@ class NoisyResults(SimulationResults):
 
         return qutip.expect(qobj_list, density_matrices)
 
-    def sample_state(self, t=-1, N_samples=1000):
+    def sample_state(self, t: int = -1, N_samples: int = 1000
+                     ) -> Counter:
         r"""Returns the result of multiple measurements. No notion of
             measurement basis here, since states have already been projected
             onto bitstrings.
@@ -253,20 +207,21 @@ class NoisyResults(SimulationResults):
         return Counter(
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
 
-    def sample_final_state(self, N_samples=1000):
+    def sample_final_state(self, N_samples: int = 1000) -> Counter:
         return self.sample_state(N_samples=N_samples)
 
-    def _standard_dev(self, op):
+    def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
         """Returns the square root of the variance of operator op."""
         density_mats = [self.get_state(t) for t in range(len(self._states))]
         return np.sqrt(qutip.variance(op, density_mats) / self.N_measures)
 
-    def _get_error_bars(self, op):
+    def _get_error_bars(self, op: qutip.Qobj) -> Tuple[ArrayLike, ArrayLike]:
         moy = self.expect([op])[0]
         st = self._standard_dev(op)
         return moy, st
 
-    def plot(self, op, error_bars=True, fmt='.', label=''):
+    def plot(self, op: qutip.Qobj, error_bars: bool = True, fmt: str = '.',
+             label: str = '') -> None:
         """Plots the expectation results of operator op, computing error bars
             if wanted.
         Args:
@@ -291,8 +246,9 @@ class CleanResults(SimulationResults):
     from them.
     """
 
-    def __init__(self, run_output, dim, size, basis_name,
-                 meas_basis, sim_times):
+    def __init__(self, run_output: Sequence[qutip.Qobj],
+                 dim: int, size: int, basis_name: str, meas_basis: str,
+                 sim_times: ArrayLike) -> None:
         """Initializes a new CleanResults instance.
 
         Args:
@@ -340,7 +296,7 @@ class CleanResults(SimulationResults):
             TypeError: If trying to reduce to a basis that would eliminate
                 states with significant occupation probabilites.
         """
-        final_state = self._states[-1].copy()
+        final_state = cast(qutip.Qobj, self._states[-1].copy())
         if ignore_global_phase:
             full = final_state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
@@ -391,13 +347,14 @@ class CleanResults(SimulationResults):
             if obs.shape != (self._dim**self._size, self._dim**self._size):
                 raise ValueError("Incompatible shape of observable.")
             # Transfrom to qutip.Qobj and take dims from state
-            dim_list = [self._states[0].dims[0], self._states[0].dims[0]]
+            dim = cast(qutip.Qobj, self._states[0]).dims[0]
+            dim_list = [dim, dim]
             qobj_list.append(qutip.Qobj(obs, dims=dim_list))
 
         return [qutip.expect(qobj, self._states) for qobj in qobj_list]
 
-    def sample_state(self, t: int = -1, meas_basis: Optional[str] = None,
-                     N_samples: int = 1000) -> dict[str, int]:
+    def sample_state(self, meas_basis: Optional[str] = None, t: int = -1,
+                     N_samples: int = 1000) -> Counter:
         r"""Returns the result of multiple measurements in a given basis.
 
         The encoding of the results depends on the meaurement basis. Namely:
@@ -432,7 +389,7 @@ class CleanResults(SimulationResults):
 
         N = self._size
         self.N_samples = N_samples
-        final_state = self._states[t].unit()
+        final_state = cast(qutip.Qobj, self._states[t]).unit()
         # Case of a density matrix
         if final_state.type != "ket":
             probs = np.abs(final_state.diag())
@@ -446,7 +403,7 @@ class CleanResults(SimulationResults):
                 # Invert the order ->  [00, 01, 10, 11] correspondence
                 weights = probs if meas_basis == 'digital' else probs[::-1]
             else:
-                return {'0' * N: int(N_samples)}
+                return Counter({'0' * N: int(N_samples)})
 
         elif self._dim == 3:
             if meas_basis == 'ground-rydberg':
@@ -480,10 +437,12 @@ class CleanResults(SimulationResults):
         return Counter(
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
 
-    def sample_final_state(self, meas_basis=None, N_samples=1000):
-        return self.sample_state(-1, meas_basis, N_samples)
+    def sample_final_state(self, meas_basis: Optional[str] = None,
+                           N_samples: int = 1000) -> Counter:
+        return self.sample_state(meas_basis=meas_basis, N_samples=N_samples)
 
-    def detection_from_basis_state(self, N_d, shot, spam):
+    def detection_from_basis_state(self, N_d: int, shot: str,
+                                   spam: dict[str, float]) -> Counter:
         """Returns the probability distribution of states really detected
             when the simulation detects bitstring shot.
 
@@ -503,7 +462,7 @@ class CleanResults(SimulationResults):
         prob_0_to_1 = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
         probs = [int(shot[i]) * prob_1_to_0 + (1 - int(shot[i]))
                  * prob_0_to_1 for i in range(len(shot))]
-        probs += [1 - sum(probs)]
+        probs += [1. - sum(probs)]
         shots = np.random.multinomial(N_d, probs)
         detected_dict = {shot: shots[-1]}
 
@@ -513,9 +472,9 @@ class CleanResults(SimulationResults):
                               + 1:]] = shots[i]
         return Counter(detected_dict)
 
-    def sampling_with_detection_errors(self, spam, t=-1,
-                                       meas_basis=None,
-                                       N_samples=1000):
+    def sampling_with_detection_errors(self, spam: dict[str, float],
+                                       t: int = -1, meas_basis: str = '',
+                                       N_samples: int = 1000) -> Counter:
         """Returns the distribution of states really detected instead of
         sampled_state. Doesn't take state preparation errors into account.
         Part of the SPAM implementation.
@@ -528,14 +487,14 @@ class CleanResults(SimulationResults):
         """
         sampled_state = self.sample_state(t=t, meas_basis=meas_basis,
                                           N_samples=N_samples)
-        detected_sample_dict = Counter()
+        detected_sample_dict: Counter = Counter()
         for (shot, N_d) in sampled_state.items():
             dict_state = self.detection_from_basis_state(N_d, shot, spam)
             detected_sample_dict += dict_state
 
         return detected_sample_dict
 
-    def plot(self, op, fmt='', label=''):
+    def plot(self, op: qutip.Qobj, fmt: str = '', label: str = '') -> None:
         plt.plot(self.sim_times, self.expect([op])[0], fmt, label=label)
         plt.xlabel('Time (µs)')
         plt.ylabel('Expectation value')

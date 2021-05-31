@@ -146,10 +146,12 @@ def test_plot():
 
 def test_sample_final_state():
     sim_no_meas = Simulation(seq_no_meas)
+    sim_no_meas.config('runs', 1)
     results_no_meas = sim_no_meas.run()
     results_no_meas.sample_final_state()
     with pytest.raises(ValueError, match="can only be"):
-        results_no_meas.sample_final_state('wrong_measurement_basis')
+        results_no_meas.sample_final_state(
+            meas_basis='wrong_measurement_basis')
     with pytest.raises(NotImplementedError, match="dimension > 3"):
         results_large_dim = deepcopy(results)
         results_large_dim._dim = 7
@@ -183,4 +185,5 @@ def test_sample_final_state_noisy():
     seq_no_meas_noisy.add(pi, 'raman')
     res_3level = Simulation(seq_no_meas_noisy)
     res_3level.set_noise('SPAM', 'doppler')
+    res_3level.config('runs', 1)
     res_3level.run().states

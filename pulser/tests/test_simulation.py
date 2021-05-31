@@ -263,13 +263,20 @@ def test_run():
 
 def test_eval_times():
     with pytest.raises(ValueError,
-                       match="`evaluation_times` must be a list of times "
-                             "or `Full` or `Minimal`"):
+                       match="evaluation_time float must be between 0 "
+                             "and 1."):
         sim = Simulation(seq, sampling_rate=1.)
-        sim.config('eval_t', -1)
+        sim.config('eval_t', -1.)
     with pytest.raises(ValueError,
                        match="Wrong evaluation time label. It should "
-                             "be `Full` or `Minimal`"):
+                             "be `Full` or `Minimal` or a float between "
+                             "0 and 1."):
+        sim = Simulation(seq, sampling_rate=1.)
+        sim.config('eval_t', 123)
+    with pytest.raises(ValueError,
+                       match="Wrong evaluation time label. It should "
+                             "be `Full` or `Minimal` or a float between "
+                             "0 and 1."):
         sim = Simulation(seq, sampling_rate=1.)
         sim.config('eval_t', 'Best')
 
@@ -308,6 +315,9 @@ def test_eval_times():
                                    np.array([0, sim._times[-10],
                                              sim._times[-3], sim._times[-1]])
                                    )
+
+    sim = Simulation(seq, sampling_rate=1.)
+    sim.config('eval_t', 0.4)
 
 
 def test_config():
