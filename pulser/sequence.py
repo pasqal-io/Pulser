@@ -69,7 +69,7 @@ _Call = namedtuple("_Call", ['name', 'args', 'kwargs'])
 def _screen(func: Callable) -> Callable:
     """Blocks the call to a function if the Sequence is parametrized."""
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
         if self.is_parametrized():
             raise RuntimeError(f"Sequence.{func.__name__} can't be called in"
                                + " parametrized sequences.")
@@ -80,8 +80,8 @@ def _screen(func: Callable) -> Callable:
 def _store(func: Callable) -> Callable:
     """Stores any Sequence building call for deferred execution."""
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        def verify_variable(x):
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
+        def verify_variable(x: Any) -> None:
             if isinstance(x, Parametrized):
                 # If not already, the sequence becomes parametrized
                 self._building = False

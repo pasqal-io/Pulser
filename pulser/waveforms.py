@@ -36,7 +36,7 @@ from pulser.json.utils import obj_to_dict
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):      # type: ignore
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 return ParamObj(cls, *args, **kwargs)
