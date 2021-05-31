@@ -31,7 +31,7 @@ class Parametrized(ABC):
         pass
 
     @abstractmethod
-    def build(self):
+    def build(self) -> Any:
         """Builds the object."""
         pass
 

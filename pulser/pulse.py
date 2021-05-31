@@ -56,7 +56,7 @@ class Pulse:
             (see ``Sequence.phase_shift()`` for more information).
     """
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):      # type: ignore
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 return ParamObj(cls, *args, **kwargs)
