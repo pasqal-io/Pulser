@@ -147,11 +147,13 @@ def test_max_connectivity():
         reg = Register.max_connectivity(2, None)
 
     # Check min number of atoms
-    with pytest.raises(ValueError, match=r"The number of qubits(.+)or above"):
+    with pytest.raises(ValueError,
+                       match=r"The number of qubits(.+)greater than"):
         reg = Register.max_connectivity(0, device)
 
     # Check max number of atoms
-    with pytest.raises(ValueError, match=r"The number of qubits(.+)exceed"):
+    with pytest.raises(ValueError,
+                       match=r"The number of qubits(.+)less than"):
         reg = Register.max_connectivity(max_atom_num + 1, device)
 
     # Check spacing

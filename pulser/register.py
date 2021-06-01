@@ -107,24 +107,25 @@ class Register:
         """
         # Check rows
         if rows < 1:
-            raise ValueError(
-                f"The number of rows ({rows}) must be 1 or above.")
+            raise ValueError(f"The number of rows (`rows` = {rows})"
+                             " must be greater than or equal to 1.")
 
         # Check columns
         if columns < 1:
-            raise ValueError(
-                f"The number of columns ({columns}) must be 1 or above.")
+            raise ValueError(f"The number of columns (`columns` = {columns})"
+                             " must be greater than or equal to 1.")
 
         # Check spacing
         if spacing <= 0.0:
-            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
+            raise ValueError(f"Spacing between atoms (`spacing` = {spacing})"
+                             " must be greater than 0.")
 
         coords = np.array([(x, y) for y in range(rows)
                            for x in range(columns)], dtype=float) * spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
-    @classmethod
+    @ classmethod
     def square(cls, side: int, spacing: float = 4.0,
                prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a square array.
@@ -143,12 +144,12 @@ class Register:
         """
         # Check side
         if side < 1:
-            raise ValueError(
-                f"The number of atoms per side ({side}) must be 1 or above.")
+            raise ValueError(f"The number of atoms per side (`side` = {side})"
+                             " must be greater than or equal to 1.")
 
         return cls.rectangle(side, side, spacing=spacing, prefix=prefix)
 
-    @classmethod
+    @ classmethod
     def triangular_lattice(cls, rows: int, atoms_per_row: int,
                            spacing: float = 4.0,
                            prefix: Optional[str] = None) -> Register:
@@ -174,18 +175,19 @@ class Register:
 
         # Check rows
         if rows < 1:
-            raise ValueError(
-                f"The number of rows ({rows}) must be 1 or above.")
+            raise ValueError(f"The number of rows (`rows` = {rows})"
+                             " must be greater than or equal to 1.")
 
         # Check atoms per row
         if atoms_per_row < 1:
-            raise ValueError(
-                f"The number of atoms per row ({atoms_per_row})"
-                " must be 1 or above.")
+            raise ValueError("The number of atoms per row"
+                             f" (`atoms_per_row` = {atoms_per_row})"
+                             " must be greater than or equal to 1.")
 
         # Check spacing
         if spacing <= 0.0:
-            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
+            raise ValueError(f"Spacing between atoms (`spacing` = {spacing})"
+                             " must be greater than 0.")
 
         coords = np.array([(x, y) for y in range(rows)
                            for x in range(atoms_per_row)], dtype=float)
@@ -195,7 +197,7 @@ class Register:
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
-    @classmethod
+    @ classmethod
     def _hexagon_helper(cls, layers: int, atoms_left: int, spacing: float,
                         prefix: Optional[str] = None) -> Register:
         """Helper function for building hexagonal arrays.
@@ -226,7 +228,7 @@ class Register:
         delta_y = [crest_y, 0.0, -crest_y, -crest_y, 0.0, crest_y]
 
         coords = np.array([(start_x[side] * layer + atom * delta_x[side],
-                           start_y[side] * layer + atom * delta_y[side])
+                          start_y[side] * layer + atom * delta_y[side])
                            for layer in range(1, layers + 1)
                            for side in range(6)
                            for atom in range(1, layer + 1)], dtype=float)
@@ -243,12 +245,13 @@ class Register:
             sides_order = [0, 3, 1, 4, 2, 5]
 
             coords2 = np.array([(start_x[side] * layer + atom * delta_x[side],
-                                start_y[side] * layer + atom * delta_y[side])
-                               for side in range(6)
-                               for atom in range(1, min_atoms_per_side + 2
-                                                 if atoms_left >
-                                                 sides_order[side]
-                                                 else min_atoms_per_side + 1)],
+                               start_y[side] * layer + atom * delta_y[side])
+                                for side in range(6)
+                                for atom in range(1, min_atoms_per_side + 2
+                                                  if atoms_left >
+                                                  sides_order[side]
+                                                  else
+                                                  min_atoms_per_side + 1)],
                                dtype=float)
 
             coords = np.concatenate((coords, coords2))
@@ -258,7 +261,7 @@ class Register:
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
-    @classmethod
+    @ classmethod
     def hexagon(cls, layers: int, spacing: float = 4.0,
                 prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a hexagonal layout.
@@ -278,16 +281,17 @@ class Register:
 
         # Check layers
         if layers < 1:
-            raise ValueError(
-                f"The number of layers ({layers}) must be 1 or above.")
+            raise ValueError(f"The number of layers (`layers` = {layers})"
+                             " must be greater than or equal to 1.")
 
         # Check spacing
         if spacing <= 0.0:
-            raise ValueError(f"Spacing ({spacing}) must be above 0.0.")
+            raise ValueError(f"Spacing between atoms (`spacing` = {spacing})"
+                             " must be greater than 0.")
 
         return cls._hexagon_helper(layers, 0, spacing, prefix)
 
-    @classmethod
+    @ classmethod
     def max_connectivity(cls, n_qubits: int,
                          device: pulser.devices._device_datacls.Device,
                          spacing: float = None,
@@ -321,22 +325,24 @@ class Register:
 
         # Check number of qubits (1 or above)
         if n_qubits < 1:
-            raise ValueError(
-                f"The number of qubits ({n_qubits}) must be 1 or above.")
+            raise ValueError(f"The number of qubits (`n_qubits` = {n_qubits})"
+                             " must be greater than or equal to 1.")
 
         # Check number of qubits (less than the max number of atoms)
         if n_qubits > device.max_atom_num:
-            raise ValueError(f"The number of qubits ({n_qubits})"
-                             " can not exceed the maximum number of"
-                             " atoms supported by this device"
+            raise ValueError(f"The number of qubits (`n_qubits` = {n_qubits})"
+                             " must be less than or equal to the maximum"
+                             " number of atoms supported by this device"
                              f" ({device.max_atom_num}).")
 
         # Default spacing or check minimal distance
         if spacing is None:
             spacing = device.min_atom_distance
         elif spacing < device.min_atom_distance:
-            raise ValueError(f"Spacing ({spacing}) for this device must be"
-                             f" {device.min_atom_distance} or above.")
+            raise ValueError(f"Spacing between atoms (`spacing = `{spacing})"
+                             " must be greater than or equal to the minimal"
+                             " distance supported by this device"
+                             f" ({device.min_atom_distance}).")
 
         if n_qubits < 7:
             hex_coords = np.array([(0.0, 0.0), (1.0, 0.0), (0.5, np.sqrt(3/4)),
@@ -394,8 +400,9 @@ class Register:
 
         # Check spacing
         if blockade_radius is not None and blockade_radius <= 0.0:
-            raise ValueError(
-                f"Blockade radius ({blockade_radius}) must be above 0.0.")
+            raise ValueError("Blockade radius (`blockade_radius` ="
+                             f" {blockade_radius})"
+                             " must be greater than 0.")
 
         pos = np.array(self._coords)
         diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
