@@ -170,12 +170,13 @@ def test_max_connectivity():
     assert(np.all(np.isclose(atoms[0], [0.0, 0.0])))
 
     # Check for less than 7 atoms:
-    for i in range(1, 6):
-        hex_coords = np.array([(0.0, 0.0), (1.0, 0.0), (0.5, np.sqrt(3/4)),
-                               (1.5, np.sqrt(3/4)), (2.0, 0.0),
-                               (0.5, -np.sqrt(3/4))])
+    for i in range(1, 7):
+        hex_coords = np.array([(0.0, 0.0), (-0.5, crest_y), (0.5, crest_y),
+                               (1.0, 0.0), (0.5, -crest_y),
+                               (-0.5, -crest_y)])
         reg = Register.max_connectivity(i, device)
-        reg2 = Register.from_coordinates(4 * hex_coords[:i])  # Use min spacing
+        reg2 = Register.from_coordinates(
+            spacing * hex_coords[:i], center=False)
         assert (len(reg.qubits) == i)
         atoms = list(reg.qubits.values())
         atoms2 = list(reg2.qubits.values())
