@@ -106,8 +106,9 @@ class SimulationResults:
             elif reduce_to_basis == "digital":
                 ex_state = "0"
             else:
-                raise ValueError("'reduce_to_basis' must be 'ground-rydberg' "
-                                 + f"'digital' or 'XY', not '{reduce_to_basis}'.")
+                raise ValueError(
+                    "'reduce_to_basis' must be 'ground-rydberg' "
+                    + f"'digital' or 'XY', not '{reduce_to_basis}'.")
             ex_inds = [i for i in range(3**self._size) if ex_state in
                        np.base_repr(i, base=3).zfill(self._size)]
             ex_probs = np.abs(final_state.extract_states(ex_inds).full()) ** 2

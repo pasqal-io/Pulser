@@ -87,11 +87,11 @@ class Simulation:
 
         if self._interaction == 'ising':
             self.samples = {addr: {basis: {}
-                                for basis in ['ground-rydberg', 'digital']}
+                            for basis in ['ground-rydberg', 'digital']}
                             for addr in ['Global', 'Local']}
         else:
             self.samples = {addr: {basis: {}
-                                for basis in ['XY']}
+                            for basis in ['XY']}
                             for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
 
@@ -271,8 +271,9 @@ class Simulation:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
-            then assign the local operator "sigma_du" at each pair.
-            The units are given so that the coefficient includes a 1/hbar factor.
+            then assign the local operator "sigma_du * sigma_ud" at each pair.
+            The units are given so that the coefficient
+            includes a 1/hbar factor.
             """
             xy = 0
             # Get every pair without duplicates

@@ -143,8 +143,8 @@ def test_sample_final_state():
 
 def test_results_xy():
     q_dict = {"A": np.array([0., 0.]),
-        "B": np.array([0., 10.]),
-        }
+              "B": np.array([0., 10.]),
+              }
     reg = Register(q_dict)
     duration = 1000
     pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0., 0)
