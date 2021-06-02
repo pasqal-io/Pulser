@@ -49,6 +49,8 @@ class Variable(Parametrized, OpSupport):
             raise TypeError("Given variable 'size' is not of type 'int'.")
         elif self.size < 1:
             raise ValueError("Variables must be of size 1 or larger.")
+
+        self._count: int
         self.__dict__["_count"] = -1      # Counts the updates
         self._clear()
 

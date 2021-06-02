@@ -90,7 +90,7 @@ class ParamObj(Parametrized, OpSupport):
     def variables(self) -> dict[str, Variable]:
         return self._variables
 
-    def build(self):
+    def build(self) -> Any:
         """Builds the object with its variables last assigned values."""
         vars_state = {key: var._count for key, var in self._variables.items()}
         if vars_state != self._vars_state:
@@ -100,13 +100,15 @@ class ParamObj(Parametrized, OpSupport):
                      for arg in self.args]
             kwargs_ = {key: val.build() if isinstance(val, Parametrized)
                        else val for key, val in self.kwargs.items()}
-            obj = (self.cls.build() if isinstance(self.cls, ParamObj)
-                   else self.cls)
+            if isinstance(self.cls, ParamObj):
+                obj = self.cls.build()
+            else:
+                obj = self.cls
             self._instance = obj(*args_, **kwargs_)
         return self._instance
 
     def _to_dict(self) -> dict[str, Any]:
-        def class_to_dict(cls):
+        def class_to_dict(cls: Callable) -> dict[str, Any]:
             return obj_to_dict(self, _build=False, _name=cls.__name__,
                                _module=cls.__module__)
 
