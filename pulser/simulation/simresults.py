@@ -103,8 +103,6 @@ class SimulationResults:
         elif reduce_to_basis is not None:
             if reduce_to_basis == "ground-rydberg":
                 ex_state = "2"
-            elif reduce_to_basis == "XY":
-                ex_state = "2"
             elif reduce_to_basis == "digital":
                 ex_state = "0"
             else:

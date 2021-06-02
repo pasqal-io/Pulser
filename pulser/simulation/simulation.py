@@ -55,17 +55,13 @@ class Simulation:
     def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
                  evaluation_times: Union[str, ArrayLike] = 'Full') -> None:
         """Initialize the Simulation with a specific pulser.Sequence."""
-        supported_bases = {"ground-rydberg", "digital", 'XY'}
+
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
-        not_supported = (set(ch.basis for ch in sequence._channels.values())
-                         - supported_bases)
-        if not_supported:
-            raise NotImplementedError("Sequence with unsupported bases: "
-                                      + "".join(not_supported))
+
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
             raise ValueError("No instructions given for the channels in the "
                              "sequence.")
@@ -239,7 +235,7 @@ class Simulation:
             raise ValueError("Duplicate atom ids in argument list.")
         if len(op_id) != len(qubit_ids):
             raise ValueError(
-                "There must be the same number of operators and qubits")
+                "Different number of operators and qubits")
         # List of identity operators, except for op_id where requested:
         op_list = [self.op_matrix['I'] for j in range(self._size)]
         for j, qubit in enumerate(qubit_ids):
@@ -274,8 +270,8 @@ class Simulation:
         def make_interaction_xy_term():
             """Construct the XY interaction Term.
 
-            For each pair of qubits, calculate the distance and the cosine similarity
-            between them, then assign the local operator "sigma_du" at each pair. 
+            For each pair of qubits, calculate the distance between them,
+            then assign the local operator "sigma_du" at each pair.
             The units are given so that the coefficient includes a 1/hbar factor.
             """
             xy = 0
@@ -408,7 +404,7 @@ class Simulation:
         else:
             # by default, initial state is "ground" state of g-r basis.
             if self._interaction == 'XY':
-                all_ground = [self.basis['u'] for _ in range(self._size)]
+                all_ground = [self.basis['d'] for _ in range(self._size)]
             else:
                 all_ground = [self.basis['g'] for _ in range(self._size)]
             self._initial_state = qutip.tensor(all_ground)

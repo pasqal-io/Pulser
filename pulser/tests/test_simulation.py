@@ -192,6 +192,32 @@ def test_building_basis_and_projection_operators():
     assert (sim2c.op_matrix['sigma_gr'] ==
             qutip.basis(2, 1) * qutip.basis(2, 0).dag())
 
+    # Global XY
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel('global', 'mw_global')
+    seq2.add(pi, 'global')
+    sim2 = Simulation(seq2, sampling_rate=0.01)
+    assert sim2.basis_name == 'XY'
+    assert sim2.dim == 2
+    assert sim2.basis == {'u': qutip.basis(2, 0),
+                          'd': qutip.basis(2, 1)
+                          }
+    assert (sim2.op_matrix['sigma_uu'] ==
+            qutip.basis(2, 0) * qutip.basis(2, 0).dag())
+    assert (sim2.op_matrix['sigma_du'] ==
+            qutip.basis(2, 1) * qutip.basis(2, 0).dag())
+    assert (sim2.op_matrix['sigma_ud'] ==
+            qutip.basis(2, 0) * qutip.basis(2, 1).dag())
+
+    # Check global operator building method:
+    with pytest.raises(ValueError, match="Duplicate atom"):
+        sim._build_general_operator(
+            ['sigma_ud', 'sigma_du'], ["target", "target"])
+
+    with pytest.raises(ValueError, match="Different number"):
+        sim._build_general_operator(
+            ['sigma_ud', 'sigma_du'], ["target"])
+
 
 def test_empty_sequences():
     seq = Sequence(reg, MockDevice)
@@ -307,3 +333,48 @@ def test_run():
                                    np.array([0, sim._times[-10],
                                              sim._times[-3], sim._times[-1]])
                                    )
+
+
+def test_get_xy_hamiltonian():
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix='atom')
+    detun = 1.
+    amp = 3.
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel('ch0', 'mw_global')
+    simple_seq.add(rise, 'ch0')
+
+    simple_sim = Simulation(simple_seq, sampling_rate=0.01)
+    with pytest.raises(ValueError, match='larger than'):
+        simple_sim.get_hamiltonian(1650)
+    with pytest.raises(ValueError, match='negative'):
+        simple_sim.get_hamiltonian(-10)
+    # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
+    simple_ham = simple_sim.get_hamiltonian(143)
+    assert (simple_ham[1, 2] == .5 * 3.7e3 / 10**3)
+    assert (simple_ham[0, 1] == .5 * amp)
+    assert (simple_ham[3, 3] == -2 * detun)
+
+
+def test_run_xy():
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix='atom')
+    detun = 1.
+    amp = 3.
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel('ch0', 'mw_global')
+    simple_seq.add(rise, 'ch0')
+
+    sim = Simulation(simple_seq, sampling_rate=0.01)
+
+    good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
+    good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0)
+                                      for _ in range(sim._size)])
+
+    sim.run(initial_state=good_initial_array)
+    sim.run(initial_state=good_initial_qobj)
+
+    assert not hasattr(sim._seq, '_measurement')
+    simple_seq.measure(basis='XY')
+    sim.run()
+    assert sim._seq._measurement == 'XY'
