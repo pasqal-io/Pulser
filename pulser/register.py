@@ -339,11 +339,12 @@ class Register:
                              f" {device.min_atom_distance} or above.")
 
         if n_qubits < 7:
-            hex_coords = np.array([(0.0, 0.0), (1.0, 0.0), (0.5, np.sqrt(3/4)),
-                                   (1.5, np.sqrt(3/4)), (2.0, 0.0),
-                                   (0.5, -np.sqrt(3/4))])
+            crest_y = np.sqrt(3) / 2.0
+            hex_coords = np.array([(0.0, 0.0), (-0.5, crest_y), (0.5, crest_y),
+                                   (1.0, 0.0), (0.5, -crest_y),
+                                   (-0.5, -crest_y)])
             return cls.from_coordinates(spacing * hex_coords[:n_qubits],
-                                        prefix=prefix)
+                                        prefix=prefix, center=False)
 
         full_layers = int((-3.0 + np.sqrt(9 + 12 * (n_qubits - 1))) / 6.0)
         atoms_left = n_qubits - 1 - (full_layers**2 + full_layers) * 3
