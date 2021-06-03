@@ -16,8 +16,7 @@ from __future__ import annotations
 
 import numpy as np
 import qutip
-from typing import Optional, Union, cast, List
-from numpy.typing import ArrayLike
+from typing import List
 
 noise_dict_set = {'doppler', 'amplitude', 'SPAM', 'dephasing'}
 
