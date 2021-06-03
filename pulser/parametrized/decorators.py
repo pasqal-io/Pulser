@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import wraps
 from itertools import chain
+from typing import Any
 
 from pulser.parametrized import Parametrized, ParamObj
 
@@ -29,7 +30,7 @@ def parametrize(func: Callable) -> Callable:
         is not supported, and in regular functions is not tested.
     """
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         for x in chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 return ParamObj(func, *args, **kwargs)

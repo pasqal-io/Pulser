@@ -11,15 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""A pulse-level composer for neutral-atom quantum devices."""
-
-from pulser._version import __version__
-
-from pulser.pulse import Pulse
-
-from pulser.register import Register
-
-from pulser.sequence import Sequence
-
-from pulser.simulation import Simulation, SimConfig
+"""Unit tests."""

@@ -27,6 +27,7 @@ from numpy.typing import ArrayLike
 from pulser import Pulse, Sequence
 from pulser.simulation.simresults import SimulationResults, \
                                          CleanResults, NoisyResults
+from pulser.simulation.simconfig import SimConfig
 from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
 
@@ -57,29 +58,16 @@ class Simulation:
     """
 
     def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
-                 evaluation_times: Union[str, ArrayLike, float] =
-                 'Full') -> None:
+                 config: Optional[SimConfig] = None,
+                 evaluation_times: Union[float, str, ArrayLike] = 'Full'
+                 ) -> None:
         """Initialize the Simulation with a specific pulser.Sequence."""
-        if not isinstance(sequence, Sequence):
-            raise TypeError("The provided sequence has to be a valid "
-                            "pulser.Sequence instance.")
-        if not sequence._schedule:
-            raise ValueError("The provided sequence has no declared channels.")
-        if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
-            raise ValueError("No instructions given for the channels in the "
-                             "sequence.")
-        self._seq = sequence
+        self.seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = max(
             [self._seq._last(ch).tf for ch in self._seq._schedule]
         )
-        if not (0 < sampling_rate <= 1.0):
-            raise ValueError("`sampling_rate` must be positive and "
-                             "not larger than 1.0")
-        if int(self._tot_duration*sampling_rate) < 4:
-            raise ValueError("`sampling_rate` is too small, less than 4 data "
-                             "points.")
         self.sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self.samples: dict[str, dict[str, dict]] = {
@@ -87,34 +75,122 @@ class Simulation:
             for addr in ['Global', 'Local']
         }
         self.operators = deepcopy(self.samples)
-        self._noise: List[str] = []
+        self._times = self._adapt_to_sampling_rate(
+            np.arange(self._tot_duration, dtype=np.double)/1000)
+        self.evaluation_times = evaluation_times
+        if config:
+            self.config = config
+        else:
+            self.config = SimConfig()
+        self.initial_state = 'all-ground'
         self._collapse_ops: List[qutip.Qobj] = []
-        self._temperature = 50e-6
-        self._build_hamiltonian_from_seq()
-        self._init_config()
-        self.config('eval_t', evaluation_times)
 
-    def _set_eval_times(self, evaluation_times:
-                        Union[str, ArrayLike, float]) -> None:
-        if isinstance(evaluation_times, str):
-            if evaluation_times == 'Full':
-                self.eval_times = deepcopy(self._times)
-            elif evaluation_times == 'Minimal':
-                self.eval_times = np.array([self._times[0], self._times[-1]])
+    @property
+    def sampling_rate(self) -> float:
+        return self._sampling_rate
+
+    @sampling_rate.setter
+    def sampling_rate(self, value: float) -> None:
+        if not (0 < value <= 1.0):
+            raise ValueError("`sampling_rate` must be positive and "
+                             "not larger than 1.0")
+        if int(self._tot_duration * value) < 4:
+            raise ValueError("`sampling_rate` is too small, less than 4 data "
+                             "points.")
+        self._sampling_rate: float = value
+
+    @property
+    def seq(self) -> Sequence:
+        return self._seq
+
+    @seq.setter
+    def seq(self, seq: Sequence) -> None:
+        if not isinstance(seq, Sequence):
+            raise TypeError("The provided sequence has to be a valid "
+                            "pulser.Sequence instance.")
+        if not seq._schedule:
+            raise ValueError("The provided sequence has no declared channels.")
+        if all(seq._schedule[x][-1].tf == 0 for x in seq._channels):
+            raise ValueError("No instructions given for the channels in the "
+                             "sequence.")
+        self._seq = seq
+
+    @property
+    def config(self) -> SimConfig:
+        return self._config
+
+    @config.setter
+    def config(self, cfg: SimConfig) -> None:
+        self._config = cfg
+        self._set_param_from_config()
+
+    def show_config(self) -> None:
+        print(self._config)
+
+    def reset_config(self) -> None:
+        self.config = SimConfig()
+        self._set_param_from_config()
+        print('Configuration has been set to default')
+
+    def _set_param_from_config(self) -> None:
+        """Called every time a new configuration is loaded in order to update
+            Simulation parameters."""
+        self.reset_sequence()
+        if 'SPAM' in self.config.noise:
+            self._prepare_spam_detune()
+        # update samples with potential noise settings
+        self._build_hamiltonian_from_seq()
+        if 'dephasing' in self.config.noise:
+            self._init_dephasing()
+
+    @property
+    def initial_state(self) -> qutip.Qobj:
+        return self._initial_state
+
+    @initial_state.setter
+    def initial_state(self, value: Union[str, ArrayLike, qutip.qObj]) -> None:
+        self._initial_state: qutip.Qobj
+        if value == 'all-ground':
+            self._initial_state = \
+                qutip.tensor([self.basis['g'] for _ in range(self._size)])
+        else:
+            if isinstance(value, qutip.Qobj):
+                if cast(qutip.Qobj, value).shape != \
+                        (self.dim**self._size, 1):
+                    raise ValueError("Incompatible shape of initial_state")
+                self._initial_state = value
+            else:
+                if cast(np.ndarray, value).shape != \
+                        (self.dim**self._size,):
+                    raise ValueError("Incompatible shape of initial_state")
+                self._initial_state = qutip.Qobj(value)
+
+    @property
+    def evaluation_times(self) -> Union[str, float, ArrayLike]:
+        return self._evaluation_times
+
+    @evaluation_times.setter
+    def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
+        if isinstance(value, str):
+            if value == 'Full':
+                self._eval_times_array = self._times
+            elif value == 'Minimal':
+                self._eval_times_array = np.array([self._times[0],
+                                                  self._times[-1]])
             else:
                 raise ValueError("Wrong evaluation time label. It should "
                       "be `Full` or `Minimal` or a float between 0 and 1.")
-        elif isinstance(evaluation_times, float):
-            if evaluation_times > 1 or evaluation_times <= 0:
-                raise ValueError("evaluation_time float must be between 0 "
+        elif isinstance(value, float):
+            if value > 1 or value <= 0:
+                raise ValueError("evaluation_times float must be between 0 "
                                  "and 1.")
             indices = np.linspace(0, len(self._times)-1,
-                                  int(evaluation_times * len(self._times)),
+                                  int(value * len(self._times)),
                                   dtype=int)
-            self.eval_times = self._times[indices]
-        elif isinstance(evaluation_times, (list, tuple, np.ndarray)):
-            t_max = np.max(evaluation_times)
-            t_min = np.min(evaluation_times)
+            self._eval_times_array = self._times[indices]
+        elif isinstance(value, (list, tuple, np.ndarray)):
+            t_max = np.max(value)
+            t_min = np.min(value)
             if t_max > self._times[-1]:
                 raise ValueError("Provided evaluation-time list extends "
                                  "further than sequence duration.")
@@ -122,16 +198,24 @@ class Simulation:
                 raise ValueError("Provided evaluation-time list contains "
                                  "negative values.")
             # Ensure the list of times is sorted
-            eval_times = np.array(np.sort(evaluation_times))
+            eval_times = np.array(np.sort(value))
             if t_min > 0:
                 eval_times = np.insert(eval_times, 0, 0.)
             if t_max < self._times[-1]:
                 eval_times = np.append(eval_times, self._times[-1])
-            self.eval_times = eval_times
+            self._eval_times_array = eval_times
             # always include initial and final times
         else:
             raise ValueError("Wrong evaluation time label. It should "
                   "be `Full` or `Minimal` or a float between 0 and 1.")
+        self._evaluation_times: Union[str, ArrayLike, float] = value
+
+    def _prepare_spam_detune(self) -> None:
+        """Choose atoms that will be badly prepared"""
+        # Tag True if atom is badly prepared
+        self.spam_detune: dict[Union[str, int], bool] = \
+            {qid: (np.random.uniform() < self.config.spam_dict['eta'])
+             for qid in self._qid_index}
 
     def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the input sequence and the one used in QuTip.
@@ -160,14 +244,14 @@ class Simulation:
                 necessary, noise errors, which are local and depend
                 on the qubit's id qid"""
             _pulse = cast(Pulse, slot.type)
-            noise_det = 0
-            noise_amp = 1
+            noise_det = 0.
+            noise_amp = 1.
             # detuning offset related to bad preparation
             # not too large, or else ODE integration errors
-            det_spam = 150
-            for noise in self._noise:
+            det_spam = 150.
+            for noise in self.config.noise:
                 if noise == 'doppler':
-                    noise_det += np.random.normal(0, self._doppler_sigma)
+                    noise_det += np.random.normal(0, self.config.doppler_sigma)
                 # qubit qid badly prepared
                 if noise == 'SPAM' and self.spam_detune[qid[0]]:
                     noise_det += det_spam
@@ -175,9 +259,9 @@ class Simulation:
                 if noise == 'amplitude':
                     position = self._qdict[qid[0]]
                     r = np.linalg.norm(position)
-                    w0 = 175.
-                    noise_amp = np.random.normal(1, 1e-3) * \
-                        np.exp(-2*(r/w0)**2)
+                    w0 = self.config.laser_waist
+                    noise_amp = np.random.normal(1., 1.e-3) * \
+                        np.exp(-2.*(r/w0)**2)
 
             samples_dict['amp'][slot.ti:slot.tf] = \
                 _pulse.amplitude.samples * noise_amp
@@ -190,7 +274,7 @@ class Simulation:
             basis = self._seq.declared_channels[channel].basis
 
             # Case of clean global simulations
-            if addr == 'Global' and not self._noise:
+            if addr == 'Global' and not self.config.noise:
                 samples_dict = self.samples[addr][basis]
                 if not samples_dict:
                     samples_dict = prepare_dict()
@@ -265,14 +349,14 @@ class Simulation:
                    else self.op_matrix['I'] for j in range(self._size)]
         return qutip.tensor(op_list)
 
-    def _construct_hamiltonian(self) -> None:
-        def adapt(full_array: np.ndarray) -> np.ndarray:
-            """Adapt list to correspond to sampling rate"""
-            indices = np.linspace(0, self._tot_duration-1,
-                                  int(self.sampling_rate*self._tot_duration),
-                                  dtype=int)
-            return cast(np.ndarray, full_array[indices])
+    def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
+        """Adapt list to correspond to sampling rate"""
+        indices = np.linspace(0, self._tot_duration-1,
+                              int(self.sampling_rate*self._tot_duration),
+                              dtype=int)
+        return cast(np.ndarray, full_array[indices])
 
+    def _construct_hamiltonian(self) -> None:
         def make_vdw_term() -> float:
             """Construct the Van der Waals interaction Term.
 
@@ -309,7 +393,8 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                 self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id], adapt(coeff)])
+                        terms.append([operators[op_id],
+                                     self._adapt_to_sampling_rate(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -323,7 +408,7 @@ class Simulation:
                                 operators[q_id][op_id] = \
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
-                                          adapt(coeff)])
+                                          self._adapt_to_sampling_rate(coeff)])
 
             self.operators[addr][basis] = operators
             return terms
@@ -341,21 +426,11 @@ class Simulation:
                 if self.samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
 
-        self._times = adapt(np.arange(self._tot_duration,
-                                      dtype=np.double)/1000)
-
         ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
         ham.compress()
 
         self._hamiltonian = ham
-
-    def _init_config(self) -> None:
-        """Sets default configuration for the Simulation."""
-        all_ground = qutip.tensor([self.basis['g'] for _ in range(self._size)])
-        self._set_eval_times('Full')
-        self._config = {'eval_t': 'Full', 'runs': 1, 'samples_per_run': 10,
-                        'initial_state': all_ground}
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
         """Get the Hamiltonian created from the sequence at a fixed time.
@@ -370,168 +445,28 @@ class Simulation:
             `self.sampling_rate`) at the specified time.
         """
         # Refresh the hamiltonian
-        self._build_hamiltonian_from_seq()
+        self._set_param_from_config()
         if time > 1000 * self._times[-1]:
             raise ValueError("Provided time is larger than sequence duration.")
         if time < 0:
             raise ValueError("Provided time is negative.")
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
-    def _prepare_spam_detune(self) -> None:
-        """Choose atoms that will be badly prepared"""
-        # Tag True if atom is badly prepared
-        self.spam_detune: dict[Union[str, int], bool] = \
-            {qid: (np.random.uniform() < self._spam_dict['eta'])
-             for qid in self._qid_index}
-
-    @property
-    def doppler_sigma(self):
-        return self._doppler_sigma
-
-    @doppler_sigma.setter
-    def doppler_sigma(self, value: float):
-        self._doppler_sigma = value
-
-    @property
-    def temperature(self):
-        return self._temperature
-
-    @temperature.setter
-    def temperature(self, value: float):
-        # value set in microkelvin
-        self._temperature = value * 10**-6
-        self._calc_sigma_doppler()
-
-    @property
-    def spam_dict(self):
-        return self._spam_dict
-
-    def _calc_sigma_doppler(self) -> None:
-        # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        self._doppler_sigma = 8.7 * np.sqrt(1.38e-23 * self._temperature /
-                                            1.45e-25)
-
-    def init_doppler_sigma(self) -> None:
-        self._doppler_sigma = 8.7 * np.sqrt(1.38e-23 * 50e-6 /
-                                            1.45e-25)
-
-    def init_spam(self) -> None:
-        self._spam_dict = {'eta': 0.005, 'epsilon': 0.01,
-                           'epsilon_prime': 0.05}
-
-    def add_noise(self, noise_type: str) -> None:
-        """Adds a noise model to the Simulation instance.
-            Args:
-                noise_type (str): Choose among:
-                    'doppler': Noisy doppler runs
-                    'amplitude: Noisy gaussian beam
-                    'SPAM': SPAM errors. Adds:
-                        eta: Probability of each atom to be badly prepared
-                        epsilon: false positives
-                        epsilon_prime: false negatives
-        """
-        # Check proper input:
-        noise_dict_set = {'doppler', 'amplitude', 'SPAM', 'dephasing'}
-        if noise_type not in noise_dict_set:
-            raise ValueError('Not a valid noise type')
-        if noise_type in set(self._noise):
-            print("Noise type already in place. Skipping instruction.")
-            return
-
-        # Add noise/error:
-        if noise_type == 'SPAM':
-            # Set SPAM parameters (experimental)
-            self.init_spam()
-            self._prepare_spam_detune()
-        if noise_type == 'doppler':
-            self.init_doppler_sigma()
-        if noise_type == 'dephasing':
-            if self.basis_name == 'digital' or self.basis_name == 'all':
-                raise ValueError("Cannot include dephasing noise in digital-"
-                                 "or all-basis.")
-            self.init_dephasing()
-        # Register added noise(s)
-        self._noise.append(noise_type)
-        # Reset any previous sequence:
-        self.reset_sequence()
-
-    def remove_all_noise(self) -> None:
-        """Removes noise from simulation"""
-        self._noise = []
-        # Reset any previous sequence:
-        self.reset_sequence()
-        self._collapse_ops = []
-        self.init_spam()
-
     def reset_sequence(self) -> None:
         self.samples = {addr: {basis: {}
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
+        self._collapse_ops = []
 
-    def set_spam(self, **values: float) -> None:
-        """Allows the user to change SPAM parameters in dictionary"""
-        for param in values:
-            if param not in {'eta', 'epsilon', 'epsilon_prime'}:
-                raise ValueError('Not a valid SPAM parameter')
-            self._spam_dict[param] = values[param]
-
-    def init_dephasing(self) -> None:
+    def _init_dephasing(self) -> None:
+        if self.basis_name == 'digital' or self.basis_name == 'all':
+            raise ValueError("Cannot include dephasing noise in digital-"
+                             "or all-basis.")
         self.dephasing_prob = 0.05  # Probability of phase (Z) flip
         self._collapse_ops += [
             np.sqrt(1 - self.dephasing_prob) * self.op_matrix['I'],
             np.sqrt(self.dephasing_prob) * (self.op_matrix['sigma_rr']
                                             - self.op_matrix['sigma_gg'])]
-
-    def set_noise(self, *noise_param: str) -> None:
-        """Sets noise parameters as those in argument"""
-        self.remove_all_noise()
-        for noise in noise_param:
-            self.add_noise(noise)
-
-    def config(self, parameter: str,
-               value: Union[ArrayLike, qutip.Qobj, int, str, float]) -> None:
-        """Include additional parameters to simulation. Will be necessary for
-        noisy simulations.
-
-        Allowed 'parameter' strings:
-            'initial_state (array value)': The initial quantum state of the
-                evolution. Will be transformed into a
-                qutip.Qobj instance.
-            'eval_t' (str / array / float value): Time at which the results are
-                to be returned. Allowed values : 'Full', 'Minimal', an array of
-                times, or a float.
-            'samples_per_run' (int value): number of samples per noisy run.
-                Useful for cutting down on computing time, but unrealistic.
-            'runs' (int value): number of runs needed : each run
-                draws a new random noise.
-        """
-
-        if parameter not in self._config:
-            raise ValueError('Not a valid setting')
-
-        else:
-            if parameter == 'initial_state':
-                if isinstance(value, qutip.Qobj):
-                    if cast(qutip.Qobj, value).shape != \
-                            (self.dim**self._size, 1):
-                        raise ValueError("Incompatible shape of initial_state")
-                    self._config[parameter] = value
-                else:
-                    if cast(np.ndarray, value).shape != \
-                            (self.dim**self._size,):
-                        raise ValueError("Incompatible shape of initial_state")
-                    self._config[parameter] = qutip.Qobj(value)
-            else:
-                self._config[parameter] = value
-                if parameter == 'eval_t':
-                    self._set_eval_times(value)
-
-    def show_config(self) -> None:
-        print(self._config)
-
-    def reset_config(self) -> None:
-        self._init_config()
-        print('Configuration has been set to default')
 
     def _build_hamiltonian_from_seq(self) -> None:
         """Extracts the sequence samples, builds default operators and
@@ -550,6 +485,12 @@ class Simulation:
             progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
                 will be shown.
         """
+        # If the user changed the configuration settings with a SimConfig
+        # setter, we update the changes here
+        self._set_param_from_config()
+        if options:
+            self.config.solver_options = qutip.Options(max_step=5, **options)
+
         def _assign_meas_basis() -> str:
             if hasattr(self._seq, '_measurement'):
                 return cast(str, self._seq._measurement)
@@ -575,59 +516,55 @@ class Simulation:
                 liouvillian = qutip.liouvillian(self._hamiltonian,
                                                 self._collapse_ops)
                 result = qutip.mesolve(liouvillian,
-                                       self._config['initial_state'],
-                                       self.eval_times,
+                                       self.initial_state,
+                                       self._eval_times_array,
                                        progress_bar=progress_bar,
-                                       options=qutip.Options(max_step=5,
-                                                             **options)
-                                       )
+                                       options=self.config.solver_options)
             else:
                 result = qutip.sesolve(self._hamiltonian,
-                                       self._config['initial_state'],
-                                       self.eval_times,
+                                       self.initial_state,
+                                       self._eval_times_array,
                                        progress_bar=progress_bar,
-                                       options=qutip.Options(max_step=5,
-                                                             **options)
-                                       )
+                                       options=self.config.solver_options)
             return CleanResults(result.states, self.dim, self._size,
                                 self.basis_name, measurement_basis,
-                                self.eval_times)
+                                self._eval_times_array)
 
-        if self._noise:
+        if self.config.noise:
             # NOISY SIMULATION:
             # We run the system multiple times
-            time_indices = range(len(self.eval_times))
+            time_indices = range(len(self._eval_times_array))
             total_count = np.array([Counter() for _ in time_indices])
-            for _ in range(self._config['runs']):
+            for _ in range(self.config.runs):
                 # At each run, new random noise
-                if 'SPAM' in self._noise:
+                if 'SPAM' in self.config.noise:
                     self._prepare_spam_detune()
                 self._build_hamiltonian_from_seq()
                 meas_basis = _assign_meas_basis()
                 # Get CleanResults instance from sequence with added noise:
                 clean_res_noisy_seq = _run_solver(as_subroutine=True,
                                                   measurement_basis=meas_basis)
-                # Extract statistics at eval time (final time by default):
-                if 'SPAM' in self._noise:
+                # Extract statistics at eval time:
+                if 'SPAM' in self.config.noise:
                     total_count += np.array(
                         [clean_res_noisy_seq.sampling_with_detection_errors(
-                            self._spam_dict,
+                            self.config.spam_dict,
                             t=t,
                             meas_basis=meas_basis,
-                            N_samples=self._config['samples_per_run'])
+                            N_samples=self.config.samples_per_run)
                          for t in time_indices])
                 else:
                     total_count += np.array(
                         [clean_res_noisy_seq.sample_state(
                             t=t,
                             meas_basis=meas_basis,
-                            N_samples=self._config['samples_per_run'])
+                            N_samples=self.config.samples_per_run)
                          for t in time_indices])
-            N_measures = self._config['runs'] * self._config['samples_per_run']
+            N_measures = self.config.runs * self.config.samples_per_run
             total_run_prob = [Counter({k: v / N_measures
                                       for k, v in total_count[t].items()})
                               for t in time_indices]
             return NoisyResults(total_run_prob, self._size, self.basis_name,
-                                meas_basis, self.eval_times, N_measures)
+                                meas_basis, self._eval_times_array, N_measures)
         else:
             return _run_solver()

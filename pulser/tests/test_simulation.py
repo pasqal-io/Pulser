@@ -99,6 +99,7 @@ def test_initialization_and_construction_of_hamiltonian():
 
 def test_extraction_of_sequences():
     sim = Simulation(seq)
+    sim.seq
     for channel in seq.declared_channels:
         addr = seq.declared_channels[channel].addressing
         basis = seq.declared_channels[channel].basis
@@ -244,15 +245,15 @@ def test_run():
 
     with pytest.raises(ValueError,
                        match='Incompatible shape of initial_state'):
-        sim.config('initial_state', bad_initial)
+        sim.initial_state = bad_initial
 
     with pytest.raises(ValueError,
                        match='Incompatible shape of initial_state'):
-        sim.config('initial_state', qutip.Qobj(bad_initial))
+        sim.initial_state = qutip.Qobj(bad_initial)
 
-    sim.config('initial_state', good_initial_array)
+    sim.initial_state = good_initial_array
     sim.run()
-    sim.config('initial_state', good_initial_qobj)
+    sim.initial_state = good_initial_qobj
     sim.run()
 
     # assert not hasattr(sim._seq, '_measurement')
@@ -263,96 +264,100 @@ def test_run():
 
 def test_eval_times():
     with pytest.raises(ValueError,
-                       match="evaluation_time float must be between 0 "
+                       match="evaluation_times float must be between 0 "
                              "and 1."):
         sim = Simulation(seq, sampling_rate=1.)
-        sim.config('eval_t', -1.)
+        sim.evaluation_times = 3.
     with pytest.raises(ValueError,
                        match="Wrong evaluation time label. It should "
                              "be `Full` or `Minimal` or a float between "
                              "0 and 1."):
         sim = Simulation(seq, sampling_rate=1.)
-        sim.config('eval_t', 123)
+        sim.evaluation_times = 123
     with pytest.raises(ValueError,
                        match="Wrong evaluation time label. It should "
                              "be `Full` or `Minimal` or a float between "
                              "0 and 1."):
         sim = Simulation(seq, sampling_rate=1.)
-        sim.config('eval_t', 'Best')
+        sim.evaluation_times = 'Best'
 
     with pytest.raises(ValueError,
                        match="Provided evaluation-time list contains "
                              "negative values."):
         sim = Simulation(seq, sampling_rate=1.)
-        sim.config('eval_t', [-1, 0, sim._times[-2]])
+        sim.evaluation_times = [-1, 0, sim._times[-2]]
 
     with pytest.raises(ValueError,
                        match="Provided evaluation-time list extends "
                              "further than sequence duration."):
         sim = Simulation(seq, sampling_rate=1.)
-        sim.config('eval_t', [0, sim._times[-1]+10])
+        sim.evaluation_times = [0, sim._times[-1]+10]
 
     sim = Simulation(seq, sampling_rate=1.)
-    sim.config('eval_t', 'Full')
-    np.testing.assert_almost_equal(sim.eval_times, sim._times)
+    sim.evaluation_times = 'Full'
+    assert sim.evaluation_times == 'Full'
+    np.testing.assert_almost_equal(sim._eval_times_array, sim._times)
 
     sim = Simulation(seq, sampling_rate=1.)
-    sim.config('eval_t', 'Minimal')
-    np.testing.assert_almost_equal(sim.eval_times,
+    sim.evaluation_times = 'Minimal'
+    np.testing.assert_almost_equal(sim._eval_times_array,
                                    np.array([sim._times[0], sim._times[-1]])
                                    )
 
     sim = Simulation(seq, sampling_rate=1.)
-    sim.config('eval_t', [0, sim._times[-3], sim._times[-1]])
-    np.testing.assert_almost_equal(sim.eval_times,
+    sim.evaluation_times = [0, sim._times[-3], sim._times[-1]]
+    np.testing.assert_almost_equal(sim._eval_times_array,
                                    np.array([0, sim._times[-3],
                                              sim._times[-1]])
                                    )
 
     sim = Simulation(seq, sampling_rate=1.)
-    sim.config('eval_t', [sim._times[-10], sim._times[-3]])
-    np.testing.assert_almost_equal(sim.eval_times,
+    sim.evaluation_times = [sim._times[-10], sim._times[-3]]
+    np.testing.assert_almost_equal(sim._eval_times_array,
                                    np.array([0, sim._times[-10],
                                              sim._times[-3], sim._times[-1]])
                                    )
 
     sim = Simulation(seq, sampling_rate=1.)
-    sim.config('eval_t', 0.4)
+    sim.evaluation_times = 0.4
 
 
 def test_config():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.reset_config()
-    with pytest.raises(ValueError,
-                       match='Not a valid setting'):
-        sim.config('bad_setting', 3)
-    sim.config('samples_per_run', 10)
+    sim.config.samples_per_run = 10
     sim.show_config()
 
 
 def test_noise():
-    sim = Simulation(seq, sampling_rate=0.01)
-    sim.add_noise('amplitude')
-    sim.remove_all_noise()
-    sim.set_noise('SPAM', 'doppler')
-    assert sim._noise == ['SPAM', 'doppler']
-    sim.set_spam(eta=0.9)
+    sim2 = Simulation(seq, sampling_rate=0.01)
+    sim2.config.noise = ['amplitude']
+    sim2.config.remove_all_noise()
+    sim2.config.noise = ['SPAM', 'doppler']
+    assert sim2.config.noise == ['SPAM', 'doppler']
+    sim2.config.runs = 30
     with pytest.raises(ValueError,
                        match='Not a valid noise type'):
-        sim.add_noise('bad_noise_type')
+        sim2.config.noise = ['bad_noise_type']
     with pytest.raises(ValueError,
                        match='Not a valid SPAM parameter'):
-        sim.set_spam(epsilon232=1.5)
-    sim.doppler_sigma = 3
-    sim.run()
-    sim.set_noise('doppler')
-    sim.add_noise('doppler')
-    sim.run()
+        sim2.config.set_spam(epsilon232=1.5)
+    with pytest.raises(ValueError,
+                       match='Invalid value'):
+        sim2.config.set_spam(epsilon=1.5)
+    sim2.config.noise = ['SPAM']
+    sim2.config.set_spam(eta=0.9)
+    assert sim2.config.spam_dict == {'eta': 0.9, 'epsilon': 0.01,
+                                     'epsilon_prime': 0.05}
+    sim2.temperature = 3003.313
+    sim2.run(min_step=0)
+    sim2.config.noise = ['doppler']
+    sim2.run().sample_final_state()
     with pytest.raises(ValueError,
                        match='Cannot include'):
-        sim.set_noise('dephasing')
-    sim.run().sample_final_state()
-    sim.spam_dict
+        sim2.config.noise = ['dephasing']
+        sim2.run()
+    sim2.config.spam_dict
 
 
 def test_dephasing():
@@ -363,12 +368,12 @@ def test_dephasing():
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.*2*np.pi, 0)
     seq.add(pulse, 'ch0')
     sim = Simulation(seq, sampling_rate=0.01)
-    sim.add_noise('dephasing')
+    sim.config.noise = ['dephasing']
     sim.run().sample_state()
 
 
 def test_temperature():
-    sim = Simulation(seq)
-    sim.temperature = 40
-    sim.temperature
-    sim.doppler_sigma
+    simtemp = Simulation(seq)
+    simtemp.config.temperature = 40
+    simtemp.config.temperature
+    simtemp.config.doppler_sigma

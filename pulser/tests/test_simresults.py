@@ -20,7 +20,7 @@ import qutip
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
-from pulser.simulation import Simulation
+from pulser.simulation import Simulation, SimConfig
 from pulser.simulation.simresults import CleanResults, NoisyResults
 
 q_dict = {"A": np.array([0., 0.]),
@@ -42,8 +42,8 @@ seq_no_meas_noisy = deepcopy(seq)
 seq.measure('ground-rydberg')
 
 sim = Simulation(seq)
-sim_noisy = Simulation(seq)
-sim_noisy.set_noise('SPAM', 'doppler', 'amplitude')
+cfg_noisy = SimConfig(noise_types=['SPAM', 'doppler', 'amplitude'])
+sim_noisy = Simulation(seq, config=cfg_noisy)
 results = sim.run()
 results_noisy = sim_noisy.run()
 
@@ -102,14 +102,16 @@ def test_get_final_state():
 
 def test_get_final_state_noisy():
     seq_ = Sequence(reg, Chadoq2)
-    seq_.declare_channel('ryd', 'rydberg_global')
     seq_.declare_channel('ram', 'raman_local', initial_target="A")
     seq_.add(pi, 'ram')
-    seq_.add(pi, 'ram')
-    seq_.add(pi, 'ryd')
     sim_noisy_ = Simulation(seq_)
-    sim_noisy_.set_noise('SPAM', 'doppler')
-    sim_noisy_.run().get_final_state()
+    sim_noisy_.config.set_noise = ['SPAM', 'doppler']
+    res3 = sim_noisy.run()
+    res3._meas_basis = 'digital'
+    res3.get_final_state()
+    res3._meas_basis = 'ground-rydberg'
+    res3.get_final_state()
+    res3.states
 
 
 def test_expect():
@@ -142,11 +144,12 @@ def test_plot():
     results_noisy.plot(op)
     results_noisy.plot(op, error_bars=False)
     results.plot(op)
+    results.states
 
 
 def test_sample_final_state():
     sim_no_meas = Simulation(seq_no_meas)
-    sim_no_meas.config('runs', 1)
+    sim_no_meas.config.runs = 1
     results_no_meas = sim_no_meas.run()
     results_no_meas.sample_final_state()
     with pytest.raises(ValueError, match="can only be"):
@@ -184,6 +187,6 @@ def test_sample_final_state_noisy():
     seq_no_meas_noisy.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas_noisy.add(pi, 'raman')
     res_3level = Simulation(seq_no_meas_noisy)
-    res_3level.set_noise('SPAM', 'doppler')
-    res_3level.config('runs', 1)
+    res_3level.config.set_noise = ['SPAM', 'doppler']
+    res_3level.config.runs = 1
     res_3level.run().states

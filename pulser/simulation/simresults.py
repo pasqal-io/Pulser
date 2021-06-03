@@ -158,7 +158,7 @@ class NoisyResults(SimulationResults):
         return self.get_state(-1)
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
-               ) -> list[Union[float, complex, ArrayLike]]:
+               ) -> Sequence[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
         Args:
@@ -183,7 +183,7 @@ class NoisyResults(SimulationResults):
                 raise ValueError("Incompatible shape of observable.")
             qobj_list.append(qutip.Qobj(obs))
 
-        return qutip.expect(qobj_list, density_matrices)
+        return cast(Sequence, qutip.expect(qobj_list, density_matrices))
 
     def sample_state(self, t: int = -1, N_samples: int = 1000
                      ) -> Counter:
@@ -213,7 +213,9 @@ class NoisyResults(SimulationResults):
     def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
         """Returns the square root of the variance of operator op."""
         density_mats = [self.get_state(t) for t in range(len(self._states))]
-        return np.sqrt(qutip.variance(op, density_mats) / self.N_measures)
+        return cast(ArrayLike,
+                    np.sqrt(qutip.variance(op, density_mats) / self.N_measures)
+                    )
 
     def _get_error_bars(self, op: qutip.Qobj) -> Tuple[ArrayLike, ArrayLike]:
         moy = self.expect([op])[0]
