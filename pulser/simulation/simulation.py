@@ -71,9 +71,7 @@ class Simulation:
         self._tot_duration = max(
             [self._seq._last(ch).tf for ch in self._seq._schedule]
         )
-        self._interaction = 'ising'
-        if self._seq._in_xy:
-            self._interaction = 'XY'
+        self._interaction = 'XY' if self._seq._in_xy else 'ising'
 
         if not (0 < sampling_rate <= 1.0):
             raise ValueError("`sampling_rate` must be positive and "
