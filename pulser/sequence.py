@@ -730,7 +730,7 @@ class Sequence:
 
         if self._channels[channel].addressing != 'Local':
             raise ValueError("Can only choose target of 'Local' channels.")
-        elif len(qubits_set) > self._channels[channel].max_targets:
+        elif len(qubits_set) > cast(int, self._channels[channel].max_targets):
             raise ValueError(
                 "This channel can target at most "
                 f"{self._channels[channel].max_targets} qubits at a time"

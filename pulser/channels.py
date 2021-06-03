@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar, Optional
+from typing import cast, ClassVar, Optional
 import warnings
 
 
@@ -52,14 +52,15 @@ class Channel:
     max_abs_detuning: float
     max_amp: float
     retarget_time: Optional[int] = None
-    max_targets: int = 1
+    max_targets: Optional[int] = None
     clock_period: int = 4       # ns
     min_duration: int = 16      # ns
     max_duration: int = 67108864        # ns
 
     @classmethod
     def Local(cls, max_abs_detuning: float, max_amp: float,
-              retarget_time: int = 220, **kwargs: int) -> Channel:
+              retarget_time: int = 220, max_targets: int = 1,
+              **kwargs: int) -> Channel:
         """Initializes the channel with local addressing.
 
         Args:
@@ -67,10 +68,12 @@ class Channel:
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
             retarget_time (int): Maximum time to change the target (in ns).
+            max_targets (int): Maximum number of atoms the channel can target
+                simultaneously.
         """
 
         return cls('Local', max_abs_detuning, max_amp,
-                   retarget_time, **kwargs)
+                   retarget_time, max_targets, **kwargs)
 
     @classmethod
     def Global(cls, max_abs_detuning: float,
@@ -121,7 +124,7 @@ class Channel:
         )
         if self.addressing == 'Local':
             config += f", Target time: {self.retarget_time} ns"
-            if self.max_targets > 1:
+            if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
         config += f", Basis: '{self.basis}'"
         return self.name + config + ")"
