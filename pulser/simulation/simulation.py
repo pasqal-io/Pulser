@@ -133,8 +133,11 @@ class Simulation:
         print('Configuration has been set to default')
 
     def _set_param_from_config(self) -> None:
-        """Called every time a new configuration is loaded in order to update
-            Simulation parameters."""
+        """Sets all relevant Simulation parameters from its SimConfig.
+
+        Called every time a new configuration is loaded in order to update
+        Simulation parameters.
+        """
         self.reset_sequence()
         if 'SPAM' in self.config.noise:
             self._prepare_spam_detune()
@@ -211,7 +214,7 @@ class Simulation:
         self._evaluation_times: Union[str, ArrayLike, float] = value
 
     def _prepare_spam_detune(self) -> None:
-        """Choose atoms that will be badly prepared"""
+        """Choose atoms that will be badly prepared."""
         # Tag True if atom is badly prepared
         self.spam_detune: dict[Union[str, int], bool] = \
             {qid: (np.random.uniform() < self.config.spam_dict['eta'])
@@ -240,9 +243,11 @@ class Simulation:
         def write_samples(slot: _TimeSlot,
                           samples_dict: Mapping[str, np.ndarray],
                           *qid: Union[int, str]) -> None:
-            """constructs hamiltonian coefficients, taking into account, if
-                necessary, noise errors, which are local and depend
-                on the qubit's id qid"""
+            """Constructs hamiltonian coefficients.
+
+            Taking into account, if necessary, noise effects, which are local
+            and depend on the qubit's id qid.
+            """
             _pulse = cast(Pulse, slot.type)
             noise_det = 0.
             noise_amp = 1.
@@ -350,7 +355,7 @@ class Simulation:
         return qutip.tensor(op_list)
 
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
-        """Adapt list to correspond to sampling rate"""
+        """Adapt list to correspond to sampling rate."""
         indices = np.linspace(0, self._tot_duration-1,
                               int(self.sampling_rate*self._tot_duration),
                               dtype=int)
@@ -469,8 +474,11 @@ class Simulation:
                                             - self.op_matrix['sigma_gg'])]
 
     def _build_hamiltonian_from_seq(self) -> None:
-        """Extracts the sequence samples, builds default operators and
-        builds the hamiltonian from those coefficients and operators."""
+        """Builds the hamiltonian from sequence samples.
+
+        Extracts the sequence samples, builds default operators and
+        builds the hamiltonian from those coefficients and operators.
+        """
         self._extract_samples()
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
@@ -478,12 +486,16 @@ class Simulation:
     # Run Simulation Evolution using Qutip
     def run(self, progress_bar: Optional[bool] = None,
             **options: qutip.solver.Options) -> SimulationResults:
-        """Simulate the sequence using QuTiP's solvers. Only clean results
-            are returned.
+        """Simulate the sequence using QuTiP's solvers.
+
+        Will return NoisyResults if it detects any noise in the SimConfig.
+        Otherwise will return CleanResults.
 
         Keyword Args:
-            progress_bar (bool): If True, the progress bar of QuTiP's sesolve()
+            progress_bar (bool): If True, the progress bar of QuTiP's solver
                 will be shown.
+            options (qutip.solver.Options): If specified, will override
+                SimConfig solver_options.
         """
         # If the user changed the configuration settings with a SimConfig
         # setter, we update the changes here

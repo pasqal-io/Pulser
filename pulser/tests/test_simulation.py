@@ -340,9 +340,6 @@ def test_noise():
                        match='Not a valid noise type'):
         sim2.config.noise = ['bad_noise_type']
     with pytest.raises(ValueError,
-                       match='Not a valid SPAM parameter'):
-        sim2.config.set_spam(epsilon232=1.5)
-    with pytest.raises(ValueError,
                        match='Invalid value'):
         sim2.config.set_spam(epsilon=1.5)
     sim2.config.noise = ['SPAM']

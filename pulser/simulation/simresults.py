@@ -121,8 +121,8 @@ class NoisyResults(SimulationResults):
         return self._states
 
     def get_state(self, t: int) -> qutip.Qobj:
-        """Get the state at time t of the simulation as a diagonal density
-        matrix.
+        """Get the state at time t as a diagonal density matrix.
+
         This is not the density matrix of the system, but is a convenient way
         of computing expectation values of observables.
 
@@ -187,9 +187,10 @@ class NoisyResults(SimulationResults):
 
     def sample_state(self, t: int = -1, N_samples: int = 1000
                      ) -> Counter:
-        r"""Returns the result of multiple measurements. No notion of
-            measurement basis here, since states have already been projected
-            onto bitstrings.
+        """Returns the result of multiple measurements.
+        Note : There is no concept of measurement basis here, since states have
+        already been projected onto bitstrings.
+
         Keyword Args:
             N_samples (int, default=1000): Number of samples to take.
             t (int, default=-1) : Time at which the system is measured.
@@ -224,8 +225,8 @@ class NoisyResults(SimulationResults):
 
     def plot(self, op: qutip.Qobj, error_bars: bool = True, fmt: str = '.',
              label: str = '') -> None:
-        """Plots the expectation results of operator op, computing error bars
-            if wanted.
+        """Plots the expectation results of an operator.
+
         Args:
             op (Qobj): QuTiP operator which expectation value is to be plotted.
             error_bars (bool): display error bars or not.
@@ -445,8 +446,9 @@ class CleanResults(SimulationResults):
 
     def detection_from_basis_state(self, N_d: int, shot: str,
                                    spam: dict[str, float]) -> Counter:
-        """Returns the probability distribution of states really detected
-            when the simulation detects bitstring shot.
+        """Computes the distribution of states detected when detecting `shot`.
+
+        Part of the SPAM implementation : computes measurement errors.
 
         Args:
             shot (str): binary string of length the number of atoms of the
@@ -477,8 +479,8 @@ class CleanResults(SimulationResults):
     def sampling_with_detection_errors(self, spam: dict[str, float],
                                        t: int = -1, meas_basis: str = '',
                                        N_samples: int = 1000) -> Counter:
-        """Returns the distribution of states really detected instead of
-        sampled_state. Doesn't take state preparation errors into account.
+        """Returns the distribution of states really detected.
+        Doesn't take state preparation errors into account.
         Part of the SPAM implementation.
 
         Args:
