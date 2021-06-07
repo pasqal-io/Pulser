@@ -56,7 +56,7 @@ class Waveform(ABC):
             raise TypeError("duration needs to be castable to an int but "
                             f"type {type(duration)} was provided.")
         if _duration <= 0:
-            raise ValueError("A waveform has to have a positive duration, "
+            raise ValueError("A waveform must have a positive duration, "
                              + f"not {duration}.")
         elif duration - _duration != 0:
             warnings.warn(f"A waveform duration of {duration} ns is below the"
