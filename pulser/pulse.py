@@ -78,7 +78,7 @@ class Pulse:
                 "The duration of detuning and amplitude waveforms must match.")
         self.duration = amplitude.duration
         if np.any(amplitude.samples < 0):
-            raise ValueError("All samples of an amplitude waveform must "
+            raise ValueError("All samples of an amplitude waveform must be"
                              "greater than or equal to zero.")
         self.amplitude = amplitude
         self.detuning = detuning
