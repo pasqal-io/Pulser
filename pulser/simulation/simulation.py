@@ -78,10 +78,7 @@ class Simulation:
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
         self.evaluation_times = evaluation_times
-        if config:
-            self.config = config
-        else:
-            self.config = SimConfig()
+        self.config = config if config else SimConfig()
         self.initial_state = 'all-ground'
         self._collapse_ops: List[qutip.Qobj] = []
 
@@ -129,8 +126,7 @@ class Simulation:
 
     def reset_config(self) -> None:
         self.config = SimConfig()
-        self._set_param_from_config()
-        print('Configuration has been set to default')
+        print("Configuration has been set to default.")
 
     def _set_param_from_config(self) -> None:
         """Sets all relevant Simulation parameters from its SimConfig.
@@ -449,8 +445,6 @@ class Simulation:
             extracted from the effective sequence (determined by
             `self.sampling_rate`) at the specified time.
         """
-        # Refresh the hamiltonian
-        self._set_param_from_config()
         if time > 1000 * self._times[-1]:
             raise ValueError("Provided time is larger than sequence duration.")
         if time < 0:
@@ -497,11 +491,8 @@ class Simulation:
             options (qutip.solver.Options): If specified, will override
                 SimConfig solver_options.
         """
-        # If the user changed the configuration settings with a SimConfig
-        # setter, we update the changes here
-        self._set_param_from_config()
-        if options:
-            self.config.solver_options = qutip.Options(max_step=5, **options)
+        solv_ops = qutip.Options(max_step=5, **options) if options \
+            else self.config.solver_options
 
         def _assign_meas_basis() -> str:
             if hasattr(self._seq, '_measurement'):
@@ -531,13 +522,13 @@ class Simulation:
                                        self.initial_state,
                                        self._eval_times_array,
                                        progress_bar=progress_bar,
-                                       options=self.config.solver_options)
+                                       options=solv_ops)
             else:
                 result = qutip.sesolve(self._hamiltonian,
                                        self.initial_state,
                                        self._eval_times_array,
                                        progress_bar=progress_bar,
-                                       options=self.config.solver_options)
+                                       options=solv_ops)
             return CleanResults(result.states, self.dim, self._size,
                                 self.basis_name, measurement_basis,
                                 self._eval_times_array)

@@ -22,4 +22,4 @@ from pulser.register import Register
 
 from pulser.sequence import Sequence
 
-from pulser.simulation import Simulation, SimConfig
+from pulser.simulation import Simulation
