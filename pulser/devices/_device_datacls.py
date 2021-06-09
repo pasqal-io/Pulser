@@ -36,7 +36,10 @@ class Device:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff: :math:`C_6/\hbar` (in :math:`\mu m^6 / \mu s`),
+        interaction_coeff_ising: :math:`C_6/\hbar` (in :math:`\mu m^6 / \mu s`),
+            which sets the van der Waals interaction strength between atoms in
+            the Rydberg state.
+        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
             the Rydberg state.
     """
@@ -47,8 +50,8 @@ class Device:
     max_radial_distance: int
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
-    interaction_coeff: float = 5008713.
-    C_3 = 3700.
+    interaction_coeff_ising: float = 5008713.
+    interaction_coeff_xy: float = 3700.
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
@@ -83,7 +86,7 @@ class Device:
         Returns:
             float: The rydberg blockade radius, in μm.
         """
-        return (self.interaction_coeff/rabi_frequency)**(1/6)
+        return (self.interaction_coeff_ising/rabi_frequency)**(1/6)
 
     def rabi_from_blockade(self, blockade_radius: float) -> float:
         """The maximum Rabi frequency value to enforce a given blockade radius.
@@ -94,7 +97,7 @@ class Device:
         Returns:
             float: The maximum rabi frequency value, in rad/µs.
         """
-        return self.interaction_coeff/blockade_radius**6
+        return self.interaction_coeff_ising/blockade_radius**6
 
     def validate_register(self, register: Register) -> None:
         """Checks if 'register' is compatible with this device.

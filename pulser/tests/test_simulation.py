@@ -249,7 +249,7 @@ def test_get_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert (simple_ham[0, 0] == Chadoq2.interaction_coeff / 10**6 - 2 * detun)
+    assert (simple_ham[0, 0] == Chadoq2.interaction_coeff_ising / 10**6 - 2 * detun)
 
 
 def test_single_atom_simulation():
@@ -351,7 +351,7 @@ def test_get_xy_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert (simple_ham[1, 2] == .5 * 3.7e3 / 10**3)
+    assert (simple_ham[1, 2] == .5 * MockDevice.interaction_coeff_xy / 10**3)
     assert (simple_ham[0, 1] == .5 * amp)
     assert (simple_ham[3, 3] == -2 * detun)
 

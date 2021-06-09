@@ -262,11 +262,11 @@ class Simulation:
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 dist = np.linalg.norm(
                     self._qdict[q1] - self._qdict[q2])
-                U = 0.5 * self._seq._device.interaction_coeff / dist**6
+                U = 0.5 * self._seq._device.interaction_coeff_ising / dist**6
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
             return vdw
 
-        def make_interaction_xy_term() -> float:
+        def make_xy_term() -> float:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
@@ -280,12 +280,20 @@ class Simulation:
                 dist = np.linalg.norm(
                     self._qdict[q1] - self._qdict[q2])
                 cosine = 0.
-                U = 0.5 * self._seq._device.C_3 * \
+                U = 0.5 * self._seq._device.interaction_coeff_xy * \
                     (1 - 3 * cosine ** 2) / dist**3
                 xy += U * self._build_general_operator(
                     ['sigma_du', 'sigma_ud'], [q1, q2]
                     )
             return xy
+
+        def make_interaction_term() -> float:
+            """Construct interaction term depending on the type of interaction.
+            """
+            if self._interaction == 'ising':
+                return make_vdw_term()
+            else:
+                return make_xy_term()
 
         def build_coeffs_ops(basis, addr):
 
@@ -332,12 +340,9 @@ class Simulation:
         # Time independent term:
         if self.basis_name == 'digital':
             qobj_list = []
-        elif self.basis_name == 'XY':
-            # XY Interaction Terms
-            qobj_list = [make_interaction_xy_term()] if self._size > 1 else []
         else:
-            # Van der Waals Interaction Terms
-            qobj_list = [make_vdw_term()] if self._size > 1 else []
+            # XY Interaction Terms
+            qobj_list = [make_interaction_term()] if self._size > 1 else []
 
         # Time dependent terms:
         for addr in self.samples:
