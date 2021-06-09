@@ -37,7 +37,8 @@ class Register:
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike]):
+    def __init__(self, qubits: Mapping[Any, ArrayLike],
+                     mag_field: ArrayLike = np.array([0., 0.])):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary "
@@ -53,6 +54,7 @@ class Register:
             raise ValueError("All coordinates must be specified as vectors of"
                              " size 2 or 3.")
         self._coords = coords
+        self._mag_field = mag_field
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
