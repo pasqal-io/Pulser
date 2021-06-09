@@ -280,7 +280,7 @@ class Simulation:
                 dist = np.linalg.norm(
                     self._qdict[q1] - self._qdict[q2])
                 cosine = 0.
-                U = 0.5 * 3700 * \
+                U = 0.5 * self._seq._device.C_3 * \
                     (1 - 3 * cosine ** 2) / dist**3
                 xy += U * self._build_general_operator(
                     ['sigma_du', 'sigma_ud'], [q1, q2]

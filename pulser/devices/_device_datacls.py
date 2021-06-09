@@ -48,6 +48,7 @@ class Device:
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
     interaction_coeff: float = 5008713.
+    C_3 = 3700.
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
