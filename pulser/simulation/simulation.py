@@ -88,8 +88,7 @@ class Simulation:
                             for basis in ['ground-rydberg', 'digital']}
                             for addr in ['Global', 'Local']}
         else:
-            self.samples = {addr: {basis: {}
-                            for basis in ['XY']}
+            self.samples = {addr: {'XY': {}}
                             for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
 
@@ -225,7 +224,9 @@ class Simulation:
                    else self.op_matrix['I'] for j in range(self._size)]
         return qutip.tensor(op_list)
 
-    def _build_general_operator(self, op_id, qubit_ids):
+    def _build_general_operator(
+        self, op_id: list[str], qubit_ids: list[Union[str, int]]
+            ) -> qutip.Qobj:
         """Create qutip.Qobj with nontrivial actions at *qubit_ids.
         op_id and qubits_id are a list of same length. op_id[j]
         acts on qubits_id[j]"""
@@ -265,7 +266,7 @@ class Simulation:
                 vdw += U * self._build_operator('sigma_rr', q1, q2)
             return vdw
 
-        def make_interaction_xy_term():
+        def make_interaction_xy_term() -> float:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
