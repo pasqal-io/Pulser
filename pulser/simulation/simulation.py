@@ -135,8 +135,9 @@ class Simulation:
         Simulation parameters.
         """
         self.reset_sequence()
+        self._bad_atoms: dict[Union[str, int], bool] = {}
         if 'SPAM' in self.config.noise:
-            self._prepare_spam_detune()
+            self._prepare_bad_atoms()
         # update samples with potential noise settings
         self._build_hamiltonian_from_seq()
         if 'dephasing' in self.config.noise:
@@ -209,10 +210,10 @@ class Simulation:
                   "be `Full` or `Minimal` or a float between 0 and 1.")
         self._evaluation_times: Union[str, ArrayLike, float] = value
 
-    def _prepare_spam_detune(self) -> None:
+    def _prepare_bad_atoms(self) -> None:
         """Choose atoms that will be badly prepared."""
         # Tag True if atom is badly prepared
-        self.spam_detune: dict[Union[str, int], bool] = \
+        self._bad_atoms = \
             {qid: (np.random.uniform() < self.config.spam_dict['eta'])
              for qid in self._qid_index}
 
@@ -249,13 +250,13 @@ class Simulation:
             noise_amp = 1.
             # detuning offset related to bad preparation
             # not too large, or else ODE integration errors
-            det_spam = 150.
+            good_prep = 1
             for noise in self.config.noise:
                 if noise == 'doppler':
                     noise_det += np.random.normal(0, self.config.doppler_sigma)
                 # qubit qid badly prepared
-                if noise == 'SPAM' and self.spam_detune[qid[0]]:
-                    noise_det += det_spam
+                if noise == 'SPAM' and self._bad_atoms[qid[0]]:
+                    good_prep = 0
                 # gaussian beam for global pulses
                 if noise == 'amplitude':
                     position = self._qdict[qid[0]]
@@ -265,7 +266,7 @@ class Simulation:
                         np.exp(-2.*(r/w0)**2)
 
             samples_dict['amp'][slot.ti:slot.tf] = \
-                _pulse.amplitude.samples * noise_amp
+                _pulse.amplitude.samples * noise_amp * good_prep
             samples_dict['det'][slot.ti:slot.tf] = \
                 _pulse.detuning.samples + noise_det
             samples_dict['phase'][slot.ti:slot.tf] = _pulse.phase
@@ -358,20 +359,21 @@ class Simulation:
         return cast(np.ndarray, full_array[indices])
 
     def _construct_hamiltonian(self) -> None:
-        def make_vdw_term() -> float:
+        def make_vdw_term() -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
             For each pair of qubits, calculate the distance between them, then
             assign the local operator "sigma_rr" at each pair. The units are
             given so that the coefficient includes a 1/hbar factor.
             """
-            vdw = 0
+            vdw = 0 * self._build_operator('I')
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
-                dist = np.linalg.norm(
-                    self._qdict[q1] - self._qdict[q2])
-                U = 0.5 * self._seq._device.interaction_coeff / dist**6
-                vdw += U * self._build_operator('sigma_rr', q1, q2)
+                # no VdW interaction with other qubits for a badly prep. qubit
+                if not(q1 in self._bad_atoms or q2 in self._bad_atoms):
+                    dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                    U = 0.5 * self._seq._device.interaction_coeff / dist**6
+                    vdw += U * self._build_operator('sigma_rr', q1, q2)
             return vdw
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
@@ -389,13 +391,13 @@ class Simulation:
                 coeffs = [0.5*samples['amp'] * np.exp(-1j * samples['phase']),
                           -0.5 * samples['det']]
                 for op_id, coeff in zip(op_ids, coeffs):
-                    if np.any(coeff != 0):
-                        # Build once global operators as they are needed
-                        if op_id not in operators:
-                            operators[op_id] =\
-                                self._build_operator(op_id, global_op=True)
-                        terms.append([operators[op_id],
-                                     self._adapt_to_sampling_rate(coeff)])
+                    #if np.any(coeff != 0):
+                    # Build once global operators as they are needed
+                    if op_id not in operators:
+                        operators[op_id] =\
+                            self._build_operator(op_id, global_op=True)
+                    terms.append([operators[op_id],
+                                 self._adapt_to_sampling_rate(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -404,12 +406,12 @@ class Simulation:
                               np.exp(-1j * samples_q['phase']),
                               -0.5 * samples_q['det']]
                     for coeff, op_id in zip(coeffs, op_ids):
-                        if np.any(coeff != 0):
-                            if op_id not in operators[q_id]:
-                                operators[q_id][op_id] = \
-                                    self._build_operator(op_id, q_id)
-                            terms.append([operators[q_id][op_id],
-                                          self._adapt_to_sampling_rate(coeff)])
+                        #if np.any(coeff != 0):
+                        if op_id not in operators[q_id]:
+                            operators[q_id][op_id] = \
+                                self._build_operator(op_id, q_id)
+                        terms.append([operators[q_id][op_id],
+                                      self._adapt_to_sampling_rate(coeff)])
 
             self.operators[addr][basis] = operators
             return terms
@@ -541,7 +543,7 @@ class Simulation:
             for _ in range(self.config.runs):
                 # At each run, new random noise
                 if 'SPAM' in self.config.noise:
-                    self._prepare_spam_detune()
+                    self._prepare_bad_atoms()
                 self._build_hamiltonian_from_seq()
                 meas_basis = _assign_meas_basis()
                 # Get CleanResults instance from sequence with added noise:

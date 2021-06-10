@@ -22,20 +22,20 @@ import qutip
 
 
 NOISE_TYPES = Literal['doppler', 'amplitude', 'SPAM', 'dephasing']
-mass = 1.45e-25
-kb = 1.38e-23
-keff = 8.7
+MASS = 1.45e-25
+KB = 1.38e-23
+KEFF = 8.7
 
 
-@dataclass
+@dataclass(frozen=True)
 class SimConfig:
     """Include additional parameters to simulation.
 
         The user chooses the settings when creating a SimConfig. Settings
-        shouldn't be changed after instantiation of a SimConfig.
+        cannot be changed after instantiation of a SimConfig.
 
         Keyword arguments:
-            noise (list[NOISE_TYPES]): Types of noises to be used in the
+            noise (tuple[NOISE_TYPES]): Types of noises to be used in the
                 simulation. Choose among:
                 -   'dephasing': Random phase (Z) flip
                 -   'doppler': Noisy doppler runs
@@ -48,12 +48,12 @@ class SimConfig:
                 noise.
             samples_per_run (int): Number of samples per noisy run.
                 Useful for cutting down on computing time, but unrealistic.
-            temperature (float): Temperature, set in muK, of the Rydberg array.
+            temperature (float): Temperature, set in µK, of the Rydberg array.
                 Also sets the standard deviation of the speed of the atoms.
             laser_waist (float): Waist of the gaussian laser in global pulses.
-            solver_options (qutip.Options): options for the qutip solver.
+            solver_options (qutip.Options): Options for the qutip solver.
         """
-    noise: list[NOISE_TYPES] = field(default_factory=list)
+    noise: tuple[NOISE_TYPES] = field(default_factory=tuple)
     runs: int = 15
     samples_per_run: int = 5
     temperature: float = 50.
@@ -66,24 +66,25 @@ class SimConfig:
     def __post_init__(self):
         self._process_temperature()
         self._check_noise_types()
-        self.spam_dict = {'eta': self.eta, 'epsilon': self.epsilon,
-                          'epsilon_prime': self.epsilon_prime}
+        self.__dict__["spam_dict"] = {'eta': self.eta, 'epsilon': self.epsilon,
+                                      'epsilon_prime': self.epsilon_prime}
         self._check_spam_dict()
         self._calc_sigma_doppler()
 
     def __str__(self) -> str:
-        s = f"""Options:
-----------
-Noise types:         {self.noise}
-Spam dictionary:     {self.spam_dict}
-Temperature:         {self.temperature}K
-Number of runs:      {self.runs}
-Samples per runs:    {self.samples_per_run}
-Laser waist:         {self.laser_waist}μm
-
-Solver Options:
-{str(self.solver_options)[10:-1]}"""
-        return s
+        lines = [
+            "Options:",
+            "----------",
+            "Noise types:         " + ", ".join(self.noise),
+            f"Spam dictionary:     {self.spam_dict}",
+            f"Temperature:         {self.temperature}K",
+            f"Number of runs:      {self.runs}",
+            f"Samples per runs:    {self.samples_per_run}",
+            f"Laser waist:         {self.laser_waist}μm",
+            "Solver Options:",
+            f"{str(self.solver_options)[10:-1]}",
+            ]
+        return "\n".join(lines)
 
     def _check_spam_dict(self) -> None:
         for param, value in self.spam_dict.items():
@@ -97,9 +98,12 @@ Solver Options:
             raise ValueError("Temperature field"
                              + f" (`temperature` = {self.temperature}) must be"
                              + " greater than 0.")
-        self.temperature *= 1.e-6
+        self.__dict__["temperature"] *= 1.e-6
 
     def _check_noise_types(self) -> None:
+        # only one noise was given as argument : convert it to a tuple
+        if isinstance(self.noise, str):
+            self.__dict__["noise"] = (self.noise, )
         for noise_type in self.noise:
             if noise_type not in get_args(NOISE_TYPES):
                 raise ValueError(str(noise_type)+" is not a valid noise type."
@@ -108,5 +112,5 @@ Solver Options:
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        self.doppler_sigma: float = keff * np.sqrt(
-            kb * self.temperature / mass)
+        self.__dict__["doppler_sigma"]: float = KEFF * np.sqrt(
+            KB * self.temperature / MASS)
