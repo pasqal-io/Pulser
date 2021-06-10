@@ -14,13 +14,22 @@
 
 from __future__ import annotations
 
+from sys import version_info
 from dataclasses import dataclass, field
-from typing import Union
-from typing_extensions import Literal, get_args
 
 import numpy as np
 import qutip
 
+if version_info[:2] == (3, 7):  # pragma: no cover
+    try:
+        from typing_extensions import Literal, get_args
+    except ImportError:
+        raise ImportError(
+            "Using pulser with Python version 3.7 requires the"
+            " `typing_extensions` module. Install it by running"
+            " `pip install typing-extensions`.")
+else:  # pragma: no cover
+    from typing import Literal, get_args, Union  # type: ignore
 
 NOISE_TYPES = Literal['doppler', 'amplitude', 'SPAM', 'dephasing']
 MASS = 1.45e-25  # kg
