@@ -18,8 +18,10 @@ from pulser.simulation import SimConfig
 
 
 def test_init():
-    config = SimConfig()
-    str(config)
+    config = SimConfig(noise=('SPAM', 'doppler'), temperature=1000., runs=100)
+    str_config = str(config)
+    assert "SPAM, doppler" in str_config and "0.001K" in str_config and \
+        "100" in str_config
     with pytest.raises(ValueError, match="is not a valid noise type."):
         SimConfig(noise='bad_noise')
     with pytest.raises(ValueError, match="Temperature field"):

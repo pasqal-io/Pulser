@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import cast
+from typing import Union
 from typing_extensions import Literal, get_args
 
 import numpy as np
@@ -23,24 +23,27 @@ import qutip
 
 
 NOISE_TYPES = Literal['doppler', 'amplitude', 'SPAM', 'dephasing']
-MASS = 1.45e-25
-KB = 1.38e-23
-KEFF = 8.7
+MASS = 1.45e-25  # kg
+KB = 1.38e-23  # J.s
+KEFF = 8.7  # µm^-1
 
 
 @dataclass(frozen=True)
 class SimConfig:
     """Include additional parameters to simulation.
 
-        The user chooses the settings when creating a SimConfig. Settings
-        cannot be changed after instantiation of a SimConfig.
+        Note:
+            The configuration chosen upon instantiation cannot be changed
+            later on.
 
         Keyword arguments:
-            noise (tuple[NOISE_TYPES]): Types of noises to be used in the
-                simulation. Choose among:
+            noise (Union[NOISE_TYPES, tuple[NOISE_TYPES]]): Types of noises
+                to be used in the simulation. You may specify just one, or a
+                tuple of the allowed noise types:
                 -   'dephasing': Random phase (Z) flip
-                -   'doppler': Noisy doppler runs
-                -   'amplitude': Noisy gaussian beam
+                -   'doppler': Local atom detuning due to finite speed of the
+                    atoms and Doppler effect with respect to laser frequency
+                -   'amplitude': Gaussian damping due to finite laser waist
                 -   'SPAM': SPAM errors. Adds:
                     --  eta: Probability of each atom to be badly prepared
                     --  epsilon: Probability of false positives
@@ -51,10 +54,12 @@ class SimConfig:
                 Useful for cutting down on computing time, but unrealistic.
             temperature (float): Temperature, set in µK, of the Rydberg array.
                 Also sets the standard deviation of the speed of the atoms.
-            laser_waist (float): Waist of the gaussian laser in global pulses.
+            laser_waist (float): Waist of the gaussian laser, set in µm,
+                in global pulses.
+
             solver_options (qutip.Options): Options for the qutip solver.
         """
-    noise: tuple[NOISE_TYPES, ...] = ()
+    noise: Union[NOISE_TYPES, tuple[NOISE_TYPES, ...]] = ()
     runs: int = 15
     samples_per_run: int = 5
     temperature: float = 50.
@@ -108,11 +113,10 @@ class SimConfig:
             self.__dict__["noise"] = (self.noise, )
         for noise_type in self.noise:
             if noise_type not in get_args(NOISE_TYPES):
-                raise ValueError(cast(str, noise_type) +
-                                 " is not a valid noise type."
-                                 "Valid noise types : " +
-                                 str(get_args(NOISE_TYPES))
-                                 )
+                raise ValueError(
+                    f"{noise_type} is not a valid noise type. " +
+                    "Valid noise types: " + ", ".join(get_args(NOISE_TYPES))
+                 )
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
