@@ -386,4 +386,3 @@ def test_run_xy():
     simple_seq.measure(basis='XY')
     sim.run()
     assert sim._seq._measurement == 'XY'
-
