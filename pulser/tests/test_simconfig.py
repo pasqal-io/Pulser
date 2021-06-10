@@ -11,7 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classes for classical emulation of a Sequence."""
 
-from pulser.simulation.simulation import Simulation
-from pulser.simulation.simconfig import SimConfig
+import pytest
+
+from pulser.simulation import SimConfig
+
+
+def test_init():
+    config = SimConfig(noise=('SPAM', 'doppler'), temperature=1000., runs=100)
+    str_config = str(config)
+    assert "SPAM, doppler" in str_config and "0.001K" in str_config and \
+        "100" in str_config
+    with pytest.raises(ValueError, match="is not a valid noise type."):
+        SimConfig(noise='bad_noise')
+    with pytest.raises(ValueError, match="Temperature field"):
+        SimConfig(temperature=-1.)
+    with pytest.raises(ValueError, match="SPAM parameter"):
+        SimConfig(eta=-1.)
