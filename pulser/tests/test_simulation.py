@@ -145,7 +145,7 @@ def test_building_basis_and_projection_operators():
 
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
-        sim._build_operator('sigma_gg', "target", "target")
+        sim._build_operator({'sigma_gg': ["target", "target"]})
 
     # Global ground-rydberg
     seq2 = Sequence(reg, Chadoq2)
@@ -208,15 +208,6 @@ def test_building_basis_and_projection_operators():
             qutip.basis(2, 1) * qutip.basis(2, 0).dag())
     assert (sim2.op_matrix['sigma_ud'] ==
             qutip.basis(2, 0) * qutip.basis(2, 1).dag())
-
-    # Check global operator building method:
-    with pytest.raises(ValueError, match="Duplicate atom"):
-        sim._build_general_operator(
-            ['sigma_ud', 'sigma_du'], ["target", "target"])
-
-    with pytest.raises(ValueError, match="Different number"):
-        sim._build_general_operator(
-            ['sigma_ud', 'sigma_du'], ["target"])
 
 
 def test_empty_sequences():
