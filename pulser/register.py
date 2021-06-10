@@ -458,3 +458,6 @@ class Register:
     def _to_dict(self) -> dict[str, Any]:
         qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
         return obj_to_dict(self, qs)
+
+    def set_magnetic_field(self, mag_field: ArrayLike) -> None:
+        self._mag_field = np.copy(mag_field)

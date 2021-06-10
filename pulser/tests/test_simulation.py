@@ -336,13 +336,17 @@ def test_run():
 
 
 def test_get_xy_hamiltonian():
-    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix='atom')
+    simple_reg = Register.from_coordinates(
+        [[0, 10], [10, 0], [0, 0]], prefix='atom')
+    simple_reg.set_magnetic_field(np.array([0, 1.]))
     detun = 1.
     amp = 3.
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.)
     simple_seq = Sequence(simple_reg, MockDevice)
     simple_seq.declare_channel('ch0', 'mw_global')
     simple_seq.add(rise, 'ch0')
+
+    assert np.abs(np.linalg.norm(simple_reg._mag_field) - 1) < 1e-10
 
     simple_sim = Simulation(simple_seq, sampling_rate=0.01)
     with pytest.raises(ValueError, match='larger than'):
@@ -352,12 +356,16 @@ def test_get_xy_hamiltonian():
     # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
     assert (simple_ham[1, 2] == .5 * MockDevice.interaction_coeff_xy / 10**3)
+    assert np.abs(
+        simple_ham[1, 4] - (-2 * .5 * MockDevice.interaction_coeff_xy / 10**3)
+        ) < 1e-10
     assert (simple_ham[0, 1] == .5 * amp)
     assert (simple_ham[3, 3] == -2 * detun)
 
 
 def test_run_xy():
-    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix='atom')
+    simple_reg = Register.from_coordinates(
+        [[10, 0], [0, 0]], prefix='atom')
     detun = 1.
     amp = 3.
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.)
@@ -378,3 +386,4 @@ def test_run_xy():
     simple_seq.measure(basis='XY')
     sim.run()
     assert sim._seq._measurement == 'XY'
+
