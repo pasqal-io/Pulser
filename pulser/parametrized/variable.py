@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the Variable and auxiliary classes."""
 
 from __future__ import annotations
 
@@ -56,6 +57,7 @@ class Variable(Parametrized, OpSupport):
 
     @property
     def variables(self) -> dict[str, Variable]:
+        """Returns a dictionary with the only variable involved (itself)."""
         return {self.name: self}
 
     def _clear(self) -> None:

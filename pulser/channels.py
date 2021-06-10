@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the various channel types."""
 
 from __future__ import annotations
 
@@ -71,7 +72,6 @@ class Channel:
             max_targets (int): Maximum number of atoms the channel can target
                 simultaneously.
         """
-
         return cls('Local', max_abs_detuning, max_amp,
                    retarget_time, max_targets, **kwargs)
 
@@ -85,7 +85,6 @@ class Channel:
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
         """
-
         return cls('Global', max_abs_detuning, max_amp,
                    **kwargs)
 
