@@ -88,8 +88,6 @@ def draw_sequence(seq: pulser.sequence.Sequence,
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
-
-    Keyword args:
         sampling_rate (float): Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.

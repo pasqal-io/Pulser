@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the custom Encoder and Decoder for JSON serialization."""
 
 from __future__ import annotations
 
@@ -26,7 +27,9 @@ from pulser.parametrized import Variable
 
 
 class PulserEncoder(JSONEncoder):
+    """The custom encoder for Pulser objects."""
     def default(self, o: Any) -> dict[str, Any]:
+        """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_dict"):
             return cast(dict, o._to_dict())
         elif type(o) == type:
@@ -40,12 +43,15 @@ class PulserEncoder(JSONEncoder):
 
 
 class PulserDecoder(JSONDecoder):
+    """The custom decoder for Pulser objects."""
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initializes the decoder."""
         # TODO: Check version compatibility (stored at the Sequence level)
         self.vars: dict[str, Variable] = {}
         super().__init__(object_hook=self.object_hook, *args, **kwargs)
 
     def object_hook(self, obj: dict[str, Any]) -> Any:
+        """Enforces custom deserializations when decoding."""
         try:
             build = obj["_build"]
             obj_name = obj["__name__"]

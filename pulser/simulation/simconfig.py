@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains SimConfig class that sets the configuration of a simulation."""
 
 from __future__ import annotations
 
@@ -39,35 +40,34 @@ KEFF = 8.7  # µm^-1
 
 @dataclass(frozen=True)
 class SimConfig:
-    """Include additional parameters to simulation.
+    """Includes additional parameters to simulation.
 
-        Note:
-            The configuration chosen upon instantiation cannot be changed
-            later on.
+    Note:
+        The configuration chosen upon instantiation cannot be changed
+        later on.
 
-        Keyword arguments:
-            noise (Union[NOISE_TYPES, tuple[NOISE_TYPES]]): Types of noises
-                to be used in the simulation. You may specify just one, or a
-                tuple of the allowed noise types:
-                -   'dephasing': Random phase (Z) flip
-                -   'doppler': Local atom detuning due to finite speed of the
-                    atoms and Doppler effect with respect to laser frequency
-                -   'amplitude': Gaussian damping due to finite laser waist
-                -   'SPAM': SPAM errors. Adds:
-                    --  eta: Probability of each atom to be badly prepared
-                    --  epsilon: Probability of false positives
-                    --  epsilon_prime: Probability of false negatives.
-            runs (int): Number of runs needed : each run draws a new random
-                noise.
-            samples_per_run (int): Number of samples per noisy run.
-                Useful for cutting down on computing time, but unrealistic.
-            temperature (float): Temperature, set in µK, of the Rydberg array.
-                Also sets the standard deviation of the speed of the atoms.
-            laser_waist (float): Waist of the gaussian laser, set in µm,
-                in global pulses.
-
-            solver_options (qutip.Options): Options for the qutip solver.
-        """
+    Keyword Arguments:
+        noise (Union[NOISE_TYPES, tuple[NOISE_TYPES]]): Types of noises
+            to be used in the simulation. You may specify just one, or a
+            tuple of the allowed noise types:
+            -   'dephasing': Random phase (Z) flip
+            -   'doppler': Local atom detuning due to finite speed of the
+                atoms and Doppler effect with respect to laser frequency
+            -   'amplitude': Gaussian damping due to finite laser waist
+            -   'SPAM': SPAM errors. Adds:
+                --  eta: Probability of each atom to be badly prepared
+                --  epsilon: Probability of false positives
+                --  epsilon_prime: Probability of false negatives.
+        runs (int): Number of runs needed : each run draws a new random
+            noise.
+        samples_per_run (int): Number of samples per noisy run.
+            Useful for cutting down on computing time, but unrealistic.
+        temperature (float): Temperature, set in µK, of the Rydberg array.
+            Also sets the standard deviation of the speed of the atoms.
+        laser_waist (float): Waist of the gaussian laser, set in µm,
+            in global pulses.
+        solver_options (qutip.Options): Options for the qutip solver.
+    """
     noise: Union[NOISE_TYPES, tuple[NOISE_TYPES, ...]] = ()
     runs: int = 15
     samples_per_run: int = 5
