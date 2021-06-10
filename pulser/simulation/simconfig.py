@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 from typing_extensions import Literal, get_args
 
 import numpy as np
@@ -53,7 +54,7 @@ class SimConfig:
             laser_waist (float): Waist of the gaussian laser in global pulses.
             solver_options (qutip.Options): Options for the qutip solver.
         """
-    noise: tuple[NOISE_TYPES] = field(default_factory=tuple)
+    noise: tuple[NOISE_TYPES, ...] = ()
     runs: int = 15
     samples_per_run: int = 5
     temperature: float = 50.
@@ -62,8 +63,9 @@ class SimConfig:
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
     solver_options: qutip.Options = qutip.Options(max_step=5)
+    spam_dict: dict[str, float] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._process_temperature()
         self._check_noise_types()
         self.__dict__["spam_dict"] = {'eta': self.eta, 'epsilon': self.epsilon,
@@ -106,11 +108,13 @@ class SimConfig:
             self.__dict__["noise"] = (self.noise, )
         for noise_type in self.noise:
             if noise_type not in get_args(NOISE_TYPES):
-                raise ValueError(str(noise_type)+" is not a valid noise type."
-                                 "Valid noise types : " + get_args(NOISE_TYPES)
+                raise ValueError(cast(str, noise_type) +
+                                 " is not a valid noise type."
+                                 "Valid noise types : " +
+                                 str(get_args(NOISE_TYPES))
                                  )
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        self.__dict__["doppler_sigma"]: float = KEFF * np.sqrt(
+        self.__dict__["doppler_sigma"] = KEFF * np.sqrt(
             KB * self.temperature / MASS)
