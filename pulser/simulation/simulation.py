@@ -28,6 +28,7 @@ from pulser import Pulse, Sequence
 from pulser.simulation.simresults import SimulationResults
 from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
+from qutip.qobj import Qobj
 
 
 class Simulation:
@@ -86,11 +87,11 @@ class Simulation:
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
         if self._interaction == 'ising':
-            self.samples = {addr: {basis: {}
+            self.samples: dict = {addr: {basis: {}
                             for basis in ['ground-rydberg', 'digital']}
                             for addr in ['Global', 'Local']}
         else:
-            self.samples = {addr: {'XY': {}}
+            self.samples: dict = {addr: {'XY': {}}
                             for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
 
@@ -291,7 +292,7 @@ class Simulation:
             else:
                 return make_xy_term()
 
-        def build_coeffs_ops(basis, addr):
+        def build_coeffs_ops(basis, addr) -> list[Qobj]:
 
             """Build coefficients and operators for the hamiltonian QobjEvo."""
             samples = self.samples[addr][basis]
