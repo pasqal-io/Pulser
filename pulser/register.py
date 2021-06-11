@@ -55,7 +55,20 @@ class Register:
             raise ValueError("All coordinates must be specified as vectors of"
                              " size 2 or 3.")
         self._coords = coords
-        self._mag_field = mag_field
+        self._mag_field = np.array(mag_field)
+
+    @property
+    def mag_field(self) -> np.ndarray:
+        return self._mag_field
+
+    @mag_field.setter
+    def magnetic_field(self, mag_field: ArrayLike) -> None:
+        """Set the external magnetic field of the register.
+
+        Args:
+            mag_field (list or np.ndarray): coordinates [Bx, By].
+        """
+        self._mag_field = np.copy(np.array(mag_field))
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
@@ -455,11 +468,3 @@ class Register:
     def _to_dict(self) -> dict[str, Any]:
         qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
         return obj_to_dict(self, qs)
-
-    def set_magnetic_field(self, mag_field: ArrayLike) -> None:
-        """Set the external magnetic field of the register.
-
-        Args:
-            mag_field (list or np.ndarray): coordinates [Bx, By].
-        """
-        self._mag_field = np.copy(mag_field)

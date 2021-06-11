@@ -330,7 +330,7 @@ def test_run():
 def test_get_xy_hamiltonian():
     simple_reg = Register.from_coordinates(
         [[0, 10], [10, 0], [0, 0]], prefix='atom')
-    simple_reg.set_magnetic_field(np.array([0, 1.]))
+    simple_reg.magnetic_field = np.array([0, 1.])
     detun = 1.
     amp = 3.
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.)
@@ -338,7 +338,7 @@ def test_get_xy_hamiltonian():
     simple_seq.declare_channel('ch0', 'mw_global')
     simple_seq.add(rise, 'ch0')
 
-    assert np.abs(np.linalg.norm(simple_reg._mag_field) - 1) < 1e-10
+    assert np.abs(np.linalg.norm(simple_reg.mag_field) - 1) < 1e-10
 
     simple_sim = Simulation(simple_seq, sampling_rate=0.01)
     with pytest.raises(ValueError,
