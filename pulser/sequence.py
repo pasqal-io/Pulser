@@ -184,6 +184,8 @@ class Sequence:
         self._variables: dict[str, Variable] = {}
         self._to_build_calls: list[_Call] = []
         self._building: bool = True
+        # Marks the sequence as empty until the first pulse is added
+        self._empty_sequence: bool = True
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -217,6 +219,22 @@ class Sequence:
                     or self._device == MockDevice)
                     and (ch.basis == 'XY' if self._in_xy else ch.basis != 'XY')
                     }
+
+    @property
+    def magnetic_field(self) -> tuple[float, float, float]:
+        """The magnetic field acting on the array of atoms.
+
+        The magnetic field vector is defined on the reference frame of the
+        atoms in the Register (with the z-axis coming outside of the plane).
+
+
+        Note:
+            Only defined in "XY Mode", the default value being (0, 0, 1) G.
+        """
+        if not self._in_xy:
+            raise AttributeError("The magnetic field is only defined when the "
+                                 "sequence is in 'XY Mode'.")
+        return self._mag_field
 
     def is_parametrized(self) -> bool:
         """States whether the sequence is parametrized.
@@ -255,6 +273,36 @@ class Sequence:
             raise ValueError("No declared channel targets the given 'basis'.")
 
         return self._phase_ref[basis][qubit].last_phase
+
+    def set_magnetic_field(self, bx: float = 0., by: float = 0.,
+                           bz: float = 1.) -> None:
+        """Sets the magnetic field acting on the entire array.
+
+        The magnetic field vector is defined on the reference frame of the
+        atoms in the Register (with the z-axis coming outside of the plane).
+        Can only be defined before there are pulses added to the sequence.
+
+        Note:
+            The magnetic field only work in the "XY Mode". If not already
+            defined through the declaration of a Microwave channel, calling
+            this function will enable the "XY Mode".
+
+        Keyword Args:
+            bx (float): The magnetic field in the x direction (in Gauss).
+            by (float): The magnetic field in the y direction (in Gauss).
+            bz (float): The magnetic field in the z direction (in Gauss).
+        """
+        if not self._in_xy:
+            if self._channels:
+                raise ValueError("The magnetic field can only be set in 'XY "
+                                 "Mode'.")
+            # No channels declared yet
+            self._in_xy = True
+        elif not self._empty_sequence:
+            # Not all channels are empty
+            raise ValueError("The magnetic field can only be set on an empty "
+                             "sequence.")
+        self._mag_field = (bx, by, bz)
 
     def declare_channel(self, name: str, channel_id: str,
                         initial_target: Optional[
@@ -305,6 +353,7 @@ class Sequence:
 
         if ch.basis == 'XY' and not self._in_xy:
             self._in_xy = True
+            self.set_magnetic_field()
         self._channels[name] = ch
         self._taken_channels[name] = channel_id
         self._schedule[name] = []
@@ -412,6 +461,9 @@ class Sequence:
         if self.is_parametrized():
             if not isinstance(pulse, Parametrized):
                 self._validate_pulse(pulse, channel)
+            # Sequence is marked as non-empty on the first added pulse
+            if self._empty_sequence:
+                self._empty_sequence = False
             return
 
         if not isinstance(pulse, Pulse):
@@ -478,6 +530,10 @@ class Sequence:
         if pulse.post_phase_shift:
             self._phase_shift(pulse.post_phase_shift, *last.targets,
                               basis=basis)
+
+        # Sequence is marked as non-empty on the first added pulse
+        if self._empty_sequence:
+            self._empty_sequence = False
 
     @_store
     def target(self, qubits: Union[QubitId, Iterable[QubitId], Parametrized],
