@@ -546,8 +546,8 @@ class Simulation:
                                        progress_bar=progress_bar,
                                        options=solv_ops)
             return CleanResults(result.states, self.dim, self._size,
-                                self.basis_name, measurement_basis,
-                                self._eval_times_array)
+                                self.basis_name, self._eval_times_array,
+                                measurement_basis)
 
         if self.config.noise:
             # NOISY SIMULATION:
@@ -589,6 +589,6 @@ class Simulation:
                                       for k, v in total_count[t].items()})
                               for t in time_indices]
             return NoisyResults(total_run_prob, self._size, basis_name,
-                                meas_basis, self._eval_times_array, N_measures)
+                                self._eval_times_array, N_measures)
         else:
             return _run_solver()

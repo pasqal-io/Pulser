@@ -34,7 +34,7 @@ class SimulationResults(ABC):
     """
 
     def __init__(self, dim: int, size: int, basis_name: str,
-                 meas_basis: Optional[str], sim_times: ArrayLike) -> None:
+                 sim_times: ArrayLike) -> None:
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -54,44 +54,38 @@ class SimulationResults(ABC):
                 "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
                 )
         self._basis_name = basis_name
-        if meas_basis:
-            if meas_basis not in {'ground-rydberg', 'digital'}:
-                raise ValueError(
-                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
-                    )
-        self._meas_basis = meas_basis
         self.sim_times = sim_times
 
     @abstractmethod
     def get_state(self, t: int) -> qutip.Qobj:
         """Returns the state of the system at time t."""
-        ...
+        pass
 
     @abstractmethod
     def get_final_state(self) -> qutip.Qobj:
         """Returns the final state of the system."""
-        ...
+        pass
 
     @abstractmethod
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> Sequence[Union[float, complex, ArrayLike]]:
         """Returns the expectation values of operators in obs_list."""
-        ...
+        pass
 
     @abstractmethod
-    def sample_state(self, t: int = -1, N_samples: int = 1000) -> Counter:
+    def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements at time t."""
-        ...
+        pass
 
     @abstractmethod
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state."""
-        ...
+        pass
 
     @abstractmethod
     def plot(self, op: qutip.Qobj, fmt: str = '.', label: str = '') -> None:
         """Plots the expectation value of a given operator op."""
-        ...
+        pass
 
 
 class NoisyResults(SimulationResults):
@@ -105,7 +99,7 @@ class NoisyResults(SimulationResults):
     """
 
     def __init__(self, run_output: Sequence[Counter],
-                 size: int, basis_name: str, meas_basis: Optional[str],
+                 size: int, basis_name: str,
                  sim_times: ArrayLike, N_measures: int, dim: int = 2) -> None:
         """Initializes a new NoisyResults instance.
 
@@ -136,14 +130,14 @@ class NoisyResults(SimulationResults):
         if basis_name == 'all':
             raise ValueError("`basis_name` must be either 'ground-rydberg' or"
                              + " 'digital'.")
-        super().__init__(dim, size, basis_name, meas_basis, sim_times)
+        super().__init__(dim, size, basis_name, sim_times)
         self.N_measures = N_measures
-        self._states = run_output
+        self._results = run_output
 
     @property
     def states(self) -> Sequence[Counter]:
         """Probability distribution of the bitstrings."""
-        return self._states
+        return self._results
 
     def get_state(self, t: int) -> qutip.Qobj:
         """Get the state at time t as a diagonal density matrix.
@@ -156,22 +150,22 @@ class NoisyResults(SimulationResults):
             t (int): index of the state to be returned.
 
         Returns:
-            qutip.Qobj: States probability distribution as a density matrix.
+            qutip.Qobj: States probability distribution as a diagonal
+                density matrix.
         """
         def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
             # In the digital case, |h> = |1> = qutip.basis()
-            # 'all' basis is unacceptable here after projection on bitstrings
-            if self._meas_basis == 'digital':
+            if self._basis_name == 'digital':
                 proj = qutip.tensor([qutip.basis(2, int(i)).proj() for i
                                      in bitstring])
-            # ground-rydberg measurement basis case
+            # ground-rydberg basis case
             else:
                 proj = qutip.tensor([qutip.basis(2, 1-int(i)).proj() for i
                                      in bitstring])
             return proj
 
         return sum(v * _proj_from_bitstring(b) for
-                   b, v in self._states[t].items())
+                   b, v in self._results[t].items())
 
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
@@ -194,11 +188,14 @@ class NoisyResults(SimulationResults):
                 calculated. If necessary, each member will be transformed into
                 a qutip.Qobj instance.
 
+        Note: This only works for diagonal observables, since results have been
+            projected onto the Z basis.
+
         Returns:
             list: the list of expectation values of each operator.
         """
         density_matrices = [self.get_state(t) for
-                            t in range(len(self._states))]
+                            t in range(len(self._results))]
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators")
 
@@ -213,7 +210,7 @@ class NoisyResults(SimulationResults):
 
         return cast(Sequence, qutip.expect(qobj_list, density_matrices))
 
-    def sample_state(self, t: int = -1, N_samples: int = 1000) -> Counter:
+    def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the state at time t.
 
         Note : There is no concept of measurement basis here, since states have
@@ -228,9 +225,8 @@ class NoisyResults(SimulationResults):
                 the arguments when the original sequence is not measured.
         """
         N = self._size
-        self.N_samples = N_samples
         bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
-        probs = [self._states[t][b] for b in bitstrings]
+        probs = [self._results[t][b] for b in bitstrings]
 
         dist = np.random.multinomial(N_samples, probs)
         return Counter(
@@ -238,11 +234,11 @@ class NoisyResults(SimulationResults):
 
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state."""
-        return self.sample_state(N_samples=N_samples)
+        return self.sample_state(-1, N_samples)
 
     def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
         """Returns the square root of the variance of operator op."""
-        density_mats = [self.get_state(t) for t in range(len(self._states))]
+        density_mats = [self.get_state(t) for t in range(len(self._results))]
         return cast(ArrayLike,
                     np.sqrt(qutip.variance(op, density_mats) / self.N_measures)
                     )
@@ -282,7 +278,7 @@ class CleanResults(SimulationResults):
 
     def __init__(self, run_output: Sequence[qutip.Qobj],
                  dim: int, size: int, basis_name: str,
-                 meas_basis: Optional[str], sim_times: ArrayLike) -> None:
+                 sim_times: ArrayLike, meas_basis: Optional[str]) -> None:
         """Initializes a new CleanResults instance.
 
         Args:
@@ -298,15 +294,21 @@ class CleanResults(SimulationResults):
             sim_times (list): Times at which Simulation object returned the
                 results.
         """
-        super().__init__(dim, size, basis_name, meas_basis, sim_times)
-        self._states = run_output
+        super().__init__(dim, size, basis_name, sim_times)
+        if meas_basis:
+            if meas_basis not in {'ground-rydberg', 'digital'}:
+                raise ValueError(
+                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                    )
+        self._meas_basis = meas_basis
+        self._results = run_output
 
     @property
     def states(self) -> list[qutip.Qobj]:
         """List of ``qutip.Qobj`` for each state in the simulation."""
-        return list(self._states)
+        return list(self._results)
 
-    def get_state(self, t: int = -1, reduce_to_basis: Optional[str] = None,
+    def get_state(self, t: int, reduce_to_basis: Optional[str] = None,
                   ignore_global_phase: bool = True, tol: float = 1e-6,
                   normalize: bool = True) -> qutip.Qobj:
         """Get the state at time t of the simulation.
@@ -331,7 +333,7 @@ class CleanResults(SimulationResults):
             TypeError: If trying to reduce to a basis that would eliminate
                 states with significant occupation probabilites.
         """
-        final_state = cast(qutip.Qobj, self._states[t].copy())
+        final_state = cast(qutip.Qobj, self._results[t].copy())
         if ignore_global_phase:
             full = final_state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
@@ -350,13 +352,13 @@ class CleanResults(SimulationResults):
                                  + f"or 'digital', not '{reduce_to_basis}'.")
             ex_inds = [i for i in range(3**self._size) if ex_state in
                        np.base_repr(i, base=3).zfill(self._size)]
-            ex_probs = np.abs(final_state.extract_states(ex_inds).full()) ** 2
+            ex_probs = np.abs(final_state.extract_results(ex_inds).full()) ** 2
             if not np.all(np.isclose(ex_probs, 0, atol=tol)):
                 raise TypeError(
                     "Can't reduce to chosen basis because the population of a "
                     "state to eliminate is above the allowed tolerance."
                     )
-            final_state = final_state.eliminate_states(
+            final_state = final_state.eliminate_results(
                                                 ex_inds, normalize=normalize)
 
         return final_state.tidyup()
@@ -389,13 +391,13 @@ class CleanResults(SimulationResults):
             if obs.shape != (self._dim**self._size, self._dim**self._size):
                 raise ValueError("Incompatible shape of observable.")
             # Transfrom to qutip.Qobj and take dims from state
-            dim = cast(qutip.Qobj, self._states[0]).dims[0]
+            dim = cast(qutip.Qobj, self._results[0]).dims[0]
             dim_list = [dim, dim]
             qobj_list.append(qutip.Qobj(obs, dims=dim_list))
 
-        return [qutip.expect(qobj, self._states) for qobj in qobj_list]
+        return [qutip.expect(qobj, self._results) for qobj in qobj_list]
 
-    def sample_state(self, t: int = -1, N_samples: int = 1000,
+    def sample_state(self, t: int, N_samples: int = 1000,
                      meas_basis: Optional[str] = None) -> Counter:
         r"""Returns the result of multiple measurements of the state at time t.
 
@@ -408,7 +410,7 @@ class CleanResults(SimulationResults):
             according to the pre-established qubit ordering in the register.
             This means that, when sampling a register with qubits ('q0','q1',
             ...), in this order, the corresponding value, in binary, will be
-            0Bb0b1..., where b0 is the outcome of measuring 'q0', 'b1' of
+            b0b1..., where b0 is the outcome of measuring 'q0', 'b1' of
             measuring 'q1' and so on.
 
         Keyword Args:
@@ -428,13 +430,12 @@ class CleanResults(SimulationResults):
                 "`meas_basis` can only be 'ground-rydberg' or 'digital'.")
 
         N = self._size
-        self.N_samples = N_samples
-        final_state = cast(qutip.Qobj, self._states[t]).unit()
+        state_t = cast(qutip.Qobj, self._results[t]).unit()
         # Case of a density matrix
-        if final_state.type != "ket":
-            probs = np.abs(final_state.diag())
+        if state_t.type != "ket":
+            probs = np.abs(state_t.diag())
         else:
-            probs = (np.abs(final_state.full())**2).flatten()
+            probs = (np.abs(state_t.full())**2).flatten()
 
         if self._dim == 2:
             if meas_basis == self._basis_name:
@@ -479,7 +480,7 @@ class CleanResults(SimulationResults):
     def sample_final_state(self, N_samples: int = 1000,
                            meas_basis: Optional[str] = None) -> Counter:
         """Returns the result of multiple measurements of the final state."""
-        return self.sample_state(meas_basis=meas_basis, N_samples=N_samples)
+        return self.sample_state(-1, N_samples, meas_basis)
 
     def detection_from_basis_state(self, N_d: int, shot: str,
                                    spam: dict[str, float]) -> Counter:
