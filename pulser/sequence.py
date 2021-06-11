@@ -228,9 +228,8 @@ class Sequence:
         The magnetic field vector is defined on the reference frame of the
         atoms in the Register (with the z-axis coming outside of the plane).
 
-
         Note:
-            Only defined in "XY Mode", the default value being (0, 0, 1) G.
+            Only defined in "XY Mode", the default value being (0, 0, 30) G.
         """
         if not self._in_xy:
             raise AttributeError("The magnetic field is only defined when the "
