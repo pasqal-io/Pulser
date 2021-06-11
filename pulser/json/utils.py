@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Utility functions for JSON serializations."""
 
 from __future__ import annotations
 
@@ -28,7 +29,7 @@ def obj_to_dict(obj: object, *args: Any,
     Args:
         obj: The object to encode in the dictionary.
 
-    Other parameters:
+    Other Parameters:
         _build (bool): Whether the object is to be built on deserialization.
         _module (str): Custom name for the module containing the object.
         _name (str): Custom name of the object.
@@ -41,7 +42,6 @@ def obj_to_dict(obj: object, *args: Any,
     Returns:
         dict: The dictionary encoding the object.
     """
-
     d = {
         "_build": _build,
         "__module__": _module if _module else obj.__class__.__module__,

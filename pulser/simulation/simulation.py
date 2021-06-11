@@ -34,15 +34,12 @@ from pulser.sequence import _TimeSlot
 
 class Simulation:
     """Simulation of a pulse sequence using QuTiP.
-
     Creates a Hamiltonian object with the proper dimension according to the
     pulse sequence given, then provides a method to time-evolve an initial
     state using the QuTiP solvers.
-
     Args:
         sequence (Sequence): An instance of a Pulser Sequence that we
             want to simulate.
-
     Keyword Args:
         sampling_rate (float): The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
@@ -130,7 +127,6 @@ class Simulation:
 
     def _set_param_from_config(self) -> None:
         """Sets all relevant Simulation parameters from its SimConfig.
-
         Called every time a new configuration is loaded in order to update
         Simulation parameters.
         """
@@ -219,7 +215,6 @@ class Simulation:
 
     def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the input sequence and the one used in QuTip.
-
         Keyword args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
@@ -241,7 +236,6 @@ class Simulation:
                           samples_dict: Mapping[str, np.ndarray],
                           *qid: Union[int, str]) -> None:
             """Constructs hamiltonian coefficients.
-
             Taking into account, if necessary, noise effects, which are local
             and depend on the qubit's id qid.
             """
@@ -361,7 +355,6 @@ class Simulation:
     def _construct_hamiltonian(self) -> None:
         def make_vdw_term() -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
-
             For each pair of qubits, calculate the distance between them, then
             assign the local operator "sigma_rr" at each pair. The units are
             given so that the coefficient includes a 1/hbar factor.
@@ -437,11 +430,9 @@ class Simulation:
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
         """Get the Hamiltonian created from the sequence at a fixed time.
-
         Args:
             time (float): The specific time in which we want to extract the
                     Hamiltonian (in ns).
-
         Returns:
             qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
             extracted from the effective sequence (determined by
@@ -471,7 +462,6 @@ class Simulation:
 
     def _build_hamiltonian_from_seq(self) -> None:
         """Builds the hamiltonian from sequence samples.
-
         Extracts the sequence samples, builds default operators and
         builds the hamiltonian from those coefficients and operators.
         """
@@ -483,10 +473,8 @@ class Simulation:
     def run(self, progress_bar: Optional[bool] = None,
             **options: qutip.solver.Options) -> SimulationResults:
         """Simulate the sequence using QuTiP's solvers.
-
         Will return NoisyResults if it detects any noise in the SimConfig.
         Otherwise will return CleanResults.
-
         Keyword Args:
             progress_bar (bool): If True, the progress bar of QuTiP's solver
                 will be shown.
