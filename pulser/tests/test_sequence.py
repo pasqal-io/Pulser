@@ -87,25 +87,29 @@ def test_magnetic_field():
                                              "is in 'XY Mode'."):
         seq.magnetic_field
     seq.declare_channel('ch0', 'mw_global')    # seq in XY mode
-    assert seq.magnetic_field == (0., 0., 1.)    # mag field is the default
+    # mag field is the default
+    assert np.all(seq.magnetic_field == np.array((0., 0., 30.)))
     seq.set_magnetic_field(bx=1., by=-1., bz=0.5)
-    assert seq.magnetic_field == (1., -1., 0.5)
+    assert np.all(seq.magnetic_field == np.array((1., -1., 0.5)))
+    with pytest.raises(ValueError, match="magnitude greater than 0"):
+        seq.set_magnetic_field(bz=0.)
     assert seq._empty_sequence
     seq.add(Pulse.ConstantPulse(100, 1, 1, 0), 'ch0')
     assert not seq._empty_sequence
     with pytest.raises(ValueError, match="can only be set on an empty seq"):
-        seq.set_magnetic_field(0., 0., 0.)
+        seq.set_magnetic_field(1., 0., 0.)
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel('ch0', 'rydberg_global')   # not in XY mode
     with pytest.raises(ValueError, match="can only be set in 'XY Mode'."):
-        seq2.set_magnetic_field(0., 0., 0.)
+        seq2.set_magnetic_field(1., 0., 0.)
 
     seq3 = Sequence(reg, MockDevice)
-    seq3.set_magnetic_field(0., 0., 0.)         # sets seq to XY mode
+    seq3.set_magnetic_field(1., 0., 0.)         # sets seq to XY mode
     assert set(seq3.available_channels) == {'mw_global'}
     seq3.declare_channel('ch0', 'mw_global')
-    assert seq3.magnetic_field == (0., 0., 0.)  # Does not change to default
+    # Does not change to default
+    assert np.all(seq3.magnetic_field == np.array((1., 0., 0.)))
     var = seq3.declare_variable('var')
     # Sequence is marked as non-empty when parametrized too
     seq3.add(Pulse.ConstantPulse(100, var, 1, 0), 'ch0')

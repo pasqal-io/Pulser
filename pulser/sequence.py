@@ -222,7 +222,7 @@ class Sequence:
                     }
 
     @property
-    def magnetic_field(self) -> tuple[float, float, float]:
+    def magnetic_field(self) -> np.ndarray:
         """The magnetic field acting on the array of atoms.
 
         The magnetic field vector is defined on the reference frame of the
@@ -235,7 +235,7 @@ class Sequence:
         if not self._in_xy:
             raise AttributeError("The magnetic field is only defined when the "
                                  "sequence is in 'XY Mode'.")
-        return self._mag_field
+        return np.array(self._mag_field)
 
     def is_parametrized(self) -> bool:
         """States whether the sequence is parametrized.
@@ -276,7 +276,7 @@ class Sequence:
         return self._phase_ref[basis][qubit].last_phase
 
     def set_magnetic_field(self, bx: float = 0., by: float = 0.,
-                           bz: float = 1.) -> None:
+                           bz: float = 30.) -> None:
         """Sets the magnetic field acting on the entire array.
 
         The magnetic field vector is defined on the reference frame of the
@@ -303,7 +303,12 @@ class Sequence:
             # Not all channels are empty
             raise ValueError("The magnetic field can only be set on an empty "
                              "sequence.")
-        self._mag_field = (bx, by, bz)
+
+        mag_vector = (bx, by, bz)
+        if np.linalg.norm(mag_vector) == 0.:
+            raise ValueError("The magnetic field must have a magnitude greater"
+                             " than 0.")
+        self._mag_field = mag_vector
 
     def declare_channel(self, name: str, channel_id: str,
                         initial_target: Optional[
