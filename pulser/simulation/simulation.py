@@ -88,11 +88,11 @@ class Simulation:
 
         if self._interaction == 'ising':
             self.samples: dict = {addr: {basis: {}
-                            for basis in ['ground-rydberg', 'digital']}
-                            for addr in ['Global', 'Local']}
+                                  for basis in ['ground-rydberg', 'digital']}
+                                  for addr in ['Global', 'Local']}
         else:
             self.samples: dict = {addr: {'XY': {}}
-                            for addr in ['Global', 'Local']}
+                                  for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
 
         self._extract_samples()
@@ -233,7 +233,6 @@ class Simulation:
 
         def adapt(full_array: np.ndarray) -> np.ndarray:
             """Adapts list to correspond to sampling rate."""
-
             indexes = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
@@ -241,6 +240,7 @@ class Simulation:
 
         def make_vdw_term() -> float:
             """Construct the Van der Waals interaction Term.
+
             For each pair of qubits, calculate the distance between them,
             then assign the local operator "sigma_rr" at each pair.
             The units are given so that the coefficient includes a
@@ -285,15 +285,14 @@ class Simulation:
             return xy
 
         def make_interaction_term() -> float:
-            """Construct interaction term depending on the type of interaction.
-            """
+            """Construct interaction term depending
+            on the type of interaction."""
             if self._interaction == 'ising':
                 return make_vdw_term()
             else:
                 return make_xy_term()
 
         def build_coeffs_ops(basis, addr) -> list[Qobj]:
-
             """Build coefficients and operators for the hamiltonian QobjEvo."""
             samples = self.samples[addr][basis]
             operators = self.operators[addr][basis]
