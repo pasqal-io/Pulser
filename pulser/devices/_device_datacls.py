@@ -36,7 +36,8 @@ class Device:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_ising: :math:`C_6/\hbar` (in :math:`\mu m^6 / \mu s`),
+        interaction_coeff_ising: :math:`C_6/\hbar`
+            (in :math:`\mu m^6 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
             the Rydberg state.
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),

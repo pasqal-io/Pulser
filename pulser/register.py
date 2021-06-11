@@ -39,7 +39,7 @@ class Register:
     """
 
     def __init__(self, qubits: Mapping[Any, ArrayLike],
-                     mag_field: ArrayLike = np.array([0., 0.])):
+                 mag_field: ArrayLike = np.array([0., 0.])):
 
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):

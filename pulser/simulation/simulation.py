@@ -228,8 +228,8 @@ class Simulation:
                     op_list[k] = self.op_matrix[operator]
         return qutip.tensor(op_list)
 
-
     def _construct_hamiltonian(self) -> None:
+
         def adapt(full_array: np.ndarray) -> np.ndarray:
             """Adapts list to correspond to sampling rate."""
 
@@ -240,9 +240,10 @@ class Simulation:
 
         def make_vdw_term() -> float:
             """Construct the Van der Waals interaction Term.
-            For each pair of qubits, calculate the distance between them, then
-            assign the local operator "sigma_rr" at each pair. The units are
-            given so that the coefficient includes a 1/hbar factor.
+            For each pair of qubits, calculate the distance between them,
+            then assign the local operator "sigma_rr" at each pair.
+            The units are given so that the coefficient includes a
+            1/hbar factor.
             """
             vdw = 0
             # Get every pair without duplicates
@@ -313,8 +314,7 @@ class Simulation:
                         if op_id not in operators:
                             operators[op_id] =\
                                 self._build_operator({op_id: 'global'})
-                                
-                        terms.append([operators[op_id], adapt(coeff)])
+                            terms.append([operators[op_id], adapt(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -327,7 +327,6 @@ class Simulation:
                             if op_id not in operators[q_id]:
                                 operators[q_id][op_id] = \
                                     self._build_operator({op_id: [q_id]})
-                                    
                             terms.append([operators[q_id][op_id],
                                           adapt(coeff)])
 

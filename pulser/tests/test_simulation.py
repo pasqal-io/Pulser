@@ -240,7 +240,8 @@ def test_get_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert (simple_ham[0, 0] == Chadoq2.interaction_coeff_ising / 10**6 - 2 * detun)
+    assert (simple_ham[0, 0] == Chadoq2.interaction_coeff_ising
+            / 10**6 - 2 * detun)
 
 
 def test_single_atom_simulation():
@@ -340,9 +341,10 @@ def test_get_xy_hamiltonian():
     assert np.abs(np.linalg.norm(simple_reg._mag_field) - 1) < 1e-10
 
     simple_sim = Simulation(simple_seq, sampling_rate=0.01)
-    with pytest.raises(ValueError, match='larger than'):
+    with pytest.raises(ValueError,
+                       match='less than or equal to the sequence duration'):
         simple_sim.get_hamiltonian(1650)
-    with pytest.raises(ValueError, match='negative'):
+    with pytest.raises(ValueError, match='greater than or equal to 0'):
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
