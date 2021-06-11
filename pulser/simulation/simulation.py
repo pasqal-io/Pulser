@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the Simulation class, used for simulation of a Sequence."""
 
 from __future__ import annotations
 
@@ -222,7 +223,7 @@ class Simulation:
     def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the input sequence and the one used in QuTip.
 
-        Keyword args:
+        Keyword Args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
         """
@@ -450,9 +451,12 @@ class Simulation:
             `self.sampling_rate`) at the specified time.
         """
         if time > 1000 * self._times[-1]:
-            raise ValueError("Provided time is larger than sequence duration.")
+            raise ValueError(f"Provided time (`time` = {time}) must be "
+                             "less than or equal to the sequence duration "
+                             f"({1000 * self._times[-1]}).")
         if time < 0:
-            raise ValueError("Provided time is negative.")
+            raise ValueError(f"Provided time (`time` = {time}) must be "
+                             "greater than or equal to 0.")
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
     def _reset_samples(self) -> None:

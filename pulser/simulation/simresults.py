@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Classes for containing and processing the results of a simulation."""
 
 from __future__ import annotations
 from collections import Counter
@@ -46,8 +47,8 @@ class SimulationResults(ABC):
             sim_times (array): Array of times when simulation results are
                 returned.
         Keyword Args:
-            meas_basis (None or str): The basis in which a sampling measurement
-                is desired.
+            meas_basis (Optional[str]): The basis in which a sampling
+                measurement is desired.
         """
         self._states = run_output
         self._dim = dim
