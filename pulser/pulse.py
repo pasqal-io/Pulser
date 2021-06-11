@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the Pulse class, the building block of a pulse sequence."""
 
 from __future__ import annotations
 
@@ -57,6 +58,7 @@ class Pulse:
     """
 
     def __new__(cls, *args, **kwargs):      # type: ignore
+        """Creates a Pulse instance or a ParamObj depending on the input."""
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 return ParamObj(cls, *args, **kwargs)
@@ -68,7 +70,6 @@ class Pulse:
                  phase: Union[float, Parametrized],
                  post_phase_shift: Union[float, Parametrized] = 0.):
         """Initializes a new Pulse."""
-
         if not (isinstance(amplitude, Waveform) and
                 isinstance(detuning, Waveform)):
             raise TypeError("'amplitude' and 'detuning' have to be waveforms.")
@@ -92,16 +93,17 @@ class Pulse:
     def ConstantDetuning(cls, amplitude: Union[Waveform, Parametrized],
                          detuning: Union[float, Parametrized],
                          phase: Union[float, Parametrized],
-                         post_phase_shift: Union[float, Parametrized]
-                         = 0.) -> Pulse:
-        """Pulse with an amplitude waveform and a constant detuning.
+                         post_phase_shift: Union[float, Parametrized] = 0.
+                         ) -> Pulse:
+        """Creates a Pulse with an amplitude waveform and a constant detuning.
 
         Args:
             amplitude (Waveform): The pulse amplitude waveform.
             detuning (float): The detuning value (in rad/µs).
             phase (float): The pulse phase (in radians).
+            post_phase_shift (float, default=0.): Optionally lets you add a
+                phase shift (in rads) immediately after the end of the pulse.
         """
-
         detuning_wf = ConstantWaveform(
             cast(Waveform, amplitude).duration, detuning)
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
@@ -111,16 +113,17 @@ class Pulse:
     def ConstantAmplitude(cls, amplitude: Union[float, Parametrized],
                           detuning: Union[Waveform, Parametrized],
                           phase: Union[float, Parametrized],
-                          post_phase_shift: Union[float, Parametrized]
-                          = 0.) -> Pulse:
+                          post_phase_shift: Union[float, Parametrized] = 0.
+                          ) -> Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
 
         Args:
             amplitude (float): The pulse amplitude value (in rad/µs).
             detuning (Waveform): The pulse detuning waveform.
             phase (float): The pulse phase (in radians).
+            post_phase_shift (float, default=0.): Optionally lets you add a
+                phase shift (in rads) immediately after the end of the pulse.
         """
-
         amplitude_wf = ConstantWaveform(
             cast(Waveform, detuning).duration, amplitude)
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
@@ -131,8 +134,8 @@ class Pulse:
                       amplitude: Union[float, Parametrized],
                       detuning: Union[float, Parametrized],
                       phase: Union[float, Parametrized],
-                      post_phase_shift: Union[float, Parametrized]
-                      = 0.) -> Pulse:
+                      post_phase_shift: Union[float, Parametrized] = 0.
+                      ) -> Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
         Args:
@@ -140,15 +143,15 @@ class Pulse:
             amplitude (float): The pulse amplitude value (in rad/µs).
             detuning (float): The detuning value (in rad/µs).
             phase (float): The pulse phase (in radians).
+            post_phase_shift (float, default=0.): Optionally lets you add a
+                phase shift (in rads) immediately after the end of the pulse.
         """
-
         amplitude_wf = ConstantWaveform(duration, amplitude)
         detuning_wf = ConstantWaveform(duration, detuning)
         return cls(amplitude_wf, detuning_wf, phase, post_phase_shift)
 
     def draw(self) -> None:
         """Draws the pulse's amplitude and frequency waveforms."""
-
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
 

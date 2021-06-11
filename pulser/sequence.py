@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the Sequence class and auxiliary classes."""
 
 from __future__ import annotations
 
@@ -245,7 +246,6 @@ class Sequence:
 
         Returns:
             float: Current phase reference of 'qubit' in 'basis'.
-
         """
         if qubit not in self._qids:
             raise ValueError("'qubit' must be the id of a qubit declared in "
@@ -280,14 +280,11 @@ class Sequence:
                 Consult ``Sequence.available_channels`` to see which channel
                 ID's are still available and the associated channel's
                 description.
-
-        Keyword Args:
             initial_target (Iterable, default=None): For 'Local' addressing
                 channels only. Declares the initial target of the channel.
                 If left as None, the initial target will have to be set
                 manually as the first addition to this channel.
         """
-
         if name in self._channels:
             raise ValueError("The given name is already in use.")
 
@@ -386,9 +383,7 @@ class Sequence:
         Args:
             pulse (pulser.Pulse): The pulse object to add to the channel.
             channel (str): The channel's name provided when declared.
-
-        Keyword Args:
-            protocol (default='min-delay'): Stipulates how to deal with
+            protocol (str, default='min-delay'): Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
                 of having multiple channels act on the same target
                 simultaneously.
@@ -495,7 +490,7 @@ class Sequence:
                 when multi-qubit addressing is possible.
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
-         """
+        """
         qubits = cast(QubitId, qubits)
         channel = cast(str, channel)
 
@@ -562,8 +557,6 @@ class Sequence:
             phi (float): The intended phase shift (in rads).
             targets (hashable): The ids of the qubits on which to apply the
                 phase shift.
-
-        Keyword Args:
             basis (str): The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
@@ -586,7 +579,6 @@ class Sequence:
             channels (str): The names of the channels to align, as given upon
                 declaration.
         """
-
         ch_set = set(channels)
         # channels have to be a subset of the declared channels
         if not ch_set <= set(self._channels):
@@ -676,7 +668,7 @@ class Sequence:
         Returns:
             str: The sequence encoded in a JSON formatted string.
 
-        See also:
+        See Also:
             ``json.dumps``: Built-in function for serialization to a JSON
             formatted string.
         """
@@ -698,7 +690,7 @@ class Sequence:
         Returns:
             Sequence: The deserialized Sequence object.
 
-        See also:
+        See Also:
             ``json.loads``: Built-in function for deserialization from a JSON
             formatted string.
         """
@@ -712,7 +704,7 @@ class Sequence:
     def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the sequence in its current state.
 
-        Keyword args:
+        Keyword Args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
         """

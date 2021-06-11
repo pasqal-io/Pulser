@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the Simulation class, used for simulation of a Sequence."""
 
 from __future__ import annotations
 
@@ -128,7 +129,7 @@ class Simulation:
     def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the input sequence and the one used in QuTip.
 
-        Keyword args:
+        Keyword Args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
         """
@@ -220,7 +221,7 @@ class Simulation:
 
     def _construct_hamiltonian(self) -> None:
         def adapt(full_array: np.ndarray) -> np.ndarray:
-            """Adapt list to correspond to sampling rate"""
+            """Adapts list to correspond to sampling rate."""
             indexes = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
@@ -329,13 +330,14 @@ class Simulation:
             initial_state: Optional[Union[np.ndarray, qutip.Qobj]] = None,
             progress_bar: Optional[bool] = None,
             **options: qutip.solver.Options) -> SimulationResults:
-        """Simulate the sequence using QuTiP's solvers.
+        """Simulates the sequence using QuTiP's solvers.
 
         Keyword Args:
             initial_state (array): The initial quantum state of the
                 evolution. Will be transformed into a ``qutip.Qobj`` instance.
             progress_bar (bool): If True, the progress bar of QuTiP's
                 ``qutip.sesolve()`` will be shown.
+
         Other Parameters:
             options: Additional simulation settings. These correspond to the
                 keyword arguments of ``qutip.solver.Options`` for
