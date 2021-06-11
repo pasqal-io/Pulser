@@ -56,7 +56,6 @@ class Simulation:
     def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
                  evaluation_times: Union[str, ArrayLike] = 'Full') -> None:
         """Initialize the Simulation with a specific pulser.Sequence."""
-
         if not isinstance(sequence, Sequence):
             raise TypeError("The provided sequence has to be a valid "
                             "pulser.Sequence instance.")
@@ -284,8 +283,10 @@ class Simulation:
             return xy
 
         def make_interaction_term() -> float:
-            """Construct interaction term depending
-            on the type of interaction."""
+            """Construct interaction term.
+
+            Depending on the type of interaction.
+            """
             if self._interaction == 'ising':
                 return make_vdw_term()
             else:
