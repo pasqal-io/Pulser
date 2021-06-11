@@ -50,8 +50,8 @@ class SimulationResults:
         self._size = size
         if basis_name not in {'ground-rydberg', 'digital', 'all', 'XY'}:
             raise ValueError(
-                "`basis_name` must be 'ground-rydberg', 'digital',\
-                'all' or 'XY'."
+                "`basis_name` must be 'ground-rydberg', 'digital',"
+                "'all' or 'XY'."
             )
         self._basis_name = basis_name
         if meas_basis:
