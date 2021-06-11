@@ -81,6 +81,39 @@ def test_channel_declaration():
         seq2.declare_channel('ch3', 'rydberg_global')
 
 
+def test_magnetic_field():
+    seq = Sequence(reg, MockDevice)
+    with pytest.raises(AttributeError, match="only defined when the sequence "
+                                             "is in 'XY Mode'."):
+        seq.magnetic_field
+    seq.declare_channel('ch0', 'mw_global')    # seq in XY mode
+    assert seq.magnetic_field == (0., 0., 1.)    # mag field is the default
+    seq.set_magnetic_field(bx=1., by=-1., bz=0.5)
+    assert seq.magnetic_field == (1., -1., 0.5)
+    assert seq._empty_sequence
+    seq.add(Pulse.ConstantPulse(100, 1, 1, 0), 'ch0')
+    assert not seq._empty_sequence
+    with pytest.raises(ValueError, match="can only be set on an empty seq"):
+        seq.set_magnetic_field(0., 0., 0.)
+
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel('ch0', 'rydberg_global')   # not in XY mode
+    with pytest.raises(ValueError, match="can only be set in 'XY Mode'."):
+        seq2.set_magnetic_field(0., 0., 0.)
+
+    seq3 = Sequence(reg, MockDevice)
+    seq3.set_magnetic_field(0., 0., 0.)         # sets seq to XY mode
+    assert set(seq3.available_channels) == {'mw_global'}
+    seq3.declare_channel('ch0', 'mw_global')
+    assert seq3.magnetic_field == (0., 0., 0.)  # Does not change to default
+    var = seq3.declare_variable('var')
+    # Sequence is marked as non-empty when parametrized too
+    seq3.add(Pulse.ConstantPulse(100, var, 1, 0), 'ch0')
+    assert seq3.is_parametrized()
+    with pytest.raises(ValueError, match="can only be set on an empty seq"):
+        seq.set_magnetic_field()
+
+
 def test_target():
     seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q1')

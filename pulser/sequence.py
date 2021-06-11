@@ -210,7 +210,8 @@ class Sequence:
         """Channels still available for declaration."""
         # Show all channels if none are declared, otherwise filter depending
         # on whether the sequence is working on XY mode
-        if not self._channels:
+        # If already in XY mode, filter right away
+        if not self._channels and not self._in_xy:
             return dict(self._device.channels)
         else:
             # MockDevice channels can be declared multiple times
