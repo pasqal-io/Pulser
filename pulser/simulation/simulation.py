@@ -222,8 +222,11 @@ class Simulation:
             else:
                 if len(set(qubits)) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
-                for j, qubit in enumerate(qubits):
-                    k = self._qid_index[qubit]
+                for qubit in qubits:
+                    if isinstance(qubit, int):
+                        k = qubit
+                    else:
+                        k = self._qid_index[qubit]
                     op_list[k] = self.op_matrix[operator]
         return qutip.tensor(op_list)
 
