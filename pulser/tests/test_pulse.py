@@ -38,10 +38,10 @@ def test_creation():
         Pulse(bwf, cwf, bwf)
         Pulse(bwf, cwf, 0, post_phase_shift=cwf)
 
-    with pytest.raises(ValueError, match="durations don't match"):
+    with pytest.raises(ValueError, match="The duration of"):
         Pulse(bwf, cwf, 0)
 
-    with pytest.raises(ValueError, match="has always to be non-negative."):
+    with pytest.raises(ValueError, match="All samples of an amplitude"):
         Pulse(cwf, cwf, 0)
         Pulse.ConstantAmplitude(-1, cwf, 0)
         Pulse.ConstantPulse(100, -1, 0, 0)
