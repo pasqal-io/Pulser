@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the Register class, defining an array of neutral atoms."""
 
 from __future__ import annotations
 
@@ -39,6 +40,7 @@ class Register:
 
     def __init__(self, qubits: Mapping[Any, ArrayLike],
                      mag_field: ArrayLike = np.array([0., 0.])):
+
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary "
@@ -174,7 +176,6 @@ class Register:
         Returns:
             Register: A register with qubits placed in a triangular lattice.
         """
-
         # Check rows
         if rows < 1:
             raise ValueError(f"The number of rows (`rows` = {rows})"
@@ -280,7 +281,6 @@ class Register:
         Returns:
             Register: A register with qubits placed in a hexagonal layout.
         """
-
         # Check layers
         if layers < 1:
             raise ValueError(f"The number of layers (`layers` = {layers})"
@@ -319,7 +319,6 @@ class Register:
         Returns:
             Register: A register with qubits placed for maximum connectivity.
         """
-
         # Check device
         if not isinstance(device, pulser.devices._device_datacls.Device):
             raise TypeError("'device' must be of type 'Device'. Import a valid"
@@ -378,7 +377,7 @@ class Register:
              draw_half_radius: bool = False) -> None:
         """Draws the entire register.
 
-        Keyword args:
+        Keyword Args:
             with_labels(bool, default=True): If True, writes the qubit ID's
                 next to each qubit.
             blockade_radius(float, default=None): The distance (in μm) between
@@ -396,7 +395,6 @@ class Register:
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-
         # Check dimensions
         if self._dim != 2:
             raise NotImplementedError("Can only draw register layouts in 2D.")

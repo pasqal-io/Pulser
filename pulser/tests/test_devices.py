@@ -70,11 +70,11 @@ def test_rydberg_blockade():
     assert np.isclose(
         rand_omega,
         dev.rabi_from_blockade(dev.rydberg_blockade_radius(rand_omega))
-        )
+    )
 
 
 def test_validate_register():
-    with pytest.raises(ValueError, match='Too many atoms'):
+    with pytest.raises(ValueError, match='The number of atoms'):
         Chadoq2.validate_register(Register.square(50))
 
     coords = [(100, 0), (-100, 0)]
@@ -89,6 +89,6 @@ def test_validate_register():
 
     with pytest.raises(ValueError, match="don't respect the minimal distance"):
         Chadoq2.validate_register(Register.triangular_lattice(
-                                                            3, 4, spacing=3.9))
+            3, 4, spacing=3.9))
 
     Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))

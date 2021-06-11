@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the Simulation class, used for simulation of a Sequence."""
 
 from __future__ import annotations
 
@@ -74,8 +75,9 @@ class Simulation:
         self._interaction = 'XY' if self._seq._in_xy else 'ising'
 
         if not (0 < sampling_rate <= 1.0):
-            raise ValueError("`sampling_rate` must be positive and "
-                             "not larger than 1.0")
+            raise ValueError("The sampling rate (`sampling_rate` = "
+                             f"{sampling_rate}) must be greater than 0 and "
+                             "less than or equal to 1.")
         if int(self._tot_duration*sampling_rate) < 4:
             raise ValueError("`sampling_rate` is too small, less than 4 data "
                              "points.")
@@ -128,7 +130,7 @@ class Simulation:
     def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the input sequence and the one used in QuTip.
 
-        Keyword args:
+        Keyword Args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
         """
@@ -226,10 +228,11 @@ class Simulation:
                     op_list[k] = self.op_matrix[operator]
         return qutip.tensor(op_list)
 
-    def _construct_hamiltonian(self):
-        def adapt(full_array):
 
-            """Adapt list to correspond to sampling rate"""
+    def _construct_hamiltonian(self) -> None:
+        def adapt(full_array: np.ndarray) -> np.ndarray:
+            """Adapts list to correspond to sampling rate."""
+
             indexes = np.linspace(0, self._tot_duration-1,
                                   int(self.sampling_rate*self._tot_duration),
                                   dtype=int)
@@ -366,9 +369,12 @@ class Simulation:
             `self.sampling_rate`) at the specified time.
         """
         if time > 1000 * self._times[-1]:
-            raise ValueError("Provided time is larger than sequence duration.")
+            raise ValueError(f"Provided time (`time` = {time}) must be "
+                             "less than or equal to the sequence duration "
+                             f"({1000 * self._times[-1]}).")
         if time < 0:
-            raise ValueError("Provided time is negative.")
+            raise ValueError(f"Provided time (`time` = {time}) must be "
+                             "greater than or equal to 0.")
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
     # Run Simulation Evolution using Qutip
@@ -376,13 +382,14 @@ class Simulation:
             initial_state: Optional[Union[np.ndarray, qutip.Qobj]] = None,
             progress_bar: Optional[bool] = None,
             **options: qutip.solver.Options) -> SimulationResults:
-        """Simulate the sequence using QuTiP's solvers.
+        """Simulates the sequence using QuTiP's solvers.
 
         Keyword Args:
             initial_state (array): The initial quantum state of the
                 evolution. Will be transformed into a ``qutip.Qobj`` instance.
             progress_bar (bool): If True, the progress bar of QuTiP's
                 ``qutip.sesolve()`` will be shown.
+
         Other Parameters:
             options: Additional simulation settings. These correspond to the
                 keyword arguments of ``qutip.solver.Options`` for

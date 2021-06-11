@@ -82,9 +82,9 @@ def test_initialization_and_construction_of_hamiltonian():
 
     with pytest.raises(ValueError, match='too small, less than'):
         Simulation(seq, sampling_rate=0.0001)
-    with pytest.raises(ValueError, match='positive and not larger'):
+    with pytest.raises(ValueError, match='The sampling rate'):
         Simulation(seq, sampling_rate=5)
-    with pytest.raises(ValueError, match='positive and not larger'):
+    with pytest.raises(ValueError, match='The sampling rate'):
         Simulation(seq, sampling_rate=-1)
 
     assert sim.sampling_rate == 0.011
@@ -234,9 +234,9 @@ def test_get_hamiltonian():
     simple_seq.add(rise, 'ising')
 
     simple_sim = Simulation(simple_seq, sampling_rate=0.01)
-    with pytest.raises(ValueError, match='larger than'):
+    with pytest.raises(ValueError, match='less than or equal to'):
         simple_sim.get_hamiltonian(1650)
-    with pytest.raises(ValueError, match='negative'):
+    with pytest.raises(ValueError, match='greater than or equal to'):
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
