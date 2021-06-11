@@ -78,8 +78,9 @@ class Simulation:
         )
 
         if not (0 < sampling_rate <= 1.0):
-            raise ValueError("`sampling_rate` must be positive and "
-                             "not larger than 1.0")
+            raise ValueError("The sampling rate (`sampling_rate` = "
+                             f"{sampling_rate}) must be greater than 0 and "
+                             "less than or equal to 1.")
         if int(self._tot_duration*sampling_rate) < 4:
             raise ValueError("`sampling_rate` is too small, less than 4 data "
                              "points.")
@@ -316,9 +317,12 @@ class Simulation:
             `self.sampling_rate`) at the specified time.
         """
         if time > 1000 * self._times[-1]:
-            raise ValueError("Provided time is larger than sequence duration.")
+            raise ValueError(f"Provided time (`time` = {time}) must be "
+                             "less than or equal to the sequence duration "
+                             f"({1000 * self._times[-1]}).")
         if time < 0:
-            raise ValueError("Provided time is negative.")
+            raise ValueError(f"Provided time (`time` = {time}) must be "
+                             "greater than or equal to 0.")
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
     # Run Simulation Evolution using Qutip

@@ -106,8 +106,10 @@ class Device:
 
         atoms = list(register.qubits.values())
         if len(atoms) > self.max_atom_num:
-            raise ValueError("Too many atoms in the array, the device accepts "
-                             f"at most {self.max_atom_num} atoms.")
+            raise ValueError(f"The number of atoms ({len(atoms)})"
+                             " must be less than or equal to the maximum"
+                             " number of atoms supported by this device"
+                             f" ({self.max_atom_num}).")
 
         if register._dim != self.dimensions:
             raise ValueError(f"All qubit positions must be {self.dimensions}D "
@@ -150,7 +152,7 @@ class Device:
             (" - Minimum distance between neighbouring atoms: "
              + f"{self.min_atom_distance} μm"),
             "\nChannels:"
-            ]
+        ]
 
         ch_lines = []
         for name, ch in self._channels:
@@ -163,12 +165,12 @@ class Device:
                      + f" {ch.max_amp:.4g} rad/µs"),
                     ("\t" + r"- Maximum :math:`|\delta|`:"
                      + f" {ch.max_abs_detuning:.4g} rad/µs")
-                    ]
+                ]
                 if ch.addressing == "Local":
                     ch_lines += [
                         f"\t- Maximum time to retarget: {ch.retarget_time} ns",
                         f"\t- Maximum simultaneous targets: {ch.max_targets}"
-                        ]
+                    ]
             else:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
