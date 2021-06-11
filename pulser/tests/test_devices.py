@@ -29,7 +29,7 @@ def test_init():
         assert dev.max_atom_num > 10
         assert dev.max_radial_distance > 10
         assert dev.min_atom_distance > 0
-        assert dev.interaction_coeff_ising > 0
+        assert dev.interaction_coeff > 0
         assert dev.interaction_coeff_xy > 0
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
@@ -46,7 +46,7 @@ def test_mock():
     assert dev.dimensions == 2
     assert dev.max_atom_num > 1000
     assert dev.min_atom_distance <= 1
-    assert dev.interaction_coeff_ising == 5008713
+    assert dev.interaction_coeff == 5008713
     assert dev.interaction_coeff_xy == 3700
     names = ['Rydberg', 'Raman', 'Microwave']
     basis = ['ground-rydberg', 'digital', 'XY']

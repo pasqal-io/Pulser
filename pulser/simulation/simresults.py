@@ -54,10 +54,16 @@ class SimulationResults:
                 "'all' or 'XY'."
             )
         self._basis_name = basis_name
-        if meas_basis:
-            if meas_basis not in {'ground-rydberg', 'digital', 'XY'}:
+        if self._basis_name == 'all':
+            if (meas_basis is not None) and\
+                    (meas_basis not in {'ground-rydberg', 'digital'}):
                 raise ValueError(
-                    "`meas_basis` must be 'ground-rydberg', 'digital' or 'XY'."
+                    "`meas_basis` must be 'ground-rydberg', 'digital'."
+                    )
+        else:
+            if (meas_basis is not None) and (meas_basis != self._basis_name):
+                raise ValueError(
+                    "`meas_basis` and `basis_name` must have the same value."
                     )
         self._meas_basis = meas_basis
 
@@ -183,10 +189,18 @@ class SimulationResults:
                     )
             meas_basis = self._meas_basis
 
-        if meas_basis not in {'ground-rydberg', 'digital', 'XY'}:
-            raise ValueError(
-                "'meas_basis' can only be 'ground-rydberg', digital' or 'XY'."
-                )
+        if self._basis_name == 'XY':
+            if (meas_basis is not None) and (meas_basis != self._basis_name):
+                raise ValueError(
+                    "`meas_basis` and `basis_name` must have"
+                    "the same value in XY mode."
+                    )
+        else:
+            if (meas_basis is not None) and (
+                    meas_basis not in {'ground-rydberg', 'digital'}):
+                raise ValueError(
+                    "`meas_basis` must be 'ground-rydberg', 'digital'."
+                    )
 
         N = self._size
         self.N_samples = N_samples

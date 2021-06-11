@@ -252,7 +252,7 @@ class Simulation:
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 dist = np.linalg.norm(
                     self._qdict[q1] - self._qdict[q2])
-                U = 0.5 * self._seq._device.interaction_coeff_ising / dist**6
+                U = 0.5 * self._seq._device.interaction_coeff / dist**6
                 vdw += U * self._build_operator({'sigma_rr': [q1, q2]})
             return vdw
 
