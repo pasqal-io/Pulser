@@ -37,13 +37,16 @@ class Simulation:
     Creates a Hamiltonian object with the proper dimension according to the
     pulse sequence given, then provides a method to time-evolve an initial
     state using the QuTiP solvers.
+
     Args:
         sequence (Sequence): An instance of a Pulser Sequence that we
             want to simulate.
+
     Keyword Args:
         sampling_rate (float): The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
             value between 0.05 and 1.0
+        config(SimConfig): Configuration to be used for this simulation.
         evaluation_times (str,list,float):
             The list of times at which the quantum
             state should be evaluated, in μs. If 'Full' is provided, this list
@@ -58,7 +61,6 @@ class Simulation:
                  config: Optional[SimConfig] = None,
                  evaluation_times: Union[float, str, ArrayLike] = 'Full'
                  ) -> None:
-        """Initialize the Simulation with a specific pulser.Sequence."""
         self.seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
@@ -127,17 +129,28 @@ class Simulation:
 
     def _set_param_from_config(self) -> None:
         """Sets all relevant Simulation parameters from its SimConfig.
+
         Called every time a new configuration is loaded in order to update
         Simulation parameters.
         """
-        self.reset_sequence()
-        self._bad_atoms: dict[Union[str, int], bool] = {}
-        if 'SPAM' in self.config.noise:
-            self._prepare_bad_atoms()
+        self._prepare_bad_atoms()
         # update samples with potential noise settings
         self._build_hamiltonian_from_seq()
         if 'dephasing' in self.config.noise:
             self._init_dephasing()
+
+    def _prepare_bad_atoms(self) -> None:
+        """Chooses atoms that will be badly prepared.
+
+        If no SPAM noise, simply sets all atoms as well-prepared.
+        """
+        # Tag True if atom is badly prepared
+        self._bad_atoms: dict[Union[str, int], bool] = {
+            qid: False for qid in self._qid_index}
+        if 'SPAM' in self.config.noise:
+            self._bad_atoms = \
+                {qid: (np.random.uniform() < self.config.spam_dict['eta'])
+                 for qid in self._qid_index}
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -206,15 +219,9 @@ class Simulation:
                   "be `Full` or `Minimal` or a float between 0 and 1.")
         self._evaluation_times: Union[str, ArrayLike, float] = value
 
-    def _prepare_bad_atoms(self) -> None:
-        """Choose atoms that will be badly prepared."""
-        # Tag True if atom is badly prepared
-        self._bad_atoms = \
-            {qid: (np.random.uniform() < self.config.spam_dict['eta'])
-             for qid in self._qid_index}
-
     def draw(self, draw_phase_area: bool = False) -> None:
         """Draws the input sequence and the one used in QuTip.
+
         Keyword args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
@@ -224,7 +231,7 @@ class Simulation:
         )
 
     def _extract_samples(self) -> None:
-        """Populate samples dictionary with every pulse in the sequence."""
+        """Populates samples dictionary with every pulse in the sequence."""
 
         def prepare_dict() -> dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
@@ -235,32 +242,27 @@ class Simulation:
         def write_samples(slot: _TimeSlot,
                           samples_dict: Mapping[str, np.ndarray],
                           *qid: Union[int, str]) -> None:
-            """Constructs hamiltonian coefficients.
+            """Builds hamiltonian coefficients.
+
             Taking into account, if necessary, noise effects, which are local
             and depend on the qubit's id qid.
             """
             _pulse = cast(Pulse, slot.type)
             noise_det = 0.
             noise_amp = 1.
-            # detuning offset related to bad preparation
-            # not too large, or else ODE integration errors
-            good_prep = 1
             for noise in self.config.noise:
                 if noise == 'doppler':
-                    noise_det += np.random.normal(0, self.config.doppler_sigma)
-                # qubit qid badly prepared
-                if noise == 'SPAM' and self._bad_atoms[qid[0]]:
-                    good_prep = 0
-                # gaussian beam for global pulses
+                    noise_det += np.random.normal(
+                        0, self.config.doppler_sigma)
+                # Gaussian beam for global pulses
                 if noise == 'amplitude':
                     position = self._qdict[qid[0]]
                     r = np.linalg.norm(position)
                     w0 = self.config.laser_waist
                     noise_amp = np.random.normal(1., 1.e-3) * \
-                        np.exp(-2.*(r/w0)**2)
-
+                        np.exp(-(r/w0)**2)
             samples_dict['amp'][slot.ti:slot.tf] = \
-                _pulse.amplitude.samples * noise_amp * good_prep
+                _pulse.amplitude.samples * noise_amp
             samples_dict['det'][slot.ti:slot.tf] = \
                 _pulse.detuning.samples + noise_det
             samples_dict['phase'][slot.ti:slot.tf] = _pulse.phase
@@ -279,8 +281,8 @@ class Simulation:
                         write_samples(slot, samples_dict)
                 self.samples[addr][basis] = samples_dict
 
-            # any noise : global becomes local for each qubit in the reg
-            # since coefficients are modified locally by all noises
+            # Any noise : global becomes local for each qubit in the reg
+            # Since coefficients are modified locally by all noises
             elif addr == 'Global':
                 samples_dict = self.samples['Local'][basis]
                 for slot in self._seq._schedule[channel]:
@@ -289,9 +291,12 @@ class Simulation:
                         for qubit in self._qid_index:
                             if qubit not in samples_dict:
                                 samples_dict[qubit] = prepare_dict()
-                            write_samples(slot, samples_dict[qubit], qubit)
+                            # We don't write samples for badly prep qubits
+                            if not self._bad_atoms[qubit]:
+                                write_samples(slot, samples_dict[qubit], qubit)
                 self.samples['Local'][basis] = samples_dict
 
+            # Local noisy pulse
             elif addr == 'Local':
                 samples_dict = self.samples['Local'][basis]
                 for slot in self._seq._schedule[channel]:
@@ -299,7 +304,8 @@ class Simulation:
                         for qubit in slot.targets:  # Allow multiaddressing
                             if qubit not in samples_dict:
                                 samples_dict[qubit] = prepare_dict()
-                            write_samples(slot, samples_dict[qubit], qubit)
+                            if not self._bad_atoms[qubit]:
+                                write_samples(slot, samples_dict[qubit], qubit)
                 self.samples[addr][basis] = samples_dict
 
     def _build_basis_and_op_matrices(self) -> None:
@@ -355,6 +361,7 @@ class Simulation:
     def _construct_hamiltonian(self) -> None:
         def make_vdw_term() -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
+
             For each pair of qubits, calculate the distance between them, then
             assign the local operator "sigma_rr" at each pair. The units are
             given so that the coefficient includes a 1/hbar factor.
@@ -363,7 +370,7 @@ class Simulation:
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 # no VdW interaction with other qubits for a badly prep. qubit
-                if not(q1 in self._bad_atoms or q2 in self._bad_atoms):
+                if not(self._bad_atoms[q1] or self._bad_atoms[q2]):
                     dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
                     U = 0.5 * self._seq._device.interaction_coeff / dist**6
                     vdw += U * self._build_operator('sigma_rr', q1, q2)
@@ -384,13 +391,13 @@ class Simulation:
                 coeffs = [0.5*samples['amp'] * np.exp(-1j * samples['phase']),
                           -0.5 * samples['det']]
                 for op_id, coeff in zip(op_ids, coeffs):
-                    # if np.any(coeff != 0):
-                    # Build once global operators as they are needed
-                    if op_id not in operators:
-                        operators[op_id] =\
-                            self._build_operator(op_id, global_op=True)
-                    terms.append([operators[op_id],
-                                 self._adapt_to_sampling_rate(coeff)])
+                    if np.any(coeff != 0):
+                        # Build once global operators as they are needed
+                        if op_id not in operators:
+                            operators[op_id] =\
+                                self._build_operator(op_id, global_op=True)
+                        terms.append([operators[op_id],
+                                     self._adapt_to_sampling_rate(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
                     if q_id not in operators:
@@ -399,12 +406,12 @@ class Simulation:
                               np.exp(-1j * samples_q['phase']),
                               -0.5 * samples_q['det']]
                     for coeff, op_id in zip(coeffs, op_ids):
-                        # if np.any(coeff != 0):
-                        if op_id not in operators[q_id]:
-                            operators[q_id][op_id] = \
-                                self._build_operator(op_id, q_id)
-                        terms.append([operators[q_id][op_id],
-                                      self._adapt_to_sampling_rate(coeff)])
+                        if np.any(coeff != 0):
+                            if op_id not in operators[q_id]:
+                                operators[q_id][op_id] = \
+                                    self._build_operator(op_id, q_id)
+                            terms.append([operators[q_id][op_id],
+                                          self._adapt_to_sampling_rate(coeff)])
 
             self.operators[addr][basis] = operators
             return terms
@@ -421,7 +428,9 @@ class Simulation:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
-
+        if not qobj_list:
+            # can't simulate an empty sequence
+            qobj_list = [0*self._build_operator('I')]
         ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
         ham.compress()
@@ -430,9 +439,11 @@ class Simulation:
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
         """Get the Hamiltonian created from the sequence at a fixed time.
+
         Args:
             time (float): The specific time in which we want to extract the
                     Hamiltonian (in ns).
+
         Returns:
             qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
             extracted from the effective sequence (determined by
@@ -444,13 +455,18 @@ class Simulation:
             raise ValueError("Provided time is negative.")
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
-    def reset_sequence(self) -> None:
+    def _reset_samples(self) -> None:
+        """Sets all samples to their default values.
+
+        Used when running several noisy runs, each one setting new samples.
+        """
         self.samples = {addr: {basis: {}
                                for basis in ['ground-rydberg', 'digital']}
                         for addr in ['Global', 'Local']}
-        self._collapse_ops = []
 
     def _init_dephasing(self) -> None:
+        """Initializes dephasing collapse operators.
+        """
         if self.basis_name == 'digital' or self.basis_name == 'all':
             raise ValueError("Cannot include dephasing noise in digital-"
                              "or all-basis.")
@@ -462,9 +478,12 @@ class Simulation:
 
     def _build_hamiltonian_from_seq(self) -> None:
         """Builds the hamiltonian from sequence samples.
-        Extracts the sequence samples, builds default operators and
-        builds the hamiltonian from those coefficients and operators.
+
+        Updates the new sequence samples that may have changed due to noise,
+        builds default operators and builds the hamiltonian from those
+        coefficients and operators.
         """
+        self._reset_samples()
         self._extract_samples()
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
@@ -501,8 +520,6 @@ class Simulation:
             """
             if not as_subroutine:
                 # CLEAN SIMULATION:
-                # Build (clean) hamiltonian
-                self._build_hamiltonian_from_seq()
                 measurement_basis = _assign_meas_basis()
             if self._collapse_ops:
                 # temporary workaround due to a qutip bug when using mesolve
@@ -528,12 +545,12 @@ class Simulation:
             # We run the system multiple times
             time_indices = range(len(self._eval_times_array))
             total_count = np.array([Counter() for _ in time_indices])
+            meas_basis = _assign_meas_basis()
             for _ in range(self.config.runs):
-                # At each run, new random noise
+                # At each run, new random noise: new Hamiltonian
                 if 'SPAM' in self.config.noise:
                     self._prepare_bad_atoms()
                 self._build_hamiltonian_from_seq()
-                meas_basis = _assign_meas_basis()
                 # Get CleanResults instance from sequence with added noise:
                 clean_res_noisy_seq = _run_solver(as_subroutine=True,
                                                   measurement_basis=meas_basis)
