@@ -34,34 +34,32 @@ from pulser.sequence import _TimeSlot
 
 
 class Simulation:
-    """Simulation of a pulse sequence using QuTiP.
-    Creates a Hamiltonian object with the proper dimension according to the
-    pulse sequence given, then provides a method to time-evolve an initial
-    state using the QuTiP solvers.
-
-    Args:
-        sequence (Sequence): An instance of a Pulser Sequence that we
-            want to simulate.
-
-    Keyword Args:
-        sampling_rate (float): The fraction of samples that we wish to
-            extract from the pulse sequence to simulate. Has to be a
-            value between 0.05 and 1.0
-        config(SimConfig): Configuration to be used for this simulation.
-        evaluation_times (str,list,float):
-            The list of times at which the quantum
-            state should be evaluated, in μs. If 'Full' is provided, this list
-            is set to be the one used to define the Hamiltonian to the solver.
-            The initial and final times are always included, so that if
-            'Minimal' is provided, the list is set to only contain the initial
-            and the final times. Use a float to act as a sampling rate for
-            the resulting state.
-    """
+    """Simulation of a pulse sequence using QuTiP."""
 
     def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
                  config: Optional[SimConfig] = None,
                  evaluation_times: Union[float, str, ArrayLike] = 'Full'
                  ) -> None:
+        """Instantiates a Simulation object.
+
+        Provides methods to simulate the sequence using QuTiP.
+        e
+        Args:
+            sequence (Sequence): An instance of a Pulser Sequence that we
+                want to simulate.
+            sampling_rate (float): The fraction of samples that we wish to
+                extract from the pulse sequence to simulate. Has to be a
+                value between 0.05 and 1.0.
+            config (SimConfig): Configuration to be used for this simulation.
+            evaluation_times (Union[str, list, float]: The list of times at
+                which the quantum state should be evaluated, in μs.
+                If 'Full' is provided, this list is set to be the one used to
+                define the Hamiltonian to the solver.
+                The initial and final times are always included, so that if
+                'Minimal' is provided, the list is set to only contain the
+                initial and the final times. Use a float to act as a sampling
+                rate for the resulting state.
+        """
         self.seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
@@ -72,8 +70,7 @@ class Simulation:
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self.samples: dict[str, dict[str, dict]] = {
             addr: {basis: {} for basis in ['ground-rydberg', 'digital']}
-            for addr in ['Global', 'Local']
-        }
+            for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
@@ -84,6 +81,7 @@ class Simulation:
 
     @property
     def sampling_rate(self) -> float:
+        """Property getter for sampling_rate."""
         return self._sampling_rate
 
     @sampling_rate.setter
@@ -98,6 +96,7 @@ class Simulation:
 
     @property
     def seq(self) -> Sequence:
+        """Property getter for sequence."""
         return self._seq
 
     @seq.setter
@@ -114,6 +113,7 @@ class Simulation:
 
     @property
     def config(self) -> SimConfig:
+        """Property getter for config."""
         return self._config
 
     @config.setter
@@ -122,9 +122,11 @@ class Simulation:
         self._set_param_from_config()
 
     def show_config(self) -> None:
+        """Shows current configuration."""
         print(self._config)
 
     def reset_config(self) -> None:
+        """Resets configuration to default."""
         self.config = SimConfig()
         print("Configuration has been set to default.")
 
@@ -155,6 +157,7 @@ class Simulation:
 
     @property
     def initial_state(self) -> qutip.Qobj:
+        """Property getter for initial_state."""
         return self._initial_state
 
     @initial_state.setter
@@ -177,6 +180,7 @@ class Simulation:
 
     @property
     def evaluation_times(self) -> Union[str, float, ArrayLike]:
+        """Property getter for evaluation_times."""
         return self._evaluation_times
 
     @evaluation_times.setter
@@ -469,8 +473,7 @@ class Simulation:
                         for addr in ['Global', 'Local']}
 
     def _init_dephasing(self) -> None:
-        """Initializes dephasing collapse operators.
-        """
+        """Initializes dephasing collapse operators."""
         if self.basis_name == 'digital' or self.basis_name == 'all':
             raise ValueError("Cannot include dephasing noise in digital-"
                              "or all-basis.")
@@ -496,8 +499,10 @@ class Simulation:
     def run(self, progress_bar: Optional[bool] = None,
             **options: qutip.solver.Options) -> SimulationResults:
         """Simulate the sequence using QuTiP's solvers.
+
         Will return NoisyResults if it detects any noise in the SimConfig.
         Otherwise will return CleanResults.
+
         Keyword Args:
             progress_bar (bool): If True, the progress bar of QuTiP's solver
                 will be shown.
@@ -518,9 +523,9 @@ class Simulation:
 
         def _run_solver(as_subroutine: bool = False,
                         measurement_basis: str = '') -> CleanResults:
-            """Returns:
-                CleanResults: Object containing the time evolution results. Its
-                _states attribute contains QuTiP quantum states, not Counters.
+            """Returns CleanResults: Object containing evolution results.
+
+            Its _states attribute contains QuTiP quantum states, not Counters.
             """
             if not as_subroutine:
                 # CLEAN SIMULATION:
@@ -546,10 +551,15 @@ class Simulation:
 
         if self.config.noise:
             # NOISY SIMULATION:
-            # We run the system multiple times
+            meas_basis = _assign_meas_basis()
+            if self.basis_name == 'all':
+                basis_name = 'digital'
+            else:
+                basis_name = self.basis_name
+
             time_indices = range(len(self._eval_times_array))
             total_count = np.array([Counter() for _ in time_indices])
-            meas_basis = _assign_meas_basis()
+            # We run the system multiple times
             for _ in range(self.config.runs):
                 # At each run, new random noise: new Hamiltonian
                 if 'SPAM' in self.config.noise:
@@ -578,7 +588,7 @@ class Simulation:
             total_run_prob = [Counter({k: v / N_measures
                                       for k, v in total_count[t].items()})
                               for t in time_indices]
-            return NoisyResults(total_run_prob, self._size, self.basis_name,
+            return NoisyResults(total_run_prob, self._size, basis_name,
                                 meas_basis, self._eval_times_array, N_measures)
         else:
             return _run_solver()

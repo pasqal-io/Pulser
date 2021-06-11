@@ -42,7 +42,7 @@ seq_no_meas_noisy = deepcopy(seq)
 seq.measure('ground-rydberg')
 
 sim = Simulation(seq)
-cfg_noisy = SimConfig(noise=['SPAM', 'doppler', 'amplitude'])
+cfg_noisy = SimConfig(noise=('SPAM', 'doppler', 'amplitude'))
 sim_noisy = Simulation(seq, config=cfg_noisy)
 results = sim.run()
 results_noisy = sim_noisy.run()

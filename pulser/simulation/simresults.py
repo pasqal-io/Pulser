@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 from collections import Counter
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Optional, Union, cast, Tuple
 from collections.abc import Sequence
 
@@ -27,30 +27,26 @@ from numpy.typing import ArrayLike
 
 class SimulationResults(ABC):
     """Results of a simulation run of a pulse sequence.
+
     Parent class for NoisyResults and CleanResults.
     Contains methods for studying the states and extracting useful information
     from them.
     """
 
-    def __init__(self, run_output: Sequence[Union[Counter, qutip.Qobj]],
-                 dim: int, size: int, basis_name: str, meas_basis: str,
-                 sim_times: ArrayLike) -> None:
+    def __init__(self, dim: int, size: int, basis_name: str,
+                 meas_basis: Optional[str], sim_times: ArrayLike) -> None:
         """Initializes a new SimulationResults instance.
+
         Args:
-            run_output (list[qutip.Qobj]): List of ``qutip.Qobj`` corresponding
-                to the states at each time step after the evolution has been
-                simulated.
             dim (int): The dimension of the local space of each atom (2 or 3).
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            sim_times (array): Array of times when simulation results are
-                returned.
-        Keyword Args:
             meas_basis (Optional[str]): The basis in which a sampling
                 measurement is desired.
+            sim_times (array): Array of times (µs) when simulation results are
+                returned.
         """
-        self._states = run_output
         self._dim = dim
         self._size = size
         if basis_name not in {'ground-rydberg', 'digital', 'all'}:
@@ -66,9 +62,41 @@ class SimulationResults(ABC):
         self._meas_basis = meas_basis
         self.sim_times = sim_times
 
+    @abstractmethod
+    def get_state(self, t: int) -> qutip.Qobj:
+        """Returns the state of the system at time t."""
+        ...
+
+    @abstractmethod
+    def get_final_state(self) -> qutip.Qobj:
+        """Returns the final state of the system."""
+        ...
+
+    @abstractmethod
+    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+               ) -> Sequence[Union[float, complex, ArrayLike]]:
+        """Returns the expectation values of operators in obs_list."""
+        ...
+
+    @abstractmethod
+    def sample_state(self, t: int = -1, N_samples: int = 1000) -> Counter:
+        """Returns the result of multiple measurements at time t."""
+        ...
+
+    @abstractmethod
+    def sample_final_state(self, N_samples: int = 1000) -> Counter:
+        """Returns the result of multiple measurements of the final state."""
+        ...
+
+    @abstractmethod
+    def plot(self, op: qutip.Qobj, fmt: str = '.', label: str = '') -> None:
+        """Plots the expectation value of a given operator op."""
+        ...
+
 
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
+
     Contrary to a CleanResults object, this object contains a list of Counter
     describing the state distribution at the time it was created by using
     Simulation.run() with a noisy simulation.
@@ -77,47 +105,56 @@ class NoisyResults(SimulationResults):
     """
 
     def __init__(self, run_output: Sequence[Counter],
-                 size: int, basis_name: str, meas_basis: str,
+                 size: int, basis_name: str, meas_basis: Optional[str],
                  sim_times: ArrayLike, N_measures: int, dim: int = 2) -> None:
         """Initializes a new NoisyResults instance.
-        Warning :
+
+        Warning:
             Can't have single-atom Hilbert spaces with dimension bigger
             than 2 for NoisyResults objects.
             This is not the case for a CleanResults object, containing states
             in Hilbert space, but NoisyResults contains a probability
             distribution of bitstrings, not atomic states
+
         Args:
-            run_output (Counter List): Each Counter contains the
+            run_output (list[Counter]): Each Counter contains the
                 probability distribution of a multi-qubits state,
                 represented as a bitstring. There is one Counter for each time
                 the simulation was asked to return a result.
-            dim (int): The dimension of the local space of each atom (2 or 3).
             size (int): The number of atoms in the register.
-            basis_name (str): The basis indicating the addressed atoms after
-                the pulse sequence ('ground-rydberg', 'digital' or 'all').
+            basis_name (str): Basis indicating the addressed atoms after
+                the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
+                makes no sense after projection on bitstrings).
             sim_times (list): times at which Simulation object returned the
                 results.
-        Keyword Args:
-            meas_basis (None or str): The basis in which a sampling measurement
-                is desired.
+            meas_basis (Optional[str]): The basis in which a sampling
+                measurement is desired.
             N_measures (int): number of measurements needed to compute this
                 result when doing the simulation.
+            dim (int): equals to 2 here, since projections already happened.
         """
-        super().__init__(run_output, dim, size, basis_name, meas_basis,
-                         sim_times)
+        if basis_name == 'all':
+            raise ValueError("`basis_name` must be either 'ground-rydberg' or"
+                             + " 'digital'.")
+        super().__init__(dim, size, basis_name, meas_basis, sim_times)
         self.N_measures = N_measures
+        self._states = run_output
 
     @property
     def states(self) -> Sequence[Counter]:
-        """Probability distribution of the bitstrings"""
+        """Probability distribution of the bitstrings."""
         return self._states
 
     def get_state(self, t: int) -> qutip.Qobj:
         """Get the state at time t as a diagonal density matrix.
-        This is not the density matrix of the system, but is a convenient way
-        of computing expectation values of observables.
+
+        Note:
+            This is not the density matrix of the system, but is a convenient
+            way of computing expectation values of observables.
+
         Args:
             t (int): index of the state to be returned.
+
         Returns:
             qutip.Qobj: States probability distribution as a density matrix.
         """
@@ -138,8 +175,10 @@ class NoisyResults(SimulationResults):
 
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
-        This is not the density matrix of the system, but is a convenient way
-        of computing expectation values of observables.
+
+        Note: This is not the density matrix of the system, but is a convenient
+            way of computing expectation values of observables.
+
         Returns:
             qutip.Qobj: States probability distribution as a density matrix.
         """
@@ -148,11 +187,13 @@ class NoisyResults(SimulationResults):
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> Sequence[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
+
         Args:
             obs_list (array-like of qutip.Qobj or array-like of numpy.ndarray):
                 A list of observables whose expectation value will be
                 calculated. If necessary, each member will be transformed into
                 a qutip.Qobj instance.
+
         Returns:
             list: the list of expectation values of each operator.
         """
@@ -172,14 +213,16 @@ class NoisyResults(SimulationResults):
 
         return cast(Sequence, qutip.expect(qobj_list, density_matrices))
 
-    def sample_state(self, t: int = -1, N_samples: int = 1000
-                     ) -> Counter:
-        """Returns the result of multiple measurements.
+    def sample_state(self, t: int = -1, N_samples: int = 1000) -> Counter:
+        """Returns the result of multiple measurements of the state at time t.
+
         Note : There is no concept of measurement basis here, since states have
         already been projected onto bitstrings.
-        Keyword Args:
+
+        Args:
             N_samples (int, default=1000): Number of samples to take.
             t (int, default=-1) : Time at which the system is measured.
+
         Raises:
             ValueError: If trying to sample without a defined 'meas_basis' in
                 the arguments when the original sequence is not measured.
@@ -194,6 +237,7 @@ class NoisyResults(SimulationResults):
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
 
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
+        """Returns the result of multiple measurements of the final state."""
         return self.sample_state(N_samples=N_samples)
 
     def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
@@ -208,12 +252,15 @@ class NoisyResults(SimulationResults):
         st = self._standard_dev(op)
         return moy, st
 
-    def plot(self, op: qutip.Qobj, error_bars: bool = True, fmt: str = '.',
-             label: str = '') -> None:
-        """Plots the expectation results of an operator.
+    def plot(self, op: qutip.Qobj, fmt: str = '.',
+             label: str = '', error_bars: bool = True) -> None:
+        """Plots the expectation value of a given operator op.
+
         Args:
-            op (Qobj): QuTiP operator which expectation value is to be plotted.
-            error_bars (bool): display error bars or not.
+            op (qutip.Qobj): Operator whose expectation value is wanted.
+            error_bars (bool): Choose to display error bars.
+            fmt (str): Curve plot format.
+            label (str): y-Axis label.
         """
         if error_bars:
             moy, st = self._get_error_bars(op)
@@ -228,14 +275,16 @@ class NoisyResults(SimulationResults):
 
 class CleanResults(SimulationResults):
     """Results of an ideal simulation run of a pulse sequence.
+
     Contains methods for studying the states and extracting useful information
     from them.
     """
 
     def __init__(self, run_output: Sequence[qutip.Qobj],
-                 dim: int, size: int, basis_name: str, meas_basis: str,
-                 sim_times: ArrayLike) -> None:
+                 dim: int, size: int, basis_name: str,
+                 meas_basis: Optional[str], sim_times: ArrayLike) -> None:
         """Initializes a new CleanResults instance.
+
         Args:
             run_output (list of qutip.Qobj): List of `qutip.Qobj` corresponding
                 to the states at each time step after the evolution has been
@@ -244,23 +293,26 @@ class CleanResults(SimulationResults):
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-        Keyword Args:
             meas_basis (None or str): The basis in which a sampling measurement
                 is desired.
+            sim_times (list): Times at which Simulation object returned the
+                results.
         """
-        super().__init__(run_output, dim, size, basis_name, meas_basis,
-                         sim_times)
+        super().__init__(dim, size, basis_name, meas_basis, sim_times)
+        self._states = run_output
 
     @property
     def states(self) -> list[qutip.Qobj]:
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._states)
 
-    def get_final_state(self, reduce_to_basis: Optional[str] = None,
-                        ignore_global_phase: bool = True, tol: float = 1e-6,
-                        normalize: bool = True) -> qutip.Qobj:
-        """Get the final state of the simulation.
-        Keyword Args:
+    def get_state(self, t: int = -1, reduce_to_basis: Optional[str] = None,
+                  ignore_global_phase: bool = True, tol: float = 1e-6,
+                  normalize: bool = True) -> qutip.Qobj:
+        """Get the state at time t of the simulation.
+
+        Args:
+            t (int): Time at which to return the state.
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible.
@@ -271,13 +323,15 @@ class CleanResults(SimulationResults):
                 eliminated state.
             normalize (bool, default=True): Whether to normalize the reduced
                 state.
+
         Returns:
             qutip.Qobj: The resulting final state.
+
         Raises:
             TypeError: If trying to reduce to a basis that would eliminate
                 states with significant occupation probabilites.
         """
-        final_state = cast(qutip.Qobj, self._states[-1].copy())
+        final_state = cast(qutip.Qobj, self._states[t].copy())
         if ignore_global_phase:
             full = final_state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
@@ -307,9 +361,17 @@ class CleanResults(SimulationResults):
 
         return final_state.tidyup()
 
+    def get_final_state(self, reduce_to_basis: Optional[str] = None,
+                        ignore_global_phase: bool = True, tol: float = 1e-6,
+                        normalize: bool = True) -> qutip.Qobj:
+        """Returns the final state of the Simulation."""
+        return self.get_state(-1, reduce_to_basis, ignore_global_phase, tol,
+                              normalize)
+
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
+
         Args:
             obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): A list of
                 observables whose expectation value will be calculated.
@@ -333,12 +395,14 @@ class CleanResults(SimulationResults):
 
         return [qutip.expect(qobj, self._states) for qobj in qobj_list]
 
-    def sample_state(self, meas_basis: Optional[str] = None, t: int = -1,
-                     N_samples: int = 1000) -> Counter:
-        r"""Returns the result of multiple measurements in a given basis.
+    def sample_state(self, t: int = -1, N_samples: int = 1000,
+                     meas_basis: Optional[str] = None) -> Counter:
+        r"""Returns the result of multiple measurements of the state at time t.
+
         The encoding of the results depends on the meaurement basis. Namely:
         - *ground-rydberg* : :math:`1 = |r\rangle;~ 0 = |g\rangle, |h\rangle`
         - *digital* : :math:`1 = |h\rangle;~ 0 = |g\rangle, |r\rangle`
+
         Note:
             The results are presented using a big-endian representation,
             according to the pre-established qubit ordering in the register.
@@ -346,11 +410,13 @@ class CleanResults(SimulationResults):
             ...), in this order, the corresponding value, in binary, will be
             0Bb0b1..., where b0 is the outcome of measuring 'q0', 'b1' of
             measuring 'q1' and so on.
+
         Keyword Args:
             meas_basis (str, default=None): 'ground-rydberg' or 'digital'. If
                 left as None, uses the measurement basis defined in the
                 original sequence.
             N_samples (int, default=1000): Number of samples to take.
+
         Raises:
             ValueError: If trying to sample without a defined 'meas_basis' in
                 the arguments when the original sequence is not measured.
@@ -359,8 +425,7 @@ class CleanResults(SimulationResults):
             meas_basis = self._meas_basis
         if meas_basis not in {'ground-rydberg', 'digital'}:
             raise ValueError(
-                "`meas_basis` can only be 'ground-rydberg' or 'digital'."
-                )
+                "`meas_basis` can only be 'ground-rydberg' or 'digital'.")
 
         N = self._size
         self.N_samples = N_samples
@@ -404,27 +469,29 @@ class CleanResults(SimulationResults):
         else:
             raise NotImplementedError(
                 "Cannot sample system with single-atom state vectors of "
-                "dimension > 3."
-                )
+                "dimension > 3.")
         # Takes care of potential numerical artefacts in case sum(weights) != 1
         weights /= sum(weights)
         dist = np.random.multinomial(N_samples, weights)
         return Counter(
                {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
 
-    def sample_final_state(self, meas_basis: Optional[str] = None,
-                           N_samples: int = 1000) -> Counter:
+    def sample_final_state(self, N_samples: int = 1000,
+                           meas_basis: Optional[str] = None) -> Counter:
+        """Returns the result of multiple measurements of the final state."""
         return self.sample_state(meas_basis=meas_basis, N_samples=N_samples)
 
     def detection_from_basis_state(self, N_d: int, shot: str,
                                    spam: dict[str, float]) -> Counter:
         """Computes the distribution of states detected when detecting `shot`.
+
         Part of the SPAM implementation : computes measurement errors.
+
         Args:
-            shot (str): binary string of length the number of atoms of the
+            N_d (int): Number of times state has been detected.
+            shot (str): Binary string of length the number of atoms of the
             simulation.
-            N_samples (int): Number of times state has been detected.
-            spam (dict): dictionnary gathering the SPAM error
+            spam (dict): Dictionnary gathering the SPAM error
             probabilities.
         """
         n_0 = shot.count('0')
@@ -450,13 +517,17 @@ class CleanResults(SimulationResults):
                                        t: int = -1, meas_basis: str = '',
                                        N_samples: int = 1000) -> Counter:
         """Returns the distribution of states really detected.
+
         Doesn't take state preparation errors into account.
         Part of the SPAM implementation.
+
         Args:
-            sampled_state (dict): dictionnary of detected states as binary
-            string with their detection number.
-            spam (dict): dictionnary gathering the SPAM error
+            spam (dict): Dictionnary gathering the SPAM error
             probabilities.
+            t (int): Time at which to return the samples.
+            meas_basis (str): Chosen measurement basis used to sample the
+                bitstrings.
+            N_samples (int): Number of samples.
         """
         sampled_state = self.sample_state(t=t, meas_basis=meas_basis,
                                           N_samples=N_samples)
@@ -468,6 +539,14 @@ class CleanResults(SimulationResults):
         return detected_sample_dict
 
     def plot(self, op: qutip.Qobj, fmt: str = '', label: str = '') -> None:
+        """Plots the expectation value of a given operator op.
+
+        Args:
+            op (qutip.Qobj): Operator whose expectation value is wanted.
+            fmt (str): Curve plot format.
+            label (str): Axis label.
+            error_bars (bool): False here.
+        """
         plt.plot(self.sim_times, self.expect([op])[0], fmt, label=label)
         plt.xlabel('Time (µs)')
         plt.ylabel('Expectation value')
