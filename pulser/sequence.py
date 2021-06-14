@@ -168,6 +168,7 @@ class Sequence:
         self._register: Register = register
         self._device: Device = device
         self._in_xy: bool = False
+        self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
         self._channels: dict[str, Channel] = {}
         self._schedule: dict[str, list[_TimeSlot]] = {}
@@ -308,6 +309,9 @@ class Sequence:
             raise ValueError("The magnetic field must have a magnitude greater"
                              " than 0.")
         self._mag_field = mag_vector
+
+        # No parametrization -> Always stored as a regular call
+        self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
     def declare_channel(self, name: str, channel_id: str,
                         initial_target: Optional[
