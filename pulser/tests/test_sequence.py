@@ -115,7 +115,13 @@ def test_magnetic_field():
     seq3.add(Pulse.ConstantPulse(100, var, 1, 0), 'ch0')
     assert seq3.is_parametrized()
     with pytest.raises(ValueError, match="can only be set on an empty seq"):
-        seq.set_magnetic_field()
+        seq3.set_magnetic_field()
+
+    seq3_str = seq3.serialize()
+    seq3_ = Sequence.deserialize(seq3_str)
+    assert seq3_._in_xy
+    assert str(seq3) == str(seq3_)
+    assert np.all(seq3_.magnetic_field == np.array((1., 0., 0.)))
 
 
 def test_target():
