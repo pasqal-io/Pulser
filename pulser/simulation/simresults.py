@@ -21,6 +21,7 @@ from collections.abc import Sequence
 
 import matplotlib.pyplot as plt
 import qutip
+from qutip.piqs import isdiagonal
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -55,6 +56,8 @@ class SimulationResults(ABC):
                 )
         self._basis_name = basis_name
         self.sim_times = sim_times
+        self._results: Union[list[Counter], list[qutip.Qobj]]
+        self._weights: list[float]
 
     @abstractmethod
     def get_state(self, t: int) -> qutip.Qobj:
@@ -67,17 +70,6 @@ class SimulationResults(ABC):
         pass
 
     @abstractmethod
-    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
-               ) -> Sequence[Union[float, complex, ArrayLike]]:
-        """Returns the expectation values of operators in obs_list."""
-        pass
-
-    @abstractmethod
-    def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
-        """Returns the result of multiple measurements at time t."""
-        pass
-
-    @abstractmethod
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state."""
         pass
@@ -86,6 +78,34 @@ class SimulationResults(ABC):
     def plot(self, op: qutip.Qobj, fmt: str = '.', label: str = '') -> None:
         """Plots the expectation value of a given operator op."""
         pass
+
+    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+               ) -> list[Union[float, complex, ArrayLike]]:
+        """Returns the expectation values of operators in obs_list."""
+        states = [self.get_state(t) for
+                  t in range(len(self._results))]
+        if not isinstance(obs_list, (list, np.ndarray)):
+            raise TypeError("`obs_list` must be a list of operators.")
+
+        qobj_list = []
+        for obs in obs_list:
+            if not (isinstance(obs, np.ndarray)
+                    or isinstance(obs, qutip.Qobj)):
+                raise TypeError("Incompatible type of observable.")
+            if obs.shape != (2**self._size, 2**self._size):
+                raise ValueError("Incompatible shape of observable.")
+            qobj_list.append(qutip.Qobj(obs))
+
+        return cast(list, qutip.expect(qobj_list, states))
+
+    def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
+        """Returns the result of multiple measurements at time t.
+
+        SimResults._weights is computed at time t for each child class.
+        """
+        dist = np.random.multinomial(N_samples, self._weights)
+        return Counter({np.binary_repr(
+                        i, self._size): dist[i] for i in np.nonzero(dist)[0]})
 
 
 class NoisyResults(SimulationResults):
@@ -98,7 +118,7 @@ class NoisyResults(SimulationResults):
     information from them.
     """
 
-    def __init__(self, run_output: Sequence[Counter],
+    def __init__(self, run_output: list[Counter],
                  size: int, basis_name: str,
                  sim_times: ArrayLike, N_measures: int, dim: int = 2) -> None:
         """Initializes a new NoisyResults instance.
@@ -135,7 +155,7 @@ class NoisyResults(SimulationResults):
         self._results = run_output
 
     @property
-    def states(self) -> Sequence[Counter]:
+    def states(self) -> list[Counter]:
         """Probability distribution of the bitstrings."""
         return self._results
 
@@ -179,7 +199,7 @@ class NoisyResults(SimulationResults):
         return self.get_state(-1)
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
-               ) -> Sequence[Union[float, complex, ArrayLike]]:
+               ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
         Args:
@@ -194,21 +214,11 @@ class NoisyResults(SimulationResults):
         Returns:
             list: the list of expectation values of each operator.
         """
-        density_matrices = [self.get_state(t) for
-                            t in range(len(self._results))]
-        if not isinstance(obs_list, (list, np.ndarray)):
-            raise TypeError("`obs_list` must be a list of operators")
-
-        qobj_list = []
         for obs in obs_list:
-            if not (isinstance(obs, np.ndarray)
-                    or isinstance(obs, qutip.Qobj)):
-                raise TypeError("Incompatible type of observable.")
-            if obs.shape != (2**self._size, 2**self._size):
-                raise ValueError("Incompatible shape of observable.")
-            qobj_list.append(qutip.Qobj(obs))
+            if not isdiagonal(obs):
+                raise ValueError("Observables in `obs_list` must be diagonal.")
 
-        return cast(Sequence, qutip.expect(qobj_list, density_matrices))
+        return super().expect(obs_list)
 
     def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the state at time t.
@@ -225,12 +235,14 @@ class NoisyResults(SimulationResults):
                 the arguments when the original sequence is not measured.
         """
         N = self._size
-        bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
-        probs = [self._results[t][b] for b in bitstrings]
 
-        dist = np.random.multinomial(N_samples, probs)
-        return Counter(
-               {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
+        def _calc_weights() -> None:
+            bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
+            weights = [self._results[t][b] for b in bitstrings]
+            self._weights = weights
+
+        _calc_weights()
+        return super().sample_state(t, N_samples)
 
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state."""
@@ -276,7 +288,7 @@ class CleanResults(SimulationResults):
     from them.
     """
 
-    def __init__(self, run_output: Sequence[qutip.Qobj],
+    def __init__(self, run_output: list[qutip.Qobj],
                  dim: int, size: int, basis_name: str,
                  sim_times: ArrayLike, meas_basis: Optional[str]) -> None:
         """Initializes a new CleanResults instance.
@@ -380,22 +392,7 @@ class CleanResults(SimulationResults):
                 If necessary, each member will be transformed into a
                 ``qutip.Qobj`` instance.
         """
-        if not isinstance(obs_list, (list, np.ndarray)):
-            raise TypeError("`obs_list` must be a list of operators")
-
-        qobj_list = []
-        for obs in obs_list:
-            if not (isinstance(obs, np.ndarray)
-                    or isinstance(obs, qutip.Qobj)):
-                raise TypeError("Incompatible type of observable.")
-            if obs.shape != (self._dim**self._size, self._dim**self._size):
-                raise ValueError("Incompatible shape of observable.")
-            # Transfrom to qutip.Qobj and take dims from state
-            dim = cast(qutip.Qobj, self._results[0]).dims[0]
-            dim_list = [dim, dim]
-            qobj_list.append(qutip.Qobj(obs, dims=dim_list))
-
-        return [qutip.expect(qobj, self._results) for qobj in qobj_list]
+        return super().expect(obs_list)
 
     def sample_state(self, t: int, N_samples: int = 1000,
                      meas_basis: Optional[str] = None) -> Counter:
@@ -423,59 +420,63 @@ class CleanResults(SimulationResults):
             ValueError: If trying to sample without a defined 'meas_basis' in
                 the arguments when the original sequence is not measured.
         """
+        N = self._size
         if not meas_basis:
             meas_basis = self._meas_basis
         if meas_basis not in {'ground-rydberg', 'digital'}:
             raise ValueError(
                 "`meas_basis` can only be 'ground-rydberg' or 'digital'.")
 
-        N = self._size
-        state_t = cast(qutip.Qobj, self._results[t]).unit()
-        # Case of a density matrix
-        if state_t.type != "ket":
-            probs = np.abs(state_t.diag())
-        else:
-            probs = (np.abs(state_t.full())**2).flatten()
-
-        if self._dim == 2:
-            if meas_basis == self._basis_name:
-                # State vector ordered with r first for 'ground_rydberg'
-                # e.g. N=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
-                # Invert the order ->  [00, 01, 10, 11] correspondence
-                weights = probs if meas_basis == 'digital' else probs[::-1]
+        def _calc_weights() -> None:
+            state_t = cast(qutip.Qobj, self._results[t]).unit()
+            # Case of a density matrix
+            if state_t.type != "ket":
+                probs = np.abs(state_t.diag())
             else:
-                return Counter({'0' * N: int(N_samples)})
+                probs = (np.abs(state_t.full())**2).flatten()
 
-        elif self._dim == 3:
-            if meas_basis == 'ground-rydberg':
-                one_state = 0       # 1 = |r>
-                ex_one = slice(1, 3)
-            elif meas_basis == 'digital':
-                one_state = 2       # 1 = |h>
-                ex_one = slice(0, 2)
-            probs = probs.reshape([3]*N)
-            weights = np.zeros(2**N)
-            for dec_val in range(2**N):
-                ind: list[Union[int, slice]] = []
-                for v in np.binary_repr(dec_val, width=N):
-                    if v == '0':
-                        ind.append(ex_one)
-                    else:
-                        ind.append(one_state)
-                # Eg: 'digital' basis => |1> = index 2, |0> = index 0, 1 = 0:2
-                # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
-                # We sum all probabilites that correspond to measuring 11010,
-                # namely hhghg, hhrhg, hhghr, hhrhr
-                weights[dec_val] = np.sum(probs[tuple(ind)])
-        else:
-            raise NotImplementedError(
-                "Cannot sample system with single-atom state vectors of "
-                "dimension > 3.")
-        # Takes care of potential numerical artefacts in case sum(weights) != 1
-        weights /= sum(weights)
-        dist = np.random.multinomial(N_samples, weights)
-        return Counter(
-               {np.binary_repr(i, N): dist[i] for i in np.nonzero(dist)[0]})
+            if self._dim == 2:
+                if meas_basis == self._basis_name:
+                    # State vector ordered with r first for 'ground_rydberg'
+                    # e.g. N=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
+                    # Invert the order ->  [00, 01, 10, 11] correspondence
+                    weights = probs if meas_basis == 'digital' else probs[::-1]
+                else:
+                    # Only 000...000 is measured
+                    weights = np.zeros(probs.size)
+                    weights[0] = 1.
+
+            elif self._dim == 3:
+                if meas_basis == 'ground-rydberg':
+                    one_state = 0       # 1 = |r>
+                    ex_one = slice(1, 3)
+                elif meas_basis == 'digital':
+                    one_state = 2       # 1 = |h>
+                    ex_one = slice(0, 2)
+                probs = probs.reshape([3]*N)
+                weights = np.zeros(2**N)
+                for dec_val in range(2**N):
+                    ind: list[Union[int, slice]] = []
+                    for v in np.binary_repr(dec_val, width=N):
+                        if v == '0':
+                            ind.append(ex_one)
+                        else:
+                            ind.append(one_state)
+                    # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
+                    # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
+                    # We sum all probabilites that correspond to measuring
+                    # 11010, namely hhghg, hhrhg, hhghr, hhrhr
+                    weights[dec_val] = np.sum(probs[tuple(ind)])
+            else:
+                raise NotImplementedError(
+                    "Cannot sample system with single-atom state vectors of "
+                    "dimension > 3.")
+            # Takes care of numerical artefacts in case sum(weights) != 1
+            weights /= sum(weights)
+            self._weights = weights
+
+        _calc_weights()
+        return super().sample_state(t, N_samples)
 
     def sample_final_state(self, N_samples: int = 1000,
                            meas_basis: Optional[str] = None) -> Counter:
