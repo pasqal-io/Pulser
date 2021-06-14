@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains all supported types of waveforms and the Waveform parent class."""
 
 from __future__ import annotations
 
@@ -38,6 +39,7 @@ class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
 
     def __new__(cls, *args, **kwargs):      # type: ignore
+        """Creates a Waveform instance or a ParamObj depending on the input."""
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
                 return ParamObj(cls, *args, **kwargs)
@@ -57,7 +59,7 @@ class Waveform(ABC):
             raise TypeError("duration needs to be castable to an int but "
                             f"type {type(duration)} was provided.")
         if _duration <= 0:
-            raise ValueError("A waveform has to have a positive duration, "
+            raise ValueError("A waveform must have a positive duration, "
                              + f"not {duration}.")
         elif duration - _duration != 0:
             warnings.warn(f"A waveform duration of {duration} ns is below the"
@@ -99,7 +101,6 @@ class Waveform(ABC):
 
     def draw(self) -> None:
         """Draws the waveform."""
-
         fig, ax = plt.subplots()
         self._plot(ax, "rad/µs")
 

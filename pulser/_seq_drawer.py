@@ -88,8 +88,6 @@ def draw_sequence(seq: pulser.sequence.Sequence,
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
-
-    Keyword args:
         sampling_rate (float): Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
@@ -227,7 +225,7 @@ def draw_sequence(seq: pulser.sequence.Sequence,
                         )
                     else:
                         area_val = seq_.type.amplitude.integral / np.pi
-                    phase_val = seq_.type.phase / np.pi
+                    phase_val = seq_.type.phase
                     x_plot = (seq_.ti + seq_.tf) / 2 / time_scale
                     if (
                         seq._schedule[ch][pulse_num-1].type == "target"

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Contains the ParamObj and auxiliary classes for object parametrization."""
 
 from __future__ import annotations
 
@@ -63,17 +64,18 @@ for method in reversible_ops:
 
 
 class ParamObj(Parametrized, OpSupport):
+    """Holds a call to a given class.
+
+    When called, a ParamObj instance returns `cls(*args, **kwargs)`.
+
+    Args:
+        cls (callable): The object to call. Usually it's a class that's
+            instantiated when called.
+        args: The args for calling `cls`.
+        kwargs: The kwargs for calling `cls`.
+    """
     def __init__(self, cls: Callable, *args: Any, **kwargs: Any) -> None:
-        """Holds a call to a given class.
-
-        When called, a ParamObj instance returns `cls(*args, **kwargs)`.
-
-        Args:
-            cls (callable): The object to call. Usually it's a class that's
-                instantiated when called.
-            args: The args for calling `cls`.
-            kwargs: The kwargs for calling `cls`.
-        """
+        """Initializes a new ParamObj."""
         self.cls = cls
         self._variables: dict[str, Variable] = {}
         if isinstance(self.cls, Parametrized):
@@ -88,6 +90,7 @@ class ParamObj(Parametrized, OpSupport):
 
     @property
     def variables(self) -> dict[str, Variable]:
+        """Returns all involved variables."""
         return self._variables
 
     def build(self) -> Any:
@@ -134,6 +137,7 @@ class ParamObj(Parametrized, OpSupport):
         return obj_to_dict(self, cls_dict, *args, **self.kwargs)
 
     def __call__(self, *args: Any, **kwargs: Any) -> ParamObj:
+        """Returns a new ParamObj storing a call to the current ParamObj."""
         obj = ParamObj(self, *args, **kwargs)
         warnings.warn("Calls to methods of parametrized objects are only "
                       "executed if they serve as arguments of other "
