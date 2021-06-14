@@ -80,7 +80,8 @@ class SimulationResults:
         Keyword Args:
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible.
+                population of the states to be ignored is negligible. Doesn't 
+                apply to XY mode.
             ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
@@ -114,7 +115,7 @@ class SimulationResults:
             else:
                 raise ValueError(
                     "'reduce_to_basis' must be 'ground-rydberg' "
-                    + f"'digital' or 'XY', not '{reduce_to_basis}'.")
+                    + f"'digital', not '{reduce_to_basis}'.")
             ex_inds = [i for i in range(3**self._size) if ex_state in
                        np.base_repr(i, base=3).zfill(self._size)]
             ex_probs = np.abs(final_state.extract_states(ex_inds).full()) ** 2
