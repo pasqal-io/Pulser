@@ -269,13 +269,13 @@ class Simulation:
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 dist = np.linalg.norm(
                     self._qdict[q1] - self._qdict[q2])
-                mag_norm = np.linalg.norm(self._seq._register._mag_field)
-                if mag_norm < 1e-6:
+                mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
+                if mag_norm < 1e-8:
                     cosine = 0.
                 else:
                     cosine = np.dot(
                         (self._qdict[q1] - self._qdict[q2]),
-                        self._seq._register._mag_field
+                        self._seq.magnetic_field[0:2]
                         ) / (dist * mag_norm)
                 U = 0.5 * self._seq._device.interaction_coeff_xy * \
                     (1 - 3 * cosine ** 2) / dist**3

@@ -38,8 +38,7 @@ class Register:
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike],
-                 mag_field: ArrayLike = np.array([0., 0.])):
+    def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError("The qubits have to be stored in a dictionary "
@@ -55,20 +54,6 @@ class Register:
             raise ValueError("All coordinates must be specified as vectors of"
                              " size 2 or 3.")
         self._coords = coords
-        self._mag_field = np.array(mag_field)
-
-    @property
-    def mag_field(self) -> np.ndarray:
-        return self._mag_field
-
-    @mag_field.setter
-    def magnetic_field(self, mag_field: ArrayLike) -> None:
-        """Set the external magnetic field of the register.
-
-        Args:
-            mag_field (list or np.ndarray): coordinates [Bx, By].
-        """
-        self._mag_field = np.copy(np.array(mag_field))
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
