@@ -80,7 +80,7 @@ class SimulationResults:
         Keyword Args:
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible. Doesn't 
+                population of the states to be ignored is negligible. Doesn't
                 apply to XY mode.
             ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
