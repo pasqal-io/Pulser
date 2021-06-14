@@ -309,6 +309,9 @@ class Sequence:
                              " than 0.")
         self._mag_field = mag_vector
 
+        # No parametrization -> Always stored as a regular call
+        self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
+
     def declare_channel(self, name: str, channel_id: str,
                         initial_target: Optional[
                             Union[Iterable[Union[QubitId, Parametrized]],
