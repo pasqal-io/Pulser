@@ -75,6 +75,7 @@ class SimulationResults(ABC):
 
     @abstractmethod
     def _calc_weights(self, t: int) -> ArrayLike:
+        """Computes the bitstring probabilities for sampled states."""
         pass
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
@@ -97,10 +98,7 @@ class SimulationResults(ABC):
         return cast(list, qutip.expect(qobj_list, states))
 
     def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
-        """Returns the result of multiple measurements at time t.
-
-        SimResults._weights is computed at time t for each child class.
-        """
+        """Returns the result of multiple measurements at time t."""
         dist = np.random.multinomial(N_samples, self._calc_weights(t))
         return Counter({np.binary_repr(
                         i, self._size): dist[i] for i in np.nonzero(dist)[0]})
@@ -273,7 +271,7 @@ class CleanResults(SimulationResults):
 
     def __init__(self, run_output: list[qutip.Qobj],
                  dim: int, size: int, basis_name: str,
-                 sim_times: ArrayLike, meas_basis: Optional[str]) -> None:
+                 sim_times: ArrayLike, meas_basis: str) -> None:
         """Initializes a new CleanResults instance.
 
         Args:
@@ -284,10 +282,10 @@ class CleanResults(SimulationResults):
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            meas_basis (None or str): The basis in which a sampling measurement
-                is desired.
             sim_times (list): Times at which Simulation object returned the
                 results.
+            meas_basis (str): The basis in which a sampling measurement
+                is desired.
         """
         super().__init__(dim, size, basis_name, sim_times)
         if meas_basis:
@@ -471,8 +469,6 @@ class CleanResults(SimulationResults):
             spam (dict): Dictionnary gathering the SPAM error
             probabilities.
             t (int): Time at which to return the samples.
-            meas_basis (str): Chosen measurement basis used to sample the
-                bitstrings.
             N_samples (int): Number of samples.
         """
         sampled_state = self.sample_state(t, N_samples)
