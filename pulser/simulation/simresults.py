@@ -35,7 +35,7 @@ class SimulationResults(ABC):
     """
 
     def __init__(self, dim: int, size: int, basis_name: str,
-                 sim_times: ArrayLike) -> None:
+                 sim_times: np.ndarray) -> None:
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -43,8 +43,6 @@ class SimulationResults(ABC):
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            meas_basis (Optional[str]): The basis in which a sampling
-                measurement is desired.
             sim_times (array): Array of times (µs) when simulation results are
                 returned.
         """
@@ -59,7 +57,7 @@ class SimulationResults(ABC):
         self._results: Union[list[Counter], list[qutip.Qobj]]
 
     @abstractmethod
-    def get_state(self, t: int) -> qutip.Qobj:
+    def get_state(self, t: float) -> qutip.Qobj:
         """Returns the state of the system at time t."""
         pass
 
@@ -74,15 +72,14 @@ class SimulationResults(ABC):
         pass
 
     @abstractmethod
-    def _calc_weights(self, t: int) -> ArrayLike:
+    def _calc_weights(self, t: float) -> ArrayLike:
         """Computes the bitstring probabilities for sampled states."""
         pass
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> list[Union[float, complex, ArrayLike]]:
         """Returns the expectation values of operators in obs_list."""
-        states = [self.get_state(t) for
-                  t in range(len(self._results))]
+        states = [self.get_state(t) for t in self.sim_times]
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators.")
 
@@ -97,11 +94,11 @@ class SimulationResults(ABC):
 
         return cast(list, qutip.expect(qobj_list, states))
 
-    def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
+    def sample_state(self, t: float, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements at time t.
 
         Args:
-            t (int): Time at which the state is sampled.
+            t (float): Time at which the state is sampled.
             N_samples (int): Number of samples to return.
         """
         dist = np.random.multinomial(N_samples, self._calc_weights(t))
@@ -110,7 +107,13 @@ class SimulationResults(ABC):
 
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state."""
-        return self.sample_state(-1, N_samples)
+        return self.sample_state(self.sim_times[-1], N_samples)
+
+    def _get_index_from_time(self, t_float: float) -> int:
+        try:
+            return int(np.where(self.sim_times == t_float)[0][0])
+        except IndexError:
+            print(f"Given time {t_float} is absent from Simulation times.")
 
 
 class NoisyResults(SimulationResults):
@@ -125,7 +128,7 @@ class NoisyResults(SimulationResults):
 
     def __init__(self, run_output: list[Counter],
                  size: int, basis_name: str,
-                 sim_times: ArrayLike, N_measures: int, dim: int = 2) -> None:
+                 sim_times: np.ndarray, N_measures: int, dim: int = 2) -> None:
         """Initializes a new NoisyResults instance.
 
         Warning:
@@ -164,7 +167,7 @@ class NoisyResults(SimulationResults):
         """Probability distribution of the bitstrings."""
         return self._results
 
-    def get_state(self, t: int) -> qutip.Qobj:
+    def get_state(self, t: float) -> qutip.Qobj:
         """Get the state at time t as a diagonal density matrix.
 
         Note:
@@ -189,8 +192,9 @@ class NoisyResults(SimulationResults):
                                      in bitstring])
             return proj
 
+        t_index = self._get_index_from_time(t)
         return sum(v * _proj_from_bitstring(b) for
-                   b, v in self._results[t].items())
+                   b, v in self._results[t_index].items())
 
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
@@ -201,7 +205,7 @@ class NoisyResults(SimulationResults):
         Returns:
             qutip.Qobj: States probability distribution as a density matrix.
         """
-        return self.get_state(-1)
+        return self.get_state(self.sim_times[-1])
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> list[Union[float, complex, ArrayLike]]:
@@ -225,14 +229,15 @@ class NoisyResults(SimulationResults):
 
         return super().expect(obs_list)
 
-    def _calc_weights(self, t: int) -> ArrayLike:
+    def _calc_weights(self, t: float) -> ArrayLike:
         N = self._size
         bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
-        return [self._results[t][b] for b in bitstrings]
+        t_index = self._get_index_from_time(t)
+        return [self._results[t_index][b] for b in bitstrings]
 
     def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
         """Returns the square root of the variance of operator op."""
-        density_mats = [self.get_state(t) for t in range(len(self._results))]
+        density_mats = [self.get_state(t) for t in self.sim_times]
         return cast(ArrayLike,
                     np.sqrt(qutip.variance(op, density_mats) / self.N_measures)
                     )
@@ -276,7 +281,7 @@ class CleanResults(SimulationResults):
 
     def __init__(self, run_output: list[qutip.Qobj],
                  dim: int, size: int, basis_name: str,
-                 sim_times: ArrayLike, meas_basis: str) -> None:
+                 sim_times: np.ndarray, meas_basis: str) -> None:
         """Initializes a new CleanResults instance.
 
         Args:
@@ -306,13 +311,13 @@ class CleanResults(SimulationResults):
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._results)
 
-    def get_state(self, t: int, reduce_to_basis: Optional[str] = None,
+    def get_state(self, t: float, reduce_to_basis: Optional[str] = None,
                   ignore_global_phase: bool = True, tol: float = 1e-6,
                   normalize: bool = True) -> qutip.Qobj:
         """Get the state at time t of the simulation.
 
         Args:
-            t (int): Time at which to return the state.
+            t (float): Time at which to return the state.
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible.
@@ -331,11 +336,12 @@ class CleanResults(SimulationResults):
             TypeError: If trying to reduce to a basis that would eliminate
                 states with significant occupation probabilites.
         """
-        final_state = cast(qutip.Qobj, self._results[t].copy())
+        t_index = self._get_index_from_time(t)
+        state = cast(qutip.Qobj, self._results[t_index].copy())
         if ignore_global_phase:
-            full = final_state.full()
+            full = state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
-            final_state *= np.exp(-1j * global_ph)
+            state *= np.exp(-1j * global_ph)
         if self._dim != 3:
             if reduce_to_basis not in [None, self._basis_name]:
                 raise TypeError(f"Can't reduce a system in {self._basis_name}"
@@ -350,27 +356,27 @@ class CleanResults(SimulationResults):
                                  + f"or 'digital', not '{reduce_to_basis}'.")
             ex_inds = [i for i in range(3**self._size) if ex_state in
                        np.base_repr(i, base=3).zfill(self._size)]
-            ex_probs = np.abs(final_state.extract_results(ex_inds).full()) ** 2
+            ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
             if not np.all(np.isclose(ex_probs, 0, atol=tol)):
                 raise TypeError(
                     "Can't reduce to chosen basis because the population of a "
                     "state to eliminate is above the allowed tolerance."
                     )
-            final_state = final_state.eliminate_results(
-                                                ex_inds, normalize=normalize)
+            state = state.eliminate_states(ex_inds, normalize=normalize)
 
-        return final_state.tidyup()
+        return state.tidyup()
 
     def get_final_state(self, reduce_to_basis: Optional[str] = None,
                         ignore_global_phase: bool = True, tol: float = 1e-6,
                         normalize: bool = True) -> qutip.Qobj:
         """Returns the final state of the Simulation."""
-        return self.get_state(-1, reduce_to_basis, ignore_global_phase, tol,
-                              normalize)
+        return self.get_state(self.sim_times[-1], reduce_to_basis,
+                              ignore_global_phase, tol, normalize)
 
-    def _calc_weights(self, t: int) -> ArrayLike:
+    def _calc_weights(self, t: float) -> ArrayLike:
+        t_index = self._get_index_from_time(t)
         N = self._size
-        state_t = cast(qutip.Qobj, self._results[t]).unit()
+        state_t = cast(qutip.Qobj, self._results[t_index]).unit()
         # Case of a density matrix
         if state_t.type != "ket":
             probs = np.abs(state_t.diag())
@@ -451,7 +457,7 @@ class CleanResults(SimulationResults):
         return Counter(detected_dict)
 
     def sampling_with_detection_errors(self, spam: dict[str, float],
-                                       t: int = -1,
+                                       t: float,
                                        N_samples: int = 1000) -> Counter:
         """Returns the distribution of states really detected.
 
@@ -461,7 +467,7 @@ class CleanResults(SimulationResults):
         Args:
             spam (dict): Dictionnary gathering the SPAM error
             probabilities.
-            t (int): Time at which to return the samples.
+            t (float): Time at which to return the samples.
             N_samples (int): Number of samples.
         """
         sampled_state = self.sample_state(t, N_samples)

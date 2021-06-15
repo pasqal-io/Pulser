@@ -574,12 +574,12 @@ class Simulation:
                         [clean_res_noisy_seq.sampling_with_detection_errors(
                             self.config.spam_dict,
                             t, N_samples=self.config.samples_per_run)
-                         for t in time_indices])
+                         for t in self._eval_times_array])
                 else:
                     total_count += np.array(
                         [clean_res_noisy_seq.sample_state(
                             t, N_samples=self.config.samples_per_run)
-                         for t in time_indices])
+                         for t in self._eval_times_array])
             N_measures = self.config.runs * self.config.samples_per_run
             total_run_prob = [Counter({k: v / N_measures
                                       for k, v in total_count[t].items()})
