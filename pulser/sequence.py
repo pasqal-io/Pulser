@@ -452,9 +452,19 @@ class Sequence:
                         current_max_t = op.tf
                         break
         ti = current_max_t
-        tf = ti + pulse.duration
         if ti > t0:
-            self._delay(ti-t0, channel)
+            # Insert a delay
+            delay_duration = ti - t0
+
+            # Delay must not be shorter than the min duration for this channel
+            min_duration = self._channels[channel].min_duration
+            if delay_duration < min_duration:
+                ti += (min_duration - delay_duration)
+                delay_duration = min_duration
+
+            self._delay(delay_duration, channel)
+
+        tf = ti + pulse.duration
 
         prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
         if len(prs) != 1:
@@ -773,11 +783,6 @@ class Sequence:
         self._validate_channel(channel)
         if self.is_parametrized():
             return
-
-        # Delay must not be shorter than the minimal duration for this channel
-        min_duration = self._channels[channel].min_duration
-        if duration < min_duration:
-            duration = min_duration
 
         last = self._last(channel)
         ti = last.tf
