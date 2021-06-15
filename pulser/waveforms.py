@@ -523,12 +523,26 @@ class BlackmanWaveform(Waveform):
 
 
 class InterpolatedWaveform(Waveform):
-    """Creates a waveform from interpolation of a set of data points."""
+    """Creates a waveform from interpolation of a set of data points.
+
+    Args:
+        duration (int): The waveform duration (in ns).
+        values (ArrayLike): Values of the interpolation points (in rad/µs).
+        times (Optional[ArrayLike]): Fractions of the total duration (between 0
+            and 1), indicating where to place each value on the time axis. If
+            not given, the values are spread evenly throughout the full
+            duration of the waveform.
+        interpolator (str = "PchipInterpolator"): The SciPy interpolation class
+            to use. Supports "PchipInterpolator" and "interp1d".
+        **interpolator_kwargs: Extra parameters to give to the chosen
+            interpolator class.
+    """
     def __init__(self, duration: Union[int, Parametrized],
                  values: Union[ArrayLike, Parametrized],
                  times: Optional[Union[ArrayLike, Parametrized]] = None,
                  interpolator: str = "PchipInterpolator",
                  **interpolator_kwargs: Any):
+        """Initializes a new InterpolatedWaveform."""
         super().__init__(duration)
         self._values = np.array(values, dtype=float)
         if times is not None:
