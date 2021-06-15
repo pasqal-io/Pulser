@@ -211,23 +211,44 @@ class Simulation:
                 self.basis[proj[0]] * self.basis[proj[1]].dag()
             )
 
-    def _build_operator(self, operations: dict,
-                        ) -> qutip.Qobj:
-        """Create qutip.Qobj with nontrivial action at *qubit_ids."""
+    def build_operator(self, operations: list) -> qutip.Qobj:
+        """Creates an operator with non trivial actions on some qubits.
+        Takes as argument a list of tuples [(operator_1, qubits_1),
+        (operator_2, qubits_2)...]. Returns the operator given by
+        sum_i {operator_i applied on qubits_i and Id on the rest}.
+        (operator, 'global') returns the sum for all $j$ of operator
+        applied at qubit $j$ and identity elsewhere.
+
+        Example for 3 qubits:
+        - [(Z, [1, 2]), (Z, [2, 3])] returns ZZI + IZZ
+        - [(X, 'global')] returns XII + IXI + IIX
+
+        Args:
+            operations (list): List of tuples (operator, qubits)
+            operator can be a qutip.Quobj or a string key for self.op_matrix
+            qubits is the list on which operator will be applied. The qubits
+            can be passed as their index or their label in the register.
+
+        Returns:
+            qutip.Qobj: the final operator.
+        """
         op_list = [self.op_matrix['I'] for j in range(self._size)]
-        for operator, qubits in operations.items():
+
+        for operator, qubits in operations:
             if qubits == 'global':
-                return sum(self._build_operator({operator: [q_id]})
+                return sum(self.build_operator([(operator, [q_id])])
                            for q_id in self._qdict)
             else:
                 if len(set(qubits)) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
+                if isinstance(operator, str):
+                    operator = self.op_matrix[operator]
                 for qubit in qubits:
                     if isinstance(qubit, int):
                         k = qubit
                     else:
                         k = self._qid_index[qubit]
-                    op_list[k] = self.op_matrix[operator]
+                    op_list[k] = operator
         return qutip.tensor(op_list)
 
     def _construct_hamiltonian(self) -> None:
@@ -253,7 +274,7 @@ class Simulation:
                 dist = np.linalg.norm(
                     self._qdict[q1] - self._qdict[q2])
                 U = 0.5 * self._seq._device.interaction_coeff / dist**6
-                vdw += U * self._build_operator({'sigma_rr': [q1, q2]})
+                vdw += U * self.build_operator([('sigma_rr', [q1, q2])])
             return vdw
 
         def make_xy_term() -> float:
@@ -279,9 +300,9 @@ class Simulation:
                         ) / (dist * mag_norm)
                 U = 0.5 * self._seq._device.interaction_coeff_xy * \
                     (1 - 3 * cosine ** 2) / dist**3
-                xy += U * self._build_operator(
-                    {'sigma_du': [q1],
-                     'sigma_ud': [q2]}
+                xy += U * self.build_operator(
+                    [('sigma_du', [q1]),
+                     ('sigma_ud', [q2])]
                 )
             return xy
 
@@ -316,7 +337,7 @@ class Simulation:
                         # Build once global operators as they are needed
                         if op_id not in operators:
                             operators[op_id] =\
-                                self._build_operator({op_id: 'global'})
+                                self.build_operator([(op_id, 'global')])
                             terms.append([operators[op_id], adapt(coeff)])
             elif addr == 'Local':
                 for q_id, samples_q in samples.items():
@@ -329,7 +350,7 @@ class Simulation:
                         if np.any(coeff != 0):
                             if op_id not in operators[q_id]:
                                 operators[q_id][op_id] = \
-                                    self._build_operator({op_id: [q_id]})
+                                    self.build_operator([(op_id, [q_id])])
                             terms.append([operators[q_id][op_id],
                                           adapt(coeff)])
 

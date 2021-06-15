@@ -145,12 +145,12 @@ def test_building_basis_and_projection_operators():
 
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
-        sim._build_operator({'sigma_gg': ["target", "target"]})
+        sim.build_operator([('sigma_gg', ["target", "target"])])
 
     # Check building operator with indices
     index_target = sim._qid_index['target']
-    op_index = sim._build_operator({'sigma_gg': [index_target]})
-    op_target = sim._build_operator({'sigma_gg': ['target']})
+    op_index = sim.build_operator([('sigma_gg', [index_target])])
+    op_target = sim.build_operator([('sigma_gg', ['target'])])
     assert np.linalg.norm(op_index - op_target) < 1e-10
 
     # Global ground-rydberg
