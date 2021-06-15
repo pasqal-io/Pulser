@@ -56,6 +56,12 @@ class SimulationResults(ABC):
         self.sim_times = sim_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
 
+    @property
+    @abstractmethod
+    def states(self) -> list[qutip.Qobj]:
+        """Lists states of the system at simulation times."""
+        pass
+
     @abstractmethod
     def get_state(self, t: float) -> qutip.Qobj:
         """Returns the state of the system at time t."""
@@ -79,7 +85,6 @@ class SimulationResults(ABC):
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> list[Union[float, complex, ArrayLike]]:
         """Returns the expectation values of operators in obs_list."""
-        states = [self.get_state(t) for t in self.sim_times]
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators.")
 
@@ -92,7 +97,7 @@ class SimulationResults(ABC):
                 raise ValueError("Incompatible shape of observable.")
             qobj_list.append(qutip.Qobj(obs))
 
-        return cast(list, qutip.expect(qobj_list, states))
+        return cast(list, qutip.expect(qobj_list, self.states))
 
     def sample_state(self, t: float, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements at time t.
@@ -164,7 +169,12 @@ class NoisyResults(SimulationResults):
         self._results = run_output
 
     @property
-    def states(self) -> list[Counter]:
+    def states(self) -> list[qutip.Qobj]:
+        """Measured states as a list of diagonal qutip.Qobj."""
+        return [self.get_state(t) for t in self.sim_times]
+
+    @property
+    def results(self) -> list[Counter]:
         """Probability distribution of the bitstrings."""
         return self._results
 
@@ -238,9 +248,8 @@ class NoisyResults(SimulationResults):
 
     def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
         """Returns the square root of the variance of operator op."""
-        density_mats = [self.get_state(t) for t in self.sim_times]
         return cast(ArrayLike,
-                    np.sqrt(qutip.variance(op, density_mats) / self.N_measures)
+                    np.sqrt(qutip.variance(op, self.states) / self.N_measures)
                     )
 
     def _get_error_bars(self, op: qutip.Qobj) -> Tuple[ArrayLike, ArrayLike]:
@@ -364,7 +373,6 @@ class CleanResults(SimulationResults):
                     "state to eliminate is above the allowed tolerance."
                     )
             state = state.eliminate_states(ex_inds, normalize=normalize)
-
         return state.tidyup()
 
     def get_final_state(self, reduce_to_basis: Optional[str] = None,
