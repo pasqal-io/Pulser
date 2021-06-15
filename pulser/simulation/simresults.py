@@ -98,7 +98,12 @@ class SimulationResults(ABC):
         return cast(list, qutip.expect(qobj_list, states))
 
     def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
-        """Returns the result of multiple measurements at time t."""
+        """Returns the result of multiple measurements at time t.
+
+        Args:
+            t (int): Time at which the state is sampled.
+            N_samples (int): Number of samples to return.
+        """
         dist = np.random.multinomial(N_samples, self._calc_weights(t))
         return Counter({np.binary_repr(
                         i, self._size): dist[i] for i in np.nonzero(dist)[0]})
@@ -362,18 +367,6 @@ class CleanResults(SimulationResults):
         """Returns the final state of the Simulation."""
         return self.get_state(-1, reduce_to_basis, ignore_global_phase, tol,
                               normalize)
-
-    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
-               ) -> list[Union[float, complex, ArrayLike]]:
-        """Calculates the expectation value of a list of observables.
-
-        Args:
-            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): A list of
-                observables whose expectation value will be calculated.
-                If necessary, each member will be transformed into a
-                ``qutip.Qobj`` instance.
-        """
-        return super().expect(obs_list)
 
     def _calc_weights(self, t: int) -> ArrayLike:
         N = self._size
