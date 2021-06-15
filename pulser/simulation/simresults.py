@@ -113,7 +113,8 @@ class SimulationResults(ABC):
         try:
             return int(np.where(self.sim_times == t_float)[0][0])
         except IndexError:
-            print(f"Given time {t_float} is absent from Simulation times.")
+            raise IndexError(
+                f"Given time {t_float} is absent from Simulation times.")
 
 
 class NoisyResults(SimulationResults):
