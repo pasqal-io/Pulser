@@ -213,6 +213,7 @@ class Simulation:
 
     def build_operator(self, operations: list) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
+        
         Takes as argument a list of tuples [(operator_1, qubits_1),
         (operator_2, qubits_2)...]. Returns the operator given by the tensor
         product of {operator_i applied on qubits_i} and Id on the rest.
