@@ -146,6 +146,13 @@ def test_building_basis_and_projection_operators():
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
         sim.build_operator([('sigma_gg', ["target", "target"])])
+    with pytest.raises(ValueError, match="not a valid operator"):
+        sim.build_operator([('wrong', ["target"])])
+    with pytest.raises(ValueError, match="not a valid qubit"):
+        sim.build_operator([('sigma_gg', ["wrong"])])
+    with pytest.raises(ValueError,
+                       match="greater than the size of the system"):
+        sim.build_operator([('sigma_gg', [10])])
 
     # Check building operator with indices
     index_target = sim._qid_index['target']

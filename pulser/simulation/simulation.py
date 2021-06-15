@@ -214,14 +214,14 @@ class Simulation:
     def build_operator(self, operations: list) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
         Takes as argument a list of tuples [(operator_1, qubits_1),
-        (operator_2, qubits_2)...]. Returns the operator given by
-        sum_i {operator_i applied on qubits_i and Id on the rest}.
+        (operator_2, qubits_2)...]. Returns the operator given by the tensor
+        product of {operator_i applied on qubits_i} and Id on the rest.
         (operator, 'global') returns the sum for all $j$ of operator
         applied at qubit $j$ and identity elsewhere.
 
-        Example for 3 qubits:
-        - [(Z, [1, 2]), (Z, [2, 3])] returns ZZI + IZZ
-        - [(X, 'global')] returns XII + IXI + IIX
+        Example for 4 qubits:
+        - [(Z, [1, 2]), (Y, [3])] returns ZZYI
+        - [(X, 'global')] returns XIII + IXII + IIXI + IIIX
 
         Args:
             operations (list): List of tuples (operator, qubits)
@@ -242,11 +242,21 @@ class Simulation:
                 if len(set(qubits)) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
                 if isinstance(operator, str):
+                    if operator not in self.op_matrix.keys():
+                        raise ValueError(
+                            f"{operator} is not a valid operator")
                     operator = self.op_matrix[operator]
                 for qubit in qubits:
                     if isinstance(qubit, int):
+                        if qubit >= self._size:
+                            raise ValueError(
+                                "The index value is greater than the "
+                                "size of the system")
                         k = qubit
                     else:
+                        if qubit not in self._qid_index.keys():
+                            raise ValueError(
+                                f"{qubit} is not a valid qubit")
                         k = self._qid_index[qubit]
                     op_list[k] = operator
         return qutip.tensor(op_list)
