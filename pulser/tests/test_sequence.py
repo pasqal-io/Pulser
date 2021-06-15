@@ -143,6 +143,17 @@ def test_delay():
     assert seq._last('ch0') == _TimeSlot('delay', 0, 388, {'q19'})
 
 
+def test_delay_min_duration():
+    # Check that a delay shorter than a channel's minimal duration
+    # is automatically extended to that minimal duration
+    seq = Sequence(reg, device)
+    seq.declare_channel('ch0', 'raman_local')
+    min_duration = seq._channels['ch0'].min_duration
+    seq.target('q0', 'ch0')
+    seq.delay(min_duration - 1, 'ch0')
+    assert seq._last('ch0') == _TimeSlot('delay', 0, min_duration, {'q0'})
+
+
 def test_phase():
     seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')

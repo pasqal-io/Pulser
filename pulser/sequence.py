@@ -774,6 +774,11 @@ class Sequence:
         if self.is_parametrized():
             return
 
+        # Delay must not be shorter than the minimal duration for this channel
+        min_duration = self._channels[channel].min_duration
+        if duration < min_duration:
+            duration = min_duration
+
         last = self._last(channel)
         ti = last.tf
         tf = ti + self._channels[channel].validate_duration(duration)
