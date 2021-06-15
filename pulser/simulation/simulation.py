@@ -34,32 +34,32 @@ from pulser.sequence import _TimeSlot
 
 
 class Simulation:
-    """Simulation of a pulse sequence using QuTiP."""
+    """Simulation of a pulse sequence using QuTiP.
+
+    Provides methods to simulate the sequence using QuTiP.
+
+    Args:
+        sequence (Sequence): An instance of a Pulser Sequence that we
+            want to simulate.
+        sampling_rate (float): The fraction of samples that we wish to
+            extract from the pulse sequence to simulate. Has to be a
+            value between 0.05 and 1.0.
+        config (SimConfig): Configuration to be used for this simulation.
+        evaluation_times (Union[str, list, float]: The list of times at
+            which the quantum state should be evaluated, in μs.
+            If 'Full' is provided, this list is set to be the one used to
+            define the Hamiltonian to the solver.
+            The initial and final times are always included, so that if
+            'Minimal' is provided, the list is set to only contain the
+            initial and the final times. Use a float to act as a sampling
+            rate for the resulting state.
+    """
 
     def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
                  config: Optional[SimConfig] = None,
                  evaluation_times: Union[float, str, ArrayLike] = 'Full'
                  ) -> None:
-        """Instantiates a Simulation object.
-
-        Provides methods to simulate the sequence using QuTiP.
-        e
-        Args:
-            sequence (Sequence): An instance of a Pulser Sequence that we
-                want to simulate.
-            sampling_rate (float): The fraction of samples that we wish to
-                extract from the pulse sequence to simulate. Has to be a
-                value between 0.05 and 1.0.
-            config (SimConfig): Configuration to be used for this simulation.
-            evaluation_times (Union[str, list, float]: The list of times at
-                which the quantum state should be evaluated, in μs.
-                If 'Full' is provided, this list is set to be the one used to
-                define the Hamiltonian to the solver.
-                The initial and final times are always included, so that if
-                'Minimal' is provided, the list is set to only contain the
-                initial and the final times. Use a float to act as a sampling
-                rate for the resulting state.
-        """
+        """Instantiates a Simulation object."""
         self.seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
@@ -422,11 +422,11 @@ class Simulation:
             return terms
 
         # Time independent term:
-        if self.basis_name == 'digital':
+        if self.basis_name == 'digital' or self._size == 1:
             qobj_list = []
         else:
             # Van der Waals Interaction Terms
-            qobj_list = [make_vdw_term()] if self._size > 1 else []
+            qobj_list = [make_vdw_term()]
 
         # Time dependent terms:
         for addr in self.samples:
@@ -573,16 +573,12 @@ class Simulation:
                     total_count += np.array(
                         [clean_res_noisy_seq.sampling_with_detection_errors(
                             self.config.spam_dict,
-                            t=t,
-                            meas_basis=meas_basis,
-                            N_samples=self.config.samples_per_run)
+                            t, N_samples=self.config.samples_per_run)
                          for t in time_indices])
                 else:
                     total_count += np.array(
                         [clean_res_noisy_seq.sample_state(
-                            t=t,
-                            meas_basis=meas_basis,
-                            N_samples=self.config.samples_per_run)
+                            t, N_samples=self.config.samples_per_run)
                          for t in time_indices])
             N_measures = self.config.runs * self.config.samples_per_run
             total_run_prob = [Counter({k: v / N_measures

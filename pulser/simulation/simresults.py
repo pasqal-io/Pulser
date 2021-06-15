@@ -57,7 +57,6 @@ class SimulationResults(ABC):
         self._basis_name = basis_name
         self.sim_times = sim_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
-        self._weights: list[float]
 
     @abstractmethod
     def get_state(self, t: int) -> qutip.Qobj:
@@ -70,13 +69,12 @@ class SimulationResults(ABC):
         pass
 
     @abstractmethod
-    def sample_final_state(self, N_samples: int = 1000) -> Counter:
-        """Returns the result of multiple measurements of the final state."""
+    def plot(self, op: qutip.Qobj, fmt: str = '.', label: str = '') -> None:
+        """Plots the expectation value of a given operator op."""
         pass
 
     @abstractmethod
-    def plot(self, op: qutip.Qobj, fmt: str = '.', label: str = '') -> None:
-        """Plots the expectation value of a given operator op."""
+    def _calc_weights(self, t: int) -> ArrayLike:
         pass
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
@@ -103,9 +101,13 @@ class SimulationResults(ABC):
 
         SimResults._weights is computed at time t for each child class.
         """
-        dist = np.random.multinomial(N_samples, self._weights)
+        dist = np.random.multinomial(N_samples, self._calc_weights(t))
         return Counter({np.binary_repr(
                         i, self._size): dist[i] for i in np.nonzero(dist)[0]})
+
+    def sample_final_state(self, N_samples: int = 1000) -> Counter:
+        """Returns the result of multiple measurements of the final state."""
+        return self.sample_state(-1, N_samples)
 
 
 class NoisyResults(SimulationResults):
@@ -216,37 +218,14 @@ class NoisyResults(SimulationResults):
         """
         for obs in obs_list:
             if not isdiagonal(obs):
-                raise ValueError("Observables in `obs_list` must be diagonal.")
+                raise ValueError(f"Observable {obs} is non-diagonal.")
 
         return super().expect(obs_list)
 
-    def sample_state(self, t: int, N_samples: int = 1000) -> Counter:
-        """Returns the result of multiple measurements of the state at time t.
-
-        Note : There is no concept of measurement basis here, since states have
-        already been projected onto bitstrings.
-
-        Args:
-            N_samples (int, default=1000): Number of samples to take.
-            t (int, default=-1) : Time at which the system is measured.
-
-        Raises:
-            ValueError: If trying to sample without a defined 'meas_basis' in
-                the arguments when the original sequence is not measured.
-        """
+    def _calc_weights(self, t: int) -> ArrayLike:
         N = self._size
-
-        def _calc_weights() -> None:
-            bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
-            weights = [self._results[t][b] for b in bitstrings]
-            self._weights = weights
-
-        _calc_weights()
-        return super().sample_state(t, N_samples)
-
-    def sample_final_state(self, N_samples: int = 1000) -> Counter:
-        """Returns the result of multiple measurements of the final state."""
-        return self.sample_state(-1, N_samples)
+        bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
+        return [self._results[t][b] for b in bitstrings]
 
     def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
         """Returns the square root of the variance of operator op."""
@@ -264,12 +243,16 @@ class NoisyResults(SimulationResults):
              label: str = '', error_bars: bool = True) -> None:
         """Plots the expectation value of a given operator op.
 
+        Note: The observable must be diagonal.
+
         Args:
             op (qutip.Qobj): Operator whose expectation value is wanted.
             error_bars (bool): Choose to display error bars.
             fmt (str): Curve plot format.
             label (str): y-Axis label.
         """
+        if not isdiagonal(op):
+            raise ValueError(f"Observable {op} is non-diagonal.")
         if error_bars:
             moy, st = self._get_error_bars(op)
             plt.errorbar(self.sim_times, moy, st, fmt=fmt, lw=1, capsize=3,
@@ -394,94 +377,55 @@ class CleanResults(SimulationResults):
         """
         return super().expect(obs_list)
 
-    def sample_state(self, t: int, N_samples: int = 1000,
-                     meas_basis: Optional[str] = None) -> Counter:
-        r"""Returns the result of multiple measurements of the state at time t.
-
-        The encoding of the results depends on the meaurement basis. Namely:
-        - *ground-rydberg* : :math:`1 = |r\rangle;~ 0 = |g\rangle, |h\rangle`
-        - *digital* : :math:`1 = |h\rangle;~ 0 = |g\rangle, |r\rangle`
-
-        Note:
-            The results are presented using a big-endian representation,
-            according to the pre-established qubit ordering in the register.
-            This means that, when sampling a register with qubits ('q0','q1',
-            ...), in this order, the corresponding value, in binary, will be
-            b0b1..., where b0 is the outcome of measuring 'q0', 'b1' of
-            measuring 'q1' and so on.
-
-        Keyword Args:
-            meas_basis (str, default=None): 'ground-rydberg' or 'digital'. If
-                left as None, uses the measurement basis defined in the
-                original sequence.
-            N_samples (int, default=1000): Number of samples to take.
-
-        Raises:
-            ValueError: If trying to sample without a defined 'meas_basis' in
-                the arguments when the original sequence is not measured.
-        """
+    def _calc_weights(self, t: int) -> ArrayLike:
         N = self._size
-        if not meas_basis:
-            meas_basis = self._meas_basis
-        if meas_basis not in {'ground-rydberg', 'digital'}:
-            raise ValueError(
-                "`meas_basis` can only be 'ground-rydberg' or 'digital'.")
+        state_t = cast(qutip.Qobj, self._results[t]).unit()
+        # Case of a density matrix
+        if state_t.type != "ket":
+            probs = np.abs(state_t.diag())
+        else:
+            probs = (np.abs(state_t.full())**2).flatten()
 
-        def _calc_weights() -> None:
-            state_t = cast(qutip.Qobj, self._results[t]).unit()
-            # Case of a density matrix
-            if state_t.type != "ket":
-                probs = np.abs(state_t.diag())
+        if self._dim == 2:
+            if self._meas_basis == self._basis_name:
+                # State vector ordered with r first for 'ground_rydberg'
+                # e.g. N=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
+                # Invert the order ->  [00, 01, 10, 11] correspondence
+                weights = probs if self._meas_basis == 'digital' \
+                    else probs[::-1]
             else:
-                probs = (np.abs(state_t.full())**2).flatten()
+                # Only 000...000 is measured
+                weights = np.zeros(probs.size)
+                weights[0] = 1.
 
-            if self._dim == 2:
-                if meas_basis == self._basis_name:
-                    # State vector ordered with r first for 'ground_rydberg'
-                    # e.g. N=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
-                    # Invert the order ->  [00, 01, 10, 11] correspondence
-                    weights = probs if meas_basis == 'digital' else probs[::-1]
-                else:
-                    # Only 000...000 is measured
-                    weights = np.zeros(probs.size)
-                    weights[0] = 1.
-
-            elif self._dim == 3:
-                if meas_basis == 'ground-rydberg':
-                    one_state = 0       # 1 = |r>
-                    ex_one = slice(1, 3)
-                elif meas_basis == 'digital':
-                    one_state = 2       # 1 = |h>
-                    ex_one = slice(0, 2)
-                probs = probs.reshape([3]*N)
-                weights = np.zeros(2**N)
-                for dec_val in range(2**N):
-                    ind: list[Union[int, slice]] = []
-                    for v in np.binary_repr(dec_val, width=N):
-                        if v == '0':
-                            ind.append(ex_one)
-                        else:
-                            ind.append(one_state)
-                    # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
-                    # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
-                    # We sum all probabilites that correspond to measuring
-                    # 11010, namely hhghg, hhrhg, hhghr, hhrhr
-                    weights[dec_val] = np.sum(probs[tuple(ind)])
-            else:
-                raise NotImplementedError(
-                    "Cannot sample system with single-atom state vectors of "
-                    "dimension > 3.")
-            # Takes care of numerical artefacts in case sum(weights) != 1
-            weights /= sum(weights)
-            self._weights = weights
-
-        _calc_weights()
-        return super().sample_state(t, N_samples)
-
-    def sample_final_state(self, N_samples: int = 1000,
-                           meas_basis: Optional[str] = None) -> Counter:
-        """Returns the result of multiple measurements of the final state."""
-        return self.sample_state(-1, N_samples, meas_basis)
+        elif self._dim == 3:
+            if self._meas_basis == 'ground-rydberg':
+                one_state = 0       # 1 = |r>
+                ex_one = slice(1, 3)
+            elif self._meas_basis == 'digital':
+                one_state = 2       # 1 = |h>
+                ex_one = slice(0, 2)
+            probs = probs.reshape([3]*N)
+            weights = np.zeros(2**N)
+            for dec_val in range(2**N):
+                ind: list[Union[int, slice]] = []
+                for v in np.binary_repr(dec_val, width=N):
+                    if v == '0':
+                        ind.append(ex_one)
+                    else:
+                        ind.append(one_state)
+                # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
+                # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
+                # We sum all probabilites that correspond to measuring
+                # 11010, namely hhghg, hhrhg, hhghr, hhrhr
+                weights[dec_val] = np.sum(probs[tuple(ind)])
+        else:
+            raise NotImplementedError(
+                "Cannot sample system with single-atom state vectors of "
+                "dimension > 3.")
+        # Takes care of numerical artefacts in case sum(weights) != 1
+        weights /= sum(weights)
+        return cast(ArrayLike, weights)
 
     def detection_from_basis_state(self, N_d: int, shot: str,
                                    spam: dict[str, float]) -> Counter:
@@ -516,7 +460,7 @@ class CleanResults(SimulationResults):
         return Counter(detected_dict)
 
     def sampling_with_detection_errors(self, spam: dict[str, float],
-                                       t: int = -1, meas_basis: str = '',
+                                       t: int = -1,
                                        N_samples: int = 1000) -> Counter:
         """Returns the distribution of states really detected.
 
@@ -531,8 +475,7 @@ class CleanResults(SimulationResults):
                 bitstrings.
             N_samples (int): Number of samples.
         """
-        sampled_state = self.sample_state(t=t, meas_basis=meas_basis,
-                                          N_samples=N_samples)
+        sampled_state = self.sample_state(t, N_samples)
         detected_sample_dict: Counter = Counter()
         for (shot, N_d) in sampled_state.items():
             dict_state = self.detection_from_basis_state(N_d, shot, spam)
