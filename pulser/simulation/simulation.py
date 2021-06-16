@@ -571,20 +571,20 @@ class Simulation:
                 # Extract statistics at eval time:
                 if 'SPAM' in self.config.noise:
                     total_count += np.array(
-                        [clean_res_noisy_seq.sampling_with_detection_errors(
+                        [clean_res_noisy_seq._sampling_with_detection_errors(
                             self.config.spam_dict,
-                            t, N_samples=self.config.samples_per_run)
+                            t, n_samples=self.config.samples_per_run)
                          for t in self._eval_times_array])
                 else:
                     total_count += np.array(
                         [clean_res_noisy_seq.sample_state(
-                            t, N_samples=self.config.samples_per_run)
+                            t, n_samples=self.config.samples_per_run)
                          for t in self._eval_times_array])
-            N_measures = self.config.runs * self.config.samples_per_run
-            total_run_prob = [Counter({k: v / N_measures
+            n_measures = self.config.runs * self.config.samples_per_run
+            total_run_prob = [Counter({k: v / n_measures
                                       for k, v in total_count[t].items()})
                               for t in time_indices]
             return NoisyResults(total_run_prob, self._size, basis_name,
-                                self._eval_times_array, N_measures)
+                                self._eval_times_array, n_measures)
         else:
             return _run_solver()

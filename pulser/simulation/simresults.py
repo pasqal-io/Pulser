@@ -53,7 +53,7 @@ class SimulationResults(ABC):
                 "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
                 )
         self._basis_name = basis_name
-        self.sim_times = sim_times
+        self._sim_times = sim_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
 
     @property
@@ -73,12 +73,7 @@ class SimulationResults(ABC):
         pass
 
     @abstractmethod
-    def plot(self, op: qutip.Qobj, fmt: str = '.', label: str = '') -> None:
-        """Plots the expectation value of a given operator op."""
-        pass
-
-    @abstractmethod
-    def _calc_weights(self, t: float) -> ArrayLike:
+    def _calc_weights(self, t_index: int) -> ArrayLike:
         """Computes the bitstring probabilities for sampled states."""
         pass
 
@@ -99,27 +94,52 @@ class SimulationResults(ABC):
 
         return cast(list, qutip.expect(qobj_list, self.states))
 
-    def sample_state(self, t: float, N_samples: int = 1000) -> Counter:
+    def sample_state(self, t: float, n_samples: int = 1000,
+                     t_tol: float = 1.e-3) -> Counter:
         """Returns the result of multiple measurements at time t.
 
         Args:
             t (float): Time at which the state is sampled.
-            N_samples (int): Number of samples to return.
+            n_samples (int): Number of samples to return.
+            t_tol (float): Tolerance for the difference between t and
+                closest time.
         """
-        dist = np.random.multinomial(N_samples, self._calc_weights(t))
+        t_index = self._get_index_from_time(t, t_tol)
+        dist = np.random.multinomial(n_samples, self._calc_weights(t_index))
         return Counter({np.binary_repr(
                         i, self._size): dist[i] for i in np.nonzero(dist)[0]})
 
-    def sample_final_state(self, N_samples: int = 1000) -> Counter:
+    def sample_final_state(self, n_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state."""
-        return self.sample_state(self.sim_times[-1], N_samples)
+        return self.sample_state(self._sim_times[-1], n_samples)
 
-    def _get_index_from_time(self, t_float: float) -> int:
+    def plot(self, op: qutip.Qobj, fmt: str = '', label: str = '') -> None:
+        """Plots the expectation value of a given operator op.
+
+        Args:
+            op (qutip.Qobj): Operator whose expectation value is wanted.
+            fmt (str): Curve plot format.
+            label (str): Axis label.
+            error_bars (bool): False here.
+        """
+        plt.plot(self._sim_times, self.expect([op])[0], fmt, label=label)
+        plt.xlabel('Time (µs)')
+        plt.ylabel('Expectation value')
+
+    def _get_index_from_time(self, t_float: float, tol: float = 1.e-3) -> int:
+        """Returns closest index corresponding to time t_float.
+
+        Args:
+            t_float (float): Time the time index of which is needed.
+            tol (float): Tolerance for the difference between t_float and
+                closest time.
+        """
         try:
-            return int(np.where(self.sim_times == t_float)[0][0])
+            return int(np.where(abs(t_float - self._sim_times) < tol)[0][0])
         except IndexError:
             raise IndexError(
-                f"Given time {t_float} is absent from Simulation times.")
+                f"Given time {t_float} is absent from Simulation times within"
+                + f" tolerance {tol}.")
 
 
 class NoisyResults(SimulationResults):
@@ -134,7 +154,7 @@ class NoisyResults(SimulationResults):
 
     def __init__(self, run_output: list[Counter],
                  size: int, basis_name: str,
-                 sim_times: np.ndarray, N_measures: int, dim: int = 2) -> None:
+                 sim_times: np.ndarray, n_measures: int, dim: int = 2) -> None:
         """Initializes a new NoisyResults instance.
 
         Warning:
@@ -157,7 +177,7 @@ class NoisyResults(SimulationResults):
                 results.
             meas_basis (Optional[str]): The basis in which a sampling
                 measurement is desired.
-            N_measures (int): number of measurements needed to compute this
+            n_measures (int): number of measurements needed to compute this
                 result when doing the simulation.
             dim (int): equals to 2 here, since projections already happened.
         """
@@ -165,20 +185,20 @@ class NoisyResults(SimulationResults):
             raise ValueError("`basis_name` must be either 'ground-rydberg' or"
                              + " 'digital'.")
         super().__init__(dim, size, basis_name, sim_times)
-        self.N_measures = N_measures
+        self.n_measures = n_measures
         self._results = run_output
 
     @property
     def states(self) -> list[qutip.Qobj]:
         """Measured states as a list of diagonal qutip.Qobj."""
-        return [self.get_state(t) for t in self.sim_times]
+        return [self.get_state(t) for t in self._sim_times]
 
     @property
     def results(self) -> list[Counter]:
         """Probability distribution of the bitstrings."""
         return self._results
 
-    def get_state(self, t: float) -> qutip.Qobj:
+    def get_state(self, t: float, t_tol: float = 1.e-3) -> qutip.Qobj:
         """Get the state at time t as a diagonal density matrix.
 
         Note:
@@ -187,6 +207,8 @@ class NoisyResults(SimulationResults):
 
         Args:
             t (int): index of the state to be returned.
+            t_tol (float): Tolerance for the difference between t and
+                closest time.
 
         Returns:
             qutip.Qobj: States probability distribution as a diagonal
@@ -203,7 +225,7 @@ class NoisyResults(SimulationResults):
                                      in bitstring])
             return proj
 
-        t_index = self._get_index_from_time(t)
+        t_index = self._get_index_from_time(t, t_tol)
         return sum(v * _proj_from_bitstring(b) for
                    b, v in self._results[t_index].items())
 
@@ -216,7 +238,7 @@ class NoisyResults(SimulationResults):
         Returns:
             qutip.Qobj: States probability distribution as a density matrix.
         """
-        return self.get_state(self.sim_times[-1])
+        return self.get_state(self._sim_times[-1])
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> list[Union[float, complex, ArrayLike]]:
@@ -240,16 +262,15 @@ class NoisyResults(SimulationResults):
 
         return super().expect(obs_list)
 
-    def _calc_weights(self, t: float) -> ArrayLike:
+    def _calc_weights(self, t_index: int) -> list[float]:
         N = self._size
         bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
-        t_index = self._get_index_from_time(t)
         return [self._results[t_index][b] for b in bitstrings]
 
-    def _standard_dev(self, op: qutip.Qobj) -> ArrayLike:
+    def _standard_dev(self, op: qutip.Qobj) -> np.ndarray:
         """Returns the square root of the variance of operator op."""
-        return cast(ArrayLike,
-                    np.sqrt(qutip.variance(op, self.states) / self.N_measures)
+        return cast(np.ndarray,
+                    np.sqrt(qutip.variance(op, self.states) / self.n_measures)
                     )
 
     def _get_error_bars(self, op: qutip.Qobj) -> Tuple[ArrayLike, ArrayLike]:
@@ -265,21 +286,18 @@ class NoisyResults(SimulationResults):
 
         Args:
             op (qutip.Qobj): Operator whose expectation value is wanted.
-            error_bars (bool): Choose to display error bars.
             fmt (str): Curve plot format.
             label (str): y-Axis label.
+            error_bars (bool): Choose to display error bars.
         """
-        if not isdiagonal(op):
-            raise ValueError(f"Observable {op} is non-diagonal.")
         if error_bars:
             moy, st = self._get_error_bars(op)
-            plt.errorbar(self.sim_times, moy, st, fmt=fmt, lw=1, capsize=3,
+            plt.errorbar(self._sim_times, moy, st, fmt=fmt, lw=1, capsize=3,
                          label=label)
+            plt.xlabel('Time (µs)')
+            plt.ylabel('Expectation value')
         else:
-            plt.plot(self.sim_times, self.expect([op])[0], fmt,
-                     label=label)
-        plt.xlabel('Time (µs)')
-        plt.ylabel('Expectation value')
+            super().plot(op, fmt, label)
 
 
 class CleanResults(SimulationResults):
@@ -323,7 +341,7 @@ class CleanResults(SimulationResults):
 
     def get_state(self, t: float, reduce_to_basis: Optional[str] = None,
                   ignore_global_phase: bool = True, tol: float = 1e-6,
-                  normalize: bool = True) -> qutip.Qobj:
+                  normalize: bool = True, t_tol: float = 1.e-3) -> qutip.Qobj:
         """Get the state at time t of the simulation.
 
         Args:
@@ -338,6 +356,8 @@ class CleanResults(SimulationResults):
                 eliminated state.
             normalize (bool, default=True): Whether to normalize the reduced
                 state.
+            t_tol (float): Tolerance for the difference between t and
+                closest time.
 
         Returns:
             qutip.Qobj: The resulting final state.
@@ -346,7 +366,7 @@ class CleanResults(SimulationResults):
             TypeError: If trying to reduce to a basis that would eliminate
                 states with significant occupation probabilites.
         """
-        t_index = self._get_index_from_time(t)
+        t_index = self._get_index_from_time(t, t_tol)
         state = cast(qutip.Qobj, self._results[t_index].copy())
         if ignore_global_phase:
             full = state.full()
@@ -379,11 +399,10 @@ class CleanResults(SimulationResults):
                         ignore_global_phase: bool = True, tol: float = 1e-6,
                         normalize: bool = True) -> qutip.Qobj:
         """Returns the final state of the Simulation."""
-        return self.get_state(self.sim_times[-1], reduce_to_basis,
+        return self.get_state(self._sim_times[-1], reduce_to_basis,
                               ignore_global_phase, tol, normalize)
 
-    def _calc_weights(self, t: float) -> ArrayLike:
-        t_index = self._get_index_from_time(t)
+    def _calc_weights(self, t_index: int) -> ArrayLike:
         N = self._size
         state_t = cast(qutip.Qobj, self._results[t_index]).unit()
         # Case of a density matrix
@@ -433,14 +452,14 @@ class CleanResults(SimulationResults):
         weights /= sum(weights)
         return cast(ArrayLike, weights)
 
-    def detection_from_basis_state(self, N_d: int, shot: str,
-                                   spam: dict[str, float]) -> Counter:
+    def _detection_from_basis_state(self, n_detections: int, shot: str,
+                                    spam: dict[str, float]) -> Counter:
         """Computes the distribution of states detected when detecting `shot`.
 
         Part of the SPAM implementation : computes measurement errors.
 
         Args:
-            N_d (int): Number of times state has been detected.
+            n_detections (int): Number of times state has been detected.
             shot (str): Binary string of length the number of atoms of the
             simulation.
             spam (dict): Dictionnary gathering the SPAM error
@@ -455,8 +474,8 @@ class CleanResults(SimulationResults):
         prob_0_to_1 = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
         probs = [int(shot[i]) * prob_1_to_0 + (1 - int(shot[i]))
                  * prob_0_to_1 for i in range(len(shot))]
-        probs += [1. - sum(probs)]
-        shots = np.random.multinomial(N_d, probs)
+        probs.append(1. - sum(probs))
+        shots = np.random.multinomial(n_detections, probs)
         detected_dict = {shot: shots[-1]}
 
         for i in range(len(shot)):
@@ -465,9 +484,9 @@ class CleanResults(SimulationResults):
                               + 1:]] = shots[i]
         return Counter(detected_dict)
 
-    def sampling_with_detection_errors(self, spam: dict[str, float],
-                                       t: float,
-                                       N_samples: int = 1000) -> Counter:
+    def _sampling_with_detection_errors(self, spam: dict[str, float],
+                                        t: float, n_samples: int = 1000,
+                                        ) -> Counter:
         """Returns the distribution of states really detected.
 
         Doesn't take state preparation errors into account.
@@ -477,25 +496,14 @@ class CleanResults(SimulationResults):
             spam (dict): Dictionnary gathering the SPAM error
             probabilities.
             t (float): Time at which to return the samples.
-            N_samples (int): Number of samples.
+            n_samples (int): Number of samples.
+            t_tol (float): Tolerance for the difference between t and
+                closest time.
         """
-        sampled_state = self.sample_state(t, N_samples)
+        sampled_state = self.sample_state(t, n_samples)
         detected_sample_dict: Counter = Counter()
         for (shot, N_d) in sampled_state.items():
-            dict_state = self.detection_from_basis_state(N_d, shot, spam)
+            dict_state = self._detection_from_basis_state(N_d, shot, spam)
             detected_sample_dict += dict_state
 
         return detected_sample_dict
-
-    def plot(self, op: qutip.Qobj, fmt: str = '', label: str = '') -> None:
-        """Plots the expectation value of a given operator op.
-
-        Args:
-            op (qutip.Qobj): Operator whose expectation value is wanted.
-            fmt (str): Curve plot format.
-            label (str): Axis label.
-            error_bars (bool): False here.
-        """
-        plt.plot(self.sim_times, self.expect([op])[0], fmt, label=label)
-        plt.xlabel('Time (µs)')
-        plt.ylabel('Expectation value')
