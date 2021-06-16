@@ -43,7 +43,8 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
         time = [-1]     # To not break the "time[-1]" later on
         amp = []
         detuning = []
-        interp_pts = defaultdict(list)  # List of interpolation points
+        # List of interpolation points
+        interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
         target: dict[Union[str, tuple[int, int]], Any] = {}
         # phase_shift = {}
         for slot in sch:
@@ -73,10 +74,9 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                 for wf_type in ["amplitude", "detuning"]:
                     wf = getattr(pulse, wf_type)
                     if isinstance(wf, InterpolatedWaveform):
-                        interp_pts[wf_type] += [
-                            (round(t + slot.ti), v) for t, v in
-                            zip(wf._times * (wf._duration - 1), wf._values)
-                        ]
+                        pts = wf.data_points
+                        pts[:, 0] += slot.ti
+                        interp_pts[wf_type] += pts.tolist()
 
         if time[-1] < seq._total_duration - 1:
             time += [time[-1]+1, seq._total_duration-1]

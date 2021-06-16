@@ -565,9 +565,6 @@ class InterpolatedWaveform(Waveform):
                 raise ValueError(
                     "`times` must be an array of non-repeating values."
                 )
-            # if np.any(times_ != unique_times):
-            #     raise ValueError("`times` must be an array of monotonically "
-            #                      "increasing values.")
             self._times = times_
         else:
             self._times = np.linspace(0, 1, num=len(self._values))
@@ -577,8 +574,14 @@ class InterpolatedWaveform(Waveform):
             raise ValueError(f"Invalid interpolator '{interpolator}', only "
                              "accepts: " + ", ".join(valid_interpolators))
         interp_cls = getattr(interpolate, interpolator)
-        self._interp_func = interp_cls(self._times * self._duration,
-                                       self._values, **interpolator_kwargs)
+        self._data_pts = np.array(
+                            [(round(t), v) for t, v in
+                             zip(self._times * (self._duration - 1),
+                                 self._values)]
+                             )
+        self._interp_func = interp_cls(self._data_pts[:, 0],
+                                       self._data_pts[:, 1],
+                                       **interpolator_kwargs)
         self._kwargs: dict[str, Any] = {
                         "times": times,
                         "interpolator": interpolator,
@@ -593,13 +596,21 @@ class InterpolatedWaveform(Waveform):
     @property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform."""
-        return cast(np.ndarray, self._interp_func(np.arange(self._duration)))
+        return cast(np.ndarray,
+                    np.round(self._interp_func(np.arange(self._duration)),
+                             decimals=9)     # Rounds to the order of Hz
+                    )
 
     @property
     def interp_function(self) -> Union[interpolate.PchipInterpolator,
                                        interpolate.interp1d]:
         """The interpolating function."""
         return self._interp_func
+
+    @property
+    def data_points(self) -> np.ndarray:
+        """Points (t[ns], value[rad/µs]) that define the interpolation."""
+        return self._data_pts.copy()
 
     @property
     def first_value(self) -> float:
@@ -626,14 +637,13 @@ class InterpolatedWaveform(Waveform):
     def _plot(self, ax: Axes, ylabel: str,
               color: Optional[str] = None) -> None:
         super()._plot(ax, ylabel, color=color)
-        ax.scatter(self._times * self._duration, self._values, c=color)
+        ax.scatter(self._data_pts[:, 0], self._data_pts[:, 1], c=color)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._values, **self._kwargs)
 
     def __str__(self) -> str:
-        coords = [f"({x*self._duration:.3g}, {y:.3g})"
-                  for x, y in zip(self._times, self._values)]
+        coords = [f"({int(x)}, {y:.4g})" for x, y in self.data_points]
         return f"InterpolatedWaveform(Points: {', '.join(coords)})"
 
     def __repr__(self) -> str:
