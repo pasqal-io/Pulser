@@ -159,6 +159,8 @@ def test_building_basis_and_projection_operators():
     op_index = sim.build_operator([('sigma_gg', [index_target])])
     op_target = sim.build_operator([('sigma_gg', ['target'])])
     assert np.linalg.norm(op_index - op_target) < 1e-10
+    op_target = sim.build_operator(('sigma_gg', ['target']))
+    assert np.linalg.norm(op_index - op_target) < 1e-10
 
     # Global ground-rydberg
     seq2 = Sequence(reg, Chadoq2)

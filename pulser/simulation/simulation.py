@@ -211,29 +211,32 @@ class Simulation:
                 self.basis[proj[0]] * self.basis[proj[1]].dag()
             )
 
-    def build_operator(self, operations: list) -> qutip.Qobj:
+    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
-        
+
         Takes as argument a list of tuples [(operator_1, qubits_1),
         (operator_2, qubits_2)...]. Returns the operator given by the tensor
         product of {operator_i applied on qubits_i} and Id on the rest.
         (operator, 'global') returns the sum for all $j$ of operator
         applied at qubit $j$ and identity elsewhere.
 
-        Example for 4 qubits:
-        - [(Z, [1, 2]), (Y, [3])] returns ZZYI
-        - [(X, 'global')] returns XIII + IXII + IIXI + IIIX
+        Example for 4 qubits: [(Z, [1, 2]), (Y, [3])] returns ZZYI
+        and [(X, 'global')] returns XIII + IXII + IIXI + IIIX
 
         Args:
             operations (list): List of tuples (operator, qubits)
-            operator can be a qutip.Quobj or a string key for self.op_matrix
-            qubits is the list on which operator will be applied. The qubits
-            can be passed as their index or their label in the register.
+                operator can be a qutip.Quobj or a string key for
+                self.op_matrix qubits is the list on which operator
+                will be applied. The qubits can be passed as their
+                index or their label in the register.
 
         Returns:
             qutip.Qobj: the final operator.
         """
         op_list = [self.op_matrix['I'] for j in range(self._size)]
+
+        if not isinstance(operations, list):
+            operations=[operations]
 
         for operator, qubits in operations:
             if qubits == 'global':
