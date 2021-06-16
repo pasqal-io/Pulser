@@ -138,7 +138,7 @@ class Waveform(ABC):
                              f"{i}) must be in the range "
                              f"0~{self.duration-1}, or "
                              f"{-self.duration}~-1 from the end.")
-        return i if i >= 0 else self.duration - i
+        return i if i >= 0 else self.duration + i
 
     def _check_slice(self, s: slice) -> slice:
         if s.step is not None and s.step != 1:
@@ -271,7 +271,33 @@ class CompositeWaveform(Waveform):
 
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
-        pass
+        wf_start: int
+        if isinstance(index_or_slice, slice):
+            s: slice = self._check_slice(index_or_slice)
+            start: int = s.start
+            stop: int = s.stop
+            array: np.ndarray = np.array([])
+            wf_start = 0
+            for wf in self._waveforms:
+                if wf_start <= start and start <= wf_start+wf.duration:
+                    if wf_start <= stop and stop <= wf_start+wf.duration:
+                        return cast(np.ndarray,
+                                    wf.samples[start-wf_start:stop-wf_start])
+                    else:
+                        array = wf.samples[start-wf_start:]
+                if start < wf_start and stop > wf_start+wf.duration:
+                    array = np.concatenate((array, wf.samples))
+                if wf_start <= stop and stop <= wf_start+wf.duration:
+                    array = np.concatenate((array, wf.samples[:stop-wf_start]))
+                wf_start += wf.duration
+            return array
+        else:
+            index: int = self._check_index(index_or_slice)
+            wf_start = 0
+            for wf in self._waveforms:
+                if wf_start <= index and index < wf_start+wf.duration:
+                    return wf[index-wf_start]
+                wf_start += wf.duration
 
     def __mul__(self, other: float) -> CompositeWaveform:
         return CompositeWaveform(*(wf * other for wf in self._waveforms))
