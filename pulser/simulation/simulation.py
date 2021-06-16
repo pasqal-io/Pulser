@@ -545,7 +545,7 @@ class Simulation:
                                        self._eval_times_array,
                                        progress_bar=progress_bar,
                                        options=solv_ops)
-            return CleanResults(result.states, self.dim, self._size,
+            return CleanResults(result.states, self._size,
                                 self.basis_name, self._eval_times_array,
                                 measurement_basis)
 

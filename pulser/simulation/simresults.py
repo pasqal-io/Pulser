@@ -34,19 +34,18 @@ class SimulationResults(ABC):
     from them.
     """
 
-    def __init__(self, dim: int, size: int, basis_name: str,
+    def __init__(self, size: int, basis_name: str,
                  sim_times: np.ndarray) -> None:
         """Initializes a new SimulationResults instance.
 
         Args:
-            dim (int): The dimension of the local space of each atom (2 or 3).
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
             sim_times (array): Array of times (µs) when simulation results are
                 returned.
         """
-        self._dim = dim
+        self._dim = 3 if basis_name == "all" else 2
         self._size = size
         if basis_name not in {'ground-rydberg', 'digital', 'all'}:
             raise ValueError(
@@ -153,7 +152,7 @@ class NoisyResults(SimulationResults):
 
     def __init__(self, run_output: list[Counter],
                  size: int, basis_name: str,
-                 sim_times: np.ndarray, n_measures: int, dim: int = 2) -> None:
+                 sim_times: np.ndarray, n_measures: int) -> None:
         """Initializes a new NoisyResults instance.
 
         Warning:
@@ -178,12 +177,11 @@ class NoisyResults(SimulationResults):
                 measurement is desired.
             n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
-            dim (int): Equal to 2 here, since projections already happened.
         """
-        if basis_name == 'all':
+        if basis_name not in {'ground-rydberg', 'digital'}:
             raise ValueError("`basis_name` must be either 'ground-rydberg' or"
                              + " 'digital'.")
-        super().__init__(dim, size, basis_name, sim_times)
+        super().__init__(size, basis_name, sim_times)
         self.n_measures = n_measures
         self._results = run_output
 
@@ -205,7 +203,7 @@ class NoisyResults(SimulationResults):
             way of computing expectation values of observables.
 
         Args:
-            t (int): Time of the state to be returned.
+            t (float): Time (µs) at which to return the state.
             t_tol (float): Tolerance for the difference between t and
                 closest time.
 
@@ -262,20 +260,9 @@ class NoisyResults(SimulationResults):
         return super().expect(obs_list)
 
     def _calc_weights(self, t_index: int) -> list[float]:
-        N = self._size
-        bitstrings = [np.binary_repr(k, N) for k in range(2**N)]
+        n = self._size
+        bitstrings = [np.binary_repr(k, n) for k in range(2**n)]
         return [self._results[t_index][b] for b in bitstrings]
-
-    def _standard_dev(self, op: qutip.Qobj) -> np.ndarray:
-        """Returns the square root of the variance of operator op."""
-        return cast(np.ndarray,
-                    np.sqrt(qutip.variance(op, self.states) / self.n_measures)
-                    )
-
-    def _get_error_bars(self, op: qutip.Qobj) -> Tuple[ArrayLike, ArrayLike]:
-        moy = self.expect([op])[0]
-        st = self._standard_dev(op)
-        return moy, st
 
     def plot(self, op: qutip.Qobj, fmt: str = '.',
              label: str = '', error_bars: bool = True) -> None:
@@ -289,8 +276,14 @@ class NoisyResults(SimulationResults):
             label (str): y-Axis label.
             error_bars (bool): Choose to display error bars.
         """
+        def get_error_bars() -> Tuple[ArrayLike, ArrayLike]:
+            moy = self.expect([op])[0]
+            standard_dev = cast(np.ndarray, np.sqrt(
+                qutip.variance(op, self.states) / self.n_measures))
+            return moy, standard_dev
+
         if error_bars:
-            moy, st = self._get_error_bars(op)
+            moy, st = get_error_bars()
             plt.errorbar(self._sim_times, moy, st, fmt=fmt, lw=1, capsize=3,
                          label=label)
             plt.xlabel('Time (µs)')
@@ -307,7 +300,7 @@ class CleanResults(SimulationResults):
     """
 
     def __init__(self, run_output: list[qutip.Qobj],
-                 dim: int, size: int, basis_name: str,
+                 size: int, basis_name: str,
                  sim_times: np.ndarray, meas_basis: str) -> None:
         """Initializes a new CleanResults instance.
 
@@ -315,7 +308,6 @@ class CleanResults(SimulationResults):
             run_output (list of qutip.Qobj): List of `qutip.Qobj` corresponding
                 to the states at each time step after the evolution has been
                 simulated.
-            dim (int): The dimension of the local space of each atom (2 or 3).
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
@@ -324,7 +316,7 @@ class CleanResults(SimulationResults):
             meas_basis (str): The basis in which a sampling measurement
                 is desired.
         """
-        super().__init__(dim, size, basis_name, sim_times)
+        super().__init__(size, basis_name, sim_times)
         if meas_basis:
             if meas_basis not in {'ground-rydberg', 'digital'}:
                 raise ValueError(
@@ -343,7 +335,7 @@ class CleanResults(SimulationResults):
         """Get the state at time t of the simulation.
 
         Args:
-            t (float): Time at which to return the state.
+            t (float): Time (µs) at which to return the state.
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible.
@@ -400,7 +392,7 @@ class CleanResults(SimulationResults):
         return self.get_state(self._sim_times[-1], reduce_to_basis,
                               ignore_global_phase, tol, normalize)
 
-    def _calc_weights(self, t_index: int) -> list[float]:
+    def _calc_weights(self, t_index: int) -> np.ndarray:
         N = self._size
         state_t = cast(qutip.Qobj, self._results[t_index]).unit()
         # Case of a density matrix
@@ -414,8 +406,8 @@ class CleanResults(SimulationResults):
                 # State vector ordered with r first for 'ground_rydberg'
                 # e.g. N=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
-                weights = probs if self._meas_basis == 'digital' \
-                    else probs[::-1]
+                weights = (probs if self._meas_basis == 'digital'
+                           else probs[::-1])
             else:
                 # Only 000...000 is measured
                 weights = np.zeros(probs.size)
@@ -448,39 +440,7 @@ class CleanResults(SimulationResults):
                 "dimension > 3.")
         # Takes care of numerical artefacts in case sum(weights) != 1
         weights /= sum(weights)
-        return cast(list[float], weights)
-
-    def _detection_from_basis_state(self, n_detections: int, shot: str,
-                                    spam: dict[str, float]) -> Counter:
-        """Computes the distribution of states detected when detecting `shot`.
-
-        Part of the SPAM implementation : computes measurement errors.
-
-        Args:
-            n_detections (int): Number of times state has been detected.
-            shot (str): Binary string of length the number of atoms of the
-            simulation.
-            spam (dict): Dictionnary gathering the SPAM error
-            probabilities.
-        """
-        n_0 = shot.count('0')
-        n_1 = shot.count('1')
-        eps = spam['epsilon']
-        eps_p = spam['epsilon_prime']
-        # Verified
-        prob_1_to_0 = eps_p * (1 - eps) ** n_0 * (1 - eps_p) ** (n_1 - 1)
-        prob_0_to_1 = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
-        probs = [int(shot[i]) * prob_1_to_0 + (1 - int(shot[i]))
-                 * prob_0_to_1 for i in range(len(shot))]
-        probs.append(1. - sum(probs))
-        shots = np.random.multinomial(n_detections, probs)
-        detected_dict = {shot: shots[-1]}
-
-        for i in range(len(shot)):
-            if shots[i]:
-                detected_dict[shot[:i] + str(1 - int(shot[i])) + shot[i
-                              + 1:]] = shots[i]
-        return Counter(detected_dict)
+        return cast(np.ndarray, weights)
 
     def _sampling_with_detection_errors(self, spam: dict[str, float],
                                         t: float, n_samples: int = 1000,
@@ -498,10 +458,42 @@ class CleanResults(SimulationResults):
             t_tol (float): Tolerance for the difference between t and
                 closest time.
         """
+
+        def detection_from_basis_state(n_detects: int, shot: str) -> Counter:
+            """Returns distribution of states detected when detecting `shot`.
+
+            Part of the SPAM implementation : computes measurement errors.
+
+            Args:
+                n_detects (int): Number of times state has been detected.
+                shot (str): Binary string of length the number of atoms of the
+                simulation.
+            """
+            n_0 = shot.count('0')
+            n_1 = shot.count('1')
+            eps = spam['epsilon']
+            eps_p = spam['epsilon_prime']
+
+            prob_1_to_0 = eps_p * (1 - eps) ** n_0 * (1 - eps_p) ** (n_1 - 1)
+            prob_0_to_1 = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
+            probs = [prob_1_to_0 if i == '1' else prob_0_to_1 for i in shot]
+            probs.append(1. - sum(probs))
+            shots = np.random.multinomial(n_detects, probs)
+            # Last bitstring : no measurement error, no character flipped
+            detected_dict = {shot: shots[-1]}
+            for i in range(len(shot)):
+                if shots[i]:
+                    # Bitstrings equal to shot except for the i-th character
+                    # have been detected due to measurement errors :
+                    flip_bit_string = (shot[:i] + str(1 - int(shot[i])) +
+                                       shot[i+1:])
+                    detected_dict[flip_bit_string] = shots[i]
+            return Counter(detected_dict)
+
         sampled_state = self.sample_state(t, n_samples)
         detected_sample_dict: Counter = Counter()
-        for (shot, N_d) in sampled_state.items():
-            dict_state = self._detection_from_basis_state(N_d, shot, spam)
+        for (shot, n_d) in sampled_state.items():
+            dict_state = detection_from_basis_state(n_d, shot)
             detected_sample_dict += dict_state
 
         return detected_sample_dict

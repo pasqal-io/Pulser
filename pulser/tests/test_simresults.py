@@ -53,10 +53,12 @@ ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 
 def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
-        CleanResults(state, 2, 2, 'bad_basis', None, [0])
+        CleanResults(state, 2, 'bad_basis', None, [0])
     with pytest.raises(ValueError, match="`meas_basis` must be"):
-        NoisyResults(state, 2, 'ground-rydberg',
-                     'wrong_measurement_basis', [0], 1)
+        CleanResults(state, 1, 'ground-rydberg', [0],
+                     'wrong_measurement_basis')
+    with pytest.raises(ValueError, match="`basis_name` must be"):
+        NoisyResults(state, 2, 'bad_basis', [0], 123)
 
     assert results._dim == 2
     assert results._size == 2
@@ -104,14 +106,20 @@ def test_get_final_state_noisy():
     seq_ = Sequence(reg, Chadoq2)
     seq_.declare_channel('ram', 'raman_local', initial_target="A")
     seq_.add(pi, 'ram')
-    sim_noisy_ = Simulation(seq_)
-    sim_noisy_.config.set_noise = ['SPAM', 'doppler']
+    noisy_config = SimConfig(noise=('SPAM', 'doppler'))
+    sim_noisy = Simulation(seq_, config=noisy_config)
     res3 = sim_noisy.run()
     res3._meas_basis = 'digital'
     res3.get_final_state()
     res3._meas_basis = 'ground-rydberg'
     res3.get_final_state()
     res3.states
+    res3.results
+
+
+def test_get_state():
+    with pytest.raises(IndexError, match="is absent from"):
+        results.get_state(0.353)
 
 
 def test_expect():
@@ -127,44 +135,33 @@ def test_expect():
 
 
 def test_expect_noisy():
-    with pytest.raises(TypeError, match="must be a list"):
-        results_noisy.expect('bad_observable')
-    with pytest.raises(TypeError, match="Incompatible type"):
-        results_noisy.expect(['bad_observable'])
-    with pytest.raises(ValueError, match="Incompatible shape"):
-        results_noisy.expect([np.array(3)])
-    op = [qutip.tensor(qutip.qeye(2),
-                       qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
-    results_noisy.expect(op)
+    bad_op = qutip.tensor([qutip.qeye(2), qutip.sigmap()])
+    with pytest.raises(ValueError, match="non-diagonal"):
+        results_noisy.expect([bad_op])
+    op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
+    results_noisy.expect([op])
 
 
 def test_plot():
-    op = qutip.tensor(qutip.qeye(2),
-                      qutip.basis(2, 1)*qutip.basis(2, 0).dag())
+    op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
     results_noisy.plot(op)
     results_noisy.plot(op, error_bars=False)
     results.plot(op)
-    results.states
 
 
 def test_sample_final_state():
-    sim_no_meas = Simulation(seq_no_meas)
-    sim_no_meas.config.runs = 1
+    sim_no_meas = Simulation(seq_no_meas, config=SimConfig(runs=1))
     results_no_meas = sim_no_meas.run()
     results_no_meas.sample_final_state()
-    with pytest.raises(ValueError, match="can only be"):
-        results_no_meas.sample_final_state(
-            meas_basis='wrong_measurement_basis')
     with pytest.raises(NotImplementedError, match="dimension > 3"):
         results_large_dim = deepcopy(results)
         results_large_dim._dim = 7
         results_large_dim.sample_final_state()
 
-    sampling = results.sample_final_state(N_samples=1234)
-    assert results.N_samples == 1234
+    sampling = results.sample_final_state(1234)
     assert len(sampling) == 4  # Check that all states were observed.
 
-    sampling0 = results.sample_final_state(meas_basis='digital', N_samples=911)
+    sampling0 = results.sample_final_state(meas_basis='digital', n_samples=911)
     assert sampling0 == {'00': 911}
 
     seq_no_meas.declare_channel('raman', 'raman_local', 'B')
@@ -181,12 +178,10 @@ def test_sample_final_state():
 
 
 def test_sample_final_state_noisy():
-    results_noisy.sample_final_state(N_samples=1234)
-    assert results_noisy.N_samples == 1234
-    results_noisy.sample_final_state(N_samples=911)
+    results_noisy.sample_final_state(n_samples=1234)
+    results_noisy.sample_final_state(n_samples=911)
     seq_no_meas_noisy.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas_noisy.add(pi, 'raman')
-    res_3level = Simulation(seq_no_meas_noisy)
-    res_3level.config.set_noise = ['SPAM', 'doppler']
-    res_3level.config.runs = 1
+    res_3level = Simulation(seq_no_meas_noisy, config=SimConfig(
+        noise=('SPAM', 'doppler'), runs=1))
     res_3level.run().states
