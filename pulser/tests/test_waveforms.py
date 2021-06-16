@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -179,3 +180,52 @@ def test_serialization():
     for wf in [constant, ramp, custom, blackman, composite]:
         s = json.dumps(wf, cls=PulserEncoder)
         assert wf == json.loads(s, cls=PulserDecoder)
+
+
+def test_constantwaveform_get_item():
+    # Check with int index
+    duration = constant.duration
+    assert constant[0] == -3
+    assert constant[duration - 1] == -3
+    assert constant[-1] == -3
+    assert constant[-duration] == -3
+    with pytest.raises(IndexError,
+                       match=re.escape("Index ('index_or_slice' = "
+                                       f"{duration}) must be in the range "
+                                       f"0~{duration-1}, or "
+                                       f"{-duration}~-1 from the end.")):
+        constant[duration]
+    with pytest.raises(IndexError,
+                       match=re.escape("Index ('index_or_slice' = "
+                                       f"{-duration-1}) must be in the range "
+                                       f"0~{duration-1}, or "
+                                       f"{-duration}~-1 from the end.")):
+        constant[-duration - 1]
+
+    # Check with slice
+    assert (constant[:] == np.full(duration, -3)).all()
+    assert (constant[0:] == np.full(duration, -3)).all()
+    assert (constant[0:-1] == np.full(duration - 1, -3)).all()
+    assert (constant[0:1] == np.full(2, -3)).all()
+    assert (constant[0:duration] == np.full(duration, -3)).all()
+    assert (constant[:duration] == np.full(duration, -3)).all()
+    assert (constant[-11:-1] == np.full(10, -3)).all()
+    assert (constant[-1:] == np.full(1, -3)).all()
+    with pytest.raises(IndexError,
+                       match="The step of the slice must be None or 1."):
+        constant[0:1:2]
+    with pytest.raises(IndexError,
+                       match=re.escape("The start of the slice (0) "
+                                       "must be less than the stop (0).")):
+        constant[0:0]
+    with pytest.raises(IndexError,
+                       match=re.escape("The range of the slice "
+                                       f"(0~{duration+1}) "
+                                       "must be included in the range "
+                                       "of the waveform.")):
+        constant[:duration+1]
+    with pytest.raises(IndexError,
+                       match=re.escape("The range of the slice (-10~10) "
+                                       "must be included in the range "
+                                       "of the waveform.")):
+        constant[-duration-10:10]

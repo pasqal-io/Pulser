@@ -127,6 +127,42 @@ class Waveform(ABC):
         pass
 
     @abstractmethod
+    def __getitem__(self, index_or_slice:
+                    Union[int, slice]) -> Union[float, np.ndarray]:
+        pass
+
+    def _check_index(self, i: int) -> int:
+        if (i < -self.duration
+                or i >= self.duration):
+            raise IndexError("Index ('index_or_slice' = "
+                             f"{i}) must be in the range "
+                             f"0~{self.duration-1}, or "
+                             f"{-self.duration}~-1 from the end.")
+        return i if i >= 0 else self.duration - i
+
+    def _check_slice(self, s: slice) -> slice:
+        if s.step is not None and s.step != 1:
+            raise IndexError("The step of the slice must be None or 1.")
+
+        # Transform start and stop indexes into positive or null values
+        # since they can be omitted (None) or negative (end-indexing)
+        start = 0 if s.start is None else (
+            s.start if s.start >= 0 else self.duration + s.start)
+        stop = self.duration if s.stop is None else (
+            s.stop if s.stop >= 0 else self.duration + s.stop)
+
+        if start >= stop:
+            raise IndexError(f"The start of the slice ({start}) "
+                             f"must be less than the stop ({stop}).")
+
+        if (start < 0 or stop < 0 or start > self.duration - 1
+                or stop > self.duration):
+            raise IndexError(f"The range of the slice ({start}~{stop}) "
+                             "must be included in the range of the waveform.")
+
+        return slice(start, stop)
+
+    @ abstractmethod
     def __mul__(self, other: float) -> Waveform:
         pass
 
@@ -183,7 +219,7 @@ class CompositeWaveform(Waveform):
 
         self._waveforms = list(waveforms)
 
-    @property
+    @ property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
         duration = 0
@@ -191,7 +227,7 @@ class CompositeWaveform(Waveform):
             duration += wf.duration
         return duration
 
-    @property
+    @ property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
@@ -201,17 +237,17 @@ class CompositeWaveform(Waveform):
         return cast(np.ndarray,
                     np.concatenate([wf.samples for wf in self._waveforms]))
 
-    @property
+    @ property
     def first_value(self) -> float:
         """The first value in the waveform."""
         return self._waveforms[0].first_value
 
-    @property
+    @ property
     def last_value(self) -> float:
         """The last value in the waveform."""
         return self._waveforms[-1].last_value
 
-    @property
+    @ property
     def waveforms(self) -> list[Waveform]:
         """The waveforms encapsulated in the composite waveform."""
         return list(self._waveforms)
@@ -233,6 +269,10 @@ class CompositeWaveform(Waveform):
     def __repr__(self) -> str:
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
+    def __getitem__(self, index_or_slice:
+                    Union[int, slice]) -> Union[float, np.ndarray]:
+        pass
+
     def __mul__(self, other: float) -> CompositeWaveform:
         return CompositeWaveform(*(wf * other for wf in self._waveforms))
 
@@ -251,12 +291,12 @@ class CustomWaveform(Waveform):
         self._samples = samples_arr
         super().__init__(len(samples_arr))
 
-    @property
+    @ property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
+    @ property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
@@ -273,6 +313,10 @@ class CustomWaveform(Waveform):
 
     def __repr__(self) -> str:
         return f'CustomWaveform({self.duration} ns, {self.samples!r})'
+
+    def __getitem__(self, index_or_slice:
+                    Union[int, slice]) -> Union[float, np.ndarray]:
+        pass
 
     def __mul__(self, other: float) -> CustomWaveform:
         return CustomWaveform(self._samples * float(other))
@@ -293,12 +337,12 @@ class ConstantWaveform(Waveform):
         value = cast(float, value)
         self._value = float(value)
 
-    @property
+    @ property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
+    @ property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
@@ -307,12 +351,12 @@ class ConstantWaveform(Waveform):
         """
         return np.full(self.duration, self._value)
 
-    @property
+    @ property
     def first_value(self) -> float:
         """The first value in the waveform."""
         return self._value
 
-    @property
+    @ property
     def last_value(self) -> float:
         """The last value in the waveform."""
         return self._value
@@ -338,6 +382,16 @@ class ConstantWaveform(Waveform):
         return (f"ConstantWaveform({self._duration} ns, "
                 + f"{self._value:.3g} rad/µs)")
 
+    def __getitem__(self, index_or_slice:
+                    Union[int, slice]) -> Union[float, np.ndarray]:
+        if isinstance(index_or_slice, slice):
+            index_or_slice = self._check_slice(index_or_slice)
+            duration = index_or_slice.stop - index_or_slice.start
+            return np.full(duration, self._value)
+        else:
+            self._check_index(index_or_slice)
+            return self._value
+
     def __mul__(self, other: float) -> ConstantWaveform:
         return ConstantWaveform(self._duration, self._value * float(other))
 
@@ -361,12 +415,12 @@ class RampWaveform(Waveform):
         stop = cast(float, stop)
         self._stop = float(stop)
 
-    @property
+    @ property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
+    @ property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
@@ -375,17 +429,17 @@ class RampWaveform(Waveform):
         """
         return np.linspace(self._start, self._stop, num=self._duration)
 
-    @property
+    @ property
     def slope(self) -> float:
         r"""Slope of the ramp, in :math:`s^{-15}`."""
         return (self._stop - self._start) / self._duration
 
-    @property
+    @ property
     def first_value(self) -> float:
         """The first value in the waveform."""
         return self._start
 
-    @property
+    @ property
     def last_value(self) -> float:
         """The last value in the waveform."""
         return self._stop
@@ -410,6 +464,10 @@ class RampWaveform(Waveform):
     def __repr__(self) -> str:
         return (f"RampWaveform({self._duration} ns, " +
                 f"{self._start:.3g}->{self._stop:.3g} rad/µs)")
+
+    def __getitem__(self, index_or_slice:
+                    Union[int, slice]) -> Union[float, np.ndarray]:
+        pass
 
     def __mul__(self, other: float) -> RampWaveform:
         k = float(other)
@@ -441,8 +499,8 @@ class BlackmanWaveform(Waveform):
         self._scaling: float = self._area / float(
             np.sum(self._norm_samples)) / 1e-3
 
-    @classmethod
-    @parametrize
+    @ classmethod
+    @ parametrize
     def from_max_val(cls, max_val: Union[float, Parametrized],
                      area: Union[float, Parametrized]) -> BlackmanWaveform:
         """Creates a Blackman waveform with a threshold on the maximum value.
@@ -472,12 +530,12 @@ class BlackmanWaveform(Waveform):
             wf = cls(duration, area)
         return wf
 
-    @property
+    @ property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
+    @ property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
@@ -486,12 +544,12 @@ class BlackmanWaveform(Waveform):
         """
         return cast(np.ndarray, self._norm_samples * self._scaling)
 
-    @property
+    @ property
     def first_value(self) -> float:
         """The first value in the waveform."""
         return 0.
 
-    @property
+    @ property
     def last_value(self) -> float:
         """The last value in the waveform."""
         return 0.
@@ -516,6 +574,10 @@ class BlackmanWaveform(Waveform):
 
     def __repr__(self) -> str:
         return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
+
+    def __getitem__(self, index_or_slice:
+                    Union[int, slice]) -> Union[float, np.ndarray]:
+        pass
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
