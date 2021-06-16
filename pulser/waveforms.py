@@ -294,10 +294,13 @@ class CompositeWaveform(Waveform):
         else:
             index: int = self._check_index(index_or_slice)
             wf_start = 0
+            value: float
             for wf in self._waveforms:
                 if wf_start <= index and index < wf_start+wf.duration:
-                    return wf[index-wf_start]
+                    value = cast(float, wf[index-wf_start])
+                    break
                 wf_start += wf.duration
+            return value
 
     def __mul__(self, other: float) -> CompositeWaveform:
         return CompositeWaveform(*(wf * other for wf in self._waveforms))
