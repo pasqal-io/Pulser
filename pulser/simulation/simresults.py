@@ -120,7 +120,6 @@ class SimulationResults(ABC):
             op (qutip.Qobj): Operator whose expectation value is wanted.
             fmt (str): Curve plot format.
             label (str): Axis label.
-            error_bars (bool): False here.
         """
         plt.plot(self._sim_times, self.expect([op])[0], fmt, label=label)
         plt.xlabel('Time (µs)')
@@ -173,13 +172,13 @@ class NoisyResults(SimulationResults):
             basis_name (str): Basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
                 makes no sense after projection on bitstrings).
-            sim_times (list): times at which Simulation object returned the
+            sim_times (list): Times at which Simulation object returned the
                 results.
             meas_basis (Optional[str]): The basis in which a sampling
                 measurement is desired.
-            n_measures (int): number of measurements needed to compute this
+            n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
-            dim (int): equals to 2 here, since projections already happened.
+            dim (int): Equal to 2 here, since projections already happened.
         """
         if basis_name == 'all':
             raise ValueError("`basis_name` must be either 'ground-rydberg' or"
@@ -206,7 +205,7 @@ class NoisyResults(SimulationResults):
             way of computing expectation values of observables.
 
         Args:
-            t (int): index of the state to be returned.
+            t (int): Time of the state to be returned.
             t_tol (float): Tolerance for the difference between t and
                 closest time.
 
@@ -254,7 +253,7 @@ class NoisyResults(SimulationResults):
             projected onto the Z basis.
 
         Returns:
-            list: the list of expectation values of each operator.
+            list: List of expectation values of each operator.
         """
         for obs in obs_list:
             if not isdiagonal(obs):
@@ -329,8 +328,7 @@ class CleanResults(SimulationResults):
         if meas_basis:
             if meas_basis not in {'ground-rydberg', 'digital'}:
                 raise ValueError(
-                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
-                    )
+                    "`meas_basis` must be 'ground-rydberg' or 'digital'.")
         self._meas_basis = meas_basis
         self._results = run_output
 
@@ -402,7 +400,7 @@ class CleanResults(SimulationResults):
         return self.get_state(self._sim_times[-1], reduce_to_basis,
                               ignore_global_phase, tol, normalize)
 
-    def _calc_weights(self, t_index: int) -> ArrayLike:
+    def _calc_weights(self, t_index: int) -> list[float]:
         N = self._size
         state_t = cast(qutip.Qobj, self._results[t_index]).unit()
         # Case of a density matrix
@@ -450,7 +448,7 @@ class CleanResults(SimulationResults):
                 "dimension > 3.")
         # Takes care of numerical artefacts in case sum(weights) != 1
         weights /= sum(weights)
-        return cast(ArrayLike, weights)
+        return cast(list[float], weights)
 
     def _detection_from_basis_state(self, n_detections: int, shot: str,
                                     spam: dict[str, float]) -> Counter:
