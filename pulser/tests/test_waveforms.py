@@ -183,8 +183,9 @@ def test_serialization():
 
 
 def test_constantwaveform_get_item():
-    # Check with int index
     duration = constant.duration
+
+    # Check with int index
     assert constant[0] == -3
     assert constant[duration - 1] == -3
     assert constant[-1] == -3
@@ -229,3 +230,44 @@ def test_constantwaveform_get_item():
                                        "must be included in the range "
                                        "of the waveform.")):
         constant[-duration-10:10]
+
+
+def test_customwaveform_get_item():
+    duration = custom.duration
+
+    # Check with int index
+    assert custom[0] == arb_samples[0]
+    assert custom[-1] == arb_samples[-1]
+
+    # Check with slice
+    assert (custom[0:duration] == arb_samples).all()
+
+
+def test_rampwaveform_get_item():
+    duration = ramp.duration
+    samples = ramp.samples
+
+    # Check with int index
+    assert ramp[0] == samples[0]
+    assert ramp[duration // 2] == samples[duration // 2]
+    assert ramp[-1] == samples[-1]
+
+    # Check with slice
+    assert (ramp[0:duration] == samples).all()
+    assert (ramp[duration // 4:duration * 3 // 4] ==
+            samples[duration // 4:duration * 3 // 4]).all()
+
+
+def test_blackmanwaveform_get_item():
+    duration = blackman.duration
+    samples = blackman.samples
+
+    # Check with int index
+    assert blackman[0] == samples[0]
+    assert blackman[duration // 2] == samples[duration // 2]
+    assert blackman[-1] == samples[-1]
+
+    # Check with slice
+    assert (blackman[0:duration] == samples).all()
+    assert (blackman[duration // 4:duration * 3 // 4] ==
+            samples[duration // 4:duration * 3 // 4]).all()

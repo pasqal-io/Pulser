@@ -288,7 +288,7 @@ class CustomWaveform(Waveform):
     def __init__(self, samples: ArrayLike):
         """Initializes a custom waveform."""
         samples_arr = np.array(samples, dtype=float)
-        self._samples = samples_arr
+        self._samples: np.ndarray = samples_arr
         super().__init__(len(samples_arr))
 
     @property
@@ -316,7 +316,12 @@ class CustomWaveform(Waveform):
 
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
-        pass
+        if isinstance(index_or_slice, slice):
+            self._check_slice(index_or_slice)
+            return cast(np.ndarray, self._samples[index_or_slice])
+        else:
+            self._check_index(index_or_slice)
+            return cast(float, self._samples[index_or_slice])
 
     def __mul__(self, other: float) -> CustomWaveform:
         return CustomWaveform(self._samples * float(other))
@@ -411,9 +416,11 @@ class RampWaveform(Waveform):
         """Initializes a ramp waveform."""
         super().__init__(duration)
         start = cast(float, start)
-        self._start = float(start)
+        self._start: float = float(start)
         stop = cast(float, stop)
-        self._stop = float(stop)
+        self._stop: float = float(stop)
+        self._samples: np.ndarray = np.linspace(
+            self._start, self._stop, num=self._duration)
 
     @property
     def duration(self) -> int:
@@ -427,7 +434,7 @@ class RampWaveform(Waveform):
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return np.linspace(self._start, self._stop, num=self._duration)
+        return self._samples
 
     @property
     def slope(self) -> float:
@@ -467,7 +474,12 @@ class RampWaveform(Waveform):
 
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
-        pass
+        if isinstance(index_or_slice, slice):
+            self._check_slice(index_or_slice)
+            return cast(np.ndarray, self._samples[index_or_slice])
+        else:
+            self._check_index(index_or_slice)
+            return cast(float, self._samples[index_or_slice])
 
     def __mul__(self, other: float) -> RampWaveform:
         k = float(other)
@@ -577,7 +589,12 @@ class BlackmanWaveform(Waveform):
 
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
-        pass
+        if isinstance(index_or_slice, slice):
+            self._check_slice(index_or_slice)
+            return cast(np.ndarray, self.samples[index_or_slice])
+        else:
+            self._check_index(index_or_slice)
+            return cast(float, self.samples[index_or_slice])
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
