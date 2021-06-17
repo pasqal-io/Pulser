@@ -78,7 +78,16 @@ class SimulationResults(ABC):
 
     def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
                ) -> list[Union[float, complex, ArrayLike]]:
-        """Returns the expectation values of operators in obs_list."""
+        """Returns the expectation values of operators in obs_list.
+
+        Args:
+            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): Input observable
+                list. ArrayLike objects will be converted to qutip.Qobj.
+
+        Returns:
+            list[Union[float, complex, ArrayLike]]: Expectation values of
+                obs_list.
+        """
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators.")
 
@@ -102,6 +111,10 @@ class SimulationResults(ABC):
             n_samples (int): Number of samples to return.
             t_tol (float): Tolerance for the difference between t and
                 closest time.
+
+        Returns:
+            Counter: Sample distribution of bitstrings corresponding to
+                measured quantum states at time t.
         """
         t_index = self._get_index_from_time(t, t_tol)
         dist = np.random.multinomial(n_samples, self._calc_weights(t_index))
@@ -109,7 +122,15 @@ class SimulationResults(ABC):
                         i, self._size): dist[i] for i in np.nonzero(dist)[0]})
 
     def sample_final_state(self, n_samples: int = 1000) -> Counter:
-        """Returns the result of multiple measurements of the final state."""
+        """Returns the result of multiple measurements of the final state.
+
+        Args:
+            n_samples (int): Number of samples to return.
+
+        Returns:
+            Counter: Sample distribution of bitstrings corresponding to
+                measured quantum states at the end of the simulation.
+        """
         return self.sample_state(self._sim_times[-1], n_samples)
 
     def plot(self, op: qutip.Qobj, fmt: str = '', label: str = '') -> None:
@@ -128,7 +149,7 @@ class SimulationResults(ABC):
         """Returns closest index corresponding to time t_float.
 
         Args:
-            t_float (float): Time the time index of which is needed.
+            t_float (float): Time value (in µs).
             tol (float): Tolerance for the difference between t_float and
                 closest time.
         """
@@ -171,8 +192,8 @@ class NoisyResults(SimulationResults):
             basis_name (str): Basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
                 makes no sense after projection on bitstrings).
-            sim_times (list): Times at which Simulation object returned the
-                results.
+            sim_times (np.ndarray): Times at which Simulation object returned
+                the results.
             meas_basis (Optional[str]): The basis in which a sampling
                 measurement is desired.
             n_measures (int): Number of measurements needed to compute this
@@ -242,10 +263,8 @@ class NoisyResults(SimulationResults):
         """Calculates the expectation value of a list of observables.
 
         Args:
-            obs_list (array-like of qutip.Qobj or array-like of numpy.ndarray):
-                A list of observables whose expectation value will be
-                calculated. If necessary, each member will be transformed into
-                a qutip.Qobj instance.
+            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): Input observable
+                list. ArrayLike objects will be converted to qutip.Qobj.
 
         Note: This only works for diagonal observables, since results have been
             projected onto the Z basis.
@@ -350,7 +369,7 @@ class CleanResults(SimulationResults):
                 closest time.
 
         Returns:
-            qutip.Qobj: The resulting final state.
+            qutip.Qobj: The resulting state at time t.
 
         Raises:
             TypeError: If trying to reduce to a basis that would eliminate
@@ -388,18 +407,34 @@ class CleanResults(SimulationResults):
     def get_final_state(self, reduce_to_basis: Optional[str] = None,
                         ignore_global_phase: bool = True, tol: float = 1e-6,
                         normalize: bool = True) -> qutip.Qobj:
-        """Returns the final state of the Simulation."""
+        """Returns the final state of the Simulation.
+
+        Args:
+            reduce_to_basis (str, default=None): Reduces the full state vector
+                to the given basis ("ground-rydberg" or "digital"), if the
+                population of the states to be ignored is negligible.
+            ignore_global_phase (bool, default=True): If True, changes the
+                final state's global phase such that the largest term (in
+                absolute value) is real.
+            tol (float, default=1e-6): Maximum allowed population of each
+                eliminated state.
+            normalize (bool, default=True): Whether to normalize the reduced
+                state.
+
+        Returns:
+            qutip.Qobj: The resulting state at time t.
+
+        Raises:
+            TypeError: If trying to reduce to a basis that would eliminate
+                states with significant occupation probabilites.
+        """
         return self.get_state(self._sim_times[-1], reduce_to_basis,
                               ignore_global_phase, tol, normalize)
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
         n = self._size
         state_t = cast(qutip.Qobj, self._results[t_index]).unit()
-        # Case of a density matrix
-        if state_t.type != "ket":
-            probs = np.abs(state_t.diag())
-        else:
-            probs = (np.abs(state_t.full())**2).flatten()
+        probs = (np.abs(state_t.full())**2).flatten()
 
         if self._dim == 2:
             if self._meas_basis == self._basis_name:

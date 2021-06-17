@@ -119,7 +119,7 @@ def test_get_final_state_noisy():
 
 def test_get_state():
     with pytest.raises(IndexError, match="is absent from"):
-        results.get_state(0.353)
+        results.get_state(-1.)
 
 
 def test_expect():
@@ -161,19 +161,19 @@ def test_sample_final_state():
     sampling = results.sample_final_state(1234)
     assert len(sampling) == 4  # Check that all states were observed.
 
-    sampling0 = results.sample_final_state(meas_basis='digital', n_samples=911)
+    results._meas_basis = 'digital'
+    sampling0 = results.sample_final_state(n_samples=911)
     assert sampling0 == {'00': 911}
-
     seq_no_meas.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas.add(pi, 'raman')
     res_3level = Simulation(seq_no_meas).run()
-    sampling_three_level = res_3level.sample_final_state(meas_basis='digital')
+    sampling_three_level = res_3level.sample_final_state()
     # Raman pi pulse on one atom will not affect other,
     # even with global pi on rydberg
     assert len(sampling_three_level) == 2
-    sampling_three_levelB = res_3level.sample_final_state(
-                                meas_basis='ground-rydberg')
-    # Global Rydberg will affect both:
+    res_3level._meas_basis = 'ground-rydberg'
+    sampling_three_levelB = res_3level.sample_final_state()
+    # Rydberg will affect both:
     assert len(sampling_three_levelB) == 4
 
 

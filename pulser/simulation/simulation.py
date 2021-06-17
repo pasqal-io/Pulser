@@ -60,7 +60,15 @@ class Simulation:
                  evaluation_times: Union[float, str, ArrayLike] = 'Full'
                  ) -> None:
         """Instantiates a Simulation object."""
-        self.seq = sequence
+        if not isinstance(sequence, Sequence):
+            raise TypeError("The provided sequence has to be a valid "
+                            "pulser.Sequence instance.")
+        if not sequence._schedule:
+            raise ValueError("The provided sequence has no declared channels.")
+        if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
+            raise ValueError("No instructions given for the channels in the "
+                             "sequence.")
+        self._seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = max(
@@ -93,23 +101,6 @@ class Simulation:
             raise ValueError("`sampling_rate` is too small, less than 4 data "
                              "points.")
         self._sampling_rate: float = value
-
-    @property
-    def seq(self) -> Sequence:
-        """Property getter for sequence."""
-        return self._seq
-
-    @seq.setter
-    def seq(self, seq: Sequence) -> None:
-        if not isinstance(seq, Sequence):
-            raise TypeError("The provided sequence has to be a valid "
-                            "pulser.Sequence instance.")
-        if not seq._schedule:
-            raise ValueError("The provided sequence has no declared channels.")
-        if all(seq._schedule[x][-1].tf == 0 for x in seq._channels):
-            raise ValueError("No instructions given for the channels in the "
-                             "sequence.")
-        self._seq = seq
 
     @property
     def config(self) -> SimConfig:
@@ -246,7 +237,8 @@ class Simulation:
 
         def write_samples(slot: _TimeSlot,
                           samples_dict: Mapping[str, np.ndarray],
-                          *qid: Union[int, str]) -> None:
+                          *qid: Union[int, str],
+                          is_global_pulse: bool = False) -> None:
             """Builds hamiltonian coefficients.
 
             Taking into account, if necessary, noise effects, which are local
@@ -255,17 +247,19 @@ class Simulation:
             _pulse = cast(Pulse, slot.type)
             noise_det = 0.
             noise_amp = 1.
+
             for noise in self.config.noise:
                 if noise == 'doppler':
                     noise_det += np.random.normal(
                         0, self.config.doppler_sigma)
-                # Gaussian beam for global pulses
-                if noise == 'amplitude':
+                # Gaussian beam loss in amplitude for global pulses only
+                if noise == 'amplitude' and is_global_pulse:
                     position = self._qdict[qid[0]]
                     r = np.linalg.norm(position)
                     w0 = self.config.laser_waist
-                    noise_amp = np.random.normal(1., 1.e-3) * \
-                        np.exp(-(r/w0)**2)
+                    noise_amp = np.random.normal(
+                        1., 1.e-3) * np.exp(-(r/w0)**2)
+
             samples_dict['amp'][slot.ti:slot.tf] = \
                 _pulse.amplitude.samples * noise_amp
             samples_dict['det'][slot.ti:slot.tf] = \
@@ -283,7 +277,7 @@ class Simulation:
                     samples_dict = prepare_dict()
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
-                        write_samples(slot, samples_dict)
+                        write_samples(slot, samples_dict, is_global_pulse=True)
                 self.samples[addr][basis] = samples_dict
 
             # Any noise : global becomes local for each qubit in the reg
@@ -298,7 +292,8 @@ class Simulation:
                                 samples_dict[qubit] = prepare_dict()
                             # We don't write samples for badly prep qubits
                             if not self._bad_atoms[qubit]:
-                                write_samples(slot, samples_dict[qubit], qubit)
+                                write_samples(slot, samples_dict[qubit], qubit,
+                                              is_global_pulse=True)
                 self.samples['Local'][basis] = samples_dict
 
             # Local noisy pulse
@@ -436,10 +431,10 @@ class Simulation:
         if not qobj_list:
             # can't simulate an empty sequence
             qobj_list = [0*self._build_operator('I')]
+
         ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
         ham.compress()
-
         self._hamiltonian = ham
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
