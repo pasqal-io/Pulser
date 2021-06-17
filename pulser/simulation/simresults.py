@@ -280,8 +280,8 @@ class NoisyResults(SimulationResults):
 
     def _calc_weights(self, t_index: int) -> list[float]:
         n = self._size
-        bitstrings = [np.binary_repr(k, n) for k in range(2**n)]
-        return [self._results[t_index][b] for b in bitstrings]
+        return [self._results[t_index][
+                np.binary_repr(k, n)] for k in range(2**n)]
 
     def plot(self, op: qutip.Qobj, fmt: str = '.',
              label: str = '', error_bars: bool = True) -> None:
