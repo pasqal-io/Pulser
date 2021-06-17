@@ -393,7 +393,7 @@ class CleanResults(SimulationResults):
                               ignore_global_phase, tol, normalize)
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
-        N = self._size
+        n = self._size
         state_t = cast(qutip.Qobj, self._results[t_index]).unit()
         # Case of a density matrix
         if state_t.type != "ket":
@@ -404,7 +404,7 @@ class CleanResults(SimulationResults):
         if self._dim == 2:
             if self._meas_basis == self._basis_name:
                 # State vector ordered with r first for 'ground_rydberg'
-                # e.g. N=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
+                # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
                 weights = (probs if self._meas_basis == 'digital'
                            else probs[::-1])
@@ -420,11 +420,11 @@ class CleanResults(SimulationResults):
             elif self._meas_basis == 'digital':
                 one_state = 2       # 1 = |h>
                 ex_one = slice(0, 2)
-            probs = probs.reshape([3]*N)
-            weights = np.zeros(2**N)
-            for dec_val in range(2**N):
+            probs = probs.reshape([3]*n)
+            weights = np.zeros(2**n)
+            for dec_val in range(2**n):
                 ind: list[Union[int, slice]] = []
-                for v in np.binary_repr(dec_val, width=N):
+                for v in np.binary_repr(dec_val, width=n):
                     if v == '0':
                         ind.append(ex_one)
                     else:
