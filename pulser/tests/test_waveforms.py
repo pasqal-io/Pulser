@@ -203,21 +203,6 @@ def test_get_item():
     with pytest.raises(IndexError,
                        match="The step of the slice must be None or 1."):
         constant[0:1:2]
-    with pytest.raises(IndexError,
-                       match=re.escape("The start of the slice (0) "
-                                       "must be less than the stop (0).")):
-        constant[0:0]
-    with pytest.raises(IndexError,
-                       match=re.escape("The range of the slice "
-                                       f"(0~{duration+1}) "
-                                       "must be included in the range "
-                                       "of the waveform.")):
-        constant[:duration+1]
-    with pytest.raises(IndexError,
-                       match=re.escape("The range of the slice (-10~10) "
-                                       "must be included in the range "
-                                       "of the waveform.")):
-        constant[-duration-10:10]
 
     # Check nominal operations
 
@@ -250,3 +235,16 @@ def test_get_item():
                     samples[duration14:duration34]).all()
             assert (wf[-duration34:-duration14] ==
                     samples[-duration34:-duration14]).all()
+
+        # Check with out of bounds slices
+        assert (wf[:duration*2] == samples).all()
+        assert (wf[-duration*2:] == samples).all()
+        assert (wf[-duration*2:duration*2] == samples).all()
+        assert (wf[duration//2:duration*2] ==
+                samples[duration//2:duration*2]).all()
+        assert (wf[-duration*2:duration//2] ==
+                samples[-duration*2:duration//2]).all()
+        assert(wf[2:1].size == 0)
+        assert(wf[duration*2:].size == 0)
+        assert(wf[duration*2:duration*3].size == 0)
+        assert(wf[-duration*3:-duration*2].size == 0)

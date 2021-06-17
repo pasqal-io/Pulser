@@ -151,14 +151,17 @@ class Waveform(ABC):
         stop = self.duration if s.stop is None else (
             s.stop if s.stop >= 0 else self.duration + s.stop)
 
-        if start >= stop:
-            raise IndexError(f"The start of the slice ({start}) "
-                             f"must be less than the stop ({stop}).")
-
-        if (start < 0 or stop < 0 or start > self.duration - 1
-                or stop > self.duration):
-            raise IndexError(f"The range of the slice ({start}~{stop}) "
-                             "must be included in the range of the waveform.")
+        # Correct out of bounds ranges
+        if start < 0:
+            start = 0
+        if stop < 0:
+            stop = 0
+        if start > self.duration:
+            start = self.duration
+        if stop > self.duration:
+            stop = self.duration
+        if stop < start:
+            stop = start
 
         return slice(start, stop)
 
@@ -279,24 +282,41 @@ class CompositeWaveform(Waveform):
             array: np.ndarray = np.array([])
             wf_start = 0
             for wf in self._waveforms:
-                if wf_start <= start and start <= wf_start+wf.duration:
-                    if wf_start <= stop and stop <= wf_start+wf.duration:
+                duration: int = wf.duration
+                if start > wf_start + duration:
+                    # Skip this waveform, which is before the start index
+                    wf_start += duration
+                    continue
+                elif wf_start <= start:
+                    # The start index belongs to this waveform
+                    if wf_start <= stop <= wf_start+duration:
+                        # The stop index also belongs to this waveform
+                        # Hence, we can return a subset of its samples
                         return cast(np.ndarray,
-                                    wf.samples[start-wf_start:stop-wf_start])
+                                    wf[start-wf_start:stop-wf_start])
                     else:
+                        # Copy the part of the waveform after the start index
                         array = wf.samples[start-wf_start:]
-                if start < wf_start and stop > wf_start+wf.duration:
-                    array = np.concatenate((array, wf.samples))
-                if wf_start <= stop and stop <= wf_start+wf.duration:
-                    array = np.concatenate((array, wf.samples[:stop-wf_start]))
-                wf_start += wf.duration
+                elif start < wf_start:
+                    if stop < wf_start:
+                        # No need to loop on the next waveforms
+                        break
+                    elif stop <= wf_start+wf.duration:
+                        # This stop index belongs to this waveform
+                        # Hence, we can concatenate a subset of it
+                        array = np.concatenate(
+                            (array, wf.samples[:stop-wf_start]))
+                    else:
+                        # This waveform fits entirely in the start~stop range
+                        array = np.concatenate((array, wf.samples))
+                wf_start += duration
             return array
         else:
             index: int = self._check_index(index_or_slice)
             wf_start = 0
             value: float
             for wf in self._waveforms:
-                if wf_start <= index and index < wf_start+wf.duration:
+                if wf_start <= index < wf_start+wf.duration:
                     value = cast(float, wf[index-wf_start])
                     break
                 wf_start += wf.duration
@@ -332,7 +352,7 @@ class CustomWaveform(Waveform):
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return self._samples
+        return self._samples.copy()
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._samples)
@@ -463,7 +483,7 @@ class RampWaveform(Waveform):
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return self._samples
+        return self._samples.copy()
 
     @property
     def slope(self) -> float:
@@ -622,8 +642,10 @@ class BlackmanWaveform(Waveform):
             self._check_slice(index_or_slice)
             return cast(np.ndarray, self.samples[index_or_slice])
         else:
-            self._check_index(index_or_slice)
-            return cast(float, self.samples[index_or_slice])
+            index: int = self._check_index(index_or_slice)
+            if index == 0 or index == self._duration - 1:
+                return 0.
+            return cast(float, self.samples[index])
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
