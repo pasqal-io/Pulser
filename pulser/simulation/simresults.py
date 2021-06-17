@@ -434,7 +434,10 @@ class CleanResults(SimulationResults):
     def _calc_weights(self, t_index: int) -> np.ndarray:
         n = self._size
         state_t = cast(qutip.Qobj, self._results[t_index]).unit()
-        probs = (np.abs(state_t.full())**2).flatten()
+        if state_t.type != "ket":
+            probs = np.abs(state_t.diag())
+        else:
+            probs = (np.abs(state_t.full())**2).flatten()
 
         if self._dim == 2:
             if self._meas_basis == self._basis_name:

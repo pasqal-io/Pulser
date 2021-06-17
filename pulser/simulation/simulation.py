@@ -86,12 +86,12 @@ class Simulation:
             addr: {basis: {} for basis in ['ground-rydberg', 'digital']}
             for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
+        self._collapse_ops: List[qutip.Qobj] = []
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
         self.evaluation_times = evaluation_times
         self.config = config if config else SimConfig()
         self.initial_state = 'all-ground'
-        self._collapse_ops: List[qutip.Qobj] = []
 
     @property
     def config(self) -> SimConfig:
@@ -143,7 +143,7 @@ class Simulation:
         return self._initial_state
 
     @initial_state.setter
-    def initial_state(self, state: Union[str, np.ndarray, qutip.qObj]) -> None:
+    def initial_state(self, state: Union[str, np.ndarray, qutip.Qobj]) -> None:
         """Sets the initial state of the simulation.
 
         Args:
@@ -158,7 +158,7 @@ class Simulation:
             self._initial_state = \
                 qutip.tensor([self.basis['g'] for _ in range(self._size)])
         else:
-            state = cast(Union[np.ndarray, qutip.qObj], state)
+            state = cast(Union[np.ndarray, qutip.Qobj], state)
             if state.shape[0] != self.dim ** self._size:
                 raise ValueError("Incompatible shape of initial state.")
             if isinstance(state, qutip.Qobj):
@@ -343,8 +343,7 @@ class Simulation:
 
         for proj in projectors:
             self.op_matrix['sigma_' + proj] = (
-                self.basis[proj[0]] * self.basis[proj[1]].dag()
-            )
+                self.basis[proj[0]] * self.basis[proj[1]].dag())
 
     def _build_operator(self, op_id: str, *qubit_ids: Union[str, int],
                         global_op: bool = False) -> qutip.Qobj:

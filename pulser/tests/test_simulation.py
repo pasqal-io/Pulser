@@ -22,6 +22,7 @@ import qutip
 from pulser import Sequence, Pulse, Register, Simulation
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
+from pulser.simulation import SimConfig
 
 q_dict = {"control1": np.array([-4., 0.]),
           "target": np.array([0., 4.]),
@@ -81,13 +82,13 @@ def test_initialization_and_construction_of_hamiltonian():
 
     with pytest.raises(ValueError, match='too small, less than'):
         Simulation(seq, sampling_rate=0.0001)
-    with pytest.raises(ValueError, match='The sampling rate'):
+    with pytest.raises(ValueError, match='`sampling_rate`'):
         Simulation(seq, sampling_rate=5)
-    with pytest.raises(ValueError, match='The sampling rate'):
+    with pytest.raises(ValueError, match='`sampling_rate`'):
         Simulation(seq, sampling_rate=-1)
 
-    assert sim.sampling_rate == 0.011
-    assert len(sim._times) == int(sim.sampling_rate * sim._tot_duration)
+    assert sim._sampling_rate == 0.011
+    assert len(sim._times) == int(sim._sampling_rate * sim._tot_duration)
 
     assert isinstance(sim._hamiltonian, qutip.QobjEvo)
     # Checks adapt() method:
@@ -99,7 +100,6 @@ def test_initialization_and_construction_of_hamiltonian():
 
 def test_extraction_of_sequences():
     sim = Simulation(seq)
-    sim.seq
     for channel in seq.declared_channels:
         addr = seq.declared_channels[channel].addressing
         basis = seq.declared_channels[channel].basis
@@ -244,11 +244,11 @@ def test_run():
                                       for _ in range(sim._size)])
 
     with pytest.raises(ValueError,
-                       match='Incompatible shape of initial_state'):
+                       match='Incompatible shape of initial state'):
         sim.initial_state = bad_initial
 
     with pytest.raises(ValueError,
-                       match='Incompatible shape of initial_state'):
+                       match='Incompatible shape of initial state'):
         sim.initial_state = qutip.Qobj(bad_initial)
 
     sim.initial_state = good_initial_array
@@ -325,34 +325,18 @@ def test_eval_times():
 def test_config():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.reset_config()
-    sim.config.samples_per_run = 10
     sim.show_config()
 
 
 def test_noise():
-    sim2 = Simulation(seq, sampling_rate=0.01)
-    sim2.config.noise = ['amplitude']
-    sim2.config.remove_all_noise()
-    sim2.config.noise = ['SPAM', 'doppler']
-    assert sim2.config.noise == ['SPAM', 'doppler']
-    sim2.config.runs = 30
-    with pytest.raises(ValueError,
-                       match='Not a valid noise type'):
-        sim2.config.noise = ['bad_noise_type']
-    with pytest.raises(ValueError,
-                       match='Invalid value'):
-        sim2.config.set_spam(epsilon=1.5)
-    sim2.config.noise = ['SPAM']
-    sim2.config.set_spam(eta=0.9)
-    assert sim2.config.spam_dict == {'eta': 0.9, 'epsilon': 0.01,
-                                     'epsilon_prime': 0.05}
-    sim2.temperature = 3003.313
+    sim2 = Simulation(seq, sampling_rate=0.01,
+                      config=SimConfig(noise=('SPAM', 'doppler')))
+    assert sim2.config.noise == ('SPAM', 'doppler')
     sim2.run(min_step=0)
-    sim2.config.noise = ['doppler']
     sim2.run().sample_final_state()
     with pytest.raises(ValueError,
                        match='Cannot include'):
-        sim2.config.noise = ['dephasing']
+        sim2.config = SimConfig(noise='dephasing')
         sim2.run()
     sim2.config.spam_dict
 
@@ -364,13 +348,6 @@ def test_dephasing():
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.*2*np.pi, 0)
     seq.add(pulse, 'ch0')
-    sim = Simulation(seq, sampling_rate=0.01)
-    sim.config.noise = ['dephasing']
-    sim.run().sample_state()
-
-
-def test_temperature():
-    simtemp = Simulation(seq)
-    simtemp.config.temperature = 40
-    simtemp.config.temperature
-    simtemp.config.doppler_sigma
+    sim = Simulation(seq, sampling_rate=0.01,
+                     config=SimConfig(noise='dephasing'))
+    sim.run().sample_final_state()
