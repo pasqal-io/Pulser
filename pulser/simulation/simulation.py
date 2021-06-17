@@ -26,8 +26,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from pulser import Pulse, Sequence
-from pulser.simulation.simresults import SimulationResults, \
-                                         CleanResults, NoisyResults
+from pulser.simulation.simresults import (SimulationResults,
+                                          CleanResults, NoisyResults)
 from pulser.simulation.simconfig import SimConfig
 from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
@@ -45,14 +45,14 @@ class Simulation:
             extract from the pulse sequence to simulate. Has to be a
             value between 0.05 and 1.0.
         config (SimConfig): Configuration to be used for this simulation.
-        evaluation_times (Union[str, list, float]: The list of times at
-            which the quantum state should be evaluated, in μs.
-            If 'Full' is provided, this list is set to be the one used to
-            define the Hamiltonian to the solver.
-            The initial and final times are always included, so that if
-            'Minimal' is provided, the list is set to only contain the
-            initial and the final times. Use a float to act as a sampling
-            rate for the resulting state.
+        evaluation_times (Union[str, ArrayLike, float]): Choose between:
+            -'Full': This list is set to be the one used to
+            define the Hamiltonian to the solver
+            -'Minimal': This list is set to only include initial and end
+                times
+            -An ArrayLike object of times in µs if you wish to only include
+                those specific times
+            -A float to act as a sampling rate for the resulting state.
     """
 
     def __init__(self, sequence: Sequence, sampling_rate: float = 1.0,
@@ -74,7 +74,13 @@ class Simulation:
         self._tot_duration = max(
             [self._seq._last(ch).tf for ch in self._seq._schedule]
         )
-        self.sampling_rate = sampling_rate
+        if not (0 < sampling_rate <= 1.0):
+            raise ValueError("`sampling_rate` must be positive and "
+                             "not larger than 1.0")
+        if int(self._tot_duration * sampling_rate) < 4:
+            raise ValueError("`sampling_rate` is too small, less than 4 data "
+                             "points.")
+        self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self.samples: dict[str, dict[str, dict]] = {
             addr: {basis: {} for basis in ['ground-rydberg', 'digital']}
@@ -86,21 +92,6 @@ class Simulation:
         self.config = config if config else SimConfig()
         self.initial_state = 'all-ground'
         self._collapse_ops: List[qutip.Qobj] = []
-
-    @property
-    def sampling_rate(self) -> float:
-        """Property getter for sampling_rate."""
-        return self._sampling_rate
-
-    @sampling_rate.setter
-    def sampling_rate(self, value: float) -> None:
-        if not (0 < value <= 1.0):
-            raise ValueError("`sampling_rate` must be positive and "
-                             "not larger than 1.0")
-        if int(self._tot_duration * value) < 4:
-            raise ValueError("`sampling_rate` is too small, less than 4 data "
-                             "points.")
-        self._sampling_rate: float = value
 
     @property
     def config(self) -> SimConfig:
@@ -142,9 +133,9 @@ class Simulation:
         self._bad_atoms: dict[Union[str, int], bool] = {
             qid: False for qid in self._qid_index}
         if 'SPAM' in self.config.noise:
-            self._bad_atoms = \
-                {qid: (np.random.uniform() < self.config.spam_dict['eta'])
-                 for qid in self._qid_index}
+            dist = (np.random.uniform(size=len(self._qid_index)) <
+                    self.config.spam_dict['eta'])
+            self._bad_atoms = dict(zip(self._qid_index, dist))
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -152,22 +143,28 @@ class Simulation:
         return self._initial_state
 
     @initial_state.setter
-    def initial_state(self, value: Union[str, ArrayLike, qutip.qObj]) -> None:
+    def initial_state(self, state: Union[str, np.ndarray, qutip.qObj]) -> None:
+        """Sets the initial state of the simulation.
+
+        Args:
+            state (Union[str, ArrayLike, qutip.qObj]): initial state.
+                Choose between:
+                -'all-ground' for all atoms in ground state
+                -An ArrayLike with a shape compatible with the system
+                -A Qobj object
+        """
         self._initial_state: qutip.Qobj
-        if value == 'all-ground':
+        if state == 'all-ground':
             self._initial_state = \
                 qutip.tensor([self.basis['g'] for _ in range(self._size)])
         else:
-            if isinstance(value, qutip.Qobj):
-                if cast(qutip.Qobj, value).shape != \
-                        (self.dim**self._size, 1):
-                    raise ValueError("Incompatible shape of initial_state")
-                self._initial_state = value
+            state = cast(Union[np.ndarray, qutip.qObj], state)
+            if state.shape[0] != self.dim ** self._size:
+                raise ValueError("Incompatible shape of initial state.")
+            if isinstance(state, qutip.Qobj):
+                self._initial_state = state
             else:
-                if cast(np.ndarray, value).shape != \
-                        (self.dim**self._size,):
-                    raise ValueError("Incompatible shape of initial_state")
-                self._initial_state = qutip.Qobj(value)
+                self._initial_state = qutip.Qobj(state)
 
     @property
     def evaluation_times(self) -> Union[str, float, ArrayLike]:
@@ -176,6 +173,18 @@ class Simulation:
 
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
+        """Sets times at which the results of this simulation are returned.
+
+        Args:
+            value (Union[str, ArrayLike, float]): Choose between:
+                -'Full': This list is set to be the one used to
+                define the Hamiltonian to the solver
+                -'Minimal': This list is set to only include initial and end
+                    times
+                -An ArrayLike object of times in µs if you wish to only include
+                    those specific times
+                -A float to act as a sampling rate for the resulting state.
+        """
         if isinstance(value, str):
             if value == 'Full':
                 self._eval_times_array = self._times
@@ -223,7 +232,7 @@ class Simulation:
                 to be shown as text on the plot, defaults to False.
         """
         draw_sequence(
-            self._seq, self.sampling_rate, draw_phase_area=draw_phase_area
+            self._seq, self._sampling_rate, draw_phase_area=draw_phase_area
         )
 
     def _extract_samples(self) -> None:
@@ -354,7 +363,7 @@ class Simulation:
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
         """Adapt list to correspond to sampling rate."""
         indices = np.linspace(0, self._tot_duration-1,
-                              int(self.sampling_rate*self._tot_duration),
+                              int(self._sampling_rate * self._tot_duration),
                               dtype=int)
         return cast(np.ndarray, full_array[indices])
 
@@ -418,7 +427,7 @@ class Simulation:
 
         # Time independent term:
         if self.basis_name == 'digital' or self._size == 1:
-            qobj_list = []
+            qobj_list = [0 * self._build_operator('I')]
         else:
             # Van der Waals Interaction Terms
             qobj_list = [make_vdw_term()]
@@ -428,9 +437,6 @@ class Simulation:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
-        if not qobj_list:
-            # can't simulate an empty sequence
-            qobj_list = [0*self._build_operator('I')]
 
         ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
@@ -518,10 +524,7 @@ class Simulation:
 
         def _run_solver(as_subroutine: bool = False,
                         measurement_basis: str = '') -> CleanResults:
-            """Returns CleanResults: Object containing evolution results.
-
-            Its _states attribute contains QuTiP quantum states, not Counters.
-            """
+            """Returns CleanResults: Object containing evolution results."""
             if not as_subroutine:
                 # CLEAN SIMULATION:
                 measurement_basis = _assign_meas_basis()
