@@ -297,12 +297,12 @@ class CompositeWaveform(Waveform):
                     else:
                         # Copy the part of the waveform after the start index
                         array = wf.samples[start-wf_start:]
-                elif start < wf_start:
+                else:
                     if stop < wf_start:
                         # No need to loop on the next waveforms
                         break
                     elif stop <= wf_start+wf.duration:
-                        # This stop index belongs to this waveform
+                        # The stop index belongs to this waveform
                         # Hence, we can concatenate a subset of it
                         array = np.concatenate(
                             (array, wf.samples[:stop-wf_start]))
@@ -527,8 +527,12 @@ class RampWaveform(Waveform):
             self._check_slice(index_or_slice)
             return cast(np.ndarray, self._samples[index_or_slice])
         else:
-            self._check_index(index_or_slice)
-            return cast(float, self._samples[index_or_slice])
+            index: int = self._check_index(index_or_slice)
+            if index == 0:
+                return self._start
+            if index == self._duration - 1:
+                return self._stop
+            return cast(float, self._samples[index])
 
     def __mul__(self, other: float) -> RampWaveform:
         k = float(other)
