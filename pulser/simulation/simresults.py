@@ -199,9 +199,10 @@ class NoisyResults(SimulationResults):
             n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
         """
-        if basis_name not in {'ground-rydberg', 'digital'}:
-            raise ValueError("`basis_name` must be either 'ground-rydberg' or"
-                             + " 'digital'.")
+        if basis_name == 'all':
+            basis_name = 'digital'
+        else:
+            basis_name = basis_name
         super().__init__(size, basis_name, sim_times)
         self.n_measures = n_measures
         self._results = run_output

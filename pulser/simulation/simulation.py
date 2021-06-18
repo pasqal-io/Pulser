@@ -33,6 +33,10 @@ from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
 
 
+SUPPORTED_BASES = {"ground-rydberg", "digital"}
+DEPHASING_PROB = 0.05
+
+
 class Simulation:
     """Simulation of a pulse sequence using QuTiP.
 
@@ -68,6 +72,11 @@ class Simulation:
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
             raise ValueError("No instructions given for the channels in the "
                              "sequence.")
+        not_supported = (set(ch.basis for ch in sequence._channels.values())
+                         - SUPPORTED_BASES)
+        if not_supported:
+            raise NotImplementedError("Sequence with unsupported bases: "
+                                      + "".join(not_supported))
         self._seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
@@ -75,8 +84,9 @@ class Simulation:
             [self._seq._last(ch).tf for ch in self._seq._schedule]
         )
         if not (0 < sampling_rate <= 1.0):
-            raise ValueError("`sampling_rate` must be positive and "
-                             "not larger than 1.0")
+            raise ValueError("The sampling rate (`sampling_rate` = "
+                             f"{sampling_rate}) must be greater than 0 and "
+                             "less than or equal to 1.")
         if int(self._tot_duration * sampling_rate) < 4:
             raise ValueError("`sampling_rate` is too small, less than 4 data "
                              "points.")
@@ -90,7 +100,10 @@ class Simulation:
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
         self.evaluation_times = evaluation_times
-        self.config = config if config else SimConfig()
+        self._config = config if config else SimConfig()
+        self._extract_samples()
+        self._build_basis_and_op_matrices()
+        self._construct_hamiltonian()
         self.initial_state = 'all-ground'
 
     @property
@@ -98,8 +111,14 @@ class Simulation:
         """Property getter for config."""
         return self._config
 
-    @config.setter
-    def config(self, cfg: SimConfig) -> None:
+    def set_config(self, cfg: SimConfig) -> None:
+        """Sets current config to cfg and updates simulation parameters.
+
+        Args:
+            cfg (SimConfig): New configuration.
+        """
+        if not isinstance(cfg, SimConfig):
+            raise ValueError(f"Object {cfg} is not a valid `SimConfig`")
         self._config = cfg
         self._set_param_from_config()
 
@@ -109,7 +128,7 @@ class Simulation:
 
     def reset_config(self) -> None:
         """Resets configuration to default."""
-        self.config = SimConfig()
+        self.set_config(SimConfig())
         print("Configuration has been set to default.")
 
     def _set_param_from_config(self) -> None:
@@ -118,24 +137,42 @@ class Simulation:
         Called every time a new configuration is loaded in order to update
         Simulation parameters.
         """
-        self._prepare_bad_atoms()
+        self._update_noise()
         # update samples with potential noise settings
-        self._build_hamiltonian_from_seq()
+        self._extract_samples()
         if 'dephasing' in self.config.noise:
             self._init_dephasing()
 
-    def _prepare_bad_atoms(self) -> None:
-        """Chooses atoms that will be badly prepared.
+    def _update_noise(self) -> None:
+        """Updates noise random parameters.
 
-        If no SPAM noise, simply sets all atoms as well-prepared.
+        Used at the start of each run. If SPAM isn't in chosen noises, all
+            atoms are set to be correctly prepared.
         """
-        # Tag True if atom is badly prepared
-        self._bad_atoms: dict[Union[str, int], bool] = {
-            qid: False for qid in self._qid_index}
         if 'SPAM' in self.config.noise:
-            dist = (np.random.uniform(size=len(self._qid_index)) <
-                    self.config.spam_dict['eta'])
-            self._bad_atoms = dict(zip(self._qid_index, dist))
+            self._prepare_bad_atoms()
+        elif 'SPAM' not in self.config.noise:
+            # Tag True if atom is badly prepared
+            self._bad_atoms: dict[Union[str, int], bool] = {
+                qid: False for qid in self._qid_index}
+        if 'doppler' in self.config.noise:
+            self._prepare_doppler_detune()
+
+    def _prepare_bad_atoms(self) -> None:
+        """Chooses atoms that will be badly prepared."""
+        dist = (np.random.uniform(size=len(self._qid_index)) <
+                self.config.spam_dict['eta'])
+        self._bad_atoms = dict(zip(self._qid_index, dist))
+
+    def _prepare_doppler_detune(self) -> None:
+        """Initializes doppler detuning for each qubit.
+
+        Note: We assume that each atom's speed is kept the same throughout
+            each sequence.
+        """
+        detune = np.random.normal(0, self.config.doppler_sigma,
+                                  size=len(self._qid_index))
+        self._doppler_detune = dict(zip(self._qid_index, detune))
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -246,8 +283,8 @@ class Simulation:
 
         def write_samples(slot: _TimeSlot,
                           samples_dict: Mapping[str, np.ndarray],
-                          *qid: Union[int, str],
-                          is_global_pulse: bool = False) -> None:
+                          is_global_pulse: bool, *qid: Union[int, str]
+                          ) -> None:
             """Builds hamiltonian coefficients.
 
             Taking into account, if necessary, noise effects, which are local
@@ -256,19 +293,15 @@ class Simulation:
             _pulse = cast(Pulse, slot.type)
             noise_det = 0.
             noise_amp = 1.
-
-            for noise in self.config.noise:
-                if noise == 'doppler':
-                    noise_det += np.random.normal(
-                        0, self.config.doppler_sigma)
-                # Gaussian beam loss in amplitude for global pulses only
-                if noise == 'amplitude' and is_global_pulse:
-                    position = self._qdict[qid[0]]
-                    r = np.linalg.norm(position)
-                    w0 = self.config.laser_waist
-                    noise_amp = np.random.normal(
-                        1., 1.e-3) * np.exp(-(r/w0)**2)
-
+            if 'doppler' in self.config.noise:
+                noise_det += self._doppler_detune[qid[0]]
+            # Gaussian beam loss in amplitude for global pulses only
+            # Noise is drawn at random for each pulse
+            if 'amplitude' in self.config.noise and is_global_pulse:
+                position = self._qdict[qid[0]]
+                r = np.linalg.norm(position)
+                w0 = self.config.laser_waist
+                noise_amp = np.random.normal(1., 1.e-3) * np.exp(-(r/w0)**2)
             samples_dict['amp'][slot.ti:slot.tf] = \
                 _pulse.amplitude.samples * noise_amp
             samples_dict['det'][slot.ti:slot.tf] = \
@@ -286,36 +319,27 @@ class Simulation:
                     samples_dict = prepare_dict()
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
-                        write_samples(slot, samples_dict, is_global_pulse=True)
+                        write_samples(slot, samples_dict, True)
                 self.samples[addr][basis] = samples_dict
 
             # Any noise : global becomes local for each qubit in the reg
             # Since coefficients are modified locally by all noises
-            elif addr == 'Global':
+            else:
+                is_global_pulse = addr == 'Global'
+                addr = 'Local'
                 samples_dict = self.samples['Local'][basis]
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
                         # global to local
                         for qubit in self._qid_index:
-                            if qubit not in samples_dict:
-                                samples_dict[qubit] = prepare_dict()
                             # We don't write samples for badly prep qubits
-                            if not self._bad_atoms[qubit]:
-                                write_samples(slot, samples_dict[qubit], qubit,
-                                              is_global_pulse=True)
-                self.samples['Local'][basis] = samples_dict
-
-            # Local noisy pulse
-            elif addr == 'Local':
-                samples_dict = self.samples['Local'][basis]
-                for slot in self._seq._schedule[channel]:
-                    if isinstance(slot.type, Pulse):
-                        for qubit in slot.targets:  # Allow multiaddressing
+                            if self._bad_atoms[qubit]:
+                                continue
                             if qubit not in samples_dict:
                                 samples_dict[qubit] = prepare_dict()
-                            if not self._bad_atoms[qubit]:
-                                write_samples(slot, samples_dict[qubit], qubit)
-                self.samples[addr][basis] = samples_dict
+                            write_samples(slot, samples_dict[qubit],
+                                          is_global_pulse, qubit)
+                self.samples['Local'][basis] = samples_dict
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
@@ -336,7 +360,7 @@ class Simulation:
             self.basis_name = 'all'  # All three states
             self.dim = 3
             basis = ['r', 'g', 'h']
-            projectors = ['gr', 'hg', 'rr', 'gg', 'hh', 'hr']
+            projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
 
         self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
         self.op_matrix = {'I': qutip.qeye(self.dim)}
@@ -475,11 +499,11 @@ class Simulation:
     def _init_dephasing(self) -> None:
         """Initializes dephasing collapse operators."""
         if self.basis_name == 'digital' or self.basis_name == 'all':
-            raise ValueError("Cannot include dephasing noise in digital-"
-                             "or all-basis.")
-        self.dephasing_prob = 0.05  # Probability of phase (Z) flip
+            raise NotImplementedError("Cannot include dephasing noise in" +
+                                      "digital- or all-basis.")
+        self.dephasing_prob = DEPHASING_PROB  # Probability of phase (Z) flip
         self._collapse_ops += [
-            np.sqrt(1 - self.dephasing_prob) * self.op_matrix['I'],
+            np.sqrt(1. - self.dephasing_prob) * self.op_matrix['I'],
             np.sqrt(self.dephasing_prob) * (self.op_matrix['sigma_rr']
                                             - self.op_matrix['sigma_gg'])]
 
@@ -492,7 +516,6 @@ class Simulation:
         """
         self._reset_samples()
         self._extract_samples()
-        self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
 
     # Run Simulation Evolution using Qutip
@@ -509,8 +532,8 @@ class Simulation:
             options (qutip.solver.Options): If specified, will override
                 SimConfig solver_options.
         """
-        solv_ops = qutip.Options(max_step=5, **options) if options \
-            else self.config.solver_options
+        solv_ops = (qutip.Options(max_step=5, **options) if options
+                    else self.config.solver_options)
 
         def _assign_meas_basis() -> str:
             if hasattr(self._seq, '_measurement'):
@@ -527,7 +550,7 @@ class Simulation:
             if not as_subroutine:
                 # CLEAN SIMULATION:
                 measurement_basis = _assign_meas_basis()
-            if self._collapse_ops:
+            if 'dephasing' in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(self._hamiltonian,
                                                 self._collapse_ops)
@@ -549,18 +572,12 @@ class Simulation:
         if self.config.noise:
             # NOISY SIMULATION:
             meas_basis = _assign_meas_basis()
-            if self.basis_name == 'all':
-                basis_name = 'digital'
-            else:
-                basis_name = self.basis_name
-
             time_indices = range(len(self._eval_times_array))
             total_count = np.array([Counter() for _ in time_indices])
             # We run the system multiple times
             for _ in range(self.config.runs):
                 # At each run, new random noise: new Hamiltonian
-                if 'SPAM' in self.config.noise:
-                    self._prepare_bad_atoms()
+                self._update_noise()
                 self._build_hamiltonian_from_seq()
                 # Get CleanResults instance from sequence with added noise:
                 clean_res_noisy_seq = _run_solver(as_subroutine=True,
@@ -581,7 +598,7 @@ class Simulation:
             total_run_prob = [Counter({k: v / n_measures
                                       for k, v in total_count[t].items()})
                               for t in time_indices]
-            return NoisyResults(total_run_prob, self._size, basis_name,
+            return NoisyResults(total_run_prob, self._size, self.basis_name,
                                 self._eval_times_array, n_measures)
         else:
             return _run_solver()
