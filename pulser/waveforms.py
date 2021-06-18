@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import functools
+from functools import cached_property
 import inspect
 import itertools
 import sys
@@ -73,15 +74,19 @@ class Waveform(ABC):
         """The duration of the pulse (in ns)."""
         pass
 
-    @property
+    @cached_property
     @abstractmethod
+    def _samples(self) -> np.ndarray:
+        pass
+
+    @property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
             np.ndarray: A numpy array with a value for each time step.
         """
-        pass
+        return self._samples.copy()
 
     @property
     def first_value(self) -> float:
@@ -126,10 +131,14 @@ class Waveform(ABC):
     def __repr__(self) -> str:
         pass
 
-    @abstractmethod
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
-        pass
+        if isinstance(index_or_slice, slice):
+            s: slice = self._check_slice(index_or_slice)
+            return cast(np.ndarray, self._samples[s])
+        else:
+            index: int = self._check_index(index_or_slice)
+            return cast(float, self._samples[index])
 
     def _check_index(self, i: int) -> int:
         if (i < -self.duration
@@ -230,8 +239,8 @@ class CompositeWaveform(Waveform):
             duration += wf.duration
         return duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
@@ -262,56 +271,6 @@ class CompositeWaveform(Waveform):
     def __repr__(self) -> str:
         return f'CompositeWaveform({self.duration} ns, {self._waveforms!r})'
 
-    def __getitem__(self, index_or_slice:
-                    Union[int, slice]) -> Union[float, np.ndarray]:
-        wf_start: int
-        if isinstance(index_or_slice, slice):
-            s: slice = self._check_slice(index_or_slice)
-            start: int = s.start
-            stop: int = s.stop
-            array: np.ndarray = np.array([])
-            wf_start = 0
-            for wf in self._waveforms:
-                duration: int = wf.duration
-                if start > wf_start + duration:
-                    # Skip this waveform, which is before the start index
-                    wf_start += duration
-                    continue
-                elif wf_start <= start:
-                    # The start index belongs to this waveform
-                    if wf_start <= stop <= wf_start+duration:
-                        # The stop index also belongs to this waveform
-                        # Hence, we can return a subset of its samples
-                        return cast(np.ndarray,
-                                    wf[start-wf_start:stop-wf_start])
-                    else:
-                        # Copy the part of the waveform after the start index
-                        array = wf.samples[start-wf_start:]
-                else:
-                    if stop < wf_start:
-                        # No need to loop on the next waveforms
-                        break
-                    elif stop <= wf_start+wf.duration:
-                        # The stop index belongs to this waveform
-                        # Hence, we can concatenate a subset of it
-                        array = np.concatenate(
-                            (array, wf.samples[:stop-wf_start]))
-                    else:
-                        # This waveform fits entirely in the start~stop range
-                        array = np.concatenate((array, wf.samples))
-                wf_start += duration
-            return array
-        else:
-            index: int = self._check_index(index_or_slice)
-            wf_start = 0
-            value: float
-            for wf in self._waveforms:
-                if wf_start <= index < wf_start+wf.duration:
-                    value = cast(float, wf[index-wf_start])
-                    break
-                wf_start += wf.duration
-            return value
-
     def __mul__(self, other: float) -> CompositeWaveform:
         return CompositeWaveform(*(wf * other for wf in self._waveforms))
 
@@ -335,14 +294,15 @@ class CustomWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return self._samples.copy()
+        # self._samples is already cached when initialized in __init__
+        pass
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._samples)
@@ -352,15 +312,6 @@ class CustomWaveform(Waveform):
 
     def __repr__(self) -> str:
         return f'CustomWaveform({self.duration} ns, {self.samples!r})'
-
-    def __getitem__(self, index_or_slice:
-                    Union[int, slice]) -> Union[float, np.ndarray]:
-        if isinstance(index_or_slice, slice):
-            self._check_slice(index_or_slice)
-            return cast(np.ndarray, self._samples[index_or_slice])
-        else:
-            self._check_index(index_or_slice)
-            return cast(float, self._samples[index_or_slice])
 
     def __mul__(self, other: float) -> CustomWaveform:
         return CustomWaveform(self._samples * float(other))
@@ -386,8 +337,8 @@ class ConstantWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
@@ -419,9 +370,7 @@ class ConstantWaveform(Waveform):
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
         if isinstance(index_or_slice, slice):
-            index_or_slice = self._check_slice(index_or_slice)
-            duration = index_or_slice.stop - index_or_slice.start
-            return np.full(duration, self._value)
+            return super().__getitem__(index_or_slice)
         else:
             self._check_index(index_or_slice)
             return self._value
@@ -448,22 +397,20 @@ class RampWaveform(Waveform):
         self._start: float = float(start)
         stop = cast(float, stop)
         self._stop: float = float(stop)
-        self._samples: np.ndarray = np.linspace(
-            self._start, self._stop, num=self._duration)
 
     @property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return self._samples.copy()
+        return np.linspace(self._start, self._stop, num=self._duration)
 
     @property
     def slope(self) -> float:
@@ -494,15 +441,14 @@ class RampWaveform(Waveform):
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
         if isinstance(index_or_slice, slice):
-            self._check_slice(index_or_slice)
-            return cast(np.ndarray, self._samples[index_or_slice])
+            return super().__getitem__(index_or_slice)
         else:
             index: int = self._check_index(index_or_slice)
             if index == 0:
                 return self._start
             if index == self._duration - 1:
                 return self._stop
-            return cast(float, self._samples[index])
+            return super().__getitem__(index)
 
     def __mul__(self, other: float) -> RampWaveform:
         k = float(other)
@@ -570,8 +516,8 @@ class BlackmanWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
@@ -603,13 +549,12 @@ class BlackmanWaveform(Waveform):
     def __getitem__(self, index_or_slice:
                     Union[int, slice]) -> Union[float, np.ndarray]:
         if isinstance(index_or_slice, slice):
-            self._check_slice(index_or_slice)
-            return cast(np.ndarray, self.samples[index_or_slice])
+            return super().__getitem__(index_or_slice)
         else:
             index: int = self._check_index(index_or_slice)
             if index == 0 or index == self._duration - 1:
                 return 0.
-            return cast(float, self.samples[index])
+            return super().__getitem__(index)
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
