@@ -86,12 +86,12 @@ class Waveform(ABC):
     @property
     def first_value(self) -> float:
         """The first value in the waveform."""
-        return float(self.samples[0])
+        return float(self[0])
 
     @property
     def last_value(self) -> float:
         """The last value in the waveform."""
-        return float(self.samples[-1])
+        return float(self[-1])
 
     @property
     def integral(self) -> float:
@@ -239,16 +239,6 @@ class CompositeWaveform(Waveform):
         """
         return cast(np.ndarray,
                     np.concatenate([wf.samples for wf in self._waveforms]))
-
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return self._waveforms[0].first_value
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return self._waveforms[-1].last_value
 
     @property
     def waveforms(self) -> list[Waveform]:
@@ -405,16 +395,6 @@ class ConstantWaveform(Waveform):
         """
         return np.full(self.duration, self._value)
 
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return self._value
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return self._value
-
     def change_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.
 
@@ -489,16 +469,6 @@ class RampWaveform(Waveform):
     def slope(self) -> float:
         r"""Slope of the ramp, in :math:`s^{-15}`."""
         return (self._stop - self._start) / self._duration
-
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return self._start
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return self._stop
 
     def change_duration(self, new_duration: int) -> RampWaveform:
         """Returns a new waveform with modified duration.
@@ -608,16 +578,6 @@ class BlackmanWaveform(Waveform):
             numpy.ndarray: A numpy array with a value for each time step.
         """
         return cast(np.ndarray, self._norm_samples * self._scaling)
-
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return 0.
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return 0.
 
     def change_duration(self, new_duration: int) -> BlackmanWaveform:
         """Returns a new waveform with modified duration.
