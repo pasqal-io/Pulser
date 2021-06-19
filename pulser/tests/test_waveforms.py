@@ -218,23 +218,16 @@ def test_get_item():
 
         # Check with slices
 
-        if wf == composite:
-            # Exhaustive tests for composite waveforms
-            for i in range(0, duration):
-                for j in range(i+1, duration):
-                    assert (wf[i:j] == samples[i:j]).all()
-        else:
-            # Limited tests for other waveforms
-            assert (wf[0:duration] == samples).all()
-            assert (wf[0:-1] == samples[0:-1]).all()
-            assert (wf[0:] == samples).all()
-            assert (wf[-1:] == samples[-1:]).all()
-            assert (wf[:duration] == samples).all()
-            assert (wf[:] == samples).all()
-            assert (wf[duration14:duration34] ==
-                    samples[duration14:duration34]).all()
-            assert (wf[-duration34:-duration14] ==
-                    samples[-duration34:-duration14]).all()
+        assert (wf[0:duration] == samples).all()
+        assert (wf[0:-1] == samples[0:-1]).all()
+        assert (wf[0:] == samples).all()
+        assert (wf[-1:] == samples[-1:]).all()
+        assert (wf[:duration] == samples).all()
+        assert (wf[:] == samples).all()
+        assert (wf[duration14:duration34] ==
+                samples[duration14:duration34]).all()
+        assert (wf[-duration34:-duration14] ==
+                samples[-duration34:-duration14]).all()
 
         # Check with out of bounds slices
         assert (wf[:duration*2] == samples).all()
