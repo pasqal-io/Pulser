@@ -326,6 +326,9 @@ def test_config():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.reset_config()
     sim.show_config()
+    with pytest.raises(ValueError, match="not a valid"):
+        sim.set_config('bad_config')
+    sim.update_config(SimConfig(noise=('SPAM', 'doppler', 'amplitude')))
 
 
 def test_noise():
@@ -334,9 +337,9 @@ def test_noise():
     assert sim2.config.noise == ('SPAM', 'doppler')
     sim2.run(min_step=0)
     sim2.run().sample_final_state()
-    with pytest.raises(ValueError,
+    with pytest.raises(NotImplementedError,
                        match='Cannot include'):
-        sim2.config = SimConfig(noise='dephasing')
+        sim2.set_config(SimConfig(noise='dephasing'))
         sim2.run()
     sim2.config.spam_dict
 

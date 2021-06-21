@@ -1,3 +1,4 @@
+
 # Copyright 2020 Pulser Development Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +16,12 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, cast, List, Any
+from typing import Optional, Union, cast, Any
 from collections.abc import Mapping
 import itertools
 from collections import Counter
 from copy import deepcopy
+from dataclasses import asdict
 
 import qutip
 import numpy as np
@@ -74,7 +76,7 @@ class Simulation:
                              "sequence.")
         not_supported = (set(ch.basis for ch in sequence._channels.values())
                          - SUPPORTED_BASES)
-        if not_supported:
+        if not_supported:  # pragma: no cover
             raise NotImplementedError("Sequence with unsupported bases: "
                                       + "".join(not_supported))
         self._seq = sequence
@@ -96,7 +98,7 @@ class Simulation:
             addr: {basis: {} for basis in ['ground-rydberg', 'digital']}
             for addr in ['Global', 'Local']}
         self.operators = deepcopy(self.samples)
-        self._collapse_ops: List[qutip.Qobj] = []
+        self._collapse_ops: list[qutip.Qobj] = []
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
         self.evaluation_times = evaluation_times
@@ -104,6 +106,8 @@ class Simulation:
         self._update_noise()
         self._extract_samples()
         self._build_basis_and_op_matrices()
+        if self.config.noise:
+            self._set_param_from_config()
         self._construct_hamiltonian()
         self.initial_state = 'all-ground'
 
@@ -128,6 +132,8 @@ class Simulation:
 
         Mostly useful when dealing with multiple noise types in different
         configurations and wanting to merge these configurations together.
+        Updates simulation parameters only when dealing with noise types that
+        weren't available in the former SimConfig.
 
         Args:
             config (SimConfig): SimConfig to retrieve parameters from.
@@ -135,7 +141,9 @@ class Simulation:
         old_noise_set = set(self.config.noise)
         new_noise_set = old_noise_set.union(config.noise)
         diff_noise_set = new_noise_set - old_noise_set
-        param_dict: dict[str, Any] = {}
+        param_dict: dict[str, Any] = asdict(self._config)
+        del param_dict["spam_dict"]
+        del param_dict["doppler_sigma"]
         param_dict['noise'] = tuple(new_noise_set)
         if 'SPAM' in diff_noise_set:
             param_dict['eta'] = config.eta
@@ -174,7 +182,7 @@ class Simulation:
         Used at the start of each run. If SPAM isn't in chosen noises, all
             atoms are set to be correctly prepared.
         """
-        if 'SPAM' in self.config.noise:
+        if 'SPAM' in self.config.noise and self.config.eta > 0:
             self._prepare_bad_atoms()
         elif 'SPAM' not in self.config.noise:
             # Tag True if atom is badly prepared
@@ -339,31 +347,31 @@ class Simulation:
 
             # Case of clean global simulations
             if addr == 'Global' and not self.config.noise:
-                samples_dict = self.samples[addr][basis]
+                samples_dict = self.samples['Global'][basis]
                 if not samples_dict:
                     samples_dict = prepare_dict()
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
                         write_samples(slot, samples_dict, True)
-                self.samples[addr][basis] = samples_dict
+                self.samples['Global'][basis] = samples_dict
 
             # Any noise : global becomes local for each qubit in the reg
             # Since coefficients are modified locally by all noises
             else:
-                is_global_pulse = addr == 'Global'
-                addr = 'Local'
+                is_global = addr == 'Global'
                 samples_dict = self.samples['Local'][basis]
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
                         # global to local
-                        for qubit in self._qid_index:
-                            # We don't write samples for badly prep qubits
-                            if self._bad_atoms[qubit]:
-                                continue
+                        targets = (self._qid_index if is_global else
+                                   slot.targets)
+                        for qubit in targets:
                             if qubit not in samples_dict:
                                 samples_dict[qubit] = prepare_dict()
-                            write_samples(slot, samples_dict[qubit],
-                                          is_global_pulse, qubit)
+                                # We don't write samples for badly prep qubits
+                            if not self._bad_atoms[qubit]:
+                                write_samples(slot, samples_dict[qubit],
+                                              is_global, qubit)
                 self.samples['Local'][basis] = samples_dict
 
     def _build_basis_and_op_matrices(self) -> None:
@@ -525,7 +533,7 @@ class Simulation:
         """Initializes dephasing collapse operators."""
         if self.basis_name == 'digital' or self.basis_name == 'all':
             raise NotImplementedError("Cannot include dephasing noise in" +
-                                      "digital- or all-basis.")
+                                      " digital- or all-basis.")
         self.dephasing_prob = DEPHASING_PROB  # Probability of phase (Z) flip
         self._collapse_ops += [
             np.sqrt(1. - self.dephasing_prob) * self.op_matrix['I'],

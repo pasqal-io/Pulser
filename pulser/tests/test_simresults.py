@@ -167,10 +167,9 @@ def test_sample_final_state():
     seq_no_meas.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas.add(pi, 'raman')
     res_3level = Simulation(seq_no_meas).run()
-    sampling_three_level = res_3level.sample_final_state()
     # Raman pi pulse on one atom will not affect other,
     # even with global pi on rydberg
-    assert len(sampling_three_level) == 2
+    assert len(res_3level.sample_final_state()) == 2
     res_3level._meas_basis = 'ground-rydberg'
     sampling_three_levelB = res_3level.sample_final_state()
     # Rydberg will affect both:
