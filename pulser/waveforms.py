@@ -378,14 +378,6 @@ class ConstantWaveform(Waveform):
         return (f"ConstantWaveform({self._duration} ns, "
                 + f"{self._value:.3g} rad/µs)")
 
-    def __getitem__(self, index_or_slice:
-                    Union[int, slice]) -> Union[float, np.ndarray]:
-        if isinstance(index_or_slice, slice):
-            return super().__getitem__(index_or_slice)
-        else:
-            self._check_index(index_or_slice)
-            return self._value
-
     def __mul__(self, other: float) -> ConstantWaveform:
         return ConstantWaveform(self._duration, self._value * float(other))
 
@@ -448,18 +440,6 @@ class RampWaveform(Waveform):
     def __repr__(self) -> str:
         return (f"RampWaveform({self._duration} ns, " +
                 f"{self._start:.3g}->{self._stop:.3g} rad/µs)")
-
-    def __getitem__(self, index_or_slice:
-                    Union[int, slice]) -> Union[float, np.ndarray]:
-        if isinstance(index_or_slice, slice):
-            return super().__getitem__(index_or_slice)
-        else:
-            index: int = self._check_index(index_or_slice)
-            if index == 0:
-                return self._start
-            if index == self._duration - 1:
-                return self._stop
-            return super().__getitem__(index)
 
     def __mul__(self, other: float) -> RampWaveform:
         k = float(other)
@@ -556,16 +536,6 @@ class BlackmanWaveform(Waveform):
 
     def __repr__(self) -> str:
         return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
-
-    def __getitem__(self, index_or_slice:
-                    Union[int, slice]) -> Union[float, np.ndarray]:
-        if isinstance(index_or_slice, slice):
-            return super().__getitem__(index_or_slice)
-        else:
-            index: int = self._check_index(index_or_slice)
-            if index == 0 or index == self._duration - 1:
-                return 0.
-            return super().__getitem__(index)
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
