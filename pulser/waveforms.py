@@ -17,10 +17,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import functools
-from functools import cached_property
 import inspect
 import itertools
 import sys
+from sys import version_info
 from types import FunctionType
 from typing import Any, cast, Optional, Tuple, Union
 import warnings
@@ -33,6 +33,17 @@ from numpy.typing import ArrayLike
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.json.utils import obj_to_dict
+
+if version_info[:2] == (3, 7):  # pragma: no cover
+    try:
+        from backports.cached_property import cached_property
+    except ImportError:
+        raise ImportError(
+            "Using pulser with Python version 3.7 requires the"
+            " `backports.cached-property` module. Install it by running"
+            " `pip install backports.cached-property`.")
+else:  # pragma: no cover
+    from functools import cached_property  # type: ignore
 
 
 class Waveform(ABC):
