@@ -28,11 +28,9 @@ setup(
     ],
     extras_require={
         ":python_version == '3.7'": [
+            "backports.cached-property",
             "typing-extensions",
         ],
-        ":python_version == '3.7'": [
-            "backports.cached-property",
-        ]
     },
     packages=find_packages(),
     include_package_data=True,
