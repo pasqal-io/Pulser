@@ -757,8 +757,6 @@ class Sequence:
         try:
             last = self._last(channel)
             if last.targets == qubits_set:
-                warnings.warn("The provided qubits are already the target. "
-                              "Skipping this target instruction.")
                 return
             ti = last.tf
             retarget = cast(int, self._channels[channel].retarget_time)
@@ -806,8 +804,6 @@ class Sequence:
                              " in this sequence's register.")
 
         if phi % (2*np.pi) == 0:
-            warnings.warn("A phase shift of 0 is meaningless, "
-                          "it will be ommited.")
             return
 
         for qubit in targets:
