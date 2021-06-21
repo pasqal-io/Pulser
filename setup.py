@@ -26,6 +26,11 @@ setup(
         "scipy",
         "qutip",
     ],
+    extras_require={
+        ":python_version == '3.7'": [
+            "typing-extensions",
+        ]
+    },
     packages=find_packages(),
     include_package_data=True,
     description="A pulse-level composer for neutral-atom quantum devices.",
