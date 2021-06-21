@@ -612,7 +612,6 @@ class Simulation:
                     total_count += np.array(
                         [clean_res_noisy_seq._sampling_with_detection_errors(
                             self.config.spam_dict, t,
-                            list(self._bad_atoms.values()),
                             n_samples=self.config.samples_per_run)
                          for t in self._eval_times_array])
                 else:

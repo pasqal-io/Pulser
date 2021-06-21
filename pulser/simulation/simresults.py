@@ -481,7 +481,6 @@ class CleanResults(SimulationResults):
 
     def _sampling_with_detection_errors(self, spam: dict[str, float],
                                         t: float,
-                                        bad_atoms: list[bool],
                                         n_samples: int = 1000) -> Counter:
         """Returns the distribution of states really detected.
 
@@ -512,19 +511,10 @@ class CleanResults(SimulationResults):
             eps_p = spam['epsilon_prime']
             n_0 = shot.count('0')
             n_1 = shot.count('1')
-            # Bitflip probability for well-prepared atoms
-            p_1_to_0_good = eps_p * (1 - eps) ** n_0 * (1 - eps_p) ** (n_1 - 1)
-            p_0_to_1_good = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
-            probs = []
-            for i, x in enumerate(shot):
-                if bad_atoms[i]:
-                    # Measured as 1 instead of 0 with epsilon probability
-                    probs.append(eps)
-                else:
-                    if x == '1':
-                        probs.append(p_1_to_0_good)
-                    else:
-                        probs.append(p_0_to_1_good)
+            # Bitflip probability
+            p_1_to_0 = eps_p * (1 - eps) ** n_0 * (1 - eps_p) ** (n_1 - 1)
+            p_0_to_1 = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
+            probs = [p_1_to_0 if x == '1' else p_0_to_1 for x in shot]
             probs.append(1. - sum(probs))
             shots = np.random.multinomial(n_detects, probs)
             # Last bitstring : no measurement error, no character flipped
