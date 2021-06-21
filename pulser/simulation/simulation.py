@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, cast, List
+from typing import Optional, Union, cast, List, Any
 from collections.abc import Mapping
 import itertools
 from collections import Counter
@@ -123,9 +123,29 @@ class Simulation:
         self._config = cfg
         self._set_param_from_config()
 
-    def update_config(self, cfg: SimConfig) -> None:
-        """SimConfig.update's this Simulation's SimConfig."""
-        self.config.update(cfg)
+    def update_config(self, config: SimConfig) -> None:
+        """Updates this SimConfig object with parameters of another one.
+
+        Mostly useful when dealing with multiple noise types in different
+        configurations and wanting to merge these configurations together.
+
+        Args:
+            config (SimConfig): SimConfig to retrieve parameters from.
+        """
+        old_noise_set = set(self.config.noise)
+        new_noise_set = old_noise_set.union(config.noise)
+        diff_noise_set = new_noise_set - old_noise_set
+        param_dict: dict[str, Any] = {}
+        param_dict['noise'] = tuple(new_noise_set)
+        if 'SPAM' in diff_noise_set:
+            param_dict['eta'] = config.eta
+            param_dict['epsilon'] = config.epsilon
+            param_dict['epsilon_prime'] = config.epsilon_prime
+        if 'doppler' in diff_noise_set:
+            param_dict['temperature'] = config.temperature
+        if 'amplitude' in diff_noise_set:
+            param_dict['laser_waist'] = config.laser_waist
+        self.set_config(SimConfig(**param_dict))
 
     def show_config(self) -> None:
         """Shows current configuration."""

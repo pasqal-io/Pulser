@@ -191,7 +191,8 @@ class NoisyResults(SimulationResults):
             size (int): The number of atoms in the register.
             basis_name (str): Basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
-                makes no sense after projection on bitstrings).
+                makes no sense after projection on bitstrings). Defaults to
+                'digital' if given value 'all'.
             sim_times (np.ndarray): Times at which Simulation object returned
                 the results.
             meas_basis (Optional[str]): The basis in which a sampling
@@ -199,11 +200,8 @@ class NoisyResults(SimulationResults):
             n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
         """
-        if basis_name == 'all':
-            basis_name = 'digital'
-        else:
-            basis_name = basis_name
-        super().__init__(size, basis_name, sim_times)
+        basis_name_ = 'digital' if basis_name == "all" else basis_name
+        super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
         self._results = run_output
 
@@ -502,6 +500,8 @@ class CleanResults(SimulationResults):
             """Returns distribution of states detected when detecting `shot`.
 
             Part of the SPAM implementation : computes measurement errors.
+                All computation is done at the lowest order in epsilon and
+                epsilon_prime.
 
             Args:
                 n_detects (int): Number of times state has been detected.

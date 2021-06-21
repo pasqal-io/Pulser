@@ -134,27 +134,3 @@ class SimConfig:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
         self.__dict__["doppler_sigma"] = KEFF * np.sqrt(
             KB * self.temperature / MASS)
-
-    def update(self, config: SimConfig) -> None:
-        """Updates this SimConfig object with parameters of another one.
-
-        Mostly useful when dealing with multiple noise types in different
-            configurations and wanting to merge these configurations together.
-
-        Args:
-            config (SimConfig): SimConfig to retrieve parameters from.
-        """
-        old_noise_set = set(self.noise)
-        new_noise_set = set(self.noise).union(config.noise)
-        self.__dict__["noise"] = tuple(new_noise_set)
-        diff_noise_set = new_noise_set - old_noise_set
-        if 'SPAM' in diff_noise_set:
-            self.__dict__["eta"] = config.eta
-            self.__dict__["epsilon"] = config.epsilon
-            self.__dict__["epsilon_prime"] = config.epsilon_prime
-            self._build_spam_dict()
-        if 'doppler' in diff_noise_set:
-            self.__dict__["temperature"] = config.temperature
-            self._process_temperature()
-        if 'amplitude' in diff_noise_set:
-            self.__dict__["laser_waist"] = config.laser_waist
