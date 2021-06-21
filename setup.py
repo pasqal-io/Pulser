@@ -28,8 +28,9 @@ setup(
     ],
     extras_require={
         ":python_version == '3.7'": [
+            "backports.cached-property",
             "typing-extensions",
-        ]
+        ],
     },
     packages=find_packages(),
     include_package_data=True,
@@ -40,8 +41,8 @@ setup(
     python_requires=">=3.7.0",
     license="Apache 2.0",
     classifiers=[
-         "Development Status :: 3 - Alpha",
-         "Programming Language :: Python :: 3",
-         ],
+        "Development Status :: 3 - Alpha",
+        "Programming Language :: Python :: 3",
+    ],
     url="https://github.com/pasqal-io/Pulser",
 )

@@ -39,16 +39,16 @@ from pulser.pulse import Pulse
 from pulser.register import Register
 from pulser._seq_drawer import draw_sequence
 
-if version_info[:2] == (3, 7):  # pragma: no cover
+if version_info[:2] >= (3, 8):  # pragma: no cover
+    from typing import Literal, get_args
+else:  # pragma: no cover
     try:
-        from typing_extensions import Literal, get_args
+        from typing_extensions import Literal, get_args  # type: ignore
     except ImportError:
         raise ImportError(
             "Using pulser with Python version 3.7 requires the"
             " `typing_extensions` module. Install it by running"
             " `pip install typing-extensions`.")
-else:  # pragma: no cover
-    from typing import Literal, get_args  # type: ignore
 
 
 QubitId = Union[int, str]
