@@ -490,8 +490,6 @@ class CleanResults(SimulationResults):
             spam (dict): Dictionnary gathering the SPAM error
             probabilities.
             t (float): Time at which to return the samples.
-            bad_atoms (list[int]): List of the badly prepared atoms in the
-                simulation.
             n_samples (int): Number of samples.
         """
 

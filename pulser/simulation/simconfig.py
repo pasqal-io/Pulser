@@ -34,7 +34,7 @@ else:  # pragma: no cover
 
 NOISE_TYPES = Literal['doppler', 'amplitude', 'SPAM', 'dephasing']
 MASS = 1.45e-25  # kg
-KB = 1.38e-23  # J/K
+KB = 1.38e-23  # J.s
 KEFF = 8.7  # µm^-1
 
 
@@ -84,8 +84,10 @@ class SimConfig:
 
     def __post_init__(self) -> None:
         self._process_temperature()
-        self._build_spam_dict()
+        self.__dict__["spam_dict"] = {'eta': self.eta, 'epsilon': self.epsilon,
+                                      'epsilon_prime': self.epsilon_prime}
         self._check_noise_types()
+        self._check_spam_dict()
         self._calc_sigma_doppler()
 
     def __str__(self) -> str:
@@ -103,9 +105,7 @@ class SimConfig:
             ]
         return "\n".join(lines)
 
-    def _build_spam_dict(self) -> None:
-        self.__dict__["spam_dict"] = {'eta': self.eta, 'epsilon': self.epsilon,
-                                      'epsilon_prime': self.epsilon_prime}
+    def _check_spam_dict(self) -> None:
         for param, value in self.spam_dict.items():
             if value > 1 or value < 0:
                 raise ValueError(f"SPAM parameter {param} = {value} must be"
