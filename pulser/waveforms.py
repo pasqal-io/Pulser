@@ -34,16 +34,16 @@ from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.json.utils import obj_to_dict
 
-if version_info[:2] == (3, 7):  # pragma: no cover
+if version_info[:2] >= (3, 7):  # pragma: no cover
+    from functools import cached_property
+else:  # pragma: no cover
     try:
-        from backports.cached_property import cached_property
+        from backports.cached_property import cached_property  # type: ignore
     except ImportError:
         raise ImportError(
             "Using pulser with Python version 3.7 requires the"
             " `backports.cached-property` module. Install it by running"
             " `pip install backports.cached-property`.")
-else:  # pragma: no cover
-    from functools import cached_property  # type: ignore
 
 
 class Waveform(ABC):
