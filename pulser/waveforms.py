@@ -34,7 +34,7 @@ from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.json.utils import obj_to_dict
 
-if version_info[:2] >= (3, 7):  # pragma: no cover
+if version_info[:2] >= (3, 8):  # pragma: no cover
     from functools import cached_property
 else:  # pragma: no cover
     try:
