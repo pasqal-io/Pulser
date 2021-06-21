@@ -101,6 +101,7 @@ class Simulation:
             np.arange(self._tot_duration, dtype=np.double)/1000)
         self.evaluation_times = evaluation_times
         self._config = config if config else SimConfig()
+        self._update_noise()
         self._extract_samples()
         self._build_basis_and_op_matrices()
         self._construct_hamiltonian()
@@ -121,6 +122,10 @@ class Simulation:
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`")
         self._config = cfg
         self._set_param_from_config()
+
+    def update_config(self, cfg: SimConfig) -> None:
+        """SimConfig.update's this Simulation's SimConfig."""
+        self.config.update(cfg)
 
     def show_config(self) -> None:
         """Shows current configuration."""
@@ -586,8 +591,9 @@ class Simulation:
                 if 'SPAM' in self.config.noise:
                     total_count += np.array(
                         [clean_res_noisy_seq._sampling_with_detection_errors(
-                            self.config.spam_dict,
-                            t, n_samples=self.config.samples_per_run)
+                            self.config.spam_dict, t,
+                            list(self._bad_atoms.values()),
+                            n_samples=self.config.samples_per_run)
                          for t in self._eval_times_array])
                 else:
                     total_count += np.array(

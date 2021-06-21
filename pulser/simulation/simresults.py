@@ -482,20 +482,20 @@ class CleanResults(SimulationResults):
         return cast(np.ndarray, weights)
 
     def _sampling_with_detection_errors(self, spam: dict[str, float],
-                                        t: float, n_samples: int = 1000,
-                                        ) -> Counter:
+                                        t: float,
+                                        bad_atoms: list[bool],
+                                        n_samples: int = 1000) -> Counter:
         """Returns the distribution of states really detected.
 
-        Doesn't take state preparation errors into account.
         Part of the SPAM implementation.
 
         Args:
             spam (dict): Dictionnary gathering the SPAM error
             probabilities.
             t (float): Time at which to return the samples.
+            bad_atoms (list[int]): List of the badly prepared atoms in the
+                simulation.
             n_samples (int): Number of samples.
-            t_tol (float): Tolerance for the difference between t and
-                closest time.
         """
 
         def detection_from_basis_state(n_detects: int, shot: str) -> Counter:
@@ -508,14 +508,23 @@ class CleanResults(SimulationResults):
                 shot (str): Binary string of length the number of atoms of the
                 simulation.
             """
-            n_0 = shot.count('0')
-            n_1 = shot.count('1')
             eps = spam['epsilon']
             eps_p = spam['epsilon_prime']
-
-            prob_1_to_0 = eps_p * (1 - eps) ** n_0 * (1 - eps_p) ** (n_1 - 1)
-            prob_0_to_1 = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
-            probs = [prob_1_to_0 if i == '1' else prob_0_to_1 for i in shot]
+            n_0 = shot.count('0')
+            n_1 = shot.count('1')
+            # Bitflip probability for well-prepared atoms
+            p_1_to_0_good = eps_p * (1 - eps) ** n_0 * (1 - eps_p) ** (n_1 - 1)
+            p_0_to_1_good = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
+            probs = []
+            for i, x in enumerate(shot):
+                if bad_atoms[i]:
+                    # Measured as 1 instead of 0 with epsilon probability
+                    probs.append(eps)
+                else:
+                    if x == '1':
+                        probs.append(p_1_to_0_good)
+                    else:
+                        probs.append(p_0_to_1_good)
             probs.append(1. - sum(probs))
             shots = np.random.multinomial(n_detects, probs)
             # Last bitstring : no measurement error, no character flipped
@@ -523,7 +532,7 @@ class CleanResults(SimulationResults):
             for i in range(len(shot)):
                 if shots[i]:
                     # Bitstrings equal to shot except for the i-th character
-                    # have been detected due to measurement errors :
+                    # have been detected due to SPAM errors :
                     flip_bit_string = (shot[:i] + str(1 - int(shot[i])) +
                                        shot[i+1:])
                     detected_dict[flip_bit_string] = shots[i]

@@ -84,10 +84,8 @@ class SimConfig:
 
     def __post_init__(self) -> None:
         self._process_temperature()
-        self.__dict__["spam_dict"] = {'eta': self.eta, 'epsilon': self.epsilon,
-                                      'epsilon_prime': self.epsilon_prime}
+        self._build_spam_dict()
         self._check_noise_types()
-        self._check_spam_dict()
         self._calc_sigma_doppler()
 
     def __str__(self) -> str:
@@ -105,7 +103,9 @@ class SimConfig:
             ]
         return "\n".join(lines)
 
-    def _check_spam_dict(self) -> None:
+    def _build_spam_dict(self) -> None:
+        self.__dict__["spam_dict"] = {'eta': self.eta, 'epsilon': self.epsilon,
+                                      'epsilon_prime': self.epsilon_prime}
         for param, value in self.spam_dict.items():
             if value > 1 or value < 0:
                 raise ValueError(f"SPAM parameter {param} = {value} must be"
@@ -134,3 +134,27 @@ class SimConfig:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
         self.__dict__["doppler_sigma"] = KEFF * np.sqrt(
             KB * self.temperature / MASS)
+
+    def update(self, config: SimConfig) -> None:
+        """Updates this SimConfig object with parameters of another one.
+
+        Mostly useful when dealing with multiple noise types in different
+            configurations and wanting to merge these configurations together.
+
+        Args:
+            config (SimConfig): SimConfig to retrieve parameters from.
+        """
+        old_noise_set = set(self.noise)
+        new_noise_set = set(self.noise).union(config.noise)
+        self.__dict__["noise"] = tuple(new_noise_set)
+        diff_noise_set = new_noise_set - old_noise_set
+        if 'SPAM' in diff_noise_set:
+            self.__dict__["eta"] = config.eta
+            self.__dict__["epsilon"] = config.epsilon
+            self.__dict__["epsilon_prime"] = config.epsilon_prime
+            self._build_spam_dict()
+        if 'doppler' in diff_noise_set:
+            self.__dict__["temperature"] = config.temperature
+            self._process_temperature()
+        if 'amplitude' in diff_noise_set:
+            self.__dict__["laser_waist"] = config.laser_waist
