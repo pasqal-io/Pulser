@@ -73,7 +73,7 @@ class SimulationResults(ABC):
         pass
 
     @abstractmethod
-    def _calc_weights(self, t_index: int) -> ArrayLike:
+    def _calc_weights(self, t_index: int) -> np.ndarray:
         """Computes the bitstring probabilities for sampled states."""
         pass
 
@@ -284,10 +284,10 @@ class NoisyResults(SimulationResults):
 
         return super().expect(obs_list)
 
-    def _calc_weights(self, t_index: int) -> ArrayLike:
+    def _calc_weights(self, t_index: int) -> np.ndarray:
         n = self._size
-        return [self._results[t_index][
-                np.binary_repr(k, n)] for k in range(2**n)]
+        return np.array([self._results[t_index][
+                np.binary_repr(k, n)] for k in range(2**n)])
 
     def plot(self, op: qutip.Qobj, fmt: str = '.',
              label: str = '', error_bars: bool = True) -> None:
@@ -438,7 +438,7 @@ class CleanResults(SimulationResults):
         return self.get_state(self._sim_times[-1], reduce_to_basis,
                               ignore_global_phase, tol, normalize)
 
-    def _calc_weights(self, t_index: int) -> ArrayLike:
+    def _calc_weights(self, t_index: int) -> np.ndarray:
         n = self._size
         state_t = cast(qutip.Qobj, self._results[t_index]).unit()
         if state_t.type != "ket":
