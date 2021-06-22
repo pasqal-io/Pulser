@@ -632,16 +632,6 @@ class InterpolatedWaveform(Waveform):
         """Points (t[ns], value[rad/µs]) that define the interpolation."""
         return self._data_pts.copy()
 
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return float(self.interp_function(0))
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return float(self.interp_function(self.duration - 1))
-
     def change_duration(self, new_duration: int) -> InterpolatedWaveform:
         """Returns a new waveform with modified duration.
 
