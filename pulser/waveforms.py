@@ -613,8 +613,8 @@ class InterpolatedWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform."""
         return cast(np.ndarray,
                     np.round(self._interp_func(np.arange(self._duration)),

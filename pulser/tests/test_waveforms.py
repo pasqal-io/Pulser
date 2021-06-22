@@ -255,7 +255,7 @@ def test_get_item():
 
     # Check nominal operations
 
-    for wf in [blackman, composite, constant, custom, ramp]:
+    for wf in [blackman, composite, constant, custom, ramp, interp]:
         duration = wf.duration
         duration14 = duration // 4
         duration34 = duration * 3 // 4
