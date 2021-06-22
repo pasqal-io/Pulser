@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -228,3 +229,64 @@ def test_serialization():
     for wf in [constant, ramp, custom, blackman, composite, interp]:
         s = json.dumps(wf, cls=PulserEncoder)
         assert wf == json.loads(s, cls=PulserDecoder)
+
+
+def test_get_item():
+
+    # Check errors raised
+
+    duration = constant.duration
+    with pytest.raises(IndexError,
+                       match=re.escape("Index ('index_or_slice' = "
+                                       f"{duration}) must be in the range "
+                                       f"0~{duration-1}, or "
+                                       f"{-duration}~-1 from the end.")):
+        constant[duration]
+    with pytest.raises(IndexError,
+                       match=re.escape("Index ('index_or_slice' = "
+                                       f"{-duration-1}) must be in the range "
+                                       f"0~{duration-1}, or "
+                                       f"{-duration}~-1 from the end.")):
+        constant[-duration - 1]
+
+    with pytest.raises(IndexError,
+                       match="The step of the slice must be None or 1."):
+        constant[0:1:2]
+
+    # Check nominal operations
+
+    for wf in [blackman, composite, constant, custom, ramp]:
+        duration = wf.duration
+        duration14 = duration // 4
+        duration34 = duration * 3 // 4
+        samples = wf.samples
+
+        # Check with int index
+        for i in range(-duration, duration):
+            assert wf[i] == samples[i]
+
+        # Check with slices
+
+        assert (wf[0:duration] == samples).all()
+        assert (wf[0:-1] == samples[0:-1]).all()
+        assert (wf[0:] == samples).all()
+        assert (wf[-1:] == samples[-1:]).all()
+        assert (wf[:duration] == samples).all()
+        assert (wf[:] == samples).all()
+        assert (wf[duration14:duration34] ==
+                samples[duration14:duration34]).all()
+        assert (wf[-duration34:-duration14] ==
+                samples[-duration34:-duration14]).all()
+
+        # Check with out of bounds slices
+        assert (wf[:duration*2] == samples).all()
+        assert (wf[-duration*2:] == samples).all()
+        assert (wf[-duration*2:duration*2] == samples).all()
+        assert (wf[duration//2:duration*2] ==
+                samples[duration//2:duration*2]).all()
+        assert (wf[-duration*2:duration//2] ==
+                samples[-duration*2:duration//2]).all()
+        assert(wf[2:1].size == 0)
+        assert(wf[duration*2:].size == 0)
+        assert(wf[duration*2:duration*3].size == 0)
+        assert(wf[-duration*3:-duration*2].size == 0)

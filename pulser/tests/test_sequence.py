@@ -144,6 +144,24 @@ def test_delay():
     assert seq._last('ch0') == _TimeSlot('delay', 0, 388, {'q19'})
 
 
+def test_delay_min_duration():
+    # Check that a delay shorter than a channel's minimal duration
+    # is automatically extended to that minimal duration
+    seq = Sequence(reg, device)
+    seq.declare_channel('ch0', 'rydberg_global')
+    seq.declare_channel('ch1', 'rydberg_local')
+    seq.target('q0', 'ch1')
+    pulse0 = Pulse.ConstantPulse(52, 1, 1, 0)
+    pulse1 = Pulse.ConstantPulse(180, 1, 1, 0)
+    seq.add(pulse1, 'ch1')
+    seq.add(pulse0, 'ch0')
+    seq.target('q1', 'ch1')
+    seq.add(pulse1, 'ch1')
+    min_duration = seq._channels['ch1'].min_duration
+    assert seq._schedule['ch1'][3] == _TimeSlot(
+        'delay', 220, 220 + min_duration, {'q1'})
+
+
 def test_phase():
     seq = Sequence(reg, device)
     seq.declare_channel('ch0', 'raman_local', initial_target='q0')
