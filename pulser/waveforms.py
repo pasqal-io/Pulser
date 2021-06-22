@@ -20,6 +20,7 @@ import functools
 import inspect
 import itertools
 import sys
+from sys import version_info
 from types import FunctionType
 from typing import Any, cast, Optional, Tuple, Union
 import warnings
@@ -32,6 +33,17 @@ from numpy.typing import ArrayLike
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.json.utils import obj_to_dict
+
+if version_info[:2] >= (3, 8):  # pragma: no cover
+    from functools import cached_property
+else:  # pragma: no cover
+    try:
+        from backports.cached_property import cached_property  # type: ignore
+    except ImportError:
+        raise ImportError(
+            "Using pulser with Python version 3.7 requires the"
+            " `backports.cached-property` module. Install it by running"
+            " `pip install backports.cached-property`.")
 
 
 class Waveform(ABC):
@@ -73,25 +85,29 @@ class Waveform(ABC):
         """The duration of the pulse (in ns)."""
         pass
 
-    @property
+    @cached_property
     @abstractmethod
+    def _samples(self) -> np.ndarray:
+        pass
+
+    @property
     def samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
             np.ndarray: A numpy array with a value for each time step.
         """
-        pass
+        return self._samples.copy()
 
     @property
     def first_value(self) -> float:
         """The first value in the waveform."""
-        return float(self.samples[0])
+        return float(self[0])
 
     @property
     def last_value(self) -> float:
         """The last value in the waveform."""
-        return float(self.samples[-1])
+        return float(self[-1])
 
     @property
     def integral(self) -> float:
@@ -125,6 +141,49 @@ class Waveform(ABC):
     @abstractmethod
     def __repr__(self) -> str:
         pass
+
+    def __getitem__(self, index_or_slice:
+                    Union[int, slice]) -> Union[float, np.ndarray]:
+        if isinstance(index_or_slice, slice):
+            s: slice = self._check_slice(index_or_slice)
+            return cast(np.ndarray, self._samples[s])
+        else:
+            index: int = self._check_index(index_or_slice)
+            return cast(float, self._samples[index])
+
+    def _check_index(self, i: int) -> int:
+        if (i < -self.duration
+                or i >= self.duration):
+            raise IndexError("Index ('index_or_slice' = "
+                             f"{i}) must be in the range "
+                             f"0~{self.duration-1}, or "
+                             f"{-self.duration}~-1 from the end.")
+        return i if i >= 0 else self.duration + i
+
+    def _check_slice(self, s: slice) -> slice:
+        if s.step is not None and s.step != 1:
+            raise IndexError("The step of the slice must be None or 1.")
+
+        # Transform start and stop indexes into positive or null values
+        # since they can be omitted (None) or negative (end-indexing)
+        start = 0 if s.start is None else (
+            s.start if s.start >= 0 else self.duration + s.start)
+        stop = self.duration if s.stop is None else (
+            s.stop if s.stop >= 0 else self.duration + s.stop)
+
+        # Correct out of bounds ranges
+        if start < 0:
+            start = 0
+        if stop < 0:
+            stop = 0
+        if start > self.duration:
+            start = self.duration
+        if stop > self.duration:
+            stop = self.duration
+        if stop < start:
+            stop = start
+
+        return slice(start, stop)
 
     @abstractmethod
     def __mul__(self, other: float) -> Waveform:
@@ -191,8 +250,8 @@ class CompositeWaveform(Waveform):
             duration += wf.duration
         return duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
@@ -200,16 +259,6 @@ class CompositeWaveform(Waveform):
         """
         return cast(np.ndarray,
                     np.concatenate([wf.samples for wf in self._waveforms]))
-
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return self._waveforms[0].first_value
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return self._waveforms[-1].last_value
 
     @property
     def waveforms(self) -> list[Waveform]:
@@ -248,7 +297,7 @@ class CustomWaveform(Waveform):
     def __init__(self, samples: ArrayLike):
         """Initializes a custom waveform."""
         samples_arr = np.array(samples, dtype=float)
-        self._samples = samples_arr
+        self._samples: np.ndarray = samples_arr
         super().__init__(len(samples_arr))
 
     @property
@@ -256,14 +305,15 @@ class CustomWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return self._samples
+        # self._samples is already cached when initialized in __init__
+        pass
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._samples)
@@ -298,24 +348,14 @@ class ConstantWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
         return np.full(self.duration, self._value)
-
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return self._value
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return self._value
 
     def change_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.
@@ -357,17 +397,17 @@ class RampWaveform(Waveform):
         """Initializes a ramp waveform."""
         super().__init__(duration)
         start = cast(float, start)
-        self._start = float(start)
+        self._start: float = float(start)
         stop = cast(float, stop)
-        self._stop = float(stop)
+        self._stop: float = float(stop)
 
     @property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
@@ -379,16 +419,6 @@ class RampWaveform(Waveform):
     def slope(self) -> float:
         r"""Slope of the ramp, in :math:`s^{-15}`."""
         return (self._stop - self._start) / self._duration
-
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return self._start
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return self._stop
 
     def change_duration(self, new_duration: int) -> RampWaveform:
         """Returns a new waveform with modified duration.
@@ -477,24 +507,14 @@ class BlackmanWaveform(Waveform):
         """The duration of the pulse (in ns)."""
         return self._duration
 
-    @property
-    def samples(self) -> np.ndarray:
+    @cached_property
+    def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform.
 
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
         return cast(np.ndarray, self._norm_samples * self._scaling)
-
-    @property
-    def first_value(self) -> float:
-        """The first value in the waveform."""
-        return 0.
-
-    @property
-    def last_value(self) -> float:
-        """The last value in the waveform."""
-        return 0.
 
     def change_duration(self, new_duration: int) -> BlackmanWaveform:
         """Returns a new waveform with modified duration.
