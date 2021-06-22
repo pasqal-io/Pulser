@@ -1,4 +1,3 @@
-
 # Copyright 2020 Pulser Development Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,7 +75,7 @@ class Simulation:
                              "sequence.")
         not_supported = (set(ch.basis for ch in sequence._channels.values())
                          - SUPPORTED_BASES)
-        if not_supported:  # pragma: no cover
+        if not_supported:
             raise NotImplementedError("Sequence with unsupported bases: "
                                       + "".join(not_supported))
         self._seq = sequence
@@ -363,9 +362,7 @@ class Simulation:
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
                         # global to local
-                        targets = (self._qid_index if is_global else
-                                   slot.targets)
-                        for qubit in targets:
+                        for qubit in slot.targets:
                             if qubit not in samples_dict:
                                 samples_dict[qubit] = prepare_dict()
                                 # We don't write samples for badly prep qubits

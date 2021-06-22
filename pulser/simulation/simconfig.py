@@ -34,7 +34,7 @@ else:  # pragma: no cover
 
 NOISE_TYPES = Literal['doppler', 'amplitude', 'SPAM', 'dephasing']
 MASS = 1.45e-25  # kg
-KB = 1.38e-23  # J.s
+KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
 
 

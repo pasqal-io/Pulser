@@ -201,6 +201,9 @@ def test_empty_sequences():
         seq.declare_channel('test', 'rydberg_local', 'target')
         seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
+    seq.declare_channel("ch0", "mw_global")
+    with pytest.raises(NotImplementedError):
+        Simulation(seq)
 
 
 def test_get_hamiltonian():
