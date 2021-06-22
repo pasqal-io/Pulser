@@ -17,6 +17,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import qutip
+from qutip.piqs import isdiagonal
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
@@ -103,6 +104,7 @@ def test_get_final_state():
 
 
 def test_get_final_state_noisy():
+    np.random.seed(123)
     seq_ = Sequence(reg, Chadoq2)
     seq_.declare_channel('ram', 'raman_local', initial_target="A")
     seq_.add(pi, 'ram')
@@ -110,16 +112,23 @@ def test_get_final_state_noisy():
     sim_noisy = Simulation(seq_, config=noisy_config)
     res3 = sim_noisy.run()
     res3._meas_basis = 'digital'
-    res3.get_final_state()
+    final_state = res3.get_final_state()
+    assert isdiagonal(final_state)
     res3._meas_basis = 'ground-rydberg'
-    res3.get_final_state()
+    assert (final_state[0, 0] == 0.06666666666666667+0j and
+            final_state[2, 2] == 0.9333333333333333+0j)
     res3.states
     res3.results
 
 
-def test_get_state():
+def test_get_state_float_time():
     with pytest.raises(IndexError, match="is absent from"):
         results.get_state(-1.)
+    with pytest.raises(IndexError, match="is absent from"):
+        mean = (results._sim_times[-1] + results._sim_times[-2]) / 2
+        diff = (results._sim_times[-1] - results._sim_times[-2]) / 2
+        results.get_state(mean, t_tol=diff / 2)
+    results.get_state(mean, t_tol=3 * diff / 2)
 
 
 def test_expect():
@@ -129,9 +138,16 @@ def test_expect():
         results.expect(['bad_observable'])
     with pytest.raises(ValueError, match="Incompatible shape"):
         results.expect([np.array(3)])
-    op = [qutip.tensor(qutip.qeye(2),
-                       qutip.basis(2, 1)*qutip.basis(2, 0).dag())]
-    assert len(results.expect(op)[0]) == number_of_meas
+    reg_single = Register.from_coordinates([(0, 0)], prefix='q')
+    seq_single = Sequence(reg_single, Chadoq2)
+    seq_single.declare_channel('ryd', 'rydberg_global')
+    seq_single.add(pi, 'ryd')
+    sim_single = Simulation(seq_single)
+    results_single = sim_single.run()
+    op = [qutip.basis(2, 0).proj()]
+    exp = results_single.expect(op)[0]
+    assert np.isclose(exp[-1], 1)
+    assert len(exp) == number_of_meas
 
 
 def test_expect_noisy():
@@ -162,7 +178,7 @@ def test_sample_final_state():
     assert len(sampling) == 4  # Check that all states were observed.
 
     results._meas_basis = 'digital'
-    sampling0 = results.sample_final_state(n_samples=911)
+    sampling0 = results.sample_final_state(N_samples=911)
     assert sampling0 == {'00': 911}
     seq_no_meas.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas.add(pi, 'raman')
@@ -177,8 +193,8 @@ def test_sample_final_state():
 
 
 def test_sample_final_state_noisy():
-    results_noisy.sample_final_state(n_samples=1234)
-    results_noisy.sample_final_state(n_samples=911)
+    results_noisy.sample_final_state(N_samples=1234)
+    results_noisy.sample_final_state(N_samples=911)
     seq_no_meas_noisy.declare_channel('raman', 'raman_local', 'B')
     seq_no_meas_noisy.add(pi, 'raman')
     res_3level = Simulation(seq_no_meas_noisy, config=SimConfig(

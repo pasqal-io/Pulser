@@ -20,7 +20,7 @@ import pytest
 import qutip
 
 from pulser import Sequence, Pulse, Register, Simulation
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
 from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
 from pulser.simulation import SimConfig
 
@@ -201,9 +201,13 @@ def test_empty_sequences():
         seq.declare_channel('test', 'rydberg_local', 'target')
         seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
-    seq.declare_channel("ch0", "mw_global")
+    seqMW = Sequence(reg, MockDevice)
     with pytest.raises(NotImplementedError):
-        Simulation(seq)
+        seqMW.declare_channel("ch0", "mw_global")
+        seqMW.add(
+            Pulse.ConstantDetuning(RampWaveform(1500, 0., 2.), 0., 0.),
+            'ch0')
+        Simulation(seqMW)
 
 
 def test_get_hamiltonian():
@@ -357,3 +361,21 @@ def test_dephasing():
     sim = Simulation(seq, sampling_rate=0.01,
                      config=SimConfig(noise='dephasing'))
     sim.run().sample_final_state()
+
+
+def test_update_config():
+    reg = Register.from_coordinates([(0, 0)], prefix='q')
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel('ch0', 'rydberg_global')
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0.*2*np.pi, 0)
+    seq.add(pulse, 'ch0')
+    sim = Simulation(seq, sampling_rate=0.01,
+                     config=SimConfig(noise='SPAM', eta=0.5))
+    with pytest.raises(ValueError, match="is not a valid"):
+        sim.update_config('bad_cfg')
+    sim.update_config(SimConfig(noise=('dephasing', 'SPAM', 'doppler'),
+                                temperature=20000))
+    assert 'dephasing' in sim.config.noise and 'SPAM' in sim.config.noise
+    assert sim.config.eta == 0.5
+    assert sim.config.temperature == 20000.e-6

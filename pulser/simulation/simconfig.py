@@ -76,6 +76,7 @@ class SimConfig:
     eta: float = 0.005
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
+    dephasing_prob: float = 0.05
     solver_options: qutip.Options = qutip.Options(max_step=5)
     spam_dict: dict[str, float] = field(init=False, default_factory=dict,
                                         repr=False)
@@ -94,12 +95,13 @@ class SimConfig:
         lines = [
             "Options:",
             "----------",
-            "Noise types:         " + ", ".join(self.noise),
-            f"Spam dictionary:     {self.spam_dict}",
-            f"Temperature:         {self.temperature}K",
-            f"Number of runs:      {self.runs}",
-            f"Samples per runs:    {self.samples_per_run}",
-            f"Laser waist:         {self.laser_waist}μm",
+            "Noise types:           " + ", ".join(self.noise),
+            f"Spam dictionary:       {self.spam_dict}",
+            f"Temperature:           {self.temperature}K",
+            f"Number of runs:        {self.runs}",
+            f"Samples per runs:      {self.samples_per_run}",
+            f"Laser waist:           {self.laser_waist}μm",
+            f"Dephasing probability: {self.dephasing_prob}",
             "Solver Options:",
             f"{str(self.solver_options)[10:-1]}",
         ]

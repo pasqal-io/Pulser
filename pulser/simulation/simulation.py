@@ -35,7 +35,6 @@ from pulser.sequence import _TimeSlot
 
 
 SUPPORTED_BASES = {"ground-rydberg", "digital"}
-DEPHASING_PROB = 0.05
 
 
 class Simulation:
@@ -105,9 +104,9 @@ class Simulation:
         self._update_noise()
         self._extract_samples()
         self._build_basis_and_op_matrices()
-        if self.config.noise:
-            self._set_param_from_config()
         self._construct_hamiltonian()
+        if 'dephasing' in self.config.noise:
+            self._init_dephasing()
         self.initial_state = 'all-ground'
 
     @property
@@ -137,6 +136,9 @@ class Simulation:
         Args:
             config (SimConfig): SimConfig to retrieve parameters from.
         """
+        if not isinstance(config, SimConfig):
+            raise ValueError(f"Object {config} is not a valid `SimConfig`")
+
         old_noise_set = set(self.config.noise)
         new_noise_set = old_noise_set.union(config.noise)
         diff_noise_set = new_noise_set - old_noise_set
@@ -149,9 +151,11 @@ class Simulation:
             param_dict['epsilon'] = config.epsilon
             param_dict['epsilon_prime'] = config.epsilon_prime
         if 'doppler' in diff_noise_set:
-            param_dict['temperature'] = config.temperature
+            param_dict['temperature'] = config.temperature * 1.e6
         if 'amplitude' in diff_noise_set:
             param_dict['laser_waist'] = config.laser_waist
+        if 'dephasing' in diff_noise_set:
+            param_dict['dephasing_prob'] = config.dephasing_prob
         self.set_config(SimConfig(**param_dict))
 
     def show_config(self) -> None:
@@ -169,11 +173,23 @@ class Simulation:
         Called every time a new configuration is loaded in order to update
         Simulation parameters.
         """
-        self._update_noise()
-        # update samples with potential noise settings
-        self._extract_samples()
-        if 'dephasing' in self.config.noise:
+        # Noise, samples and Hamiltonian update routine
+        self._update_hamiltonian()
+        if 'dephasing' in self.config.noise and not self._collapse_ops:
             self._init_dephasing()
+
+    def _update_hamiltonian(self) -> None:
+        """Noise, samples and Hamiltonian update routine.
+
+        Updates:
+            -Noise parameters, randomly chosen at each run
+            -New sequence samples that may have changed due to noise
+            -Sequence Hamiltonian from samples.
+        """
+        self._update_noise()
+        self._reset_samples()
+        self._extract_samples()
+        self._construct_hamiltonian()
 
     def _update_noise(self) -> None:
         """Updates noise random parameters.
@@ -228,8 +244,11 @@ class Simulation:
                 qutip.tensor([self.basis['g'] for _ in range(self._size)])
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
-            if state.shape[0] != self.dim ** self._size:
-                raise ValueError("Incompatible shape of initial state.")
+            shape = state.shape[0]
+            legal_shape = self.dim ** self._size
+            if shape != legal_shape:
+                raise ValueError("Incompatible shape of initial state." +
+                                 f"Expected {legal_shape}, got {shape}.")
             if isinstance(state, qutip.Qobj):
                 self._initial_state = state
             else:
@@ -361,11 +380,10 @@ class Simulation:
                 samples_dict = self.samples['Local'][basis]
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
-                        # global to local
                         for qubit in slot.targets:
                             if qubit not in samples_dict:
                                 samples_dict[qubit] = prepare_dict()
-                                # We don't write samples for badly prep qubits
+                            # We don't write samples for badly prep qubits
                             if not self._bad_atoms[qubit]:
                                 write_samples(slot, samples_dict[qubit],
                                               is_global, qubit)
@@ -531,22 +549,12 @@ class Simulation:
         if self.basis_name == 'digital' or self.basis_name == 'all':
             raise NotImplementedError("Cannot include dephasing noise in" +
                                       " digital- or all-basis.")
-        self.dephasing_prob = DEPHASING_PROB  # Probability of phase (Z) flip
+        # Probability of phase (Z) flip
+        prob = self.config.dephasing_prob
         self._collapse_ops += [
-            np.sqrt(1. - self.dephasing_prob) * self.op_matrix['I'],
-            np.sqrt(self.dephasing_prob) * (self.op_matrix['sigma_rr']
-                                            - self.op_matrix['sigma_gg'])]
-
-    def _build_hamiltonian_from_seq(self) -> None:
-        """Builds the hamiltonian from sequence samples.
-
-        Updates the new sequence samples that may have changed due to noise,
-        builds default operators and builds the hamiltonian from those
-        coefficients and operators.
-        """
-        self._reset_samples()
-        self._extract_samples()
-        self._construct_hamiltonian()
+            np.sqrt(1. - prob) * self.op_matrix['I'],
+            np.sqrt(prob) * (self.op_matrix['sigma_rr']
+                             - self.op_matrix['sigma_gg'])]
 
     # Run Simulation Evolution using Qutip
     def run(self, progress_bar: Optional[bool] = None,
@@ -580,7 +588,7 @@ class Simulation:
             if not as_subroutine:
                 # CLEAN SIMULATION:
                 measurement_basis = _assign_meas_basis()
-            if 'dephasing' in self.config.noise:
+            if self._collapse_ops:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(self._hamiltonian,
                                                 self._collapse_ops)
@@ -607,8 +615,7 @@ class Simulation:
             # We run the system multiple times
             for _ in range(self.config.runs):
                 # At each run, new random noise: new Hamiltonian
-                self._update_noise()
-                self._build_hamiltonian_from_seq()
+                self._update_hamiltonian()
                 # Get CleanResults instance from sequence with added noise:
                 clean_res_noisy_seq = _run_solver(as_subroutine=True,
                                                   measurement_basis=meas_basis)

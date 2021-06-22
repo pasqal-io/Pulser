@@ -14,6 +14,7 @@
 """Classes for containing and processing the results of a simulation."""
 
 from __future__ import annotations
+
 from collections import Counter
 from abc import ABC, abstractmethod
 from typing import Optional, Union, cast, Tuple
@@ -92,12 +93,16 @@ class SimulationResults(ABC):
             raise TypeError("`obs_list` must be a list of operators.")
 
         qobj_list = []
+        legal_shape = (2**self._size, 2**self._size)
         for obs in obs_list:
             if not (isinstance(obs, np.ndarray)
                     or isinstance(obs, qutip.Qobj)):
-                raise TypeError("Incompatible type of observable.")
-            if obs.shape != (2**self._size, 2**self._size):
-                raise ValueError("Incompatible shape of observable.")
+                raise TypeError(f"Incompatible type {type(obs)} of " +
+                                "observable. Type must be ArrayLike or " +
+                                "qutip.Qobj.")
+            if obs.shape != legal_shape:
+                raise ValueError("Incompatible shape of observable." +
+                                 f"Expected {legal_shape}, got {obs.shape}.")
             qobj_list.append(qutip.Qobj(obs))
 
         return cast(list, qutip.expect(qobj_list, self.states))
@@ -121,7 +126,7 @@ class SimulationResults(ABC):
         return Counter({np.binary_repr(
                         i, self._size): dist[i] for i in np.nonzero(dist)[0]})
 
-    def sample_final_state(self, n_samples: int = 1000) -> Counter:
+    def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state.
 
         Args:
@@ -131,7 +136,7 @@ class SimulationResults(ABC):
             Counter: Sample distribution of bitstrings corresponding to
                 measured quantum states at the end of the simulation.
         """
-        return self.sample_state(self._sim_times[-1], n_samples)
+        return self.sample_state(self._sim_times[-1], N_samples)
 
     def plot(self, op: qutip.Qobj, fmt: str = '', label: str = '') -> None:
         """Plots the expectation value of a given operator op.
@@ -249,7 +254,8 @@ class NoisyResults(SimulationResults):
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
 
-        Note: This is not the density matrix of the system, but is a convenient
+        Note:
+            This is not the density matrix of the system, but is a convenient
             way of computing expectation values of observables.
 
         Returns:
@@ -265,7 +271,8 @@ class NoisyResults(SimulationResults):
             obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): Input observable
                 list. ArrayLike objects will be converted to qutip.Qobj.
 
-        Note: This only works for diagonal observables, since results have been
+        Note:
+            This only works for diagonal observables, since results have been
             projected onto the Z basis.
 
         Returns:
@@ -286,7 +293,8 @@ class NoisyResults(SimulationResults):
              label: str = '', error_bars: bool = True) -> None:
         """Plots the expectation value of a given operator op.
 
-        Note: The observable must be diagonal.
+        Note:
+            The observable must be diagonal.
 
         Args:
             op (qutip.Qobj): Operator whose expectation value is wanted.
@@ -421,7 +429,7 @@ class CleanResults(SimulationResults):
                 state.
 
         Returns:
-            qutip.Qobj: The resulting state at time t.
+            qutip.Qobj: The resulting final state.
 
         Raises:
             TypeError: If trying to reduce to a basis that would eliminate
@@ -492,44 +500,32 @@ class CleanResults(SimulationResults):
             t (float): Time at which to return the samples.
             n_samples (int): Number of samples.
         """
-
         def detection_from_basis_state(n_detects: int, shot: str) -> Counter:
             """Returns distribution of states detected when detecting `shot`.
 
             Part of the SPAM implementation : computes measurement errors.
-                All computation is done at the lowest order in epsilon and
-                epsilon_prime.
 
             Args:
                 n_detects (int): Number of times state has been detected.
                 shot (str): Binary string of length the number of atoms of the
                 simulation.
             """
+            detected_dict: Counter = Counter()
             eps = spam['epsilon']
             eps_p = spam['epsilon_prime']
-            n_0 = shot.count('0')
-            n_1 = shot.count('1')
-            # Bitflip probability
-            p_1_to_0 = eps_p * (1 - eps) ** n_0 * (1 - eps_p) ** (n_1 - 1)
-            p_0_to_1 = eps * (1 - eps) ** (n_0 - 1) * (1 - eps_p) ** n_1
-            probs = [p_1_to_0 if x == '1' else p_0_to_1 for x in shot]
-            probs.append(1. - sum(probs))
-            shots = np.random.multinomial(n_detects, probs)
-            # Last bitstring : no measurement error, no character flipped
-            detected_dict = {shot: shots[-1]}
-            for i in range(len(shot)):
-                if shots[i]:
-                    # Bitstrings equal to shot except for the i-th character
-                    # have been detected due to SPAM errors :
-                    flip_bit_string = (shot[:i] + str(1 - int(shot[i])) +
-                                       shot[i+1:])
-                    detected_dict[flip_bit_string] = shots[i]
-            return Counter(detected_dict)
+            # Probability of flipping each bit
+            flip_probs = [eps_p if x == '1' else eps for x in shot]
+            for _ in range(n_detects):
+                shots = [(np.random.uniform() < p)*1 for p in flip_probs]
+                # shot, but with certain bits flipped at random
+                d_shot = ''.join([str((int(shot[i])+shots[i]) % 2)
+                                  for i in range(len(shot))])
+                detected_dict = detected_dict + Counter({d_shot: 1})
+            return detected_dict
 
         sampled_state = self.sample_state(t, n_samples)
         detected_sample_dict: Counter = Counter()
         for (shot, n_d) in sampled_state.items():
-            dict_state = detection_from_basis_state(n_d, shot)
-            detected_sample_dict += dict_state
+            detected_sample_dict += detection_from_basis_state(n_d, shot)
 
         return detected_sample_dict
