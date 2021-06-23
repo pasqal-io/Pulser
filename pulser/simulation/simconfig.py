@@ -21,16 +21,16 @@ from dataclasses import dataclass, field
 import numpy as np
 import qutip
 
-if version_info[:2] == (3, 7):  # pragma: no cover
+if version_info[:2] >= (3, 8):  # pragma: no cover
+    from typing import Literal, get_args, Union
+else:  # pragma: no cover
     try:
-        from typing_extensions import Literal, get_args
+        from typing_extensions import Literal, get_args  # type: ignore
     except ImportError:
         raise ImportError(
             "Using pulser with Python version 3.7 requires the"
             " `typing_extensions` module. Install it by running"
             " `pip install typing-extensions`.")
-else:  # pragma: no cover
-    from typing import Literal, get_args, Union  # type: ignore
 
 NOISE_TYPES = Literal['doppler', 'amplitude', 'SPAM', 'dephasing']
 MASS = 1.45e-25  # kg
@@ -102,7 +102,7 @@ class SimConfig:
             f"Laser waist:         {self.laser_waist}μm",
             "Solver Options:",
             f"{str(self.solver_options)[10:-1]}",
-            ]
+        ]
         return "\n".join(lines)
 
     def _check_spam_dict(self) -> None:
@@ -128,7 +128,7 @@ class SimConfig:
                 raise ValueError(
                     f"{noise_type} is not a valid noise type. " +
                     "Valid noise types: " + ", ".join(get_args(NOISE_TYPES))
-                 )
+                )
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
