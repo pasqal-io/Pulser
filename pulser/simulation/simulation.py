@@ -100,13 +100,15 @@ class Simulation:
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
         self.evaluation_times = evaluation_times
+        self._bad_atoms: dict[Union[str, int], bool] = {
+            qid: False for qid in self._qid_index}
+        self._doppler_detune: dict[Union[str, int], float] = {
+            qid: 0. for qid in self._qid_index}
         self._config = config if config else SimConfig()
-        self._update_noise()
+        # Extract samples to know basis before building basis and operators
         self._extract_samples()
         self._build_basis_and_op_matrices()
-        self._construct_hamiltonian()
-        if 'dephasing' in self.config.noise:
-            self._init_dephasing()
+        self.set_config(self._config)
         self.initial_state = 'all-ground'
 
     @property
@@ -123,7 +125,10 @@ class Simulation:
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`")
         self._config = cfg
-        self._set_param_from_config()
+        # Noise, samples and Hamiltonian update routine
+        self._construct_hamiltonian()
+        if 'dephasing' in self.config.noise:
+            self._init_dephasing()
 
     def update_config(self, config: SimConfig) -> None:
         """Updates this SimConfig object with parameters of another one.
@@ -151,7 +156,7 @@ class Simulation:
             param_dict['epsilon'] = config.epsilon
             param_dict['epsilon_prime'] = config.epsilon_prime
         if 'doppler' in diff_noise_set:
-            param_dict['temperature'] = config.temperature * 1.e6
+            param_dict['temperature'] = config.temperature * 1.0e6
         if 'amplitude' in diff_noise_set:
             param_dict['laser_waist'] = config.laser_waist
         if 'dephasing' in diff_noise_set:
@@ -166,61 +171,6 @@ class Simulation:
         """Resets configuration to default."""
         self.set_config(SimConfig())
         print("Configuration has been set to default.")
-
-    def _set_param_from_config(self) -> None:
-        """Sets all relevant Simulation parameters from its SimConfig.
-
-        Called every time a new configuration is loaded in order to update
-        Simulation parameters.
-        """
-        # Noise, samples and Hamiltonian update routine
-        self._update_hamiltonian()
-        if 'dephasing' in self.config.noise and not self._collapse_ops:
-            self._init_dephasing()
-
-    def _update_hamiltonian(self) -> None:
-        """Noise, samples and Hamiltonian update routine.
-
-        Updates:
-            -Noise parameters, randomly chosen at each run
-            -New sequence samples that may have changed due to noise
-            -Sequence Hamiltonian from samples.
-        """
-        self._update_noise()
-        self._reset_samples()
-        self._extract_samples()
-        self._construct_hamiltonian()
-
-    def _update_noise(self) -> None:
-        """Updates noise random parameters.
-
-        Used at the start of each run. If SPAM isn't in chosen noises, all
-            atoms are set to be correctly prepared.
-        """
-        if 'SPAM' in self.config.noise and self.config.eta > 0:
-            self._prepare_bad_atoms()
-        elif 'SPAM' not in self.config.noise:
-            # Tag True if atom is badly prepared
-            self._bad_atoms: dict[Union[str, int], bool] = {
-                qid: False for qid in self._qid_index}
-        if 'doppler' in self.config.noise:
-            self._prepare_doppler_detune()
-
-    def _prepare_bad_atoms(self) -> None:
-        """Chooses atoms that will be badly prepared."""
-        dist = (np.random.uniform(size=len(self._qid_index)) <
-                self.config.spam_dict['eta'])
-        self._bad_atoms = dict(zip(self._qid_index, dist))
-
-    def _prepare_doppler_detune(self) -> None:
-        """Initializes doppler detuning for each qubit.
-
-        Note: We assume that each atom's speed is kept the same throughout
-            each sequence.
-        """
-        detune = np.random.normal(0, self.config.doppler_sigma,
-                                  size=len(self._qid_index))
-        self._doppler_detune = dict(zip(self._qid_index, detune))
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -438,7 +388,34 @@ class Simulation:
                               dtype=int)
         return cast(np.ndarray, full_array[indices])
 
+    def _update_noise(self) -> None:
+        """Updates noise random parameters.
+
+        Used at the start of each run. If SPAM isn't in chosen noises, all
+            atoms are set to be correctly prepared.
+        """
+        if 'SPAM' in self.config.noise and self.config.eta > 0:
+            dist = (np.random.uniform(size=len(self._qid_index)) <
+                    self.config.spam_dict['eta'])
+            self._bad_atoms = dict(zip(self._qid_index, dist))
+        if 'doppler' in self.config.noise:
+            detune = np.random.normal(0, self.config.doppler_sigma,
+                                      size=len(self._qid_index))
+            self._doppler_detune = dict(zip(self._qid_index, detune))
+
     def _construct_hamiltonian(self) -> None:
+        """Constructs the hamiltonian from the Sequence.
+
+        Also refreshes potential noise parameters by drawing new at random.
+        """
+        if not set(self.config.noise).isdisjoint(
+                {'SPAM', 'doppler', 'amplitude'}):
+            self._update_noise()
+            self.samples = {addr: {basis: {}
+                                   for basis in ['ground-rydberg', 'digital']}
+                            for addr in ['Global', 'Local']}
+            self._extract_samples()
+
         def make_vdw_term() -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
@@ -535,15 +512,6 @@ class Simulation:
                              "greater than or equal to 0.")
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
-    def _reset_samples(self) -> None:
-        """Sets all samples to their default values.
-
-        Used when running several noisy runs, each one setting new samples.
-        """
-        self.samples = {addr: {basis: {}
-                               for basis in ['ground-rydberg', 'digital']}
-                        for addr in ['Global', 'Local']}
-
     def _init_dephasing(self) -> None:
         """Initializes dephasing collapse operators."""
         if self.basis_name == 'digital' or self.basis_name == 'all':
@@ -559,7 +527,7 @@ class Simulation:
     # Run Simulation Evolution using Qutip
     def run(self, progress_bar: Optional[bool] = None,
             **options: qutip.solver.Options) -> SimulationResults:
-        """Simulate the sequence using QuTiP's solvers.
+        """Simulates the sequence using QuTiP's solvers.
 
         Will return NoisyResults if it detects any noise in the SimConfig.
         Otherwise will return CleanResults.
@@ -588,7 +556,7 @@ class Simulation:
             if not as_subroutine:
                 # CLEAN SIMULATION:
                 measurement_basis = _assign_meas_basis()
-            if self._collapse_ops:
+            if 'dephasing' in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(self._hamiltonian,
                                                 self._collapse_ops)
@@ -615,7 +583,7 @@ class Simulation:
             # We run the system multiple times
             for _ in range(self.config.runs):
                 # At each run, new random noise: new Hamiltonian
-                self._update_hamiltonian()
+                self._construct_hamiltonian()
                 # Get CleanResults instance from sequence with added noise:
                 clean_res_noisy_seq = _run_solver(as_subroutine=True,
                                                   measurement_basis=meas_basis)

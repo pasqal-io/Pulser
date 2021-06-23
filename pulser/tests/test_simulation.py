@@ -20,10 +20,10 @@ import numpy as np
 import pytest
 import qutip
 
-from pulser import Sequence, Pulse, Register, Simulation
+from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
 from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
-from pulser.simulation import SimConfig
+from pulser.simulation import SimConfig, Simulation
 
 q_dict = {"control1": np.array([-4., 0.]),
           "target": np.array([0., 4.]),

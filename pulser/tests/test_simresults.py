@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from copy import deepcopy
 
 from collections import Counter
@@ -167,7 +166,7 @@ def test_expect_noisy():
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7733333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.76)
 
 
 def test_plot():
@@ -209,7 +208,7 @@ def test_sample_final_state():
 def test_sample_final_state_noisy():
     np.random.seed(123)
     assert(results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {'11': 787, '10': 219, '01': 176, '00': 52}))
+        {'11': 738, '10': 160, '01': 210, '00': 126}))
     res_3level = Simulation(seq_no_meas_noisy, config=SimConfig(
         noise=('SPAM', 'doppler'), runs=10))
     final_state = res_3level.run().states[-1]
