@@ -206,8 +206,7 @@ def test_empty_sequences():
     with pytest.raises(NotImplementedError):
         seqMW.declare_channel("ch0", "mw_global")
         seqMW.add(
-            Pulse.ConstantDetuning(RampWaveform(1500, 0., 2.), 0., 0.),
-            'ch0')
+            Pulse.ConstantDetuning(RampWaveform(1500, 0., 2.), 0., 0.), 'ch0')
         Simulation(seqMW)
 
 
@@ -227,6 +226,16 @@ def test_get_hamiltonian():
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
     assert (simple_ham[0, 0] == Chadoq2.interaction_coeff / 10**6 - 2 * detun)
+
+    np.random.seed(123)
+    simple_sim_noise = Simulation(simple_seq, config=SimConfig(
+        noise='doppler', temperature=20000))
+    simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
+    assert np.isclose(simple_ham_noise.full(), np.array(
+        [[4.0683997+0.j,   0.09606404+0.j,   0.09606404+0.j,   0.+0.j],
+         [0.09606404+0.j,  12.03082372+0.j,   0.+0.j,  0.09606404+0.j],
+         [0.09606404+0.j,   0.+0.j, -12.97113702+0.j,  0.09606404+0.j],
+         [0.+0.j,   0.09606404+0.j,   0.09606404+0.j,  0.+0.j]])).all()
 
 
 def test_single_atom_simulation():
@@ -333,18 +342,19 @@ def test_eval_times():
 def test_config():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.reset_config()
+    assert sim.config == SimConfig()
     sim.show_config()
-    assert sim.config.eta == 0.005
     with pytest.raises(ValueError, match="not a valid"):
         sim.set_config('bad_config')
+    new_cfg = SimConfig(noise='SPAM')
+    sim.set_config(new_cfg)
+    assert sim.config == new_cfg
 
 
 def test_noise():
     sim2 = Simulation(seq, sampling_rate=0.01,
                       config=SimConfig(noise=('SPAM', 'doppler')))
     assert sim2.config.noise == ('SPAM', 'doppler')
-    sim2.run(min_step=0)
-    sim2.run().sample_final_state()
     with pytest.raises(NotImplementedError,
                        match='Cannot include'):
         sim2.set_config(SimConfig(noise='dephasing'))
@@ -383,7 +393,7 @@ def test_update_config():
     assert 'dephasing' in sim.config.noise and 'SPAM' in sim.config.noise
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.e-6
-    sim.reset_config()
+    sim.set_config(SimConfig(noise='dephasing', laser_waist=175.))
     sim.update_config(SimConfig(noise=('SPAM', 'amplitude'), laser_waist=172.))
     assert 'amplitude' in sim.config.noise and 'SPAM' in sim.config.noise
     assert sim.config.laser_waist == 172.
