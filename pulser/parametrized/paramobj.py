@@ -143,7 +143,8 @@ class ParamObj(Parametrized, OpSupport):
                       "executed if they serve as arguments of other "
                       "parametrized objects that are themselves built. If this"
                       f" is not the case, the call to {obj} will not be "
-                      "executed upon sequence building.")
+                      "executed upon sequence building.",
+                      stacklevel=2)
         return obj
 
     def __getattr__(self, name: str) -> ParamObj:
