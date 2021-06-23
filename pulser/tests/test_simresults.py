@@ -14,16 +14,20 @@
 
 from copy import deepcopy
 
+from collections import Counter
+
 import numpy as np
 import pytest
 import qutip
 from qutip.piqs import isdiagonal
+
 from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
 from pulser.simulation import Simulation, SimConfig
 from pulser.simulation.simresults import CleanResults, NoisyResults
 
+np.random.seed(123)
 q_dict = {"A": np.array([0., 0.]),
           "B": np.array([0., 10.]),
           }
@@ -117,8 +121,9 @@ def test_get_final_state_noisy():
     res3._meas_basis = 'ground-rydberg'
     assert (final_state[0, 0] == 0.06666666666666667+0j and
             final_state[2, 2] == 0.9333333333333333+0j)
-    res3.states
-    res3.results
+    assert res3.states[-1] == final_state
+    assert res3.results[-1] == Counter(
+        {'10': 0.9333333333333333, '00': 0.06666666666666667})
 
 
 def test_get_state_float_time():
@@ -128,7 +133,13 @@ def test_get_state_float_time():
         mean = (results._sim_times[-1] + results._sim_times[-2]) / 2
         diff = (results._sim_times[-1] - results._sim_times[-2]) / 2
         results.get_state(mean, t_tol=diff / 2)
-    results.get_state(mean, t_tol=3 * diff / 2)
+    state = results.get_state(mean, t_tol=3 * diff / 2)
+    assert state == results.get_state(results._sim_times[-2])
+    assert np.isclose(state.full(), np.array([[0.79602211+0.j],
+                                              [0.02417478-0.37829574j],
+                                              [0.02417478-0.37829574j],
+                                              [-0.27423657-0.06131009j]])
+                      ).all()
 
 
 def test_expect():
@@ -151,11 +162,12 @@ def test_expect():
 
 
 def test_expect_noisy():
+    np.random.seed(123)
     bad_op = qutip.tensor([qutip.qeye(2), qutip.sigmap()])
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    results_noisy.expect([op])
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7733333333333334)
 
 
 def test_plot():
@@ -166,9 +178,11 @@ def test_plot():
 
 
 def test_sample_final_state():
+    np.random.seed(123)
     sim_no_meas = Simulation(seq_no_meas, config=SimConfig(runs=1))
     results_no_meas = sim_no_meas.run()
-    results_no_meas.sample_final_state()
+    assert results_no_meas.sample_final_state() == Counter(
+        {'00': 77, '01': 140, '10': 167, '11': 616})
     with pytest.raises(NotImplementedError, match="dimension > 3"):
         results_large_dim = deepcopy(results)
         results_large_dim._dim = 7
@@ -193,10 +207,14 @@ def test_sample_final_state():
 
 
 def test_sample_final_state_noisy():
-    results_noisy.sample_final_state(N_samples=1234)
-    results_noisy.sample_final_state(N_samples=911)
-    seq_no_meas_noisy.declare_channel('raman', 'raman_local', 'B')
-    seq_no_meas_noisy.add(pi, 'raman')
+    np.random.seed(123)
+    assert(results_noisy.sample_final_state(N_samples=1234) == Counter(
+        {'11': 787, '10': 219, '01': 176, '00': 52}))
     res_3level = Simulation(seq_no_meas_noisy, config=SimConfig(
-        noise=('SPAM', 'doppler'), runs=1))
-    res_3level.run().states
+        noise=('SPAM', 'doppler'), runs=10))
+    final_state = res_3level.run().states[-1]
+    assert (np.isclose(final_state.full(),
+                       np.array([[0.62+0.j, 0.+0.j, 0.+0.j, 0.+0.j],
+                                 [0.+0.j, 0.16+0.j, 0.+0.j, 0.+0.j],
+                                 [0.+0.j, 0.+0.j, 0.18+0.j, 0.+0.j],
+                                 [0.+0.j, 0.+0.j, 0.+0.j, 0.04+0.j]])).all())
