@@ -5,6 +5,7 @@ scipy
 
 # version specific
 typing-extensions; python_version == '3.7'
+backports.cached-property; python_version == '3.7'
 
 # tests
 pytest
