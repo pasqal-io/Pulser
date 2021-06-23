@@ -383,3 +383,7 @@ def test_update_config():
     assert 'dephasing' in sim.config.noise and 'SPAM' in sim.config.noise
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.e-6
+    sim.reset_config()
+    sim.update_config(SimConfig(noise=('SPAM', 'amplitude'), laser_waist=172.))
+    assert 'amplitude' in sim.config.noise and 'SPAM' in sim.config.noise
+    assert sim.config.laser_waist == 172.
