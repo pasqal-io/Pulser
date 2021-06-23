@@ -250,7 +250,6 @@ def test_sequence():
     with patch('matplotlib.pyplot.show'):
         seq.draw()
 
-    # pulse1 = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     pulse1 = Pulse(InterpolatedWaveform(500, [0, 1, 0]),
                    InterpolatedWaveform(500, [-1, 1, 0]), phase=0,
                    post_phase_shift=np.pi)
