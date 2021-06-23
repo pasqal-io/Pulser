@@ -14,9 +14,10 @@
 
 from unittest.mock import patch
 
+from collections import Counter
+
 import numpy as np
 import pytest
-
 import qutip
 
 from pulser import Sequence, Pulse, Register, Simulation
@@ -333,9 +334,9 @@ def test_config():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.reset_config()
     sim.show_config()
+    assert sim.config.eta == 0.005
     with pytest.raises(ValueError, match="not a valid"):
         sim.set_config('bad_config')
-    sim.update_config(SimConfig(noise=('SPAM', 'doppler', 'amplitude')))
 
 
 def test_noise():
@@ -348,10 +349,12 @@ def test_noise():
                        match='Cannot include'):
         sim2.set_config(SimConfig(noise='dephasing'))
         sim2.run()
-    sim2.config.spam_dict
+    assert sim2.config.spam_dict == {'eta': 0.005, 'epsilon': 0.01,
+                                     'epsilon_prime': 0.05}
 
 
 def test_dephasing():
+    np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix='q')
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel('ch0', 'rydberg_global')
@@ -360,7 +363,8 @@ def test_dephasing():
     seq.add(pulse, 'ch0')
     sim = Simulation(seq, sampling_rate=0.01,
                      config=SimConfig(noise='dephasing'))
-    sim.run().sample_final_state()
+    assert sim.run().sample_final_state() == Counter({'0': 436, '1': 564})
+    assert len(sim._collapse_ops) != 0
 
 
 def test_update_config():
