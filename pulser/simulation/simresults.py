@@ -514,9 +514,10 @@ class CleanResults(SimulationResults):
             eps = spam['epsilon']
             eps_p = spam['epsilon_prime']
             # Probability of flipping each bit
-            flip_probs = [eps_p if x == '1' else eps for x in shot]
+            flip_probs = np.array([eps_p if x == '1' else eps for x in shot])
             for _ in range(n_detects):
-                shots = [(np.random.uniform() < p)*1 for p in flip_probs]
+                shots = (np.random.uniform(size=len(flip_probs)) < flip_probs
+                         ).astype(int)
                 # shot, but with certain bits flipped at random
                 d_shot = ''.join([str((int(shot[i])+shots[i]) % 2)
                                   for i in range(len(shot))])
