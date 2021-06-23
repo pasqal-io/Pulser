@@ -647,7 +647,7 @@ class Sequence:
             missing_vars = all_keys - given_keys
             if missing_vars:
                 raise TypeError("Did not receive values for variables: "
-                                + ", ".join(missing_vars), stacklevel=2)
+                                + ", ".join(missing_vars))
 
         for name, value in vars.items():
             self._variables[name]._assign(value)
@@ -766,7 +766,7 @@ class Sequence:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
-                        cast(int, 16 if delta < 16 else delta)
+                        16 if delta < 16 else delta
                     )
             tf = ti + delta
 
