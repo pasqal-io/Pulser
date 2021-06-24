@@ -92,10 +92,6 @@ class Simulation:
                              "points.")
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
-        self.samples: dict[str, dict[str, dict]] = {
-            addr: {basis: {} for basis in ['ground-rydberg', 'digital']}
-            for addr in ['Global', 'Local']}
-        self.operators = deepcopy(self.samples)
         self._collapse_ops: list[qutip.Qobj] = []
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
@@ -104,11 +100,7 @@ class Simulation:
             qid: False for qid in self._qid_index}
         self._doppler_detune: dict[Union[str, int], float] = {
             qid: 0. for qid in self._qid_index}
-        self._config = config if config else SimConfig()
-        # Extract samples to know basis before building basis and operators
-        self._extract_samples()
-        self._build_basis_and_op_matrices()
-        self.set_config(self._config)
+        self.set_config(config) if config else self.set_config(SimConfig())
         self.initial_state = 'all-ground'
 
     @property
@@ -125,6 +117,10 @@ class Simulation:
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`")
         self._config = cfg
+        if not ('SPAM' in self.config.noise and self.config.eta > 0):
+            self._bad_atoms = {qid: False for qid in self._qid_index}
+        if 'doppler' not in self.config.noise:
+            self._doppler_detune = {qid: 0. for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
         if 'dephasing' in self.config.noise:
@@ -275,6 +271,11 @@ class Simulation:
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
+        self.samples: dict[str, dict[str, dict]] = {
+            addr: {basis: {} for basis in ['ground-rydberg', 'digital']}
+            for addr in ['Global', 'Local']}
+        if not hasattr(self, 'operators'):
+            self.operators = deepcopy(self.samples)
 
         def prepare_dict() -> dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
@@ -339,34 +340,6 @@ class Simulation:
                                               is_global, qubit)
                 self.samples['Local'][basis] = samples_dict
 
-    def _build_basis_and_op_matrices(self) -> None:
-        """Determine dimension, basis and projector operators."""
-        # No samples => Empty dict entry => False
-        if (not self.samples['Global']['digital']
-                and not self.samples['Local']['digital']):
-            self.basis_name = 'ground-rydberg'
-            self.dim = 2
-            basis = ['r', 'g']
-            projectors = ['gr', 'rr', 'gg']
-        elif (not self.samples['Global']['ground-rydberg']
-                and not self.samples['Local']['ground-rydberg']):
-            self.basis_name = 'digital'
-            self.dim = 2
-            basis = ['g', 'h']
-            projectors = ['hg', 'hh', 'gg']
-        else:
-            self.basis_name = 'all'  # All three states
-            self.dim = 3
-            basis = ['r', 'g', 'h']
-            projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
-
-        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
-        self.op_matrix = {'I': qutip.qeye(self.dim)}
-
-        for proj in projectors:
-            self.op_matrix['sigma_' + proj] = (
-                self.basis[proj[0]] * self.basis[proj[1]].dag())
-
     def _build_operator(self, op_id: str, *qubit_ids: Union[str, int],
                         global_op: bool = False) -> qutip.Qobj:
         """Create qutip.Qobj with nontrivial action at *qubit_ids."""
@@ -403,17 +376,48 @@ class Simulation:
                                       size=len(self._qid_index))
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
+    def _build_basis_and_op_matrices(self) -> None:
+        """Determine dimension, basis and projector operators."""
+        # No samples => Empty dict entry => False
+        if (not self.samples['Global']['digital']
+                and not self.samples['Local']['digital']):
+            self.basis_name = 'ground-rydberg'
+            self.dim = 2
+            basis = ['r', 'g']
+            projectors = ['gr', 'rr', 'gg']
+        elif (not self.samples['Global']['ground-rydberg']
+                and not self.samples['Local']['ground-rydberg']):
+            self.basis_name = 'digital'
+            self.dim = 2
+            basis = ['g', 'h']
+            projectors = ['hg', 'hh', 'gg']
+        else:
+            self.basis_name = 'all'  # All three states
+            self.dim = 3
+            basis = ['r', 'g', 'h']
+            projectors = ['gr', 'hg', 'rr', 'gg', 'hh']
+
+        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(
+                      basis)}
+        self.op_matrix = {'I': qutip.qeye(self.dim)}
+
+        for proj in projectors:
+            self.op_matrix['sigma_' + proj] = (
+                self.basis[proj[0]] * self.basis[proj[1]].dag())
+
     def _construct_hamiltonian(self) -> None:
         """Constructs the hamiltonian from the Sequence.
 
-        Also refreshes potential noise parameters by drawing new at random.
+        Also builds qutip.Qobjs related to the Sequence if not build already,
+        and refreshes potential noise parameters by drawing new at random.
         """
+        if not hasattr(self, 'basis_name'):
+            self._extract_samples()
+            self._build_basis_and_op_matrices()
+
         if not set(self.config.noise).isdisjoint(
                 {'SPAM', 'doppler', 'amplitude'}):
             self._update_noise()
-            self.samples = {addr: {basis: {}
-                                   for basis in ['ground-rydberg', 'digital']}
-                            for addr in ['Global', 'Local']}
             self._extract_samples()
 
         def make_vdw_term() -> qutip.Qobj:
