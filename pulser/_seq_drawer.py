@@ -83,8 +83,9 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
 
 def draw_sequence(seq: pulser.sequence.Sequence,
                   sampling_rate: Optional[float] = None,
-                  draw_phase_area: bool = False) -> None:
-    """Draw the entire sequence.
+                  draw_phase_area: bool = False,
+                  draw_phase_shifts: bool = False) -> None:
+    """Draws the entire sequence.
 
     Args:
         seq (pulser.Sequence): The input sequence of operations on a device.
@@ -93,6 +94,8 @@ def draw_sequence(seq: pulser.sequence.Sequence,
             input pulse.
         draw_phase_area (bool): Whether phase and area values need to be shown
             as text on the plot, defaults to False.
+        draw_phase_shifts (bool): Whether phase shift and reference information
+            should be added to the plot, defaults to False.
     """
 
     def phase_str(phi: float) -> str:
@@ -264,7 +267,7 @@ def draw_sequence(seq: pulser.sequence.Sequence,
                     a.text(x, tgt_txt_y, tgt_str, fontsize=12, ha='left',
                            bbox=q_box)
                     phase = seq._phase_ref[basis][targets[0]][0]
-                    if phase:
+                    if phase and draw_phase_shifts:
                         msg = r"$\phi=$" + phase_str(phase)
                         a.text(0, max_amp*1.1, msg, ha='left', fontsize=12,
                                bbox=ph_box)
@@ -277,7 +280,7 @@ def draw_sequence(seq: pulser.sequence.Sequence,
                 b.axvspan(ti, tf, alpha=0.4, color='grey', hatch='//')
                 a.text(tf + t[-1]*5e-3, tgt_txt_y, tgt_str, ha='left',
                        fontsize=12, bbox=q_box)
-                if phase:
+                if phase and draw_phase_shifts:
                     msg = r"$\phi=$" + phase_str(phase)
                     wrd_len = len(max(tgt_strs, key=len))
                     x = tf + t[-1]*0.01*(wrd_len+1)
@@ -286,7 +289,8 @@ def draw_sequence(seq: pulser.sequence.Sequence,
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(t[-1])
-        for start, targets_, end in target_regions:
+        for start, targets_, end in (
+                target_regions if draw_phase_shifts else []):
             start = cast(float, start)
             targets_ = cast(list, targets_)
             end = cast(float, end)
