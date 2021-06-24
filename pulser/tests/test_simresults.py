@@ -24,7 +24,7 @@ from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2
 from pulser.waveforms import BlackmanWaveform
 from pulser.simulation import Simulation, SimConfig
-from pulser.simulation.simresults import CleanResults, NoisyResults
+from pulser.simulation.simresults import CoherentResults, NoisyResults
 
 np.random.seed(123)
 q_dict = {"A": np.array([0., 0.]),
@@ -57,10 +57,10 @@ ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 
 def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
-        CleanResults(state, 2, 'bad_basis', None, [0])
+        CoherentResults(state, 2, 'bad_basis', None, [0])
     with pytest.raises(ValueError, match="`meas_basis` must be"):
-        CleanResults(state, 1, 'ground-rydberg', [0],
-                     'wrong_measurement_basis')
+        CoherentResults(state, 1, 'ground-rydberg', [0],
+                        'wrong_measurement_basis')
     with pytest.raises(ValueError, match="`basis_name` must be"):
         NoisyResults(state, 2, 'bad_basis', [0], 123)
 
@@ -166,7 +166,7 @@ def test_expect_noisy():
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.76)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7733333333333334)
 
 
 def test_plot():
@@ -208,7 +208,7 @@ def test_sample_final_state():
 def test_sample_final_state_noisy():
     np.random.seed(123)
     assert(results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {'11': 738, '10': 160, '01': 210, '00': 126}))
+        {'11': 787, '10': 219, '01': 176, '00': 52}))
     res_3level = Simulation(seq_no_meas_noisy, config=SimConfig(
         noise=('SPAM', 'doppler'), runs=10))
     final_state = res_3level.run().states[-1]

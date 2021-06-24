@@ -272,8 +272,6 @@ def test_run():
     sim.run()
     sim.initial_state = good_initial_qobj
     sim.run()
-
-    # assert not hasattr(sim._seq, '_measurement')
     seq.measure('ground-rydberg')
     sim.run()
     assert sim._seq._measurement == 'ground-rydberg'
@@ -285,16 +283,11 @@ def test_eval_times():
                              "and 1."):
         sim = Simulation(seq, sampling_rate=1.)
         sim.evaluation_times = 3.
-    with pytest.raises(ValueError,
-                       match="Wrong evaluation time label. It should "
-                             "be `Full` or `Minimal` or a float between "
-                             "0 and 1."):
+    with pytest.raises(ValueError, match="Wrong evaluation time label."):
+
         sim = Simulation(seq, sampling_rate=1.)
         sim.evaluation_times = 123
-    with pytest.raises(ValueError,
-                       match="Wrong evaluation time label. It should "
-                             "be `Full` or `Minimal` or a float between "
-                             "0 and 1."):
+    with pytest.raises(ValueError, match="Wrong evaluation time label."):
         sim = Simulation(seq, sampling_rate=1.)
         sim.evaluation_times = 'Best'
 
@@ -337,24 +330,42 @@ def test_eval_times():
 
     sim = Simulation(seq, sampling_rate=1.)
     sim.evaluation_times = 0.4
+    np.testing.assert_almost_equal(
+        sim._times[np.linspace(0, len(sim._times)-1, int(
+            0.4 * len(sim._times)), dtype=int)], sim._eval_times_array)
 
 
 def test_config():
-    sim = Simulation(seq, sampling_rate=0.01)
+    np.random.seed(123)
+    reg = Register.from_coordinates([(0, 0), (0, 5)], prefix='q')
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel('ch0', 'rydberg_global')
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0.*2*np.pi, 0)
+    seq.add(pulse, 'ch0')
+    sim = Simulation(seq, config=SimConfig(noise='SPAM'))
     sim.reset_config()
     assert sim.config == SimConfig()
     sim.show_config()
     with pytest.raises(ValueError, match="not a valid"):
         sim.set_config('bad_config')
-    new_cfg = SimConfig(noise='SPAM')
+    clean_ham = sim.get_hamiltonian(123)
+    new_cfg = SimConfig(noise='doppler', temperature=10000)
     sim.set_config(new_cfg)
     assert sim.config == new_cfg
+    noisy_ham = sim.get_hamiltonian(123)
+    assert (noisy_ham[0, 0] != clean_ham[0, 0] and
+            noisy_ham[3, 3] == clean_ham[3, 3])
+    sim.set_config(SimConfig(noise='amplitude'))
+    noisy_amp_ham = sim.get_hamiltonian(123)
+    assert (noisy_amp_ham[0, 0] == clean_ham[0, 0] and
+            noisy_amp_ham[0, 1] != clean_ham[0, 1])
 
 
 def test_noise():
     sim2 = Simulation(seq, sampling_rate=0.01,
-                      config=SimConfig(noise=('SPAM', 'doppler')))
-    assert sim2.config.noise == ('SPAM', 'doppler')
+                      config=SimConfig(noise=('doppler')))
+    sim2.run()
     with pytest.raises(NotImplementedError,
                        match='Cannot include'):
         sim2.set_config(SimConfig(noise='dephasing'))
@@ -373,7 +384,7 @@ def test_dephasing():
     seq.add(pulse, 'ch0')
     sim = Simulation(seq, sampling_rate=0.01,
                      config=SimConfig(noise='dephasing'))
-    assert sim.run().sample_final_state() == Counter({'0': 436, '1': 564})
+    assert sim.run().sample_final_state() == Counter({'0': 486, '1': 514})
     assert len(sim._collapse_ops) != 0
 
 

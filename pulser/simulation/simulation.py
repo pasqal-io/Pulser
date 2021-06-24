@@ -28,7 +28,7 @@ from numpy.typing import ArrayLike
 
 from pulser import Pulse, Sequence
 from pulser.simulation.simresults import (SimulationResults,
-                                          CleanResults, NoisyResults)
+                                          CoherentResults, NoisyResults)
 from pulser.simulation.simconfig import SimConfig
 from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
@@ -100,7 +100,15 @@ class Simulation:
             qid: False for qid in self._qid_index}
         self._doppler_detune: dict[Union[str, int], float] = {
             qid: 0. for qid in self._qid_index}
+        # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
+        if hasattr(self._seq, '_measurement'):
+            self._meas_basis = cast(str, self._seq._measurement)
+        else:
+            if self.basis_name in {'digital', 'all'}:
+                self._meas_basis = 'digital'
+            else:
+                self._meas_basis = 'ground-rydberg'
         self.initial_state = 'all-ground'
 
     @property
@@ -115,7 +123,7 @@ class Simulation:
             cfg (SimConfig): New configuration.
         """
         if not isinstance(cfg, SimConfig):
-            raise ValueError(f"Object {cfg} is not a valid `SimConfig`")
+            raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
         self._config = cfg
         if not ('SPAM' in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -124,15 +132,24 @@ class Simulation:
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
         if 'dephasing' in self.config.noise:
-            self._init_dephasing()
+            if self.basis_name == 'digital' or self.basis_name == 'all':
+                raise NotImplementedError("Cannot include dephasing noise in" +
+                                          " digital- or all-basis.")
+            # Probability of phase (Z) flip
+            prob = self.config.dephasing_prob
+            self._collapse_ops += [
+                np.sqrt(1. - prob) * self.op_matrix['I'],
+                np.sqrt(prob) * (self.op_matrix['sigma_rr']
+                                 - self.op_matrix['sigma_gg'])]
 
     def update_config(self, config: SimConfig) -> None:
         """Updates this SimConfig object with parameters of another one.
 
         Mostly useful when dealing with multiple noise types in different
         configurations and wanting to merge these configurations together.
-        Updates simulation parameters only when dealing with noise types that
-        weren't available in the former SimConfig.
+        Adds simulation parameters to noises that weren't available in the
+        former SimConfig. Noises specified in both SimConfigs will keep
+        former noise parameters.
 
         Args:
             config (SimConfig): SimConfig to retrieve parameters from.
@@ -255,7 +272,8 @@ class Simulation:
             # always include initial and final times
         else:
             raise ValueError("Wrong evaluation time label. It should "
-                  "be `Full` or `Minimal` or a float between 0 and 1.")
+                             "be `Full`, `Minimal`, an array of times or a" +
+                             "float between 0 and 1.")
         self._evaluation_times: Union[str, ArrayLike, float] = value
 
     def draw(self, draw_phase_area: bool = False) -> None:
@@ -304,10 +322,10 @@ class Simulation:
                 r = np.linalg.norm(position)
                 w0 = self.config.laser_waist
                 noise_amp = np.random.normal(1., 1.e-3) * np.exp(-(r/w0)**2)
-            samples_dict['amp'][slot.ti:slot.tf] = \
-                _pulse.amplitude.samples * noise_amp
-            samples_dict['det'][slot.ti:slot.tf] = \
-                _pulse.detuning.samples + noise_det
+            samples_dict['amp'][slot.ti:slot.tf] = (
+                _pulse.amplitude.samples * noise_amp)
+            samples_dict['det'][slot.ti:slot.tf] = (
+                _pulse.detuning.samples + noise_det)
             samples_dict['phase'][slot.ti:slot.tf] = _pulse.phase
 
         for channel in self._seq.declared_channels:
@@ -365,7 +383,7 @@ class Simulation:
         """Updates noise random parameters.
 
         Used at the start of each run. If SPAM isn't in chosen noises, all
-            atoms are set to be correctly prepared.
+        atoms are set to be correctly prepared.
         """
         if 'SPAM' in self.config.noise and self.config.eta > 0:
             dist = (np.random.uniform(size=len(self._qid_index)) <
@@ -408,17 +426,13 @@ class Simulation:
     def _construct_hamiltonian(self) -> None:
         """Constructs the hamiltonian from the Sequence.
 
-        Also builds qutip.Qobjs related to the Sequence if not build already,
+        Also builds qutip.Qobjs related to the Sequence if not built already,
         and refreshes potential noise parameters by drawing new at random.
         """
+        self._update_noise()
+        self._extract_samples()
         if not hasattr(self, 'basis_name'):
-            self._extract_samples()
             self._build_basis_and_op_matrices()
-
-        if not set(self.config.noise).isdisjoint(
-                {'SPAM', 'doppler', 'amplitude'}):
-            self._update_noise()
-            self._extract_samples()
 
         def make_vdw_term() -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
@@ -499,8 +513,8 @@ class Simulation:
         """Get the Hamiltonian created from the sequence at a fixed time.
 
         Args:
-            time (float): The specific time in which we want to extract the
-                    Hamiltonian (in ns).
+            time (float): The specific time at which we want to extract the
+                Hamiltonian (in ns).
 
         Returns:
             qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
@@ -516,25 +530,13 @@ class Simulation:
                              "greater than or equal to 0.")
         return self._hamiltonian(time/1000)  # Creates new Qutip.Qobj
 
-    def _init_dephasing(self) -> None:
-        """Initializes dephasing collapse operators."""
-        if self.basis_name == 'digital' or self.basis_name == 'all':
-            raise NotImplementedError("Cannot include dephasing noise in" +
-                                      " digital- or all-basis.")
-        # Probability of phase (Z) flip
-        prob = self.config.dephasing_prob
-        self._collapse_ops += [
-            np.sqrt(1. - prob) * self.op_matrix['I'],
-            np.sqrt(prob) * (self.op_matrix['sigma_rr']
-                             - self.op_matrix['sigma_gg'])]
-
     # Run Simulation Evolution using Qutip
     def run(self, progress_bar: Optional[bool] = None,
             **options: qutip.solver.Options) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
 
         Will return NoisyResults if it detects any noise in the SimConfig.
-        Otherwise will return CleanResults.
+        Otherwise will return CoherentResults.
 
         Keyword Args:
             progress_bar (bool): If True, the progress bar of QuTiP's solver
@@ -545,21 +547,8 @@ class Simulation:
         solv_ops = (qutip.Options(max_step=5, **options) if options
                     else self.config.solver_options)
 
-        def _assign_meas_basis() -> str:
-            if hasattr(self._seq, '_measurement'):
-                return cast(str, self._seq._measurement)
-            else:
-                if self.basis_name in {'digital', 'all'}:
-                    return 'digital'
-                else:
-                    return 'ground-rydberg'
-
-        def _run_solver(as_subroutine: bool = False,
-                        measurement_basis: str = '') -> CleanResults:
-            """Returns CleanResults: Object containing evolution results."""
-            if not as_subroutine:
-                # CLEAN SIMULATION:
-                measurement_basis = _assign_meas_basis()
+        def _run_solver() -> CoherentResults:
+            """Returns CoherentResults: Object containing evolution results."""
             if 'dephasing' in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(self._hamiltonian,
@@ -575,22 +564,21 @@ class Simulation:
                                        self._eval_times_array,
                                        progress_bar=progress_bar,
                                        options=solv_ops)
-            return CleanResults(result.states, self._size,
-                                self.basis_name, self._eval_times_array,
-                                measurement_basis)
-
-        if self.config.noise:
-            # NOISY SIMULATION:
-            meas_basis = _assign_meas_basis()
+            return CoherentResults(result.states, self._size,
+                                   self.basis_name, self._eval_times_array,
+                                   self._meas_basis)
+        # Check if noises ask for averaging over multiple runs:
+        if set(self.config.noise).issubset({'dephasing'}):
+            return _run_solver()
+        else:
             time_indices = range(len(self._eval_times_array))
             total_count = np.array([Counter() for _ in time_indices])
             # We run the system multiple times
             for _ in range(self.config.runs):
                 # At each run, new random noise: new Hamiltonian
                 self._construct_hamiltonian()
-                # Get CleanResults instance from sequence with added noise:
-                clean_res_noisy_seq = _run_solver(as_subroutine=True,
-                                                  measurement_basis=meas_basis)
+                # Get CoherentResults instance from sequence with added noise:
+                clean_res_noisy_seq = _run_solver()
                 # Extract statistics at eval time:
                 if 'SPAM' in self.config.noise:
                     total_count += np.array(
@@ -609,5 +597,3 @@ class Simulation:
                               for t in time_indices]
             return NoisyResults(total_run_prob, self._size, self.basis_name,
                                 self._eval_times_array, n_measures)
-        else:
-            return _run_solver()

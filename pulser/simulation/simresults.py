@@ -30,7 +30,7 @@ from numpy.typing import ArrayLike
 class SimulationResults(ABC):
     """Results of a simulation run of a pulse sequence.
 
-    Parent class for NoisyResults and CleanResults.
+    Parent class for NoisyResults and CoherentResults.
     Contains methods for studying the states and extracting useful information
     from them.
     """
@@ -169,9 +169,9 @@ class SimulationResults(ABC):
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
 
-    Contrary to a CleanResults object, this object contains a list of Counter
-    describing the state distribution at the time it was created by using
-    Simulation.run() with a noisy simulation.
+    Contrary to a CoherentResults object, this object contains a list of
+    Counters describing the state distribution at the time it was created by
+    using Simulation.run() with a noisy simulation.
     Contains methods for studying the populations and extracting useful
     information from them.
     """
@@ -184,8 +184,8 @@ class NoisyResults(SimulationResults):
         Warning:
             Can't have single-atom Hilbert spaces with dimension bigger
             than 2 for NoisyResults objects.
-            This is not the case for a CleanResults object, containing states
-            in Hilbert space, but NoisyResults contains a probability
+            This is not the case for a CoherentResults object, containing
+            states in Hilbert space, but NoisyResults contains a probability
             distribution of bitstrings, not atomic states
 
         Args:
@@ -318,7 +318,7 @@ class NoisyResults(SimulationResults):
             super().plot(op, fmt, label)
 
 
-class CleanResults(SimulationResults):
+class CoherentResults(SimulationResults):
     """Results of an ideal simulation run of a pulse sequence.
 
     Contains methods for studying the states and extracting useful information
@@ -328,7 +328,7 @@ class CleanResults(SimulationResults):
     def __init__(self, run_output: list[qutip.Qobj],
                  size: int, basis_name: str,
                  sim_times: np.ndarray, meas_basis: str) -> None:
-        """Initializes a new CleanResults instance.
+        """Initializes a new CoherentResults instance.
 
         Args:
             run_output (list of qutip.Qobj): List of `qutip.Qobj` corresponding
