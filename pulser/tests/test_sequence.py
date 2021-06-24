@@ -304,7 +304,7 @@ def test_sequence():
     assert seq._last('ch2').tf == seq._last('ch0').tf
 
     with patch('matplotlib.pyplot.show'):
-        seq.draw()
+        seq.draw(draw_phase_shifts=True)
 
     assert seq._total_duration == 4000
 
