@@ -142,7 +142,7 @@ class Simulation:
                 np.sqrt(prob) * (self.op_matrix['sigma_rr']
                                  - self.op_matrix['sigma_gg'])]
 
-    def update_config(self, config: SimConfig) -> None:
+    def add_config(self, config: SimConfig) -> None:
         """Updates this SimConfig object with parameters of another one.
 
         Mostly useful when dealing with multiple noise types in different

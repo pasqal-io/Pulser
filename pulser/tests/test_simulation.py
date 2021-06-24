@@ -388,7 +388,7 @@ def test_dephasing():
     assert len(sim._collapse_ops) != 0
 
 
-def test_update_config():
+def test_add_config():
     reg = Register.from_coordinates([(0, 0)], prefix='q')
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel('ch0', 'rydberg_global')
@@ -398,13 +398,13 @@ def test_update_config():
     sim = Simulation(seq, sampling_rate=0.01,
                      config=SimConfig(noise='SPAM', eta=0.5))
     with pytest.raises(ValueError, match="is not a valid"):
-        sim.update_config('bad_cfg')
-    sim.update_config(SimConfig(noise=('dephasing', 'SPAM', 'doppler'),
-                                temperature=20000))
+        sim.add_config('bad_cfg')
+    sim.add_config(SimConfig(noise=('dephasing', 'SPAM', 'doppler'),
+                             temperature=20000))
     assert 'dephasing' in sim.config.noise and 'SPAM' in sim.config.noise
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.e-6
     sim.set_config(SimConfig(noise='dephasing', laser_waist=175.))
-    sim.update_config(SimConfig(noise=('SPAM', 'amplitude'), laser_waist=172.))
+    sim.add_config(SimConfig(noise=('SPAM', 'amplitude'), laser_waist=172.))
     assert 'amplitude' in sim.config.noise and 'SPAM' in sim.config.noise
     assert sim.config.laser_waist == 172.
