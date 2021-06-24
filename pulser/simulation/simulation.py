@@ -96,10 +96,8 @@ class Simulation:
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double)/1000)
         self.evaluation_times = evaluation_times
-        self._bad_atoms: dict[Union[str, int], bool] = {
-            qid: False for qid in self._qid_index}
-        self._doppler_detune: dict[Union[str, int], float] = {
-            qid: 0. for qid in self._qid_index}
+        self._bad_atoms: dict[Union[str, int], bool] = {}
+        self._doppler_detune: dict[Union[str, int], float] = {}
         # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
         if hasattr(self._seq, '_measurement'):
@@ -244,7 +242,8 @@ class Simulation:
                                                   self._times[-1]])
             else:
                 raise ValueError("Wrong evaluation time label. It should "
-                      "be `Full` or `Minimal` or a float between 0 and 1.")
+                                 "be `Full`, `Minimal`, an array of times or" +
+                                 " a float between 0 and 1.")
         elif isinstance(value, float):
             if value > 1 or value <= 0:
                 raise ValueError("evaluation_times float must be between 0 "
@@ -272,7 +271,7 @@ class Simulation:
             # always include initial and final times
         else:
             raise ValueError("Wrong evaluation time label. It should "
-                             "be `Full`, `Minimal`, an array of times or a" +
+                             "be `Full`, `Minimal`, an array of times or a " +
                              "float between 0 and 1.")
         self._evaluation_times: Union[str, ArrayLike, float] = value
 
@@ -332,8 +331,9 @@ class Simulation:
             addr = self._seq.declared_channels[channel].addressing
             basis = self._seq.declared_channels[channel].basis
 
-            # Case of clean global simulations
-            if addr == 'Global' and not self.config.noise:
+            # Case of coherent global simulations
+            if addr == 'Global' and (
+                    set(self.config.noise).issubset({'dephasing'})):
                 samples_dict = self.samples['Global'][basis]
                 if not samples_dict:
                     samples_dict = prepare_dict()
@@ -487,7 +487,6 @@ class Simulation:
                                     self._build_operator(op_id, q_id)
                             terms.append([operators[q_id][op_id],
                                           self._adapt_to_sampling_rate(coeff)])
-
             self.operators[addr][basis] = operators
             return terms
 
