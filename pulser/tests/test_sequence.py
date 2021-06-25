@@ -22,7 +22,8 @@ from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
-from pulser.waveforms import BlackmanWaveform, CompositeWaveform, RampWaveform
+from pulser.waveforms import (BlackmanWaveform, CompositeWaveform,
+                              RampWaveform, InterpolatedWaveform)
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix='q')
 device = Chadoq2
@@ -251,7 +252,9 @@ def test_sequence():
     with patch('matplotlib.pyplot.show'):
         seq.draw()
 
-    pulse1 = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
+    pulse1 = Pulse(InterpolatedWaveform(500, [0, 1, 0]),
+                   InterpolatedWaveform(500, [-1, 1, 0]), phase=0,
+                   post_phase_shift=np.pi)
     pulse2 = Pulse.ConstantDetuning(BlackmanWaveform(1e3, np.pi/4), 25, np.pi,
                                     post_phase_shift=1)
     with pytest.raises(TypeError):
@@ -306,7 +309,7 @@ def test_sequence():
     assert seq._last('ch2').tf == seq._last('ch0').tf
 
     with patch('matplotlib.pyplot.show'):
-        seq.draw()
+        seq.draw(draw_phase_shifts=True)
 
     assert seq._total_duration == 4000
 

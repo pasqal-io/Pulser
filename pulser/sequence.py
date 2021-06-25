@@ -711,14 +711,27 @@ class Sequence:
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
     @_screen
-    def draw(self, draw_phase_area: bool = False) -> None:
+    def draw(self, draw_phase_area: bool = False,
+             draw_interp_pts: bool = True,
+             draw_phase_shifts: bool = False) -> None:
         """Draws the sequence in its current state.
 
         Keyword Args:
-            draw_phase_area (bool): Whether phase and area values need
-                to be shown as text on the plot, defaults to False.
+            draw_phase_area (bool): Whether phase and area values need to be
+                shown as text on the plot, defaults to False.
+            draw_interp_pts (bool): When the sequence has pulses with waveforms
+                of type InterpolatedWaveform, draws the points of interpolation
+                on top of the respective waveforms (defaults to True).
+            draw_phase_shifts (bool): Whether phase shift and reference
+                information should be added to the plot, defaults to False.
+
+        See Also:
+            Simulation.draw(): Draws the provided sequence and the one used by
+                the solver.
         """
-        draw_sequence(self, draw_phase_area=draw_phase_area)
+        draw_sequence(self, draw_phase_area=draw_phase_area,
+                      draw_interp_pts=draw_interp_pts,
+                      draw_phase_shifts=draw_phase_shifts)
 
     def _target(self, qubits: Union[Iterable[QubitId],
                                     QubitId], channel: str) -> None:
