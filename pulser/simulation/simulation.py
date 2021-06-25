@@ -690,12 +690,12 @@ class Simulation:
                 # At each run, new random noise: new Hamiltonian
                 self._construct_hamiltonian()
                 # Get CoherentResults instance from sequence with added noise:
-                clean_res_noisy_seq = _run_solver()
+                cleanres_noisyseq = _run_solver()
                 # Extract statistics at eval time:
                 if "SPAM" in self.config.noise:
                     total_count += np.array(
                         [
-                            clean_res_noisy_seq._sampling_with_detection_errors(
+                            cleanres_noisyseq._sampling_with_detection_errors(
                                 self.config.spam_dict,
                                 t,
                                 n_samples=self.config.samples_per_run,
@@ -706,7 +706,7 @@ class Simulation:
                 else:
                     total_count += np.array(
                         [
-                            clean_res_noisy_seq.sample_state(
+                            cleanres_noisyseq.sample_state(
                                 t, n_samples=self.config.samples_per_run
                             )
                             for t in self._eval_times_array
