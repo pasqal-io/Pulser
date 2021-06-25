@@ -37,7 +37,7 @@ Here are the steps you should follow to make your contribution:
     git checkout -b branch-name-here upstream/develop
     ```
     This will create and checkout the new branch, where you will do your changes.
-    
+
     **Note**: `branch-name-here` should be replaced by the name you'll give your branch. Try to be descriptive, pick a name that identifies your new feature.
 
 3. Do your work and commit the changes to this new branch. Try to make the first line of your commit messages short but informative; in case you want to go into more detail, you have the option to do so in the next lines.
@@ -47,7 +47,7 @@ Here are the steps you should follow to make your contribution:
     git pull upstream develop
     ```
    you will fetch the latest changes in `upstream/develop` and merge them with your working branch, at which point you'll have to solve any merge conflicts that may    arise. This will keep your working branch in sync with `upstream/develop`.
-   
+
 5. Finally, you push your code to your local branch:
     ```bash
     git push origin branch-name-here
@@ -65,18 +65,24 @@ We enforce some continuous integration standards in order to maintain the qualit
 pip install -r requirements.txt
 ```
 
-- **Tests**: We use [pytest](https://docs.pytest.org/en/latest/) to run unit tests on our code. If your changes break existing tests, you'll have to update these tests accordingly. Additionally, we aim for 100% coverage over our code. Try to cover all the new lines of code with simple tests, which should be placed in the `Pulser/pulser/tests` folder. To run all tests and check coverage, run:
+- **Tests**: We use [`pytest`](https://docs.pytest.org/en/latest/) to run unit tests on our code. If your changes break existing tests, you'll have to update these tests accordingly. Additionally, we aim for 100% coverage over our code. Try to cover all the new lines of code with simple tests, which should be placed in the `Pulser/pulser/tests` folder. To run all tests and check coverage, run:
     ```bash
     pytest --cov pulser
     ```
     All lines that are not meant to be tested must be tagged with `# pragma: no cover`. Use it sparingly,
     every decision to leave a line uncovered must be well justified.
 
-- **Style**: We use [flake8](https://flake8.pycqa.org/en/latest/) to enforce PEP8 style guidelines. To lint your code with `flake8`, simply run:
+- **Style**: We use [`flake8`](https://flake8.pycqa.org/en/latest/) and the `flake8-docstrings` extension to enforce PEP8 style guidelines. To lint your code with `flake8`, simply run:
     ```bash
     flake8 .
     ```
-To help you keep your code compliant with PEP8 guidelines effortlessly, we suggest you look into installing a linter for your text editor of choice.
+    To help you keep your code compliant with PEP8 guidelines effortlessly, we suggest you look into installing a linter for your text editor of choice.
+
+- **Format**: We use the [`black`](https://black.readthedocs.io/en/stable/index.html) auto-formatter to enforce a consistent style throughout the entire code base. It will also ensure your code is compliant with the formatting enforced by `flake8` for you. To automatically format your code with black, just run:
+    ```bash
+    black .
+    ```
+    Note that some IDE's and text editors support plug-ins which auto-format your code with `black` upon saving, so you don't have to worry about code format at all.
 
 - **Type hints**: We use [mypy](http://mypy-lang.org/) to type check the code. Your code should have type
 annotations and pass the type checks from running:
