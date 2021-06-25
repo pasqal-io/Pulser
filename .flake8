@@ -11,3 +11,5 @@ per-file-ignores =
 extend-ignore =
     # D105 Missing docstring in magic method
     D105,
+    # E203 whitespace before ':' (for compliance with black)
+    E203,

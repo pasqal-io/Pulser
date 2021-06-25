@@ -13,6 +13,7 @@ pytest-cov
 flake8
 flake8-docstrings
 mypy
+black
 
 # tutorials
 notebook

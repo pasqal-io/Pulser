@@ -25,6 +25,7 @@ from typing import Any, Union, TYPE_CHECKING
 
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
+
 if TYPE_CHECKING:
     from pulser.parametrized import Variable  # pragma: no cover
 
@@ -36,7 +37,7 @@ reversible_ops = [
     "__truediv__",
     "__floordiv__",
     "__pow__",
-    "__mod__"
+    "__mod__",
 ]
 
 
@@ -74,6 +75,7 @@ class ParamObj(Parametrized, OpSupport):
         args: The args for calling `cls`.
         kwargs: The kwargs for calling `cls`.
     """
+
     def __init__(self, cls: Callable, *args: Any, **kwargs: Any) -> None:
         """Initializes a new ParamObj."""
         self.cls = cls
@@ -99,10 +101,14 @@ class ParamObj(Parametrized, OpSupport):
         if vars_state != self._vars_state:
             self._vars_state = vars_state
             # Builds all Parametrized arguments before feeding them to cls
-            args_ = [arg.build() if isinstance(arg, Parametrized) else arg
-                     for arg in self.args]
-            kwargs_ = {key: val.build() if isinstance(val, Parametrized)
-                       else val for key, val in self.kwargs.items()}
+            args_ = [
+                arg.build() if isinstance(arg, Parametrized) else arg
+                for arg in self.args
+            ]
+            kwargs_ = {
+                key: val.build() if isinstance(val, Parametrized) else val
+                for key, val in self.kwargs.items()
+            }
             if isinstance(self.cls, ParamObj):
                 obj = self.cls.build()
             else:
@@ -112,25 +118,32 @@ class ParamObj(Parametrized, OpSupport):
 
     def _to_dict(self) -> dict[str, Any]:
         def class_to_dict(cls: Callable) -> dict[str, Any]:
-            return obj_to_dict(self, _build=False, _name=cls.__name__,
-                               _module=cls.__module__)
+            return obj_to_dict(
+                self, _build=False, _name=cls.__name__, _module=cls.__module__
+            )
 
         args = list(self.args)
         if isinstance(self.cls, Parametrized):
             cls_dict = self.cls._to_dict()
-        elif (hasattr(args[0], self.cls.__name__)
-              and inspect.isfunction(self.cls)):
+        elif hasattr(args[0], self.cls.__name__) and inspect.isfunction(
+            self.cls
+        ):
             # Check for parametrized methods
             if inspect.isclass(self.args[0]):
                 # classmethod
-                cls_dict = obj_to_dict(self, _build=False,
-                                       _name=self.cls.__name__,
-                                       _module=self.args[0].__module__,
-                                       _submodule=self.args[0].__name__)
+                cls_dict = obj_to_dict(
+                    self,
+                    _build=False,
+                    _name=self.cls.__name__,
+                    _module=self.args[0].__module__,
+                    _submodule=self.args[0].__name__,
+                )
                 args[0] = class_to_dict(self.args[0])
             else:
-                raise NotImplementedError("Instance or static method "
-                                          "serialization is not supported.")
+                raise NotImplementedError(
+                    "Instance or static method "
+                    "serialization is not supported."
+                )
         else:
             cls_dict = class_to_dict(self.cls)
 
@@ -139,12 +152,14 @@ class ParamObj(Parametrized, OpSupport):
     def __call__(self, *args: Any, **kwargs: Any) -> ParamObj:
         """Returns a new ParamObj storing a call to the current ParamObj."""
         obj = ParamObj(self, *args, **kwargs)
-        warnings.warn("Calls to methods of parametrized objects are only "
-                      "executed if they serve as arguments of other "
-                      "parametrized objects that are themselves built. If this"
-                      f" is not the case, the call to {obj} will not be "
-                      "executed upon sequence building.",
-                      stacklevel=2)
+        warnings.warn(
+            "Calls to methods of parametrized objects are only "
+            "executed if they serve as arguments of other "
+            "parametrized objects that are themselves built. If this"
+            f" is not the case, the call to {obj} will not be "
+            "executed upon sequence building.",
+            stacklevel=2,
+        )
         return obj
 
     def __getattr__(self, name: str) -> ParamObj:
@@ -158,9 +173,11 @@ class ParamObj(Parametrized, OpSupport):
         kwargs = [f"{key}={str(value)}" for key, value in self.kwargs.items()]
         if isinstance(self.cls, Parametrized):
             name = str(self.cls)
-        elif (hasattr(self.args[0], self.cls.__name__)
-              and inspect.isfunction(self.cls)
-              and inspect.isclass(self.args[0])):
+        elif (
+            hasattr(self.args[0], self.cls.__name__)
+            and inspect.isfunction(self.cls)
+            and inspect.isclass(self.args[0])
+        ):
             name = f"{self.args[0].__name__}.{self.cls.__name__}"
             args = args[1:]
         else:

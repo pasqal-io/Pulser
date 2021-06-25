@@ -18,12 +18,15 @@ from __future__ import annotations
 from typing import Any, Optional
 
 
-def obj_to_dict(obj: object, *args: Any,
-                _build: bool = True,
-                _module: Optional[str] = None,
-                _name: Optional[str] = None,
-                _submodule: Optional[str] = None,
-                **kwargs: Any) -> dict[str, Any]:
+def obj_to_dict(
+    obj: object,
+    *args: Any,
+    _build: bool = True,
+    _module: Optional[str] = None,
+    _name: Optional[str] = None,
+    _submodule: Optional[str] = None,
+    **kwargs: Any
+) -> dict[str, Any]:
     """Encodes an object in a dictionary for serialization.
 
     Args:

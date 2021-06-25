@@ -28,6 +28,7 @@ from pulser.parametrized import Variable
 
 class PulserEncoder(JSONEncoder):
     """The custom encoder for Pulser objects."""
+
     def default(self, o: Any) -> dict[str, Any]:
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_dict"):
@@ -44,6 +45,7 @@ class PulserEncoder(JSONEncoder):
 
 class PulserDecoder(JSONDecoder):
     """The custom decoder for Pulser objects."""
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initializes the decoder."""
         # TODO: Check version compatibility (stored at the Sequence level)
@@ -59,21 +61,25 @@ class PulserDecoder(JSONDecoder):
         except KeyError:
             return obj
 
-        if (obj_name == "Variable" and
-           module_str == "pulser.parametrized.variable"):
+        if (
+            obj_name == "Variable"
+            and module_str == "pulser.parametrized.variable"
+        ):
             var_name = obj["name"]
             try:
                 var = self.vars[var_name]
-                assert var.name == var_name, (f"Variable {var.name} already "
-                                              + f"declared under {var_name}.")
+                assert var.name == var_name, (
+                    f"Variable {var.name} already "
+                    + f"declared under {var_name}."
+                )
                 assert var.dtype == obj["dtype"], (
                     "Mismatching variable types for variables under the name "
                     + f"'{var_name}'."
-                    )
+                )
                 assert var.size == obj["size"], (
                     "Mismatching sizes for variables under the name "
                     + f"'{var_name}'."
-                    )
+                )
             except KeyError:
                 var = Variable(var_name, obj["dtype"], obj["size"])
                 self.vars[var_name] = var
@@ -85,7 +91,7 @@ class PulserDecoder(JSONDecoder):
             submodule = getattr(module, obj["__submodule__"])
             cls = getattr(submodule, obj_name)
             if inspect.ismethod(cls):
-                cls = cls.__func__      # Use the unbound function by default
+                cls = cls.__func__  # Use the unbound function by default
         else:
             cls = getattr(module, obj_name)
 
@@ -98,8 +104,9 @@ class PulserDecoder(JSONDecoder):
                 getattr(seq, name)(*args, **kwargs)
             seq._building = obj["vars"] == {}
             for name, var in obj["vars"].items():
-                assert name not in seq._variables, ("Multiples variables with"
-                                                    + f" the name '{name}'.")
+                assert name not in seq._variables, (
+                    "Multiples variables with" + f" the name '{name}'."
+                )
                 seq._variables[name] = var
             for name, args, kwargs in obj["to_build_calls"]:
                 getattr(seq, name)(*args, **kwargs)

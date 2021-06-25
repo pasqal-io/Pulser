@@ -27,7 +27,13 @@ jobs:
           pip install -r requirements.txt
       - name: Lint with flake8
         run: flake8
-
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Pulser
+        uses: actions/checkout@v2
+      - name: Check formatting with black
+        uses: psf/black@stable
   typing:
     runs-on: ubuntu-latest
     steps:
