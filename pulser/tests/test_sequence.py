@@ -22,7 +22,8 @@ from pulser import Sequence, Pulse, Register
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
-from pulser.waveforms import BlackmanWaveform, CompositeWaveform, RampWaveform
+from pulser.waveforms import (BlackmanWaveform, CompositeWaveform,
+                              RampWaveform, InterpolatedWaveform)
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix='q')
 device = Chadoq2
@@ -101,8 +102,7 @@ def test_target():
     retarget_t = seq.declared_channels['ch0'].retarget_time
     assert seq._schedule['ch0'][-1] == _TimeSlot('target', 0,
                                                  retarget_t, {'q4'})
-    with pytest.warns(UserWarning):
-        seq.target('q4', 'ch0')
+    seq.target('q4', 'ch0')   # targets the same qubit
     seq.target('q20', 'ch0')
     assert seq._schedule['ch0'][-1] == _TimeSlot('target', retarget_t,
                                                  2*retarget_t, {'q20'})
@@ -173,9 +173,12 @@ def test_phase():
         seq.phase_shift(1, 'q3', basis='hyperfine')
     assert seq.current_phase_ref('q0', 'digital') == 2*np.pi - 1
 
-    with pytest.warns(UserWarning):
-        seq.phase_shift(0, 'q0')
-        seq.phase_shift(-8*np.pi, 'q1')
+    # Phase shifts of 0
+    seq.phase_shift(0, 'q0')
+    seq.phase_shift(-8*np.pi, 'q1')
+    assert seq.current_phase_ref('q0', 'digital') == 2*np.pi - 1
+    assert seq.current_phase_ref('q1', 'digital') == 2*np.pi - 1
+
     with pytest.raises(ValueError, match='targets have to be qubit ids'):
         seq.phase_shift(np.pi, 'q1', 'q4', 'q100')
 
@@ -249,7 +252,9 @@ def test_sequence():
     with patch('matplotlib.pyplot.show'):
         seq.draw()
 
-    pulse1 = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
+    pulse1 = Pulse(InterpolatedWaveform(500, [0, 1, 0]),
+                   InterpolatedWaveform(500, [-1, 1, 0]), phase=0,
+                   post_phase_shift=np.pi)
     pulse2 = Pulse.ConstantDetuning(BlackmanWaveform(1e3, np.pi/4), 25, np.pi,
                                     post_phase_shift=1)
     with pytest.raises(TypeError):
@@ -304,7 +309,7 @@ def test_sequence():
     assert seq._last('ch2').tf == seq._last('ch0').tf
 
     with patch('matplotlib.pyplot.show'):
-        seq.draw()
+        seq.draw(draw_phase_shifts=True)
 
     assert seq._total_duration == 4000
 

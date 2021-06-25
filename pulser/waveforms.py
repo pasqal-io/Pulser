@@ -29,6 +29,7 @@ from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
+import scipy.interpolate as interpolate
 
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
@@ -75,7 +76,7 @@ class Waveform(ABC):
         elif duration - _duration != 0:
             warnings.warn(f"A waveform duration of {duration} ns is below the"
                           " supported precision of 1 ns. It was rounded down "
-                          + f"to {_duration} ns.")
+                          + f"to {_duration} ns.", stacklevel=3)
 
         self._duration = _duration
 
@@ -539,6 +540,129 @@ class BlackmanWaveform(Waveform):
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
+
+
+class InterpolatedWaveform(Waveform):
+    """Creates a waveform from interpolation of a set of data points.
+
+    Args:
+        duration (int): The waveform duration (in ns).
+        values (ArrayLike): Values of the interpolation points (in rad/µs).
+        times (Optional[ArrayLike]): Fractions of the total duration (between 0
+            and 1), indicating where to place each value on the time axis. If
+            not given, the values are spread evenly throughout the full
+            duration of the waveform.
+        interpolator (str = "PchipInterpolator"): The SciPy interpolation class
+            to use. Supports "PchipInterpolator" and "interp1d".
+        **interpolator_kwargs: Extra parameters to give to the chosen
+            interpolator class.
+    """
+    def __init__(self, duration: Union[int, Parametrized],
+                 values: Union[ArrayLike, Parametrized],
+                 times: Optional[Union[ArrayLike, Parametrized]] = None,
+                 interpolator: str = "PchipInterpolator",
+                 **interpolator_kwargs: Any):
+        """Initializes a new InterpolatedWaveform."""
+        super().__init__(duration)
+        self._values = np.array(values, dtype=float)
+        if times is not None:
+            times_ = np.array(times, dtype=float)
+            if len(times_) != len(self._values):
+                raise ValueError(
+                    "When specified, the number of time coordinates in `times`"
+                    f" ({len(times_)}) must match the number of `values` "
+                    f"({len(self._values)}).")
+            if np.any(times_ < 0):
+                raise ValueError(
+                    "All values in `times` must be greater than or equal to 0."
+                )
+            if np.any(times_ > 1):
+                raise ValueError(
+                    "All values in `times` must be less than or equal to 1."
+                )
+            unique_times = np.unique(times)     # Sorted array of unique values
+            if len(times_) != len(unique_times):
+                raise ValueError(
+                    "`times` must be an array of non-repeating values."
+                )
+            self._times = times_
+        else:
+            self._times = np.linspace(0, 1, num=len(self._values))
+
+        valid_interpolators = ("PchipInterpolator", "interp1d")
+        if interpolator not in valid_interpolators:
+            raise ValueError(f"Invalid interpolator '{interpolator}', only "
+                             "accepts: " + ", ".join(valid_interpolators))
+        interp_cls = getattr(interpolate, interpolator)
+        self._data_pts = np.array(
+                            [(round(t), v) for t, v in
+                             zip(self._times * (self._duration - 1),
+                                 self._values)]
+                             )
+        self._interp_func = interp_cls(self._data_pts[:, 0],
+                                       self._data_pts[:, 1],
+                                       **interpolator_kwargs)
+        self._kwargs: dict[str, Any] = {
+                        "times": times,
+                        "interpolator": interpolator,
+                        **interpolator_kwargs
+                        }
+
+    @property
+    def duration(self) -> int:
+        """The duration of the pulse (in ns)."""
+        return self._duration
+
+    @cached_property
+    def _samples(self) -> np.ndarray:
+        """The value at each time step that describes the waveform."""
+        return cast(np.ndarray,
+                    np.round(self._interp_func(np.arange(self._duration)),
+                             decimals=9)     # Rounds to the order of Hz
+                    )
+
+    @property
+    def interp_function(self) -> Union[interpolate.PchipInterpolator,
+                                       interpolate.interp1d]:
+        """The interpolating function."""
+        return self._interp_func
+
+    @property
+    def data_points(self) -> np.ndarray:
+        """Points (t[ns], value[rad/µs]) that define the interpolation."""
+        return self._data_pts.copy()
+
+    def change_duration(self, new_duration: int) -> InterpolatedWaveform:
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            InterpolatedWaveform: The new waveform with the same coordinates
+                for interpolation but a new duration.
+        """
+        return InterpolatedWaveform(new_duration, self._values, **self._kwargs)
+
+    def _plot(self, ax: Axes, ylabel: str,
+              color: Optional[str] = None) -> None:
+        super()._plot(ax, ylabel, color=color)
+        ax.scatter(self._data_pts[:, 0], self._data_pts[:, 1], c=color)
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self._duration, self._values, **self._kwargs)
+
+    def __str__(self) -> str:
+        coords = [f"({int(x)}, {y:.4g})" for x, y in self.data_points]
+        return f"InterpolatedWaveform(Points: {', '.join(coords)})"
+
+    def __repr__(self) -> str:
+        interp_str = f", Interpolator={self._kwargs['interpolator']})"
+        return self.__str__()[:-1] + interp_str
+
+    def __mul__(self, other: float) -> InterpolatedWaveform:
+        return InterpolatedWaveform(self._duration, self._values * other,
+                                    **self._kwargs)
 
 
 # To replicate __init__'s signature in __new__ for every Waveform subclass

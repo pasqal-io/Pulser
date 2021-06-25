@@ -159,7 +159,7 @@ class Sequence:
                          + "'pulser.devices'. Correct operation is not ensured"
                          + " for custom devices. Choose 'MockDevice' or one of"
                          + " the following real devices:\n" + "\n".join(names))
-            warnings.warn(warns_msg)
+            warnings.warn(warns_msg, stacklevel=2)
 
         # Checks if register is compatible with the device
         device.validate_register(register)
@@ -634,14 +634,14 @@ class Sequence:
         """
         if not self.is_parametrized():
             warnings.warn("Building a non-parametrized sequence simply returns"
-                          " a copy of itself.")
+                          " a copy of itself.", stacklevel=2)
             return copy.copy(self)
         all_keys, given_keys = self._variables.keys(), vars.keys()
         if given_keys != all_keys:
             invalid_vars = given_keys - all_keys
             if invalid_vars:
                 warnings.warn("No declared variables named: "
-                              + ", ".join(invalid_vars))
+                              + ", ".join(invalid_vars), stacklevel=2)
                 for k in invalid_vars:
                     vars.pop(k, None)
             missing_vars = all_keys - given_keys
@@ -706,19 +706,32 @@ class Sequence:
         """
         if "Sequence" not in obj:
             warnings.warn("The given JSON formatted string does not encode a "
-                          "Sequence.")
+                          "Sequence.", stacklevel=2)
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
     @_screen
-    def draw(self, draw_phase_area: bool = False) -> None:
+    def draw(self, draw_phase_area: bool = False,
+             draw_interp_pts: bool = True,
+             draw_phase_shifts: bool = False) -> None:
         """Draws the sequence in its current state.
 
         Keyword Args:
-            draw_phase_area (bool): Whether phase and area values need
-                to be shown as text on the plot, defaults to False.
+            draw_phase_area (bool): Whether phase and area values need to be
+                shown as text on the plot, defaults to False.
+            draw_interp_pts (bool): When the sequence has pulses with waveforms
+                of type InterpolatedWaveform, draws the points of interpolation
+                on top of the respective waveforms (defaults to True).
+            draw_phase_shifts (bool): Whether phase shift and reference
+                information should be added to the plot, defaults to False.
+
+        See Also:
+            Simulation.draw(): Draws the provided sequence and the one used by
+                the solver.
         """
-        draw_sequence(self, draw_phase_area=draw_phase_area)
+        draw_sequence(self, draw_phase_area=draw_phase_area,
+                      draw_interp_pts=draw_interp_pts,
+                      draw_phase_shifts=draw_phase_shifts)
 
     def _target(self, qubits: Union[Iterable[QubitId],
                                     QubitId], channel: str) -> None:
@@ -757,8 +770,6 @@ class Sequence:
         try:
             last = self._last(channel)
             if last.targets == qubits_set:
-                warnings.warn("The provided qubits are already the target. "
-                              "Skipping this target instruction.")
                 return
             ti = last.tf
             retarget = cast(int, self._channels[channel].retarget_time)
@@ -768,7 +779,7 @@ class Sequence:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
-                        cast(int, np.clip(delta, 16, np.inf))
+                        16 if delta < 16 else delta
                     )
             tf = ti + delta
 
@@ -806,8 +817,6 @@ class Sequence:
                              " in this sequence's register.")
 
         if phi % (2*np.pi) == 0:
-            warnings.warn("A phase shift of 0 is meaningless, "
-                          "it will be ommited.")
             return
 
         for qubit in targets:
