@@ -19,6 +19,9 @@ from dataclasses import dataclass
 from typing import cast, ClassVar, Optional
 import warnings
 
+# Warnings of adjusted waveform duration appear just once
+warnings.filterwarnings("once", "A duration of")
+
 
 @dataclass(init=True, repr=False, frozen=True)
 class Channel:
@@ -112,7 +115,8 @@ class Channel:
             _duration += self.clock_period - _duration % self.clock_period
             warnings.warn(f"A duration of {duration} ns is not a multiple of "
                           f"the channel's clock period ({self.clock_period} "
-                          f"ns). It was rounded up to {_duration} ns.")
+                          f"ns). It was rounded up to {_duration} ns.",
+                          stacklevel=4)
         return _duration
 
     def __repr__(self) -> str:

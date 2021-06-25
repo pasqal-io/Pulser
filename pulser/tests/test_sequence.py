@@ -102,8 +102,7 @@ def test_target():
     retarget_t = seq.declared_channels['ch0'].retarget_time
     assert seq._schedule['ch0'][-1] == _TimeSlot('target', 0,
                                                  retarget_t, {'q4'})
-    with pytest.warns(UserWarning):
-        seq.target('q4', 'ch0')
+    seq.target('q4', 'ch0')   # targets the same qubit
     seq.target('q20', 'ch0')
     assert seq._schedule['ch0'][-1] == _TimeSlot('target', retarget_t,
                                                  2*retarget_t, {'q20'})
@@ -174,9 +173,12 @@ def test_phase():
         seq.phase_shift(1, 'q3', basis='hyperfine')
     assert seq.current_phase_ref('q0', 'digital') == 2*np.pi - 1
 
-    with pytest.warns(UserWarning):
-        seq.phase_shift(0, 'q0')
-        seq.phase_shift(-8*np.pi, 'q1')
+    # Phase shifts of 0
+    seq.phase_shift(0, 'q0')
+    seq.phase_shift(-8*np.pi, 'q1')
+    assert seq.current_phase_ref('q0', 'digital') == 2*np.pi - 1
+    assert seq.current_phase_ref('q1', 'digital') == 2*np.pi - 1
+
     with pytest.raises(ValueError, match='targets have to be qubit ids'):
         seq.phase_shift(np.pi, 'q1', 'q4', 'q100')
 

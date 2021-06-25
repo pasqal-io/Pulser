@@ -159,7 +159,7 @@ class Sequence:
                          + "'pulser.devices'. Correct operation is not ensured"
                          + " for custom devices. Choose 'MockDevice' or one of"
                          + " the following real devices:\n" + "\n".join(names))
-            warnings.warn(warns_msg)
+            warnings.warn(warns_msg, stacklevel=2)
 
         # Checks if register is compatible with the device
         device.validate_register(register)
@@ -634,14 +634,14 @@ class Sequence:
         """
         if not self.is_parametrized():
             warnings.warn("Building a non-parametrized sequence simply returns"
-                          " a copy of itself.")
+                          " a copy of itself.", stacklevel=2)
             return copy.copy(self)
         all_keys, given_keys = self._variables.keys(), vars.keys()
         if given_keys != all_keys:
             invalid_vars = given_keys - all_keys
             if invalid_vars:
                 warnings.warn("No declared variables named: "
-                              + ", ".join(invalid_vars))
+                              + ", ".join(invalid_vars), stacklevel=2)
                 for k in invalid_vars:
                     vars.pop(k, None)
             missing_vars = all_keys - given_keys
@@ -706,7 +706,7 @@ class Sequence:
         """
         if "Sequence" not in obj:
             warnings.warn("The given JSON formatted string does not encode a "
-                          "Sequence.")
+                          "Sequence.", stacklevel=2)
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
@@ -770,8 +770,6 @@ class Sequence:
         try:
             last = self._last(channel)
             if last.targets == qubits_set:
-                warnings.warn("The provided qubits are already the target. "
-                              "Skipping this target instruction.")
                 return
             ti = last.tf
             retarget = cast(int, self._channels[channel].retarget_time)
@@ -781,7 +779,7 @@ class Sequence:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
-                        cast(int, np.clip(delta, 16, np.inf))
+                        16 if delta < 16 else delta
                     )
             tf = ti + delta
 
@@ -819,8 +817,6 @@ class Sequence:
                              " in this sequence's register.")
 
         if phi % (2*np.pi) == 0:
-            warnings.warn("A phase shift of 0 is meaningless, "
-                          "it will be ommited.")
             return
 
         for qubit in targets:

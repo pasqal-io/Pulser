@@ -76,7 +76,7 @@ class Waveform(ABC):
         elif duration - _duration != 0:
             warnings.warn(f"A waveform duration of {duration} ns is below the"
                           " supported precision of 1 ns. It was rounded down "
-                          + f"to {_duration} ns.")
+                          + f"to {_duration} ns.", stacklevel=3)
 
         self._duration = _duration
 
