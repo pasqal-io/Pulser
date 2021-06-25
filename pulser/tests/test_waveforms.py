@@ -18,11 +18,13 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from scipy.interpolate import interp1d, PchipInterpolator
 
 from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.parametrized import Variable, ParamObj
 from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
-                              CustomWaveform, CompositeWaveform)
+                              CustomWaveform, CompositeWaveform,
+                              InterpolatedWaveform)
 
 np.random.seed(20201105)
 
@@ -32,6 +34,8 @@ arb_samples = np.random.random(52)
 custom = CustomWaveform(arb_samples)
 blackman = BlackmanWaveform(40, np.pi)
 composite = CompositeWaveform(blackman, constant, custom)
+interp_values = [0, 1, 4.4, 2, 3, 1, 0]
+interp = InterpolatedWaveform(1000, interp_values)
 
 
 def test_duration():
@@ -67,6 +71,10 @@ def test_change_duration():
     assert new_ramp.duration == 100
     assert new_ramp != ramp
 
+    assert interp.duration == 1000
+    new_interp = interp.change_duration(100)
+    assert new_interp.duration == 100
+
 
 def test_samples():
     assert np.all(constant.samples == -3)
@@ -86,6 +94,7 @@ def test_draw():
     with patch('matplotlib.pyplot.show'):
         composite.draw()
         blackman.draw()
+        interp.draw()
 
 
 def test_eq():
@@ -103,6 +112,8 @@ def test_first_last():
     assert composite.first_value == 0
     assert composite.last_value == arb_samples[-1]
     assert custom.first_value == arb_samples[0]
+    assert np.isclose(interp.first_value, interp_values[0])
+    assert np.isclose(interp.last_value, interp_values[-1])
 
 
 def test_hash():
@@ -166,6 +177,44 @@ def test_blackman():
     assert wf_var.build() == wf
 
 
+def test_interpolated():
+    assert isinstance(interp.interp_function, PchipInterpolator)
+
+    times = np.linspace(0.2, 0.8, num=len(interp_values))
+    with pytest.raises(ValueError, match="must match the number of `values`"):
+        InterpolatedWaveform(1000, interp_values, times=times[:-1])
+    with pytest.raises(ValueError, match="must be greater than or equal to 0"):
+        InterpolatedWaveform(1000, interp_values, times=times - 0.21)
+    with pytest.raises(ValueError, match="must be less than or equal to 1"):
+        InterpolatedWaveform(1000, interp_values, times=times + 0.21)
+    with pytest.raises(ValueError, match="array of non-repeating values"):
+        InterpolatedWaveform(1000, interp_values,
+                             times=[0.2] + times[:-1].tolist())
+
+    with pytest.raises(ValueError, match="Invalid interpolator 'fake'"):
+        InterpolatedWaveform(1000, interp_values, times=times,
+                             interpolator="fake")
+
+    dt = 1000
+    interp_wf = InterpolatedWaveform(dt, [0, 1], interpolator="interp1d",
+                                     kind="linear")
+    assert isinstance(interp_wf.interp_function, interp1d)
+    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 1., num=dt))
+
+    interp_wf *= 2
+    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 2., num=dt))
+
+    wf_str = "InterpolatedWaveform(Points: (0, 0), (999, 2)"
+    assert str(interp_wf) == wf_str + ")"
+    assert repr(interp_wf) == wf_str + ", Interpolator=interp1d)"
+
+    vals = np.linspace(0, 1, num=5) ** 2
+    interp_wf2 = InterpolatedWaveform(dt, vals, interpolator="interp1d",
+                                      kind="quadratic")
+    np.testing.assert_allclose(interp_wf2.samples,
+                               np.linspace(0, 1, num=dt)**2, atol=1e-3)
+
+
 def test_ops():
     assert -constant == ConstantWaveform(100, 3)
     assert ramp * 2 == RampWaveform(2e3, 10, 38)
@@ -177,7 +226,7 @@ def test_ops():
 
 
 def test_serialization():
-    for wf in [constant, ramp, custom, blackman, composite]:
+    for wf in [constant, ramp, custom, blackman, composite, interp]:
         s = json.dumps(wf, cls=PulserEncoder)
         assert wf == json.loads(s, cls=PulserDecoder)
 
@@ -206,7 +255,7 @@ def test_get_item():
 
     # Check nominal operations
 
-    for wf in [blackman, composite, constant, custom, ramp]:
+    for wf in [blackman, composite, constant, custom, ramp, interp]:
         duration = wf.duration
         duration14 = duration // 4
         duration34 = duration * 3 // 4

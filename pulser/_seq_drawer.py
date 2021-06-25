@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any, cast, Optional, Union
 
 import matplotlib.pyplot as plt
@@ -21,7 +22,7 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 
 import pulser
-from pulser.waveforms import ConstantWaveform
+from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 from pulser.pulse import Pulse
 
 
@@ -42,6 +43,8 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
         time = [-1]     # To not break the "time[-1]" later on
         amp = []
         detuning = []
+        # List of interpolation points
+        interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
         target: dict[Union[str, tuple[int, int]], Any] = {}
         # phase_shift = {}
         for slot in sch:
@@ -68,6 +71,13 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                 time += list(range(slot.ti, slot.tf))
                 amp += pulse.amplitude.samples.tolist()
                 detuning += pulse.detuning.samples.tolist()
+                for wf_type in ["amplitude", "detuning"]:
+                    wf = getattr(pulse, wf_type)
+                    if isinstance(wf, InterpolatedWaveform):
+                        pts = wf.data_points
+                        pts[:, 0] += slot.ti
+                        interp_pts[wf_type] += pts.tolist()
+
         if time[-1] < seq._total_duration - 1:
             time += [time[-1]+1, seq._total_duration-1]
             amp += [0, 0]
@@ -78,12 +88,15 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                     'target': target}
         if hasattr(seq, "_measurement"):
             data[ch]['measurement'] = seq._measurement
+        if interp_pts:
+            data[ch]['interp_pts'] = interp_pts
     return data
 
 
 def draw_sequence(seq: pulser.sequence.Sequence,
                   sampling_rate: Optional[float] = None,
-                  draw_phase_area: bool = False) -> None:
+                  draw_phase_area: bool = False,
+                  draw_interp_pts: bool = True) -> None:
     """Draw the entire sequence.
 
     Args:
@@ -93,6 +106,9 @@ def draw_sequence(seq: pulser.sequence.Sequence,
             input pulse.
         draw_phase_area (bool): Whether phase and area values need to be shown
             as text on the plot, defaults to False.
+        draw_interp_pts (bool): When the sequence has pulses with waveforms of
+            type InterpolatedWaveform, draws the points of interpolation on
+            top of the respective waveforms.
     """
 
     def phase_str(phi: float) -> str:
@@ -318,5 +334,14 @@ def draw_sequence(seq: pulser.sequence.Sequence,
         else:
             a.axhline(0, linestyle='-', linewidth=0.5, color='grey')
             b.axhline(0, linestyle=':', linewidth=0.5, color='grey')
+
+        if 'interp_pts' in data[ch] and draw_interp_pts:
+            all_points = data[ch]['interp_pts']
+            if 'amplitude' in all_points:
+                pts = np.array(all_points['amplitude'])
+                a.scatter(pts[:, 0], pts[:, 1], color="darkgreen")
+            if 'detuning' in all_points:
+                pts = np.array(all_points['detuning'])
+                b.scatter(pts[:, 0], pts[:, 1], color="indigo")
 
     plt.show()

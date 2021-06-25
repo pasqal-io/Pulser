@@ -711,14 +711,19 @@ class Sequence:
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
     @_screen
-    def draw(self, draw_phase_area: bool = False) -> None:
+    def draw(self, draw_phase_area: bool = False,
+             draw_interp_pts: bool = True) -> None:
         """Draws the sequence in its current state.
 
         Keyword Args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
+            draw_interp_pts (bool): When the sequence has pulses with waveforms
+                of type InterpolatedWaveform, draws the points of interpolation
+                on top of the respective waveforms.
         """
-        draw_sequence(self, draw_phase_area=draw_phase_area)
+        draw_sequence(self, draw_phase_area=draw_phase_area,
+                      draw_interp_pts=draw_interp_pts)
 
     def _target(self, qubits: Union[Iterable[QubitId],
                                     QubitId], channel: str) -> None:
