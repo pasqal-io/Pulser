@@ -724,6 +724,10 @@ class Sequence:
                 on top of the respective waveforms (defaults to True).
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
+
+        See Also:
+            Simulation.draw(): Draws the provided sequence and the one used by
+                the solver.
         """
         draw_sequence(self, draw_phase_area=draw_phase_area,
                       draw_interp_pts=draw_interp_pts,

@@ -275,15 +275,28 @@ class Simulation:
                              "float between 0 and 1.")
         self._evaluation_times: Union[str, ArrayLike, float] = value
 
-    def draw(self, draw_phase_area: bool = False) -> None:
-        """Draws the input sequence and the one used in QuTip.
+    def draw(self, draw_phase_area: bool = False,
+             draw_interp_pts: bool = False,
+             draw_phase_shifts: bool = False) -> None:
+        """Draws the input sequence and the one used by the solver.
 
         Keyword Args:
             draw_phase_area (bool): Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
+            draw_interp_pts (bool): When the sequence has pulses with waveforms
+                of type InterpolatedWaveform, draws the points of interpolation
+                on top of the respective waveforms (defaults to False).
+            draw_phase_shifts (bool): Whether phase shift and reference
+                information should be added to the plot, defaults to False.
+
+        See Also:
+            Sequence.draw(): Draws the sequence in its current state.
         """
         draw_sequence(
-            self._seq, self._sampling_rate, draw_phase_area=draw_phase_area
+            self._seq, self._sampling_rate,
+            draw_phase_area=draw_phase_area,
+            draw_interp_pts=draw_interp_pts,
+            draw_phase_shifts=draw_phase_shifts,
         )
 
     def _extract_samples(self) -> None:
