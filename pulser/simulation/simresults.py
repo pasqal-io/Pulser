@@ -35,8 +35,9 @@ class SimulationResults(ABC):
     from them.
     """
 
-    def __init__(self, size: int, basis_name: str,
-                 sim_times: np.ndarray) -> None:
+    def __init__(
+        self, size: int, basis_name: str, sim_times: np.ndarray
+    ) -> None:
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -48,10 +49,10 @@ class SimulationResults(ABC):
         """
         self._dim = 3 if basis_name == "all" else 2
         self._size = size
-        if basis_name not in {'ground-rydberg', 'digital', 'all'}:
+        if basis_name not in {"ground-rydberg", "digital", "all"}:
             raise ValueError(
                 "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
-                )
+            )
         self._basis_name = basis_name
         self._sim_times = sim_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
@@ -77,8 +78,9 @@ class SimulationResults(ABC):
         """Computes the bitstring probabilities for sampled states."""
         pass
 
-    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
-               ) -> list[Union[float, complex, ArrayLike]]:
+    def expect(
+        self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+    ) -> list[Union[float, complex, ArrayLike]]:
         """Returns the expectation values of operators in obs_list.
 
         Args:
@@ -93,22 +95,28 @@ class SimulationResults(ABC):
             raise TypeError("`obs_list` must be a list of operators.")
 
         qobj_list = []
-        legal_shape = (2**self._size, 2**self._size)
+        legal_shape = (2 ** self._size, 2 ** self._size)
         for obs in obs_list:
-            if not (isinstance(obs, np.ndarray)
-                    or isinstance(obs, qutip.Qobj)):
-                raise TypeError(f"Incompatible type {type(obs)} of " +
-                                "observable. Type must be ArrayLike or " +
-                                "qutip.Qobj.")
+            if not (
+                isinstance(obs, np.ndarray) or isinstance(obs, qutip.Qobj)
+            ):
+                raise TypeError(
+                    f"Incompatible type {type(obs)} of "
+                    + "observable. Type must be ArrayLike or "
+                    + "qutip.Qobj."
+                )
             if obs.shape != legal_shape:
-                raise ValueError("Incompatible shape of observable." +
-                                 f"Expected {legal_shape}, got {obs.shape}.")
+                raise ValueError(
+                    "Incompatible shape of observable."
+                    + f"Expected {legal_shape}, got {obs.shape}."
+                )
             qobj_list.append(qutip.Qobj(obs))
 
         return cast(list, qutip.expect(qobj_list, self.states))
 
-    def sample_state(self, t: float, n_samples: int = 1000,
-                     t_tol: float = 1.e-3) -> Counter:
+    def sample_state(
+        self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3
+    ) -> Counter:
         """Returns the result of multiple measurements at time t.
 
         Args:
@@ -123,8 +131,12 @@ class SimulationResults(ABC):
         """
         t_index = self._get_index_from_time(t, t_tol)
         dist = np.random.multinomial(n_samples, self._calc_weights(t_index))
-        return Counter({np.binary_repr(
-                        i, self._size): dist[i] for i in np.nonzero(dist)[0]})
+        return Counter(
+            {
+                np.binary_repr(i, self._size): dist[i]
+                for i in np.nonzero(dist)[0]
+            }
+        )
 
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state.
@@ -138,7 +150,7 @@ class SimulationResults(ABC):
         """
         return self.sample_state(self._sim_times[-1], N_samples)
 
-    def plot(self, op: qutip.Qobj, fmt: str = '', label: str = '') -> None:
+    def plot(self, op: qutip.Qobj, fmt: str = "", label: str = "") -> None:
         """Plots the expectation value of a given operator op.
 
         Args:
@@ -147,10 +159,10 @@ class SimulationResults(ABC):
             label (str): Axis label.
         """
         plt.plot(self._sim_times, self.expect([op])[0], fmt, label=label)
-        plt.xlabel('Time (µs)')
-        plt.ylabel('Expectation value')
+        plt.xlabel("Time (µs)")
+        plt.ylabel("Expectation value")
 
-    def _get_index_from_time(self, t_float: float, tol: float = 1.e-3) -> int:
+    def _get_index_from_time(self, t_float: float, tol: float = 1.0e-3) -> int:
         """Returns closest index corresponding to time t_float.
 
         Args:
@@ -163,7 +175,8 @@ class SimulationResults(ABC):
         except IndexError:
             raise IndexError(
                 f"Given time {t_float} is absent from Simulation times within"
-                + f" tolerance {tol}.")
+                + f" tolerance {tol}."
+            )
 
 
 class NoisyResults(SimulationResults):
@@ -176,9 +189,14 @@ class NoisyResults(SimulationResults):
     information from them.
     """
 
-    def __init__(self, run_output: list[Counter],
-                 size: int, basis_name: str,
-                 sim_times: np.ndarray, n_measures: int) -> None:
+    def __init__(
+        self,
+        run_output: list[Counter],
+        size: int,
+        basis_name: str,
+        sim_times: np.ndarray,
+        n_measures: int,
+    ) -> None:
         """Initializes a new NoisyResults instance.
 
         Warning:
@@ -205,7 +223,7 @@ class NoisyResults(SimulationResults):
             n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
         """
-        basis_name_ = 'digital' if basis_name == "all" else basis_name
+        basis_name_ = "digital" if basis_name == "all" else basis_name
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
         self._results = run_output
@@ -220,7 +238,7 @@ class NoisyResults(SimulationResults):
         """Probability distribution of the bitstrings."""
         return self._results
 
-    def get_state(self, t: float, t_tol: float = 1.e-3) -> qutip.Qobj:
+    def get_state(self, t: float, t_tol: float = 1.0e-3) -> qutip.Qobj:
         """Get the state at time t as a diagonal density matrix.
 
         Note:
@@ -236,20 +254,25 @@ class NoisyResults(SimulationResults):
             qutip.Qobj: States probability distribution as a diagonal
                 density matrix.
         """
+
         def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
             # In the digital case, |h> = |1> = qutip.basis()
-            if self._basis_name == 'digital':
-                proj = qutip.tensor([qutip.basis(2, int(i)).proj() for i
-                                     in bitstring])
+            if self._basis_name == "digital":
+                proj = qutip.tensor(
+                    [qutip.basis(2, int(i)).proj() for i in bitstring]
+                )
             # ground-rydberg basis case
             else:
-                proj = qutip.tensor([qutip.basis(2, 1-int(i)).proj() for i
-                                     in bitstring])
+                proj = qutip.tensor(
+                    [qutip.basis(2, 1 - int(i)).proj() for i in bitstring]
+                )
             return proj
 
         t_index = self._get_index_from_time(t, t_tol)
-        return sum(v * _proj_from_bitstring(b) for
-                   b, v in self._results[t_index].items())
+        return sum(
+            v * _proj_from_bitstring(b)
+            for b, v in self._results[t_index].items()
+        )
 
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
@@ -263,8 +286,9 @@ class NoisyResults(SimulationResults):
         """
         return self.get_state(self._sim_times[-1])
 
-    def expect(self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
-               ) -> list[Union[float, complex, ArrayLike]]:
+    def expect(
+        self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+    ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
         Args:
@@ -286,11 +310,20 @@ class NoisyResults(SimulationResults):
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
         n = self._size
-        return np.array([self._results[t_index][
-                np.binary_repr(k, n)] for k in range(2**n)])
+        return np.array(
+            [
+                self._results[t_index][np.binary_repr(k, n)]
+                for k in range(2 ** n)
+            ]
+        )
 
-    def plot(self, op: qutip.Qobj, fmt: str = '.',
-             label: str = '', error_bars: bool = True) -> None:
+    def plot(
+        self,
+        op: qutip.Qobj,
+        fmt: str = ".",
+        label: str = "",
+        error_bars: bool = True,
+    ) -> None:
         """Plots the expectation value of a given operator op.
 
         Note:
@@ -302,18 +335,22 @@ class NoisyResults(SimulationResults):
             label (str): y-Axis label.
             error_bars (bool): Choose to display error bars.
         """
+
         def get_error_bars() -> Tuple[ArrayLike, ArrayLike]:
             moy = self.expect([op])[0]
-            standard_dev = cast(np.ndarray, np.sqrt(
-                qutip.variance(op, self.states) / self.n_measures))
+            standard_dev = cast(
+                np.ndarray,
+                np.sqrt(qutip.variance(op, self.states) / self.n_measures),
+            )
             return moy, standard_dev
 
         if error_bars:
             moy, st = get_error_bars()
-            plt.errorbar(self._sim_times, moy, st, fmt=fmt, lw=1, capsize=3,
-                         label=label)
-            plt.xlabel('Time (µs)')
-            plt.ylabel('Expectation value')
+            plt.errorbar(
+                self._sim_times, moy, st, fmt=fmt, lw=1, capsize=3, label=label
+            )
+            plt.xlabel("Time (µs)")
+            plt.ylabel("Expectation value")
         else:
             super().plot(op, fmt, label)
 
@@ -325,9 +362,14 @@ class CoherentResults(SimulationResults):
     from them.
     """
 
-    def __init__(self, run_output: list[qutip.Qobj],
-                 size: int, basis_name: str,
-                 sim_times: np.ndarray, meas_basis: str) -> None:
+    def __init__(
+        self,
+        run_output: list[qutip.Qobj],
+        size: int,
+        basis_name: str,
+        sim_times: np.ndarray,
+        meas_basis: str,
+    ) -> None:
         """Initializes a new CoherentResults instance.
 
         Args:
@@ -344,9 +386,10 @@ class CoherentResults(SimulationResults):
         """
         super().__init__(size, basis_name, sim_times)
         if meas_basis:
-            if meas_basis not in {'ground-rydberg', 'digital'}:
+            if meas_basis not in {"ground-rydberg", "digital"}:
                 raise ValueError(
-                    "`meas_basis` must be 'ground-rydberg' or 'digital'.")
+                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                )
         self._meas_basis = meas_basis
         self._results = run_output
 
@@ -355,9 +398,15 @@ class CoherentResults(SimulationResults):
         """List of ``qutip.Qobj`` for each state in the simulation."""
         return list(self._results)
 
-    def get_state(self, t: float, reduce_to_basis: Optional[str] = None,
-                  ignore_global_phase: bool = True, tol: float = 1e-6,
-                  normalize: bool = True, t_tol: float = 1.e-3) -> qutip.Qobj:
+    def get_state(
+        self,
+        t: float,
+        reduce_to_basis: Optional[str] = None,
+        ignore_global_phase: bool = True,
+        tol: float = 1e-6,
+        normalize: bool = True,
+        t_tol: float = 1.0e-3,
+    ) -> qutip.Qobj:
         """Get the state at time t of the simulation.
 
         Args:
@@ -390,30 +439,41 @@ class CoherentResults(SimulationResults):
             state *= np.exp(-1j * global_ph)
         if self._dim != 3:
             if reduce_to_basis not in [None, self._basis_name]:
-                raise TypeError(f"Can't reduce a system in {self._basis_name}"
-                                + f" to the {reduce_to_basis} basis.")
+                raise TypeError(
+                    f"Can't reduce a system in {self._basis_name}"
+                    + f" to the {reduce_to_basis} basis."
+                )
         elif reduce_to_basis is not None:
             if reduce_to_basis == "ground-rydberg":
                 ex_state = "2"
             elif reduce_to_basis == "digital":
                 ex_state = "0"
             else:
-                raise ValueError("'reduce_to_basis' must be 'ground-rydberg' "
-                                 + f"or 'digital', not '{reduce_to_basis}'.")
-            ex_inds = [i for i in range(3**self._size) if ex_state in
-                       np.base_repr(i, base=3).zfill(self._size)]
+                raise ValueError(
+                    "'reduce_to_basis' must be 'ground-rydberg' "
+                    + f"or 'digital', not '{reduce_to_basis}'."
+                )
+            ex_inds = [
+                i
+                for i in range(3 ** self._size)
+                if ex_state in np.base_repr(i, base=3).zfill(self._size)
+            ]
             ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
             if not np.all(np.isclose(ex_probs, 0, atol=tol)):
                 raise TypeError(
                     "Can't reduce to chosen basis because the population of a "
                     "state to eliminate is above the allowed tolerance."
-                    )
+                )
             state = state.eliminate_states(ex_inds, normalize=normalize)
         return state.tidyup()
 
-    def get_final_state(self, reduce_to_basis: Optional[str] = None,
-                        ignore_global_phase: bool = True, tol: float = 1e-6,
-                        normalize: bool = True) -> qutip.Qobj:
+    def get_final_state(
+        self,
+        reduce_to_basis: Optional[str] = None,
+        ignore_global_phase: bool = True,
+        tol: float = 1e-6,
+        normalize: bool = True,
+    ) -> qutip.Qobj:
         """Returns the final state of the Simulation.
 
         Args:
@@ -435,8 +495,13 @@ class CoherentResults(SimulationResults):
             TypeError: If trying to reduce to a basis that would eliminate
                 states with significant occupation probabilites.
         """
-        return self.get_state(self._sim_times[-1], reduce_to_basis,
-                              ignore_global_phase, tol, normalize)
+        return self.get_state(
+            self._sim_times[-1],
+            reduce_to_basis,
+            ignore_global_phase,
+            tol,
+            normalize,
+        )
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
         n = self._size
@@ -444,33 +509,34 @@ class CoherentResults(SimulationResults):
         if state_t.type != "ket":
             probs = np.abs(state_t.diag())
         else:
-            probs = (np.abs(state_t.full())**2).flatten()
+            probs = (np.abs(state_t.full()) ** 2).flatten()
 
         if self._dim == 2:
             if self._meas_basis == self._basis_name:
                 # State vector ordered with r first for 'ground_rydberg'
                 # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
-                weights = (probs if self._meas_basis == 'digital'
-                           else probs[::-1])
+                weights = (
+                    probs if self._meas_basis == "digital" else probs[::-1]
+                )
             else:
                 # Only 000...000 is measured
                 weights = np.zeros(probs.size)
-                weights[0] = 1.
+                weights[0] = 1.0
 
         elif self._dim == 3:
-            if self._meas_basis == 'ground-rydberg':
-                one_state = 0       # 1 = |r>
+            if self._meas_basis == "ground-rydberg":
+                one_state = 0  # 1 = |r>
                 ex_one = slice(1, 3)
-            elif self._meas_basis == 'digital':
-                one_state = 2       # 1 = |h>
+            elif self._meas_basis == "digital":
+                one_state = 2  # 1 = |h>
                 ex_one = slice(0, 2)
-            probs = probs.reshape([3]*n)
-            weights = np.zeros(2**n)
-            for dec_val in range(2**n):
+            probs = probs.reshape([3] * n)
+            weights = np.zeros(2 ** n)
+            for dec_val in range(2 ** n):
                 ind: list[Union[int, slice]] = []
                 for v in np.binary_repr(dec_val, width=n):
-                    if v == '0':
+                    if v == "0":
                         ind.append(ex_one)
                     else:
                         ind.append(one_state)
@@ -482,14 +548,15 @@ class CoherentResults(SimulationResults):
         else:
             raise NotImplementedError(
                 "Cannot sample system with single-atom state vectors of "
-                "dimension > 3.")
+                "dimension > 3."
+            )
         # Takes care of numerical artefacts in case sum(weights) != 1
         weights /= sum(weights)
         return cast(np.ndarray, weights)
 
-    def _sampling_with_detection_errors(self, spam: dict[str, float],
-                                        t: float,
-                                        n_samples: int = 1000) -> Counter:
+    def _sampling_with_detection_errors(
+        self, spam: dict[str, float], t: float, n_samples: int = 1000
+    ) -> Counter:
         """Returns the distribution of states really detected.
 
         Part of the SPAM implementation.
@@ -500,6 +567,7 @@ class CoherentResults(SimulationResults):
             t (float): Time at which to return the samples.
             n_samples (int): Number of samples.
         """
+
         def detection_from_basis_state(n_detects: int, shot: str) -> Counter:
             """Returns distribution of states detected when detecting `shot`.
 
@@ -511,16 +579,21 @@ class CoherentResults(SimulationResults):
                 simulation.
             """
             detected_dict: Counter = Counter()
-            eps = spam['epsilon']
-            eps_p = spam['epsilon_prime']
+            eps = spam["epsilon"]
+            eps_p = spam["epsilon_prime"]
             # Probability of flipping each bit
-            flip_probs = np.array([eps_p if x == '1' else eps for x in shot])
+            flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
             for _ in range(n_detects):
-                shots = (np.random.uniform(size=len(flip_probs)) < flip_probs
-                         ).astype(int)
+                shots = (
+                    np.random.uniform(size=len(flip_probs)) < flip_probs
+                ).astype(int)
                 # shot, but with certain bits flipped at random
-                d_shot = ''.join([str((int(shot[i])+shots[i]) % 2)
-                                  for i in range(len(shot))])
+                d_shot = "".join(
+                    [
+                        str((int(shot[i]) + shots[i]) % 2)
+                        for i in range(len(shot))
+                    ]
+                )
                 detected_dict = detected_dict + Counter({d_shot: 1})
             return detected_dict
 

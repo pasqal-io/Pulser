@@ -14,8 +14,8 @@
 
 from setuptools import setup, find_packages
 
-__version__ = ''
-exec(open('pulser/_version.py').read())
+__version__ = ""
+exec(open("pulser/_version.py").read())
 
 setup(
     name="pulser",

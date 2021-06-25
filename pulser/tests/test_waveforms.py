@@ -22,9 +22,14 @@ from scipy.interpolate import interp1d, PchipInterpolator
 
 from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.parametrized import Variable, ParamObj
-from pulser.waveforms import (ConstantWaveform, RampWaveform, BlackmanWaveform,
-                              CustomWaveform, CompositeWaveform,
-                              InterpolatedWaveform)
+from pulser.waveforms import (
+    ConstantWaveform,
+    RampWaveform,
+    BlackmanWaveform,
+    CustomWaveform,
+    CompositeWaveform,
+    InterpolatedWaveform,
+)
 
 np.random.seed(20201105)
 
@@ -39,16 +44,16 @@ interp = InterpolatedWaveform(1000, interp_values)
 
 
 def test_duration():
-    with pytest.raises(TypeError, match='needs to be castable to an int'):
+    with pytest.raises(TypeError, match="needs to be castable to an int"):
         ConstantWaveform("s", -1)
         RampWaveform([0, 1, 3], 1, 0)
 
-    with pytest.raises(ValueError, match='positive duration'):
+    with pytest.raises(ValueError, match="positive duration"):
         ConstantWaveform(15, -10)
         RampWaveform(-20, 3, 4)
 
     with pytest.warns(UserWarning):
-        wf = BlackmanWaveform(np.pi*10, 1)
+        wf = BlackmanWaveform(np.pi * 10, 1)
 
     assert wf.duration == 31
     assert custom.duration == 52
@@ -91,7 +96,7 @@ def test_integral():
 
 
 def test_draw():
-    with patch('matplotlib.pyplot.show'):
+    with patch("matplotlib.pyplot.show"):
         composite.draw()
         blackman.draw()
         interp.draw()
@@ -122,29 +127,31 @@ def test_hash():
 
 
 def test_composite():
-    with pytest.raises(ValueError, match='Needs at least two waveforms'):
+    with pytest.raises(ValueError, match="Needs at least two waveforms"):
         CompositeWaveform()
         CompositeWaveform(composite)
         CompositeWaveform([blackman, custom])
         CompositeWaveform(10)
 
-    with pytest.raises(TypeError, match='not a valid waveform'):
-        CompositeWaveform(composite, 'constant')
+    with pytest.raises(TypeError, match="not a valid waveform"):
+        CompositeWaveform(composite, "constant")
 
     assert composite.waveforms == [blackman, constant, custom]
 
     wf = CompositeWaveform(blackman, constant)
-    msg = ('BlackmanWaveform(40 ns, Area: 3.14), ' +
-           'ConstantWaveform(100 ns, -3 rad/µs)')
-    assert wf.__str__() == f'Composite({msg})'
-    assert wf.__repr__() == f'CompositeWaveform(140 ns, [{msg}])'
+    msg = (
+        "BlackmanWaveform(40 ns, Area: 3.14), "
+        + "ConstantWaveform(100 ns, -3 rad/µs)"
+    )
+    assert wf.__str__() == f"Composite({msg})"
+    assert wf.__repr__() == f"CompositeWaveform(140 ns, [{msg}])"
 
 
 def test_custom():
     data = np.arange(16, dtype=float)
     wf = CustomWaveform(data)
-    assert wf.__str__() == 'Custom'
-    assert wf.__repr__() == f'CustomWaveform(16 ns, {data!r})'
+    assert wf.__str__() == "Custom"
+    assert wf.__repr__() == f"CustomWaveform(16 ns, {data!r})"
 
 
 def test_ramp():
@@ -162,8 +169,8 @@ def test_blackman():
     with pytest.raises(ValueError, match="matching signs"):
         BlackmanWaveform.from_max_val(-10, np.pi)
 
-    wf = BlackmanWaveform.from_max_val(10, 2*np.pi)
-    assert np.isclose(wf.integral, 2*np.pi)
+    wf = BlackmanWaveform.from_max_val(10, 2 * np.pi)
+    assert np.isclose(wf.integral, 2 * np.pi)
     assert np.max(wf.samples) < 10
 
     wf = BlackmanWaveform.from_max_val(-10, -np.pi)
@@ -188,31 +195,36 @@ def test_interpolated():
     with pytest.raises(ValueError, match="must be less than or equal to 1"):
         InterpolatedWaveform(1000, interp_values, times=times + 0.21)
     with pytest.raises(ValueError, match="array of non-repeating values"):
-        InterpolatedWaveform(1000, interp_values,
-                             times=[0.2] + times[:-1].tolist())
+        InterpolatedWaveform(
+            1000, interp_values, times=[0.2] + times[:-1].tolist()
+        )
 
     with pytest.raises(ValueError, match="Invalid interpolator 'fake'"):
-        InterpolatedWaveform(1000, interp_values, times=times,
-                             interpolator="fake")
+        InterpolatedWaveform(
+            1000, interp_values, times=times, interpolator="fake"
+        )
 
     dt = 1000
-    interp_wf = InterpolatedWaveform(dt, [0, 1], interpolator="interp1d",
-                                     kind="linear")
+    interp_wf = InterpolatedWaveform(
+        dt, [0, 1], interpolator="interp1d", kind="linear"
+    )
     assert isinstance(interp_wf.interp_function, interp1d)
-    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 1., num=dt))
+    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 1.0, num=dt))
 
     interp_wf *= 2
-    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 2., num=dt))
+    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 2.0, num=dt))
 
     wf_str = "InterpolatedWaveform(Points: (0, 0), (999, 2)"
     assert str(interp_wf) == wf_str + ")"
     assert repr(interp_wf) == wf_str + ", Interpolator=interp1d)"
 
     vals = np.linspace(0, 1, num=5) ** 2
-    interp_wf2 = InterpolatedWaveform(dt, vals, interpolator="interp1d",
-                                      kind="quadratic")
-    np.testing.assert_allclose(interp_wf2.samples,
-                               np.linspace(0, 1, num=dt)**2, atol=1e-3)
+    interp_wf2 = InterpolatedWaveform(
+        dt, vals, interpolator="interp1d", kind="quadratic"
+    )
+    np.testing.assert_allclose(
+        interp_wf2.samples, np.linspace(0, 1, num=dt) ** 2, atol=1e-3
+    )
 
 
 def test_ops():
@@ -236,21 +248,30 @@ def test_get_item():
     # Check errors raised
 
     duration = constant.duration
-    with pytest.raises(IndexError,
-                       match=re.escape("Index ('index_or_slice' = "
-                                       f"{duration}) must be in the range "
-                                       f"0~{duration-1}, or "
-                                       f"{-duration}~-1 from the end.")):
+    with pytest.raises(
+        IndexError,
+        match=re.escape(
+            "Index ('index_or_slice' = "
+            f"{duration}) must be in the range "
+            f"0~{duration-1}, or "
+            f"{-duration}~-1 from the end."
+        ),
+    ):
         constant[duration]
-    with pytest.raises(IndexError,
-                       match=re.escape("Index ('index_or_slice' = "
-                                       f"{-duration-1}) must be in the range "
-                                       f"0~{duration-1}, or "
-                                       f"{-duration}~-1 from the end.")):
+    with pytest.raises(
+        IndexError,
+        match=re.escape(
+            "Index ('index_or_slice' = "
+            f"{-duration-1}) must be in the range "
+            f"0~{duration-1}, or "
+            f"{-duration}~-1 from the end."
+        ),
+    ):
         constant[-duration - 1]
 
-    with pytest.raises(IndexError,
-                       match="The step of the slice must be None or 1."):
+    with pytest.raises(
+        IndexError, match="The step of the slice must be None or 1."
+    ):
         constant[0:1:2]
 
     # Check nominal operations
@@ -273,20 +294,26 @@ def test_get_item():
         assert (wf[-1:] == samples[-1:]).all()
         assert (wf[:duration] == samples).all()
         assert (wf[:] == samples).all()
-        assert (wf[duration14:duration34] ==
-                samples[duration14:duration34]).all()
-        assert (wf[-duration34:-duration14] ==
-                samples[-duration34:-duration14]).all()
+        assert (
+            wf[duration14:duration34] == samples[duration14:duration34]
+        ).all()
+        assert (
+            wf[-duration34:-duration14] == samples[-duration34:-duration14]
+        ).all()
 
         # Check with out of bounds slices
-        assert (wf[:duration*2] == samples).all()
-        assert (wf[-duration*2:] == samples).all()
-        assert (wf[-duration*2:duration*2] == samples).all()
-        assert (wf[duration//2:duration*2] ==
-                samples[duration//2:duration*2]).all()
-        assert (wf[-duration*2:duration//2] ==
-                samples[-duration*2:duration//2]).all()
-        assert(wf[2:1].size == 0)
-        assert(wf[duration*2:].size == 0)
-        assert(wf[duration*2:duration*3].size == 0)
-        assert(wf[-duration*3:-duration*2].size == 0)
+        assert (wf[: duration * 2] == samples).all()
+        assert (wf[-duration * 2 :] == samples).all()
+        assert (wf[-duration * 2 : duration * 2] == samples).all()
+        assert (
+            wf[duration // 2 : duration * 2]
+            == samples[duration // 2 : duration * 2]
+        ).all()
+        assert (
+            wf[-duration * 2 : duration // 2]
+            == samples[-duration * 2 : duration // 2]
+        ).all()
+        assert wf[2:1].size == 0
+        assert wf[duration * 2 :].size == 0
+        assert wf[duration * 2 : duration * 3].size == 0
+        assert wf[-duration * 3 : -duration * 2].size == 0

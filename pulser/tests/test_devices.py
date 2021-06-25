@@ -34,10 +34,10 @@ def test_init():
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
     assert Chadoq2 in pulser.devices._valid_devices
-    assert Chadoq2.supported_bases == {'digital', 'ground-rydberg'}
-    with patch('sys.stdout'):
+    assert Chadoq2.supported_bases == {"digital", "ground-rydberg"}
+    with patch("sys.stdout"):
         Chadoq2.print_specs()
-    assert Chadoq2.__repr__() == 'Chadoq2'
+    assert Chadoq2.__repr__() == "Chadoq2"
 
 
 def test_mock():
@@ -46,15 +46,15 @@ def test_mock():
     assert dev.max_atom_num > 1000
     assert dev.min_atom_distance <= 1
     assert dev.interaction_coeff == 5008713
-    names = ['Rydberg', 'Raman', 'Microwave']
-    basis = ['ground-rydberg', 'digital', 'XY']
+    names = ["Rydberg", "Raman", "Microwave"]
+    basis = ["ground-rydberg", "digital", "XY"]
     for ch in dev.channels.values():
         assert ch.name in names
         assert ch.basis == basis[names.index(ch.name)]
-        assert ch.addressing in ['Local', 'Global']
+        assert ch.addressing in ["Local", "Global"]
         assert ch.max_abs_detuning >= 1000
         assert ch.max_amp >= 200
-        if ch.addressing == 'Local':
+        if ch.addressing == "Local":
             assert ch.retarget_time == 0
             assert ch.max_targets > 1
             assert ch.max_targets == int(ch.max_targets)
@@ -62,31 +62,32 @@ def test_mock():
 
 def test_rydberg_blockade():
     dev = pulser.devices.MockDevice
-    assert np.isclose(dev.rydberg_blockade_radius(3*np.pi), 9)
-    assert np.isclose(dev.rabi_from_blockade(9), 3*np.pi)
-    rand_omega = np.random.rand() * 2*np.pi
+    assert np.isclose(dev.rydberg_blockade_radius(3 * np.pi), 9)
+    assert np.isclose(dev.rabi_from_blockade(9), 3 * np.pi)
+    rand_omega = np.random.rand() * 2 * np.pi
     assert np.isclose(
         rand_omega,
-        dev.rabi_from_blockade(dev.rydberg_blockade_radius(rand_omega))
+        dev.rabi_from_blockade(dev.rydberg_blockade_radius(rand_omega)),
     )
 
 
 def test_validate_register():
-    with pytest.raises(ValueError, match='The number of atoms'):
+    with pytest.raises(ValueError, match="The number of atoms"):
         Chadoq2.validate_register(Register.square(50))
 
     coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
         Chadoq2.validate_register(coords)
-    with pytest.raises(ValueError, match='at most 50 μm away from the center'):
+    with pytest.raises(ValueError, match="at most 50 μm away from the center"):
         Chadoq2.validate_register(Register.from_coordinates(coords))
 
-    with pytest.raises(ValueError, match='must be 2D vectors'):
+    with pytest.raises(ValueError, match="must be 2D vectors"):
         coords = [(-10, 4, 0), (0, 0, 0)]
         Chadoq2.validate_register(Register(dict(enumerate(coords))))
 
     with pytest.raises(ValueError, match="don't respect the minimal distance"):
-        Chadoq2.validate_register(Register.triangular_lattice(
-            3, 4, spacing=3.9))
+        Chadoq2.validate_register(
+            Register.triangular_lattice(3, 4, spacing=3.9)
+        )
 
     Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))

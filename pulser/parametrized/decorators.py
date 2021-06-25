@@ -30,6 +30,7 @@ def parametrize(func: Callable) -> Callable:
         Designed for use in class methods. Usage in instance or static methods
         is not supported, and in regular functions is not tested.
     """
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         for x in chain(args, kwargs.values()):

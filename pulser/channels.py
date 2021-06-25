@@ -57,14 +57,19 @@ class Channel:
     max_amp: float
     retarget_time: Optional[int] = None
     max_targets: Optional[int] = None
-    clock_period: int = 4       # ns
-    min_duration: int = 16      # ns
-    max_duration: int = 67108864        # ns
+    clock_period: int = 4  # ns
+    min_duration: int = 16  # ns
+    max_duration: int = 67108864  # ns
 
     @classmethod
-    def Local(cls, max_abs_detuning: float, max_amp: float,
-              retarget_time: int = 220, max_targets: int = 1,
-              **kwargs: int) -> Channel:
+    def Local(
+        cls,
+        max_abs_detuning: float,
+        max_amp: float,
+        retarget_time: int = 220,
+        max_targets: int = 1,
+        **kwargs: int,
+    ) -> Channel:
         """Initializes the channel with local addressing.
 
         Args:
@@ -75,12 +80,19 @@ class Channel:
             max_targets (int): Maximum number of atoms the channel can target
                 simultaneously.
         """
-        return cls('Local', max_abs_detuning, max_amp,
-                   retarget_time, max_targets, **kwargs)
+        return cls(
+            "Local",
+            max_abs_detuning,
+            max_amp,
+            retarget_time,
+            max_targets,
+            **kwargs,
+        )
 
     @classmethod
-    def Global(cls, max_abs_detuning: float,
-               max_amp: float, **kwargs: int) -> Channel:
+    def Global(
+        cls, max_abs_detuning: float, max_amp: float, **kwargs: int
+    ) -> Channel:
         """Initializes the channel with global addressing.
 
         Args:
@@ -88,8 +100,7 @@ class Channel:
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
         """
-        return cls('Global', max_abs_detuning, max_amp,
-                   **kwargs)
+        return cls("Global", max_abs_detuning, max_amp, **kwargs)
 
     def validate_duration(self, duration: int) -> int:
         """Validates and adapts the duration of an instruction on this channel.
@@ -100,23 +111,29 @@ class Channel:
         try:
             _duration = int(duration)
         except (TypeError, ValueError):
-            raise TypeError("duration needs to be castable to an int but "
-                            "type %s was provided" % type(duration))
+            raise TypeError(
+                "duration needs to be castable to an int but "
+                "type %s was provided" % type(duration)
+            )
 
         if duration < self.min_duration:
-            raise ValueError("duration has to be at least "
-                             + f"{self.min_duration} ns.")
+            raise ValueError(
+                "duration has to be at least " + f"{self.min_duration} ns."
+            )
 
         if duration > self.max_duration:
-            raise ValueError("duration can be at most "
-                             + f"{self.max_duration} ns.")
+            raise ValueError(
+                "duration can be at most " + f"{self.max_duration} ns."
+            )
 
         if duration % self.clock_period != 0:
             _duration += self.clock_period - _duration % self.clock_period
-            warnings.warn(f"A duration of {duration} ns is not a multiple of "
-                          f"the channel's clock period ({self.clock_period} "
-                          f"ns). It was rounded up to {_duration} ns.",
-                          stacklevel=4)
+            warnings.warn(
+                f"A duration of {duration} ns is not a multiple of "
+                f"the channel's clock period ({self.clock_period} "
+                f"ns). It was rounded up to {_duration} ns.",
+                stacklevel=4,
+            )
         return _duration
 
     def __repr__(self) -> str:
@@ -125,7 +142,7 @@ class Channel:
             f"{self.max_abs_detuning} rad/µs, Max Amplitude: "
             f"{self.max_amp} rad/µs"
         )
-        if self.addressing == 'Local':
+        if self.addressing == "Local":
             config += f", Target time: {self.retarget_time} ns"
             if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
@@ -140,8 +157,9 @@ class Raman(Channel):
     Channel targeting the transition between the hyperfine ground states, in
     which the 'digital' basis is encoded. See base class.
     """
-    name: ClassVar[str] = 'Raman'
-    basis: ClassVar[str] = 'digital'
+
+    name: ClassVar[str] = "Raman"
+    basis: ClassVar[str] = "digital"
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -151,8 +169,9 @@ class Rydberg(Channel):
     Channel targeting the transition between the ground and rydberg states,
     thus enconding the 'ground-rydberg' basis. See base class.
     """
-    name: ClassVar[str] = 'Rydberg'
-    basis: ClassVar[str] = 'ground-rydberg'
+
+    name: ClassVar[str] = "Rydberg"
+    basis: ClassVar[str] = "ground-rydberg"
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -162,5 +181,6 @@ class Microwave(Channel):
     Channel targeting the transition between two rydberg states, thus encoding
     the 'XY' basis. See base class.
     """
-    name: ClassVar[str] = 'Microwave'
-    basis: ClassVar[str] = 'XY'
+
+    name: ClassVar[str] = "Microwave"
+    basis: ClassVar[str] = "XY"

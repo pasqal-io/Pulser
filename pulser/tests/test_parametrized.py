@@ -108,11 +108,11 @@ def test_paramobj():
 def test_opsupport():
     a._assign(-2.0)
     x = 5 + a
-    x = b - x       # x = [-4, -2]
+    x = b - x  # x = [-4, -2]
     x = x / 2
-    x = 8 * x      # x = [-16, -8]
-    x = -x // 3      # x = [5, 2]
-    assert np.all(x.build() == [5., 2.])
-    assert (a**a).build() == 0.25
+    x = 8 * x  # x = [-16, -8]
+    x = -x // 3  # x = [5, 2]
+    assert np.all(x.build() == [5.0, 2.0])
+    assert (a ** a).build() == 0.25
     assert abs(a).build() == 2.0
-    assert (3 % a).build() == -1.
+    assert (3 % a).build() == -1.0

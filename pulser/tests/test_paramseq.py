@@ -60,7 +60,7 @@ def test_stored_calls():
         sb.target(var_, "ch1")
 
     with pytest.raises(ValueError, match="non-variable qubits must belong"):
-        sb.target('q20', "ch1")
+        sb.target("q20", "ch1")
 
     sb.delay(var, "ch1")
     call = sb._to_build_calls[1]
@@ -73,11 +73,15 @@ def test_stored_calls():
     with pytest.raises(ValueError, match="Invalid protocol 'last'"):
         sb.add(pls, "ch1", protocol="last")
 
-    with pytest.raises(ValueError, match='amplitude goes over the maximum'):
-        sb.add(Pulse.ConstantPulse(20, 2*np.pi*100, -2*np.pi*100, 0), 'ch1')
-    with pytest.raises(ValueError,
-                       match='detuning values go out of the range'):
-        sb.add(Pulse.ConstantPulse(500, 2*np.pi, -2*np.pi*100, 0), 'ch1')
+    with pytest.raises(ValueError, match="amplitude goes over the maximum"):
+        sb.add(
+            Pulse.ConstantPulse(20, 2 * np.pi * 100, -2 * np.pi * 100, 0),
+            "ch1",
+        )
+    with pytest.raises(
+        ValueError, match="detuning values go out of the range"
+    ):
+        sb.add(Pulse.ConstantPulse(500, 2 * np.pi, -2 * np.pi * 100, 0), "ch1")
 
     assert sb._to_build_calls[-1] == call
     sb.add(pls, "ch1", protocol="wait-for-all")
@@ -121,7 +125,7 @@ def test_stored_calls():
         sb.measure(basis="z")
     sb.measure()
     with pytest.raises(SystemError):
-        sb.delay(var*50, "ch1")
+        sb.delay(var * 50, "ch1")
 
 
 def test_build():
@@ -132,10 +136,10 @@ def test_build():
     sb.declare_channel("ch1", "rydberg_local")
     sb.declare_channel("ch2", "raman_local", initial_target=targ_var[0])
     sb.target(targ_var[1], "ch1")
-    wf = BlackmanWaveform(var*100, np.pi)
+    wf = BlackmanWaveform(var * 100, np.pi)
     pls = Pulse.ConstantDetuning(wf, var, var)
     sb.add(pls, "ch1")
-    sb.delay(var*50, "ch1")
+    sb.delay(var * 50, "ch1")
     sb.align("ch2", "ch1")
     sb.phase_shift(var, targ_var[0])
     pls2 = Pulse.ConstantPulse(wf.duration, var, var, 0)
@@ -148,7 +152,7 @@ def test_build():
     seq = sb.build(var=2, targ_var=["q1", "q0"])
     assert seq._schedule["ch2"][-1].tf == 500
     assert seq.current_phase_ref("q1") == 2.0
-    assert seq.current_phase_ref("q0") == 0.
+    assert seq.current_phase_ref("q0") == 0.0
     assert seq._measurement == "ground-rydberg"
 
     s = sb.serialize()
@@ -167,10 +171,12 @@ def test_str():
     with pytest.warns(UserWarning, match="Building a non-parametrized"):
         seq = sb.build()
     var = sb.declare_variable("var")
-    pls = Pulse.ConstantPulse(var*100, var, -1, var)
+    pls = Pulse.ConstantPulse(var * 100, var, -1, var)
     sb.add(pls, "ch1")
-    s = (f"Prelude\n-------\n{str(seq)}Stored calls\n------------\n\n"
-         + "1. add(Pulse.ConstantPulse(mul(var, 100), var, -1, var), ch1)")
+    s = (
+        f"Prelude\n-------\n{str(seq)}Stored calls\n------------\n\n"
+        + "1. add(Pulse.ConstantPulse(mul(var, 100), var, -1, var), ch1)"
+    )
     assert s == str(sb)
 
 

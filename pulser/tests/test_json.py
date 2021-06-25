@@ -49,8 +49,9 @@ def test_rare_cases():
     var = seq.declare_variable("var")
 
     wf = BlackmanWaveform(100, var)
-    with pytest.warns(UserWarning, match="Calls to methods of parametrized "
-                      "objects"):
+    with pytest.warns(
+        UserWarning, match="Calls to methods of parametrized " "objects"
+    ):
         s = encode(wf.draw())
 
     with pytest.warns(UserWarning, match="not encode a Sequence"):
@@ -62,7 +63,7 @@ def test_rare_cases():
 
     var_ = wf_._variables["var"]
     var_._assign(-10)
-    with patch('matplotlib.pyplot.show'):
+    with patch("matplotlib.pyplot.show"):
         wf_.build()
 
     rotated_reg = parametrize(Register.rotate)(reg, var)

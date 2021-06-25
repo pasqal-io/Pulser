@@ -57,7 +57,7 @@ class Pulse:
             (see ``Sequence.phase_shift()`` for more information).
     """
 
-    def __new__(cls, *args, **kwargs):      # type: ignore
+    def __new__(cls, *args, **kwargs):  # type: ignore
         """Creates a Pulse instance or a ParamObj depending on the input."""
         for x in itertools.chain(args, kwargs.values()):
             if isinstance(x, Parametrized):
@@ -65,22 +65,29 @@ class Pulse:
         else:
             return object.__new__(cls)
 
-    def __init__(self, amplitude: Union[Waveform, Parametrized],
-                 detuning: Union[Waveform, Parametrized],
-                 phase: Union[float, Parametrized],
-                 post_phase_shift: Union[float, Parametrized] = 0.):
+    def __init__(
+        self,
+        amplitude: Union[Waveform, Parametrized],
+        detuning: Union[Waveform, Parametrized],
+        phase: Union[float, Parametrized],
+        post_phase_shift: Union[float, Parametrized] = 0.0,
+    ):
         """Initializes a new Pulse."""
-        if not (isinstance(amplitude, Waveform) and
-                isinstance(detuning, Waveform)):
+        if not (
+            isinstance(amplitude, Waveform) and isinstance(detuning, Waveform)
+        ):
             raise TypeError("'amplitude' and 'detuning' have to be waveforms.")
 
         if detuning.duration != amplitude.duration:
             raise ValueError(
-                "The duration of detuning and amplitude waveforms must match.")
+                "The duration of detuning and amplitude waveforms must match."
+            )
         self.duration = amplitude.duration
         if np.any(amplitude.samples < 0):
-            raise ValueError("All samples of an amplitude waveform must be "
-                             "greater than or equal to zero.")
+            raise ValueError(
+                "All samples of an amplitude waveform must be "
+                "greater than or equal to zero."
+            )
         self.amplitude = amplitude
         self.detuning = detuning
         phase = cast(float, phase)
@@ -90,11 +97,13 @@ class Pulse:
 
     @classmethod
     @parametrize
-    def ConstantDetuning(cls, amplitude: Union[Waveform, Parametrized],
-                         detuning: Union[float, Parametrized],
-                         phase: Union[float, Parametrized],
-                         post_phase_shift: Union[float, Parametrized] = 0.
-                         ) -> Pulse:
+    def ConstantDetuning(
+        cls,
+        amplitude: Union[Waveform, Parametrized],
+        detuning: Union[float, Parametrized],
+        phase: Union[float, Parametrized],
+        post_phase_shift: Union[float, Parametrized] = 0.0,
+    ) -> Pulse:
         """Creates a Pulse with an amplitude waveform and a constant detuning.
 
         Args:
@@ -105,16 +114,19 @@ class Pulse:
                 phase shift (in rads) immediately after the end of the pulse.
         """
         detuning_wf = ConstantWaveform(
-            cast(Waveform, amplitude).duration, detuning)
+            cast(Waveform, amplitude).duration, detuning
+        )
         return cls(amplitude, detuning_wf, phase, post_phase_shift)
 
     @classmethod
     @parametrize
-    def ConstantAmplitude(cls, amplitude: Union[float, Parametrized],
-                          detuning: Union[Waveform, Parametrized],
-                          phase: Union[float, Parametrized],
-                          post_phase_shift: Union[float, Parametrized] = 0.
-                          ) -> Pulse:
+    def ConstantAmplitude(
+        cls,
+        amplitude: Union[float, Parametrized],
+        detuning: Union[Waveform, Parametrized],
+        phase: Union[float, Parametrized],
+        post_phase_shift: Union[float, Parametrized] = 0.0,
+    ) -> Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
 
         Args:
@@ -125,17 +137,20 @@ class Pulse:
                 phase shift (in rads) immediately after the end of the pulse.
         """
         amplitude_wf = ConstantWaveform(
-            cast(Waveform, detuning).duration, amplitude)
+            cast(Waveform, detuning).duration, amplitude
+        )
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
     @parametrize
-    def ConstantPulse(cls, duration: Union[int, Parametrized],
-                      amplitude: Union[float, Parametrized],
-                      detuning: Union[float, Parametrized],
-                      phase: Union[float, Parametrized],
-                      post_phase_shift: Union[float, Parametrized] = 0.
-                      ) -> Pulse:
+    def ConstantPulse(
+        cls,
+        duration: Union[int, Parametrized],
+        amplitude: Union[float, Parametrized],
+        detuning: Union[float, Parametrized],
+        phase: Union[float, Parametrized],
+        post_phase_shift: Union[float, Parametrized] = 0.0,
+    ) -> Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
         Args:
@@ -162,8 +177,13 @@ class Pulse:
         plt.show()
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, self.amplitude, self.detuning, self.phase,
-                           post_phase_shift=self.post_phase_shift)
+        return obj_to_dict(
+            self,
+            self.amplitude,
+            self.detuning,
+            self.phase,
+            post_phase_shift=self.post_phase_shift,
+        )
 
     def __str__(self) -> str:
         return (
@@ -172,9 +192,11 @@ class Pulse:
         )
 
     def __repr__(self) -> str:
-        return (f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, " +
-                f"phase={self.phase:.3g}, " +
-                f"post_phase_shift={self.post_phase_shift:.3g})")
+        return (
+            f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, "
+            + f"phase={self.phase:.3g}, "
+            + f"post_phase_shift={self.post_phase_shift:.3g})"
+        )
 
 
 # Replicate __init__'s signature in __new__

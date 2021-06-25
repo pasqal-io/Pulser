@@ -24,7 +24,7 @@ cwf = ConstantWaveform(100, -10)
 bwf = BlackmanWaveform(200, 3)
 rwf = RampWaveform(200, 0, 1)
 
-pls = Pulse(bwf, bwf, 2*np.pi)
+pls = Pulse(bwf, bwf, 2 * np.pi)
 pls2 = Pulse.ConstantPulse(100, 1, -10, -np.pi)
 pls3 = Pulse.ConstantAmplitude(1, cwf, 1)
 pls4 = Pulse.ConstantDetuning(bwf, -10, 0)
@@ -56,8 +56,9 @@ def test_creation():
 
 
 def test_str():
-    assert pls2.__str__() == ("Pulse(Amp=1 rad/µs, Detuning=-10 rad/µs, "
-                              + "Phase=3.14)")
+    assert pls2.__str__() == (
+        "Pulse(Amp=1 rad/µs, Detuning=-10 rad/µs, " + "Phase=3.14)"
+    )
     pls_ = Pulse(bwf, rwf, 1)
     msg = "Pulse(Amp=Blackman(Area: 3), Detuning=Ramp(0->1 rad/µs), Phase=1)"
     assert pls_.__str__() == msg
@@ -65,13 +66,15 @@ def test_str():
 
 def test_repr():
     pls_ = Pulse(bwf, rwf, 1, post_phase_shift=-np.pi)
-    msg = ("Pulse(amp=BlackmanWaveform(200 ns, Area: 3), " +
-           "detuning=RampWaveform(200 ns, 0->1 rad/µs), " +
-           "phase=1, post_phase_shift=3.14)")
+    msg = (
+        "Pulse(amp=BlackmanWaveform(200 ns, Area: 3), "
+        + "detuning=RampWaveform(200 ns, 0->1 rad/µs), "
+        + "phase=1, post_phase_shift=3.14)"
+    )
     assert pls_.__repr__() == msg
 
 
 def test_draw():
     pls_ = Pulse.ConstantDetuning(bwf, -10, 1, post_phase_shift=-np.pi)
-    with patch('matplotlib.pyplot.show'):
+    with patch("matplotlib.pyplot.show"):
         pls_.draw()
