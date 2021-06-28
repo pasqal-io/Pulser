@@ -538,13 +538,24 @@ class BlackmanWaveform(Waveform):
             raise ValueError(
                 "The maximum value and the area must have " "matching signs."
             )
+
         # A normalized Blackman waveform has an area of 0.42 * duration
         duration = np.ceil(area / (0.42 * max_val) * 1e3)  # in ns
         wf = cls(duration, area)
+
         # Adjust for rounding errors to make sure max_val is not surpassed
         while np.abs(wf._scaling) > np.abs(max_val):
             duration += 1
+            previous_wf = wf
             wf = cls(duration, area)
+
+        # According to the documentation for numpy.blackman(), "the value one
+        # appears only if the number of samples is odd". Hence, the previous
+        # even duration can reach a maximal value closer to max_val.
+        if (previous_wf is not None and duration % 2 == 1 and
+                np.max(wf.samples) < np.max(previous_wf.samples) <= max_val):
+            wf = previous_wf
+
         return wf
 
     @property

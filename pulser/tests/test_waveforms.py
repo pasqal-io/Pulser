@@ -183,6 +183,15 @@ def test_blackman():
     var._assign(-np.pi)
     assert wf_var.build() == wf
 
+    # Check moving back to previous even duration
+    area: float = np.pi / 6
+    max_val: float = 46
+    wf: BlackmanWaveform = BlackmanWaveform.from_max_val(max_val, area)
+    duration = wf.duration
+    assert(duration % 2 == 0)
+    wf2 = BlackmanWaveform(duration + 1, area)
+    assert(np.max(wf2.samples) < np.max(wf.samples) <= max_val)
+
 
 def test_interpolated():
     assert isinstance(interp.interp_function, PchipInterpolator)
@@ -303,17 +312,17 @@ def test_get_item():
 
         # Check with out of bounds slices
         assert (wf[: duration * 2] == samples).all()
-        assert (wf[-duration * 2 :] == samples).all()
-        assert (wf[-duration * 2 : duration * 2] == samples).all()
+        assert (wf[-duration * 2:] == samples).all()
+        assert (wf[-duration * 2: duration * 2] == samples).all()
         assert (
-            wf[duration // 2 : duration * 2]
-            == samples[duration // 2 : duration * 2]
+            wf[duration // 2: duration * 2]
+            == samples[duration // 2: duration * 2]
         ).all()
         assert (
-            wf[-duration * 2 : duration // 2]
-            == samples[-duration * 2 : duration // 2]
+            wf[-duration * 2: duration // 2]
+            == samples[-duration * 2: duration // 2]
         ).all()
         assert wf[2:1].size == 0
-        assert wf[duration * 2 :].size == 0
-        assert wf[duration * 2 : duration * 3].size == 0
-        assert wf[-duration * 3 : -duration * 2].size == 0
+        assert wf[duration * 2:].size == 0
+        assert wf[duration * 2: duration * 3].size == 0
+        assert wf[-duration * 3: -duration * 2].size == 0
