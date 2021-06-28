@@ -178,6 +178,39 @@ class SimulationResults(ABC):
                 + f" tolerance {tol}."
             )
 
+    def _calc_pseudo_density_matrix(self, t_index: int) -> qutip.Qobj:
+        """Calculates the pseudo-density matrix at a given time.
+
+        The pseudo-density matrix is the diagonal matrix calculated from the
+        probability of obtaining each possible state, after measurement.
+
+        Args:
+            t_index (int): The index in the list of states/results to turn
+                into the pseudo-density matrix.
+
+        Returns:
+            Qobj: The pseudo-density matrix as a QObj.
+        """
+
+        def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
+            # In the digital case, |h> = |1> = qutip.basis()
+            if self._basis_name == "digital":
+                proj = qutip.tensor(
+                    [qutip.basis(2, int(i)).proj() for i in bitstring]
+                )
+            # ground-rydberg basis case
+            else:
+                proj = qutip.tensor(
+                    [qutip.basis(2, 1 - int(i)).proj() for i in bitstring]
+                )
+            return proj
+
+        w = self._calc_weights(t_index)
+        return sum(
+            w[i] * _proj_from_bitstring(np.binary_repr(i, width=self._size))
+            for i in np.nonzero(w)[0]
+        )
+
 
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
@@ -239,7 +272,7 @@ class NoisyResults(SimulationResults):
         return self._results
 
     def get_state(self, t: float, t_tol: float = 1.0e-3) -> qutip.Qobj:
-        """Get the state at time t as a diagonal density matrix.
+        """Gets the state at time t as a diagonal density matrix.
 
         Note:
             This is not the density matrix of the system, but is a convenient
@@ -254,25 +287,8 @@ class NoisyResults(SimulationResults):
             qutip.Qobj: States probability distribution as a diagonal
                 density matrix.
         """
-
-        def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
-            # In the digital case, |h> = |1> = qutip.basis()
-            if self._basis_name == "digital":
-                proj = qutip.tensor(
-                    [qutip.basis(2, int(i)).proj() for i in bitstring]
-                )
-            # ground-rydberg basis case
-            else:
-                proj = qutip.tensor(
-                    [qutip.basis(2, 1 - int(i)).proj() for i in bitstring]
-                )
-            return proj
-
         t_index = self._get_index_from_time(t, t_tol)
-        return sum(
-            v * _proj_from_bitstring(b)
-            for b, v in self._results[t_index].items()
-        )
+        return self._calc_pseudo_density_matrix(t_index)
 
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
