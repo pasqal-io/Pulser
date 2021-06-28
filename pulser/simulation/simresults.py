@@ -16,9 +16,9 @@
 from __future__ import annotations
 
 from collections import Counter
+import collections.abc
 from abc import ABC, abstractmethod
 from typing import Optional, Union, cast, Tuple
-from collections.abc import Sequence
 
 import matplotlib.pyplot as plt
 import qutip
@@ -79,7 +79,7 @@ class SimulationResults(ABC):
         pass
 
     def expect(
-        self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+        self, obs_list: collections.abc.Sequence[Union[qutip.Qobj, ArrayLike]]
     ) -> list[Union[float, complex, ArrayLike]]:
         """Returns the expectation values of operators in obs_list.
 
@@ -287,7 +287,7 @@ class NoisyResults(SimulationResults):
         return self.get_state(self._sim_times[-1])
 
     def expect(
-        self, obs_list: Sequence[Union[qutip.Qobj, ArrayLike]]
+        self, obs_list: collections.abc.Sequence[Union[qutip.Qobj, ArrayLike]]
     ) -> list[Union[float, complex, ArrayLike]]:
         """Calculates the expectation value of a list of observables.
 
