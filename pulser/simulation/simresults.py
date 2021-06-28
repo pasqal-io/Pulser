@@ -18,6 +18,7 @@ from __future__ import annotations
 from collections import Counter
 import collections.abc
 from abc import ABC, abstractmethod
+from functools import lru_cache
 from typing import Optional, Union, cast, Tuple
 
 import matplotlib.pyplot as plt
@@ -56,6 +57,8 @@ class SimulationResults(ABC):
         self._basis_name = basis_name
         self._sim_times = sim_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
+        # Use the pseudo-density matrix when calculating expectation values
+        self._use_pseudo_dens: bool = False
 
     @property
     @abstractmethod
@@ -111,8 +114,17 @@ class SimulationResults(ABC):
                     + f"Expected {legal_shape}, got {obs.shape}."
                 )
             qobj_list.append(qutip.Qobj(obs))
+            if self._use_pseudo_dens:
+                if not isdiagonal(obs):
+                    raise ValueError(f"Observable {obs!r} is non-diagonal.")
+                states = [
+                    self._calc_pseudo_density(self._get_index_from_time(t))
+                    for t in self._sim_times
+                ]
+            else:
+                states = self.states
 
-        return cast(list, qutip.expect(qobj_list, self.states))
+        return cast(list, qutip.expect(qobj_list, states))
 
     def sample_state(
         self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3
@@ -178,7 +190,8 @@ class SimulationResults(ABC):
                 + f" tolerance {tol}."
             )
 
-    def _calc_pseudo_density_matrix(self, t_index: int) -> qutip.Qobj:
+    @lru_cache(maxsize=None)
+    def _calc_pseudo_density(self, t_index: int) -> qutip.Qobj:
         """Calculates the pseudo-density matrix at a given time.
 
         The pseudo-density matrix is the diagonal matrix calculated from the
@@ -260,6 +273,7 @@ class NoisyResults(SimulationResults):
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
         self._results = run_output
+        self._use_pseudo_dens = True
 
     @property
     def states(self) -> list[qutip.Qobj]:
@@ -288,7 +302,7 @@ class NoisyResults(SimulationResults):
                 density matrix.
         """
         t_index = self._get_index_from_time(t, t_tol)
-        return self._calc_pseudo_density_matrix(t_index)
+        return self._calc_pseudo_density(t_index)
 
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
@@ -301,28 +315,6 @@ class NoisyResults(SimulationResults):
             qutip.Qobj: States probability distribution as a density matrix.
         """
         return self.get_state(self._sim_times[-1])
-
-    def expect(
-        self, obs_list: collections.abc.Sequence[Union[qutip.Qobj, ArrayLike]]
-    ) -> list[Union[float, complex, ArrayLike]]:
-        """Calculates the expectation value of a list of observables.
-
-        Args:
-            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): Input observable
-                list. ArrayLike objects will be converted to qutip.Qobj.
-
-        Note:
-            This only works for diagonal observables, since results have been
-            projected onto the Z basis.
-
-        Returns:
-            list: List of expectation values of each operator.
-        """
-        for obs in obs_list:
-            if not isdiagonal(obs):
-                raise ValueError(f"Observable {obs!r} is non-diagonal.")
-
-        return super().expect(obs_list)
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
         weights = np.zeros(2 ** self._size)
