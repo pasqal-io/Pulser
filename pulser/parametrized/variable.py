@@ -15,7 +15,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+import collections.abc  # To use collections.abc.Sequence
+from collections.abc import Iterable
 import dataclasses
 from typing import Union, Any, cast
 
@@ -130,7 +131,7 @@ class _VariableItem(Parametrized, OpSupport):
 
     def build(self) -> Union[ArrayLike, str, float, int]:
         """Return the variable's item(s) values."""
-        return cast(Sequence, self.var.build())[self.key]
+        return cast(collections.abc.Sequence, self.var.build())[self.key]
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
