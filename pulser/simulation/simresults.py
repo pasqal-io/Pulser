@@ -309,13 +309,10 @@ class NoisyResults(SimulationResults):
         return super().expect(obs_list)
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
-        n = self._size
-        return np.array(
-            [
-                self._results[t_index][np.binary_repr(k, n)]
-                for k in range(2 ** n)
-            ]
-        )
+        weights = np.zeros(2 ** self._size)
+        for bin_rep, prob in self._results[t_index].items():
+            weights[int(bin_rep, base=2)] = prob
+        return weights
 
     def plot(
         self,
