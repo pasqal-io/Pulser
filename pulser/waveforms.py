@@ -552,8 +552,11 @@ class BlackmanWaveform(Waveform):
         # According to the documentation for numpy.blackman(), "the value one
         # appears only if the number of samples is odd". Hence, the previous
         # even duration can reach a maximal value closer to max_val.
-        if (previous_wf is not None and duration % 2 == 1 and
-                np.max(wf.samples) < np.max(previous_wf.samples) <= max_val):
+        if (
+            previous_wf is not None
+            and duration % 2 == 1
+            and np.max(wf.samples) < np.max(previous_wf.samples) <= max_val
+        ):
             wf = previous_wf
 
         return wf
