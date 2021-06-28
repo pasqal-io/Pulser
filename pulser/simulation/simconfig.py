@@ -17,12 +17,13 @@ from __future__ import annotations
 
 from sys import version_info
 from dataclasses import dataclass, field
+from typing import Union
 
 import numpy as np
 import qutip
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal, get_args, Union
+    from typing import Literal, get_args
 else:  # pragma: no cover
     try:
         from typing_extensions import Literal, get_args  # type: ignore
