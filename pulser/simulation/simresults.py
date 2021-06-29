@@ -593,28 +593,30 @@ class CoherentResults(SimulationResults):
         # Returns normal projectors in the absence of measurement errors
         return super()._meas_projector(state_n)
 
-        Part of the SPAM implementation.
+    def sample_state(
+        self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3
+    ) -> Counter:
+        """Returns the result of multiple measurements at time t.
 
         Args:
-            spam (dict): Dictionnary gathering the SPAM error
-            probabilities.
-            t (float): Time at which to return the samples.
-            n_samples (int): Number of samples.
+            t (float): Time at which the state is sampled.
+            n_samples (int): Number of samples to return.
+            t_tol (float): Tolerance for the difference between t and
+                closest time.
+
+        Returns:
+            Counter: Sample distribution of bitstrings corresponding to
+                measured quantum states at time t.
         """
+        sampled_state = super().sample_state(t, n_samples, t_tol)
+        if self._meas_errors is None:
+            return sampled_state
 
-        def detection_from_basis_state(n_detects: int, shot: str) -> Counter:
-            """Returns distribution of states detected when detecting `shot`.
-
-            Part of the SPAM implementation : computes measurement errors.
-
-            Args:
-                n_detects (int): Number of times state has been detected.
-                shot (str): Binary string of length the number of atoms of the
-                simulation.
-            """
+        detected_sample_dict: Counter = Counter()
+        for (shot, n_detects) in sampled_state.items():
             detected_dict: Counter = Counter()
-            eps = spam["epsilon"]
-            eps_p = spam["epsilon_prime"]
+            eps = self._meas_errors["epsilon"]
+            eps_p = self._meas_errors["epsilon_prime"]
             # Probability of flipping each bit
             flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
             for _ in range(n_detects):
@@ -629,11 +631,6 @@ class CoherentResults(SimulationResults):
                     ]
                 )
                 detected_dict = detected_dict + Counter({d_shot: 1})
-            return detected_dict
-
-        sampled_state = self.sample_state(t, n_samples)
-        detected_sample_dict: Counter = Counter()
-        for (shot, n_d) in sampled_state.items():
-            detected_sample_dict += detection_from_basis_state(n_d, shot)
+            detected_sample_dict += detected_dict
 
         return detected_sample_dict
