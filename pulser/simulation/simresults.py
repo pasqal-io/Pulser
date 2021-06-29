@@ -19,7 +19,7 @@ from collections import Counter
 import collections.abc
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import Optional, Union, cast, Tuple
+from typing import Optional, Union, cast, Tuple, Mapping
 
 import matplotlib.pyplot as plt
 import qutip
@@ -206,16 +206,9 @@ class SimulationResults(ABC):
         """
 
         def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
-            # In the digital case, |h> = |1> = qutip.basis()
-            if self._basis_name == "digital":
-                proj = qutip.tensor(
-                    [qutip.basis(2, int(i)).proj() for i in bitstring]
-                )
-            # ground-rydberg basis case
-            else:
-                proj = qutip.tensor(
-                    [qutip.basis(2, 1 - int(i)).proj() for i in bitstring]
-                )
+            proj = qutip.tensor(
+                [self._meas_projector(int(i)) for i in bitstring]
+            )
             return proj
 
         w = self._calc_weights(t_index)
@@ -223,6 +216,18 @@ class SimulationResults(ABC):
             w[i] * _proj_from_bitstring(np.binary_repr(i, width=self._size))
             for i in np.nonzero(w)[0]
         )
+
+    def _meas_projector(self, state_n: int) -> qutip.Qobj:
+        """Gets the post measurement projector (defaults to the ideal case).
+
+        Args:
+            state_n: The measured state (0 or 1).
+        """
+        if self._basis_name == "ground-rydberg":
+            # 0 = |g> = |1>, 1 = |r> = |0>
+            return qutip.basis(2, 1 - state_n).proj()
+
+        return qutip.basis(2, state_n).proj()
 
 
 class NoisyResults(SimulationResults):
@@ -374,6 +379,7 @@ class CoherentResults(SimulationResults):
         basis_name: str,
         sim_times: np.ndarray,
         meas_basis: str,
+        meas_errors: Optional[Mapping[str, float]] = None,
     ) -> None:
         """Initializes a new CoherentResults instance.
 
@@ -388,6 +394,9 @@ class CoherentResults(SimulationResults):
                 results.
             meas_basis (str): The basis in which a sampling measurement
                 is desired.
+            meas_errors (Optional[Mapping[str, float]]): If measurement errors
+                are involved, give them in a dictionary with "epsilon" and
+                "epsilon_prime".
         """
         super().__init__(size, basis_name, sim_times)
         if meas_basis:
@@ -397,6 +406,14 @@ class CoherentResults(SimulationResults):
                 )
         self._meas_basis = meas_basis
         self._results = run_output
+        if meas_errors is not None:
+            if set(meas_errors) != {"epsilon", "epsilon_prime"}:
+                raise ValueError(
+                    "When defining measurement errors, only values of "
+                    "'epsilon' and 'epsilon_prime' must be given."
+                )
+            self._use_pseudo_dens = True
+        self._meas_errors = meas_errors
 
     @property
     def states(self) -> list[qutip.Qobj]:
@@ -559,10 +576,22 @@ class CoherentResults(SimulationResults):
         weights /= sum(weights)
         return cast(np.ndarray, weights)
 
-    def _sampling_with_detection_errors(
-        self, spam: dict[str, float], t: float, n_samples: int = 1000
-    ) -> Counter:
-        """Returns the distribution of states really detected.
+    def _meas_projector(self, state_n: int) -> qutip.Qobj:
+        if self._meas_errors:
+            err_param = (
+                self._meas_errors["epsilon"]
+                if state_n == 0
+                else self._meas_errors["epsilon_prime"]
+            )
+            # 'good' is the position of the state that measures to state_n
+            # Matches for the digital basis, is inverted for ground-rydberg
+            good = state_n if self._basis_name == "digital" else 1 - state_n
+            return (
+                qutip.basis(2, good).proj() * (1 - err_param)
+                + qutip.basis(2, 1 - good).proj() * err_param
+            )
+        # Returns normal projectors in the absence of measurement errors
+        return super()._meas_projector(state_n)
 
         Part of the SPAM implementation.
 
