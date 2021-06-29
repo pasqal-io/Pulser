@@ -542,6 +542,7 @@ class BlackmanWaveform(Waveform):
         # A normalized Blackman waveform has an area of 0.42 * duration
         duration = np.ceil(area / (0.42 * max_val) * 1e3)  # in ns
         wf = cls(duration, area)
+        previous_wf = None
 
         # Adjust for rounding errors to make sure max_val is not surpassed
         while np.abs(wf._scaling) > np.abs(max_val):
