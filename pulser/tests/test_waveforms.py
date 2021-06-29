@@ -183,6 +183,15 @@ def test_blackman():
     var._assign(-np.pi)
     assert wf_var.build() == wf
 
+    # Check moving back to previous even duration
+    area: float = np.pi / 6
+    max_val: float = 46
+    wf: BlackmanWaveform = BlackmanWaveform.from_max_val(max_val, area)
+    duration = wf.duration
+    assert duration % 2 == 0
+    wf2 = BlackmanWaveform(duration + 1, area)
+    assert np.max(wf2.samples) < np.max(wf.samples) <= max_val
+
 
 def test_interpolated():
     assert isinstance(interp.interp_function, PchipInterpolator)
