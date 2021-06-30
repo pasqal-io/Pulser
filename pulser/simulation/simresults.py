@@ -118,8 +118,8 @@ class SimulationResults(ABC):
                 if not isdiagonal(obs):
                     raise ValueError(f"Observable {obs!r} is non-diagonal.")
                 states = [
-                    self._calc_pseudo_density(self._get_index_from_time(t))
-                    for t in self._sim_times
+                    self._calc_pseudo_density(ind)
+                    for ind in range(len(self._results))
                 ]
             else:
                 states = self.states
@@ -202,7 +202,7 @@ class SimulationResults(ABC):
                 into the pseudo-density matrix.
 
         Returns:
-            Qobj: The pseudo-density matrix as a QObj.
+            qutip.Qobj: The pseudo-density matrix as a Qobj.
         """
 
         def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
