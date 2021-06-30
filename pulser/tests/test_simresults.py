@@ -34,7 +34,6 @@ q_dict = {
 reg = Register(q_dict)
 
 duration = 1000
-number_of_meas = duration
 pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
 
 seq = Sequence(reg, Chadoq2)
@@ -65,6 +64,17 @@ def test_initialization():
         )
     with pytest.raises(ValueError, match="`basis_name` must be"):
         NoisyResults(state, 2, "bad_basis", [0], 123)
+    with pytest.raises(
+        ValueError, match="only values of 'epsilon' and 'epsilon_prime'"
+    ):
+        CoherentResults(
+            state,
+            1,
+            "ground-rydberg",
+            [0],
+            "ground-rydberg",
+            cfg_noisy.spam_dict,
+        )
 
     assert results._dim == 2
     assert results._size == 2
@@ -183,7 +193,31 @@ def test_expect():
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
     assert np.isclose(exp[-1], 1)
-    assert len(exp) == number_of_meas
+    assert len(exp) == duration
+    np.testing.assert_almost_equal(
+        results_single._calc_pseudo_density(-1).full(),
+        np.array([[1, 0], [0, 0]]),
+    )
+
+    config = SimConfig(noise="SPAM", eta=0)
+    sim_single.set_config(config)
+    sim_single.evaluation_times = "Minimal"
+    results_single = sim_single.run()
+    exp = results_single.expect(op)[0]
+    assert len(exp) == 2
+    assert isinstance(results_single, CoherentResults)
+    assert results_single._meas_errors == {
+        "epsilon": config.epsilon,
+        "epsilon_prime": config.epsilon_prime,
+    }
+    # Probability of measuring 1 = probability of false positive
+    assert np.isclose(exp[0], config.epsilon)
+    # Probability of measuring 1 = 1 - probability of false negative
+    assert np.isclose(exp[-1], 1 - config.epsilon_prime)
+    np.testing.assert_almost_equal(
+        results_single._calc_pseudo_density(-1).full(),
+        np.array([[1 - config.epsilon_prime, 0], [0, config.epsilon_prime]]),
+    )
 
 
 def test_expect_noisy():
