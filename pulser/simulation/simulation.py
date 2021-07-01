@@ -641,13 +641,14 @@ class Simulation:
             progress_bar (bool): If True, the progress bar of QuTiP's solver
                 will be shown.
             options (qutip.solver.Options): If specified, will override
-                SimConfig solver_options.
+                SimConfig solver_options. If no `max_step` value is provided,
+                an automatic one is calculated from the `Sequence`'s schedule.
         """
-        solv_ops = (
-            qutip.Options(max_step=5, **options)
-            if options
-            else self.config.solver_options
-        )
+        if 'max_step' in options.keys():
+            solv_ops = qutip.Options(**options)
+        else:
+            self._auto_max_step = 0.5 * (self._seq._min_slot_duration() / 1000)
+            solv_ops = qutip.Options(max_step=self._auto_max_step, **options)
 
         def _run_solver() -> CoherentResults:
             """Returns CoherentResults: Object containing evolution results."""

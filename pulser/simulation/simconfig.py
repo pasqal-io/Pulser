@@ -80,7 +80,7 @@ class SimConfig:
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
-    solver_options: qutip.Options = qutip.Options(max_step=5)
+    solver_options: qutip.Options = None
     spam_dict: dict[str, float] = field(
         init=False, default_factory=dict, repr=False
     )
