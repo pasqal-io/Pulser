@@ -739,6 +739,94 @@ class InterpolatedWaveform(Waveform):
         )
 
 
+class KaiserWaveform(Waveform):
+    """A Kaiser window of a specified duration and beta parameter.
+
+    Args:
+        duration (int): The waveform duration (in ns).
+        scaling (Optional[float]): The maximum value of the Kaiser window.
+            The default value is 1. Can be negative, in which case it takes
+            the positive waveform and changes the sign of all its values.
+        beta (Optional[float]): The beta parameter of the Kaiser window.
+            The default value is 14.
+    """
+
+    def __init__(
+        self,
+        duration: Union[int, Parametrized],
+        scaling: Optional[Union[float, Parametrized]] = 1.0,
+        beta: Optional[Union[float, Parametrized]] = 14.0,
+    ):
+        """Initializes a Kaiser waveform."""
+        super().__init__(duration)
+
+        try:
+            self._scaling: float = float(cast(float, scaling))
+        except (TypeError, ValueError):
+            raise TypeError(
+                "max_val needs to be castable to a float but "
+                f"type {type(scaling)} was provided."
+            )
+
+        try:
+            self._beta: float = float(cast(float, beta))
+        except (TypeError, ValueError):
+            raise TypeError(
+                "beta needs to be castable to a float but "
+                f"type {type(beta)} was provided."
+            )
+
+        self._norm_samples: np.ndarray = np.clip(
+            np.kaiser(self._duration, self._beta), 0, np.inf
+        )
+
+    @property
+    def duration(self) -> int:
+        """The duration of the pulse (in ns)."""
+        return self._duration
+
+    @cached_property
+    def _samples(self) -> np.ndarray:
+        """The value at each time step that describes the waveform.
+
+        Returns:
+            numpy.ndarray: A numpy array with a value for each time step.
+        """
+        return cast(np.ndarray, self._norm_samples * self._scaling)
+
+    def change_duration(self, new_duration: int) -> KaiserWaveform:
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            KaiserWaveform: The new waveform with the same scaling and beta
+            but a new duration.
+        """
+        return KaiserWaveform(new_duration, self._scaling, self._beta)
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self._duration, self._scaling, self._beta)
+
+    def __str__(self) -> str:
+        return (
+            f"Kaiser({self._duration} ns, "
+            f"Scaling: {self._scaling:.3g}, Beta: {self._beta:.3g})"
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"KaiserWaveform(duration: {self._duration}, "
+            f"scaling: {self._scaling}, beta: {self._beta:.3g})"
+        )
+
+    def __mul__(self, other: float) -> KaiserWaveform:
+        return KaiserWaveform(
+            self._duration, self._scaling * float(other), self._beta
+        )
+
+
 # To replicate __init__'s signature in __new__ for every Waveform subclass
 def _copy_func(f: FunctionType) -> FunctionType:
     return FunctionType(
