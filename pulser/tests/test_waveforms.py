@@ -42,7 +42,7 @@ blackman = BlackmanWaveform(40, np.pi)
 composite = CompositeWaveform(blackman, constant, custom)
 interp_values = [0, 1, 4.4, 2, 3, 1, 0]
 interp = InterpolatedWaveform(1000, interp_values)
-kaiser = KaiserWaveform(20)
+kaiser = KaiserWaveform(40, np.pi)
 
 
 def test_duration():
@@ -239,52 +239,54 @@ def test_interpolated():
 
 
 def test_kaiser():
-    duration: int = 19  # Must be odd for max value to be 1.0
-    scaling = 10.0
-    beta = 14.0
+    duration: int = 40
+    area: float = np.pi
+    beta: float = 14.0
 
-    wf: KaiserWaveform = KaiserWaveform(duration, scaling, beta)
+    wf: KaiserWaveform = KaiserWaveform(duration, area, beta)
 
-    # Check type error on scaling
+    # Check type error on area
     with pytest.raises(TypeError):
-        KaiserWaveform(20, np.array([1, 2]))
+        KaiserWaveform(duration, np.array([1, 2]))
 
     # Check type error on beta
     with pytest.raises(TypeError):
-        KaiserWaveform(20, beta=np.array([1, 2]))
+        KaiserWaveform(duration, area, beta=np.array([1, 2]))
+
+    # Check beta must not be negative
+    with pytest.raises(ValueError, match="must be greater than 0"):
+        KaiserWaveform(duration, area, -1.0)
 
     # Check duration
     assert wf.duration == duration
     assert wf.samples.size == duration
 
-    # Check default scaling
-    wf_default_scaling: KaiserWaveform = KaiserWaveform(duration)
-    assert np.max(wf_default_scaling.samples) == 1.0
-
-    # Check scaling
-    wf_scaling: KaiserWaveform = KaiserWaveform(duration, scaling)
-    assert np.max(wf_scaling.samples) == scaling
-
     # Check default beta
-    wf_default_beta: KaiserWaveform = KaiserWaveform(duration)
-    kaiser_beta_14: np.ndarray = np.kaiser(duration, beta)
-    assert (wf_default_beta.samples == kaiser_beta_14).all()
+    wf_default_beta = KaiserWaveform(duration, area)
+    kaiser_beta_14: np.ndarray = np.kaiser(duration, 14.0)
+    kaiser_beta_14 *= area / float(np.sum(kaiser_beta_14)) / 1e-3
+    np.testing.assert_allclose(
+        wf_default_beta.samples, kaiser_beta_14, atol=1e-3
+    )
+
+    # Check area
+    assert np.isclose(np.sum(wf.samples), area * 1000.0)
 
     # Check duration change
-    new_duration = duration * 2 + 1
+    new_duration = duration * 2
     wf_change_duration = wf.change_duration(new_duration)
     assert wf_change_duration.samples.size == new_duration
-    assert np.max(wf_change_duration.samples) == scaling
+    assert np.isclose(np.sum(wf.samples), np.sum(wf_change_duration.samples))
 
     # Check __str__
     assert str(wf) == (
-        f"Kaiser({duration} ns, Scaling: {scaling:.3g}, Beta: {beta:.3g})"
+        f"Kaiser({duration} ns, Area: {area:.3g}, Beta: {beta:.3g})"
     )
 
     # Check __repr__
     assert repr(wf) == (
         f"KaiserWaveform(duration: {duration}, "
-        f"scaling: {scaling}, beta: {beta:.3g})"
+        f"area: {area:.3g}, beta: {beta:.3g})"
     )
 
     # Check multiplication

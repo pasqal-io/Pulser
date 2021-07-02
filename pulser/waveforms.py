@@ -742,11 +742,15 @@ class InterpolatedWaveform(Waveform):
 class KaiserWaveform(Waveform):
     """A Kaiser window of a specified duration and beta parameter.
 
+    For more information on the Kaiser window and the beta parameter,
+    check the numpy documentation for the kaiser(M, beta) function:
+    https://numpy.org/doc/stable/reference/generated/numpy.kaiser.html
+
     Args:
         duration (int): The waveform duration (in ns).
-        scaling (Optional[float]): The maximum value of the Kaiser window.
-            The default value is 1. Can be negative, in which case it takes
-            the positive waveform and changes the sign of all its values.
+        area (float): The integral of the waveform. Can be negative,
+            in which case it takes the positive waveform and changes the sign
+            of all its values.
         beta (Optional[float]): The beta parameter of the Kaiser window.
             The default value is 14.
     """
@@ -754,18 +758,18 @@ class KaiserWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        scaling: Optional[Union[float, Parametrized]] = 1.0,
+        area: Union[float, Parametrized],
         beta: Optional[Union[float, Parametrized]] = 14.0,
     ):
         """Initializes a Kaiser waveform."""
         super().__init__(duration)
 
         try:
-            self._scaling: float = float(cast(float, scaling))
+            self._area: float = float(cast(float, area))
         except (TypeError, ValueError):
             raise TypeError(
-                "max_val needs to be castable to a float but "
-                f"type {type(scaling)} was provided."
+                "area needs to be castable to a float but "
+                f"type {type(area)} was provided."
             )
 
         try:
@@ -776,8 +780,18 @@ class KaiserWaveform(Waveform):
                 f"type {type(beta)} was provided."
             )
 
+        if self._beta < 0.0:
+            raise ValueError(
+                f"The beta parameter (`beta` = {self._beta})"
+                " must be greater than 0."
+            )
+
         self._norm_samples: np.ndarray = np.clip(
             np.kaiser(self._duration, self._beta), 0, np.inf
+        )
+
+        self._scaling: float = (
+            self._area / float(np.sum(self._norm_samples)) / 1e-3
         )
 
     @property
@@ -801,29 +815,29 @@ class KaiserWaveform(Waveform):
             new_duration(int): The duration of the new waveform.
 
         Returns:
-            KaiserWaveform: The new waveform with the same scaling and beta
-            but a new duration.
+            KaiserWaveform: The new waveform with the same area and beta
+                but a new duration.
         """
-        return KaiserWaveform(new_duration, self._scaling, self._beta)
+        return KaiserWaveform(new_duration, self._area, self._beta)
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, self._duration, self._scaling, self._beta)
+        return obj_to_dict(self, self._duration, self._area, self._beta)
 
     def __str__(self) -> str:
         return (
             f"Kaiser({self._duration} ns, "
-            f"Scaling: {self._scaling:.3g}, Beta: {self._beta:.3g})"
+            f"Area: {self._area:.3g}, Beta: {self._beta:.3g})"
         )
 
     def __repr__(self) -> str:
         return (
             f"KaiserWaveform(duration: {self._duration}, "
-            f"scaling: {self._scaling}, beta: {self._beta:.3g})"
+            f"area: {self._area:.3g}, beta: {self._beta:.3g})"
         )
 
     def __mul__(self, other: float) -> KaiserWaveform:
         return KaiserWaveform(
-            self._duration, self._scaling * float(other), self._beta
+            self._duration, self._area * float(other), self._beta
         )
 
 
