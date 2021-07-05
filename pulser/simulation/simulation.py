@@ -645,7 +645,7 @@ class Simulation:
                 an automatic one is calculated from the `Sequence`'s schedule
                 (half of the shortest duration among pulses and delays).
         """
-        if 'max_step' in options.keys():
+        if "max_step" in options.keys():
             solv_ops = qutip.Options(**options)
         else:
             auto_max_step = 0.5 * (self._seq._min_slot_duration() / 1000)

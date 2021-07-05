@@ -999,7 +999,7 @@ class Sequence:
         duration_list = []
         for ch_schedule in self._schedule.values():
             for slot in ch_schedule:
-                if isinstance(slot.type, Pulse) or slot.type == 'delay':
+                if isinstance(slot.type, Pulse) or slot.type == "delay":
                     duration_list.append(slot.tf - slot.ti)
         return min(duration_list)
 
