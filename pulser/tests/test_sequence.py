@@ -175,7 +175,7 @@ def test_delay_min_duration():
 def test_min_slot_duration():
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "rydberg_global")
-    seq.declare_ßchannel("ch1", "rydberg_local")
+    seq.declare_channel("ch1", "rydberg_local")
     seq.target("q0", "ch1")
     pulse0 = Pulse.ConstantPulse(160, 1, 1, 0)
     pulse1 = Pulse.ConstantPulse(80, 1, 1, 0)
