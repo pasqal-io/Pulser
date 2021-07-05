@@ -172,6 +172,22 @@ def test_delay_min_duration():
     )
 
 
+def test_min_slot_duration():
+    seq = Sequence(reg, device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_ßchannel("ch1", "rydberg_local")
+    seq.target("q0", "ch1")
+    pulse0 = Pulse.ConstantPulse(160, 1, 1, 0)
+    pulse1 = Pulse.ConstantPulse(80, 1, 1, 0)
+    seq.add(pulse1, "ch1")
+    assert seq._min_slot_duration() == 80
+    seq.add(pulse0, "ch0")
+    seq.delay(50, "ch0")
+    seq.target("q1", "ch1")
+    seq.add(pulse1, "ch1")
+    assert seq._min_slot_duration() == 50
+
+
 def test_phase():
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
