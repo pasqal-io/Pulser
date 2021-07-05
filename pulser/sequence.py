@@ -1000,7 +1000,7 @@ class Sequence:
         for ch_schedule in self._schedule.values():
             for slot in ch_schedule:
                 if isinstance(slot.type, Pulse) or slot.type == 'delay':
-                    duration_list.append(max(slot.tf - slot.ti, 16))
+                    duration_list.append(max(slot.tf - slot.ti))
         return min(duration_list)
 
     def _last(self, channel: str) -> _TimeSlot:
