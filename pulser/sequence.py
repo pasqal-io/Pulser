@@ -251,6 +251,29 @@ class Sequence:
         return not self._building
 
     @_screen
+    def get_duration(self, channel: Optional[str] = None) -> int:
+        """Returns the current duration of a channel or the whole sequence.
+
+        Keyword Args:
+            channel (Optional[str]): A specific channel to return the duration
+                of. If left as None, it will return the duration of the whole
+                sequence.
+
+        Returns:
+            int: The duration of the channel or sequence, in ns.
+        """
+        if channel is None:
+            durations = [
+                self._last(ch).tf
+                for ch in self._schedule
+                if self._schedule[ch]
+            ]
+            return 0 if not durations else max(durations)
+
+        self._validate_channel(channel)
+        return self._last(channel).tf if self._schedule[channel] else 0
+
+    @_screen
     def current_phase_ref(
         self, qubit: QubitId, basis: str = "digital"
     ) -> float:
