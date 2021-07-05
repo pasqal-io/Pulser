@@ -18,7 +18,8 @@ from __future__ import annotations
 from collections import Counter
 import collections.abc
 from abc import ABC, abstractmethod
-from typing import Optional, Union, cast, Tuple
+from functools import lru_cache
+from typing import Optional, Union, cast, Tuple, Mapping
 
 import matplotlib.pyplot as plt
 import qutip
@@ -56,6 +57,8 @@ class SimulationResults(ABC):
         self._basis_name = basis_name
         self._sim_times = sim_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
+        # Use the pseudo-density matrix when calculating expectation values
+        self._use_pseudo_dens: bool = False
 
     @property
     @abstractmethod
@@ -111,8 +114,17 @@ class SimulationResults(ABC):
                     + f"Expected {legal_shape}, got {obs.shape}."
                 )
             qobj_list.append(qutip.Qobj(obs))
+            if self._use_pseudo_dens:
+                if not isdiagonal(obs):
+                    raise ValueError(f"Observable {obs!r} is non-diagonal.")
+                states = [
+                    self._calc_pseudo_density(ind)
+                    for ind in range(len(self._results))
+                ]
+            else:
+                states = self.states
 
-        return cast(list, qutip.expect(qobj_list, self.states))
+        return cast(list, qutip.expect(qobj_list, states))
 
     def sample_state(
         self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3
@@ -178,6 +190,45 @@ class SimulationResults(ABC):
                 + f" tolerance {tol}."
             )
 
+    @lru_cache(maxsize=None)
+    def _calc_pseudo_density(self, t_index: int) -> qutip.Qobj:
+        """Calculates the pseudo-density matrix at a given time.
+
+        The pseudo-density matrix is the diagonal matrix calculated from the
+        probability of obtaining each possible state, after measurement.
+
+        Args:
+            t_index (int): The index in the list of states/results to turn
+                into the pseudo-density matrix.
+
+        Returns:
+            qutip.Qobj: The pseudo-density matrix as a Qobj.
+        """
+
+        def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
+            proj = qutip.tensor(
+                [self._meas_projector(int(i)) for i in bitstring]
+            )
+            return proj
+
+        w = self._calc_weights(t_index)
+        return sum(
+            w[i] * _proj_from_bitstring(np.binary_repr(i, width=self._size))
+            for i in np.nonzero(w)[0]
+        )
+
+    def _meas_projector(self, state_n: int) -> qutip.Qobj:
+        """Gets the post measurement projector (defaults to the ideal case).
+
+        Args:
+            state_n: The measured state (0 or 1).
+        """
+        if self._basis_name == "ground-rydberg":
+            # 0 = |g> = |1>, 1 = |r> = |0>
+            return qutip.basis(2, 1 - state_n).proj()
+
+        return qutip.basis(2, state_n).proj()
+
 
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
@@ -227,6 +278,7 @@ class NoisyResults(SimulationResults):
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
         self._results = run_output
+        self._use_pseudo_dens = True
 
     @property
     def states(self) -> list[qutip.Qobj]:
@@ -239,7 +291,7 @@ class NoisyResults(SimulationResults):
         return self._results
 
     def get_state(self, t: float, t_tol: float = 1.0e-3) -> qutip.Qobj:
-        """Get the state at time t as a diagonal density matrix.
+        """Gets the state at time t as a diagonal density matrix.
 
         Note:
             This is not the density matrix of the system, but is a convenient
@@ -254,25 +306,8 @@ class NoisyResults(SimulationResults):
             qutip.Qobj: States probability distribution as a diagonal
                 density matrix.
         """
-
-        def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
-            # In the digital case, |h> = |1> = qutip.basis()
-            if self._basis_name == "digital":
-                proj = qutip.tensor(
-                    [qutip.basis(2, int(i)).proj() for i in bitstring]
-                )
-            # ground-rydberg basis case
-            else:
-                proj = qutip.tensor(
-                    [qutip.basis(2, 1 - int(i)).proj() for i in bitstring]
-                )
-            return proj
-
         t_index = self._get_index_from_time(t, t_tol)
-        return sum(
-            v * _proj_from_bitstring(b)
-            for b, v in self._results[t_index].items()
-        )
+        return self._calc_pseudo_density(t_index)
 
     def get_final_state(self) -> qutip.Qobj:
         """Get the final state of the simulation as a diagonal density matrix.
@@ -286,36 +321,11 @@ class NoisyResults(SimulationResults):
         """
         return self.get_state(self._sim_times[-1])
 
-    def expect(
-        self, obs_list: collections.abc.Sequence[Union[qutip.Qobj, ArrayLike]]
-    ) -> list[Union[float, complex, ArrayLike]]:
-        """Calculates the expectation value of a list of observables.
-
-        Args:
-            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): Input observable
-                list. ArrayLike objects will be converted to qutip.Qobj.
-
-        Note:
-            This only works for diagonal observables, since results have been
-            projected onto the Z basis.
-
-        Returns:
-            list: List of expectation values of each operator.
-        """
-        for obs in obs_list:
-            if not isdiagonal(obs):
-                raise ValueError(f"Observable {obs!r} is non-diagonal.")
-
-        return super().expect(obs_list)
-
     def _calc_weights(self, t_index: int) -> np.ndarray:
-        n = self._size
-        return np.array(
-            [
-                self._results[t_index][np.binary_repr(k, n)]
-                for k in range(2 ** n)
-            ]
-        )
+        weights = np.zeros(2 ** self._size)
+        for bin_rep, prob in self._results[t_index].items():
+            weights[int(bin_rep, base=2)] = prob
+        return weights
 
     def plot(
         self,
@@ -369,6 +379,7 @@ class CoherentResults(SimulationResults):
         basis_name: str,
         sim_times: np.ndarray,
         meas_basis: str,
+        meas_errors: Optional[Mapping[str, float]] = None,
     ) -> None:
         """Initializes a new CoherentResults instance.
 
@@ -383,6 +394,9 @@ class CoherentResults(SimulationResults):
                 results.
             meas_basis (str): The basis in which a sampling measurement
                 is desired.
+            meas_errors (Optional[Mapping[str, float]]): If measurement errors
+                are involved, give them in a dictionary with "epsilon" and
+                "epsilon_prime".
         """
         super().__init__(size, basis_name, sim_times)
         if meas_basis:
@@ -392,6 +406,14 @@ class CoherentResults(SimulationResults):
                 )
         self._meas_basis = meas_basis
         self._results = run_output
+        if meas_errors is not None:
+            if set(meas_errors) != {"epsilon", "epsilon_prime"}:
+                raise ValueError(
+                    "When defining measurement errors, only values of "
+                    "'epsilon' and 'epsilon_prime' must be given."
+                )
+            self._use_pseudo_dens = True
+        self._meas_errors = meas_errors
 
     @property
     def states(self) -> list[qutip.Qobj]:
@@ -554,52 +576,61 @@ class CoherentResults(SimulationResults):
         weights /= sum(weights)
         return cast(np.ndarray, weights)
 
-    def _sampling_with_detection_errors(
-        self, spam: dict[str, float], t: float, n_samples: int = 1000
-    ) -> Counter:
-        """Returns the distribution of states really detected.
+    def _meas_projector(self, state_n: int) -> qutip.Qobj:
+        if self._meas_errors:
+            err_param = (
+                self._meas_errors["epsilon"]
+                if state_n == 0
+                else self._meas_errors["epsilon_prime"]
+            )
+            # 'good' is the position of the state that measures to state_n
+            # Matches for the digital basis, is inverted for ground-rydberg
+            good = state_n if self._basis_name == "digital" else 1 - state_n
+            return (
+                qutip.basis(2, good).proj() * (1 - err_param)
+                + qutip.basis(2, 1 - good).proj() * err_param
+            )
+        # Returns normal projectors in the absence of measurement errors
+        return super()._meas_projector(state_n)
 
-        Part of the SPAM implementation.
+    def sample_state(
+        self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3
+    ) -> Counter:
+        """Returns the result of multiple measurements at time t.
 
         Args:
-            spam (dict): Dictionnary gathering the SPAM error
-            probabilities.
-            t (float): Time at which to return the samples.
-            n_samples (int): Number of samples.
+            t (float): Time at which the state is sampled.
+            n_samples (int): Number of samples to return.
+            t_tol (float): Tolerance for the difference between t and
+                closest time.
+
+        Returns:
+            Counter: Sample distribution of bitstrings corresponding to
+                measured quantum states at time t.
         """
+        sampled_state = super().sample_state(t, n_samples, t_tol)
+        if self._meas_errors is None:
+            return sampled_state
 
-        def detection_from_basis_state(n_detects: int, shot: str) -> Counter:
-            """Returns distribution of states detected when detecting `shot`.
-
-            Part of the SPAM implementation : computes measurement errors.
-
-            Args:
-                n_detects (int): Number of times state has been detected.
-                shot (str): Binary string of length the number of atoms of the
-                simulation.
-            """
-            detected_dict: Counter = Counter()
-            eps = spam["epsilon"]
-            eps_p = spam["epsilon_prime"]
+        detected_sample_dict: Counter = Counter()
+        for (shot, n_detects) in sampled_state.items():
+            eps = self._meas_errors["epsilon"]
+            eps_p = self._meas_errors["epsilon_prime"]
+            # Shot as an array of 1s and 0s
+            shot_arr = np.array(list(shot), dtype=int)
             # Probability of flipping each bit
             flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
-            for _ in range(n_detects):
-                shots = (
-                    np.random.uniform(size=len(flip_probs)) < flip_probs
-                ).astype(int)
-                # shot, but with certain bits flipped at random
-                d_shot = "".join(
-                    [
-                        str((int(shot[i]) + shots[i]) % 2)
-                        for i in range(len(shot))
-                    ]
-                )
-                detected_dict = detected_dict + Counter({d_shot: 1})
-            return detected_dict
-
-        sampled_state = self.sample_state(t, n_samples)
-        detected_sample_dict: Counter = Counter()
-        for (shot, n_d) in sampled_state.items():
-            detected_sample_dict += detection_from_basis_state(n_d, shot)
+            # 1 if it flips, 0 if it stays the same
+            flips = (
+                np.random.uniform(size=(n_detects, len(flip_probs)))
+                < flip_probs
+            ).astype(int)
+            # XOR betwen the original array and the flips
+            # Gives an array of n_detects individual shots
+            new_shots = shot_arr ^ flips
+            # Count all the new_shots
+            detected_sample_dict += Counter(
+                "".join(map(str, measured)) for measured in new_shots
+            )
 
         return detected_sample_dict

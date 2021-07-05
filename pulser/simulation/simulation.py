@@ -650,6 +650,13 @@ class Simulation:
             self._auto_max_step = 0.5 * (self._seq._min_slot_duration() / 1000)
             solv_ops = qutip.Options(max_step=self._auto_max_step, **options)
 
+        meas_errors: Optional[Mapping[str, float]] = None
+        if "SPAM" in self.config.noise:
+            meas_errors = {
+                k: self.config.spam_dict[k]
+                for k in ("epsilon", "epsilon_prime")
+            }
+
         def _run_solver() -> CoherentResults:
             """Returns CoherentResults: Object containing evolution results."""
             if "dephasing" in self.config.noise:
@@ -678,50 +685,42 @@ class Simulation:
                 self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
+                meas_errors,
             )
 
         # Check if noises ask for averaging over multiple runs:
-        if set(self.config.noise).issubset({"dephasing"}):
-            return _run_solver()
-        else:
-            time_indices = range(len(self._eval_times_array))
-            total_count = np.array([Counter() for _ in time_indices])
-            # We run the system multiple times
-            for _ in range(self.config.runs):
-                # At each run, new random noise: new Hamiltonian
-                self._construct_hamiltonian()
-                # Get CoherentResults instance from sequence with added noise:
-                cleanres_noisyseq = _run_solver()
-                # Extract statistics at eval time:
-                if "SPAM" in self.config.noise:
-                    total_count += np.array(
-                        [
-                            cleanres_noisyseq._sampling_with_detection_errors(
-                                self.config.spam_dict,
-                                t,
-                                n_samples=self.config.samples_per_run,
-                            )
-                            for t in self._eval_times_array
-                        ]
+        if set(self.config.noise).issubset({"dephasing", "SPAM"}):
+            # If there is "SPAM", the preparation errors must be zero
+            if "SPAM" not in self.config.noise or self.config.eta == 0:
+                return _run_solver()
+
+        # Did not obey the conditions above, will return NoisyResults
+        time_indices = range(len(self._eval_times_array))
+        total_count = np.array([Counter() for _ in time_indices])
+        # We run the system multiple times
+        for _ in range(self.config.runs):
+            # At each run, new random noise: new Hamiltonian
+            self._construct_hamiltonian()
+            # Get CoherentResults instance from sequence with added noise:
+            cleanres_noisyseq = _run_solver()
+            # Extract statistics at eval time:
+            total_count += np.array(
+                [
+                    cleanres_noisyseq.sample_state(
+                        t, n_samples=self.config.samples_per_run
                     )
-                else:
-                    total_count += np.array(
-                        [
-                            cleanres_noisyseq.sample_state(
-                                t, n_samples=self.config.samples_per_run
-                            )
-                            for t in self._eval_times_array
-                        ]
-                    )
-            n_measures = self.config.runs * self.config.samples_per_run
-            total_run_prob = [
-                Counter({k: v / n_measures for k, v in total_count[t].items()})
-                for t in time_indices
-            ]
-            return NoisyResults(
-                total_run_prob,
-                self._size,
-                self.basis_name,
-                self._eval_times_array,
-                n_measures,
+                    for t in self._eval_times_array
+                ]
             )
+        n_measures = self.config.runs * self.config.samples_per_run
+        total_run_prob = [
+            Counter({k: v / n_measures for k, v in total_count[t].items()})
+            for t in time_indices
+        ]
+        return NoisyResults(
+            total_run_prob,
+            self._size,
+            self.basis_name,
+            self._eval_times_array,
+            n_measures,
+        )
