@@ -182,10 +182,10 @@ def test_min_slot_duration():
     seq.add(pulse1, "ch1")
     assert seq._min_slot_duration() == 80
     seq.add(pulse0, "ch0")
-    seq.delay(50, "ch0")
+    seq.delay(52, "ch0")
     seq.target("q1", "ch1")
     seq.add(pulse1, "ch1")
-    assert seq._min_slot_duration() == 50
+    assert seq._min_slot_duration() == 52
 
 
 def test_phase():
