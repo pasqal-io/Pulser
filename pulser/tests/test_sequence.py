@@ -223,9 +223,9 @@ def test_measure():
     with pytest.raises(ValueError, match="not supported"):
         seq.measure(basis="XY")
     seq.measure()
-    with pytest.raises(SystemError, match="already been measured"):
+    with pytest.raises(RuntimeError, match="already been measured"):
         seq.measure(basis="digital")
-    with pytest.raises(SystemError, match="Nothing more can be added."):
+    with pytest.raises(RuntimeError, match="Nothing more can be added."):
         seq.add(pulse, "ch0")
 
     seq = Sequence(reg, MockDevice)
@@ -256,7 +256,7 @@ def test_str():
 def test_sequence():
     seq = Sequence(reg, device)
     assert seq.get_duration() == 0
-    with pytest.raises(SystemError, match="empty sequence"):
+    with pytest.raises(RuntimeError, match="empty sequence"):
         seq.draw()
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.declare_channel("ch1", "rydberg_local", initial_target="q0")

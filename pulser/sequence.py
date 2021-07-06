@@ -109,7 +109,7 @@ def _store(func: Callable) -> Callable:
                     verify_variable(y)
 
         if self._is_measured and self.is_parametrized():
-            raise SystemError(
+            raise RuntimeError(
                 "The sequence has been measured, no further "
                 "changes are allowed."
             )
@@ -634,7 +634,7 @@ class Sequence:
             )
 
         if hasattr(self, "_measurement"):
-            raise SystemError("The sequence has already been measured.")
+            raise RuntimeError("The sequence has already been measured.")
 
         if self.is_parametrized():
             self._is_measured = True
@@ -1006,7 +1006,7 @@ class Sequence:
 
     def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
         if hasattr(self, "_measurement"):
-            raise SystemError(
+            raise RuntimeError(
                 "The sequence has already been measured. "
                 "Nothing more can be added."
             )

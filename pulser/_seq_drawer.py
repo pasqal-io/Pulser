@@ -136,7 +136,7 @@ def draw_sequence(
 
     n_channels = len(seq._channels)
     if not n_channels:
-        raise SystemError("Can't draw an empty sequence.")
+        raise RuntimeError("Can't draw an empty sequence.")
     data = gather_data(seq)
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
