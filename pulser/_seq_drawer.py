@@ -36,7 +36,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
         dict: The data to plot.
     """
     # The minimum time axis length is 100 ns
-    total_duration = seq.get_duration()
+    total_duration = max(seq.get_duration(), 100)
     data = {}
     for ch, sch in seq._schedule.items():
         time = [-1]  # To not break the "time[-1]" later on
@@ -97,6 +97,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
             data[ch]["measurement"] = seq._measurement
         if interp_pts:
             data[ch]["interp_pts"] = interp_pts
+    data["total_duration"] = total_duration
     return data
 
 
@@ -137,7 +138,7 @@ def draw_sequence(
     if not n_channels:
         raise SystemError("Can't draw an empty sequence.")
     data = gather_data(seq)
-    total_duration = seq.get_duration()
+    total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
 
     # Boxes for qubit and phase text
