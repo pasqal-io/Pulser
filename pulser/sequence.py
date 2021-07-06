@@ -179,7 +179,6 @@ class Sequence:
         # Checks if register is compatible with the device
         device.validate_register(register)
 
-        self._total_duration: int = 0
         self._register: Register = register
         self._device: Device = device
         self._in_xy: bool = False

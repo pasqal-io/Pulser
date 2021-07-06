@@ -255,11 +255,14 @@ def test_str():
 
 def test_sequence():
     seq = Sequence(reg, device)
+    assert seq.get_duration() == 0
     with pytest.raises(SystemError, match="empty sequence"):
         seq.draw()
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.declare_channel("ch1", "rydberg_local", initial_target="q0")
     seq.declare_channel("ch2", "rydberg_global")
+    assert seq.get_duration("ch0") == 0
+    assert seq.get_duration("ch2") == 0
     seq.phase_shift(np.pi, "q0", basis="ground-rydberg")
 
     with patch("matplotlib.pyplot.show"):
@@ -308,32 +311,32 @@ def test_sequence():
     assert seq.current_phase_ref("q0", "digital") == np.pi
 
     seq.add(pulse1, "ch2")
-    assert seq._last("ch2").tf == 2500
+    assert seq.get_duration("ch2") == 2500
     seq.add(pulse2, "ch1", protocol="no-delay")
-    assert seq._last("ch1").tf == 3500
+    assert seq.get_duration("ch1") == 3500
     seq.add(pulse1, "ch0", protocol="no-delay")
     assert seq._last("ch0").ti == 500
-    assert seq._last("ch0").tf == 1000
+    assert seq.get_duration("ch0") == 1000
     assert seq.current_phase_ref("q0", "digital") == 0
     seq.phase_shift(np.pi / 2, "q1")
     seq.target("q1", "ch0")
     assert seq._last_used["digital"]["q1"] == 0
     assert seq._last_target["ch0"] == 1000
     assert seq._last("ch0").ti == 1000
-    assert seq._last("ch0").tf == 1000
+    assert seq.get_duration("ch0") == 1000
     seq.add(pulse1, "ch0")
     assert seq._last("ch0").ti == 2500
-    assert seq._last("ch0").tf == 3000
+    assert seq.get_duration("ch0") == 3000
     seq.add(pulse1, "ch0", protocol="wait-for-all")
     assert seq._last("ch0").ti == 3500
-    assert seq._last("ch2").tf != seq._last("ch0").tf
+    assert seq.get_duration("ch2") != seq.get_duration("ch0")
     seq.align("ch0", "ch2")
-    assert seq._last("ch2").tf == seq._last("ch0").tf
+    assert seq.get_duration("ch2") == seq.get_duration("ch0")
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_shifts=True)
 
-    assert seq._total_duration == 4000
+    assert seq.get_duration() == 4000
 
     seq.measure(basis="digital")
 
