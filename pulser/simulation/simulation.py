@@ -236,7 +236,7 @@ class Simulation:
         op_list = [self.op_matrix['I'] for j in range(self._size)]
 
         if not isinstance(operations, list):
-            operations=[operations]
+            operations = [operations]
 
         for operator, qubits in operations:
             if qubits == 'global':
