@@ -77,7 +77,7 @@ def _screen(func: Callable) -> Callable:
         if self.is_parametrized():
             raise RuntimeError(
                 f"Sequence.{func.__name__} can't be called in"
-                + " parametrized sequences."
+                " parametrized sequences."
             )
         return func(self, *args, **kwargs)
 
@@ -474,8 +474,8 @@ class Sequence:
         valid_protocols = get_args(PROTOCOLS)
         if protocol not in valid_protocols:
             raise ValueError(
-                f"Invalid protocol '{protocol}', only accepts "
-                "protocols: " + ", ".join(valid_protocols)
+                f"Invalid protocol '{protocol}', only accepts protocols: "
+                + ", ".join(valid_protocols)
             )
 
         if self.is_parametrized():
@@ -485,8 +485,7 @@ class Sequence:
 
         if not isinstance(pulse, Pulse):
             raise TypeError(
-                "pulse input must be of type Pulse, not of type "
-                f"{type(pulse)}."
+                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
             )
 
         channel_obj = self._channels[channel]
@@ -501,10 +500,10 @@ class Sequence:
                 )
             except NotImplementedError:
                 raise TypeError(
-                    "Failed to automatically adjust one of the "
-                    "pulse's waveforms to the channel duration "
-                    "constraints. Choose a duration that is a "
-                    f"multiple of {channel_obj.clock_period} ns."
+                    "Failed to automatically adjust one of the pulse's "
+                    "waveforms to the channel duration constraints. Choose a "
+                    "duration that is a multiple of "
+                    f"{channel_obj.clock_period} ns."
                 )
 
         self._validate_pulse(pulse, channel)
@@ -545,9 +544,8 @@ class Sequence:
         prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
         if len(prs) != 1:
             raise ValueError(
-                "Cannot do a multiple-target pulse on qubits "
-                "with different phase references for the same "
-                "basis."
+                "Cannot do a multiple-target pulse on qubits with different "
+                "phase references for the same basis."
             )
         else:
             phase_ref = prs.pop()
@@ -811,8 +809,7 @@ class Sequence:
         """
         if "Sequence" not in obj:
             warnings.warn(
-                "The given JSON formatted string does not encode a "
-                "Sequence.",
+                "The given JSON formatted string does not encode a Sequence.",
                 stacklevel=2,
             )
 
@@ -873,8 +870,7 @@ class Sequence:
             for q in qubits_set:
                 if q not in self._qids and not isinstance(q, Parametrized):
                     raise ValueError(
-                        "All non-variable qubits must belong to "
-                        "the register."
+                        "All non-variable qubits must belong to the register."
                     )
             return
 
@@ -933,8 +929,7 @@ class Sequence:
             for t in targets:
                 if t not in self._qids and not isinstance(t, Parametrized):
                     raise ValueError(
-                        "All non-variable targets must belong to "
-                        "the register."
+                        "All non-variable targets must belong to the register."
                     )
             return
 
