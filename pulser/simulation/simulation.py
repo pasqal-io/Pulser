@@ -648,7 +648,7 @@ class Simulation:
         if "max_step" in options.keys():
             solv_ops = qutip.Options(**options)
         else:
-            auto_max_step = 0.5 * (self._seq._min_slot_duration() / 1000)
+            auto_max_step = 0.5 * (self._seq._min_pulse_duration() / 1000)
             solv_ops = qutip.Options(max_step=auto_max_step, **options)
 
         meas_errors: Optional[Mapping[str, float]] = None
