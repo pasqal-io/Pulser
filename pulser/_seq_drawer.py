@@ -36,9 +36,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
         dict: The data to plot.
     """
     # The minimum time axis length is 100 ns
-    seq._total_duration = max(
-        [seq._last(ch).tf for ch in seq._schedule if seq._schedule[ch]] + [100]
-    )
+    total_duration = max(seq.get_duration(), 100)
     data = {}
     for ch, sch in seq._schedule.items():
         time = [-1]  # To not break the "time[-1]" later on
@@ -83,8 +81,8 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                         pts[:, 0] += slot.ti
                         interp_pts[wf_type] += pts.tolist()
 
-        if time[-1] < seq._total_duration - 1:
-            time += [time[-1] + 1, seq._total_duration - 1]
+        if time[-1] < total_duration - 1:
+            time += [time[-1] + 1, total_duration - 1]
             amp += [0, 0]
             detuning += [0, 0]
         # Store everything
@@ -99,6 +97,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
             data[ch]["measurement"] = seq._measurement
         if interp_pts:
             data[ch]["interp_pts"] = interp_pts
+    data["total_duration"] = total_duration
     return data
 
 
@@ -137,9 +136,10 @@ def draw_sequence(
 
     n_channels = len(seq._channels)
     if not n_channels:
-        raise SystemError("Can't draw an empty sequence.")
+        raise RuntimeError("Can't draw an empty sequence.")
     data = gather_data(seq)
-    time_scale = 1e3 if seq._total_duration > 1e4 else 1
+    total_duration = data["total_duration"]
+    time_scale = 1e3 if total_duration > 1e4 else 1
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
@@ -187,11 +187,11 @@ def draw_sequence(
     if sampling_rate:
         indexes = np.linspace(
             0,
-            seq._total_duration - 1,
-            int(sampling_rate * seq._total_duration),
+            total_duration - 1,
+            int(sampling_rate * total_duration),
             dtype=int,
         )
-        times = np.arange(seq._total_duration, dtype=np.double) / time_scale
+        times = np.arange(total_duration, dtype=np.double) / time_scale
         solver_time = times[indexes]
         delta_t = np.diff(solver_time)[0]
         # Compare pulse with an interpolated pulse with 100 times more samples
@@ -382,7 +382,7 @@ def draw_sequence(
             # All targets have the same ref, so we pick
             q = targets_[0]
             ref = seq._phase_ref[basis][q]
-            if end != seq._total_duration - 1 or "measurement" not in data[ch]:
+            if end != total_duration - 1 or "measurement" not in data[ch]:
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
                 conf = dict(linestyle="--", linewidth=1.5, color="black")

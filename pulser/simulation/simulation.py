@@ -92,9 +92,7 @@ class Simulation:
         self._seq = sequence
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
-        self._tot_duration = max(
-            [self._seq._last(ch).tf for ch in self._seq._schedule]
-        )
+        self._tot_duration = self._seq.get_duration()
         if not (0 < sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "

@@ -124,7 +124,7 @@ def test_stored_calls():
     with pytest.raises(ValueError, match="not supported"):
         sb.measure(basis="z")
     sb.measure()
-    with pytest.raises(SystemError):
+    with pytest.raises(RuntimeError):
         sb.delay(var * 50, "ch1")
 
 
