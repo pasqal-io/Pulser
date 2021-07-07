@@ -313,7 +313,9 @@ def test_add_max_step_and_delays():
     seq.delay(1500, "ch")
     seq.add(Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi), 0, 0), "ch")
     seq.delay(2000, "ch")
-    seq.add(Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi/2), 0, 0), "ch")
+    seq.add(
+        Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi / 2), 0, 0), "ch"
+    )
     sim = Simulation(seq)
     res_large_max_step = sim.run(max_step=1)
     res_auto_max_step = sim.run()
