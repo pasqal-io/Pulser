@@ -204,7 +204,6 @@ class Simulation:
     def reset_config(self) -> None:
         """Resets configuration to default."""
         self.set_config(SimConfig())
-        print("Configuration has been set to default.")
 
     @property
     def initial_state(self) -> qutip.Qobj:
