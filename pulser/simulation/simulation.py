@@ -149,17 +149,18 @@ class Simulation:
                     "Cannot include dephasing noise in"
                     + " digital- or all-basis."
                 )
-            # Probability of phase (Z) flip
+            # Probability of phase (Z) flip:
+            # We only allow one flip for all qubits (first order in prob)
             prob = self.config.dephasing_prob
-            global_id = qutip.tensor(
-                [self.op_matrix["I"] for _ in range(self._size)]
-            )
+            n = self._size
+            k = 1 / ((1 - prob) ** (n - 1) * (1 + prob * (n - 1)))
+            global_id = qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             global_sigmaz = self._build_operator(
                 "sigma_rr", global_op=True
             ) - self._build_operator("sigma_gg", global_op=True)
             self._collapse_ops = [
-                np.sqrt(1.0 - prob) * global_id,
-                np.sqrt(prob) * global_sigmaz,
+                k * np.sqrt((1 - prob) ** n) * global_id,
+                k * np.sqrt(prob * (1 - prob) ** (n - 1)) * global_sigmaz,
             ]
 
     def add_config(self, config: SimConfig) -> None:

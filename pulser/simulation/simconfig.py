@@ -100,28 +100,24 @@ class SimConfig:
         self._calc_sigma_doppler()
 
     def __str__(self, solver_options: bool = False) -> str:
-        lines = ["Options: \n", "---------- \n"]
-        lines.append(f"Number of runs:        {self.runs} \n")
-        lines.append(f"Samples per run:       {self.samples_per_run} \n")
+        lines = ["Options:", "----------"]
+        lines.append(f"Number of runs:        {self.runs}")
+        lines.append(f"Samples per run:       {self.samples_per_run}")
         if self.noise:
-            lines.append(
-                "Noise types:           " + ", ".join(self.noise) + "\n"
-            )
+            lines.append("Noise types:           " + ", ".join(self.noise))
         if "SPAM" in self.noise:
-            lines.append(f"Spam dictionary:       {self.spam_dict} \n")
+            lines.append(f"SPAM dictionary:       {self.spam_dict}")
         if "doppler" in self.noise:
-            lines.append(
-                f"Temperature:           {self.temperature*1.e6}µK \n"
-            )
+            lines.append(f"Temperature:           {self.temperature*1.e6}µK")
         if "amplitude" in self.noise:
-            lines.append(f"Laser waist:           {self.laser_waist}μm \n")
+            lines.append(f"Laser waist:           {self.laser_waist}μm")
         if "dephasing" in self.noise:
-            lines.append(f"Dephasing probability: {self.dephasing_prob} \n")
+            lines.append(f"Dephasing probability: {self.dephasing_prob}")
         if solver_options:
             lines.append(
                 "Solver Options: \n" + f"{str(self.solver_options)[10:-1]}"
             )
-        return "".join(lines).rstrip()
+        return "\n".join(lines).rstrip()
 
     def _check_spam_dict(self) -> None:
         for param, value in self.spam_dict.items():
