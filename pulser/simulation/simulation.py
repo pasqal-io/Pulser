@@ -197,9 +197,9 @@ class Simulation:
         param_dict["temperature"] *= 1.0e6
         self.set_config(SimConfig(**param_dict))
 
-    def show_config(self) -> None:
+    def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
-        print(self._config)
+        print(self._config.__str__(solver_options))
 
     def reset_config(self) -> None:
         """Resets configuration to default."""

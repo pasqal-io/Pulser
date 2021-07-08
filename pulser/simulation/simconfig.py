@@ -99,31 +99,29 @@ class SimConfig:
         self._check_spam_dict()
         self._calc_sigma_doppler()
 
-    def __str__(self) -> str:
-        lines = [
-            "Options: \n",
-            "---------- \n",
-            "Noise types:           " + ", ".join(self.noise) + "\n"
-            if self.noise
-            else "",
-            f"Spam dictionary:       {self.spam_dict} \n"
-            if "SPAM" in self.noise
-            else "",
-            f"Temperature:           {self.temperature}K \n"
-            if "doppler" in self.noise
-            else "",
-            f"Number of runs:        {self.runs} \n",
-            f"Samples per runs:      {self.samples_per_run} \n",
-            f"Laser waist:           {self.laser_waist}μm \n"
-            if "amplitude" in self.noise
-            else "",
-            f"Dephasing probability: {self.dephasing_prob} \n"
-            if "dephasing" in self.noise
-            else "",
-            "Solver Options: \n",
-            f"{str(self.solver_options)[10:-1]}",
-        ]
-        return "".join(lines)
+    def __str__(self, solver_options: bool = False) -> str:
+        lines = ["Options: \n", "---------- \n"]
+        lines.append(f"Number of runs:        {self.runs} \n")
+        lines.append(f"Samples per run:       {self.samples_per_run} \n")
+        if self.noise:
+            lines.append(
+                "Noise types:           " + ", ".join(self.noise) + "\n"
+            )
+        if "SPAM" in self.noise:
+            lines.append(f"Spam dictionary:       {self.spam_dict} \n")
+        if "doppler" in self.noise:
+            lines.append(
+                f"Temperature:           {self.temperature*1.e6}µK \n"
+            )
+        if "amplitude" in self.noise:
+            lines.append(f"Laser waist:           {self.laser_waist}μm \n")
+        if "dephasing" in self.noise:
+            lines.append(f"Dephasing probability: {self.dephasing_prob} \n")
+        if solver_options:
+            lines.append(
+                "Solver Options: \n" + f"{str(self.solver_options)[10:-1]}"
+            )
+        return "".join(lines).rstrip()
 
     def _check_spam_dict(self) -> None:
         for param, value in self.spam_dict.items():
