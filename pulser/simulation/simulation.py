@@ -184,11 +184,12 @@ class Simulation:
             param_dict["epsilon"] = config.epsilon
             param_dict["epsilon_prime"] = config.epsilon_prime
         if "doppler" in diff_noise_set:
-            param_dict["temperature"] = config.temperature * 1.0e6
+            param_dict["temperature"] = config.temperature
         if "amplitude" in diff_noise_set:
             param_dict["laser_waist"] = config.laser_waist
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_prob"] = config.dephasing_prob
+        param_dict["temperature"] *= 1.0e6
         self.set_config(SimConfig(**param_dict))
 
     def show_config(self) -> None:
