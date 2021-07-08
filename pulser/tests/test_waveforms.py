@@ -293,6 +293,13 @@ def test_kaiser():
     wf_multiplication = wf * 2
     assert (wf_multiplication.samples == wf.samples * 2).all()
 
+    # Test from_max_val
+    for max_val in range(1, 501, 50):
+        for beta in range(1, 20):
+            wf = KaiserWaveform.from_max_val(max_val, area, beta)
+            assert np.isclose(np.sum(wf.samples), area * 1000.0)
+            assert np.max(wf.samples) <= max_val
+
 
 def test_ops():
     assert -constant == ConstantWaveform(100, 3)

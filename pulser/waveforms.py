@@ -794,6 +794,74 @@ class KaiserWaveform(Waveform):
             self._area / float(np.sum(self._norm_samples)) / 1e-3
         )
 
+    @classmethod
+    @parametrize
+    def from_max_val(
+        cls,
+        max_val: Union[float, Parametrized],
+        area: Union[float, Parametrized],
+        beta: Optional[Union[float, Parametrized]] = 14.0,
+    ) -> KaiserWaveform:
+        """Creates a Kaiser waveform with a threshold on the maximum value.
+
+        Instead of defining a duration, the waveform is defined by its area and
+        the maximum value. The duration is chosen so that the maximum value is
+        not surpassed, but approached as closely as possible.
+
+        Args:
+            max_val (float): The maximum value threshold (in rad/µs). If
+                negative, it is taken as the lower bound i.e. the minimum
+                value that can be reached. The sign of `max_val` must match the
+                sign of `area`.
+            area (float): The area under the waveform.
+            beta (Optional[float]): The beta parameter of the Kaiser window.
+                The default value is 14.
+        """
+        # Compute the ratio area / duration for a long duration
+        # and use this value for a first guess of the best duration
+
+        max_val = cast(float, max_val)
+        area = cast(float, area)
+
+        ratio: float = max_val * np.sum(np.kaiser(100, beta)) / 100
+        duration_guess: int = int(area * 1000.0 / ratio)
+
+        duration_best: int = 0
+
+        if duration_guess < 11:
+            # Because of the seesawing effect on short durations,
+            # all solutions must be tested to find the best one
+
+            max_val_best: float = 0
+            for duration in range(1, 16):
+                kaiser_temp = np.kaiser(duration, beta)
+                scaling_temp = 1000 * area / np.sum(kaiser_temp)
+                max_val_temp = np.max(kaiser_temp) * scaling_temp
+                if max_val_best < max_val_temp <= max_val:
+                    max_val_best = max_val_temp
+                    duration_best = duration
+
+        else:
+            # Increase or decrease duration depending on
+            # the max value for the guessed duration
+
+            kaiser_guess = np.kaiser(duration_guess, beta)
+            scaling_guess = 1000 * area / np.sum(kaiser_guess)
+
+            step = 1 if np.max(kaiser_guess) * scaling_guess > max_val else -1
+            duration = duration_guess
+
+            max_val_temp = max_val + step
+            while np.sign(max_val_temp - max_val) == np.sign(step):
+                duration += step
+                kaiser_temp = np.kaiser(duration, beta)
+                scaling = 1000 * area / np.sum(kaiser_temp)
+                max_val_temp = np.max(kaiser_temp) * scaling
+
+            duration_best = duration if step == 1 else duration + 1
+
+        return cls(duration_best, area, beta)
+
     @property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
