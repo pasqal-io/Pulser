@@ -306,6 +306,26 @@ def test_single_atom_simulation():
     assert one_resb._size == one_sim._size
 
 
+def test_add_max_step_and_delays():
+    reg = Register.from_coordinates([(0, 0)])
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch", "rydberg_global")
+    seq.delay(1500, "ch")
+    seq.add(Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi), 0, 0), "ch")
+    seq.delay(2000, "ch")
+    seq.add(
+        Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi / 2), 0, 0), "ch"
+    )
+    sim = Simulation(seq)
+    res_large_max_step = sim.run(max_step=1)
+    res_auto_max_step = sim.run()
+    r = qutip.basis(2, 0)
+    occ_large = res_large_max_step.expect([r.proj()])[0]
+    occ_auto = res_auto_max_step.expect([r.proj()])[0]
+    assert np.isclose(occ_large[-1], 0, 1e-4)
+    assert np.isclose(occ_auto[-1], 0.5, 1e-4)
+
+
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
     with patch("matplotlib.pyplot.show"):
