@@ -55,8 +55,8 @@ class SimulationResults:
             )
         self._basis_name = basis_name
         if self._basis_name == 'all':
-            if (meas_basis is not None) and\
-                    (meas_basis not in {'ground-rydberg', 'digital'}):
+            if (meas_basis is not None and
+                 meas_basis not in {'ground-rydberg', 'digital'}):
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg', 'digital'."
                     )
