@@ -101,19 +101,24 @@ class SimConfig:
 
     def __str__(self) -> str:
         lines = [
-            "Options:",
-            "----------",
-            "Noise types:           " + ", ".join(self.noise),
-            f"Spam dictionary:       {self.spam_dict}",
-            f"Temperature:           {self.temperature}K",
-            f"Number of runs:        {self.runs}",
-            f"Samples per runs:      {self.samples_per_run}",
-            f"Laser waist:           {self.laser_waist}μm",
-            f"Dephasing probability: {self.dephasing_prob}",
-            "Solver Options:",
+            "Options: \n",
+            "---------- \n",
+            "Noise types:           " + ", ".join(self.noise) + "\n"
+            if self.noise else "",
+            f"Spam dictionary:       {self.spam_dict} \n"
+            if 'SPAM' in self.noise else "",
+            f"Temperature:           {self.temperature}K \n"
+            if 'doppler' in self.noise else "",
+            f"Number of runs:        {self.runs} \n",
+            f"Samples per runs:      {self.samples_per_run} \n",
+            f"Laser waist:           {self.laser_waist}μm \n"
+            if 'amplitude' in self.noise else "",
+            f"Dephasing probability: {self.dephasing_prob} \n"
+            if 'dephasing' in self.noise else "",
+            "Solver Options: \n",
             f"{str(self.solver_options)[10:-1]}",
         ]
-        return "\n".join(lines)
+        return "".join(lines)
 
     def _check_spam_dict(self) -> None:
         for param, value in self.spam_dict.items():

@@ -151,11 +151,13 @@ class Simulation:
                 )
             # Probability of phase (Z) flip
             prob = self.config.dephasing_prob
-            self._collapse_ops += [
-                np.sqrt(1.0 - prob) * self.op_matrix["I"],
-                np.sqrt(prob)
-                * (self.op_matrix["sigma_rr"] - self.op_matrix["sigma_gg"]),
-            ]
+            global_id = qutip.tensor(
+                [self.op_matrix["I"] for _ in range(self._size)]
+            )
+            global_sigmaz = (self._build_operator("sigma_rr", global_op=True) -
+                             self._build_operator("sigma_gg", global_op=True))
+            self._collapse_ops = [np.sqrt(1.0 - prob) * global_id,
+                                  np.sqrt(prob) * global_sigmaz]
 
     def add_config(self, config: SimConfig) -> None:
         """Updates this SimConfig object with parameters of another one.
