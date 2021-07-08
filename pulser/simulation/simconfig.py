@@ -104,17 +104,22 @@ class SimConfig:
             "Options: \n",
             "---------- \n",
             "Noise types:           " + ", ".join(self.noise) + "\n"
-            if self.noise else "",
+            if self.noise
+            else "",
             f"Spam dictionary:       {self.spam_dict} \n"
-            if 'SPAM' in self.noise else "",
+            if "SPAM" in self.noise
+            else "",
             f"Temperature:           {self.temperature}K \n"
-            if 'doppler' in self.noise else "",
+            if "doppler" in self.noise
+            else "",
             f"Number of runs:        {self.runs} \n",
             f"Samples per runs:      {self.samples_per_run} \n",
             f"Laser waist:           {self.laser_waist}μm \n"
-            if 'amplitude' in self.noise else "",
+            if "amplitude" in self.noise
+            else "",
             f"Dephasing probability: {self.dephasing_prob} \n"
-            if 'dephasing' in self.noise else "",
+            if "dephasing" in self.noise
+            else "",
             "Solver Options: \n",
             f"{str(self.solver_options)[10:-1]}",
         ]
