@@ -153,14 +153,15 @@ class Simulation:
             # We only allow one flip for all qubits (first order in prob)
             prob = self.config.dephasing_prob
             n = self._size
-            k = 1 / ((1 - prob) ** (n - 1) * (1 + prob * (n - 1)))
             global_id = qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-            global_sigmaz = self._build_operator(
-                "sigma_rr", global_op=True
-            ) - self._build_operator("sigma_gg", global_op=True)
-            self._collapse_ops = [
-                k * np.sqrt((1 - prob) ** n) * global_id,
-                k * np.sqrt(prob * (1 - prob) ** (n - 1)) * global_sigmaz,
+            self._collapse_ops = [np.sqrt((1 - prob) ** n) * global_id]
+            self._collapse_ops += [
+                np.sqrt(prob * (1 - prob) ** (n - 1))
+                * (
+                    self._build_operator("sigma_rr", qid)
+                    - self._build_operator("sigma_gg", qid)
+                )
+                for qid in self._qid_index
             ]
 
     def add_config(self, config: SimConfig) -> None:
