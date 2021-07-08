@@ -83,9 +83,9 @@ class Simulation:
         self.sampling_rate = sampling_rate
 
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
-
+        self.samples: dict[str, dict[str, dict]]
         if self._interaction == 'ising':
-            self.samples: dict = {addr: {basis: {}
+            self.samples = {addr: {basis: {}
                                   for basis in ['ground-rydberg', 'digital']}
                                   for addr in ['Global', 'Local']}
         else:
