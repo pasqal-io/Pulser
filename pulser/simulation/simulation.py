@@ -21,6 +21,7 @@ import itertools
 from collections import Counter
 from copy import deepcopy
 from dataclasses import asdict
+import warnings
 
 import qutip
 import numpy as np
@@ -152,13 +153,13 @@ class Simulation:
             # Probability of phase (Z) flip:
             # First order in prob
             prob = self.config.dephasing_prob / 2
-            if prob > 0.1:
-                raise Warning(
+            n = self._size
+            if prob > 0.1 and n > 1:
+                warnings.warn(
                     "The dephasing model is a first-order approximation in the"
-                    + f"dephasing probability. p = {prob} is too large for "
+                    + f" dephasing probability. p = {2*prob} is too large for "
                     "realistic results."
                 )
-            n = self._size
             k = np.sqrt(prob * (1 - prob) ** (n - 1))
             self._collapse_ops = [
                 np.sqrt((1 - prob) ** n)
@@ -655,13 +656,15 @@ class Simulation:
             progress_bar (bool): If True, the progress bar of QuTiP's solver
                 will be shown.
             options (qutip.solver.Options): If specified, will override
-                SimConfig solver_options.
+                SimConfig solver_options. If no `max_step` value is provided,
+                an automatic one is calculated from the `Sequence`'s schedule
+                (half of the shortest duration among pulses and delays).
         """
-        solv_ops = (
-            qutip.Options(max_step=5, **options)
-            if options
-            else self.config.solver_options
-        )
+        if "max_step" in options.keys():
+            solv_ops = qutip.Options(**options)
+        else:
+            auto_max_step = 0.5 * (self._seq._min_pulse_duration() / 1000)
+            solv_ops = qutip.Options(max_step=auto_max_step, **options)
 
         meas_errors: Optional[Mapping[str, float]] = None
         if "SPAM" in self.config.noise:
