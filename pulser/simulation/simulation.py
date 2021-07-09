@@ -320,15 +320,7 @@ class Simulation:
                 )
             return xy
 
-        def make_interaction_term() -> float:
-            """Construct interaction term.
-
-            Depending on the type of interaction.
-            """
-            if self._interaction == 'ising':
-                return make_vdw_term()
-            else:
-                return make_xy_term()
+        make_interaction_term = make_xy_term if self._interaction == 'XY' else make_vdw_term
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
