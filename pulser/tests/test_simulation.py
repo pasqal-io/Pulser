@@ -459,6 +459,8 @@ def test_dephasing():
     )
     assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
     assert len(sim._collapse_ops) != 0
+    with pytest.raises(Warning, match="first-order"):
+        sim.set_config(SimConfig(noise="dephasing", dephasing_prob=0.5))
 
 
 def test_add_config():
