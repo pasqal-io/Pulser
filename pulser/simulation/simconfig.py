@@ -100,9 +100,12 @@ class SimConfig:
         self._calc_sigma_doppler()
 
     def __str__(self, solver_options: bool = False) -> str:
-        lines = ["Options:", "----------"]
-        lines.append(f"Number of runs:        {self.runs}")
-        lines.append(f"Samples per run:       {self.samples_per_run}")
+        lines = [
+            "Options:",
+            "----------",
+            f"Number of runs:        {self.runs}",
+            f"Samples per run:       {self.samples_per_run}",
+        ]
         if self.noise:
             lines.append("Noise types:           " + ", ".join(self.noise))
         if "SPAM" in self.noise:

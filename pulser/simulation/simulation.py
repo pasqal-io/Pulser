@@ -150,18 +150,15 @@ class Simulation:
                     + " digital- or all-basis."
                 )
             # Probability of phase (Z) flip:
-            # We only allow one flip for all qubits (first order in prob)
-            prob = self.config.dephasing_prob
-            n = self._size
-            global_id = qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-            self._collapse_ops = [np.sqrt((1 - prob) ** n) * global_id]
-            self._collapse_ops += [
-                np.sqrt(prob * (1 - prob) ** (n - 1))
-                * (
-                    self._build_operator("sigma_rr", qid)
-                    - self._build_operator("sigma_gg", qid)
+            prob = self.config.dephasing_prob / 2
+            if self._size > 1:  # pragma: no cover
+                raise NotImplementedError(
+                    "Dephasing not implemented for" + "multiple qubit systems."
                 )
-                for qid in self._qid_index
+            self._collapse_ops += [
+                np.sqrt(1.0 - prob) * self.op_matrix["I"],
+                np.sqrt(prob)
+                * (self.op_matrix["sigma_rr"] - self.op_matrix["sigma_gg"]),
             ]
 
     def add_config(self, config: SimConfig) -> None:
