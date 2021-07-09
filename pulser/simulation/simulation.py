@@ -86,8 +86,8 @@ class Simulation:
         self.samples: dict[str, dict[str, dict]]
         if self._interaction == 'ising':
             self.samples = {addr: {basis: {}
-                                  for basis in ['ground-rydberg', 'digital']}
-                                  for addr in ['Global', 'Local']}
+                            for basis in ['ground-rydberg', 'digital']}
+                            for addr in ['Global', 'Local']}
         else:
             self.samples = {addr: {'XY': {}}
                             for addr in ['Global', 'Local']}
@@ -246,10 +246,11 @@ class Simulation:
                 if len(set(qubits)) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
                 if isinstance(operator, str):
-                    if operator not in self.op_matrix.keys():
+                    try:
+                        operator = self.op_matrix[operator]
+                    except KeyError:
                         raise ValueError(
                             f"{operator} is not a valid operator")
-                    operator = self.op_matrix[operator]
                 for qubit in qubits:
                     if isinstance(qubit, int):
                         if qubit >= self._size:
@@ -320,7 +321,8 @@ class Simulation:
                 )
             return xy
 
-        make_interaction_term = make_xy_term if self._interaction == 'XY' else make_vdw_term
+        make_interaction_term = make_xy_term\
+            if self._interaction == 'XY' else make_vdw_term
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
@@ -367,7 +369,6 @@ class Simulation:
         if self.basis_name == 'digital':
             qobj_list = []
         else:
-            # XY Interaction Terms
             qobj_list = [make_interaction_term()] if self._size > 1 else []
 
         # Time dependent terms:

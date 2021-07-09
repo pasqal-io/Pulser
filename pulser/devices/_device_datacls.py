@@ -51,7 +51,6 @@ class Device:
     max_radial_distance: int
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
-
     # Ising interaction coeff
     interaction_coeff: float = 5008713.
     interaction_coeff_xy: float = 3700.

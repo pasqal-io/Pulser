@@ -56,7 +56,7 @@ class SimulationResults:
         self._basis_name = basis_name
         if self._basis_name == 'all':
             if (meas_basis is not None and
-                 meas_basis not in {'ground-rydberg', 'digital'}):
+                    meas_basis not in {'ground-rydberg', 'digital'}):
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg', 'digital'."
                     )
@@ -191,13 +191,13 @@ class SimulationResults:
             meas_basis = self._meas_basis
 
         if self._basis_name == 'XY':
-            if (meas_basis is not None) and (meas_basis != self._basis_name):
+            if (meas_basis is not None and meas_basis != self._basis_name):
                 raise ValueError(
                     "`meas_basis` and `basis_name` must have"
                     "the same value in XY mode."
                     )
         else:
-            if (meas_basis is not None) and (
+            if (meas_basis is not None and
                     meas_basis not in {'ground-rydberg', 'digital'}):
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg', 'digital'."
