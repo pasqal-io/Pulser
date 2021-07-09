@@ -149,8 +149,12 @@ class Simulation:
                     "Cannot include dephasing noise in"
                     + " digital- or all-basis."
                 )
-            # Probability of phase (Z) flip
-            prob = self.config.dephasing_prob
+            # Probability of phase (Z) flip:
+            prob = self.config.dephasing_prob / 2
+            if self._size > 1:  # pragma: no cover
+                raise NotImplementedError(
+                    "Dephasing not implemented for" + "multiple qubit systems."
+                )
             self._collapse_ops += [
                 np.sqrt(1.0 - prob) * self.op_matrix["I"],
                 np.sqrt(prob)
@@ -184,21 +188,21 @@ class Simulation:
             param_dict["epsilon"] = config.epsilon
             param_dict["epsilon_prime"] = config.epsilon_prime
         if "doppler" in diff_noise_set:
-            param_dict["temperature"] = config.temperature * 1.0e6
+            param_dict["temperature"] = config.temperature
         if "amplitude" in diff_noise_set:
             param_dict["laser_waist"] = config.laser_waist
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_prob"] = config.dephasing_prob
+        param_dict["temperature"] *= 1.0e6
         self.set_config(SimConfig(**param_dict))
 
-    def show_config(self) -> None:
+    def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
-        print(self._config)
+        print(self._config.__str__(solver_options))
 
     def reset_config(self) -> None:
         """Resets configuration to default."""
         self.set_config(SimConfig())
-        print("Configuration has been set to default.")
 
     @property
     def initial_state(self) -> qutip.Qobj:

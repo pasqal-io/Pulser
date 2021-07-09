@@ -477,7 +477,7 @@ def test_dephasing():
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 486, "1": 514})
+    assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
     assert len(sim._collapse_ops) != 0
 
 
