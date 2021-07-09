@@ -21,6 +21,7 @@ import itertools
 from collections import Counter
 from copy import deepcopy
 from dataclasses import asdict
+import warnings
 
 import qutip
 import numpy as np
@@ -150,15 +151,28 @@ class Simulation:
                     + " digital- or all-basis."
                 )
             # Probability of phase (Z) flip:
+            # First order in prob
             prob = self.config.dephasing_prob / 2
-            if self._size > 1:  # pragma: no cover
-                raise NotImplementedError(
-                    "Dephasing not implemented for" + "multiple qubit systems."
+            n = self._size
+            if prob > 0.1 and n > 1:
+                warnings.warn(
+                    "The dephasing model is a first-order approximation in the"
+                    + f" dephasing probability. p = {2*prob} is too large for "
+                    "realistic results.",
+                    stacklevel=2,
                 )
+            k = np.sqrt(prob * (1 - prob) ** (n - 1))
+            self._collapse_ops = [
+                np.sqrt((1 - prob) ** n)
+                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+            ]
             self._collapse_ops += [
-                np.sqrt(1.0 - prob) * self.op_matrix["I"],
-                np.sqrt(prob)
-                * (self.op_matrix["sigma_rr"] - self.op_matrix["sigma_gg"]),
+                k
+                * (
+                    self._build_operator("sigma_rr", qid)
+                    - self._build_operator("sigma_gg", qid)
+                )
+                for qid in self._qid_index
             ]
 
     def add_config(self, config: SimConfig) -> None:

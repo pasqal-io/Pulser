@@ -479,6 +479,18 @@ def test_dephasing():
     )
     assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
     assert len(sim._collapse_ops) != 0
+    with pytest.warns(UserWarning, match="first-order"):
+        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
+        seq2 = Sequence(reg, Chadoq2)
+        seq2.declare_channel("ch0", "rydberg_global")
+        duration = 2500
+        pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
+        seq2.add(pulse, "ch0")
+        sim = Simulation(
+            seq2,
+            sampling_rate=0.01,
+            config=SimConfig(noise="dephasing", dephasing_prob=0.5),
+        )
 
 
 def test_add_config():
