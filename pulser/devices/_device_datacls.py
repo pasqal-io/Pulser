@@ -39,10 +39,10 @@ class Device:
         interaction_coeff: :math:`C_6/\hbar`
             (in :math:`\mu m^6 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
-            the Rydberg state.
+            the same Rydberg state.
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
-            the Rydberg state.
+            different Rydberg states.
     """
 
     name: str
