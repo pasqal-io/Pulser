@@ -158,7 +158,8 @@ class Simulation:
                 warnings.warn(
                     "The dephasing model is a first-order approximation in the"
                     + f" dephasing probability. p = {2*prob} is too large for "
-                    "realistic results."
+                    "realistic results.",
+                    stacklevel=2,
                 )
             k = np.sqrt(prob * (1 - prob) ** (n - 1))
             self._collapse_ops = [
