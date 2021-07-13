@@ -42,7 +42,7 @@ SUPPORTED_BASES = {"ground-rydberg", "digital"}
 
 
 class Simulation:
-    """Simulation of a pulse sequence using QuTiP.
+    r"""Simulation of a pulse sequence using QuTiP.
 
     Provides methods to simulate the sequence using QuTiP.
 
@@ -54,13 +54,17 @@ class Simulation:
             value between 0.05 and 1.0.
         config (SimConfig): Configuration to be used for this simulation.
         evaluation_times (Union[str, ArrayLike, float]): Choose between:
-            -'Full': This list is set to be the one used to
-            define the Hamiltonian to the solver
-            -'Minimal': This list is set to only include initial and end
-                times
-            -An ArrayLike object of times in µs if you wish to only include
-                those specific times
-            -A float to act as a sampling rate for the resulting state.
+
+            - 'Full': This list is set to be the one used to define the
+              Hamiltonian to the solver.
+
+            - 'Minimal': This list is set to only include initial and end
+              times.
+
+            - An ArrayLike object of times in µs if you wish to only include
+              those specific times.
+
+            - A float to act as a sampling rate for the resulting state.
     """
 
     def __init__(

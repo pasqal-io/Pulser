@@ -55,6 +55,7 @@ source_suffix = [".rst", ".md"]
 # Autodoc config
 autosummary_generate = True
 autodoc_member_order = "bysource"
+autodoc_typehints = "none"
 
 
 # -- Options for HTML output -------------------------------------------------

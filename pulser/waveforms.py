@@ -584,7 +584,7 @@ class BlackmanWaveform(Waveform):
 
         Returns:
             BlackmanWaveform: The new waveform with the same area but a new
-                duration.
+            duration.
         """
         return BlackmanWaveform(new_duration, self._area)
 
@@ -712,7 +712,7 @@ class InterpolatedWaveform(Waveform):
 
         Returns:
             InterpolatedWaveform: The new waveform with the same coordinates
-                for interpolation but a new duration.
+            for interpolation but a new duration.
         """
         return InterpolatedWaveform(new_duration, self._values, **self._kwargs)
 

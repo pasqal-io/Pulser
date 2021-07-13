@@ -455,16 +455,15 @@ class Sequence:
                 of having multiple channels act on the same target
                 simultaneously.
 
-                - ``'min-delay'``
-                    Before adding the pulse, introduces the smallest
-                    possible delay that avoids all exisiting conflicts.
-                - ``'no-delay'``
-                    Adds the pulse to the channel, regardless of
-                    existing conflicts.
-                - ``'wait-for-all'``
-                    Before adding the pulse, adds a delay that
-                    idles the channel until the end of the other channels'
-                    latest pulse.
+                - ``'min-delay'``: Before adding the pulse, introduces the
+                  smallest possible delay that avoids all exisiting conflicts.
+
+                - ``'no-delay'``: Adds the pulse to the channel, regardless of
+                  existing conflicts.
+
+                - ``'wait-for-all'``: Before adding the pulse, adds a delay
+                  that idles the channel until the end of the other channels'
+                  latest pulse.
         """
         pulse = cast(Pulse, pulse)
         channel = cast(str, channel)

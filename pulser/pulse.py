@@ -49,11 +49,9 @@ class Pulse:
         amplitude (Waveform): The pulse amplitude waveform.
         detuning (Waveform): The pulse detuning waveform.
         phase (float): The pulse phase (in radians).
-
-    Keyword Args:
-        post_phase_shift (default=0): Optionally lets you add a phase shift
-            (in rads) immediately after the end of the pulse. This allows for
-            enconding of arbitrary single-qubit gates into a single pulse
+        post_phase_shift (float, default=0.): Optionally lets you add a phase
+            shift(in rads) immediately after the end of the pulse. This allows
+            for enconding of arbitrary single-qubit gates into a single pulse
             (see ``Sequence.phase_shift()`` for more information).
     """
 
