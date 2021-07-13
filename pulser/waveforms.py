@@ -534,10 +534,15 @@ class BlackmanWaveform(Waveform):
         """
         max_val = cast(float, max_val)
         area = cast(float, area)
-        if np.sign(max_val) != np.sign(area):
+        area_sign = np.sign(area)
+        if np.sign(max_val) != area_sign:
             raise ValueError(
                 "The maximum value and the area must have " "matching signs."
             )
+
+        # Deal only with positive areas
+        area *= float(area_sign)
+        max_val *= float(area_sign)
 
         # A normalized Blackman waveform has an area of 0.42 * duration
         duration = np.ceil(area / (0.42 * max_val) * 1e3)  # in ns
@@ -545,7 +550,7 @@ class BlackmanWaveform(Waveform):
         previous_wf = None
 
         # Adjust for rounding errors to make sure max_val is not surpassed
-        while np.abs(wf._scaling) > np.abs(max_val):
+        while wf._scaling > max_val:
             duration += 1
             previous_wf = wf
             wf = cls(duration, area)
@@ -560,7 +565,8 @@ class BlackmanWaveform(Waveform):
         ):
             wf = previous_wf
 
-        return wf
+        # Restore original sign to the waveform
+        return wf if area_sign != -1 else cast(BlackmanWaveform, -wf)
 
     @property
     def duration(self) -> int:
