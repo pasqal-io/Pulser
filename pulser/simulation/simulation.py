@@ -252,17 +252,22 @@ class Simulation:
                         raise ValueError(
                             f"{operator} is not a valid operator")
                 for qubit in qubits:
-                    if isinstance(qubit, int):
-                        if qubit >= self._size:
-                            raise ValueError(
-                                "The index value is greater than the "
-                                "size of the system")
-                        k = qubit
-                    else:
-                        if qubit not in self._qid_index.keys():
-                            raise ValueError(
-                                f"{qubit} is not a valid qubit")
+                    # if isinstance(qubit, int):
+                    #     if qubit >= self._size:
+                    #         raise ValueError(
+                    #             "The index value is greater than the "
+                    #             "size of the system")
+                    #     k = qubit
+                    # else:
+                    #     if qubit not in self._qid_index.keys():
+                    #         raise ValueError(
+                    #             f"{qubit} is not a valid qubit")
+                    #     k = self._qid_index[qubit]
+                    try:
                         k = self._qid_index[qubit]
+                    except KeyError:
+                        raise ValueError(f"{qubit} is not a valid qubit")
+
                     op_list[k] = operator
         return qutip.tensor(op_list)
 
@@ -321,8 +326,8 @@ class Simulation:
                 )
             return xy
 
-        make_interaction_term = make_xy_term\
-            if self._interaction == 'XY' else make_vdw_term
+        make_interaction_term = (make_xy_term
+            if self._interaction == 'XY' else make_vdw_term)
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
