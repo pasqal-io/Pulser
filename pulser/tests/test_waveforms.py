@@ -194,6 +194,13 @@ def test_blackman():
     wf2 = BlackmanWaveform(duration + 1, area)
     assert np.max(wf2.samples) < np.max(wf.samples) <= max_val
 
+    # Same but with a negativa max value
+    wf: BlackmanWaveform = BlackmanWaveform.from_max_val(-max_val, -area)
+    duration = wf.duration
+    assert duration % 2 == 0
+    wf2 = BlackmanWaveform(duration + 1, -area)
+    assert np.min(wf2.samples) > np.min(wf.samples) >= -max_val
+
 
 def test_interpolated():
     assert isinstance(interp.interp_function, PchipInterpolator)
