@@ -227,7 +227,6 @@ def test_expect():
     exp3dim = sim3dim.run().expect(
         [qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))]
     )
-    print(exp3dim)
     assert np.isclose(exp3dim[0][-1], 1.89690200e-14)
 
 
