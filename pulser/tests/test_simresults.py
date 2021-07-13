@@ -218,6 +218,16 @@ def test_expect():
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1 - config.epsilon_prime, 0], [0, config.epsilon_prime]]),
     )
+    seq3dim = Sequence(reg, Chadoq2)
+    seq3dim.declare_channel("ryd", "rydberg_global")
+    seq3dim.declare_channel("ram", "raman_local", initial_target="A")
+    seq3dim.add(pi, "ram")
+    seq3dim.add(pi, "ryd")
+    sim3dim = Simulation(seq3dim)
+    exp3dim = sim3dim.run().expect(
+        [qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))]
+    )
+    assert np.isclose(exp3dim[0][-1], 1.89690200e-14)
 
 
 def test_expect_noisy():
