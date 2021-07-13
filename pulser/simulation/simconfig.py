@@ -80,7 +80,7 @@ class SimConfig:
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
-    solver_options: qutip.Options = qutip.Options(max_step=5)
+    solver_options: qutip.Options = None
     spam_dict: dict[str, float] = field(
         init=False, default_factory=dict, repr=False
     )
@@ -99,21 +99,28 @@ class SimConfig:
         self._check_spam_dict()
         self._calc_sigma_doppler()
 
-    def __str__(self) -> str:
+    def __str__(self, solver_options: bool = False) -> str:
         lines = [
             "Options:",
             "----------",
-            "Noise types:           " + ", ".join(self.noise),
-            f"Spam dictionary:       {self.spam_dict}",
-            f"Temperature:           {self.temperature}K",
             f"Number of runs:        {self.runs}",
-            f"Samples per runs:      {self.samples_per_run}",
-            f"Laser waist:           {self.laser_waist}μm",
-            f"Dephasing probability: {self.dephasing_prob}",
-            "Solver Options:",
-            f"{str(self.solver_options)[10:-1]}",
+            f"Samples per run:       {self.samples_per_run}",
         ]
-        return "\n".join(lines)
+        if self.noise:
+            lines.append("Noise types:           " + ", ".join(self.noise))
+        if "SPAM" in self.noise:
+            lines.append(f"SPAM dictionary:       {self.spam_dict}")
+        if "doppler" in self.noise:
+            lines.append(f"Temperature:           {self.temperature*1.e6}µK")
+        if "amplitude" in self.noise:
+            lines.append(f"Laser waist:           {self.laser_waist}μm")
+        if "dephasing" in self.noise:
+            lines.append(f"Dephasing probability: {self.dephasing_prob}")
+        if solver_options:
+            lines.append(
+                "Solver Options: \n" + f"{str(self.solver_options)[10:-1]}"
+            )
+        return "\n".join(lines).rstrip()
 
     def _check_spam_dict(self) -> None:
         for param, value in self.spam_dict.items():

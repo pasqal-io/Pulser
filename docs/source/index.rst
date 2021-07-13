@@ -65,12 +65,14 @@ computers and simulators, check the pages in :doc:`review`.
    phase_shifts_vz_gates
    composite_wfs
    paramseqs
+   interpolated_wfs
    serialization
 
 .. toctree::
    :maxdepth: 2
    :caption: Applications
 
+   noisy_sim
    cz_gate
    afm_prep
    1D_crystals

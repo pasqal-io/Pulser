@@ -98,7 +98,9 @@ class SimulationResults(ABC):
             raise TypeError("`obs_list` must be a list of operators.")
 
         qobj_list = []
-        legal_shape = (2 ** self._size, 2 ** self._size)
+        dim = self._dim if not self._use_pseudo_dens else 2
+        legal_dims = [[dim] * self._size] * 2
+        legal_shape = (dim ** self._size, dim ** self._size)
         for obs in obs_list:
             if not (
                 isinstance(obs, np.ndarray) or isinstance(obs, qutip.Qobj)
@@ -113,7 +115,7 @@ class SimulationResults(ABC):
                     "Incompatible shape of observable."
                     + f"Expected {legal_shape}, got {obs.shape}."
                 )
-            qobj_list.append(qutip.Qobj(obs))
+            qobj_list.append(qutip.Qobj(obs, dims=legal_dims))
             if self._use_pseudo_dens:
                 if not isdiagonal(obs):
                     raise ValueError(f"Observable {obs!r} is non-diagonal.")

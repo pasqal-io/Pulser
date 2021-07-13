@@ -77,7 +77,7 @@ def _screen(func: Callable) -> Callable:
         if self.is_parametrized():
             raise RuntimeError(
                 f"Sequence.{func.__name__} can't be called in"
-                + " parametrized sequences."
+                " parametrized sequences."
             )
         return func(self, *args, **kwargs)
 
@@ -109,7 +109,7 @@ def _store(func: Callable) -> Callable:
                     verify_variable(y)
 
         if self._is_measured and self.is_parametrized():
-            raise SystemError(
+            raise RuntimeError(
                 "The sequence has been measured, no further "
                 "changes are allowed."
             )
@@ -179,7 +179,6 @@ class Sequence:
         # Checks if register is compatible with the device
         device.validate_register(register)
 
-        self._total_duration: int = 0
         self._register: Register = register
         self._device: Device = device
         self._in_xy: bool = False
@@ -249,6 +248,29 @@ class Sequence:
             bool: Whether the sequence is parametrized.
         """
         return not self._building
+
+    @_screen
+    def get_duration(self, channel: Optional[str] = None) -> int:
+        """Returns the current duration of a channel or the whole sequence.
+
+        Keyword Args:
+            channel (Optional[str]): A specific channel to return the duration
+                of. If left as None, it will return the duration of the whole
+                sequence.
+
+        Returns:
+            int: The duration of the channel or sequence, in ns.
+        """
+        if channel is None:
+            durations = [
+                self._last(ch).tf
+                for ch in self._schedule
+                if self._schedule[ch]
+            ]
+            return 0 if not durations else max(durations)
+
+        self._validate_channel(channel)
+        return self._last(channel).tf if self._schedule[channel] else 0
 
     @_screen
     def current_phase_ref(
@@ -452,8 +474,8 @@ class Sequence:
         valid_protocols = get_args(PROTOCOLS)
         if protocol not in valid_protocols:
             raise ValueError(
-                f"Invalid protocol '{protocol}', only accepts "
-                "protocols: " + ", ".join(valid_protocols)
+                f"Invalid protocol '{protocol}', only accepts protocols: "
+                + ", ".join(valid_protocols)
             )
 
         if self.is_parametrized():
@@ -463,8 +485,7 @@ class Sequence:
 
         if not isinstance(pulse, Pulse):
             raise TypeError(
-                "pulse input must be of type Pulse, not of type "
-                f"{type(pulse)}."
+                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
             )
 
         channel_obj = self._channels[channel]
@@ -479,10 +500,10 @@ class Sequence:
                 )
             except NotImplementedError:
                 raise TypeError(
-                    "Failed to automatically adjust one of the "
-                    "pulse's waveforms to the channel duration "
-                    "constraints. Choose a duration that is a "
-                    f"multiple of {channel_obj.clock_period} ns."
+                    "Failed to automatically adjust one of the pulse's "
+                    "waveforms to the channel duration constraints. Choose a "
+                    "duration that is a multiple of "
+                    f"{channel_obj.clock_period} ns."
                 )
 
         self._validate_pulse(pulse, channel)
@@ -523,9 +544,8 @@ class Sequence:
         prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
         if len(prs) != 1:
             raise ValueError(
-                "Cannot do a multiple-target pulse on qubits "
-                "with different phase references for the same "
-                "basis."
+                "Cannot do a multiple-target pulse on qubits with different "
+                "phase references for the same basis."
             )
         else:
             phase_ref = prs.pop()
@@ -614,7 +634,7 @@ class Sequence:
             )
 
         if hasattr(self, "_measurement"):
-            raise SystemError("The sequence has already been measured.")
+            raise RuntimeError("The sequence has already been measured.")
 
         if self.is_parametrized():
             self._is_measured = True
@@ -789,8 +809,7 @@ class Sequence:
         """
         if "Sequence" not in obj:
             warnings.warn(
-                "The given JSON formatted string does not encode a "
-                "Sequence.",
+                "The given JSON formatted string does not encode a Sequence.",
                 stacklevel=2,
             )
 
@@ -851,8 +870,7 @@ class Sequence:
             for q in qubits_set:
                 if q not in self._qids and not isinstance(q, Parametrized):
                     raise ValueError(
-                        "All non-variable qubits must belong to "
-                        "the register."
+                        "All non-variable qubits must belong to the register."
                     )
             return
 
@@ -911,8 +929,7 @@ class Sequence:
             for t in targets:
                 if t not in self._qids and not isinstance(t, Parametrized):
                     raise ValueError(
-                        "All non-variable targets must belong to "
-                        "the register."
+                        "All non-variable targets must belong to the register."
                     )
             return
 
@@ -989,11 +1006,19 @@ class Sequence:
 
     def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
         if hasattr(self, "_measurement"):
-            raise SystemError(
+            raise RuntimeError(
                 "The sequence has already been measured. "
                 "Nothing more can be added."
             )
         self._schedule[channel].append(timeslot)
+
+    def _min_pulse_duration(self) -> float:
+        duration_list = []
+        for ch_schedule in self._schedule.values():
+            for slot in ch_schedule:
+                if isinstance(slot.type, Pulse):
+                    duration_list.append(slot.tf - slot.ti)
+        return min(duration_list)
 
     def _last(self, channel: str) -> _TimeSlot:
         """Shortcut to last element in the channel's schedule."""

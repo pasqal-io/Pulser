@@ -306,6 +306,26 @@ def test_single_atom_simulation():
     assert one_resb._size == one_sim._size
 
 
+def test_add_max_step_and_delays():
+    reg = Register.from_coordinates([(0, 0)])
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch", "rydberg_global")
+    seq.delay(1500, "ch")
+    seq.add(Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi), 0, 0), "ch")
+    seq.delay(2000, "ch")
+    seq.add(
+        Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi / 2), 0, 0), "ch"
+    )
+    sim = Simulation(seq)
+    res_large_max_step = sim.run(max_step=1)
+    res_auto_max_step = sim.run()
+    r = qutip.basis(2, 0)
+    occ_large = res_large_max_step.expect([r.proj()])[0]
+    occ_auto = res_auto_max_step.expect([r.proj()])[0]
+    assert np.isclose(occ_large[-1], 0, 1e-4)
+    assert np.isclose(occ_auto[-1], 0.5, 1e-4)
+
+
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
     with patch("matplotlib.pyplot.show"):
@@ -457,8 +477,20 @@ def test_dephasing():
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 486, "1": 514})
+    assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
     assert len(sim._collapse_ops) != 0
+    with pytest.warns(UserWarning, match="first-order"):
+        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
+        seq2 = Sequence(reg, Chadoq2)
+        seq2.declare_channel("ch0", "rydberg_global")
+        duration = 2500
+        pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
+        seq2.add(pulse, "ch0")
+        sim = Simulation(
+            seq2,
+            sampling_rate=0.01,
+            config=SimConfig(noise="dephasing", dephasing_prob=0.5),
+        )
 
 
 def test_add_config():
