@@ -293,12 +293,19 @@ def test_kaiser():
     wf_multiplication = wf * 2
     assert (wf_multiplication.samples == wf.samples * 2).all()
 
+    # Check area and max_val must have matching signs
+    with pytest.raises(ValueError, match="must have matching signs"):
+        KaiserWaveform.from_max_val(1, -1)
+
     # Test from_max_val
     for max_val in range(1, 501, 50):
         for beta in range(1, 20):
             wf = KaiserWaveform.from_max_val(max_val, area, beta)
             assert np.isclose(np.sum(wf.samples), area * 1000.0)
             assert np.max(wf.samples) <= max_val
+            wf = KaiserWaveform.from_max_val(-max_val, -area, beta)
+            assert np.isclose(np.sum(wf.samples), -area * 1000.0)
+            assert np.min(wf.samples) >= -max_val
 
 
 def test_ops():

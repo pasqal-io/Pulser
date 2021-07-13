@@ -817,11 +817,23 @@ class KaiserWaveform(Waveform):
             beta (Optional[float]): The beta parameter of the Kaiser window.
                 The default value is 14.
         """
-        # Compute the ratio area / duration for a long duration
-        # and use this value for a first guess of the best duration
-
         max_val = cast(float, max_val)
         area = cast(float, area)
+
+        if np.sign(max_val) != np.sign(area):
+            raise ValueError(
+                "The maximum value and the area must have matching signs."
+            )
+
+        # All computations will be done on a positive area
+
+        is_negative: bool = area < 0
+        if is_negative:
+            area = -area
+            max_val = -max_val
+
+        # Compute the ratio area / duration for a long duration
+        # and use this value for a first guess of the best duration
 
         ratio: float = max_val * np.sum(np.kaiser(100, beta)) / 100
         duration_guess: int = int(area * 1000.0 / ratio)
@@ -842,23 +854,31 @@ class KaiserWaveform(Waveform):
                     duration_best = duration
 
         else:
-            # Increase or decrease duration depending on
-            # the max value for the guessed duration
+
+            # Start with a waveform based on the duration guess
 
             kaiser_guess = np.kaiser(duration_guess, beta)
             scaling_guess = 1000 * area / np.sum(kaiser_guess)
+            max_val_temp = np.max(kaiser_guess) * scaling_guess
 
-            step = 1 if np.max(kaiser_guess) * scaling_guess > max_val else -1
+            # Increase or decrease duration depending on
+            # the max value for the guessed duration
+
+            step = 1 if np.max(kaiser_guess) * scaling_guess >= max_val else -1
             duration = duration_guess
 
-            max_val_temp = max_val + step
-            while np.sign(max_val_temp - max_val) == np.sign(step):
+            while np.sign(max_val_temp - max_val) == step:
                 duration += step
                 kaiser_temp = np.kaiser(duration, beta)
                 scaling = 1000 * area / np.sum(kaiser_temp)
                 max_val_temp = np.max(kaiser_temp) * scaling
 
             duration_best = duration if step == 1 else duration + 1
+
+        # Restore the original area if it was negative
+
+        if is_negative:
+            area = -area
 
         return cls(duration_best, area, beta)
 
