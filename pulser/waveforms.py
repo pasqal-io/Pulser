@@ -739,6 +739,196 @@ class InterpolatedWaveform(Waveform):
         )
 
 
+class KaiserWaveform(Waveform):
+    """A Kaiser window of a specified duration and beta parameter.
+
+    For more information on the Kaiser window and the beta parameter,
+    check the numpy documentation for the kaiser(M, beta) function:
+    https://numpy.org/doc/stable/reference/generated/numpy.kaiser.html
+
+    Args:
+        duration (int): The waveform duration (in ns).
+        area (float): The integral of the waveform. Can be negative,
+            in which case it takes the positive waveform and changes the sign
+            of all its values.
+        beta (Optional[float]): The beta parameter of the Kaiser window.
+            The default value is 14.
+    """
+
+    def __init__(
+        self,
+        duration: Union[int, Parametrized],
+        area: Union[float, Parametrized],
+        beta: Optional[Union[float, Parametrized]] = 14.0,
+    ):
+        """Initializes a Kaiser waveform."""
+        super().__init__(duration)
+
+        try:
+            self._area: float = float(cast(float, area))
+        except (TypeError, ValueError):
+            raise TypeError(
+                "area needs to be castable to a float but "
+                f"type {type(area)} was provided."
+            )
+
+        try:
+            self._beta: float = float(cast(float, beta))
+        except (TypeError, ValueError):
+            raise TypeError(
+                "beta needs to be castable to a float but "
+                f"type {type(beta)} was provided."
+            )
+
+        if self._beta < 0.0:
+            raise ValueError(
+                f"The beta parameter (`beta` = {self._beta})"
+                " must be greater than 0."
+            )
+
+        self._norm_samples: np.ndarray = np.clip(
+            np.kaiser(self._duration, self._beta), 0, np.inf
+        )
+
+        self._scaling: float = (
+            self._area / float(np.sum(self._norm_samples)) / 1e-3
+        )
+
+    @classmethod
+    @parametrize
+    def from_max_val(
+        cls,
+        max_val: Union[float, Parametrized],
+        area: Union[float, Parametrized],
+        beta: Optional[Union[float, Parametrized]] = 14.0,
+    ) -> KaiserWaveform:
+        """Creates a Kaiser waveform with a threshold on the maximum value.
+
+        Instead of defining a duration, the waveform is defined by its area and
+        the maximum value. The duration is chosen so that the maximum value is
+        not surpassed, but approached as closely as possible.
+
+        Args:
+            max_val (float): The maximum value threshold (in rad/µs). If
+                negative, it is taken as the lower bound i.e. the minimum
+                value that can be reached. The sign of `max_val` must match the
+                sign of `area`.
+            area (float): The area under the waveform.
+            beta (Optional[float]): The beta parameter of the Kaiser window.
+                The default value is 14.
+        """
+        max_val = cast(float, max_val)
+        area = cast(float, area)
+
+        if np.sign(max_val) != np.sign(area):
+            raise ValueError(
+                "The maximum value and the area must have matching signs."
+            )
+
+        # All computations will be done on a positive area
+
+        is_negative: bool = area < 0
+        if is_negative:
+            area = -area
+            max_val = -max_val
+
+        # Compute the ratio area / duration for a long duration
+        # and use this value for a first guess of the best duration
+
+        ratio: float = max_val * np.sum(np.kaiser(100, beta)) / 100
+        duration_guess: int = int(area * 1000.0 / ratio)
+
+        duration_best: int = 0
+
+        if duration_guess < 11:
+            # Because of the seesawing effect on short durations,
+            # all solutions must be tested to find the best one
+
+            max_val_best: float = 0
+            for duration in range(1, 16):
+                kaiser_temp = np.kaiser(duration, beta)
+                scaling_temp = 1000 * area / np.sum(kaiser_temp)
+                max_val_temp = np.max(kaiser_temp) * scaling_temp
+                if max_val_best < max_val_temp <= max_val:
+                    max_val_best = max_val_temp
+                    duration_best = duration
+
+        else:
+
+            # Start with a waveform based on the duration guess
+
+            kaiser_guess = np.kaiser(duration_guess, beta)
+            scaling_guess = 1000 * area / np.sum(kaiser_guess)
+            max_val_temp = np.max(kaiser_guess) * scaling_guess
+
+            # Increase or decrease duration depending on
+            # the max value for the guessed duration
+
+            step = 1 if np.max(kaiser_guess) * scaling_guess >= max_val else -1
+            duration = duration_guess
+
+            while np.sign(max_val_temp - max_val) == step:
+                duration += step
+                kaiser_temp = np.kaiser(duration, beta)
+                scaling = 1000 * area / np.sum(kaiser_temp)
+                max_val_temp = np.max(kaiser_temp) * scaling
+
+            duration_best = duration if step == 1 else duration + 1
+
+        # Restore the original area if it was negative
+
+        if is_negative:
+            area = -area
+
+        return cls(duration_best, area, beta)
+
+    @property
+    def duration(self) -> int:
+        """The duration of the pulse (in ns)."""
+        return self._duration
+
+    @cached_property
+    def _samples(self) -> np.ndarray:
+        """The value at each time step that describes the waveform.
+
+        Returns:
+            numpy.ndarray: A numpy array with a value for each time step.
+        """
+        return cast(np.ndarray, self._norm_samples * self._scaling)
+
+    def change_duration(self, new_duration: int) -> KaiserWaveform:
+        """Returns a new waveform with modified duration.
+
+        Args:
+            new_duration(int): The duration of the new waveform.
+
+        Returns:
+            KaiserWaveform: The new waveform with the same area and beta
+                but a new duration.
+        """
+        return KaiserWaveform(new_duration, self._area, self._beta)
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self._duration, self._area, self._beta)
+
+    def __str__(self) -> str:
+        return (
+            f"Kaiser({self._duration} ns, "
+            f"Area: {self._area:.3g}, Beta: {self._beta:.3g})"
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"KaiserWaveform(duration: {self._duration}, "
+            f"area: {self._area:.3g}, beta: {self._beta:.3g})"
+        )
+
+    def __mul__(self, other: float) -> KaiserWaveform:
+        return KaiserWaveform(
+            self._duration, self._area * float(other), self._beta
+        )
+
+
 # To replicate __init__'s signature in __new__ for every Waveform subclass
 def _copy_func(f: FunctionType) -> FunctionType:
     return FunctionType(

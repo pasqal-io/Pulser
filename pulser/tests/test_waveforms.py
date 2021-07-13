@@ -24,6 +24,7 @@ from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.parametrized import Variable, ParamObj
 from pulser.waveforms import (
     ConstantWaveform,
+    KaiserWaveform,
     RampWaveform,
     BlackmanWaveform,
     CustomWaveform,
@@ -41,6 +42,7 @@ blackman = BlackmanWaveform(40, np.pi)
 composite = CompositeWaveform(blackman, constant, custom)
 interp_values = [0, 1, 4.4, 2, 3, 1, 0]
 interp = InterpolatedWaveform(1000, interp_values)
+kaiser = KaiserWaveform(40, np.pi)
 
 
 def test_duration():
@@ -236,6 +238,76 @@ def test_interpolated():
     )
 
 
+def test_kaiser():
+    duration: int = 40
+    area: float = np.pi
+    beta: float = 14.0
+
+    wf: KaiserWaveform = KaiserWaveform(duration, area, beta)
+
+    # Check type error on area
+    with pytest.raises(TypeError):
+        KaiserWaveform(duration, np.array([1, 2]))
+
+    # Check type error on beta
+    with pytest.raises(TypeError):
+        KaiserWaveform(duration, area, beta=np.array([1, 2]))
+
+    # Check beta must not be negative
+    with pytest.raises(ValueError, match="must be greater than 0"):
+        KaiserWaveform(duration, area, -1.0)
+
+    # Check duration
+    assert wf.duration == duration
+    assert wf.samples.size == duration
+
+    # Check default beta
+    wf_default_beta = KaiserWaveform(duration, area)
+    kaiser_beta_14: np.ndarray = np.kaiser(duration, 14.0)
+    kaiser_beta_14 *= area / float(np.sum(kaiser_beta_14)) / 1e-3
+    np.testing.assert_allclose(
+        wf_default_beta.samples, kaiser_beta_14, atol=1e-3
+    )
+
+    # Check area
+    assert np.isclose(np.sum(wf.samples), area * 1000.0)
+
+    # Check duration change
+    new_duration = duration * 2
+    wf_change_duration = wf.change_duration(new_duration)
+    assert wf_change_duration.samples.size == new_duration
+    assert np.isclose(np.sum(wf.samples), np.sum(wf_change_duration.samples))
+
+    # Check __str__
+    assert str(wf) == (
+        f"Kaiser({duration} ns, Area: {area:.3g}, Beta: {beta:.3g})"
+    )
+
+    # Check __repr__
+    assert repr(wf) == (
+        f"KaiserWaveform(duration: {duration}, "
+        f"area: {area:.3g}, beta: {beta:.3g})"
+    )
+
+    # Check multiplication
+    wf_multiplication = wf * 2
+    assert (wf_multiplication.samples == wf.samples * 2).all()
+
+    # Check area and max_val must have matching signs
+    with pytest.raises(ValueError, match="must have matching signs"):
+        KaiserWaveform.from_max_val(1, -1)
+
+    # Test from_max_val
+    for max_val in range(1, 501, 50):
+        for beta in range(1, 20):
+            wf = KaiserWaveform.from_max_val(max_val, area, beta)
+            assert np.isclose(np.sum(wf.samples), area * 1000.0)
+            assert np.max(wf.samples) <= max_val
+            wf = KaiserWaveform.from_max_val(-max_val, -area, beta)
+            assert np.isclose(np.sum(wf.samples), -area * 1000.0)
+            assert np.min(wf.samples) >= -max_val
+
+
 def test_ops():
     assert -constant == ConstantWaveform(100, 3)
     assert ramp * 2 == RampWaveform(2e3, 10, 38)
@@ -247,7 +319,7 @@ def test_ops():
 
 
 def test_serialization():
-    for wf in [constant, ramp, custom, blackman, composite, interp]:
+    for wf in [blackman, composite, constant, custom, interp, kaiser, ramp]:
         s = json.dumps(wf, cls=PulserEncoder)
         assert wf == json.loads(s, cls=PulserDecoder)
 
@@ -285,7 +357,7 @@ def test_get_item():
 
     # Check nominal operations
 
-    for wf in [blackman, composite, constant, custom, ramp, interp]:
+    for wf in [blackman, composite, constant, custom, kaiser, ramp, interp]:
         duration = wf.duration
         duration14 = duration // 4
         duration34 = duration * 3 // 4
