@@ -249,10 +249,7 @@ class Simulation:
                     "Incompatible shape of initial state."
                     + f"Expected {legal_shape}, got {shape}."
                 )
-            if isinstance(state, qutip.Qobj):
-                self._initial_state = state
-            else:
-                self._initial_state = qutip.Qobj(state, dims=legal_dims)
+            self._initial_state = qutip.Qobj(state, dims=legal_dims)
 
     @property
     def evaluation_times(self) -> Union[str, float, ArrayLike]:
