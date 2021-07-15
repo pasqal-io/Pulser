@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the Sequence class and auxiliary classes."""
+"""The Sequence class, where a pulse sequence is defined."""
 
 from __future__ import annotations
 
@@ -573,9 +573,9 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (hashable, iterable): The new target for this channel. Must
-                correspond to a qubit ID in device or an iterable of qubit IDs,
-                when multi-qubit addressing is possible.
+            qubits (Union[int, str, Iterable]): The new target for this
+                channel. Must correspond to a qubit ID in device or an iterable
+                of qubit IDs, when multi-qubit addressing is possible.
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
         """
@@ -654,8 +654,8 @@ class Sequence:
 
         Args:
             phi (float): The intended phase shift (in rads).
-            targets (hashable): The ids of the qubits on which to apply the
-                phase shift.
+            targets (Union[int, str]): The ids of the qubits to apply the phase
+                shift to.
             basis (str): The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.

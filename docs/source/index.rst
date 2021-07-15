@@ -82,7 +82,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/qaoa_param_seq
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Documentation
 
    apidoc/pulser

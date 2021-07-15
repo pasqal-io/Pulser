@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the various channel types."""
+"""The various hardware channel types."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ class Channel:
     Not to be initialized itself, but rather through a child class and the
     ``Local`` or ``Global`` classmethods.
 
-    Attributes:
+    Args:
         name: The name of channel.
         basis: The addressed basis name.
         addressing: "Local" or "Global".
@@ -107,6 +107,9 @@ class Channel:
 
         Args:
             duration (int): The duration to validate.
+
+        Returns:
+            int: The duration, potentially adapted to the channels specs.
         """
         try:
             _duration = int(duration)

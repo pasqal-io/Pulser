@@ -7,14 +7,26 @@ Sequence
 
 .. automodule:: pulser.sequence
    :members:
-   :undoc-members:
 
 Register
 ----------------------
 
 .. automodule:: pulser.register
   :members:
-  :undoc-members:
+
+Pulse
+-------------------
+
+.. automodule:: pulser.pulse
+   :members:
+
+
+Waveforms
+----------------------
+
+.. automodule:: pulser.waveforms
+  :members:
+  :show-inheritance:
 
 Devices
 ---------------------
@@ -44,26 +56,6 @@ with the same characteristics.
 
 Channels
 ^^^^^^^^^^^
-Each device is contains a set hardware Channels, to which the Pulses are allocated.
-Each channel has specific configurations, which dictate the pulses it can execute.
-
 .. automodule:: pulser.channels
    :members:
    :show-inheritance:
-
-
-Pulse
--------------------
-
-.. automodule:: pulser.pulse
-   :members:
-   :undoc-members:
-
-
-Waveforms
-----------------------
-
-.. automodule:: pulser.waveforms
-  :members:
-  :undoc-members:
-  :show-inheritance:
