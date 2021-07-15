@@ -243,6 +243,7 @@ class Simulation:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
             shape = state.shape[0]
             legal_shape = self.dim ** self._size
+            legal_dims = [[self.dim] * self._size, [1] * self._size]
             if shape != legal_shape:
                 raise ValueError(
                     "Incompatible shape of initial state."
@@ -251,7 +252,7 @@ class Simulation:
             if isinstance(state, qutip.Qobj):
                 self._initial_state = state
             else:
-                self._initial_state = qutip.Qobj(state)
+                self._initial_state = qutip.Qobj(state, dims=legal_dims)
 
     @property
     def evaluation_times(self) -> Union[str, float, ArrayLike]:
