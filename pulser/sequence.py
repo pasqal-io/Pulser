@@ -279,9 +279,8 @@ class Sequence:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
-            qubit (hashable): The id of the qubit whose phase shift is desired.
-
-        Keyword args:
+            qubit (Union[int, str]): The id of the qubit whose phase shift is
+                desired.
             basis (str): The basis (i.e. electronic transition) the phase
                 reference is associated with. Must correspond to the basis of a
                 declared channel.
@@ -330,10 +329,10 @@ class Sequence:
                 Consult ``Sequence.available_channels`` to see which channel
                 ID's are still available and the associated channel's
                 description.
-            initial_target (Iterable, default=None): For 'Local' addressing
-                channels only. Declares the initial target of the channel.
-                If left as None, the initial target will have to be set
-                manually as the first addition to this channel.
+            initial_target (Optional[Union[int, str, Iterable]]): For 'Local'
+                addressing channels only. Declares the initial target of the
+                channel. If left as None, the initial target will have to be
+                set manually as the first addition to this channel.
         """
         if name in self._channels:
             raise ValueError("The given name is already in use.")
@@ -834,7 +833,7 @@ class Sequence:
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
-                the solver.
+            the solver.
         """
         draw_sequence(
             self,

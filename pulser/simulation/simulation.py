@@ -44,8 +44,6 @@ SUPPORTED_BASES = {"ground-rydberg", "digital"}
 class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
 
-    Provides methods to simulate the sequence using QuTiP.
-
     Args:
         sequence (Sequence): An instance of a Pulser Sequence that we
             want to simulate.
@@ -55,10 +53,10 @@ class Simulation:
         config (SimConfig): Configuration to be used for this simulation.
         evaluation_times (Union[str, ArrayLike, float]): Choose between:
 
-            - 'Full': This list is set to be the one used to define the
+            - "Full": The times are set to be the ones used to define the
               Hamiltonian to the solver.
 
-            - 'Minimal': This list is set to only include initial and end
+            - "Minimal": The times are set to only include initial and final
               times.
 
             - An ArrayLike object of times in µs if you wish to only include
@@ -180,7 +178,7 @@ class Simulation:
             ]
 
     def add_config(self, config: SimConfig) -> None:
-        """Updates this SimConfig object with parameters of another one.
+        """Updates the current configuration with parameters of another one.
 
         Mostly useful when dealing with multiple noise types in different
         configurations and wanting to merge these configurations together.
@@ -224,20 +222,21 @@ class Simulation:
 
     @property
     def initial_state(self) -> qutip.Qobj:
-        """Property getter for initial_state."""
+        """The initial state of the simulation.
+
+        Args:
+            state (Union[str, ArrayLike, qutip.Qobj]): The initial state.
+                Choose between:
+
+                - "all-ground" for all atoms in ground state
+                - An ArrayLike with a shape compatible with the system
+                - A Qobj object
+        """
         return self._initial_state
 
     @initial_state.setter
     def initial_state(self, state: Union[str, np.ndarray, qutip.Qobj]) -> None:
-        """Sets the initial state of the simulation.
-
-        Args:
-            state (Union[str, ArrayLike, qutip.qObj]): initial state.
-                Choose between:
-                -'all-ground' for all atoms in ground state
-                -An ArrayLike with a shape compatible with the system
-                -A Qobj object
-        """
+        """Sets the initial state of the simulation."""
         self._initial_state: qutip.Qobj
         if state == "all-ground":
             self._initial_state = qutip.tensor(
@@ -259,23 +258,27 @@ class Simulation:
 
     @property
     def evaluation_times(self) -> Union[str, float, ArrayLike]:
-        """Property getter for evaluation_times."""
+        """The times at which the results of this simulation are returned.
+
+        Args:
+            value (Union[str, ArrayLike, float]): Choose between:
+
+                - "Full": The times are set to be the ones used to define the
+                  Hamiltonian to the solver.
+
+                - "Minimal": The times are set to only include initial and
+                  final times.
+
+                - An ArrayLike object of times in µs if you wish to only
+                  include those specific times.
+
+                - A float to act as a sampling rate for the resulting state.
+        """
         return self._evaluation_times
 
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
-        """Sets times at which the results of this simulation are returned.
-
-        Args:
-            value (Union[str, ArrayLike, float]): Choose between:
-                -'Full': This list is set to be the one used to
-                define the Hamiltonian to the solver
-                -'Minimal': This list is set to only include initial and end
-                    times
-                -An ArrayLike object of times in µs if you wish to only include
-                    those specific times
-                -A float to act as a sampling rate for the resulting state.
-        """
+        """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
                 self._eval_times_array = self._times
@@ -654,7 +657,7 @@ class Simulation:
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
 
-        Will return NoisyResults if it detects any noise in the SimConfig.
+        Will return NoisyResults if the noise in the SimConfig requires it.
         Otherwise will return CoherentResults.
 
         Keyword Args:

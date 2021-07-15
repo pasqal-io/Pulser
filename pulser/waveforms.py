@@ -910,7 +910,7 @@ class KaiserWaveform(Waveform):
 
         Returns:
             KaiserWaveform: The new waveform with the same area and beta
-                but a new duration.
+            but a new duration.
         """
         return KaiserWaveform(new_duration, self._area, self._beta)
 

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains SimConfig class that sets the configuration of a simulation."""
+"""Contains the SimConfig class that sets the configuration of a simulation."""
 
 from __future__ import annotations
 
@@ -42,24 +42,27 @@ KEFF = 8.7  # µm^-1
 
 @dataclass(frozen=True)
 class SimConfig:
-    """Includes additional parameters to simulation.
+    """Specifies a simulation's configuration.
 
     Note:
-        The configuration chosen upon instantiation cannot be changed
-        later on.
+        Being a frozen dataclass, the configuration chosen upon instantiation
+        cannot be changed later on.
 
-    Keyword Arguments:
-        noise (Union[NOISE_TYPES, tuple[NOISE_TYPES]]): Types of noises
-            to be used in the simulation. You may specify just one, or a
-            tuple of the allowed noise types:
-            -   'dephasing': Random phase (Z) flip
-            -   'doppler': Local atom detuning due to finite speed of the
-                atoms and Doppler effect with respect to laser frequency
-            -   'amplitude': Gaussian damping due to finite laser waist
-            -   'SPAM': SPAM errors. Adds:
-                --  eta: Probability of each atom to be badly prepared
-                --  epsilon: Probability of false positives
-                --  epsilon_prime: Probability of false negatives.
+    Args:
+        noise (Union[str, tuple[str]]): Types of noises to be used in the
+            simulation. You may specify just one, or a tuple of the allowed
+            noise types:
+
+            - "dephasing": Random phase (Z) flip
+            - "doppler": Local atom detuning due to finite speed of the
+              atoms and Doppler effect with respect to laser frequency
+            - "amplitude": Gaussian damping due to finite laser waist
+            - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
+              **epsilon_prime**.
+
+        eta (float): Probability of each atom to be badly prepared.
+        epsilon (float): Probability of false positives.
+        epsilon_prime(float): Probability of false negatives.
         runs (int): Number of runs needed : each run draws a new random
             noise.
         samples_per_run (int): Number of samples per noisy run.

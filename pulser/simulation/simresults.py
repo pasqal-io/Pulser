@@ -87,12 +87,12 @@ class SimulationResults(ABC):
         """Returns the expectation values of operators in obs_list.
 
         Args:
-            obs_list (Sequence[Union[qutip.Qobj, ArrayLike]]): Input observable
+            obs_list (list[Union[qutip.Qobj, ArrayLike]]): Input observable
                 list. ArrayLike objects will be converted to qutip.Qobj.
 
         Returns:
             list[Union[float, complex, ArrayLike]]: Expectation values of
-                obs_list.
+            obs_list.
         """
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators.")
@@ -141,7 +141,7 @@ class SimulationResults(ABC):
 
         Returns:
             Counter: Sample distribution of bitstrings corresponding to
-                measured quantum states at time t.
+            measured quantum states at time t.
         """
         t_index = self._get_index_from_time(t, t_tol)
         dist = np.random.multinomial(n_samples, self._calc_weights(t_index))
@@ -160,7 +160,7 @@ class SimulationResults(ABC):
 
         Returns:
             Counter: Sample distribution of bitstrings corresponding to
-                measured quantum states at the end of the simulation.
+            measured quantum states at the end of the simulation.
         """
         return self.sample_state(self._sim_times[-1], N_samples)
 
@@ -306,7 +306,7 @@ class NoisyResults(SimulationResults):
 
         Returns:
             qutip.Qobj: States probability distribution as a diagonal
-                density matrix.
+            density matrix.
         """
         t_index = self._get_index_from_time(t, t_tol)
         return self._calc_pseudo_density(t_index)
@@ -368,7 +368,7 @@ class NoisyResults(SimulationResults):
 
 
 class CoherentResults(SimulationResults):
-    """Results of an ideal simulation run of a pulse sequence.
+    """Results of a coherent simulation run of a pulse sequence.
 
     Contains methods for studying the states and extracting useful information
     from them.
@@ -608,7 +608,7 @@ class CoherentResults(SimulationResults):
 
         Returns:
             Counter: Sample distribution of bitstrings corresponding to
-                measured quantum states at time t.
+            measured quantum states at time t.
         """
         sampled_state = super().sample_state(t, n_samples, t_tol)
         if self._meas_errors is None:
