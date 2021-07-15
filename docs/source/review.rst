@@ -185,7 +185,7 @@ target individual qubits instead of the entire system.
 Since the Rydberg blockade effect is not present when atoms are in :math:`|g\rangle` or :math:`|h\rangle`,
 the dynamics of each qubit's state are just determined by the driving pulses,
 already illustrated above as rotations on the Bloch sphere. By tuning the parameters of a pulse,
-we can achieve any arbitrary single-qubit unitary, as is shown in :doc:`phase_shifts_vz_gates`.
+we can achieve any arbitrary single-qubit unitary, as is shown in :doc:`tutorials/phase_shifts_vz_gates`.
 
 .. image:: files/digital.png
   :align: center
@@ -197,4 +197,4 @@ possible to do multi-qubit gates. Therefore, the Rydberg level is used
 ancillarily in order to generate a conditional logic on the atoms by attempting
 an excitation which will be blocked (or not) depending on the distance and
 current levels of the involved atoms. This is the key behind the `CZ gate`, whose
-implementation is detailed in :doc:`cz_gate`.
+implementation is detailed in :doc:`tutorials/cz_gate`.
