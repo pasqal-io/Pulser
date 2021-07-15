@@ -60,7 +60,7 @@ computers and simulators, check the pages in :doc:`review`.
    review
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Advanced Features
 
    tutorials/phase_shifts_vz_gates
@@ -70,7 +70,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/serialization
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Applications
 
    tutorials/noisy_sim
@@ -85,7 +85,7 @@ computers and simulators, check the pages in :doc:`review`.
    :maxdepth: 2
    :caption: Documentation
 
-   pulser
+   apidoc/pulser
 
 
 Indices and tables

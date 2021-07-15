@@ -1,13 +1,20 @@
-API Reference
-==============
+************************
+Pulse Sequence Creation
+************************
 
-
-Channels
+Sequence
 ----------------------
 
-.. automodule:: pulser.channels
+.. automodule:: pulser.sequence
    :members:
-   :show-inheritance:
+   :undoc-members:
+
+Register
+----------------------
+
+.. automodule:: pulser.register
+  :members:
+  :undoc-members:
 
 Devices
 ---------------------
@@ -35,6 +42,16 @@ with the same characteristics.
 
 .. autodata:: pulser.devices.MockDevice
 
+Channels
+^^^^^^^^^^^
+Each device is contains a set hardware Channels, to which the Pulses are allocated.
+Each channel has specific configurations, which dictate the pulses it can execute.
+
+.. automodule:: pulser.channels
+   :members:
+   :show-inheritance:
+
+
 Pulse
 -------------------
 
@@ -42,45 +59,11 @@ Pulse
    :members:
    :undoc-members:
 
-Register
-----------------------
-
-.. automodule:: pulser.register
-   :members:
-   :undoc-members:
-
-Sequence
-----------------------
-
-.. automodule:: pulser.sequence
-   :members:
-   :undoc-members:
-
-Simulation
-----------------------
-
-The :class:`Simulation` class is responsible for the classical simulation of
-a :class:`Sequence`.
-
-
-.. automodule:: pulser.simulation.simulation
-   :members:
-   :undoc-members:
-
-Simulation Results
-^^^^^^^^^^^^^^^^^^^
-The :class:`SimulationResults` features methods for the calculation of
-expectation values or emulation of the sampling performed on physical devices.
-
-.. automodule:: pulser.simulation.simresults
-   :members:
-   :undoc-members:
-
 
 Waveforms
------------------------
+----------------------
 
 .. automodule:: pulser.waveforms
-   :members:
-   :undoc-members:
-   :show-inheritance:
+  :members:
+  :undoc-members:
+  :show-inheritance:
