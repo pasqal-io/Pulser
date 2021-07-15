@@ -335,6 +335,7 @@ def test_run():
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
     )
+    good_initial_qobj_no_dims = qutip.basis(sim.dim ** sim._size, 2)
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
@@ -349,6 +350,8 @@ def test_run():
     sim.initial_state = good_initial_array
     sim.run()
     sim.initial_state = good_initial_qobj
+    sim.run()
+    sim.initial_state = good_initial_qobj_no_dims
     sim.run()
     seq.measure("ground-rydberg")
     sim.run()
