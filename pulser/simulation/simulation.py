@@ -128,7 +128,7 @@ class Simulation:
 
     @property
     def config(self) -> SimConfig:
-        """Property getter for config."""
+        """The current configuration, as a SimConfig instance."""
         return self._config
 
     def set_config(self, cfg: SimConfig) -> None:

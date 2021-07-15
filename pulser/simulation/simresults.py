@@ -156,7 +156,7 @@ class SimulationResults(ABC):
         """Returns the result of multiple measurements of the final state.
 
         Args:
-            n_samples (int): Number of samples to return.
+            N_samples (int): Number of samples to return.
 
         Returns:
             Counter: Sample distribution of bitstrings corresponding to
@@ -170,7 +170,7 @@ class SimulationResults(ABC):
         Args:
             op (qutip.Qobj): Operator whose expectation value is wanted.
             fmt (str): Curve plot format.
-            label (str): Axis label.
+            label (str): Curve label.
         """
         plt.plot(self._sim_times, self.expect([op])[0], fmt, label=label)
         plt.xlabel("Time (µs)")
