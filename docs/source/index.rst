@@ -38,7 +38,8 @@ the development and testing of new pulse sequences.
 
 To get started with Pulser, follow the instructions in :doc:`installation` and
 check out the :doc:`introduction_rydberg_blockade` page. For a more in-depth
-introduction, consult the tutorials on :doc:`creating` and :doc:`simulating`.
+introduction, consult the tutorials on :doc:`tutorials/creating` and
+:doc:`tutorials/simulating`.
 To better understand neutral atom devices and how they serve as quantum
 computers and simulators, check the pages in :doc:`review`.
 
@@ -49,8 +50,8 @@ computers and simulators, check the pages in :doc:`review`.
 
    installation
    introduction_rydberg_blockade
-   creating
-   simulating
+   tutorials/creating
+   tutorials/simulating
 
 .. toctree::
    :maxdepth: 2
@@ -62,22 +63,23 @@ computers and simulators, check the pages in :doc:`review`.
    :maxdepth: 2
    :caption: Advanced Features
 
-   phase_shifts_vz_gates
-   composite_wfs
-   paramseqs
-   interpolated_wfs
-   serialization
+   tutorials/phase_shifts_vz_gates
+   tutorials/composite_wfs
+   tutorials/paramseqs
+   tutorials/interpolated_wfs
+   tutorials/serialization
 
 .. toctree::
    :maxdepth: 2
    :caption: Applications
 
-   cz_gate
-   afm_prep
-   1D_crystals
-   optimization
-   qaoa_mis
-   qaoa_param_seq
+   tutorials/noisy_sim
+   tutorials/cz_gate
+   tutorials/afm_prep
+   tutorials/1D_crystals
+   tutorials/optimization
+   tutorials/qaoa_mis
+   tutorials/qaoa_param_seq
 
 .. toctree::
    :maxdepth: 2
