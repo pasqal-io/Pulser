@@ -327,7 +327,8 @@ class Simulation:
             return xy
 
         make_interaction_term = (make_xy_term
-            if self._interaction == 'XY' else make_vdw_term)
+                                 if self._interaction == 'XY'
+                                 else make_vdw_term)
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""

@@ -156,7 +156,6 @@ def test_building_basis_and_projection_operators():
     op_one = sim.build_operator(('sigma_gg', ['target']))
     assert np.linalg.norm(op_standard - op_one) < 1e-10
 
-
     # Global ground-rydberg
     seq2 = Sequence(reg, Chadoq2)
     seq2.declare_channel('global', 'rydberg_global')
