@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the Register class, defining an array of neutral atoms."""
+"""Defines the configuration of an array of neutral atoms."""
 
 from __future__ import annotations
 

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains all supported types of waveforms and the Waveform parent class."""
+"""All built-in types of waveforms and their Waveform parent class."""
 
 from __future__ import annotations
 
@@ -590,7 +590,7 @@ class BlackmanWaveform(Waveform):
 
         Returns:
             BlackmanWaveform: The new waveform with the same area but a new
-                duration.
+            duration.
         """
         return BlackmanWaveform(new_duration, self._area)
 
@@ -718,7 +718,7 @@ class InterpolatedWaveform(Waveform):
 
         Returns:
             InterpolatedWaveform: The new waveform with the same coordinates
-                for interpolation but a new duration.
+            for interpolation but a new duration.
         """
         return InterpolatedWaveform(new_duration, self._values, **self._kwargs)
 
@@ -910,7 +910,7 @@ class KaiserWaveform(Waveform):
 
         Returns:
             KaiserWaveform: The new waveform with the same area and beta
-                but a new duration.
+            but a new duration.
         """
         return KaiserWaveform(new_duration, self._area, self._beta)
 

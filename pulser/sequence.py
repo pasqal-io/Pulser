@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the Sequence class and auxiliary classes."""
+"""The Sequence class, where a pulse sequence is defined."""
 
 from __future__ import annotations
 
@@ -279,9 +279,8 @@ class Sequence:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
-            qubit (hashable): The id of the qubit whose phase shift is desired.
-
-        Keyword args:
+            qubit (Union[int, str]): The id of the qubit whose phase shift is
+                desired.
             basis (str): The basis (i.e. electronic transition) the phase
                 reference is associated with. Must correspond to the basis of a
                 declared channel.
@@ -330,10 +329,10 @@ class Sequence:
                 Consult ``Sequence.available_channels`` to see which channel
                 ID's are still available and the associated channel's
                 description.
-            initial_target (Iterable, default=None): For 'Local' addressing
-                channels only. Declares the initial target of the channel.
-                If left as None, the initial target will have to be set
-                manually as the first addition to this channel.
+            initial_target (Optional[Union[int, str, Iterable]]): For 'Local'
+                addressing channels only. Declares the initial target of the
+                channel. If left as None, the initial target will have to be
+                set manually as the first addition to this channel.
         """
         if name in self._channels:
             raise ValueError("The given name is already in use.")
@@ -455,16 +454,15 @@ class Sequence:
                 of having multiple channels act on the same target
                 simultaneously.
 
-                - ``'min-delay'``
-                    Before adding the pulse, introduces the smallest
-                    possible delay that avoids all exisiting conflicts.
-                - ``'no-delay'``
-                    Adds the pulse to the channel, regardless of
-                    existing conflicts.
-                - ``'wait-for-all'``
-                    Before adding the pulse, adds a delay that
-                    idles the channel until the end of the other channels'
-                    latest pulse.
+                - ``'min-delay'``: Before adding the pulse, introduces the
+                  smallest possible delay that avoids all exisiting conflicts.
+
+                - ``'no-delay'``: Adds the pulse to the channel, regardless of
+                  existing conflicts.
+
+                - ``'wait-for-all'``: Before adding the pulse, adds a delay
+                  that idles the channel until the end of the other channels'
+                  latest pulse.
         """
         pulse = cast(Pulse, pulse)
         channel = cast(str, channel)
@@ -575,9 +573,9 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (hashable, iterable): The new target for this channel. Must
-                correspond to a qubit ID in device or an iterable of qubit IDs,
-                when multi-qubit addressing is possible.
+            qubits (Union[int, str, Iterable]): The new target for this
+                channel. Must correspond to a qubit ID in device or an iterable
+                of qubit IDs, when multi-qubit addressing is possible.
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
         """
@@ -656,8 +654,8 @@ class Sequence:
 
         Args:
             phi (float): The intended phase shift (in rads).
-            targets (hashable): The ids of the qubits on which to apply the
-                phase shift.
+            targets (Union[int, str]): The ids of the qubits to apply the phase
+                shift to.
             basis (str): The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
@@ -835,7 +833,7 @@ class Sequence:
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
-                the solver.
+            the solver.
         """
         draw_sequence(
             self,

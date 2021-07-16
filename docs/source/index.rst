@@ -37,7 +37,7 @@ Additionally, Pulser features built-in tools for classical simulation to aid in
 the development and testing of new pulse sequences.
 
 To get started with Pulser, follow the instructions in :doc:`installation` and
-check out the :doc:`introduction_rydberg_blockade` page. For a more in-depth
+check out the :doc:`intro_rydberg_blockade` page. For a more in-depth
 introduction, consult the tutorials on :doc:`tutorials/creating` and
 :doc:`tutorials/simulating`.
 To better understand neutral atom devices and how they serve as quantum
@@ -49,7 +49,7 @@ computers and simulators, check the pages in :doc:`review`.
    :caption: Installation and First Steps
 
    installation
-   introduction_rydberg_blockade
+   intro_rydberg_blockade
    tutorials/creating
    tutorials/simulating
 
@@ -60,7 +60,7 @@ computers and simulators, check the pages in :doc:`review`.
    review
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Advanced Features
 
    tutorials/phase_shifts_vz_gates
@@ -70,7 +70,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/serialization
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Applications
 
    tutorials/noisy_sim
@@ -82,10 +82,10 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/qaoa_param_seq
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Documentation
 
-   pulser
+   apidoc/pulser
 
 
 Indices and tables

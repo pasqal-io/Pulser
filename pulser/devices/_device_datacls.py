@@ -164,7 +164,11 @@ class Device:
             f" - Maximum distance from origin: {self.max_radial_distance} μm",
             (
                 " - Minimum distance between neighbouring atoms: "
-                + f"{self.min_atom_distance} μm"
+                f"{self.min_atom_distance} μm"
+            ),
+            (
+                r" - Interaction coefficient (:math:`C_6/\hbar`): "
+                fr"{self.interaction_coeff} :math:`\mu m^6 / \mu s`"
             ),
             "\nChannels:",
         ]
@@ -192,6 +196,10 @@ class Device:
                         f"\t- Maximum time to retarget: {ch.retarget_time} ns",
                         f"\t- Maximum simultaneous targets: {ch.max_targets}",
                     ]
+                ch_lines += [
+                    f"\t- Clock period: {ch.clock_period} ns",
+                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
+                ]
             else:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
