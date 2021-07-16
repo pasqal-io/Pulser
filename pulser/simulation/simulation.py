@@ -252,17 +252,6 @@ class Simulation:
                         raise ValueError(
                             f"{operator} is not a valid operator")
                 for qubit in qubits:
-                    # if isinstance(qubit, int):
-                    #     if qubit >= self._size:
-                    #         raise ValueError(
-                    #             "The index value is greater than the "
-                    #             "size of the system")
-                    #     k = qubit
-                    # else:
-                    #     if qubit not in self._qid_index.keys():
-                    #         raise ValueError(
-                    #             f"{qubit} is not a valid qubit")
-                    #     k = self._qid_index[qubit]
                     try:
                         k = self._qid_index[qubit]
                     except KeyError:
