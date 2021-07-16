@@ -15,6 +15,6 @@
 
 from pulser.parametrized.paramabc import Parametrized
 
-from pulser.parametrized.paramobj import ParamObj
-
 from pulser.parametrized.variable import Variable
+
+from pulser.parametrized.paramobj import ParamObj

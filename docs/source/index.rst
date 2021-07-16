@@ -37,8 +37,9 @@ Additionally, Pulser features built-in tools for classical simulation to aid in
 the development and testing of new pulse sequences.
 
 To get started with Pulser, follow the instructions in :doc:`installation` and
-check out the :doc:`introduction_rydberg_blockade` page. For a more in-depth
-introduction, consult the tutorials on :doc:`creating` and :doc:`simulating`.
+check out the :doc:`intro_rydberg_blockade` page. For a more in-depth
+introduction, consult the tutorials on :doc:`tutorials/creating` and
+:doc:`tutorials/simulating`.
 To better understand neutral atom devices and how they serve as quantum
 computers and simulators, check the pages in :doc:`review`.
 
@@ -48,9 +49,9 @@ computers and simulators, check the pages in :doc:`review`.
    :caption: Installation and First Steps
 
    installation
-   introduction_rydberg_blockade
-   creating
-   simulating
+   intro_rydberg_blockade
+   tutorials/creating
+   tutorials/simulating
 
 .. toctree::
    :maxdepth: 2
@@ -59,30 +60,32 @@ computers and simulators, check the pages in :doc:`review`.
    review
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Advanced Features
 
-   phase_shifts_vz_gates
-   composite_wfs
-   paramseqs
-   serialization
+   tutorials/phase_shifts_vz_gates
+   tutorials/composite_wfs
+   tutorials/paramseqs
+   tutorials/interpolated_wfs
+   tutorials/serialization
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Applications
 
-   cz_gate
-   afm_prep
-   1D_crystals
-   optimization
-   qaoa_mis
-   qaoa_param_seq
+   tutorials/noisy_sim
+   tutorials/cz_gate
+   tutorials/afm_prep
+   tutorials/1D_crystals
+   tutorials/optimization
+   tutorials/qaoa_mis
+   tutorials/qaoa_param_seq
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Documentation
 
-   pulser
+   apidoc/pulser
 
 
 Indices and tables

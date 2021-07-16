@@ -14,18 +14,24 @@
 
 from setuptools import setup, find_packages
 
-__version__ = ''
-exec(open('pulser/_version.py').read())
+__version__ = ""
+exec(open("pulser/_version.py").read())
 
 setup(
     name="pulser",
     version=__version__,
     install_requires=[
         "matplotlib",
-        "numpy",
+        "numpy>=1.20",
         "scipy",
         "qutip",
     ],
+    extras_require={
+        ":python_version == '3.7'": [
+            "backports.cached-property",
+            "typing-extensions",
+        ],
+    },
     packages=find_packages(),
     include_package_data=True,
     description="A pulse-level composer for neutral-atom quantum devices.",
@@ -35,8 +41,8 @@ setup(
     python_requires=">=3.7.0",
     license="Apache 2.0",
     classifiers=[
-         "Development Status :: 3 - Alpha",
-         "Programming Language :: Python :: 3",
-         ],
+        "Development Status :: 3 - Alpha",
+        "Programming Language :: Python :: 3",
+    ],
     url="https://github.com/pasqal-io/Pulser",
 )

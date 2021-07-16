@@ -12,20 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pulser.devices._pasqal_device import PasqalDevice
-from pulser.channels import Rydberg, Raman
+from pulser.devices._device_datacls import Device
+from pulser.channels import Rydberg, Raman, Microwave
 
 
-MockDevice = PasqalDevice(
-            name="MockDevice",
-            dimensions=2,
-            max_atom_num=2000,
-            max_radial_distance=1000,
-            min_atom_distance=1,
-            _channels=(
-                ("rydberg_global", Rydberg.Global(1000, 200)),
-                ("rydberg_local", Rydberg.Local(1000, 200, 0, 2000)),
-                ("raman_global", Raman.Global(1000, 200)),
-                ("raman_local", Raman.Local(1000, 200, 0, 2000)),
-                )
-            )
+MockDevice = Device(
+    name="MockDevice",
+    dimensions=2,
+    max_atom_num=2000,
+    max_radial_distance=1000,
+    min_atom_distance=1,
+    _channels=(
+        (
+            "rydberg_global",
+            Rydberg.Global(1000, 200, clock_period=1, min_duration=1),
+        ),
+        (
+            "rydberg_local",
+            Rydberg.Local(
+                1000, 200, 0, max_targets=2000, clock_period=1, min_duration=1
+            ),
+        ),
+        (
+            "raman_global",
+            Raman.Global(1000, 200, clock_period=1, min_duration=1),
+        ),
+        (
+            "raman_local",
+            Raman.Local(
+                1000, 200, 0, max_targets=2000, clock_period=1, min_duration=1
+            ),
+        ),
+        (
+            "mw_global",
+            Microwave.Global(1000, 200, clock_period=1, min_duration=1),
+        ),
+    ),
+)

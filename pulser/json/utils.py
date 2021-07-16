@@ -11,18 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Utility functions for JSON serializations."""
 
-import warnings
+from __future__ import annotations
+
+from typing import Any, Optional
 
 
-def obj_to_dict(obj, *args, _build=True, _module=None, _name=None,
-                _submodule=None, **kwargs):
+def obj_to_dict(
+    obj: object,
+    *args: Any,
+    _build: bool = True,
+    _module: Optional[str] = None,
+    _name: Optional[str] = None,
+    _submodule: Optional[str] = None,
+    **kwargs: Any
+) -> dict[str, Any]:
     """Encodes an object in a dictionary for serialization.
 
     Args:
         obj: The object to encode in the dictionary.
 
-    Other parameters:
+    Other Parameters:
         _build (bool): Whether the object is to be built on deserialization.
         _module (str): Custom name for the module containing the object.
         _name (str): Custom name of the object.
@@ -35,7 +45,6 @@ def obj_to_dict(obj, *args, _build=True, _module=None, _name=None,
     Returns:
         dict: The dictionary encoding the object.
     """
-
     d = {
         "_build": _build,
         "__module__": _module if _module else obj.__class__.__module__,
@@ -48,29 +57,3 @@ def obj_to_dict(obj, *args, _build=True, _module=None, _name=None,
         d["__submodule__"] = _submodule
 
     return d
-
-
-def validate_duration(duration, min_duration=16, max_duration=67108864):
-    """Validates a time interval.
-
-    Returns:
-        int: The duration in multiples of 4 ns.
-    """
-    try:
-        _duration = int(duration)
-    except (TypeError, ValueError):
-        raise TypeError("duration needs to be castable to an int but "
-                        "type %s was provided" % type(duration))
-
-    if duration < min_duration:
-        raise ValueError(f"duration has to be at least {min_duration} ns.")
-
-    if duration > max_duration:
-        raise ValueError(f"duration can be at most {max_duration} ns.")
-
-    if duration % 4 != 0:
-        _duration -= _duration % 4
-        warnings.warn("The given duration is below the machine's precision"
-                      " of 4 ns time steps. It was rounded down to the"
-                      " nearest multiple of 4 ns.")
-    return _duration
