@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+import pulser
+
 
 def obj_to_dict(
     obj: object,
@@ -56,4 +58,5 @@ def obj_to_dict(
     if _submodule:
         d["__submodule__"] = _submodule
 
+    pulser.json.supported.validate_serialization(d)
     return d
