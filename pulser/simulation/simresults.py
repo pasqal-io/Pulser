@@ -48,15 +48,22 @@ class SimulationResults:
         self._states = run_output
         self._dim = dim
         self._size = size
-        if basis_name not in {'ground-rydberg', 'digital', 'all'}:
+        if basis_name not in {'ground-rydberg', 'digital', 'all', 'XY'}:
             raise ValueError(
-                "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
-                )
+                "`basis_name` must be 'ground-rydberg', 'digital',"
+                "'all' or 'XY'."
+            )
         self._basis_name = basis_name
-        if meas_basis:
-            if meas_basis not in {'ground-rydberg', 'digital'}:
+        if self._basis_name == 'all':
+            if (meas_basis is not None and
+                    meas_basis not in {'ground-rydberg', 'digital'}):
                 raise ValueError(
-                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                    "`meas_basis` must be 'ground-rydberg', 'digital'."
+                    )
+        else:
+            if (meas_basis is not None) and (meas_basis != self._basis_name):
+                raise ValueError(
+                    "`meas_basis` and `basis_name` must have the same value."
                     )
         self._meas_basis = meas_basis
 
@@ -73,7 +80,8 @@ class SimulationResults:
         Keyword Args:
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible.
+                population of the states to be ignored is negligible. Doesn't
+                apply to XY mode.
             ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
@@ -94,6 +102,7 @@ class SimulationResults:
             full = final_state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
             final_state *= np.exp(-1j * global_ph)
+
         if self._dim != 3:
             if reduce_to_basis not in [None, self._basis_name]:
                 raise TypeError(f"Can't reduce a system in {self._basis_name}"
@@ -104,8 +113,9 @@ class SimulationResults:
             elif reduce_to_basis == "digital":
                 ex_state = "0"
             else:
-                raise ValueError("'reduce_to_basis' must be 'ground-rydberg' "
-                                 + f"or 'digital', not '{reduce_to_basis}'.")
+                raise ValueError(
+                    "'reduce_to_basis' must be 'ground-rydberg' "
+                    + f"'digital', not '{reduce_to_basis}'.")
             ex_inds = [i for i in range(3**self._size) if ex_state in
                        np.base_repr(i, base=3).zfill(self._size)]
             ex_probs = np.abs(final_state.extract_states(ex_inds).full()) ** 2
@@ -180,10 +190,18 @@ class SimulationResults:
                     )
             meas_basis = self._meas_basis
 
-        if meas_basis not in {'ground-rydberg', 'digital'}:
-            raise ValueError(
-                "'meas_basis' can only be 'ground-rydberg' or 'digital'."
-                )
+        if self._basis_name == 'XY':
+            if (meas_basis is not None and meas_basis != self._basis_name):
+                raise ValueError(
+                    "`meas_basis` and `basis_name` must have"
+                    "the same value in XY mode."
+                    )
+        else:
+            if (meas_basis is not None and
+                    meas_basis not in {'ground-rydberg', 'digital'}):
+                raise ValueError(
+                    "`meas_basis` must be 'ground-rydberg', 'digital'."
+                    )
 
         N = self._size
         self.N_samples = N_samples

@@ -37,6 +37,7 @@ class Register:
             position coordinates (in μm) as values
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
+
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):

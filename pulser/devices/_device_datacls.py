@@ -36,9 +36,13 @@ class Device:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff: :math:`C_6/\hbar` (in :math:`\mu m^6 / \mu s`),
+        interaction_coeff: :math:`C_6/\hbar`
+            (in :math:`\mu m^6 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
-            the Rydberg state.
+            the same Rydberg state.
+        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states.
     """
 
     name: str
@@ -47,7 +51,9 @@ class Device:
     max_radial_distance: int
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
+    # Ising interaction coeff
     interaction_coeff: float = 5008713.
+    interaction_coeff_xy: float = 3700.
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
