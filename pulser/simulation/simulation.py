@@ -38,7 +38,7 @@ from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
 
 
-SUPPORTED_BASES = {"ground-rydberg", "digital"}
+SUPPORTED_BASES = {"ground-rydberg", "digital", "XY"}
 
 
 class Simulation:
@@ -93,6 +93,7 @@ class Simulation:
                 "Sequence with unsupported bases: " + "".join(not_supported)
             )
         self._seq = sequence
+        self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = self._seq.get_duration()
@@ -112,6 +113,7 @@ class Simulation:
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double) / 1000
         )
+
         self.evaluation_times = evaluation_times
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
@@ -123,7 +125,7 @@ class Simulation:
             if self.basis_name in {"digital", "all"}:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = "ground-rydberg"
+                self._meas_basis = self.basis_name
         self.initial_state = "all-ground"
 
     @property
@@ -171,8 +173,8 @@ class Simulation:
             self._collapse_ops += [
                 k
                 * (
-                    self._build_operator("sigma_rr", qid)
-                    - self._build_operator("sigma_gg", qid)
+                    self.build_operator([("sigma_rr", [qid])])
+                    - self.build_operator([("sigma_gg", [qid])])
                 )
                 for qid in self._qid_index
             ]
@@ -240,7 +242,10 @@ class Simulation:
         self._initial_state: qutip.Qobj
         if state == "all-ground":
             self._initial_state = qutip.tensor(
-                [self.basis["g"] for _ in range(self._size)]
+                [
+                    self.basis["d" if self._interaction == "XY" else "g"]
+                    for _ in range(self._size)
+                ]
             )
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
@@ -361,10 +366,15 @@ class Simulation:
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
-        self.samples: dict[str, dict[str, dict]] = {
-            addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
-            for addr in ["Global", "Local"]
-        }
+        self.samples: dict[str, dict[str, dict]]
+        if self._interaction == "ising":
+            self.samples = {
+                addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
+                for addr in ["Global", "Local"]
+            }
+        else:
+            self.samples = {addr: {"XY": {}} for addr in ["Global", "Local"]}
+
         if not hasattr(self, "operators"):
             self.operators = deepcopy(self.samples)
 
@@ -442,23 +452,54 @@ class Simulation:
                                 )
                 self.samples["Local"][basis] = samples_dict
 
-    def _build_operator(
-        self, op_id: str, *qubit_ids: Union[str, int], global_op: bool = False
-    ) -> qutip.Qobj:
-        """Create qutip.Qobj with nontrivial action at *qubit_ids."""
-        if global_op:
-            return sum(
-                self._build_operator(op_id, q_id) for q_id in self._qdict
-            )
-        if len(set(qubit_ids)) < len(qubit_ids):
-            raise ValueError("Duplicate atom ids in argument list.")
-        # List of identity operators, except for op_id where requested:
-        op_list = [
-            self.op_matrix[op_id]
-            if j in map(self._qid_index.get, qubit_ids)
-            else self.op_matrix["I"]
-            for j in range(self._size)
-        ]
+    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+        """Creates an operator with non trivial actions on some qubits.
+
+        Takes as argument a list of tuples [(operator_1, qubits_1),
+        (operator_2, qubits_2)...]. Returns the operator given by the tensor
+        product of {operator_i applied on qubits_i} and Id on the rest.
+        (operator, 'global') returns the sum for all $j$ of operator
+        applied at qubit $j$ and identity elsewhere.
+
+        Example for 4 qubits: [(Z, [1, 2]), (Y, [3])] returns ZZYI
+        and [(X, 'global')] returns XIII + IXII + IIXI + IIIX
+
+        Args:
+            operations (list): List of tuples (operator, qubits)
+                operator can be a qutip.Quobj or a string key for
+                self.op_matrix qubits is the list on which operator
+                will be applied. The qubits can be passed as their
+                index or their label in the register.
+
+        Returns:
+            qutip.Qobj: the final operator.
+        """
+        op_list = [self.op_matrix["I"] for j in range(self._size)]
+
+        if not isinstance(operations, list):
+            operations = [operations]
+
+        for operator, qubits in operations:
+            if qubits == "global":
+                return sum(
+                    self.build_operator([(operator, [q_id])])
+                    for q_id in self._qdict
+                )
+            else:
+                if len(set(qubits)) < len(qubits):
+                    raise ValueError("Duplicate atom ids in argument list.")
+                if isinstance(operator, str):
+                    try:
+                        operator = self.op_matrix[operator]
+                    except KeyError:
+                        raise ValueError(f"{operator} is not a valid operator")
+                for qubit in qubits:
+                    try:
+                        k = self._qid_index[qubit]
+                    except KeyError:
+                        raise ValueError(f"{qubit} is not a valid qubit")
+
+                    op_list[k] = operator
         return qutip.tensor(op_list)
 
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
@@ -491,28 +532,34 @@ class Simulation:
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
-        # No samples => Empty dict entry => False
-        if (
-            not self.samples["Global"]["digital"]
-            and not self.samples["Local"]["digital"]
-        ):
-            self.basis_name = "ground-rydberg"
+        if self._interaction == "XY":
+            self.basis_name = "XY"
             self.dim = 2
-            basis = ["r", "g"]
-            projectors = ["gr", "rr", "gg"]
-        elif (
-            not self.samples["Global"]["ground-rydberg"]
-            and not self.samples["Local"]["ground-rydberg"]
-        ):
-            self.basis_name = "digital"
-            self.dim = 2
-            basis = ["g", "h"]
-            projectors = ["hg", "hh", "gg"]
+            basis = ["u", "d"]
+            projectors = ["uu", "du", "ud", "dd"]
         else:
-            self.basis_name = "all"  # All three states
-            self.dim = 3
-            basis = ["r", "g", "h"]
-            projectors = ["gr", "hg", "rr", "gg", "hh"]
+            # No samples => Empty dict entry => False
+            if (
+                not self.samples["Global"]["digital"]
+                and not self.samples["Local"]["digital"]
+            ):
+                self.basis_name = "ground-rydberg"
+                self.dim = 2
+                basis = ["r", "g"]
+                projectors = ["gr", "rr", "gg"]
+            elif (
+                not self.samples["Global"]["ground-rydberg"]
+                and not self.samples["Local"]["ground-rydberg"]
+            ):
+                self.basis_name = "digital"
+                self.dim = 2
+                basis = ["g", "h"]
+                projectors = ["hg", "hh", "gg"]
+            else:
+                self.basis_name = "all"  # All three states
+                self.dim = 3
+                basis = ["r", "g", "h"]
+                projectors = ["gr", "hg", "rr", "gg", "hh"]
 
         self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
         self.op_matrix = {"I": qutip.qeye(self.dim)}
@@ -536,19 +583,58 @@ class Simulation:
         def make_vdw_term() -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
-            For each pair of qubits, calculate the distance between them, then
-            assign the local operator "sigma_rr" at each pair. The units are
-            given so that the coefficient includes a 1/hbar factor.
+            For each pair of qubits, calculate the distance between them,
+            then assign the local operator "sigma_rr" at each pair.
+            The units are given so that the coefficient includes a
+            1/hbar factor.
             """
-            vdw = 0 * self._build_operator("I")
+            vdw = cast(qutip.Qobj, 0)
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 # no VdW interaction with other qubits for a badly prep. qubit
                 if not (self._bad_atoms[q1] or self._bad_atoms[q2]):
                     dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
                     U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
-                    vdw += U * self._build_operator("sigma_rr", q1, q2)
+                    vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
             return vdw
+
+        def make_xy_term() -> qutip.Qobj:
+            """Construct the XY interaction Term.
+
+            For each pair of qubits, calculate the distance between them,
+            then assign the local operator "sigma_du * sigma_ud" at each pair.
+            The units are given so that the coefficient
+            includes a 1/hbar factor.
+            """
+            xy = cast(qutip.Qobj, 0)
+            # Get every pair without duplicates
+            for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
+                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
+                if mag_norm < 1e-8:
+                    cosine = 0.0
+                else:
+                    cosine = (
+                        np.dot(
+                            (self._qdict[q1] - self._qdict[q2]),
+                            self._seq.magnetic_field[0:2],
+                        )
+                        / (dist * mag_norm)
+                    )
+                U = (
+                    0.5
+                    * self._seq._device.interaction_coeff_xy
+                    * (1 - 3 * cosine ** 2)
+                    / dist ** 3
+                )
+                xy += U * self.build_operator(
+                    [("sigma_du", [q1]), ("sigma_ud", [q2])]
+                )
+            return xy
+
+        make_interaction_term = (
+            make_xy_term if self._interaction == "XY" else make_vdw_term
+        )
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
@@ -559,6 +645,8 @@ class Simulation:
                 op_ids = ["sigma_gr", "sigma_rr"]
             elif basis == "digital":
                 op_ids = ["sigma_hg", "sigma_gg"]
+            elif basis == "XY":
+                op_ids = ["sigma_du", "sigma_dd"]
 
             terms = []
             if addr == "Global":
@@ -570,8 +658,8 @@ class Simulation:
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
                         if op_id not in operators:
-                            operators[op_id] = self._build_operator(
-                                op_id, global_op=True
+                            operators[op_id] = self.build_operator(
+                                [(op_id, "global")]
                             )
                         terms.append(
                             [
@@ -592,8 +680,8 @@ class Simulation:
                     for coeff, op_id in zip(coeffs, op_ids):
                         if np.any(coeff != 0):
                             if op_id not in operators[q_id]:
-                                operators[q_id][op_id] = self._build_operator(
-                                    op_id, q_id
+                                operators[q_id][op_id] = self.build_operator(
+                                    [(op_id, [q_id])]
                                 )
                             terms.append(
                                 [
@@ -606,10 +694,9 @@ class Simulation:
 
         # Time independent term:
         if self.basis_name == "digital" or self._size == 1:
-            qobj_list = [0 * self._build_operator("I")]
+            qobj_list = [0 * self.build_operator([("I", "global")])]
         else:
-            # Van der Waals Interaction Terms
-            qobj_list = [make_vdw_term()]
+            qobj_list = [make_interaction_term()] if self._size > 1 else []
 
         # Time dependent terms:
         for addr in self.samples:

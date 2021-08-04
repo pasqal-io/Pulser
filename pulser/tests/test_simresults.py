@@ -21,7 +21,7 @@ import qutip
 from qutip.piqs import isdiagonal
 
 from pulser import Sequence, Pulse, Register
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
 from pulser.waveforms import BlackmanWaveform
 from pulser.simulation import Simulation, SimConfig
 from pulser.simulation.simresults import CoherentResults, NoisyResults
@@ -58,7 +58,10 @@ ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
         CoherentResults(state, 2, "bad_basis", None, [0])
-    with pytest.raises(ValueError, match="`meas_basis` must be"):
+    with pytest.raises(
+        ValueError,
+        match="`meas_basis` and `basis_name` must have the same value.",
+    ):
         CoherentResults(
             state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
         )
@@ -296,3 +299,47 @@ def test_sample_final_state_noisy():
             ]
         ),
     ).all()
+
+
+def test_results_xy():
+    q_dict = {
+        "A": np.array([0.0, 0.0]),
+        "B": np.array([0.0, 10.0]),
+    }
+    reg = Register(q_dict)
+    duration = 1000
+    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+    seq = Sequence(reg, MockDevice)
+
+    # Declare Channels
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(pi, "ch0")
+    seq.measure("XY")
+
+    sim = Simulation(seq)
+    results = sim.run()
+
+    ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
+
+    assert results._dim == 2
+    assert results._size == 2
+    assert results._basis_name == "XY"
+    assert results._meas_basis == "XY"
+    assert results.states[0] == ground
+
+    with pytest.raises(TypeError, match="Can't reduce a system in"):
+        results.get_final_state(reduce_to_basis="all")
+
+    with pytest.raises(TypeError, match="Can't reduce a system in"):
+        results.get_final_state(reduce_to_basis="ground-rydberg")
+
+    with pytest.raises(TypeError, match="Can't reduce a system in"):
+        results.get_final_state(reduce_to_basis="digital")
+
+    state = results.get_final_state(reduce_to_basis="XY")
+
+    assert np.all(
+        np.isclose(
+            np.abs(state.full()), np.abs(results.states[-1].full()), atol=1e-5
+        )
+    )

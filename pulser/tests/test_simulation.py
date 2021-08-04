@@ -169,7 +169,16 @@ def test_building_basis_and_projection_operators():
 
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
-        sim._build_operator("sigma_gg", "target", "target")
+        sim.build_operator([("sigma_gg", ["target", "target"])])
+    with pytest.raises(ValueError, match="not a valid operator"):
+        sim.build_operator([("wrong", ["target"])])
+    with pytest.raises(ValueError, match="not a valid qubit"):
+        sim.build_operator([("sigma_gg", ["wrong"])])
+
+    # Check building operator with one operator
+    op_standard = sim.build_operator([("sigma_gg", ["target"])])
+    op_one = sim.build_operator(("sigma_gg", ["target"]))
+    assert np.linalg.norm(op_standard - op_one) < 1e-10
 
     # Global ground-rydberg
     seq2 = Sequence(reg, Chadoq2)
@@ -222,23 +231,41 @@ def test_building_basis_and_projection_operators():
         == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
     )
 
+    # Global XY
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel("global", "mw_global")
+    seq2.add(pi, "global")
+    sim2 = Simulation(seq2, sampling_rate=0.01)
+    assert sim2.basis_name == "XY"
+    assert sim2.dim == 2
+    assert sim2.basis == {"u": qutip.basis(2, 0), "d": qutip.basis(2, 1)}
+    assert (
+        sim2.op_matrix["sigma_uu"]
+        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2.op_matrix["sigma_du"]
+        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2.op_matrix["sigma_ud"]
+        == qutip.basis(2, 0) * qutip.basis(2, 1).dag()
+    )
+
 
 def test_empty_sequences():
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, MockDevice)
     with pytest.raises(ValueError, match="no declared channels"):
         Simulation(seq)
+    seq.declare_channel("ch0", "mw_global")
     with pytest.raises(ValueError, match="No instructions given"):
-        seq.declare_channel("test", "rydberg_local", "target")
-        seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
-    seqMW = Sequence(reg, MockDevice)
-    with pytest.raises(NotImplementedError):
-        seqMW.declare_channel("ch0", "mw_global")
-        seqMW.add(
-            Pulse.ConstantDetuning(RampWaveform(1500, 0.0, 2.0), 0.0, 0.0),
-            "ch0",
-        )
-        Simulation(seqMW)
+
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("test", "rydberg_local", "target")
+    seq.declare_channel("test2", "rydberg_global")
+    with pytest.raises(ValueError, match="No instructions given"):
+        Simulation(seq)
 
 
 def test_get_hamiltonian():
@@ -518,3 +545,65 @@ def test_add_config():
     sim.add_config(SimConfig(noise=("SPAM", "amplitude"), laser_waist=172.0))
     assert "amplitude" in sim.config.noise and "SPAM" in sim.config.noise
     assert sim.config.laser_waist == 172.0
+
+
+def test_get_xy_hamiltonian():
+    simple_reg = Register.from_coordinates(
+        [[0, 10], [10, 0], [0, 0]], prefix="atom"
+    )
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.set_magnetic_field(0, 1.0, 0.0)
+    simple_seq.add(rise, "ch0")
+
+    assert np.isclose(np.linalg.norm(simple_seq.magnetic_field[0:2]), 1)
+
+    simple_sim = Simulation(simple_seq, sampling_rate=0.01)
+    with pytest.raises(
+        ValueError, match="less than or equal to the sequence duration"
+    ):
+        simple_sim.get_hamiltonian(1650)
+    with pytest.raises(ValueError, match="greater than or equal to 0"):
+        simple_sim.get_hamiltonian(-10)
+    # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
+    simple_ham = simple_sim.get_hamiltonian(143)
+    assert simple_ham[1, 2] == 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3
+    assert (
+        np.abs(
+            simple_ham[1, 4]
+            - (-2 * 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3)
+        )
+        < 1e-10
+    )
+    assert simple_ham[0, 1] == 0.5 * amp
+    assert simple_ham[3, 3] == -2 * detun
+
+
+def test_run_xy():
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.add(rise, "ch0")
+
+    sim = Simulation(simple_seq, sampling_rate=0.01)
+
+    good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
+    good_initial_qobj = qutip.tensor(
+        [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
+    )
+
+    sim.initial_state = good_initial_array
+    sim.run()
+    sim.initial_state = good_initial_qobj
+    sim.run()
+
+    assert not hasattr(sim._seq, "_measurement")
+    simple_seq.measure(basis="XY")
+    sim.run()
+    assert sim._seq._measurement == "XY"

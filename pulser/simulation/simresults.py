@@ -50,9 +50,10 @@ class SimulationResults(ABC):
         """
         self._dim = 3 if basis_name == "all" else 2
         self._size = size
-        if basis_name not in {"ground-rydberg", "digital", "all"}:
+        if basis_name not in {"ground-rydberg", "digital", "all", "XY"}:
             raise ValueError(
-                "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
+                "`basis_name` must be 'ground-rydberg', 'digital', 'all' or "
+                "'XY'."
             )
         self._basis_name = basis_name
         self._sim_times = sim_times
@@ -271,8 +272,6 @@ class NoisyResults(SimulationResults):
                 'digital' if given value 'all'.
             sim_times (np.ndarray): Times at which Simulation object returned
                 the results.
-            meas_basis (Optional[str]): The basis in which a sampling
-                measurement is desired.
             n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
         """
@@ -401,10 +400,15 @@ class CoherentResults(SimulationResults):
                 "epsilon_prime".
         """
         super().__init__(size, basis_name, sim_times)
-        if meas_basis:
+        if self._basis_name == "all":
             if meas_basis not in {"ground-rydberg", "digital"}:
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                )
+        else:
+            if meas_basis != self._basis_name:
+                raise ValueError(
+                    "`meas_basis` and `basis_name` must have the same value."
                 )
         self._meas_basis = meas_basis
         self._results = run_output
@@ -437,7 +441,8 @@ class CoherentResults(SimulationResults):
             t (float): Time (µs) at which to return the state.
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible.
+                population of the states to be ignored is negligible. Doesn't
+                apply to XY mode.
             ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
@@ -503,7 +508,8 @@ class CoherentResults(SimulationResults):
         Args:
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible.
+                population of the states to be ignored is negligible. Doesn't
+                apply to XY mode.
             ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
