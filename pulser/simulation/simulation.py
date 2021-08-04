@@ -240,7 +240,7 @@ class Simulation:
     def initial_state(self, state: Union[str, np.ndarray, qutip.Qobj]) -> None:
         """Sets the initial state of the simulation."""
         self._initial_state: qutip.Qobj
-        if state == "all-ground":
+        if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
                 [
                     self.basis["d" if self._interaction == "XY" else "g"]
