@@ -238,7 +238,7 @@ class Simulation:
     def initial_state(self, state: Union[str, np.ndarray, qutip.Qobj]) -> None:
         """Sets the initial state of the simulation."""
         self._initial_state: qutip.Qobj
-        if state == "all-ground":
+        if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
                 [self.basis["g"] for _ in range(self._size)]
             )
@@ -678,6 +678,13 @@ class Simulation:
                 k: self.config.spam_dict[k]
                 for k in ("epsilon", "epsilon_prime")
             }
+            if self.config.eta > 0 and self.initial_state != qutip.tensor(
+                [self.basis["g"] for _ in range(self._size)]
+            ):
+                raise NotImplementedError(
+                    "Can't combine state preparation errors with an initial "
+                    "state different from the ground."
+                )
 
         def _run_solver() -> CoherentResults:
             """Returns CoherentResults: Object containing evolution results."""
