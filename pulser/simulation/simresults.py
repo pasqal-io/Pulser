@@ -546,6 +546,7 @@ class CoherentResults(SimulationResults):
                 # State vector ordered with r first for 'ground_rydberg'
                 # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
+                # The same applies in XY mode, which is ordered with u first
                 weights = (
                     probs if self._meas_basis == "digital" else probs[::-1]
                 )

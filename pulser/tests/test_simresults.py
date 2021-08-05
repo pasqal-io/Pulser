@@ -59,6 +59,10 @@ def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
         CoherentResults(state, 2, "bad_basis", None, [0])
     with pytest.raises(
+        ValueError, match="`meas_basis` must be 'ground-rydberg' or 'digital'."
+    ):
+        CoherentResults(state, 1, "all", None, "XY")
+    with pytest.raises(
         ValueError,
         match="`meas_basis` and `basis_name` must have the same value.",
     ):

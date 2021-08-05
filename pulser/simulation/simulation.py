@@ -38,7 +38,10 @@ from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
 
 
-SUPPORTED_BASES = {"ground-rydberg", "digital", "XY"}
+SUPPORTED_NOISE = {
+    "ising": {"dephasing", "doppler", "amplitude", "SPAM"},
+    "XY": {"SPAM"},
+}
 
 
 class Simulation:
@@ -83,14 +86,6 @@ class Simulation:
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
             raise ValueError(
                 "No instructions given for the channels in the " "sequence."
-            )
-        not_supported = (
-            set(ch.basis for ch in sequence._channels.values())
-            - SUPPORTED_BASES
-        )
-        if not_supported:
-            raise NotImplementedError(
-                "Sequence with unsupported bases: " + "".join(not_supported)
             )
         self._seq = sequence
         self._interaction = "XY" if self._seq._in_xy else "ising"
@@ -141,6 +136,12 @@ class Simulation:
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
+        not_supported = set(cfg.noise) - SUPPORTED_NOISE[self._interaction]
+        if not_supported:
+            raise NotImplementedError(
+                f"Interaction mode '{self._interaction}' does not support "
+                f"simulation of noise types: {', '.join(not_supported)}."
+            )
         self._config = cfg
         if not ("SPAM" in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -193,6 +194,13 @@ class Simulation:
         """
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
+
+        not_supported = set(config.noise) - SUPPORTED_NOISE[self._interaction]
+        if not_supported:
+            raise NotImplementedError(
+                f"Interaction mode '{self._interaction}' does not support "
+                f"simulation of noise types: {', '.join(not_supported)}."
+            )
 
         old_noise_set = set(self.config.noise)
         new_noise_set = old_noise_set.union(config.noise)
