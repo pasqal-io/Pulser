@@ -328,6 +328,7 @@ def test_add_max_step_and_delays():
 
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
+    sim.set_config(SimConfig("SPAM", eta=0.0))
     with patch("matplotlib.pyplot.show"):
         sim.draw(draw_phase_area=True)
     bad_initial = np.array([1.0])
@@ -356,6 +357,14 @@ def test_run():
     seq.measure("ground-rydberg")
     sim.run()
     assert sim._seq._measurement == "ground-rydberg"
+
+    sim.set_config(SimConfig("SPAM", eta=0.1))
+    with pytest.raises(
+        NotImplementedError,
+        match="Can't combine state preparation errors with an initial state "
+        "different from the ground.",
+    ):
+        sim.run()
 
 
 def test_eval_times():
