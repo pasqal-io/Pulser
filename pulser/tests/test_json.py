@@ -50,13 +50,14 @@ def test_rare_cases():
 
     wf = BlackmanWaveform(100, var)
     with pytest.warns(
-        UserWarning, match="Calls to methods of parametrized " "objects"
+        UserWarning, match="Calls to methods of parametrized objects"
     ):
         s = encode(wf.draw())
 
-    with pytest.warns(UserWarning, match="not encode a Sequence"):
+    with pytest.raises(ValueError, match="not encode a Sequence"):
         wf_ = Sequence.deserialize(s)
 
+    wf_ = decode(s)
     var._assign(-10)
     with pytest.raises(ValueError, match="No value assigned"):
         wf_.build()

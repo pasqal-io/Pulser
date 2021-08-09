@@ -806,9 +806,8 @@ class Sequence:
             formatted string.
         """
         if "Sequence" not in obj:
-            warnings.warn(
-                "The given JSON formatted string does not encode a Sequence.",
-                stacklevel=2,
+            raise ValueError(
+                "The given JSON formatted string does not encode a Sequence."
             )
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
