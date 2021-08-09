@@ -20,6 +20,7 @@ import pytest
 from pulser import Sequence, Register
 from pulser.devices import Chadoq2
 from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.json.supported import validate_serialization
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import BlackmanWaveform
 
@@ -70,3 +71,35 @@ def test_rare_cases():
     rotated_reg = parametrize(Register.rotate)(reg, var)
     with pytest.raises(NotImplementedError):
         encode(rotated_reg)
+
+
+def test_support():
+    seq = Sequence(Register.square(2), Chadoq2)
+    var = seq.declare_variable("var")
+
+    obj_dict = BlackmanWaveform.from_max_val(1, var)._to_dict()
+    del obj_dict["__module__"]
+    with pytest.raises(TypeError, match="Invalid 'obj_dict'."):
+        validate_serialization(obj_dict)
+
+    obj_dict["__module__"] = "pulser.fake"
+    with pytest.raises(
+        SystemError, match="No serialization support for module 'pulser.fake'."
+    ):
+        validate_serialization(obj_dict)
+
+    wf_obj_dict = obj_dict["__args__"][0]
+    wf_obj_dict["__submodule__"] = "RampWaveform"
+    with pytest.raises(
+        SystemError,
+        match="No serialization support for attributes of "
+        "'pulser.waveforms.RampWaveform'",
+    ):
+        validate_serialization(wf_obj_dict)
+
+    del wf_obj_dict["__submodule__"]
+    with pytest.raises(
+        SystemError,
+        match="No serialization support for 'pulser.waveforms.from_max_val'",
+    ):
+        validate_serialization(wf_obj_dict)

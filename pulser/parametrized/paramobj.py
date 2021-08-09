@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from pulser.parametrized import Variable  # pragma: no cover
 
 # Available operations on parametrized objects with OpSupport
-reversible_ops = [
+reversible_ops: list[str] = [
     "__add__",
     "__sub__",
     "__mul__",

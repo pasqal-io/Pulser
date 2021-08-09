@@ -60,7 +60,7 @@ def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
         obj_str = obj_dict["__name__"]
         module_str = obj_dict["__module__"]
     except KeyError:
-        raise TypeError("Not a valid 'obj_dict'.")
+        raise TypeError("Invalid 'obj_dict'.")
 
     if module_str not in SUPPORTED_MODULES:
         raise SystemError(
