@@ -533,20 +533,20 @@ def test_cuncurrent_pulses():
     reg = Register({"q0": (0, 0)})
     seq = Sequence(reg, Chadoq2)
 
-    seq.declare_channel('ch_local', 'rydberg_local', initial_target='q0')
-    seq.declare_channel('ch_global', 'rydberg_global')
+    seq.declare_channel("ch_local", "rydberg_local", initial_target="q0")
+    seq.declare_channel("ch_global", "rydberg_global")
 
     pulse = Pulse.ConstantPulse(20, 10, 0, 0)
 
-    seq.add(pulse, 'ch_local')
-    seq.add(pulse, 'ch_global', protocol='no-delay')
+    seq.add(pulse, "ch_local")
+    seq.add(pulse, "ch_global", protocol="no-delay")
 
     # Clean simulation
     sim_no_noise = Simulation(seq)
 
     # Noisy simulation
     sim_with_noise = Simulation(seq)
-    config_doppler = SimConfig(noise=('doppler'))
+    config_doppler = SimConfig(noise=("doppler"))
     sim_with_noise.set_config(config_doppler)
 
     for t in sim_no_noise._times:
