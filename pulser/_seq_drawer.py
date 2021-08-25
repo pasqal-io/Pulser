@@ -145,6 +145,7 @@ def draw_sequence(
     q_box = dict(boxstyle="round", facecolor="orange")
     ph_box = dict(boxstyle="round", facecolor="ghostwhite")
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
+    slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
     fig = plt.figure(constrained_layout=False, figsize=(20, 4.5 * n_channels))
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
@@ -397,6 +398,23 @@ def draw_sequence(
                     fontsize=14,
                     bbox=ph_box,
                 )
+
+        # Draw the SLM mask
+        for time in seq._slm_mask_times:
+            a.axvspan(time[0], time[1], color="black", alpha=0.1, zorder=-100)
+            b.axvspan(time[0], time[1], color="black", alpha=0.1, zorder=-100)
+            tgt_strs = [str(q) for q in seq._slm_mask_targets]
+            tgt_txt_x = time[0] + t[-1] * 0.005
+            tgt_txt_y = b.get_ylim()[0]
+            tgt_str = "\n".join(tgt_strs)
+            b.text(
+                tgt_txt_x,
+                tgt_txt_y,
+                tgt_str,
+                fontsize=12,
+                ha="left",
+                bbox=slm_box,
+            )
 
         if "measurement" in data[ch]:
             msg = f"Basis: {data[ch]['measurement']}"

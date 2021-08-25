@@ -92,36 +92,38 @@ def test_channel_declaration():
 
 def test_magnetic_field():
     seq = Sequence(reg, MockDevice)
-    with pytest.raises(AttributeError, match="only defined when the sequence "
-                                             "is in 'XY Mode'."):
+    with pytest.raises(
+        AttributeError,
+        match="only defined when the sequence " "is in 'XY Mode'.",
+    ):
         seq.magnetic_field
-    seq.declare_channel('ch0', 'mw_global')    # seq in XY mode
+    seq.declare_channel("ch0", "mw_global")  # seq in XY mode
     # mag field is the default
-    assert np.all(seq.magnetic_field == np.array((0., 0., 30.)))
-    seq.set_magnetic_field(bx=1., by=-1., bz=0.5)
-    assert np.all(seq.magnetic_field == np.array((1., -1., 0.5)))
+    assert np.all(seq.magnetic_field == np.array((0.0, 0.0, 30.0)))
+    seq.set_magnetic_field(bx=1.0, by=-1.0, bz=0.5)
+    assert np.all(seq.magnetic_field == np.array((1.0, -1.0, 0.5)))
     with pytest.raises(ValueError, match="magnitude greater than 0"):
-        seq.set_magnetic_field(bz=0.)
+        seq.set_magnetic_field(bz=0.0)
     assert seq._empty_sequence
-    seq.add(Pulse.ConstantPulse(100, 1, 1, 0), 'ch0')
+    seq.add(Pulse.ConstantPulse(100, 1, 1, 0), "ch0")
     assert not seq._empty_sequence
     with pytest.raises(ValueError, match="can only be set on an empty seq"):
-        seq.set_magnetic_field(1., 0., 0.)
+        seq.set_magnetic_field(1.0, 0.0, 0.0)
 
     seq2 = Sequence(reg, MockDevice)
-    seq2.declare_channel('ch0', 'rydberg_global')   # not in XY mode
+    seq2.declare_channel("ch0", "rydberg_global")  # not in XY mode
     with pytest.raises(ValueError, match="can only be set in 'XY Mode'."):
-        seq2.set_magnetic_field(1., 0., 0.)
+        seq2.set_magnetic_field(1.0, 0.0, 0.0)
 
     seq3 = Sequence(reg, MockDevice)
-    seq3.set_magnetic_field(1., 0., 0.)         # sets seq to XY mode
-    assert set(seq3.available_channels) == {'mw_global'}
-    seq3.declare_channel('ch0', 'mw_global')
+    seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
+    assert set(seq3.available_channels) == {"mw_global"}
+    seq3.declare_channel("ch0", "mw_global")
     # Does not change to default
-    assert np.all(seq3.magnetic_field == np.array((1., 0., 0.)))
-    var = seq3.declare_variable('var')
+    assert np.all(seq3.magnetic_field == np.array((1.0, 0.0, 0.0)))
+    var = seq3.declare_variable("var")
     # Sequence is marked as non-empty when parametrized too
-    seq3.add(Pulse.ConstantPulse(100, var, 1, 0), 'ch0')
+    seq3.add(Pulse.ConstantPulse(100, var, 1, 0), "ch0")
     assert seq3.is_parametrized()
     with pytest.raises(ValueError, match="can only be set on an empty seq"):
         seq3.set_magnetic_field()
@@ -130,7 +132,7 @@ def test_magnetic_field():
     seq3_ = Sequence.deserialize(seq3_str)
     assert seq3_._in_xy
     assert str(seq3) == str(seq3_)
-    assert np.all(seq3_.magnetic_field == np.array((1., 0., 0.)))
+    assert np.all(seq3_.magnetic_field == np.array((1.0, 0.0, 0.0)))
 
 
 def test_target():
@@ -406,3 +408,102 @@ def test_sequence():
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence.deserialize(s)
     assert str(seq) == str(seq_)
+
+
+def test_config_slm_mask():
+    reg_s = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    seq_s = Sequence(reg_s, device)
+
+    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+        seq_s.config_slm_mask(0)
+    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+        seq_s.config_slm_mask((0))
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_s.config_slm_mask("q0")
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_s.config_slm_mask(["q3"])
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_s.config_slm_mask(("q3",))
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_s.config_slm_mask({"q3"})
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_s.config_slm_mask([0])
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_s.config_slm_mask((0,))
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_s.config_slm_mask({0})
+
+    targets_s = ["q0", "q2"]
+    seq_s.config_slm_mask(targets_s)
+    assert seq_s._slm_mask_targets == {"q0", "q2"}
+
+    with pytest.raises(ValueError, match="configured only once"):
+        seq_s.config_slm_mask(targets_s)
+
+    reg_i = Register({0: (0, 0), 1: (10, 10), 2: (-10, -10)})
+    seq_i = Sequence(reg_i, device)
+
+    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+        seq_i.config_slm_mask(0)
+    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+        seq_i.config_slm_mask((0))
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_i.config_slm_mask("q0")
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_i.config_slm_mask([3])
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_i.config_slm_mask((3,))
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_i.config_slm_mask({3})
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_i.config_slm_mask(["0"])
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_i.config_slm_mask(("0",))
+    with pytest.raises(ValueError, match="exist in the register"):
+        seq_i.config_slm_mask({"0"})
+
+    targets_i = [0, 2]
+    seq_i.config_slm_mask(targets_i)
+    assert seq_i._slm_mask_targets == {0, 2}
+
+    with pytest.raises(ValueError, match="configured only once"):
+        seq_i.config_slm_mask(targets_i)
+
+
+def test_set_slm_mask():
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    seq = Sequence(reg, device)
+
+    # Try to align the mask to a non-existing channel
+    with pytest.raises(ValueError, match="name of a declared channel"):
+        seq.set_slm_mask("ch0")
+
+    seq.declare_channel("ch0", "rydberg_global")
+
+    # Try to align a mask that has not been configured
+    with pytest.raises(ValueError, match="SLM mask was not configured"):
+        seq.set_slm_mask("ch0")
+
+    targets = ["q0", "q2"]
+    seq.config_slm_mask(targets)
+
+    # Try to align the mask to a channel with no pulses
+    with pytest.raises(ValueError, match="No pulse in chosen channel"):
+        seq.set_slm_mask("ch0")
+
+    pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
+    pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
+    pulse3 = Pulse.ConstantPulse(300, 10, 0, 0)
+    seq.add(pulse1, "ch0")
+    seq.set_slm_mask("ch0")
+
+    assert seq._slm_mask_times == [[0, 100]]
+
+    seq.add(pulse2, "ch0")
+    seq.add(pulse3, "ch0")
+    seq.set_slm_mask("ch0")
+
+    assert seq._slm_mask_times == [[0, 100], [300, 600]]
+
+    with patch("matplotlib.pyplot.show"):
+        seq.draw()

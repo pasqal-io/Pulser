@@ -201,6 +201,9 @@ class Sequence:
         self._building: bool = True
         # Marks the sequence as empty until the first pulse is added
         self._empty_sequence: bool = True
+        # SLM mask targets and on/off times
+        self._slm_mask_targets: Set[QubitId] = set()
+        self._slm_mask_times: list[list] = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -1110,6 +1113,36 @@ class Sequence:
         self._is_measured = False
         self._variables = {}
         self._to_build_calls = []
+
+    def config_slm_mask(self, qubits: Set[QubitId]) -> None:
+        """Setup an SLM mask by specifying the qubits it targets."""
+        if self._slm_mask_targets:
+            raise ValueError("SLM mask can be configured only once")
+
+        try:
+            targets = set(qubits)
+        except TypeError:
+            raise TypeError("The SLM targets are not an iterable")
+
+        if not targets.issubset(self._qids):
+            raise ValueError("SLM mask targets must exist in the register")
+        self._slm_mask_targets = targets
+
+    def set_slm_mask(self, align_with_channel: str) -> None:
+        """Switch SLM on for the duration of last pulse in channel."""
+        channel = align_with_channel
+
+        self._validate_channel(channel)
+
+        last = self._last(channel)
+        if self._slm_mask_targets:
+            ti = last.ti
+            if ti < 0:
+                raise ValueError("No pulse in chosen channel")
+            tf = last.tf
+            self._slm_mask_times.append([ti, tf])
+        else:
+            raise ValueError("SLM mask was not configured")
 
 
 class _PhaseTracker:
