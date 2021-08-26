@@ -650,7 +650,7 @@ class Simulation:
     # Run Simulation Evolution using Qutip
     def run(
         self,
-        progress_bar: Optional[bool] = False,
+        progress_bar: Optional[Union[None, bool]] = False,
         **options: qutip.solver.Options,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
