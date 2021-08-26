@@ -358,6 +358,15 @@ def test_run():
     sim.run()
     assert sim._seq._measurement == "ground-rydberg"
 
+    sim.run(progress_bar=True)
+    sim.run(progress_bar=False)
+    sim.run(progress_bar=None)
+    with pytest.raises(
+        ValueError,
+        match="`progress_bar` must be a bool.",
+    ):
+        sim.run(progress_bar=1)
+
     sim.set_config(SimConfig("SPAM", eta=0.1))
     with pytest.raises(
         NotImplementedError,
