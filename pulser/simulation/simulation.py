@@ -650,7 +650,7 @@ class Simulation:
     # Run Simulation Evolution using Qutip
     def run(
         self,
-        progress_bar: Optional[Union[None, bool]] = False,
+        progress_bar: Optional[bool] = False,
         **options: qutip.solver.Options,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
@@ -659,8 +659,8 @@ class Simulation:
         Otherwise will return CoherentResults.
 
         Keyword Args:
-            progress_bar (bool): If True, the progress bar of QuTiP's solver
-                will be shown.
+            progress_bar (bool or None): If True, the progress bar of QuTiP's
+                solver will be shown. If None or False, no text appears.
             options (qutip.solver.Options): If specified, will override
                 SimConfig solver_options. If no `max_step` value is provided,
                 an automatic one is calculated from the `Sequence`'s schedule
@@ -691,8 +691,8 @@ class Simulation:
             # Decide if progress bar will be fed to QuTiP solver
             if progress_bar is True:
                 p_bar = True
-            elif progress_bar is False or progress_bar is None:
-                p_bar = None
+            elif (progress_bar is False) or (progress_bar is None):
+                p_bar = None  # type: ignore
             else:
                 raise ValueError("`progress_bar` must be a bool.")
 
