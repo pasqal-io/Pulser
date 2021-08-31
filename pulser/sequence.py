@@ -201,7 +201,7 @@ class Sequence:
         self._building: bool = True
         # Marks the sequence as empty until the first pulse is added
         self._empty_sequence: bool = True
-        # SLM mask targets and on/off times
+        # SLM mask targets
         self._slm_mask_targets: Set[QubitId] = set()
 
         # Initializes all parametrized Sequence related attributes
