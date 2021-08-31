@@ -248,15 +248,37 @@ class Simulation:
     def initial_state(self, state: Union[str, np.ndarray, qutip.Qobj]) -> None:
         """Sets the initial state of the simulation."""
         self._initial_state: qutip.Qobj
-        if isinstance(state, str) and state == "all-ground":
-            self._initial_state = qutip.tensor(
-                [
-                    self.basis["d" if self._interaction == "XY" else "g"]
-                    for _ in range(self._size)
-                ]
-            )
+
+        if isinstance(state, str):
+            if self.basis_name == "XY":
+                zero = "d"
+                one = "u"
+            elif self.basis_name == "ground-rydberg":
+                zero = "g"
+                one = "r"
+            else:
+                zero = "g"
+                one = "h"
+
+            if state == "all-ground":
+                self._initial_state = qutip.tensor(
+                    [self.basis[zero] for _ in range(self._size)]
+                )
+            elif state == "slm-mask":
+                if not self._seq._slm_mask_targets:
+                    raise ValueError("SLM mask was not configured")
+                self._initial_state = qutip.tensor(
+                    [
+                        self.basis[zero]
+                        if x in self._seq._slm_mask_targets
+                        else self.basis[one]
+                        for x in self._qdict
+                    ]
+                )
+            else:
+                raise ValueError(f"{state} is not a valid initial state")
+
         else:
-            state = cast(Union[np.ndarray, qutip.Qobj], state)
             shape = state.shape[0]
             legal_shape = self.dim ** self._size
             legal_dims = [[self.dim] * self._size, [1] * self._size]
@@ -419,13 +441,13 @@ class Simulation:
                 noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
                     -((r / w0) ** 2)
                 )
-            samples_dict["amp"][slot.ti : slot.tf] = (
+            samples_dict["amp"][slot.ti : slot.tf] += (
                 _pulse.amplitude.samples * noise_amp
             )
-            samples_dict["det"][slot.ti : slot.tf] = (
+            samples_dict["det"][slot.ti : slot.tf] += (
                 _pulse.detuning.samples + noise_det
             )
-            samples_dict["phase"][slot.ti : slot.tf] = _pulse.phase
+            samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing

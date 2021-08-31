@@ -607,3 +607,78 @@ def test_run_xy():
     simple_seq.measure(basis="XY")
     sim.run()
     assert sim._seq._measurement == "XY"
+
+
+def test_initial_state():
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    pulse = Pulse.ConstantPulse(20, 10, 0, 0)
+    masked_qubits = {"q0", "q1"}
+
+    # ground-rydberg
+    seq_gr = Sequence(reg, Chadoq2)
+    seq_gr.declare_channel("ch_gr", "rydberg_global")
+
+    seq_gr.add(pulse, "ch_gr")
+
+    # Try to set masked initial state without configuring mask
+    with pytest.raises(ValueError, match="SLM mask was not configured"):
+        sim_gr = Simulation(seq_gr)
+        sim_gr.initial_state = "slm-mask"
+
+    seq_gr.config_slm_mask(masked_qubits)
+    sim_gr = Simulation(seq_gr)
+
+    # Try to set invalid initial state
+    with pytest.raises(ValueError, match="is not a valid initial state"):
+        sim_gr.initial_state = "foo"
+
+    sim_gr.initial_state = "slm-mask"
+
+    assert sim_gr.initial_state == qutip.tensor(
+        sim_gr.basis["g"], sim_gr.basis["g"], sim_gr.basis["r"]
+    )
+    assert sim_gr.initial_state.shape == (2 ** 3, 1)
+
+    # XY
+    seq_xy = Sequence(reg, MockDevice)
+    seq_xy.declare_channel("ch_xy", "mw_global")
+    seq_xy.add(pulse, "ch_xy")
+    seq_xy.config_slm_mask(masked_qubits)
+
+    sim_xy = Simulation(seq_xy)
+    sim_xy.initial_state = "slm-mask"
+
+    assert sim_xy.initial_state == qutip.tensor(
+        sim_xy.basis["d"], sim_xy.basis["d"], sim_xy.basis["u"]
+    )
+    assert sim_xy.initial_state.shape == (2 ** 3, 1)
+
+    # digital
+    seq_dig = Sequence(reg, Chadoq2)
+    seq_dig.declare_channel("ch_dig", "raman_local", initial_target="q0")
+    seq_dig.add(pulse, "ch_dig")
+    seq_dig.config_slm_mask(masked_qubits)
+
+    sim_dig = Simulation(seq_dig)
+    sim_dig.initial_state = "slm-mask"
+
+    assert sim_dig.initial_state == qutip.tensor(
+        sim_dig.basis["g"], sim_dig.basis["g"], sim_dig.basis["h"]
+    )
+    assert sim_dig.initial_state.shape == (2 ** 3, 1)
+
+    # all
+    seq_all = Sequence(reg, Chadoq2)
+    seq_all.declare_channel("ch_all1", "raman_local", initial_target="q0")
+    seq_all.declare_channel("ch_all2", "rydberg_local", initial_target="q0")
+    seq_all.add(pulse, "ch_all1")
+    seq_all.add(pulse, "ch_all2")
+    seq_all.config_slm_mask(masked_qubits)
+
+    sim_all = Simulation(seq_all)
+    sim_all.initial_state = "slm-mask"
+
+    assert sim_all.initial_state == qutip.tensor(
+        sim_all.basis["g"], sim_all.basis["g"], sim_all.basis["h"]
+    )
+    assert sim_all.initial_state.shape == (3 ** 3, 1)
