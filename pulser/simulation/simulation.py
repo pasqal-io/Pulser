@@ -401,13 +401,13 @@ class Simulation:
                 noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
                     -((r / w0) ** 2)
                 )
-            samples_dict["amp"][slot.ti : slot.tf] = (
+            samples_dict["amp"][slot.ti : slot.tf] += (
                 _pulse.amplitude.samples * noise_amp
             )
-            samples_dict["det"][slot.ti : slot.tf] = (
+            samples_dict["det"][slot.ti : slot.tf] += (
                 _pulse.detuning.samples + noise_det
             )
-            samples_dict["phase"][slot.ti : slot.tf] = _pulse.phase
+            samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
