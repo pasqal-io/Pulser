@@ -123,6 +123,23 @@ class Simulation:
                 self._meas_basis = self.basis_name
         self.initial_state = "all-ground"
 
+        # If mask is set, find initial and final time of SLM mask
+        self.slm_mask_time = []
+        if self._seq._slm_mask_targets:
+            for channel in self._seq._declared_channels:
+                if self._seq._schedule[channel]:
+                    first = self._seq._schedule[channel][0]
+                    ti = first.ti
+                    tf = first.tf
+                    if self.slm_mask_time:
+                        if ti < self.slm_mask_time[0]:
+                            self.slm_mask_time[0] = ti
+                            self.slm_mask_time[1] = tf
+                    else:
+                        self.slm_mask_time.append(ti)
+                        self.slm_mask_time.append(tf)
+
+
     @property
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
@@ -483,17 +500,12 @@ class Simulation:
 
             # Apply SLM mask if it was defined
             if self._seq._slm_mask_targets:
+                ti = self._seq._slm_mask_time[0]
+                tf = self._seq._slm_mask_time[1]
                 for qubit in self._seq._slm_mask_targets:
-                    for time in self._seq._slm_mask_times:
-                        self.samples["Local"][basis][qubit]["amp"][
-                            time[0] : time[1]
-                        ] = 0
-                        self.samples["Local"][basis][qubit]["det"][
-                            time[0] : time[1]
-                        ] = 0
-                        self.samples["Local"][basis][qubit]["phase"][
-                            time[0] : time[1]
-                        ] = 0
+                    self.samples["Local"][basis][qubit]["amp"][ti : tf] = 0
+                    self.samples["Local"][basis][qubit]["det"][ti : tf] = 0
+                    self.samples["Local"][basis][qubit]["phase"][ti : tf] = 0
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
