@@ -620,65 +620,115 @@ def test_initial_state():
 
     seq_gr.add(pulse, "ch_gr")
 
-    # Try to set masked initial state without configuring mask
-    with pytest.raises(ValueError, match="SLM mask was not configured"):
-        sim_gr = Simulation(seq_gr)
-        sim_gr.initial_state = "slm-mask"
+    seq.add(pulse, "ch_local")
+    seq.add(pulse, "ch_global", protocol="no-delay")
 
-    seq_gr.config_slm_mask(masked_qubits)
-    sim_gr = Simulation(seq_gr)
+    # Clean simulation
+    sim_no_noise = Simulation(seq)
 
-    # Try to set invalid initial state
-    with pytest.raises(ValueError, match="is not a valid initial state"):
-        sim_gr.initial_state = "foo"
+    # Noisy simulation
+    sim_with_noise = Simulation(seq)
+    config_doppler = SimConfig(noise=("doppler"))
+    sim_with_noise.set_config(config_doppler)
 
-    sim_gr.initial_state = "slm-mask"
+    for t in sim_no_noise._times:
+        ham_no_noise = sim_no_noise.get_hamiltonian(t)
+        ham_with_noise = sim_with_noise.get_hamiltonian(t)
+        assert ham_no_noise[0, 1] == ham_with_noise[0, 1]
 
-    assert sim_gr.initial_state == qutip.tensor(
-        sim_gr.basis["g"], sim_gr.basis["g"], sim_gr.basis["r"]
-    )
-    assert sim_gr.initial_state.shape == (2 ** 3, 1)
 
-    # XY
-    seq_xy = Sequence(reg, MockDevice)
-    seq_xy.declare_channel("ch_xy", "mw_global")
-    seq_xy.add(pulse, "ch_xy")
-    seq_xy.config_slm_mask(masked_qubits)
+def test_mask_nopulses():
+    """Check interaction between SLM mask and a simulation with no pulses."""
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    seq_empty = Sequence(reg, MockDevice)
+    seq_empty.set_magnetic_field(0, 1.0, 0.0)
+    seq_empty.declare_channel("ch", "mw_global")
+    seq_empty.delay(duration=100, channel="ch")
+    masked_qubits = ["q2"]
+    seq_empty.config_slm_mask(masked_qubits)
+    sim_empty = Simulation(seq_empty)
 
-    sim_xy = Simulation(seq_xy)
-    sim_xy.initial_state = "slm-mask"
+    assert seq_empty._slm_mask_time == []
+    assert sim_empty._tot_duration == 100
 
-    assert sim_xy.initial_state == qutip.tensor(
-        sim_xy.basis["d"], sim_xy.basis["d"], sim_xy.basis["u"]
-    )
-    assert sim_xy.initial_state.shape == (2 ** 3, 1)
 
-    # digital
-    seq_dig = Sequence(reg, Chadoq2)
-    seq_dig.declare_channel("ch_dig", "raman_local", initial_target="q0")
-    seq_dig.add(pulse, "ch_dig")
-    seq_dig.config_slm_mask(masked_qubits)
+def test_xy_mask_equals_remove():
+    """Check that masking is equivalent to removing the masked qubits.
 
-    sim_dig = Simulation(seq_dig)
-    sim_dig.initial_state = "slm-mask"
+    A global pulse acting on three qubits of which one is masked, should be
+    equivalent to acting on a register with only the two unmasked qubits.
+    """
+    reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    reg_two = Register({"q0": (0, 0), "q1": (10, 10)})
+    pulse = Pulse.ConstantPulse(100, 10, 0, 0)
 
-    assert sim_dig.initial_state == qutip.tensor(
-        sim_dig.basis["g"], sim_dig.basis["g"], sim_dig.basis["h"]
-    )
-    assert sim_dig.initial_state.shape == (2 ** 3, 1)
+    # Masked simulation
+    seq_masked = Sequence(reg_three, MockDevice)
+    seq_masked.set_magnetic_field(0, 1.0, 0.0)
+    seq_masked.declare_channel("ch_masked", "mw_global")
+    masked_qubits = ["q2"]
+    seq_masked.config_slm_mask(masked_qubits)
+    seq_masked.add(pulse, "ch_masked")
+    sim_masked = Simulation(seq_masked)
 
-    # all
-    seq_all = Sequence(reg, Chadoq2)
-    seq_all.declare_channel("ch_all1", "raman_local", initial_target="q0")
-    seq_all.declare_channel("ch_all2", "rydberg_local", initial_target="q0")
-    seq_all.add(pulse, "ch_all1")
-    seq_all.add(pulse, "ch_all2")
-    seq_all.config_slm_mask(masked_qubits)
+    # Simulation on reduced register
+    seq_two = Sequence(reg_two, MockDevice)
+    seq_two.set_magnetic_field(0, 1.0, 0.0)
+    seq_two.declare_channel("ch_two", "mw_global")
+    seq_two.add(pulse, "ch_two")
+    sim_two = Simulation(seq_two)
 
-    sim_all = Simulation(seq_all)
-    sim_all.initial_state = "slm-mask"
+    # Check equality
+    for t in sim_two._times:
+        ham_masked = sim_masked.get_hamiltonian(t)
+        ham_two = sim_two.get_hamiltonian(t)
+        assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
 
-    assert sim_all.initial_state == qutip.tensor(
-        sim_all.basis["g"], sim_all.basis["g"], sim_all.basis["h"]
-    )
-    assert sim_all.initial_state.shape == (3 ** 3, 1)
+
+def test_xy_mask_two_pulses():
+    """Similar to test_xy_mask_equals_remove, but with more pulses afterwards.
+
+    Three global pulses act on a three qubit register, with one qubit masked
+    during the first pulse.
+    """
+    reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    reg_two = Register({"q0": (0, 0), "q1": (10, 10)})
+    pulse = Pulse.ConstantPulse(100, 10, 0, 0)
+    no_pulse = Pulse.ConstantPulse(100, 0, 0, 0)
+
+    # Masked simulation
+    seq_masked = Sequence(reg_three, MockDevice)
+    seq_masked.declare_channel("ch_masked", "mw_global")
+    masked_qubits = ["q2"]
+    seq_masked.config_slm_mask(masked_qubits)
+    seq_masked.add(pulse, "ch_masked")  # First pulse: masked
+    seq_masked.add(pulse, "ch_masked")  # Second pulse: unmasked
+    seq_masked.add(pulse, "ch_masked")  # Third pulse: unmasked
+    sim_masked = Simulation(seq_masked)
+
+    # Unmasked simulation on full register
+    seq_three = Sequence(reg_three, MockDevice)
+    seq_three.declare_channel("ch_three", "mw_global")
+    seq_three.add(no_pulse, "ch_three")
+    seq_three.add(pulse, "ch_three")
+    seq_three.add(pulse, "ch_three")
+    sim_three = Simulation(seq_three)
+
+    # Unmasked simulation on reduced register
+    seq_two = Sequence(reg_two, MockDevice)
+    seq_two.declare_channel("ch_two", "mw_global")
+    seq_two.add(pulse, "ch_two")
+    seq_two.add(no_pulse, "ch_two")
+    seq_two.add(no_pulse, "ch_two")
+    sim_two = Simulation(seq_two)
+
+    ti = seq_masked._slm_mask_time[0]
+    tf = seq_masked._slm_mask_time[1]
+    for t in sim_masked._times:
+        ham_masked = sim_masked.get_hamiltonian(t)
+        ham_three = sim_three.get_hamiltonian(t)
+        ham_two = sim_two.get_hamiltonian(t)
+        if ti <= t <= tf:
+            assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
+        else:
+            assert ham_masked == ham_three

@@ -70,7 +70,9 @@ def test_channel_declaration():
     seq2.declare_channel("ch0", "raman_local", initial_target="q1")
     seq2.declare_channel("ch1", "rydberg_global")
     seq2.declare_channel("ch2", "rydberg_global")
-    assert set(seq2.available_channels) == available_channels - {"mw_global"}
+    assert set(seq2.available_channels) == (
+        available_channels - {"mw_global", "mw_local"}
+    )
     assert seq2._taken_channels == {
         "ch0": "raman_local",
         "ch1": "rydberg_global",
@@ -82,7 +84,7 @@ def test_channel_declaration():
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.available_channels) == {"mw_global", "mw_local"}
     with pytest.raises(
         ValueError,
         match="cannot work simultaneously with the declared 'Microwave'",
@@ -117,7 +119,7 @@ def test_magnetic_field():
 
     seq3 = Sequence(reg, MockDevice)
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
-    assert set(seq3.available_channels) == {"mw_global"}
+    assert set(seq3.available_channels) == {"mw_global", "mw_local"}
     seq3.declare_channel("ch0", "mw_global")
     # Does not change to default
     assert np.all(seq3.magnetic_field == np.array((1.0, 0.0, 0.0)))
@@ -414,9 +416,9 @@ def test_config_slm_mask():
     reg_s = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     seq_s = Sequence(reg_s, device)
 
-    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+    with pytest.raises(TypeError, match="should be castable to set"):
         seq_s.config_slm_mask(0)
-    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+    with pytest.raises(TypeError, match="should be castable to set"):
         seq_s.config_slm_mask((0))
     with pytest.raises(ValueError, match="exist in the register"):
         seq_s.config_slm_mask("q0")
@@ -443,9 +445,9 @@ def test_config_slm_mask():
     reg_i = Register({0: (0, 0), 1: (10, 10), 2: (-10, -10)})
     seq_i = Sequence(reg_i, device)
 
-    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+    with pytest.raises(TypeError, match="should be castable to set"):
         seq_i.config_slm_mask(0)
-    with pytest.raises(TypeError, match="SLM targets are not an iterable"):
+    with pytest.raises(TypeError, match="should be castable to set"):
         seq_i.config_slm_mask((0))
     with pytest.raises(ValueError, match="exist in the register"):
         seq_i.config_slm_mask("q0")
@@ -468,3 +470,70 @@ def test_config_slm_mask():
 
     with pytest.raises(ValueError, match="configured only once"):
         seq_i.config_slm_mask(targets_i)
+
+
+def test_slm_mask():
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    targets = ["q0", "q2"]
+    pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
+    pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
+
+    # Try to set mask when Ising was already declared
+    seq_ising1 = Sequence(reg, MockDevice)
+    seq_ising1.declare_channel("ch_rg", "rydberg_global")
+    with pytest.raises(
+        NotImplementedError, match="SLM mask can only be added in XY mode"
+    ):
+        seq_ising1.config_slm_mask(targets)
+
+    # Try to set mask and then declare Ising
+    seq_ising2 = Sequence(reg, MockDevice)
+    seq_ising2.config_slm_mask(targets)
+    with pytest.raises(
+        NotImplementedError, match="SLM mask is not yet available in Ising"
+    ):
+        seq_ising2.declare_channel("ch_rg", "rydberg_global")
+
+    # Set mask when an XY pulse is already in the schedule
+    seq_xy1 = Sequence(reg, MockDevice)
+    seq_xy1.declare_channel("ch_xy", "mw_global")
+    seq_xy1.add(pulse1, "ch_xy")
+    seq_xy1.config_slm_mask(targets)
+    assert seq_xy1._slm_mask_time == [0, 100]
+
+    # Set mask and then add an XY pulse to the schedule
+    seq_xy2 = Sequence(reg, MockDevice)
+    seq_xy2.config_slm_mask(targets)
+    seq_xy2.declare_channel("ch_xy", "mw_global")
+    seq_xy2.add(pulse1, "ch_xy")
+    assert seq_xy2._slm_mask_time == [0, 100]
+
+    # Check that adding extra pulses does not change SLM mask time
+    seq_xy2.add(pulse2, "ch_xy")
+    assert seq_xy2._slm_mask_time == [0, 100]
+
+    # Check that SLM mask time is updated accordingly if a new pulse with
+    # earlier start is added
+    seq_xy3 = Sequence(reg, MockDevice)
+    seq_xy3.declare_channel("ch_xy1", "mw_global")
+    seq_xy3.config_slm_mask(targets)
+    seq_xy3.delay(duration=100, channel="ch_xy1")
+    seq_xy3.add(pulse1, "ch_xy1")
+    assert seq_xy3._slm_mask_time == [100, 200]
+    seq_xy3.declare_channel("ch_xy2", "mw_global")
+    seq_xy3.add(pulse1, "ch_xy2", "no-delay")
+    assert seq_xy3._slm_mask_time == [0, 100]
+
+    # Same as previous check, but mask is added afterwards
+    seq_xy4 = Sequence(reg, MockDevice)
+    seq_xy4.declare_channel("ch_xy1", "mw_global")
+    seq_xy4.delay(duration=100, channel="ch_xy1")
+    seq_xy4.add(pulse1, "ch_xy1")
+    seq_xy4.declare_channel("ch_xy2", "mw_global")
+    seq_xy4.add(pulse1, "ch_xy2", "no-delay")
+    seq_xy4.config_slm_mask(targets)
+    assert seq_xy4._slm_mask_time == [0, 100]
+
+    # Check drawing method
+    with patch("matplotlib.pyplot.show"):
+        seq_xy2.draw()

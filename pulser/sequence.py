@@ -203,6 +203,7 @@ class Sequence:
         self._empty_sequence: bool = True
         # SLM mask targets
         self._slm_mask_targets: Set[QubitId] = set()
+        self._slm_mask_time: list = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -420,6 +421,12 @@ class Sequence:
             else:
                 raise ValueError(f"Channel {channel_id} is not available.")
 
+        # Remove this check once SLM is available in Ising mode
+        if self._slm_mask_targets and ch.basis != "XY":
+            raise NotImplementedError(
+                "SLM mask is not yet available in Ising mode"
+            )
+
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
             self.set_magnetic_field()
@@ -636,6 +643,14 @@ class Sequence:
         # Sequence is marked as non-empty on the first added pulse
         if self._empty_sequence:
             self._empty_sequence = False
+
+        # Update the SLM mask initial and final time if necessary
+        if self._slm_mask_targets:
+            try:
+                if self._slm_mask_time[0] > ti:
+                    self._slm_mask_time = [ti, tf]
+            except IndexError:
+                self._slm_mask_time = [ti, tf]
 
     @_store
     def target(
@@ -1121,11 +1136,36 @@ class Sequence:
         try:
             targets = set(qubits)
         except TypeError:
-            raise TypeError("The SLM targets are not an iterable")
+            raise TypeError("The SLM targets should be castable to set")
 
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register")
+
+        if not self._in_xy and self._channels:
+            raise NotImplementedError("SLM mask can only be added in XY mode")
+
+        # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
+
+        # Find tentative initial and final time of SLM mask if possible
+        for channel in self._channels:
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
+                if isinstance(slot.type, Pulse):
+                    first = slot
+                    break
+            try:
+                ti = first.ti
+                tf = first.tf
+            # If try fails, it's because the variable 'first' is not defined,
+            # meaning there are no pulses in this channel
+            except NameError:
+                continue
+            try:
+                if ti < self._slm_mask_time[0]:
+                    self._slm_mask_time = [ti, tf]
+            except IndexError:
+                self._slm_mask_time = [ti, tf]
 
 
 class _PhaseTracker:

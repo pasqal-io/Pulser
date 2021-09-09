@@ -398,6 +398,25 @@ def draw_sequence(
                     bbox=ph_box,
                 )
 
+        # Draw the SLM mask
+        if seq._slm_mask_targets:
+            ti_m = seq._slm_mask_time[0]
+            tf_m = seq._slm_mask_time[1]
+            a.axvspan(ti_m, tf_m, color="black", alpha=0.1, zorder=-100)
+            b.axvspan(ti_m, tf_m, color="black", alpha=0.1, zorder=-100)
+            tgt_strs = [str(q) for q in seq._slm_mask_targets]
+            tgt_txt_x = ti_m + t[-1] * 0.005
+            tgt_txt_y = b.get_ylim()[0]
+            tgt_str = "\n".join(tgt_strs)
+            b.text(
+                tgt_txt_x,
+                tgt_txt_y,
+                tgt_str,
+                fontsize=12,
+                ha="left",
+                bbox=slm_box,
+            )
+
         if "measurement" in data[ch]:
             msg = f"Basis: {data[ch]['measurement']}"
             b.text(

@@ -449,6 +449,19 @@ class Simulation:
             )
             samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
+        def affected_by_slm(slot: _TimeSlot) -> bool:
+            """Check if the SLM is on during a slot."""
+            if not self._seq._slm_mask_targets:
+                return False
+            if self._seq._slm_mask_time:
+                ti_slot = slot.ti
+                tf_slot = slot.tf
+                ti_mask = self._seq._slm_mask_time[0]
+                tf_mask = self._seq._slm_mask_time[1]
+                if ti_mask < tf_slot and tf_mask > ti_slot:
+                    return True
+            return False
+
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
             basis = self._seq.declared_channels[channel].basis
@@ -480,7 +493,19 @@ class Simulation:
                                 write_samples(
                                     slot, samples_dict[qubit], is_global, qubit
                                 )
-                self.samples["Local"][basis] = samples_dict
+                        self.samples["Local"][basis] = samples_dict
+
+            # Apply SLM mask if it was defined
+            if self._seq._slm_mask_targets:
+                try:
+                    ti = self._seq._slm_mask_time[0]
+                    tf = self._seq._slm_mask_time[1]
+                    for qubit in self._seq._slm_mask_targets:
+                        self.samples["Local"][basis][qubit]["amp"][ti:tf] = 0
+                        self.samples["Local"][basis][qubit]["det"][ti:tf] = 0
+                        self.samples["Local"][basis][qubit]["phase"][ti:tf] = 0
+                except IndexError:
+                    pass
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
@@ -662,9 +687,53 @@ class Simulation:
                 )
             return xy
 
-        make_interaction_term = (
-            make_xy_term if self._interaction == "XY" else make_vdw_term
-        )
+        def make_masked_xy_term() -> qutip.Qobj:
+            """Construct the XY interaction Term when SLM mask is on.
+
+            For each pair of unmasked qubits, calculate the distance between
+            them, then assign the local operator "sigma_du * sigma_ud" at each
+            pair. The units are given so that the coefficient
+            includes a 1/hbar factor.
+            """
+            xy = 0 * self.build_operator([("I", "global")])
+            # Get every pair without duplicates
+            for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
+                if not (
+                    q1 in self._seq._slm_mask_targets
+                    or q2 in self._seq._slm_mask_targets
+                ):
+                    dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                    mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
+                    if mag_norm < 1e-8:
+                        cosine = 0.0
+                    else:
+                        cosine = (
+                            np.dot(
+                                (self._qdict[q1] - self._qdict[q2]),
+                                self._seq.magnetic_field[0:2],
+                            )
+                            / (dist * mag_norm)
+                        )
+                    U = (
+                        0.5
+                        * self._seq._device.interaction_coeff_xy
+                        * (1 - 3 * cosine ** 2)
+                        / dist ** 3
+                    )
+                    xy += U * self.build_operator(
+                        [("sigma_du", [q1]), ("sigma_ud", [q2])]
+                    )
+            return xy
+
+        def make_interaction_term() -> qutip.Qobj:
+            if self._interaction == "XY":
+                return make_xy_term()
+            else:
+                return make_vdw_term()
+
+        def make_masked_interaction_term() -> qutip.Qqobj:
+            if self._interaction == "XY":
+                return make_masked_xy_term()
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
@@ -722,7 +791,27 @@ class Simulation:
             self.operators[addr][basis] = operators
             return terms
 
-        # Time independent term:
+        def build_masked_coeff() -> np.ndarray:
+            coeff = np.zeros(self._tot_duration)
+            try:
+                ti = self._seq._slm_mask_time[0]
+                tf = self._seq._slm_mask_time[1]
+            except IndexError:
+                return coeff
+            coeff[ti:tf] = 1
+            return coeff
+
+        def build_unmasked_coeff() -> np.ndarray:
+            coeff = np.ones(self._tot_duration)
+            try:
+                ti = self._seq._slm_mask_time[0]
+                tf = self._seq._slm_mask_time[1]
+            except IndexError:
+                return coeff
+            coeff[ti:tf] = 0
+            return coeff
+
+        # Interaction term:
         if self.basis_name == "digital" or self._size == 1:
             qobj_list = [0 * self.build_operator([("I", "global")])]
         else:
