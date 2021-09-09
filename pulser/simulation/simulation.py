@@ -123,22 +123,6 @@ class Simulation:
                 self._meas_basis = self.basis_name
         self.initial_state = "all-ground"
 
-        # If mask is set, find initial and final time of SLM mask
-        if self._seq._slm_mask_targets:
-            for channel in self._seq._declared_channels:
-                try:
-                    first = self._seq._schedule[channel][0]
-                except:
-                    continue
-                ti = first.ti
-                tf = first.tf
-                try:
-                    if ti < self._slm_mask_time[0]:
-                        self._slm_mask_time = [ti, tf]
-                except:
-                    self._slm_mask_time = [ti, tf]
-
-
     @property
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
@@ -445,11 +429,17 @@ class Simulation:
 
         def affected_by_slm(slot: _TimeSlot) -> bool:
             """Check if the SLM is on during a slot."""
-            ti = slot.ti
-            tf = slot.tf
-            for time in self._seq._slm_mask_times:
-                if time[0] < tf and time[1] > ti:
-                    return True
+            if not self._seq._slm_mask_targets:
+                return False
+            ti_slot = slot.ti
+            tf_slot = slot.tf
+            try:
+                ti_mask = self._seq._slm_mask_time[0]
+                tf_mask = self._seq._slm_mask_time[1]
+            except IndexError:
+                return False
+            if ti_mask < tf_slot and tf_mask > ti_slot:
+                return True
             return False
 
         for channel in self._seq.declared_channels:
@@ -502,9 +492,9 @@ class Simulation:
                 ti = self._seq._slm_mask_time[0]
                 tf = self._seq._slm_mask_time[1]
                 for qubit in self._seq._slm_mask_targets:
-                    self.samples["Local"][basis][qubit]["amp"][ti : tf] = 0
-                    self.samples["Local"][basis][qubit]["det"][ti : tf] = 0
-                    self.samples["Local"][basis][qubit]["phase"][ti : tf] = 0
+                    self.samples["Local"][basis][qubit]["amp"][ti:tf] = 0
+                    self.samples["Local"][basis][qubit]["det"][ti:tf] = 0
+                    self.samples["Local"][basis][qubit]["phase"][ti:tf] = 0
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
@@ -817,14 +807,16 @@ class Simulation:
 
         def build_masked_coeff() -> np.ndarray:
             coeff = np.zeros(self._tot_duration)
-            for time in self._seq._slm_mask_times:
-                coeff[time[0] : time[1]] = 1
+            ti = self._seq._slm_mask_time[0]
+            tf = self._seq._slm_mask_time[1]
+            coeff[ti:tf] = 1
             return coeff
 
         def build_unmasked_coeff() -> np.ndarray:
             coeff = np.ones(self._tot_duration)
-            for time in self._seq._slm_mask_times:
-                coeff[time[0] : time[1]] = 0
+            ti = self._seq._slm_mask_time[0]
+            tf = self._seq._slm_mask_time[1]
+            coeff[ti:tf] = 0
             return coeff
 
         # Interaction term:

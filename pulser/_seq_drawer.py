@@ -400,11 +400,13 @@ def draw_sequence(
                 )
 
         # Draw the SLM mask
-        for time in seq._slm_mask_times:
-            a.axvspan(time[0], time[1], color="black", alpha=0.1, zorder=-100)
-            b.axvspan(time[0], time[1], color="black", alpha=0.1, zorder=-100)
+        if seq._slm_mask_targets:
+            ti_m = seq._slm_mask_time[0]
+            tf_m = seq._slm_mask_time[1]
+            a.axvspan(ti_m, tf_m, color="black", alpha=0.1, zorder=-100)
+            b.axvspan(ti_m, tf_m, color="black", alpha=0.1, zorder=-100)
             tgt_strs = [str(q) for q in seq._slm_mask_targets]
-            tgt_txt_x = time[0] + t[-1] * 0.005
+            tgt_txt_x = ti_m + t[-1] * 0.005
             tgt_txt_y = b.get_ylim()[0]
             tgt_str = "\n".join(tgt_strs)
             b.text(

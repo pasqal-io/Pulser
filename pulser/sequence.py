@@ -420,6 +420,12 @@ class Sequence:
             else:
                 raise ValueError(f"Channel {channel_id} is not available.")
 
+        # Remove this check once SLM is available in Ising mode
+        if self._slm_mask_targets and ch.basis != "XY":
+            raise NotImplementedError(
+                "SLM mask is not yet available in Ising mode"
+            )
+
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
             self.set_magnetic_field()
@@ -636,6 +642,14 @@ class Sequence:
         # Sequence is marked as non-empty on the first added pulse
         if self._empty_sequence:
             self._empty_sequence = False
+
+        # Update the SLM mask initial and final time if necessary
+        if self._slm_mask_targets:
+            try:
+                if self._slm_mask_time[0] > ti:
+                    self._slm_mask_time = [ti, tf]
+            except IndexError:
+                self._slm_mask_time = [ti, tf]
 
     @_store
     def target(
@@ -1127,23 +1141,30 @@ class Sequence:
             raise ValueError("SLM mask targets must exist in the register")
 
         if not self._in_xy and self._channels:
-            raise ValueError("SLM mask can only be added in XY mode")
+            raise NotImplementedError("SLM mask can only be added in XY mode")
 
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
+        self._slm_mask_time = []
 
         # Find tentative initial and final time of SLM mask if possible
         for channel in self._channels:
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
+                if isinstance(slot.type, Pulse):
+                    first = slot
+                    break
             try:
-                first = self._schedule[channel][0]
-            except:
+                ti = first.ti
+                tf = first.tf
+            # If try fails, it's because the variable 'first' is not defined,
+            # meaning there are no pulses in this channel
+            except NameError:
                 continue
-            ti = first.ti
-            tf = first.tf
             try:
                 if ti < self._slm_mask_time[0]:
                     self._slm_mask_time = [ti, tf]
-            except:
+            except IndexError:
                 self._slm_mask_time = [ti, tf]
 
 
