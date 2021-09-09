@@ -635,6 +635,21 @@ def test_cuncurrent_pulses():
         assert ham_no_noise[0, 1] == ham_with_noise[0, 1]
 
 
+def test_mask_nopulses():
+    """Check interaction between SLM mask and a simulation with no pulses."""
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    seq_empty = Sequence(reg, MockDevice)
+    seq_empty.set_magnetic_field(0, 1.0, 0.0)
+    seq_empty.declare_channel("ch", "mw_global")
+    seq_empty.delay(duration=100, channel="ch")
+    masked_qubits = ["q2"]
+    seq_empty.config_slm_mask(masked_qubits)
+    sim_empty = Simulation(seq_empty)
+
+    assert seq_empty._slm_mask_time == []
+    assert sim_empty._tot_duration == 100
+
+
 def test_xy_mask_equals_remove():
     """Check that masking is equivalent to removing the masked qubits.
 
@@ -711,7 +726,7 @@ def test_xy_mask_two_pulses():
         ham_masked = sim_masked.get_hamiltonian(t)
         ham_three = sim_three.get_hamiltonian(t)
         ham_two = sim_two.get_hamiltonian(t)
-        if ti < t < tf:
+        if ti <= t <= tf:
             assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
         else:
             assert ham_masked == ham_three

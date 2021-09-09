@@ -203,6 +203,7 @@ class Sequence:
         self._empty_sequence: bool = True
         # SLM mask targets and on/off times
         self._slm_mask_targets: Set[QubitId] = set()
+        self._slm_mask_time: list = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -1145,7 +1146,6 @@ class Sequence:
 
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
-        self._slm_mask_time = []
 
         # Find tentative initial and final time of SLM mask if possible
         for channel in self._channels:

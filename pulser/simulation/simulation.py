@@ -431,15 +431,13 @@ class Simulation:
             """Check if the SLM is on during a slot."""
             if not self._seq._slm_mask_targets:
                 return False
-            ti_slot = slot.ti
-            tf_slot = slot.tf
-            try:
+            if self._seq._slm_mask_time:
+                ti_slot = slot.ti
+                tf_slot = slot.tf
                 ti_mask = self._seq._slm_mask_time[0]
                 tf_mask = self._seq._slm_mask_time[1]
-            except IndexError:
-                return False
-            if ti_mask < tf_slot and tf_mask > ti_slot:
-                return True
+                if ti_mask < tf_slot and tf_mask > ti_slot:
+                    return True
             return False
 
         for channel in self._seq.declared_channels:
@@ -489,12 +487,15 @@ class Simulation:
 
             # Apply SLM mask if it was defined
             if self._seq._slm_mask_targets:
-                ti = self._seq._slm_mask_time[0]
-                tf = self._seq._slm_mask_time[1]
-                for qubit in self._seq._slm_mask_targets:
-                    self.samples["Local"][basis][qubit]["amp"][ti:tf] = 0
-                    self.samples["Local"][basis][qubit]["det"][ti:tf] = 0
-                    self.samples["Local"][basis][qubit]["phase"][ti:tf] = 0
+                try:
+                    ti = self._seq._slm_mask_time[0]
+                    tf = self._seq._slm_mask_time[1]
+                    for qubit in self._seq._slm_mask_targets:
+                        self.samples["Local"][basis][qubit]["amp"][ti:tf] = 0
+                        self.samples["Local"][basis][qubit]["det"][ti:tf] = 0
+                        self.samples["Local"][basis][qubit]["phase"][ti:tf] = 0
+                except IndexError:
+                    pass
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
@@ -642,29 +643,6 @@ class Simulation:
                     vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
             return vdw
 
-        def make_masked_vdw_term() -> qutip.Qobj:
-            """Construct the Van der Waals interaction Term when SLM mask is on.
-
-            For each pair of unmasked qubits, calculate the distance between
-            them, then assign the local operator "sigma_rr" at each pair.
-            The units are given so that the coefficient includes a
-            1/hbar factor.
-            """
-            vdw = 0 * self.build_operator([("I", "global")])
-            # Get every pair without duplicates
-            for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
-                # no VdW interaction with other qubits for a badly prep. qubit
-                if not (
-                    self._bad_atoms[q1]
-                    or self._bad_atoms[q2]
-                    or q1 in self._seq._slm_mask_targets
-                    or q2 in self._seq._slm_mask_targets
-                ):
-                    dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-                    U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
-                    vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
-            return vdw
-
         def make_xy_term() -> qutip.Qobj:
             """Construct the XY interaction Term.
 
@@ -746,8 +724,6 @@ class Simulation:
         def make_masked_interaction_term() -> qutip.Qqobj:
             if self._interaction == "XY":
                 return make_masked_xy_term()
-            else:
-                return make_masked_vdw_term()
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
@@ -807,15 +783,21 @@ class Simulation:
 
         def build_masked_coeff() -> np.ndarray:
             coeff = np.zeros(self._tot_duration)
-            ti = self._seq._slm_mask_time[0]
-            tf = self._seq._slm_mask_time[1]
+            try:
+                ti = self._seq._slm_mask_time[0]
+                tf = self._seq._slm_mask_time[1]
+            except IndexError:
+                return coeff
             coeff[ti:tf] = 1
             return coeff
 
         def build_unmasked_coeff() -> np.ndarray:
             coeff = np.ones(self._tot_duration)
-            ti = self._seq._slm_mask_time[0]
-            tf = self._seq._slm_mask_time[1]
+            try:
+                ti = self._seq._slm_mask_time[0]
+                tf = self._seq._slm_mask_time[1]
+            except IndexError:
+                return coeff
             coeff[ti:tf] = 0
             return coeff
 
