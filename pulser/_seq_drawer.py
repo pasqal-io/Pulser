@@ -400,7 +400,7 @@ def draw_sequence(
                 )
 
         # Draw the SLM mask
-        if seq._slm_mask_targets:
+        if seq._slm_mask_targets and seq._slm_mask_time:
             ti_m = seq._slm_mask_time[0]
             tf_m = seq._slm_mask_time[1]
             a.axvspan(ti_m, tf_m, color="black", alpha=0.1, zorder=-100)
