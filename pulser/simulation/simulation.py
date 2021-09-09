@@ -124,20 +124,19 @@ class Simulation:
         self.initial_state = "all-ground"
 
         # If mask is set, find initial and final time of SLM mask
-        self.slm_mask_time = []
         if self._seq._slm_mask_targets:
             for channel in self._seq._declared_channels:
-                if self._seq._schedule[channel]:
+                try:
                     first = self._seq._schedule[channel][0]
-                    ti = first.ti
-                    tf = first.tf
-                    if self.slm_mask_time:
-                        if ti < self.slm_mask_time[0]:
-                            self.slm_mask_time[0] = ti
-                            self.slm_mask_time[1] = tf
-                    else:
-                        self.slm_mask_time.append(ti)
-                        self.slm_mask_time.append(tf)
+                except:
+                    continue
+                ti = first.ti
+                tf = first.tf
+                try:
+                    if ti < self._slm_mask_time[0]:
+                        self._slm_mask_time = [ti, tf]
+                except:
+                    self._slm_mask_time = [ti, tf]
 
 
     @property

@@ -1121,7 +1121,7 @@ class Sequence:
         try:
             targets = set(qubits)
         except TypeError:
-            raise TypeError("The SLM targets are not an iterable")
+            raise TypeError("The SLM targets should be castable to set")
 
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register")
@@ -1129,7 +1129,22 @@ class Sequence:
         if not self._in_xy and self._channels:
             raise ValueError("SLM mask can only be added in XY mode")
 
+        # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
+
+        # Find tentative initial and final time of SLM mask if possible
+        for channel in self._channels:
+            try:
+                first = self._schedule[channel][0]
+            except:
+                continue
+            ti = first.ti
+            tf = first.tf
+            try:
+                if ti < self._slm_mask_time[0]:
+                    self._slm_mask_time = [ti, tf]
+            except:
+                self._slm_mask_time = [ti, tf]
 
 
 class _PhaseTracker:
