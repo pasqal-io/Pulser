@@ -70,9 +70,7 @@ def test_channel_declaration():
     seq2.declare_channel("ch0", "raman_local", initial_target="q1")
     seq2.declare_channel("ch1", "rydberg_global")
     seq2.declare_channel("ch2", "rydberg_global")
-    assert set(seq2.available_channels) == (
-        available_channels - {"mw_global", "mw_local"}
-    )
+    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
     assert seq2._taken_channels == {
         "ch0": "raman_local",
         "ch1": "rydberg_global",
@@ -84,7 +82,7 @@ def test_channel_declaration():
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global", "mw_local"}
+    assert set(seq2.available_channels) == {"mw_global"}
     with pytest.raises(
         ValueError,
         match="cannot work simultaneously with the declared 'Microwave'",
@@ -119,7 +117,7 @@ def test_magnetic_field():
 
     seq3 = Sequence(reg, MockDevice)
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
-    assert set(seq3.available_channels) == {"mw_global", "mw_local"}
+    assert set(seq3.available_channels) == {"mw_global"}
     seq3.declare_channel("ch0", "mw_global")
     # Does not change to default
     assert np.all(seq3.magnetic_field == np.array((1.0, 0.0, 0.0)))
@@ -416,9 +414,9 @@ def test_config_slm_mask():
     reg_s = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     seq_s = Sequence(reg_s, device)
 
-    with pytest.raises(TypeError, match="should be castable to set"):
+    with pytest.raises(TypeError, match="must be castable to set"):
         seq_s.config_slm_mask(0)
-    with pytest.raises(TypeError, match="should be castable to set"):
+    with pytest.raises(TypeError, match="must be castable to set"):
         seq_s.config_slm_mask((0))
     with pytest.raises(ValueError, match="exist in the register"):
         seq_s.config_slm_mask("q0")
@@ -445,9 +443,9 @@ def test_config_slm_mask():
     reg_i = Register({0: (0, 0), 1: (10, 10), 2: (-10, -10)})
     seq_i = Sequence(reg_i, device)
 
-    with pytest.raises(TypeError, match="should be castable to set"):
+    with pytest.raises(TypeError, match="must be castable to set"):
         seq_i.config_slm_mask(0)
-    with pytest.raises(TypeError, match="should be castable to set"):
+    with pytest.raises(TypeError, match="must be castable to set"):
         seq_i.config_slm_mask((0))
     with pytest.raises(ValueError, match="exist in the register"):
         seq_i.config_slm_mask("q0")

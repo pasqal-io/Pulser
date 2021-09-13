@@ -202,8 +202,8 @@ class Sequence:
         # Marks the sequence as empty until the first pulse is added
         self._empty_sequence: bool = True
         # SLM mask targets and on/off times
-        self._slm_mask_targets: Set[QubitId] = set()
-        self._slm_mask_time: list = []
+        self._slm_mask_targets: set[QubitId] = set()
+        self._slm_mask_time: list[int] = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -1131,12 +1131,12 @@ class Sequence:
     def config_slm_mask(self, qubits: Set[QubitId]) -> None:
         """Setup an SLM mask by specifying the qubits it targets."""
         if self._slm_mask_targets:
-            raise ValueError("SLM mask can be configured only once")
+            raise ValueError("SLM mask can be configured only once.")
 
         try:
             targets = set(qubits)
         except TypeError:
-            raise TypeError("The SLM targets should be castable to set")
+            raise TypeError("The SLM targets must be castable to set")
 
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register")
@@ -1151,21 +1151,16 @@ class Sequence:
         for channel in self._channels:
             # Cycle on slots in schedule until the first pulse is found
             for slot in self._schedule[channel]:
-                if isinstance(slot.type, Pulse):
-                    first = slot
-                    break
-            try:
-                ti = first.ti
-                tf = first.tf
-            # If try fails, it's because the variable 'first' is not defined,
-            # meaning there are no pulses in this channel
-            except NameError:
-                continue
-            try:
-                if ti < self._slm_mask_time[0]:
+                if not isinstance(slot.type, Pulse):
+                    continue
+                ti = slot.ti
+                tf = slot.tf
+                if self._slm_mask_time:
+                    if ti < self._slm_mask_time[0]:
+                        self._slm_mask_time = [ti, tf]
+                else:
                     self._slm_mask_time = [ti, tf]
-            except IndexError:
-                self._slm_mask_time = [ti, tf]
+                break
 
 
 class _PhaseTracker:

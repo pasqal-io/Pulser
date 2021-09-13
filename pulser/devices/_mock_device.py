@@ -47,11 +47,5 @@ MockDevice = Device(
             "mw_global",
             Microwave.Global(1000, 200, clock_period=1, min_duration=1),
         ),
-        (
-            "mw_local",
-            Microwave.Local(
-                1000, 200, 0, max_targets=2000, clock_period=1, min_duration=1
-            ),
-        ),
     ),
 )
