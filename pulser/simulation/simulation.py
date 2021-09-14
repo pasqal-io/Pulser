@@ -429,15 +429,7 @@ class Simulation:
 
         def affected_by_slm(slot: _TimeSlot) -> bool:
             """Check if the SLM is on during a slot."""
-            if not self._seq._slm_mask_targets:
-                return False
-            if self._seq._slm_mask_time:
-                ti_slot = slot.ti
-                tf_slot = slot.tf
-                ti_mask = self._seq._slm_mask_time[0]
-                tf_mask = self._seq._slm_mask_time[1]
-                return ti_mask < tf_slot and tf_mask > ti_slot
-            return False
+            return self._seq._slm_mask_time[1] > slot.ti
 
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
@@ -488,11 +480,10 @@ class Simulation:
 
             # Apply SLM mask if it was defined
             if self._seq._slm_mask_targets and self._seq._slm_mask_time:
-                ti = self._seq._slm_mask_time[0]
                 tf = self._seq._slm_mask_time[1]
                 for qubit in self._seq._slm_mask_targets:
                     for x in ("amp", "det", "phase"):
-                        self.samples["Local"][basis][qubit][x][ti:tf] = 0
+                        self.samples["Local"][basis][qubit][x][0:tf] = 0
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
@@ -743,49 +734,35 @@ class Simulation:
             self.operators[addr][basis] = operators
             return terms
 
-        def build_unmasked_coeff() -> np.ndarray:
-            coeff = np.ones(self._tot_duration)
-            if self._seq._slm_mask_time:
-                ti = self._seq._slm_mask_time[0]
-                tf = self._seq._slm_mask_time[1]
-                coeff[ti:tf] = 0
-            return coeff
-
         # Interaction term:
         if self.basis_name == "digital" or self._size == 1:
             qobj_list = [0 * self.build_operator([("I", "global")])]
         else:
-            coeff = build_unmasked_coeff()
-            if self._seq._slm_mask_targets:
-                qobj_list = (
+            # Build time-dependent or time-independent interaction term based
+            # on whether an SLM mask was defined or not
+            if self._seq._slm_mask_time:
+                # Build an array of binary coefficients for the interaction
+                # term of unmasked qubits
+                coeff = np.ones(self._tot_duration)
+                coeff[0 : self._seq._slm_mask_time[1]] = 0
+                # Build the interaction term for unmasked qubits
+                qobj_list = [
                     [
-                        [
-                            make_interaction_term(masked=False),
-                            self._adapt_to_sampling_rate(coeff),
-                        ]
+                        make_interaction_term(masked=False),
+                        self._adapt_to_sampling_rate(coeff),
                     ]
-                    if self._size > 1
-                    else []
-                )
-
-                qobj_list += (
+                ]
+                # Build the interaction term for masked qubits
+                qobj_list += [
                     [
-                        [
-                            make_interaction_term(masked=True),
-                            self._adapt_to_sampling_rate(
-                                np.logical_not(coeff).astype(int)
-                            ),
-                        ]
+                        make_interaction_term(masked=True),
+                        self._adapt_to_sampling_rate(
+                            np.logical_not(coeff).astype(int)
+                        ),
                     ]
-                    if self._size > 1
-                    else []
-                )
+                ]
             else:
-                qobj_list = (
-                    [make_interaction_term(masked=True)]
-                    if self._size > 1
-                    else []
-                )
+                qobj_list = [make_interaction_term(masked=False)]
 
         # Time dependent terms:
         for addr in self.samples:

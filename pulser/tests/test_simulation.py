@@ -647,7 +647,7 @@ def test_mask_nopulses():
     sim_empty = Simulation(seq_empty)
 
     assert seq_empty._slm_mask_time == []
-    assert sim_empty._tot_duration == 100
+    assert sim_empty._seq._slm_mask_time == []
 
 
 def test_xy_mask_equals_remove():

@@ -532,6 +532,17 @@ def test_slm_mask():
     seq_xy4.config_slm_mask(targets)
     assert seq_xy4._slm_mask_time == [0, 100]
 
+    # Check that paramatrize works with SLM mask
+    seq_xy5 = Sequence(reg, MockDevice)
+    seq_xy5.declare_channel("ch", "mw_global")
+    var = seq_xy5.declare_variable("var")
+    seq_xy5.add(Pulse.ConstantPulse(200, var, 0, 0), "ch")
+    assert seq_xy5.is_parametrized()
+    seq_xy5.config_slm_mask(targets)
+    seq_xy5_str = seq_xy5.serialize()
+    seq_xy5_ = Sequence.deserialize(seq_xy5_str)
+    assert str(seq_xy5) == str(seq_xy5_)
+
     # Check drawing method
     with patch("matplotlib.pyplot.show"):
         seq_xy2.draw()

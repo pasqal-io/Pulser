@@ -644,7 +644,8 @@ class Sequence:
         if self._empty_sequence:
             self._empty_sequence = False
 
-        # Update the SLM mask initial and final time if necessary
+        # If the added pulse starts earlier than all previously added pulses,
+        # update SLM mask initial and final time
         if self._slm_mask_targets:
             try:
                 if self._slm_mask_time[0] > ti:
@@ -1128,11 +1129,9 @@ class Sequence:
         self._variables = {}
         self._to_build_calls = []
 
+    @_store
     def config_slm_mask(self, qubits: Set[QubitId]) -> None:
         """Setup an SLM mask by specifying the qubits it targets."""
-        if self._slm_mask_targets:
-            raise ValueError("SLM mask can be configured only once.")
-
         try:
             targets = set(qubits)
         except TypeError:
@@ -1143,6 +1142,12 @@ class Sequence:
 
         if not self._in_xy and self._channels:
             raise NotImplementedError("SLM mask can only be added in XY mode")
+
+        if self.is_parametrized():
+            return
+
+        if self._slm_mask_targets:
+            raise ValueError("SLM mask can be configured only once.")
 
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
