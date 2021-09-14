@@ -427,10 +427,6 @@ class Simulation:
             )
             samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
-        def affected_by_slm(slot: _TimeSlot) -> bool:
-            """Check if the SLM is on during a slot."""
-            return self._seq._slm_mask_time[1] > slot.ti
-
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
             basis = self._seq.declared_channels[channel].basis
@@ -443,7 +439,7 @@ class Simulation:
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
                         # If SLM is on during slot, populate local samples
-                        if slm_on and affected_by_slm(slot):
+                        if slm_on and self._seq._slm_mask_time[1] > slot.ti:
                             samples_dict = self.samples["Local"][basis]
                             for qubit in slot.targets:
                                 if qubit not in samples_dict:
