@@ -627,7 +627,7 @@ class Simulation:
                     vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
             return vdw
 
-        def make_xy_term(masked: bool) -> qutip.Qobj:
+        def make_xy_term(masked: bool = False) -> qutip.Qobj:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
@@ -675,7 +675,7 @@ class Simulation:
                     )
             return xy
 
-        def make_interaction_term(masked: bool) -> qutip.Qobj:
+        def make_interaction_term(masked: bool = False) -> qutip.Qobj:
             if self._interaction == "XY":
                 return make_xy_term(masked)
             else:
@@ -751,7 +751,7 @@ class Simulation:
                 # Build the interaction term for unmasked qubits
                 qobj_list = [
                     [
-                        make_interaction_term(masked=False),
+                        make_interaction_term(),
                         self._adapt_to_sampling_rate(coeff),
                     ]
                 ]
@@ -765,7 +765,7 @@ class Simulation:
                     ]
                 ]
             else:
-                qobj_list = [make_interaction_term(masked=False)]
+                qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
         for addr in self.samples:
