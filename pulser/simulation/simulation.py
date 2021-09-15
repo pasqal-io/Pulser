@@ -418,13 +418,13 @@ class Simulation:
                 noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
                     -((r / w0) ** 2)
                 )
-            samples_dict["amp"][slot.ti : slot.tf] = (
+            samples_dict["amp"][slot.ti : slot.tf] += (
                 _pulse.amplitude.samples * noise_amp
             )
-            samples_dict["det"][slot.ti : slot.tf] = (
+            samples_dict["det"][slot.ti : slot.tf] += (
                 _pulse.detuning.samples + noise_det
             )
-            samples_dict["phase"][slot.ti : slot.tf] = _pulse.phase
+            samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
@@ -750,7 +750,7 @@ class Simulation:
     # Run Simulation Evolution using Qutip
     def run(
         self,
-        progress_bar: Optional[bool] = None,
+        progress_bar: Optional[bool] = False,
         **options: qutip.solver.Options,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
@@ -759,8 +759,8 @@ class Simulation:
         Otherwise will return CoherentResults.
 
         Keyword Args:
-            progress_bar (bool): If True, the progress bar of QuTiP's solver
-                will be shown.
+            progress_bar (bool or None): If True, the progress bar of QuTiP's
+                solver will be shown. If None or False, no text appears.
             options (qutip.solver.Options): If specified, will override
                 SimConfig solver_options. If no `max_step` value is provided,
                 an automatic one is calculated from the `Sequence`'s schedule
@@ -778,9 +778,24 @@ class Simulation:
                 k: self.config.spam_dict[k]
                 for k in ("epsilon", "epsilon_prime")
             }
+            if self.config.eta > 0 and self.initial_state != qutip.tensor(
+                [self.basis["g"] for _ in range(self._size)]
+            ):
+                raise NotImplementedError(
+                    "Can't combine state preparation errors with an initial "
+                    "state different from the ground."
+                )
 
         def _run_solver() -> CoherentResults:
             """Returns CoherentResults: Object containing evolution results."""
+            # Decide if progress bar will be fed to QuTiP solver
+            if progress_bar is True:
+                p_bar = True
+            elif (progress_bar is False) or (progress_bar is None):
+                p_bar = None  # type: ignore
+            else:
+                raise ValueError("`progress_bar` must be a bool.")
+
             if "dephasing" in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(
@@ -790,7 +805,7 @@ class Simulation:
                     liouvillian,
                     self.initial_state,
                     self._eval_times_array,
-                    progress_bar=progress_bar,
+                    progress_bar=p_bar,
                     options=solv_ops,
                 )
             else:
@@ -798,7 +813,7 @@ class Simulation:
                     self._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
-                    progress_bar=progress_bar,
+                    progress_bar=p_bar,
                     options=solv_ops,
                 )
             return CoherentResults(

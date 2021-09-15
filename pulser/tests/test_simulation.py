@@ -355,6 +355,7 @@ def test_add_max_step_and_delays():
 
 def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
+    sim.set_config(SimConfig("SPAM", eta=0.0))
     with patch("matplotlib.pyplot.show"):
         sim.draw(draw_phase_area=True)
     bad_initial = np.array([1.0])
@@ -383,6 +384,23 @@ def test_run():
     seq.measure("ground-rydberg")
     sim.run()
     assert sim._seq._measurement == "ground-rydberg"
+
+    sim.run(progress_bar=True)
+    sim.run(progress_bar=False)
+    sim.run(progress_bar=None)
+    with pytest.raises(
+        ValueError,
+        match="`progress_bar` must be a bool.",
+    ):
+        sim.run(progress_bar=1)
+
+    sim.set_config(SimConfig("SPAM", eta=0.1))
+    with pytest.raises(
+        NotImplementedError,
+        match="Can't combine state preparation errors with an initial state "
+        "different from the ground.",
+    ):
+        sim.run()
 
 
 def test_eval_times():
@@ -545,6 +563,32 @@ def test_add_config():
     sim.add_config(SimConfig(noise=("SPAM", "amplitude"), laser_waist=172.0))
     assert "amplitude" in sim.config.noise and "SPAM" in sim.config.noise
     assert sim.config.laser_waist == 172.0
+
+
+def test_cuncurrent_pulses():
+    reg = Register({"q0": (0, 0)})
+    seq = Sequence(reg, Chadoq2)
+
+    seq.declare_channel("ch_local", "rydberg_local", initial_target="q0")
+    seq.declare_channel("ch_global", "rydberg_global")
+
+    pulse = Pulse.ConstantPulse(20, 10, 0, 0)
+
+    seq.add(pulse, "ch_local")
+    seq.add(pulse, "ch_global", protocol="no-delay")
+
+    # Clean simulation
+    sim_no_noise = Simulation(seq)
+
+    # Noisy simulation
+    sim_with_noise = Simulation(seq)
+    config_doppler = SimConfig(noise=("doppler"))
+    sim_with_noise.set_config(config_doppler)
+
+    for t in sim_no_noise._times:
+        ham_no_noise = sim_no_noise.get_hamiltonian(t)
+        ham_with_noise = sim_with_noise.get_hamiltonian(t)
+        assert ham_no_noise[0, 1] == ham_with_noise[0, 1]
 
 
 def test_get_xy_hamiltonian():
