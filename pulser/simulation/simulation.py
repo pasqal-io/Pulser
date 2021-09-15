@@ -702,17 +702,20 @@ class Simulation:
             self.operators[addr][basis] = operators
             return terms
 
+        qobj_list = []
         # Time independent term:
-        if self.basis_name == "digital" or self._size == 1:
-            qobj_list = [0 * self.build_operator([("I", "global")])]
-        else:
-            qobj_list = [make_interaction_term()] if self._size > 1 else []
+        effective_size = self._size - sum(self._bad_atoms.values())
+        if self.basis_name != "digital" and effective_size > 1:
+            qobj_list.append(make_interaction_term())
 
         # Time dependent terms:
         for addr in self.samples:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
+
+        if not qobj_list:  # If qobj_list ends up empty
+            qobj_list = [0 * self.build_operator([("I", "global")])]
 
         ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
