@@ -635,6 +635,13 @@ class Simulation:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
+            # Check if the total number of unmasked qubits is less than 2
+            effective_size = (
+                self._size - len(self._seq._slm_mask_targets)*int(masked)
+            )
+            if effective_size < 2:
+                return 0 * self.build_operator([("I", "global")])
+
             xy = cast(qutip.Qobj, 0)
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
