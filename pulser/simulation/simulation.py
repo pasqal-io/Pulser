@@ -85,7 +85,7 @@ class Simulation:
             raise ValueError("The provided sequence has no declared channels.")
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
             raise ValueError(
-                "No instructions given for the channels in the " "sequence."
+                "No instructions given for the channels in the sequence."
             )
         self._seq = sequence
         self._interaction = "XY" if self._seq._in_xy else "ising"
@@ -100,7 +100,7 @@ class Simulation:
             )
         if int(self._tot_duration * sampling_rate) < 4:
             raise ValueError(
-                "`sampling_rate` is too small, less than 4 data " "points."
+                "`sampling_rate` is too small, less than 4 data points."
             )
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
@@ -152,8 +152,7 @@ class Simulation:
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 raise NotImplementedError(
-                    "Cannot include dephasing noise in"
-                    + " digital- or all-basis."
+                    "Cannot include dephasing noise in digital- or all-basis."
                 )
             # Probability of phase (Z) flip:
             # First order in prob
@@ -162,7 +161,7 @@ class Simulation:
             if prob > 0.1 and n > 1:
                 warnings.warn(
                     "The dephasing model is a first-order approximation in the"
-                    + f" dephasing probability. p = {2*prob} is too large for "
+                    f" dephasing probability. p = {2*prob} is too large for "
                     "realistic results.",
                     stacklevel=2,
                 )
@@ -600,10 +599,11 @@ class Simulation:
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 # no VdW interaction with other qubits for a badly prep. qubit
-                if not (self._bad_atoms[q1] or self._bad_atoms[q2]):
-                    dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-                    U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
-                    vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
+                if self._bad_atoms[q1] or self._bad_atoms[q2]:
+                    continue
+                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
+                vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
             return vdw
 
         def make_xy_term() -> qutip.Qobj:
@@ -617,6 +617,8 @@ class Simulation:
             xy = cast(qutip.Qobj, 0)
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
+                if self._bad_atoms[q1] or self._bad_atoms[q2]:
+                    continue
                 dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
                 mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
                 if mag_norm < 1e-8:
