@@ -347,3 +347,7 @@ def test_results_xy():
             np.abs(state.full()), np.abs(results.states[-1].full()), atol=1e-5
         )
     )
+
+    # Check that measurement projectors are correct
+    assert results._meas_projector(0) == qutip.basis(2, 1).proj()
+    assert results._meas_projector(1) == qutip.basis(2, 0).proj()

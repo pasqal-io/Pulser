@@ -483,7 +483,7 @@ def test_config():
 
 def test_noise():
     sim2 = Simulation(
-        seq, sampling_rate=0.01, config=SimConfig(noise=("doppler"))
+        seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.4)
     )
     sim2.run()
     with pytest.raises(NotImplementedError, match="Cannot include"):
@@ -607,3 +607,27 @@ def test_run_xy():
     simple_seq.measure(basis="XY")
     sim.run()
     assert sim._seq._measurement == "XY"
+
+
+def test_noisy_xy():
+    simple_reg = Register.from_coordinates(
+        [[0, 10], [10, 0], [0, 0]], prefix="atom"
+    )
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.add(rise, "ch0")
+
+    sim = Simulation(simple_seq, sampling_rate=0.01)
+    with pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim.set_config(SimConfig(("SPAM", "doppler")))
+
+    sim.set_config(SimConfig("SPAM", eta=0.4))
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: amplitude"
+    ):
+        sim.add_config(SimConfig("amplitude"))
