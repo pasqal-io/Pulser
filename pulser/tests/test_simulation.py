@@ -654,9 +654,8 @@ def test_run_xy():
 
 
 def test_noisy_xy():
-    simple_reg = Register.from_coordinates(
-        [[0, 10], [10, 0], [0, 0]], prefix="atom"
-    )
+    np.random.seed(15092021)
+    simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
     amp = 3.0
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
@@ -671,6 +670,12 @@ def test_noisy_xy():
         sim.set_config(SimConfig(("SPAM", "doppler")))
 
     sim.set_config(SimConfig("SPAM", eta=0.4))
+    assert sim._bad_atoms == {
+        "atom0": True,
+        "atom1": False,
+        "atom2": True,
+        "atom3": False,
+    }
     with pytest.raises(
         NotImplementedError, match="simulation of noise types: amplitude"
     ):
