@@ -641,13 +641,13 @@ class Simulation:
             includes a 1/hbar factor.
             """
             # Calculate the total number of good, unmasked qubits
-            effective_size = (
-                self._size
-                - len(self._seq._slm_mask_targets) * int(masked)
-                - sum(self._bad_atoms.values())
-            )
-            if effective_size < 2:
-                return 0 * self.build_operator([("I", "global")])
+            if masked:
+                effective_size = self._size - sum(self._bad_atoms.values())
+                for q in self._seq._slm_mask_targets:
+                    if not self._bad_atoms[q]:
+                        effective_size -= 1
+                if effective_size < 2:
+                    return 0 * self.build_operator([("I", "global")])
 
             xy = cast(qutip.Qobj, 0)
             # Get every pair without duplicates
@@ -655,12 +655,10 @@ class Simulation:
                 if (
                     self._bad_atoms[q1]
                     or self._bad_atoms[q2]
-                    or (
-                        masked
-                        and (
-                            q1 in self._seq._slm_mask_targets
-                            or q2 in self._seq._slm_mask_targets
-                        )
+                    or masked
+                    and (
+                        q1 in self._seq._slm_mask_targets
+                        or q2 in self._seq._slm_mask_targets
                     )
                 ):
                     continue

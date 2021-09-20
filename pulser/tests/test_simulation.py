@@ -776,3 +776,43 @@ def test_xy_mask_two_pulses():
             assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
         else:
             assert ham_masked == ham_three
+
+
+def test_effective_size_intersection():
+    np.random.seed(15092021)
+    simple_reg = Register.square(2, prefix="atom")
+    rise = Pulse.ConstantPulse(1500, 0, 0, 0)
+    seq = Sequence(simple_reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(rise, "ch0")
+    seq.config_slm_mask(["atom0"])
+
+    sim = Simulation(seq, sampling_rate=0.01)
+    sim.set_config(SimConfig("SPAM", eta=0.4))
+    assert sim._bad_atoms == {
+        "atom0": True,
+        "atom1": False,
+        "atom2": True,
+        "atom3": False,
+    }
+    assert sim.get_hamiltonian(0) != 0 * sim.build_operator([("I", "global")])
+
+
+def test_effective_size_disjoint():
+    np.random.seed(15092021)
+    simple_reg = Register.square(2, prefix="atom")
+    rise = Pulse.ConstantPulse(1500, 0, 0, 0)
+    seq = Sequence(simple_reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(rise, "ch0")
+    seq.config_slm_mask(["atom1"])
+
+    sim = Simulation(seq, sampling_rate=0.01)
+    sim.set_config(SimConfig("SPAM", eta=0.4))
+    assert sim._bad_atoms == {
+        "atom0": True,
+        "atom1": False,
+        "atom2": True,
+        "atom3": False,
+    }
+    assert sim.get_hamiltonian(0) == 0 * sim.build_operator([("I", "global")])
