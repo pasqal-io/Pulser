@@ -142,6 +142,7 @@ class Simulation:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
+        prev_config = self.config if hasattr(self, "_config") else SimConfig()
         self._config = cfg
         if not ("SPAM" in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -151,6 +152,8 @@ class Simulation:
         self._construct_hamiltonian()
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
+                # Go back to previous config
+                self.set_config(prev_config)
                 raise NotImplementedError(
                     "Cannot include dephasing noise in digital- or all-basis."
                 )

@@ -506,9 +506,8 @@ def test_noise():
     sim2.run()
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="dephasing"))
-        sim2.run()
     assert sim2.config.spam_dict == {
-        "eta": 0.005,
+        "eta": 0.4,
         "epsilon": 0.01,
         "epsilon_prime": 0.05,
     }
