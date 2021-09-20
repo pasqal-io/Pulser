@@ -496,19 +496,21 @@ class Simulation:
                     for q_id in self._qdict
                 )
             else:
-                if len(set(qubits)) < len(qubits):
+                qubits_set = set(qubits)
+                if len(qubits_set) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
+                if not qubits_set.issubset(self._qdict.keys()):
+                    raise ValueError(
+                        "Invalid qubit names: "
+                        f"{qubits_set - self._qdict.keys()}"
+                    )
                 if isinstance(operator, str):
                     try:
                         operator = self.op_matrix[operator]
                     except KeyError:
                         raise ValueError(f"{operator} is not a valid operator")
                 for qubit in qubits:
-                    try:
-                        k = self._qid_index[qubit]
-                    except KeyError:
-                        raise ValueError(f"{qubit} is not a valid qubit")
-
+                    k = self._qid_index[qubit]
                     op_list[k] = operator
         return qutip.tensor(op_list)
 

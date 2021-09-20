@@ -172,7 +172,7 @@ def test_building_basis_and_projection_operators():
         sim.build_operator([("sigma_gg", ["target", "target"])])
     with pytest.raises(ValueError, match="not a valid operator"):
         sim.build_operator([("wrong", ["target"])])
-    with pytest.raises(ValueError, match="not a valid qubit"):
+    with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
         sim.build_operator([("sigma_gg", ["wrong"])])
 
     # Check building operator with one operator
