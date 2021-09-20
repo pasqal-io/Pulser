@@ -85,7 +85,7 @@ class Simulation:
             raise ValueError("The provided sequence has no declared channels.")
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
             raise ValueError(
-                "No instructions given for the channels in the " "sequence."
+                "No instructions given for the channels in the sequence."
             )
         self._seq = sequence
         self._interaction = "XY" if self._seq._in_xy else "ising"
@@ -100,7 +100,7 @@ class Simulation:
             )
         if int(self._tot_duration * sampling_rate) < 4:
             raise ValueError(
-                "`sampling_rate` is too small, less than 4 data " "points."
+                "`sampling_rate` is too small, less than 4 data points."
             )
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
@@ -142,6 +142,7 @@ class Simulation:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
+        prev_config = self.config if hasattr(self, "_config") else SimConfig()
         self._config = cfg
         if not ("SPAM" in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -151,9 +152,10 @@ class Simulation:
         self._construct_hamiltonian()
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
+                # Go back to previous config
+                self.set_config(prev_config)
                 raise NotImplementedError(
-                    "Cannot include dephasing noise in"
-                    + " digital- or all-basis."
+                    "Cannot include dephasing noise in digital- or all-basis."
                 )
             # Probability of phase (Z) flip:
             # First order in prob
@@ -162,7 +164,7 @@ class Simulation:
             if prob > 0.1 and n > 1:
                 warnings.warn(
                     "The dephasing model is a first-order approximation in the"
-                    + f" dephasing probability. p = {2*prob} is too large for "
+                    f" dephasing probability. p = {2*prob} is too large for "
                     "realistic results.",
                     stacklevel=2,
                 )
@@ -515,19 +517,21 @@ class Simulation:
                     for q_id in self._qdict
                 )
             else:
-                if len(set(qubits)) < len(qubits):
+                qubits_set = set(qubits)
+                if len(qubits_set) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
+                if not qubits_set.issubset(self._qdict.keys()):
+                    raise ValueError(
+                        "Invalid qubit names: "
+                        f"{qubits_set - self._qdict.keys()}"
+                    )
                 if isinstance(operator, str):
                     try:
                         operator = self.op_matrix[operator]
                     except KeyError:
                         raise ValueError(f"{operator} is not a valid operator")
                 for qubit in qubits:
-                    try:
-                        k = self._qid_index[qubit]
-                    except KeyError:
-                        raise ValueError(f"{qubit} is not a valid qubit")
-
+                    k = self._qid_index[qubit]
                     op_list[k] = operator
         return qutip.tensor(op_list)
 
@@ -621,10 +625,11 @@ class Simulation:
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 # no VdW interaction with other qubits for a badly prep. qubit
-                if not (self._bad_atoms[q1] or self._bad_atoms[q2]):
-                    dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-                    U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
-                    vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
+                if self._bad_atoms[q1] or self._bad_atoms[q2]:
+                    continue
+                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
+                vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
             return vdw
 
         def make_xy_term(masked: bool = False) -> qutip.Qobj:
@@ -635,9 +640,11 @@ class Simulation:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            # Check if the total number of unmasked qubits is less than 2
+            # Calculate the total number of good, unmasked qubits
             effective_size = (
-                self._size - len(self._seq._slm_mask_targets)*int(masked)
+                self._size
+                - len(self._seq._slm_mask_targets) * int(masked)
+                - sum(self._bad_atoms.values())
             )
             if effective_size < 2:
                 return 0 * self.build_operator([("I", "global")])
@@ -645,34 +652,39 @@ class Simulation:
             xy = cast(qutip.Qobj, 0)
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
-                if not masked or (
-                    masked
-                    and not (
-                        q1 in self._seq._slm_mask_targets
-                        or q2 in self._seq._slm_mask_targets
+                if (
+                    self._bad_atoms[q1]
+                    or self._bad_atoms[q2]
+                    or (
+                        masked
+                        and (
+                            q1 in self._seq._slm_mask_targets
+                            or q2 in self._seq._slm_mask_targets
+                        )
                     )
                 ):
-                    dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-                    mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
-                    if mag_norm < 1e-8:
-                        cosine = 0.0
-                    else:
-                        cosine = (
-                            np.dot(
-                                (self._qdict[q1] - self._qdict[q2]),
-                                self._seq.magnetic_field[0:2],
-                            )
-                            / (dist * mag_norm)
+                    continue
+                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
+                if mag_norm < 1e-8:
+                    cosine = 0.0
+                else:
+                    cosine = (
+                        np.dot(
+                            (self._qdict[q1] - self._qdict[q2]),
+                            self._seq.magnetic_field[0:2],
                         )
-                    U = (
-                        0.5
-                        * self._seq._device.interaction_coeff_xy
-                        * (1 - 3 * cosine ** 2)
-                        / dist ** 3
+                        / (dist * mag_norm)
                     )
-                    xy += U * self.build_operator(
-                        [("sigma_du", [q1]), ("sigma_ud", [q2])]
-                    )
+                U = (
+                    0.5
+                    * self._seq._device.interaction_coeff_xy
+                    * (1 - 3 * cosine ** 2)
+                    / dist ** 3
+                )
+                xy += U * self.build_operator(
+                    [("sigma_du", [q1]), ("sigma_ud", [q2])]
+                )
             return xy
 
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
@@ -737,10 +749,10 @@ class Simulation:
             self.operators[addr][basis] = operators
             return terms
 
-        # Interaction term:
-        if self.basis_name == "digital" or self._size == 1:
-            qobj_list = [0 * self.build_operator([("I", "global")])]
-        else:
+        qobj_list = []
+        # Time independent term:
+        effective_size = self._size - sum(self._bad_atoms.values())
+        if self.basis_name != "digital" and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
             if self._seq._slm_mask_time:
@@ -772,6 +784,9 @@ class Simulation:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
+
+        if not qobj_list:  # If qobj_list ends up empty
+            qobj_list = [0 * self.build_operator([("I", "global")])]
 
         ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()
@@ -806,7 +821,7 @@ class Simulation:
     # Run Simulation Evolution using Qutip
     def run(
         self,
-        progress_bar: Optional[bool] = None,
+        progress_bar: Optional[bool] = False,
         **options: qutip.solver.Options,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
@@ -815,8 +830,8 @@ class Simulation:
         Otherwise will return CoherentResults.
 
         Keyword Args:
-            progress_bar (bool): If True, the progress bar of QuTiP's solver
-                will be shown.
+            progress_bar (bool or None): If True, the progress bar of QuTiP's
+                solver will be shown. If None or False, no text appears.
             options (qutip.solver.Options): If specified, will override
                 SimConfig solver_options. If no `max_step` value is provided,
                 an automatic one is calculated from the `Sequence`'s schedule
@@ -834,9 +849,24 @@ class Simulation:
                 k: self.config.spam_dict[k]
                 for k in ("epsilon", "epsilon_prime")
             }
+            if self.config.eta > 0 and self.initial_state != qutip.tensor(
+                [self.basis["g"] for _ in range(self._size)]
+            ):
+                raise NotImplementedError(
+                    "Can't combine state preparation errors with an initial "
+                    "state different from the ground."
+                )
 
         def _run_solver() -> CoherentResults:
             """Returns CoherentResults: Object containing evolution results."""
+            # Decide if progress bar will be fed to QuTiP solver
+            if progress_bar is True:
+                p_bar = True
+            elif (progress_bar is False) or (progress_bar is None):
+                p_bar = None  # type: ignore
+            else:
+                raise ValueError("`progress_bar` must be a bool.")
+
             if "dephasing" in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(
@@ -846,7 +876,7 @@ class Simulation:
                     liouvillian,
                     self.initial_state,
                     self._eval_times_array,
-                    progress_bar=progress_bar,
+                    progress_bar=p_bar,
                     options=solv_ops,
                 )
             else:
@@ -854,7 +884,7 @@ class Simulation:
                     self._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
-                    progress_bar=progress_bar,
+                    progress_bar=p_bar,
                     options=solv_ops,
                 )
             return CoherentResults(

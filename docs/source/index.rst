@@ -80,6 +80,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/optimization
    tutorials/qaoa_mis
    tutorials/qaoa_param_seq
+   tutorials/qek
 
 .. toctree::
    :maxdepth: 3

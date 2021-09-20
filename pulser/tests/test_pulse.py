@@ -26,7 +26,7 @@ rwf = RampWaveform(200, 0, 1)
 
 pls = Pulse(bwf, bwf, 2 * np.pi)
 pls2 = Pulse.ConstantPulse(100, 1, -10, -np.pi)
-pls3 = Pulse.ConstantAmplitude(1, cwf, 1)
+pls3 = Pulse.ConstantAmplitude(1, cwf, -np.pi)
 pls4 = Pulse.ConstantDetuning(bwf, -10, 0)
 
 
@@ -47,10 +47,8 @@ def test_creation():
         Pulse.ConstantPulse(100, -1, 0, 0)
 
     assert pls.phase == 0
-    assert pls2.amplitude == pls3.amplitude
-    assert pls2.detuning == pls3.detuning
-    assert pls2.phase == np.pi
-    assert pls3.phase == 1
+    assert pls2 == pls3
+    assert pls != pls4
     assert pls4.detuning != cwf
     assert pls4.amplitude == pls.amplitude
 

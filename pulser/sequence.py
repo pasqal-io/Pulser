@@ -625,9 +625,13 @@ class Sequence:
             phase_ref = prs.pop()
 
         if phase_ref != 0:
-            # Has to copy to keep the original pulse intact
-            pulse = copy.deepcopy(pulse)
-            pulse.phase = (pulse.phase + phase_ref) % (2 * np.pi)
+            # Has to recriate the original pulse with a new phase
+            pulse = Pulse(
+                pulse.amplitude,
+                pulse.detuning,
+                pulse.phase + phase_ref,
+                post_phase_shift=pulse.post_phase_shift,
+            )
 
         self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
 
