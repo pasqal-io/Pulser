@@ -655,10 +655,12 @@ class Simulation:
                 if (
                     self._bad_atoms[q1]
                     or self._bad_atoms[q2]
-                    or masked
-                    and (
-                        q1 in self._seq._slm_mask_targets
-                        or q2 in self._seq._slm_mask_targets
+                    or (
+                        masked
+                        and (
+                            q1 in self._seq._slm_mask_targets
+                            or q2 in self._seq._slm_mask_targets
+                        )
                     )
                 ):
                     continue
