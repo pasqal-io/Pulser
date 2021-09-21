@@ -320,8 +320,6 @@ class Simulation:
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
-            print(t_max)
-            print(self._times[-1])
             if t_max > self._times[-1]:
                 raise ValueError(
                     "Provided evaluation-time list extends "
