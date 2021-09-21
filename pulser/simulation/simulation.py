@@ -437,13 +437,27 @@ class Simulation:
             if addr == "Global" and (
                 set(self.config.noise).issubset({"dephasing"})
             ):
-                samples_dict = self.samples["Global"][basis]
-                if not samples_dict:
-                    samples_dict = prepare_dict()
+                slm_on = bool(self._seq._slm_mask_targets)
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
-                        write_samples(slot, samples_dict, True)
-                self.samples["Global"][basis] = samples_dict
+                        # If SLM is on during slot, populate local samples
+                        if slm_on and self._seq._slm_mask_time[1] > slot.ti:
+                            samples_dict = self.samples["Local"][basis]
+                            for qubit in slot.targets:
+                                if qubit not in samples_dict:
+                                    samples_dict[qubit] = prepare_dict()
+                                write_samples(
+                                    slot, samples_dict[qubit], True, qubit
+                                )
+                            self.samples["Local"][basis] = samples_dict
+                        # Otherwise, populate corresponding global
+                        else:
+                            slm_on = False
+                            samples_dict = self.samples["Global"][basis]
+                            if not samples_dict:
+                                samples_dict = prepare_dict()
+                            write_samples(slot, samples_dict, True)
+                            self.samples["Global"][basis] = samples_dict
 
             # Any noise : global becomes local for each qubit in the reg
             # Since coefficients are modified locally by all noises
@@ -461,6 +475,13 @@ class Simulation:
                                     slot, samples_dict[qubit], is_global, qubit
                                 )
                 self.samples["Local"][basis] = samples_dict
+
+            # Apply SLM mask if it was defined
+            if self._seq._slm_mask_targets and self._seq._slm_mask_time:
+                tf = self._seq._slm_mask_time[1]
+                for qubit in self._seq._slm_mask_targets:
+                    for x in ("amp", "det", "phase"):
+                        self.samples["Local"][basis][qubit][x][0:tf] = 0
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non trivial actions on some qubits.
@@ -611,7 +632,7 @@ class Simulation:
                 vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
             return vdw
 
-        def make_xy_term() -> qutip.Qobj:
+        def make_xy_term(masked: bool = False) -> qutip.Qobj:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
@@ -619,10 +640,29 @@ class Simulation:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
+            # Calculate the total number of good, unmasked qubits
+            if masked:
+                effective_size = self._size - sum(self._bad_atoms.values())
+                for q in self._seq._slm_mask_targets:
+                    if not self._bad_atoms[q]:
+                        effective_size -= 1
+                if effective_size < 2:
+                    return 0 * self.build_operator([("I", "global")])
+
             xy = cast(qutip.Qobj, 0)
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
-                if self._bad_atoms[q1] or self._bad_atoms[q2]:
+                if (
+                    self._bad_atoms[q1]
+                    or self._bad_atoms[q2]
+                    or (
+                        masked
+                        and (
+                            q1 in self._seq._slm_mask_targets
+                            or q2 in self._seq._slm_mask_targets
+                        )
+                    )
+                ):
                     continue
                 dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
                 mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
@@ -647,9 +687,11 @@ class Simulation:
                 )
             return xy
 
-        make_interaction_term = (
-            make_xy_term if self._interaction == "XY" else make_vdw_term
-        )
+        def make_interaction_term(masked: bool = False) -> qutip.Qobj:
+            if self._interaction == "XY":
+                return make_xy_term(masked)
+            else:
+                return make_vdw_term()
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
@@ -711,7 +753,31 @@ class Simulation:
         # Time independent term:
         effective_size = self._size - sum(self._bad_atoms.values())
         if self.basis_name != "digital" and effective_size > 1:
-            qobj_list.append(make_interaction_term())
+            # Build time-dependent or time-independent interaction term based
+            # on whether an SLM mask was defined or not
+            if self._seq._slm_mask_time:
+                # Build an array of binary coefficients for the interaction
+                # term of unmasked qubits
+                coeff = np.ones(self._tot_duration)
+                coeff[0 : self._seq._slm_mask_time[1]] = 0
+                # Build the interaction term for unmasked qubits
+                qobj_list = [
+                    [
+                        make_interaction_term(),
+                        self._adapt_to_sampling_rate(coeff),
+                    ]
+                ]
+                # Build the interaction term for masked qubits
+                qobj_list += [
+                    [
+                        make_interaction_term(masked=True),
+                        self._adapt_to_sampling_rate(
+                            np.logical_not(coeff).astype(int)
+                        ),
+                    ]
+                ]
+            else:
+                qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
         for addr in self.samples:

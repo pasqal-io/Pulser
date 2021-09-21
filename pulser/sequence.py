@@ -201,6 +201,9 @@ class Sequence:
         self._building: bool = True
         # Marks the sequence as empty until the first pulse is added
         self._empty_sequence: bool = True
+        # SLM mask targets and on/off times
+        self._slm_mask_targets: set[QubitId] = set()
+        self._slm_mask_time: list[int] = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -417,6 +420,12 @@ class Sequence:
                 )
             else:
                 raise ValueError(f"Channel {channel_id} is not available.")
+
+        # Remove this check once SLM is available in Ising mode
+        if self._slm_mask_targets and ch.basis != "XY":
+            raise NotImplementedError(
+                "SLM mask is not yet available in Ising mode"
+            )
 
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
@@ -638,6 +647,15 @@ class Sequence:
         # Sequence is marked as non-empty on the first added pulse
         if self._empty_sequence:
             self._empty_sequence = False
+
+        # If the added pulse starts earlier than all previously added pulses,
+        # update SLM mask initial and final time
+        if self._slm_mask_targets:
+            try:
+                if self._slm_mask_time[0] > ti:
+                    self._slm_mask_time = [ti, tf]
+            except IndexError:
+                self._slm_mask_time = [ti, tf]
 
     @_store
     def target(
@@ -1114,6 +1132,44 @@ class Sequence:
         self._is_measured = False
         self._variables = {}
         self._to_build_calls = []
+
+    @_store
+    def config_slm_mask(self, qubits: Set[QubitId]) -> None:
+        """Setup an SLM mask by specifying the qubits it targets."""
+        try:
+            targets = set(qubits)
+        except TypeError:
+            raise TypeError("The SLM targets must be castable to set")
+
+        if not targets.issubset(self._qids):
+            raise ValueError("SLM mask targets must exist in the register")
+
+        if not self._in_xy and self._channels:
+            raise NotImplementedError("SLM mask can only be added in XY mode")
+
+        if self.is_parametrized():
+            return
+
+        if self._slm_mask_targets:
+            raise ValueError("SLM mask can be configured only once.")
+
+        # If checks have passed, set the SLM mask targets
+        self._slm_mask_targets = targets
+
+        # Find tentative initial and final time of SLM mask if possible
+        for channel in self._channels:
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
+                if not isinstance(slot.type, Pulse):
+                    continue
+                ti = slot.ti
+                tf = slot.tf
+                if self._slm_mask_time:
+                    if ti < self._slm_mask_time[0]:
+                        self._slm_mask_time = [ti, tf]
+                else:
+                    self._slm_mask_time = [ti, tf]
+                break
 
 
 class _PhaseTracker:
