@@ -50,9 +50,10 @@ class SimulationResults(ABC):
         """
         self._dim = 3 if basis_name == "all" else 2
         self._size = size
-        if basis_name not in {"ground-rydberg", "digital", "all"}:
+        if basis_name not in {"ground-rydberg", "digital", "all", "XY"}:
             raise ValueError(
-                "`basis_name` must be 'ground-rydberg', 'digital' or 'all'."
+                "`basis_name` must be 'ground-rydberg', 'digital', 'all' or "
+                "'XY'."
             )
         self._basis_name = basis_name
         self._sim_times = sim_times
@@ -220,16 +221,16 @@ class SimulationResults(ABC):
         )
 
     def _meas_projector(self, state_n: int) -> qutip.Qobj:
-        """Gets the post measurement projector (defaults to the ideal case).
+        """Gets the post measurement projector.
 
         Args:
             state_n: The measured state (0 or 1).
         """
-        if self._basis_name == "ground-rydberg":
-            # 0 = |g> = |1>, 1 = |r> = |0>
-            return qutip.basis(2, 1 - state_n).proj()
+        if self._basis_name == "digital":
+            return qutip.basis(2, state_n).proj()
 
-        return qutip.basis(2, state_n).proj()
+        # 0 = |g or d> = |1>; 1 = |r or u> = |0>
+        return qutip.basis(2, 1 - state_n).proj()
 
 
 class NoisyResults(SimulationResults):
@@ -271,8 +272,6 @@ class NoisyResults(SimulationResults):
                 'digital' if given value 'all'.
             sim_times (np.ndarray): Times at which Simulation object returned
                 the results.
-            meas_basis (Optional[str]): The basis in which a sampling
-                measurement is desired.
             n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
         """
@@ -401,10 +400,15 @@ class CoherentResults(SimulationResults):
                 "epsilon_prime".
         """
         super().__init__(size, basis_name, sim_times)
-        if meas_basis:
+        if self._basis_name == "all":
             if meas_basis not in {"ground-rydberg", "digital"}:
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg' or 'digital'."
+                )
+        else:
+            if meas_basis != self._basis_name:
+                raise ValueError(
+                    "`meas_basis` and `basis_name` must have the same value."
                 )
         self._meas_basis = meas_basis
         self._results = run_output
@@ -437,7 +441,8 @@ class CoherentResults(SimulationResults):
             t (float): Time (µs) at which to return the state.
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible.
+                population of the states to be ignored is negligible. Doesn't
+                apply to XY mode.
             ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
@@ -503,7 +508,8 @@ class CoherentResults(SimulationResults):
         Args:
             reduce_to_basis (str, default=None): Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible.
+                population of the states to be ignored is negligible. Doesn't
+                apply to XY mode.
             ignore_global_phase (bool, default=True): If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
@@ -540,6 +546,7 @@ class CoherentResults(SimulationResults):
                 # State vector ordered with r first for 'ground_rydberg'
                 # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
+                # The same applies in XY mode, which is ordered with u first
                 weights = (
                     probs if self._meas_basis == "digital" else probs[::-1]
                 )
@@ -586,7 +593,8 @@ class CoherentResults(SimulationResults):
                 else self._meas_errors["epsilon_prime"]
             )
             # 'good' is the position of the state that measures to state_n
-            # Matches for the digital basis, is inverted for ground-rydberg
+            # Matches for the digital basis, is inverted for ground-rydberg and
+            # for XY
             good = state_n if self._basis_name == "digital" else 1 - state_n
             return (
                 qutip.basis(2, good).proj() * (1 - err_param)

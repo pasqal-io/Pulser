@@ -38,7 +38,10 @@ from pulser._seq_drawer import draw_sequence
 from pulser.sequence import _TimeSlot
 
 
-SUPPORTED_BASES = {"ground-rydberg", "digital"}
+SUPPORTED_NOISE = {
+    "ising": {"dephasing", "doppler", "amplitude", "SPAM"},
+    "XY": {"SPAM"},
+}
 
 
 class Simulation:
@@ -82,17 +85,10 @@ class Simulation:
             raise ValueError("The provided sequence has no declared channels.")
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
             raise ValueError(
-                "No instructions given for the channels in the " "sequence."
-            )
-        not_supported = (
-            set(ch.basis for ch in sequence._channels.values())
-            - SUPPORTED_BASES
-        )
-        if not_supported:
-            raise NotImplementedError(
-                "Sequence with unsupported bases: " + "".join(not_supported)
+                "No instructions given for the channels in the sequence."
             )
         self._seq = sequence
+        self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = self._seq.get_duration()
@@ -104,7 +100,7 @@ class Simulation:
             )
         if int(self._tot_duration * sampling_rate) < 4:
             raise ValueError(
-                "`sampling_rate` is too small, less than 4 data " "points."
+                "`sampling_rate` is too small, less than 4 data points."
             )
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
@@ -112,6 +108,7 @@ class Simulation:
         self._times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double) / 1000
         )
+
         self.evaluation_times = evaluation_times
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
@@ -123,7 +120,7 @@ class Simulation:
             if self.basis_name in {"digital", "all"}:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = "ground-rydberg"
+                self._meas_basis = self.basis_name
         self.initial_state = "all-ground"
 
     @property
@@ -139,6 +136,13 @@ class Simulation:
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
+        not_supported = set(cfg.noise) - SUPPORTED_NOISE[self._interaction]
+        if not_supported:
+            raise NotImplementedError(
+                f"Interaction mode '{self._interaction}' does not support "
+                f"simulation of noise types: {', '.join(not_supported)}."
+            )
+        prev_config = self.config if hasattr(self, "_config") else SimConfig()
         self._config = cfg
         if not ("SPAM" in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -148,9 +152,10 @@ class Simulation:
         self._construct_hamiltonian()
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
+                # Go back to previous config
+                self.set_config(prev_config)
                 raise NotImplementedError(
-                    "Cannot include dephasing noise in"
-                    + " digital- or all-basis."
+                    "Cannot include dephasing noise in digital- or all-basis."
                 )
             # Probability of phase (Z) flip:
             # First order in prob
@@ -159,7 +164,7 @@ class Simulation:
             if prob > 0.1 and n > 1:
                 warnings.warn(
                     "The dephasing model is a first-order approximation in the"
-                    + f" dephasing probability. p = {2*prob} is too large for "
+                    f" dephasing probability. p = {2*prob} is too large for "
                     "realistic results.",
                     stacklevel=2,
                 )
@@ -171,8 +176,8 @@ class Simulation:
             self._collapse_ops += [
                 k
                 * (
-                    self._build_operator("sigma_rr", qid)
-                    - self._build_operator("sigma_gg", qid)
+                    self.build_operator([("sigma_rr", [qid])])
+                    - self.build_operator([("sigma_gg", [qid])])
                 )
                 for qid in self._qid_index
             ]
@@ -191,6 +196,13 @@ class Simulation:
         """
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
+
+        not_supported = set(config.noise) - SUPPORTED_NOISE[self._interaction]
+        if not_supported:
+            raise NotImplementedError(
+                f"Interaction mode '{self._interaction}' does not support "
+                f"simulation of noise types: {', '.join(not_supported)}."
+            )
 
         old_noise_set = set(self.config.noise)
         new_noise_set = old_noise_set.union(config.noise)
@@ -240,7 +252,10 @@ class Simulation:
         self._initial_state: qutip.Qobj
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
-                [self.basis["g"] for _ in range(self._size)]
+                [
+                    self.basis["d" if self._interaction == "XY" else "g"]
+                    for _ in range(self._size)
+                ]
             )
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
@@ -361,10 +376,15 @@ class Simulation:
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
-        self.samples: dict[str, dict[str, dict]] = {
-            addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
-            for addr in ["Global", "Local"]
-        }
+        self.samples: dict[str, dict[str, dict]]
+        if self._interaction == "ising":
+            self.samples = {
+                addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
+                for addr in ["Global", "Local"]
+            }
+        else:
+            self.samples = {addr: {"XY": {}} for addr in ["Global", "Local"]}
+
         if not hasattr(self, "operators"):
             self.operators = deepcopy(self.samples)
 
@@ -417,13 +437,27 @@ class Simulation:
             if addr == "Global" and (
                 set(self.config.noise).issubset({"dephasing"})
             ):
-                samples_dict = self.samples["Global"][basis]
-                if not samples_dict:
-                    samples_dict = prepare_dict()
+                slm_on = bool(self._seq._slm_mask_targets)
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
-                        write_samples(slot, samples_dict, True)
-                self.samples["Global"][basis] = samples_dict
+                        # If SLM is on during slot, populate local samples
+                        if slm_on and self._seq._slm_mask_time[1] > slot.ti:
+                            samples_dict = self.samples["Local"][basis]
+                            for qubit in slot.targets:
+                                if qubit not in samples_dict:
+                                    samples_dict[qubit] = prepare_dict()
+                                write_samples(
+                                    slot, samples_dict[qubit], True, qubit
+                                )
+                            self.samples["Local"][basis] = samples_dict
+                        # Otherwise, populate corresponding global
+                        else:
+                            slm_on = False
+                            samples_dict = self.samples["Global"][basis]
+                            if not samples_dict:
+                                samples_dict = prepare_dict()
+                            write_samples(slot, samples_dict, True)
+                            self.samples["Global"][basis] = samples_dict
 
             # Any noise : global becomes local for each qubit in the reg
             # Since coefficients are modified locally by all noises
@@ -442,23 +476,63 @@ class Simulation:
                                 )
                 self.samples["Local"][basis] = samples_dict
 
-    def _build_operator(
-        self, op_id: str, *qubit_ids: Union[str, int], global_op: bool = False
-    ) -> qutip.Qobj:
-        """Create qutip.Qobj with nontrivial action at *qubit_ids."""
-        if global_op:
-            return sum(
-                self._build_operator(op_id, q_id) for q_id in self._qdict
-            )
-        if len(set(qubit_ids)) < len(qubit_ids):
-            raise ValueError("Duplicate atom ids in argument list.")
-        # List of identity operators, except for op_id where requested:
-        op_list = [
-            self.op_matrix[op_id]
-            if j in map(self._qid_index.get, qubit_ids)
-            else self.op_matrix["I"]
-            for j in range(self._size)
-        ]
+            # Apply SLM mask if it was defined
+            if self._seq._slm_mask_targets and self._seq._slm_mask_time:
+                tf = self._seq._slm_mask_time[1]
+                for qubit in self._seq._slm_mask_targets:
+                    for x in ("amp", "det", "phase"):
+                        self.samples["Local"][basis][qubit][x][0:tf] = 0
+
+    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+        """Creates an operator with non trivial actions on some qubits.
+
+        Takes as argument a list of tuples [(operator_1, qubits_1),
+        (operator_2, qubits_2)...]. Returns the operator given by the tensor
+        product of {operator_i applied on qubits_i} and Id on the rest.
+        (operator, 'global') returns the sum for all $j$ of operator
+        applied at qubit $j$ and identity elsewhere.
+
+        Example for 4 qubits: [(Z, [1, 2]), (Y, [3])] returns ZZYI
+        and [(X, 'global')] returns XIII + IXII + IIXI + IIIX
+
+        Args:
+            operations (list): List of tuples (operator, qubits)
+                operator can be a qutip.Quobj or a string key for
+                self.op_matrix qubits is the list on which operator
+                will be applied. The qubits can be passed as their
+                index or their label in the register.
+
+        Returns:
+            qutip.Qobj: the final operator.
+        """
+        op_list = [self.op_matrix["I"] for j in range(self._size)]
+
+        if not isinstance(operations, list):
+            operations = [operations]
+
+        for operator, qubits in operations:
+            if qubits == "global":
+                return sum(
+                    self.build_operator([(operator, [q_id])])
+                    for q_id in self._qdict
+                )
+            else:
+                qubits_set = set(qubits)
+                if len(qubits_set) < len(qubits):
+                    raise ValueError("Duplicate atom ids in argument list.")
+                if not qubits_set.issubset(self._qdict.keys()):
+                    raise ValueError(
+                        "Invalid qubit names: "
+                        f"{qubits_set - self._qdict.keys()}"
+                    )
+                if isinstance(operator, str):
+                    try:
+                        operator = self.op_matrix[operator]
+                    except KeyError:
+                        raise ValueError(f"{operator} is not a valid operator")
+                for qubit in qubits:
+                    k = self._qid_index[qubit]
+                    op_list[k] = operator
         return qutip.tensor(op_list)
 
     def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
@@ -491,28 +565,34 @@ class Simulation:
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
-        # No samples => Empty dict entry => False
-        if (
-            not self.samples["Global"]["digital"]
-            and not self.samples["Local"]["digital"]
-        ):
-            self.basis_name = "ground-rydberg"
+        if self._interaction == "XY":
+            self.basis_name = "XY"
             self.dim = 2
-            basis = ["r", "g"]
-            projectors = ["gr", "rr", "gg"]
-        elif (
-            not self.samples["Global"]["ground-rydberg"]
-            and not self.samples["Local"]["ground-rydberg"]
-        ):
-            self.basis_name = "digital"
-            self.dim = 2
-            basis = ["g", "h"]
-            projectors = ["hg", "hh", "gg"]
+            basis = ["u", "d"]
+            projectors = ["uu", "du", "ud", "dd"]
         else:
-            self.basis_name = "all"  # All three states
-            self.dim = 3
-            basis = ["r", "g", "h"]
-            projectors = ["gr", "hg", "rr", "gg", "hh"]
+            # No samples => Empty dict entry => False
+            if (
+                not self.samples["Global"]["digital"]
+                and not self.samples["Local"]["digital"]
+            ):
+                self.basis_name = "ground-rydberg"
+                self.dim = 2
+                basis = ["r", "g"]
+                projectors = ["gr", "rr", "gg"]
+            elif (
+                not self.samples["Global"]["ground-rydberg"]
+                and not self.samples["Local"]["ground-rydberg"]
+            ):
+                self.basis_name = "digital"
+                self.dim = 2
+                basis = ["g", "h"]
+                projectors = ["hg", "hh", "gg"]
+            else:
+                self.basis_name = "all"  # All three states
+                self.dim = 3
+                basis = ["r", "g", "h"]
+                projectors = ["gr", "hg", "rr", "gg", "hh"]
 
         self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
         self.op_matrix = {"I": qutip.qeye(self.dim)}
@@ -536,19 +616,82 @@ class Simulation:
         def make_vdw_term() -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
-            For each pair of qubits, calculate the distance between them, then
-            assign the local operator "sigma_rr" at each pair. The units are
-            given so that the coefficient includes a 1/hbar factor.
+            For each pair of qubits, calculate the distance between them,
+            then assign the local operator "sigma_rr" at each pair.
+            The units are given so that the coefficient includes a
+            1/hbar factor.
             """
-            vdw = 0 * self._build_operator("I")
+            vdw = cast(qutip.Qobj, 0)
             # Get every pair without duplicates
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 # no VdW interaction with other qubits for a badly prep. qubit
-                if not (self._bad_atoms[q1] or self._bad_atoms[q2]):
-                    dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-                    U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
-                    vdw += U * self._build_operator("sigma_rr", q1, q2)
+                if self._bad_atoms[q1] or self._bad_atoms[q2]:
+                    continue
+                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
+                vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
             return vdw
+
+        def make_xy_term(masked: bool = False) -> qutip.Qobj:
+            """Construct the XY interaction Term.
+
+            For each pair of qubits, calculate the distance between them,
+            then assign the local operator "sigma_du * sigma_ud" at each pair.
+            The units are given so that the coefficient
+            includes a 1/hbar factor.
+            """
+            # Calculate the total number of good, unmasked qubits
+            if masked:
+                effective_size = self._size - sum(self._bad_atoms.values())
+                for q in self._seq._slm_mask_targets:
+                    if not self._bad_atoms[q]:
+                        effective_size -= 1
+                if effective_size < 2:
+                    return 0 * self.build_operator([("I", "global")])
+
+            xy = cast(qutip.Qobj, 0)
+            # Get every pair without duplicates
+            for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
+                if (
+                    self._bad_atoms[q1]
+                    or self._bad_atoms[q2]
+                    or (
+                        masked
+                        and (
+                            q1 in self._seq._slm_mask_targets
+                            or q2 in self._seq._slm_mask_targets
+                        )
+                    )
+                ):
+                    continue
+                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+                mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
+                if mag_norm < 1e-8:
+                    cosine = 0.0
+                else:
+                    cosine = (
+                        np.dot(
+                            (self._qdict[q1] - self._qdict[q2]),
+                            self._seq.magnetic_field[0:2],
+                        )
+                        / (dist * mag_norm)
+                    )
+                U = (
+                    0.5
+                    * self._seq._device.interaction_coeff_xy
+                    * (1 - 3 * cosine ** 2)
+                    / dist ** 3
+                )
+                xy += U * self.build_operator(
+                    [("sigma_du", [q1]), ("sigma_ud", [q2])]
+                )
+            return xy
+
+        def make_interaction_term(masked: bool = False) -> qutip.Qobj:
+            if self._interaction == "XY":
+                return make_xy_term(masked)
+            else:
+                return make_vdw_term()
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
@@ -559,6 +702,8 @@ class Simulation:
                 op_ids = ["sigma_gr", "sigma_rr"]
             elif basis == "digital":
                 op_ids = ["sigma_hg", "sigma_gg"]
+            elif basis == "XY":
+                op_ids = ["sigma_du", "sigma_dd"]
 
             terms = []
             if addr == "Global":
@@ -570,8 +715,8 @@ class Simulation:
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
                         if op_id not in operators:
-                            operators[op_id] = self._build_operator(
-                                op_id, global_op=True
+                            operators[op_id] = self.build_operator(
+                                [(op_id, "global")]
                             )
                         terms.append(
                             [
@@ -592,8 +737,8 @@ class Simulation:
                     for coeff, op_id in zip(coeffs, op_ids):
                         if np.any(coeff != 0):
                             if op_id not in operators[q_id]:
-                                operators[q_id][op_id] = self._build_operator(
-                                    op_id, q_id
+                                operators[q_id][op_id] = self.build_operator(
+                                    [(op_id, [q_id])]
                                 )
                             terms.append(
                                 [
@@ -604,18 +749,44 @@ class Simulation:
             self.operators[addr][basis] = operators
             return terms
 
+        qobj_list = []
         # Time independent term:
-        if self.basis_name == "digital" or self._size == 1:
-            qobj_list = [0 * self._build_operator("I")]
-        else:
-            # Van der Waals Interaction Terms
-            qobj_list = [make_vdw_term()]
+        effective_size = self._size - sum(self._bad_atoms.values())
+        if self.basis_name != "digital" and effective_size > 1:
+            # Build time-dependent or time-independent interaction term based
+            # on whether an SLM mask was defined or not
+            if self._seq._slm_mask_time:
+                # Build an array of binary coefficients for the interaction
+                # term of unmasked qubits
+                coeff = np.ones(self._tot_duration)
+                coeff[0 : self._seq._slm_mask_time[1]] = 0
+                # Build the interaction term for unmasked qubits
+                qobj_list = [
+                    [
+                        make_interaction_term(),
+                        self._adapt_to_sampling_rate(coeff),
+                    ]
+                ]
+                # Build the interaction term for masked qubits
+                qobj_list += [
+                    [
+                        make_interaction_term(masked=True),
+                        self._adapt_to_sampling_rate(
+                            np.logical_not(coeff).astype(int)
+                        ),
+                    ]
+                ]
+            else:
+                qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
         for addr in self.samples:
             for basis in self.samples[addr]:
                 if self.samples[addr][basis]:
                     qobj_list += cast(list, build_coeffs_ops(basis, addr))
+
+        if not qobj_list:  # If qobj_list ends up empty
+            qobj_list = [0 * self.build_operator([("I", "global")])]
 
         ham = qutip.QobjEvo(qobj_list, tlist=self._times)
         ham = ham + ham.dag()

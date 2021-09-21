@@ -169,7 +169,16 @@ def test_building_basis_and_projection_operators():
 
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
-        sim._build_operator("sigma_gg", "target", "target")
+        sim.build_operator([("sigma_gg", ["target", "target"])])
+    with pytest.raises(ValueError, match="not a valid operator"):
+        sim.build_operator([("wrong", ["target"])])
+    with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
+        sim.build_operator([("sigma_gg", ["wrong"])])
+
+    # Check building operator with one operator
+    op_standard = sim.build_operator([("sigma_gg", ["target"])])
+    op_one = sim.build_operator(("sigma_gg", ["target"]))
+    assert np.linalg.norm(op_standard - op_one) < 1e-10
 
     # Global ground-rydberg
     seq2 = Sequence(reg, Chadoq2)
@@ -222,23 +231,41 @@ def test_building_basis_and_projection_operators():
         == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
     )
 
+    # Global XY
+    seq2 = Sequence(reg, MockDevice)
+    seq2.declare_channel("global", "mw_global")
+    seq2.add(pi, "global")
+    sim2 = Simulation(seq2, sampling_rate=0.01)
+    assert sim2.basis_name == "XY"
+    assert sim2.dim == 2
+    assert sim2.basis == {"u": qutip.basis(2, 0), "d": qutip.basis(2, 1)}
+    assert (
+        sim2.op_matrix["sigma_uu"]
+        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2.op_matrix["sigma_du"]
+        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2.op_matrix["sigma_ud"]
+        == qutip.basis(2, 0) * qutip.basis(2, 1).dag()
+    )
+
 
 def test_empty_sequences():
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, MockDevice)
     with pytest.raises(ValueError, match="no declared channels"):
         Simulation(seq)
+    seq.declare_channel("ch0", "mw_global")
     with pytest.raises(ValueError, match="No instructions given"):
-        seq.declare_channel("test", "rydberg_local", "target")
-        seq.declare_channel("test2", "rydberg_global")
         Simulation(seq)
-    seqMW = Sequence(reg, MockDevice)
-    with pytest.raises(NotImplementedError):
-        seqMW.declare_channel("ch0", "mw_global")
-        seqMW.add(
-            Pulse.ConstantDetuning(RampWaveform(1500, 0.0, 2.0), 0.0, 0.0),
-            "ch0",
-        )
-        Simulation(seqMW)
+
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("test", "rydberg_local", "target")
+    seq.declare_channel("test2", "rydberg_global")
+    with pytest.raises(ValueError, match="No instructions given"):
+        Simulation(seq)
 
 
 def test_get_hamiltonian():
@@ -474,14 +501,13 @@ def test_config():
 
 def test_noise():
     sim2 = Simulation(
-        seq, sampling_rate=0.01, config=SimConfig(noise=("doppler"))
+        seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.4)
     )
     sim2.run()
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="dephasing"))
-        sim2.run()
     assert sim2.config.spam_dict == {
-        "eta": 0.005,
+        "eta": 0.4,
         "epsilon": 0.01,
         "epsilon_prime": 0.05,
     }
@@ -562,3 +588,231 @@ def test_cuncurrent_pulses():
         ham_no_noise = sim_no_noise.get_hamiltonian(t)
         ham_with_noise = sim_with_noise.get_hamiltonian(t)
         assert ham_no_noise[0, 1] == ham_with_noise[0, 1]
+
+
+def test_get_xy_hamiltonian():
+    simple_reg = Register.from_coordinates(
+        [[0, 10], [10, 0], [0, 0]], prefix="atom"
+    )
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.set_magnetic_field(0, 1.0, 0.0)
+    simple_seq.add(rise, "ch0")
+
+    assert np.isclose(np.linalg.norm(simple_seq.magnetic_field[0:2]), 1)
+
+    simple_sim = Simulation(simple_seq, sampling_rate=0.01)
+    with pytest.raises(
+        ValueError, match="less than or equal to the sequence duration"
+    ):
+        simple_sim.get_hamiltonian(1650)
+    with pytest.raises(ValueError, match="greater than or equal to 0"):
+        simple_sim.get_hamiltonian(-10)
+    # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
+    simple_ham = simple_sim.get_hamiltonian(143)
+    assert simple_ham[1, 2] == 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3
+    assert (
+        np.abs(
+            simple_ham[1, 4]
+            - (-2 * 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3)
+        )
+        < 1e-10
+    )
+    assert simple_ham[0, 1] == 0.5 * amp
+    assert simple_ham[3, 3] == -2 * detun
+
+
+def test_run_xy():
+    simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.add(rise, "ch0")
+
+    sim = Simulation(simple_seq, sampling_rate=0.01)
+
+    good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
+    good_initial_qobj = qutip.tensor(
+        [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
+    )
+
+    sim.initial_state = good_initial_array
+    sim.run()
+    sim.initial_state = good_initial_qobj
+    sim.run()
+
+    assert not hasattr(sim._seq, "_measurement")
+    simple_seq.measure(basis="XY")
+    sim.run()
+    assert sim._seq._measurement == "XY"
+
+
+def test_noisy_xy():
+    np.random.seed(15092021)
+    simple_reg = Register.square(2, prefix="atom")
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    simple_seq = Sequence(simple_reg, MockDevice)
+    simple_seq.declare_channel("ch0", "mw_global")
+    simple_seq.add(rise, "ch0")
+
+    sim = Simulation(simple_seq, sampling_rate=0.01)
+    with pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim.set_config(SimConfig(("SPAM", "doppler")))
+
+    sim.set_config(SimConfig("SPAM", eta=0.4))
+    assert sim._bad_atoms == {
+        "atom0": True,
+        "atom1": False,
+        "atom2": True,
+        "atom3": False,
+    }
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: amplitude"
+    ):
+        sim.add_config(SimConfig("amplitude"))
+
+
+def test_mask_nopulses():
+    """Check interaction between SLM mask and a simulation with no pulses."""
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    seq_empty = Sequence(reg, MockDevice)
+    seq_empty.set_magnetic_field(0, 1.0, 0.0)
+    seq_empty.declare_channel("ch", "mw_global")
+    seq_empty.delay(duration=100, channel="ch")
+    masked_qubits = ["q2"]
+    seq_empty.config_slm_mask(masked_qubits)
+    sim_empty = Simulation(seq_empty)
+
+    assert seq_empty._slm_mask_time == []
+    assert sim_empty._seq._slm_mask_time == []
+
+
+def test_xy_mask_equals_remove():
+    """Check that masking is equivalent to removing the masked qubits.
+
+    A global pulse acting on three qubits of which one is masked, should be
+    equivalent to acting on a register with only the two unmasked qubits.
+    """
+    reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    reg_two = Register({"q0": (0, 0), "q1": (10, 10)})
+    pulse = Pulse.ConstantPulse(100, 10, 0, 0)
+
+    # Masked simulation
+    seq_masked = Sequence(reg_three, MockDevice)
+    seq_masked.set_magnetic_field(0, 1.0, 0.0)
+    seq_masked.declare_channel("ch_masked", "mw_global")
+    masked_qubits = ["q2"]
+    seq_masked.config_slm_mask(masked_qubits)
+    seq_masked.add(pulse, "ch_masked")
+    sim_masked = Simulation(seq_masked)
+
+    # Simulation on reduced register
+    seq_two = Sequence(reg_two, MockDevice)
+    seq_two.set_magnetic_field(0, 1.0, 0.0)
+    seq_two.declare_channel("ch_two", "mw_global")
+    seq_two.add(pulse, "ch_two")
+    sim_two = Simulation(seq_two)
+
+    # Check equality
+    for t in sim_two._times:
+        ham_masked = sim_masked.get_hamiltonian(t)
+        ham_two = sim_two.get_hamiltonian(t)
+        assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
+
+
+def test_xy_mask_two_pulses():
+    """Similar to test_xy_mask_equals_remove, but with more pulses afterwards.
+
+    Three global pulses act on a three qubit register, with one qubit masked
+    during the first pulse.
+    """
+    reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    reg_two = Register({"q0": (0, 0), "q1": (10, 10)})
+    pulse = Pulse.ConstantPulse(100, 10, 0, 0)
+    no_pulse = Pulse.ConstantPulse(100, 0, 0, 0)
+
+    # Masked simulation
+    seq_masked = Sequence(reg_three, MockDevice)
+    seq_masked.declare_channel("ch_masked", "mw_global")
+    masked_qubits = ["q2"]
+    seq_masked.config_slm_mask(masked_qubits)
+    seq_masked.add(pulse, "ch_masked")  # First pulse: masked
+    seq_masked.add(pulse, "ch_masked")  # Second pulse: unmasked
+    seq_masked.add(pulse, "ch_masked")  # Third pulse: unmasked
+    sim_masked = Simulation(seq_masked)
+
+    # Unmasked simulation on full register
+    seq_three = Sequence(reg_three, MockDevice)
+    seq_three.declare_channel("ch_three", "mw_global")
+    seq_three.add(no_pulse, "ch_three")
+    seq_three.add(pulse, "ch_three")
+    seq_three.add(pulse, "ch_three")
+    sim_three = Simulation(seq_three)
+
+    # Unmasked simulation on reduced register
+    seq_two = Sequence(reg_two, MockDevice)
+    seq_two.declare_channel("ch_two", "mw_global")
+    seq_two.add(pulse, "ch_two")
+    seq_two.add(no_pulse, "ch_two")
+    seq_two.add(no_pulse, "ch_two")
+    sim_two = Simulation(seq_two)
+
+    ti = seq_masked._slm_mask_time[0]
+    tf = seq_masked._slm_mask_time[1]
+    for t in sim_masked._times:
+        ham_masked = sim_masked.get_hamiltonian(t)
+        ham_three = sim_three.get_hamiltonian(t)
+        ham_two = sim_two.get_hamiltonian(t)
+        if ti <= t <= tf:
+            assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
+        else:
+            assert ham_masked == ham_three
+
+
+def test_effective_size_intersection():
+    np.random.seed(15092021)
+    simple_reg = Register.square(2, prefix="atom")
+    rise = Pulse.ConstantPulse(1500, 0, 0, 0)
+    seq = Sequence(simple_reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(rise, "ch0")
+    seq.config_slm_mask(["atom0"])
+
+    sim = Simulation(seq, sampling_rate=0.01)
+    sim.set_config(SimConfig("SPAM", eta=0.4))
+    assert sim._bad_atoms == {
+        "atom0": True,
+        "atom1": False,
+        "atom2": True,
+        "atom3": False,
+    }
+    assert sim.get_hamiltonian(0) != 0 * sim.build_operator([("I", "global")])
+
+
+def test_effective_size_disjoint():
+    np.random.seed(15092021)
+    simple_reg = Register.square(2, prefix="atom")
+    rise = Pulse.ConstantPulse(1500, 0, 0, 0)
+    seq = Sequence(simple_reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(rise, "ch0")
+    seq.config_slm_mask(["atom1"])
+
+    sim = Simulation(seq, sampling_rate=0.01)
+    sim.set_config(SimConfig("SPAM", eta=0.4))
+    assert sim._bad_atoms == {
+        "atom0": True,
+        "atom1": False,
+        "atom2": True,
+        "atom3": False,
+    }
+    assert sim.get_hamiltonian(0) == 0 * sim.build_operator([("I", "global")])

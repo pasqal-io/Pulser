@@ -182,6 +182,7 @@ class Sequence:
         self._register: Register = register
         self._device: Device = device
         self._in_xy: bool = False
+        self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
         self._channels: dict[str, Channel] = {}
         self._schedule: dict[str, list[_TimeSlot]] = {}
@@ -198,6 +199,11 @@ class Sequence:
         self._variables: dict[str, Variable] = {}
         self._to_build_calls: list[_Call] = []
         self._building: bool = True
+        # Marks the sequence as empty until the first pulse is added
+        self._empty_sequence: bool = True
+        # SLM mask targets and on/off times
+        self._slm_mask_targets: set[QubitId] = set()
+        self._slm_mask_time: list[int] = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -222,7 +228,8 @@ class Sequence:
         """Channels still available for declaration."""
         # Show all channels if none are declared, otherwise filter depending
         # on whether the sequence is working on XY mode
-        if not self._channels:
+        # If already in XY mode, filter right away
+        if not self._channels and not self._in_xy:
             return dict(self._device.channels)
         else:
             # MockDevice channels can be declared multiple times
@@ -235,6 +242,23 @@ class Sequence:
                 )
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
+
+    @property
+    def magnetic_field(self) -> np.ndarray:
+        """The magnetic field acting on the array of atoms.
+
+        The magnetic field vector is defined on the reference frame of the
+        atoms in the Register (with the z-axis coming outside of the plane).
+
+        Note:
+            Only defined in "XY Mode", the default value being (0, 0, 30) G.
+        """
+        if not self._in_xy:
+            raise AttributeError(
+                "The magnetic field is only defined when the "
+                "sequence is in 'XY Mode'."
+            )
+        return np.array(self._mag_field)
 
     def is_parametrized(self) -> bool:
         """States whether the sequence is parametrized.
@@ -299,6 +323,48 @@ class Sequence:
 
         return self._phase_ref[basis][qubit].last_phase
 
+    def set_magnetic_field(
+        self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0
+    ) -> None:
+        """Sets the magnetic field acting on the entire array.
+
+        The magnetic field vector is defined on the reference frame of the
+        atoms in the Register (with the z-axis coming outside of the plane).
+        Can only be defined before there are pulses added to the sequence.
+
+        Note:
+            The magnetic field only work in the "XY Mode". If not already
+            defined through the declaration of a Microwave channel, calling
+            this function will enable the "XY Mode".
+
+        Keyword Args:
+            bx (float): The magnetic field in the x direction (in Gauss).
+            by (float): The magnetic field in the y direction (in Gauss).
+            bz (float): The magnetic field in the z direction (in Gauss).
+        """
+        if not self._in_xy:
+            if self._channels:
+                raise ValueError(
+                    "The magnetic field can only be set in 'XY " "Mode'."
+                )
+            # No channels declared yet
+            self._in_xy = True
+        elif not self._empty_sequence:
+            # Not all channels are empty
+            raise ValueError(
+                "The magnetic field can only be set on an empty " "sequence."
+            )
+
+        mag_vector = (bx, by, bz)
+        if np.linalg.norm(mag_vector) == 0.0:
+            raise ValueError(
+                "The magnetic field must have a magnitude greater" " than 0."
+            )
+        self._mag_field = mag_vector
+
+        # No parametrization -> Always stored as a regular call
+        self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
+
     def declare_channel(
         self,
         name: str,
@@ -355,8 +421,15 @@ class Sequence:
             else:
                 raise ValueError(f"Channel {channel_id} is not available.")
 
+        # Remove this check once SLM is available in Ising mode
+        if self._slm_mask_targets and ch.basis != "XY":
+            raise NotImplementedError(
+                "SLM mask is not yet available in Ising mode"
+            )
+
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
+            self.set_magnetic_field()
         self._channels[name] = ch
         self._taken_channels[name] = channel_id
         self._schedule[name] = []
@@ -479,6 +552,9 @@ class Sequence:
         if self.is_parametrized():
             if not isinstance(pulse, Parametrized):
                 self._validate_pulse(pulse, channel)
+            # Sequence is marked as non-empty on the first added pulse
+            if self._empty_sequence:
+                self._empty_sequence = False
             return
 
         if not isinstance(pulse, Pulse):
@@ -567,6 +643,19 @@ class Sequence:
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
             )
+
+        # Sequence is marked as non-empty on the first added pulse
+        if self._empty_sequence:
+            self._empty_sequence = False
+
+        # If the added pulse starts earlier than all previously added pulses,
+        # update SLM mask initial and final time
+        if self._slm_mask_targets:
+            try:
+                if self._slm_mask_time[0] > ti:
+                    self._slm_mask_time = [ti, tf]
+            except IndexError:
+                self._slm_mask_time = [ti, tf]
 
     @_store
     def target(
@@ -1043,6 +1132,44 @@ class Sequence:
         self._is_measured = False
         self._variables = {}
         self._to_build_calls = []
+
+    @_store
+    def config_slm_mask(self, qubits: Set[QubitId]) -> None:
+        """Setup an SLM mask by specifying the qubits it targets."""
+        try:
+            targets = set(qubits)
+        except TypeError:
+            raise TypeError("The SLM targets must be castable to set")
+
+        if not targets.issubset(self._qids):
+            raise ValueError("SLM mask targets must exist in the register")
+
+        if not self._in_xy and self._channels:
+            raise NotImplementedError("SLM mask can only be added in XY mode")
+
+        if self.is_parametrized():
+            return
+
+        if self._slm_mask_targets:
+            raise ValueError("SLM mask can be configured only once.")
+
+        # If checks have passed, set the SLM mask targets
+        self._slm_mask_targets = targets
+
+        # Find tentative initial and final time of SLM mask if possible
+        for channel in self._channels:
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
+                if not isinstance(slot.type, Pulse):
+                    continue
+                ti = slot.ti
+                tf = slot.tf
+                if self._slm_mask_time:
+                    if ti < self._slm_mask_time[0]:
+                        self._slm_mask_time = [ti, tf]
+                else:
+                    self._slm_mask_time = [ti, tf]
+                break
 
 
 class _PhaseTracker:
