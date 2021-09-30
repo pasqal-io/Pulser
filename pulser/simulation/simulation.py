@@ -421,13 +421,13 @@ class Simulation:
                 noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
                     -((r / w0) ** 2)
                 )
-            samples_dict["amp"][slot.ti: slot.tf] += (
+            samples_dict["amp"][slot.ti : slot.tf] += (
                 _pulse.amplitude.samples * noise_amp
             )
-            samples_dict["det"][slot.ti: slot.tf] += (
+            samples_dict["det"][slot.ti : slot.tf] += (
                 _pulse.detuning.samples + noise_det
             )
-            samples_dict["phase"][slot.ti: slot.tf] += _pulse.phase
+            samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
@@ -759,7 +759,7 @@ class Simulation:
                 # Build an array of binary coefficients for the interaction
                 # term of unmasked qubits
                 coeff = np.ones(self._tot_duration)
-                coeff[0: self._seq._slm_mask_time[1]] = 0
+                coeff[0 : self._seq._slm_mask_time[1]] = 0
                 # Build the interaction term for unmasked qubits
                 qobj_list = [
                     [
