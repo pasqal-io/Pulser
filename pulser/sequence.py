@@ -164,14 +164,15 @@ class Sequence:
                 " device from 'pulser.devices'."
             )
         cond1 = device not in pulser.devices._valid_devices
-        cond2 = device != MockDevice
+        cond2 = device not in pulser.devices._mock_devices
+#        cond2 = device != MockDevice
         if cond1 and cond2:
             names = [d.name for d in pulser.devices._valid_devices]
             warns_msg = (
                 "The Sequence's device should be imported from "
                 + "'pulser.devices'. Correct operation is not ensured"
-                + " for custom devices. Choose 'MockDevice' or one of"
-                + " the following real devices:\n"
+                + " for custom devices. Choose 'MockDevice', 'MockDevice3D'"
+                + " or one of the following real devices:\n"
                 + "\n".join(names)
             )
             warnings.warn(warns_msg, stacklevel=2)
