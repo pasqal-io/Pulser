@@ -17,34 +17,34 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser import Register
+from pulser import Generic_Register, Register, Register_3D
 from pulser.devices import Chadoq2
 
 
 def test_creation():
     empty_dict = {}
     with pytest.raises(ValueError, match="Cannot create a Register with"):
-        Register(empty_dict)
+        Generic_Register(empty_dict)
 
     coords = [(0, 0), (1, 0)]
     ids = ["q0", "q1"]
     qubits = dict(zip(ids, coords))
     with pytest.raises(TypeError):
-        Register(coords)
-        Register(ids)
+        Generic_Register(coords)
+        Generic_Register(ids)
 
     with pytest.raises(ValueError, match="vectors of size 2 or 3"):
-        Register.from_coordinates([(0, 1, 0, 1)])
+        Generic_Register.from_coordinates([(0, 1, 0, 1)])
 
     with pytest.raises(ValueError, match="vectors of size 2 or 3"):
-        Register.from_coordinates([((1, 0),), ((-1, 0),)])
+        Generic_Register.from_coordinates([((1, 0),), ((-1, 0),)])
 
-    reg1 = Register(qubits)
-    reg2 = Register.from_coordinates(coords, center=False, prefix="q")
+    reg1 = Generic_Register(qubits)
+    reg2 = Generic_Register.from_coordinates(coords, center=False, prefix="q")
     assert np.all(np.array(reg1._coords) == np.array(reg2._coords))
     assert reg1._ids == reg2._ids
 
-    reg3 = Register.from_coordinates(np.array(coords), prefix="foo")
+    reg3 = Generic_Register.from_coordinates(np.array(coords), prefix="foo")
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
     assert reg3._ids == ["foo0", "foo1"]
     assert np.all(reg3._coords == coords_)
@@ -279,3 +279,79 @@ def test_drawing():
     reg = Register.square(1)
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True)
+
+
+def test_orthorombic():
+    # Check rows
+    with pytest.raises(ValueError, match="The number of rows"):
+        Register_3D.orthorhombic(0, 2, 2)
+
+    # Check columns
+    with pytest.raises(ValueError, match="The number of columns"):
+        Register_3D.orthorhombic(2, 0, 2)
+
+    # Check layers
+    with pytest.raises(ValueError, match="The number of layers"):
+        Register_3D.orthorhombic(2, 2, 0)
+
+    # Check spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register_3D.orthorhombic(2, 2, 2, 0.0)
+
+
+def test_cubic():
+    # Check side
+    with pytest.raises(ValueError, match="The number of atoms per side"):
+        Register_3D.cubic(0)
+
+    # Check spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register_3D.cubic(2, 0.0)
+
+
+def test_drawing3D():
+    with pytest.raises(NotImplementedError, match="register layouts in 3D."):
+        reg_ = Register_3D.from_coordinates([(1, 0), (0, 1)])
+        reg_.draw()
+
+    with pytest.raises(ValueError, match="Blockade radius"):
+        reg = Register_3D.from_coordinates([(1, 0, 0), (0, 0, 1)])
+        reg.draw(blockade_radius=0.0)
+
+    reg = Register_3D.cubic(3, 8)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw()
+
+    reg = Register_3D.orthorhombic(1, 8, 2)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
+
+    with pytest.raises(ValueError, match="'blockade_radius' to draw."):
+        reg.draw(draw_half_radius=True)
+
+    reg = Register_3D.orthorhombic(2, 2, 2)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(blockade_radius=5,
+                 draw_half_radius=True,
+                 draw_graph=True,
+                 projection=True)
+
+    reg = Register_3D.orthorhombic(2, 2, 2)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(blockade_radius=5,
+                 draw_half_radius=True,
+                 draw_graph=False,
+                 projection=True)
+
+    reg = Register_3D.cubic(1)
+    with pytest.raises(NotImplementedError, match="Needs more than one atom"):
+        reg.draw(blockade_radius=5, draw_half_radius=True)
+
+
+def test_to_2D():
+    with pytest.raises(ValueError, match="e"):
+        reg = Register_3D.orthorhombic(2, 2, 2)
+        reg.to_2D()
+
+    reg = Register_3D.orthorhombic(2, 2, 1)
+    reg.to_2D()

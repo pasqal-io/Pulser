@@ -564,10 +564,10 @@ class Register_3D(Generic_Register):
     def cubic(
         cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
     ) -> Register_3D:
-        """Initializes the register with the qubits in a square array.
+        """Initializes the register with the qubits in a cubic array.
 
         Args:
-            side (int): Side of the square in number of qubits.
+            side (int): Side of the cubic in number of qubits.
 
         Keyword args:
             spacing(float): The distance between neighbouring qubits in μm.
@@ -598,7 +598,7 @@ class Register_3D(Generic_Register):
         spacing: float = 4.0,
         prefix: Optional[str] = None,
     ) -> Register_3D:
-        """Initializes the register with the qubits in a rectangular array.
+        """Initializes the register with the qubits in a orthorhombic array.
 
         Args:
             rows (int): Number of rows.
@@ -657,7 +657,7 @@ class Register_3D(Generic_Register):
 
     def to_2D(self) -> Register:
         coords = np.array(self._coords)
-        prefix = self._ids[0][:-1]
+        prefix = str(self._ids[0])[:-1]
 
         G = coords.sum(axis=0) / coords.shape[0]
         # run SVD
@@ -719,6 +719,15 @@ class Register_3D(Generic_Register):
 
         pos = np.array(self._coords)
 
+        if draw_half_radius:
+            if blockade_radius is None:
+                raise ValueError("Define 'blockade_radius' to draw.")
+            if len(pos) == 1:
+                raise NotImplementedError(
+                    "Needs more than one atom to draw "
+                    "the blockade radius."
+                )
+
         if projection:
             diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
             diffs[diffs < 9] *= 1.5
@@ -767,14 +776,6 @@ class Register_3D(Generic_Register):
                                     fontsize=12, ha="left", va="bottom")
 
                 if draw_half_radius:
-                    if blockade_radius is None:
-                        raise ValueError("Define 'blockade_radius' to draw.")
-                    if len(pos) == 1:
-                        raise NotImplementedError(
-                            "Needs more than one atom to draw "
-                            "the blockade radius."
-                        )
-
                     for p in pos:
                         circle = plt.Circle(
                             tuple([p[ix], p[iy]]),
@@ -783,6 +784,7 @@ class Register_3D(Generic_Register):
                             color="darkgreen"
                         )
                         ax.add_patch(circle)
+
                 if draw_graph and blockade_radius is not None:
                     epsilon = 1e-9  # Accounts for rounding errors
                     edges = KDTree(pos).query_pairs(blockade_radius
@@ -802,6 +804,7 @@ class Register_3D(Generic_Register):
 
         else:
             fig = plt.figure(figsize=2*plt.figaspect(0.5))
+
             if draw_graph and blockade_radius is not None:
                 epsilon = 1e-9  # Accounts for rounding errors
                 edges = KDTree(pos).query_pairs(blockade_radius
@@ -820,7 +823,14 @@ class Register_3D(Generic_Register):
 
                 ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2],
                            s=30, alpha=0.7, c="darkgreen")
-                if draw_graph and blockade_radius is not None:
+
+                if with_labels:
+                    for q, coords in zip(self._ids, self._coords):
+                        ax.text(coords[0], coords[1], coords[2],
+                                q,
+                                fontsize=12, ha="left", va="bottom")
+
+                if draw_half_radius:
                     for r in pos:
                         x0, y0, z0 = r
                         radius = blockade_radius/2
@@ -831,6 +841,7 @@ class Register_3D(Generic_Register):
                         # alpha controls opacity
                         ax.plot_surface(x, y, z, color="darkgreen", alpha=0.1)
 
+                if draw_graph and blockade_radius is not None:
                     for x, y, z in bonds.values():
                         ax.plot(x, y, z, linewidth=1.5, color="grey")
 
