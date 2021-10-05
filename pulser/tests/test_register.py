@@ -331,17 +331,21 @@ def test_drawing3D():
 
     reg = Register_3D.orthorhombic(2, 2, 2)
     with patch("matplotlib.pyplot.show"):
-        reg.draw(blockade_radius=5,
-                 draw_half_radius=True,
-                 draw_graph=True,
-                 projection=True)
+        reg.draw(
+            blockade_radius=5,
+            draw_half_radius=True,
+            draw_graph=True,
+            projection=True,
+        )
 
     reg = Register_3D.orthorhombic(2, 2, 2)
     with patch("matplotlib.pyplot.show"):
-        reg.draw(blockade_radius=5,
-                 draw_half_radius=True,
-                 draw_graph=False,
-                 projection=True)
+        reg.draw(
+            blockade_radius=5,
+            draw_half_radius=True,
+            draw_graph=False,
+            projection=True,
+        )
 
     reg = Register_3D.cubic(1)
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):

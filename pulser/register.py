@@ -72,7 +72,7 @@ class Generic_Register:
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
-    ) -> Register:
+    ) -> Generic_Register:
         """Creates the register from an array of coordinates.
 
         Args:
@@ -100,8 +100,16 @@ class Generic_Register:
 
 
 class Register(Generic_Register):
+    """A 2D quantum register containing a set of qubits.
+
+    Args:
+        qubits (dict): Dictionary with the qubit names as keys and their
+            position coordinates (in μm) as values
+            (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
+    """
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
+        """Initializes a custom Register."""
         Generic_Register.__init__(self, qubits)
 
     @classmethod
@@ -556,8 +564,16 @@ class Register(Generic_Register):
 
 
 class Register_3D(Generic_Register):
+    """A 3D quantum register containing a set of qubits.
+
+    Args:
+        qubits (dict): Dictionary with the qubit names as keys and their
+            position coordinates (in μm) as values
+            (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
+    """
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
+        """Initializes a custom Register."""
         Generic_Register.__init__(self, qubits)
 
     @classmethod
@@ -586,8 +602,9 @@ class Register_3D(Generic_Register):
                 " must be greater than or equal to 1."
             )
 
-        return cls.orthorhombic(side, side, side,
-                                spacing=spacing, prefix=prefix)
+        return cls.orthorhombic(
+            side, side, side, spacing=spacing, prefix=prefix
+        )
 
     @classmethod
     def orthorhombic(
@@ -645,9 +662,12 @@ class Register_3D(Generic_Register):
 
         coords = (
             np.array(
-                [(x, y, z) for z in range(layers)
+                [
+                    (x, y, z)
+                    for z in range(layers)
                     for y in range(rows)
-                    for x in range(columns)],
+                    for x in range(columns)
+                ],
                 dtype=float,
             )
             * spacing
@@ -656,6 +676,12 @@ class Register_3D(Generic_Register):
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     def to_2D(self) -> Register:
+        """Converts a Register_3D into a Register (if possible).
+
+        Note:
+            Returns a 2D register with the coordinates of the atoms in a plane,
+            if they are     coplanar. Returns an error otherwise.
+        """
         coords = np.array(self._coords)
         prefix = str(self._ids[0])[:-1]
 
@@ -664,15 +690,13 @@ class Register_3D(Generic_Register):
         u, s, vh = np.linalg.svd(coords - G)
         width = min(s)
         if width > 0:
-            raise ValueError(
-                f"Atoms are not coplanar (`width` = {width})"
-            )
+            raise ValueError(f"Atoms are not coplanar (`width` = {width})")
         else:
             e_x = vh[0, :]
             e_y = vh[1, :]
-            coords_2D = np.array([
-                                 np.array([e_x.dot(r), e_y.dot(r)])
-                                 for r in coords])
+            coords_2D = np.array(
+                [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
+            )
             return Register.from_coordinates(coords_2D, prefix=prefix)
 
     def draw(
@@ -681,7 +705,7 @@ class Register_3D(Generic_Register):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
-        projection: bool = False
+        projection: bool = False,
     ) -> None:
         """Draws the entire register.
 
@@ -724,8 +748,7 @@ class Register_3D(Generic_Register):
                 raise ValueError("Define 'blockade_radius' to draw.")
             if len(pos) == 1:
                 raise NotImplementedError(
-                    "Needs more than one atom to draw "
-                    "the blockade radius."
+                    "Needs more than one atom to draw " "the blockade radius."
                 )
 
         if projection:
@@ -761,40 +784,46 @@ class Register_3D(Generic_Register):
                     ax.set_xlabel("x (µm)")
                     ax.set_ylabel("z (µm)")
                     ax.set_title("Projection onto the xz_plane")
-                ax.scatter(pos[:, ix], pos[:, iy],
-                           s=30,
-                           alpha=0.7,
-                           c="darkgreen")
+                ax.scatter(
+                    pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen"
+                )
                 ax.axis("equal")
                 ax.spines["right"].set_color("none")
                 ax.spines["top"].set_color("none")
 
                 if with_labels:
                     for q, coords in zip(self._ids, self._coords):
-                        ax.annotate(q,
-                                    np.array([coords[ix], coords[iy]]),
-                                    fontsize=12, ha="left", va="bottom")
+                        ax.annotate(
+                            q,
+                            np.array([coords[ix], coords[iy]]),
+                            fontsize=12,
+                            ha="left",
+                            va="bottom",
+                        )
 
-                if draw_half_radius:
+                if draw_half_radius and blockade_radius is not None:
                     for p in pos:
                         circle = plt.Circle(
                             tuple([p[ix], p[iy]]),
                             blockade_radius / 2,
                             alpha=0.1,
-                            color="darkgreen"
+                            color="darkgreen",
                         )
                         ax.add_patch(circle)
 
                 if draw_graph and blockade_radius is not None:
                     epsilon = 1e-9  # Accounts for rounding errors
-                    edges = KDTree(pos).query_pairs(blockade_radius
-                                                    * (1 + epsilon))
-                    lines = [[[r1[ix], r1[iy]], [r2[ix], r2[iy]]]
-                             for r1, r2 in pos[(tuple(edges),)]]
+                    edges = KDTree(pos).query_pairs(
+                        blockade_radius * (1 + epsilon)
+                    )
+                    lines = [
+                        [[r1[ix], r1[iy]], [r2[ix], r2[iy]]]
+                        for r1, r2 in pos[(tuple(edges),)]
+                    ]
 
-                    lc = mc.LineCollection(lines,
-                                           linewidths=0.6,
-                                           colors="grey")
+                    lc = mc.LineCollection(
+                        lines, linewidths=0.6, colors="grey"
+                    )
                     ax.add_collection(lc)
 
                 else:
@@ -803,12 +832,13 @@ class Register_3D(Generic_Register):
                     ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
 
         else:
-            fig = plt.figure(figsize=2*plt.figaspect(0.5))
+            fig = plt.figure(figsize=2 * plt.figaspect(0.5))
 
             if draw_graph and blockade_radius is not None:
                 epsilon = 1e-9  # Accounts for rounding errors
-                edges = KDTree(pos).query_pairs(blockade_radius
-                                                * (1 + epsilon))
+                edges = KDTree(pos).query_pairs(
+                    blockade_radius * (1 + epsilon)
+                )
 
                 bonds = {}
                 for i, j in edges:
@@ -817,26 +847,45 @@ class Register_3D(Generic_Register):
                     bonds[(i, j)] = [[xi, xj], [yi, yj], [zi, zj]]
 
             for i in range(1, 3):
-                ax = fig.add_subplot(1, 2, i,
-                                     projection='3d',
-                                     azim=- 60*(-1)**i, elev=30)
+                ax = fig.add_subplot(
+                    1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=30
+                )
 
-                ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2],
-                           s=30, alpha=0.7, c="darkgreen")
+                ax.scatter(
+                    pos[:, 0],
+                    pos[:, 1],
+                    pos[:, 2],
+                    s=30,
+                    alpha=0.7,
+                    c="darkgreen",
+                )
 
                 if with_labels:
                     for q, coords in zip(self._ids, self._coords):
-                        ax.text(coords[0], coords[1], coords[2],
-                                q,
-                                fontsize=12, ha="left", va="bottom")
+                        ax.text(
+                            coords[0],
+                            coords[1],
+                            coords[2],
+                            q,
+                            fontsize=12,
+                            ha="left",
+                            va="bottom",
+                        )
 
-                if draw_half_radius:
+                if draw_half_radius and blockade_radius is not None:
                     for r in pos:
                         x0, y0, z0 = r
-                        radius = blockade_radius/2
-                        u, v = np.mgrid[0:2*np.pi:50j, 0:np.pi:50j]
-                        x = radius * np.cos(u)*np.sin(v) + x0
-                        y = radius * np.sin(u)*np.sin(v) + y0
+                        radius = blockade_radius / 2
+
+                        # Strange behavior pf mypy using "imaginary slice step"
+                        # u, v = np.pi * np.mgrid[0:2:50j, 0:1:50j]
+
+                        v, u = np.meshgrid(
+                            np.linspace(0, np.pi, num=50),
+                            np.linspace(0, 2 * np.pi, num=50),
+                        )
+                        x = radius * np.cos(u) * np.sin(v) + x0
+                        y = radius * np.sin(u) * np.sin(v) + y0
                         z = radius * np.cos(v) + z0
                         # alpha controls opacity
                         ax.plot_surface(x, y, z, color="darkgreen", alpha=0.1)
