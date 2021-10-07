@@ -54,7 +54,7 @@ class Variable(Parametrized, OpSupport):
             raise ValueError("Variables must be of size 1 or larger.")
 
         self._count: int
-        self.__dict__["_count"] = -1  # Counts the updates
+        object.__setattr__(self, "_count", -1)  # Counts the updates
         self._clear()
 
     @property
@@ -63,7 +63,7 @@ class Variable(Parametrized, OpSupport):
         return {self.name: self}
 
     def _clear(self) -> None:
-        self.__dict__["value"] = None
+        object.__setattr__(self, "value", None)
         self.__dict__["_count"] += 1
 
     def _assign(self, value: Union[ArrayLike, str, float, int]) -> None:
@@ -85,7 +85,10 @@ class Variable(Parametrized, OpSupport):
                 + f"variable of size {self.size}."
             )
 
-        self.__dict__["value"] = self.dtype(val) if self.size == 1 else val
+        if self.size == 1:
+            object.__setattr__(self, "value", self.dtype(val))
+        else:
+            object.__setattr__(self, "value", val)
         self.__dict__["_count"] += 1
 
     def build(self) -> Union[ArrayLike, str, float, int]:

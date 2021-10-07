@@ -93,11 +93,15 @@ class SimConfig:
 
     def __post_init__(self) -> None:
         self._process_temperature()
-        self.__dict__["spam_dict"] = {
-            "eta": self.eta,
-            "epsilon": self.epsilon,
-            "epsilon_prime": self.epsilon_prime,
-        }
+        object.__setattr__(
+            self,
+            "spam_dict",
+            {
+                "eta": self.eta,
+                "epsilon": self.epsilon,
+                "epsilon_prime": self.epsilon_prime,
+            },
+        )
         self._check_noise_types()
         self._check_spam_dict()
         self._calc_sigma_doppler()
@@ -146,7 +150,7 @@ class SimConfig:
     def _check_noise_types(self) -> None:
         # only one noise was given as argument : convert it to a tuple
         if isinstance(self.noise, str):
-            self.__dict__["noise"] = (self.noise,)
+            object.__setattr__(self, "noise", (self.noise,))
         for noise_type in self.noise:
             if noise_type not in get_args(NOISE_TYPES):
                 raise ValueError(
@@ -157,6 +161,6 @@ class SimConfig:
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        self.__dict__["doppler_sigma"] = KEFF * np.sqrt(
-            KB * self.temperature / MASS
+        object.__setattr__(
+            self, "doppler_sigma", KEFF * np.sqrt(KB * self.temperature / MASS)
         )
