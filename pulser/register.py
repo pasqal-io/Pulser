@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
+
 from collections.abc import Mapping, Iterable
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
@@ -22,6 +24,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 from typing import Any, cast, Optional, Union
+from itertools import combinations
 
 import pulser
 from pulser.json.utils import obj_to_dict
@@ -29,14 +32,8 @@ from pulser.json.utils import obj_to_dict
 QubitId = Union[int, str]
 
 
-class Generic_Register:
-    """A quantum register containing a set of qubits.
-
-    Args:
-        qubits (dict): Dictionary with the qubit names as keys and their
-            position coordinates (in μm) as values
-            (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
-    """
+class BaseRegister(ABC):
+    """The abstract class for a register."""
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
@@ -72,7 +69,7 @@ class Generic_Register:
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
-    ) -> Generic_Register:
+    ) -> cls:
         """Creates the register from an array of coordinates.
 
         Args:
@@ -98,8 +95,106 @@ class Generic_Register:
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
+    def draw_2D(
+        ax: plt.axes._subplots.AxesSubplot,
+        pos: np.ndarray,
+        ids: list,
+        plane: tuple = (0, 1),
+        with_labels: bool = True,
+        blockade_radius: Optional[float] = None,
+        draw_graph: bool = True,
+        draw_half_radius: bool = False,
+    ) -> None:
 
-class Register(Generic_Register):
+        ix, iy = plane
+
+        ax.scatter(pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen")
+
+        axes = "xyz"
+
+        ax.set_xlabel(axes[ix] + " (µm)")
+        ax.set_ylabel(axes[iy] + " (µm)")
+        ax.axis("equal")
+        ax.spines["right"].set_color("none")
+        ax.spines["top"].set_color("none")
+
+        if with_labels:
+            for q, coords in zip(ids, pos):
+                ax.annotate(
+                    q, coords[[ix, iy]], fontsize=12, ha="left", va="bottom"
+                )
+
+        if draw_half_radius:
+            if blockade_radius is None:
+                raise ValueError("Define 'blockade_radius' to draw.")
+            if len(pos) == 1:
+                raise NotImplementedError(
+                    "Needs more than one atom to draw " "the blockade radius."
+                )
+
+            for p in pos:
+                circle = plt.Circle(
+                    tuple(p[[ix, iy]]),
+                    blockade_radius / 2,
+                    alpha=0.1,
+                    color="darkgreen",
+                )
+                ax.add_patch(circle)
+        if draw_graph and blockade_radius is not None:
+            epsilon = 1e-9  # Accounts for rounding errors
+            edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
+            lines = pos[(tuple(edges),)][:, :, (ix, iy)]
+            lc = mc.LineCollection(lines, linewidths=0.6, colors="grey")
+            ax.add_collection(lc)
+
+        else:
+            # Only draw central axis lines when not drawing the graph
+            ax.axvline(0, c="grey", alpha=0.5, linestyle=":")
+            ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
+
+    def draw(
+        self,
+        with_labels: bool = True,
+        blockade_radius: Optional[float] = None,
+        draw_graph: bool = True,
+        draw_half_radius: bool = False,
+    ) -> None:
+        """Draws the entire register.
+
+        Keyword Args:
+            with_labels(bool, default=True): If True, writes the qubit ID's
+                next to each qubit.
+            blockade_radius(float, default=None): The distance (in μm) between
+                atoms below the Rydberg blockade effect occurs.
+            draw_half_radius(bool, default=False): Whether or not to draw the
+                half the blockade radius surrounding each atoms. If `True`,
+                requires `blockade_radius` to be defined.
+            draw_graph(bool, default=True): Whether or not to draw the
+                interaction between atoms as edges in a graph. Will only draw
+                if the `blockade_radius` is defined.
+
+        Note:
+            When drawing half the blockade radius, we say there is a blockade
+            effect between atoms whenever their respective circles overlap.
+            This representation is preferred over drawing the full Rydberg
+            radius because it helps in seeing the interactions between atoms.
+        """
+        # Check dimensions
+        if (self._dim != 2) and (self._dim != 3):
+            raise NotImplementedError(
+                "Can only draw register layouts in 2D  or 3D."
+            )
+
+        # Check spacing
+        if blockade_radius is not None and blockade_radius <= 0.0:
+            raise ValueError(
+                "Blockade radius (`blockade_radius` ="
+                f" {blockade_radius})"
+                " must be greater than 0."
+            )
+
+
+class Register(BaseRegister):
     """A 2D quantum register containing a set of qubits.
 
     Args:
@@ -110,7 +205,7 @@ class Register(Generic_Register):
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
-        Generic_Register.__init__(self, qubits)
+        super(Register, self).__init__(qubits)
 
     @classmethod
     def square(
@@ -494,17 +589,6 @@ class Register(Generic_Register):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-        # Check dimensions
-        if self._dim != 2:
-            raise NotImplementedError("Can only draw register layouts in 2D.")
-
-        # Check spacing
-        if blockade_radius is not None and blockade_radius <= 0.0:
-            raise ValueError(
-                "Blockade radius (`blockade_radius` ="
-                f" {blockade_radius})"
-                " must be greater than 0."
-            )
 
         pos = np.array(self._coords)
         diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
@@ -519,42 +603,15 @@ class Register(Generic_Register):
         )  # Figsize is, at most, (10,10)
 
         fig, ax = plt.subplots(figsize=Ls)
-        ax.scatter(pos[:, 0], pos[:, 1], s=30, alpha=0.7, c="darkgreen")
-
-        ax.set_xlabel("µm")
-        ax.set_ylabel("µm")
-        ax.axis("equal")
-        ax.spines["right"].set_color("none")
-        ax.spines["top"].set_color("none")
-
-        if with_labels:
-            for q, coords in zip(self._ids, self._coords):
-                ax.annotate(q, coords, fontsize=12, ha="left", va="bottom")
-
-        if draw_half_radius:
-            if blockade_radius is None:
-                raise ValueError("Define 'blockade_radius' to draw.")
-            if len(pos) == 1:
-                raise NotImplementedError(
-                    "Needs more than one atom to draw " "the blockade radius."
-                )
-
-            for p in pos:
-                circle = plt.Circle(
-                    tuple(p), blockade_radius / 2, alpha=0.1, color="darkgreen"
-                )
-                ax.add_patch(circle)
-        if draw_graph and blockade_radius is not None:
-            epsilon = 1e-9  # Accounts for rounding errors
-            edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
-            lines = pos[(tuple(edges),)]
-            lc = mc.LineCollection(lines, linewidths=0.6, colors="grey")
-            ax.add_collection(lc)
-
-        else:
-            # Only draw central axis lines when not drawing the graph
-            ax.axvline(0, c="grey", alpha=0.5, linestyle=":")
-            ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
+        BaseRegister.draw_2D(
+            ax,
+            pos,
+            self._ids,
+            with_labels=with_labels,
+            blockade_radius=blockade_radius,
+            draw_graph=draw_graph,
+            draw_half_radius=draw_half_radius,
+        )
 
         plt.show()
 
@@ -563,7 +620,7 @@ class Register(Generic_Register):
         return obj_to_dict(self, qs)
 
 
-class Register_3D(Generic_Register):
+class Register3D(BaseRegister):
     """A 3D quantum register containing a set of qubits.
 
     Args:
@@ -574,12 +631,12 @@ class Register_3D(Generic_Register):
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
-        Generic_Register.__init__(self, qubits)
+        BaseRegister.__init__(self, qubits)
 
     @classmethod
     def cubic(
         cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
-    ) -> Register_3D:
+    ) -> Register3D:
         """Initializes the register with the qubits in a cubic array.
 
         Args:
@@ -592,7 +649,7 @@ class Register_3D(Generic_Register):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register_3D : A 3D register with qubits placed in
+            Register3D : A 3D register with qubits placed in
                 an orthorhombic array.
         """
         # Check side
@@ -614,7 +671,7 @@ class Register_3D(Generic_Register):
         layers: int,
         spacing: float = 4.0,
         prefix: Optional[str] = None,
-    ) -> Register_3D:
+    ) -> Register3D:
         """Initializes the register with the qubits in a orthorhombic array.
 
         Args:
@@ -629,7 +686,7 @@ class Register_3D(Generic_Register):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
         Returns:
-            Register_3D : A 3D register with qubits placed in
+            Register3D : A 3D register with qubits placed in
                 an orthorhombic array.
         """
         # Check rows
@@ -676,11 +733,14 @@ class Register_3D(Generic_Register):
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     def to_2D(self) -> Register:
-        """Converts a Register_3D into a Register (if possible).
+        """Converts a Register3D into a Register (if possible).
 
-        Note:
-            Returns a 2D register with the coordinates of the atoms in a plane,
-            if they are     coplanar. Returns an error otherwise.
+        Returns:
+            Register : Returns a 2D register with the coordinates
+            of the atoms in a plane, if they are coplanar.
+
+        Raises:
+            If the atoms are not coplanar, raises an error.
         """
         coords = np.array(self._coords)
         prefix = str(self._ids[0])[:-1]
@@ -743,6 +803,10 @@ class Register_3D(Generic_Register):
 
         pos = np.array(self._coords)
 
+        if draw_graph and blockade_radius is not None:
+            epsilon = 1e-9  # Accounts for rounding errors
+            edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
+
         if draw_half_radius:
             if blockade_radius is None:
                 raise ValueError("Define 'blockade_radius' to draw.")
@@ -764,82 +828,31 @@ class Register_3D(Generic_Register):
                 big_side / 4, 10
             )  # Figsize is, at most, (10,10)
 
+            labels = "xyz"
+
             fig, axes = plt.subplots(ncols=3, figsize=Ls)
-            for i, ax in enumerate(axes):
-                if i == 0:
-                    ix = 0
-                    iy = 1
-                    ax.set_xlabel("x (µm)")
-                    ax.set_ylabel("y (µm)")
-                    ax.set_title("Projection onto the xy_plane")
-                elif i == 1:
-                    ix = 1
-                    iy = 2
-                    ax.set_xlabel("y (µm)")
-                    ax.set_ylabel("z (µm)")
-                    ax.set_title("Projection onto the yz_plane")
-                else:
-                    ix = 0
-                    iy = 2
-                    ax.set_xlabel("x (µm)")
-                    ax.set_ylabel("z (µm)")
-                    ax.set_title("Projection onto the xz_plane")
-                ax.scatter(
-                    pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen"
+            for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
+                BaseRegister.draw_2D(
+                    ax,
+                    pos,
+                    self._ids,
+                    plane=(
+                        ix,
+                        iy,
+                    ),
+                    with_labels=with_labels,
+                    blockade_radius=blockade_radius,
+                    draw_graph=draw_graph,
+                    draw_half_radius=draw_half_radius,
                 )
-                ax.axis("equal")
-                ax.spines["right"].set_color("none")
-                ax.spines["top"].set_color("none")
-
-                if with_labels:
-                    for q, coords in zip(self._ids, self._coords):
-                        ax.annotate(
-                            q,
-                            np.array([coords[ix], coords[iy]]),
-                            fontsize=12,
-                            ha="left",
-                            va="bottom",
-                        )
-
-                if draw_half_radius and blockade_radius is not None:
-                    for p in pos:
-                        circle = plt.Circle(
-                            tuple([p[ix], p[iy]]),
-                            blockade_radius / 2,
-                            alpha=0.1,
-                            color="darkgreen",
-                        )
-                        ax.add_patch(circle)
-
-                if draw_graph and blockade_radius is not None:
-                    epsilon = 1e-9  # Accounts for rounding errors
-                    edges = KDTree(pos).query_pairs(
-                        blockade_radius * (1 + epsilon)
-                    )
-                    lines = [
-                        [[r1[ix], r1[iy]], [r2[ix], r2[iy]]]
-                        for r1, r2 in pos[(tuple(edges),)]
-                    ]
-
-                    lc = mc.LineCollection(
-                        lines, linewidths=0.6, colors="grey"
-                    )
-                    ax.add_collection(lc)
-
-                else:
-                    # Only draw central axis lines when not drawing the graph
-                    ax.axvline(0, c="grey", alpha=0.5, linestyle=":")
-                    ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
+                ax.set_title(
+                    "Projection onto the " + labels[ix] + labels[iy] + "-plane"
+                )
 
         else:
             fig = plt.figure(figsize=2 * plt.figaspect(0.5))
 
             if draw_graph and blockade_radius is not None:
-                epsilon = 1e-9  # Accounts for rounding errors
-                edges = KDTree(pos).query_pairs(
-                    blockade_radius * (1 + epsilon)
-                )
-
                 bonds = {}
                 for i, j in edges:
                     xi, yi, zi = pos[i]

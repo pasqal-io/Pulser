@@ -119,9 +119,11 @@ class Device:
                 f" ({self.max_atom_num})."
             )
 
-        if register._dim != self.dimensions:
+        if register._dim >= self.dimensions:
             raise ValueError(
-                f"All qubit positions must be {self.dimensions}D " "vectors."
+                f"All qubit positions must be at most"
+                "{self.dimensions}D "
+                "vectors."
             )
 
         if len(atoms) > 1:

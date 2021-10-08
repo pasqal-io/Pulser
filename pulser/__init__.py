@@ -18,7 +18,7 @@ from pulser._version import __version__
 
 from pulser.pulse import Pulse
 
-from pulser.register import Generic_Register, Register, Register_3D
+from pulser.register import BaseRegister, Register, Register3D
 
 from pulser.sequence import Sequence
 
