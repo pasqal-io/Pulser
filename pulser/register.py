@@ -117,7 +117,7 @@ class BaseRegister(ABC):
                     q, coords[[ix, iy]], fontsize=12, ha="left", va="bottom"
                 )
 
-        if draw_half_radius:
+        if draw_half_radius and blockade_radius is not None:
             for p in pos:
                 circle = plt.Circle(
                     tuple(p[[ix, iy]]),

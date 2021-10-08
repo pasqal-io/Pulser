@@ -17,7 +17,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser import BaseRegister, Register, Register3D
+from pulser import Register, Register3D
 from pulser.devices import Chadoq2
 
 
