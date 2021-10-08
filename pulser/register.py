@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from collections.abc import Mapping, Iterable
 import matplotlib.pyplot as plt
@@ -23,13 +23,15 @@ from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, cast, Optional, Union
+from typing import Any, cast, Optional, Union, TypeVar, Type
 from itertools import combinations
 
 import pulser
 from pulser.json.utils import obj_to_dict
 
 QubitId = Union[int, str]
+
+T = TypeVar("T", bound="BaseRegister")
 
 
 class BaseRegister(ABC):
@@ -65,11 +67,11 @@ class BaseRegister(ABC):
 
     @classmethod
     def from_coordinates(
-        cls,
+        cls: Type[T],
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
-    ) -> BaseRegister:
+    ) -> T:
         """Creates the register from an array of coordinates.
 
         Args:
@@ -105,6 +107,26 @@ class BaseRegister(ABC):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
     ) -> None:
+        """Draws a register corresponing to the positions in `pos`.
+
+        Keyword Args:
+            with_labels(bool, default=True): If True, writes the ID's contained
+                in ids next to each qubit.
+            blockade_radius(float, default=None): The distance (in μm) between
+                atoms below the Rydberg blockade effect occurs.
+            draw_half_radius(bool, default=False): Whether or not to draw the
+                half the blockade radius surrounding each atoms. If `True`,
+                requires `blockade_radius` to be defined.
+            draw_graph(bool, default=True): Whether or not to draw the
+                interaction between atoms as edges in a graph. Will only draw
+                if the `blockade_radius` is defined.
+
+        Note:
+            When drawing half the blockade radius, we say there is a blockade
+            effect between atoms whenever their respective circles overlap.
+            This representation is preferred over drawing the full Rydberg
+            radius because it helps in seeing the interactions between atoms.
+        """
 
         ix, iy = plane
 
