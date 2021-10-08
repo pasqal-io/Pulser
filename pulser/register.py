@@ -69,7 +69,7 @@ class BaseRegister(ABC):
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
-    ) -> cls:
+    ) -> BaseRegister:
         """Creates the register from an array of coordinates.
 
         Args:
