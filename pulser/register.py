@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from collections.abc import Mapping, Iterable
 import matplotlib.pyplot as plt
@@ -37,6 +37,7 @@ T = TypeVar("T", bound="BaseRegister")
 class BaseRegister(ABC):
     """The abstract class for a register."""
 
+    @abstractmethod
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
@@ -49,16 +50,7 @@ class BaseRegister(ABC):
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
         self._ids = list(qubits.keys())
-        coords = [np.array(v, dtype=float) for v in qubits.values()]
-        self._dim = coords[0].size
-        if any(c.shape != (self._dim,) for c in coords) or (
-            self._dim != 2 and self._dim != 3
-        ):
-            raise ValueError(
-                "All coordinates must be specified as vectors of"
-                " size 2 or 3."
-            )
-        self._coords = coords
+        self._coords = [np.array(v, dtype=float) for v in qubits.values()]
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
@@ -97,7 +89,7 @@ class BaseRegister(ABC):
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
-    def draw_2D(
+    def _draw_2D(
         ax: plt.axes._subplots.AxesSubplot,
         pos: np.ndarray,
         ids: list,
@@ -107,27 +99,6 @@ class BaseRegister(ABC):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
     ) -> None:
-        """Draws a register corresponing to the positions in `pos`.
-
-        Keyword Args:
-            with_labels(bool, default=True): If True, writes the ID's contained
-                in ids next to each qubit.
-            blockade_radius(float, default=None): The distance (in μm) between
-                atoms below the Rydberg blockade effect occurs.
-            draw_half_radius(bool, default=False): Whether or not to draw the
-                half the blockade radius surrounding each atoms. If `True`,
-                requires `blockade_radius` to be defined.
-            draw_graph(bool, default=True): Whether or not to draw the
-                interaction between atoms as edges in a graph. Will only draw
-                if the `blockade_radius` is defined.
-
-        Note:
-            When drawing half the blockade radius, we say there is a blockade
-            effect between atoms whenever their respective circles overlap.
-            This representation is preferred over drawing the full Rydberg
-            radius because it helps in seeing the interactions between atoms.
-        """
-
         ix, iy = plane
 
         ax.scatter(pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen")
@@ -147,13 +118,6 @@ class BaseRegister(ABC):
                 )
 
         if draw_half_radius:
-            if blockade_radius is None:
-                raise ValueError("Define 'blockade_radius' to draw.")
-            if len(pos) == 1:
-                raise NotImplementedError(
-                    "Needs more than one atom to draw " "the blockade radius."
-                )
-
             for p in pos:
                 circle = plt.Circle(
                     tuple(p[[ix, iy]]),
@@ -165,7 +129,11 @@ class BaseRegister(ABC):
         if draw_graph and blockade_radius is not None:
             epsilon = 1e-9  # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
-            lines = pos[(tuple(edges),)][:, :, (ix, iy)]
+            bonds = pos[(tuple(edges),)]
+            if len(bonds) > 0:
+                lines = bonds[:, :, (ix, iy)]
+            else:
+                lines = []
             lc = mc.LineCollection(lines, linewidths=0.6, colors="grey")
             ax.add_collection(lc)
 
@@ -201,12 +169,6 @@ class BaseRegister(ABC):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-        # Check dimensions
-        if (self._dim != 2) and (self._dim != 3):
-            raise NotImplementedError(
-                "Can only draw register layouts in 2D  or 3D."
-            )
-
         # Check spacing
         if blockade_radius is not None and blockade_radius <= 0.0:
             raise ValueError(
@@ -214,6 +176,14 @@ class BaseRegister(ABC):
                 f" {blockade_radius})"
                 " must be greater than 0."
             )
+
+        if draw_half_radius:
+            if blockade_radius is None:
+                raise ValueError("Define 'blockade_radius' to draw.")
+            if len(self._ids) == 1:
+                raise NotImplementedError(
+                    "Needs more than one atom to draw " "the blockade radius."
+                )
 
 
 class Register(BaseRegister):
@@ -228,6 +198,13 @@ class Register(BaseRegister):
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
         super(Register, self).__init__(qubits)
+        coords = [np.array(v, dtype=float) for v in qubits.values()]
+        self._dim = coords[0].size
+        if any(c.shape != (self._dim,) for c in coords) or (self._dim != 2):
+            raise ValueError(
+                "All coordinates must be specified as vectors of size 2."
+            )
+        self._coords = coords
 
     @classmethod
     def square(
@@ -576,8 +553,6 @@ class Register(BaseRegister):
         Args:
             degrees (float): The angle of rotation in degrees.
         """
-        if self._dim != 2:
-            raise NotImplementedError("Can only rotate arrays in 2D.")
         theta = np.deg2rad(degrees)
         rot = np.array(
             [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
@@ -611,7 +586,12 @@ class Register(BaseRegister):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-
+        super().draw(
+            with_labels=with_labels,
+            blockade_radius=blockade_radius,
+            draw_graph=draw_graph,
+            draw_half_radius=draw_half_radius,
+        )
         pos = np.array(self._coords)
         diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
         diffs[diffs < 9] *= 1.5
@@ -625,7 +605,7 @@ class Register(BaseRegister):
         )  # Figsize is, at most, (10,10)
 
         fig, ax = plt.subplots(figsize=Ls)
-        BaseRegister.draw_2D(
+        BaseRegister._draw_2D(
             ax,
             pos,
             self._ids,
@@ -653,7 +633,14 @@ class Register3D(BaseRegister):
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
-        BaseRegister.__init__(self, qubits)
+        super(Register3D, self).__init__(qubits)
+        coords = [np.array(v, dtype=float) for v in qubits.values()]
+        self._dim = coords[0].size
+        if any(c.shape != (self._dim,) for c in coords) or (self._dim != 3):
+            raise ValueError(
+                "All coordinates must be specified as vectors of size 3."
+            )
+        self._coords = coords
 
     @classmethod
     def cubic(
@@ -811,31 +798,18 @@ class Register3D(BaseRegister):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-        # Check dimensions
-        if self._dim != 3:
-            raise NotImplementedError("Can only draw register layouts in 3D.")
-
-        # Check spacing
-        if blockade_radius is not None and blockade_radius <= 0.0:
-            raise ValueError(
-                "Blockade radius (`blockade_radius` ="
-                f" {blockade_radius})"
-                " must be greater than 0."
-            )
+        super().draw(
+            with_labels=with_labels,
+            blockade_radius=blockade_radius,
+            draw_graph=draw_graph,
+            draw_half_radius=draw_half_radius,
+        )
 
         pos = np.array(self._coords)
 
         if draw_graph and blockade_radius is not None:
             epsilon = 1e-9  # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
-
-        if draw_half_radius:
-            if blockade_radius is None:
-                raise ValueError("Define 'blockade_radius' to draw.")
-            if len(pos) == 1:
-                raise NotImplementedError(
-                    "Needs more than one atom to draw " "the blockade radius."
-                )
 
         if projection:
             diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
@@ -854,7 +828,7 @@ class Register3D(BaseRegister):
 
             fig, axes = plt.subplots(ncols=3, figsize=Ls)
             for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
-                BaseRegister.draw_2D(
+                BaseRegister._draw_2D(
                     ax,
                     pos,
                     self._ids,

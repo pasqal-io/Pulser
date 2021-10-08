@@ -19,8 +19,8 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser.devices import Chadoq2
-from pulser.register import Register
+from pulser.devices import Chadoq2, MockDevice
+from pulser.register import Register, Register3D
 
 
 def test_init():
@@ -83,9 +83,13 @@ def test_validate_register():
     with pytest.raises(ValueError, match="at most 50 μm away from the center"):
         Chadoq2.validate_register(Register.from_coordinates(coords))
 
-    with pytest.raises(ValueError, match="must be 2D vectors"):
+    with pytest.raises(ValueError, match="at most 2D vectors"):
         coords = [(-10, 4, 0), (0, 0, 0)]
-        Chadoq2.validate_register(Register(dict(enumerate(coords))))
+        Chadoq2.validate_register(Register3D(dict(enumerate(coords))))
+
+    with pytest.raises(ValueError, match="vectors of size 3"):
+        coords = [(-10, 4, 2, 1), (0, 0, 9, 12)]
+        MockDevice.validate_register(Register3D(dict(enumerate(coords))))
 
     with pytest.raises(ValueError, match="don't respect the minimal distance"):
         Chadoq2.validate_register(

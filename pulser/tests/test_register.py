@@ -24,27 +24,27 @@ from pulser.devices import Chadoq2
 def test_creation():
     empty_dict = {}
     with pytest.raises(ValueError, match="Cannot create a Register with"):
-        BaseRegister(empty_dict)
+        Register(empty_dict)
 
     coords = [(0, 0), (1, 0)]
     ids = ["q0", "q1"]
     qubits = dict(zip(ids, coords))
     with pytest.raises(TypeError):
-        BaseRegister(coords)
-        BaseRegister(ids)
+        Register(coords)
+        Register(ids)
 
-    with pytest.raises(ValueError, match="vectors of size 2 or 3"):
-        BaseRegister.from_coordinates([(0, 1, 0, 1)])
+    with pytest.raises(ValueError, match="vectors of size 2"):
+        Register.from_coordinates([(0, 1, 0, 1)])
 
-    with pytest.raises(ValueError, match="vectors of size 2 or 3"):
-        BaseRegister.from_coordinates([((1, 0),), ((-1, 0),)])
+    with pytest.raises(ValueError, match="vectors of size 3"):
+        Register3D.from_coordinates([((1, 0),), ((-1, 0),)])
 
-    reg1 = BaseRegister(qubits)
-    reg2 = BaseRegister.from_coordinates(coords, center=False, prefix="q")
+    reg1 = Register(qubits)
+    reg2 = Register.from_coordinates(coords, center=False, prefix="q")
     assert np.all(np.array(reg1._coords) == np.array(reg2._coords))
     assert reg1._ids == reg2._ids
 
-    reg3 = BaseRegister.from_coordinates(np.array(coords), prefix="foo")
+    reg3 = Register.from_coordinates(np.array(coords), prefix="foo")
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
     assert reg3._ids == ["foo0", "foo1"]
     assert np.all(reg3._coords == coords_)
@@ -247,9 +247,6 @@ def test_max_connectivity():
 
 
 def test_rotation():
-    with pytest.raises(NotImplementedError):
-        reg_ = Register.from_coordinates([(1, 0, 0), (0, 1, 4)])
-        reg_.rotate(20)
     reg = Register.square(2, spacing=np.sqrt(2))
     reg.rotate(45)
     coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
@@ -257,13 +254,12 @@ def test_rotation():
 
 
 def test_drawing():
-    with pytest.raises(NotImplementedError, match="register layouts in 2D."):
-        reg_ = Register.from_coordinates([(1, 0, 0), (0, 1, 4)])
-        reg_.draw()
-
     with pytest.raises(ValueError, match="Blockade radius"):
         reg = Register.from_coordinates([(1, 0), (0, 1)])
-        reg.draw(blockade_radius=0.0)
+        reg.draw(blockade_radius=0.0, draw_half_radius=True)
+
+    reg = Register.from_coordinates([(1, 0), (0, 1)])
+    reg.draw(blockade_radius=0.1, draw_graph=True)
 
     reg = Register.triangular_lattice(3, 8)
     with patch("matplotlib.pyplot.show"):
@@ -310,10 +306,6 @@ def test_cubic():
 
 
 def test_drawing3D():
-    with pytest.raises(NotImplementedError, match="register layouts in 3D."):
-        reg_ = Register3D.from_coordinates([(1, 0), (0, 1)])
-        reg_.draw()
-
     with pytest.raises(ValueError, match="Blockade radius"):
         reg = Register3D.from_coordinates([(1, 0, 0), (0, 0, 1)])
         reg.draw(blockade_radius=0.0)
