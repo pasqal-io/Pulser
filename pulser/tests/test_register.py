@@ -280,19 +280,19 @@ def test_drawing():
 def test_orthorombic():
     # Check rows
     with pytest.raises(ValueError, match="The number of rows"):
-        Register3D.orthorhombic(0, 2, 2)
+        Register3D.cuboid(0, 2, 2)
 
     # Check columns
     with pytest.raises(ValueError, match="The number of columns"):
-        Register3D.orthorhombic(2, 0, 2)
+        Register3D.cuboid(2, 0, 2)
 
     # Check layers
     with pytest.raises(ValueError, match="The number of layers"):
-        Register3D.orthorhombic(2, 2, 0)
+        Register3D.cuboid(2, 2, 0)
 
     # Check spacing
     with pytest.raises(ValueError, match="Spacing"):
-        Register3D.orthorhombic(2, 2, 2, 0.0)
+        Register3D.cuboid(2, 2, 2, 0.0)
 
 
 def test_cubic():
@@ -314,14 +314,14 @@ def test_drawing3D():
     with patch("matplotlib.pyplot.show"):
         reg.draw()
 
-    reg = Register3D.orthorhombic(1, 8, 2)
+    reg = Register3D.cuboid(1, 8, 2)
     with patch("matplotlib.pyplot.show"):
         reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
 
     with pytest.raises(ValueError, match="'blockade_radius' to draw."):
         reg.draw(draw_half_radius=True)
 
-    reg = Register3D.orthorhombic(2, 2, 2)
+    reg = Register3D.cuboid(2, 2, 2)
     with patch("matplotlib.pyplot.show"):
         reg.draw(
             blockade_radius=5,
@@ -330,7 +330,7 @@ def test_drawing3D():
             projection=True,
         )
 
-    reg = Register3D.orthorhombic(2, 2, 2)
+    reg = Register3D.cuboid(2, 2, 2)
     with patch("matplotlib.pyplot.show"):
         reg.draw(
             blockade_radius=5,
@@ -346,8 +346,8 @@ def test_drawing3D():
 
 def test_to_2D():
     with pytest.raises(ValueError, match="e"):
-        reg = Register3D.orthorhombic(2, 2, 2)
+        reg = Register3D.cuboid(2, 2, 2)
         reg.to_2D()
 
-    reg = Register3D.orthorhombic(2, 2, 1)
+    reg = Register3D.cuboid(2, 2, 1)
     reg.to_2D()

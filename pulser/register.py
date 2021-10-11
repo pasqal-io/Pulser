@@ -114,26 +114,44 @@ class BaseRegister(ABC):
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            # plot_ids = list(ids)
             plot_ids = [f"{i}" for i in ids]
             # Threshold distance between points
             epsilon = 1.0e-4
 
             i = 0
+            bbs = {}
             while i < len(plot_ids):
                 r = plot_pos[i]
                 j = i + 1
+                overlap = False
                 while j < len(plot_ids):
                     r2 = plot_pos[j]
                     if np.max(np.abs(r - r2)) < epsilon:
-                        plot_ids[i] += "," + plot_ids.pop(j)
+                        plot_ids[i] += ", " + plot_ids.pop(j)
                         plot_pos.pop(j)
+                        overlap = True
                     else:
                         j += 1
+                bbs[plot_ids[i]] = overlap
                 i += 1
 
             for q, coords in zip(plot_ids, plot_pos):
-                ax.annotate(q, coords, fontsize=12, ha="left", va="bottom")
+                # ax.annotate(q, coords, fontsize=12, ha="left", va="bottom")
+                bb = (
+                    dict(boxstyle="square", fill=False, ec="gray", ls="--")
+                    if bbs[q]
+                    else None
+                )
+                txt = ax.text(
+                    coords[0],
+                    coords[1],
+                    q,
+                    ha="left",
+                    va="bottom",
+                    wrap=True,
+                    bbox=bb,
+                )
+                txt._get_wrap_line_width = lambda: 40.0
 
         if draw_half_radius and blockade_radius is not None:
             for p in pos:
@@ -144,6 +162,7 @@ class BaseRegister(ABC):
                     color="darkgreen",
                 )
                 ax.add_patch(circle)
+                ax.autoscale()
         if draw_graph and blockade_radius is not None:
             epsilon = 1e-9  # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
@@ -700,12 +719,10 @@ class Register3D(BaseRegister):
                 " must be greater than or equal to 1."
             )
 
-        return cls.orthorhombic(
-            side, side, side, spacing=spacing, prefix=prefix
-        )
+        return cls.cuboid(side, side, side, spacing=spacing, prefix=prefix)
 
     @classmethod
-    def orthorhombic(
+    def cuboid(
         cls,
         rows: int,
         columns: int,
@@ -713,7 +730,7 @@ class Register3D(BaseRegister):
         spacing: float = 4.0,
         prefix: Optional[str] = None,
     ) -> Register3D:
-        """Initializes the register with the qubits in a orthorhombic array.
+        """Initializes the register with the qubits in a cuboid array.
 
         Args:
             rows (int): Number of rows.
@@ -728,7 +745,7 @@ class Register3D(BaseRegister):
 
         Returns:
             Register3D : A 3D register with qubits placed in
-                an orthorhombic array.
+                an cuboid array.
         """
         # Check rows
         if rows < 1:
@@ -959,5 +976,4 @@ class Register3D(BaseRegister):
                 ax.set_ylabel("y (µm)")
                 ax.set_zlabel("z (µm)")
 
-        plt.tight_layout()
         plt.show()
