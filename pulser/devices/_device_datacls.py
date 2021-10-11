@@ -20,7 +20,8 @@ from typing import Any
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from pulser import Register, Register3D, Pulse
+from pulser import Register, Pulse
+from pulser.register import BaseRegister
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
 
@@ -107,10 +108,11 @@ class Device:
         Args:
             register(pulser.Register): The Register to validate.
         """
-        if not (
-            isinstance(register, Register) or isinstance(register, Register3D)
-        ):
-            raise TypeError("register has to be a pulser.Register instance.")
+        if not (isinstance(register, BaseRegister)):
+            raise TypeError(
+                "register has to be a pulser.Register or "
+                "a pulser.Register3D instance."
+            )
 
         atoms = list(register.qubits.values())
         if len(atoms) > self.max_atom_num:

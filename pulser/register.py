@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-
 from collections.abc import Mapping, Iterable
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
@@ -89,6 +88,7 @@ class BaseRegister(ABC):
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
+    @staticmethod
     def _draw_2D(
         ax: plt.axes._subplots.AxesSubplot,
         pos: np.ndarray,
@@ -112,10 +112,28 @@ class BaseRegister(ABC):
         ax.spines["top"].set_color("none")
 
         if with_labels:
-            for q, coords in zip(ids, pos):
-                ax.annotate(
-                    q, coords[[ix, iy]], fontsize=12, ha="left", va="bottom"
-                )
+            # Determine which labels would overlap and merge those
+            plot_pos = list(pos[:, (ix, iy)])
+            # plot_ids = list(ids)
+            plot_ids = [f"{i}" for i in ids]
+            # Threshold distance between points
+            epsilon = 1.0e-4
+
+            i = 0
+            while i < len(plot_ids):
+                r = plot_pos[i]
+                j = i + 1
+                while j < len(plot_ids):
+                    r2 = plot_pos[j]
+                    if np.max(np.abs(r - r2)) < epsilon:
+                        plot_ids[i] += "," + plot_ids.pop(j)
+                        plot_pos.pop(j)
+                    else:
+                        j += 1
+                i += 1
+
+            for q, coords in zip(plot_ids, plot_pos):
+                ax.annotate(q, coords, fontsize=12, ha="left", va="bottom")
 
         if draw_half_radius and blockade_radius is not None:
             for p in pos:
@@ -141,6 +159,20 @@ class BaseRegister(ABC):
             # Only draw central axis lines when not drawing the graph
             ax.axvline(0, c="grey", alpha=0.5, linestyle=":")
             ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
+
+    @staticmethod
+    def _register_dims(
+        pos: np.ndarray,
+        blockade_radius: Optional[float] = None,
+        draw_half_radius: bool = False,
+    ) -> np.ndarray:
+        diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
+        diffs[diffs < 9] *= 1.5
+        diffs[diffs < 9] += 2
+        if blockade_radius and draw_half_radius:
+            diffs[diffs < blockade_radius] = blockade_radius
+
+        return np.array(diffs)
 
     def draw(
         self,
@@ -197,14 +229,14 @@ class Register(BaseRegister):
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
-        super(Register, self).__init__(qubits)
-        coords = [np.array(v, dtype=float) for v in qubits.values()]
-        self._dim = coords[0].size
-        if any(c.shape != (self._dim,) for c in coords) or (self._dim != 2):
+        super().__init__(qubits)
+        self._dim = self._coords[0].size
+        if any(c.shape != (self._dim,) for c in self._coords) or (
+            self._dim != 2
+        ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 2."
             )
-        self._coords = coords
 
     @classmethod
     def square(
@@ -593,11 +625,11 @@ class Register(BaseRegister):
             draw_half_radius=draw_half_radius,
         )
         pos = np.array(self._coords)
-        diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
-        diffs[diffs < 9] *= 1.5
-        diffs[diffs < 9] += 2
-        if blockade_radius and draw_half_radius:
-            diffs[diffs < blockade_radius] = blockade_radius
+        diffs = super()._register_dims(
+            pos,
+            blockade_radius=blockade_radius,
+            draw_half_radius=draw_half_radius,
+        )
         big_side = max(diffs)
         proportions = diffs / big_side
         Ls = proportions * min(
@@ -605,7 +637,7 @@ class Register(BaseRegister):
         )  # Figsize is, at most, (10,10)
 
         fig, ax = plt.subplots(figsize=Ls)
-        BaseRegister._draw_2D(
+        super()._draw_2D(
             ax,
             pos,
             self._ids,
@@ -633,7 +665,7 @@ class Register3D(BaseRegister):
 
     def __init__(self, qubits: Mapping[Any, ArrayLike]):
         """Initializes a custom Register."""
-        super(Register3D, self).__init__(qubits)
+        super().__init__(qubits)
         coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = coords[0].size
         if any(c.shape != (self._dim,) for c in coords) or (self._dim != 3):
@@ -649,7 +681,7 @@ class Register3D(BaseRegister):
         """Initializes the register with the qubits in a cubic array.
 
         Args:
-            side (int): Side of the cubic in number of qubits.
+            side (int): Side of the cube in number of qubits.
 
         Keyword args:
             spacing(float): The distance between neighbouring qubits in μm.
@@ -659,7 +691,7 @@ class Register3D(BaseRegister):
 
         Returns:
             Register3D : A 3D register with qubits placed in
-                an orthorhombic array.
+                a cubic array.
         """
         # Check side
         if side < 1:
@@ -754,12 +786,13 @@ class Register3D(BaseRegister):
         coords = np.array(self._coords)
         prefix = str(self._ids[0])[:-1]
 
-        G = coords.sum(axis=0) / coords.shape[0]
+        barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
-        u, s, vh = np.linalg.svd(coords - G)
+        u, s, vh = np.linalg.svd(coords - barycenter)
         width = min(s)
+        # A set of vector is coplanar if one of the Singular values is 0
         if width > 0:
-            raise ValueError(f"Atoms are not coplanar (`width` = {width})")
+            raise ValueError(f"Atoms are not coplanar (`width` = {width} µm)")
         else:
             e_x = vh[0, :]
             e_y = vh[1, :]
@@ -812,23 +845,38 @@ class Register3D(BaseRegister):
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
 
         if projection:
-            diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
-            diffs[diffs < 9] *= 1.5
-            diffs[diffs < 9] += 2
-            if blockade_radius and draw_half_radius:
-                diffs[diffs < blockade_radius] = blockade_radius
-            big_side = max(diffs[:2])
-            proportions = diffs[:2] / big_side
-            proportions[0] *= 3
-            Ls = proportions * min(
-                big_side / 4, 10
-            )  # Figsize is, at most, (10,10)
+            diffs = super()._register_dims(
+                pos,
+                blockade_radius=blockade_radius,
+                draw_half_radius=draw_half_radius,
+            )
+
+            proportions = []
+            for (ix, iy) in combinations(np.arange(3), 2):
+                big_side = max(diffs[[ix, iy]])
+                Ls = diffs[[ix, iy]] / big_side
+                Ls *= max(
+                    min(big_side / 4, 10), 4
+                )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
+                proportions.append(Ls)
+
+            fig_height = np.max([Ls[1] for Ls in proportions])
+
+            for i, (width, height) in enumerate(proportions):
+                proportions[i] = (width * fig_height / height, fig_height)
+            widths = [Ls[0] for Ls in proportions]
+            fig_width = np.sum(widths)
 
             labels = "xyz"
 
-            fig, axes = plt.subplots(ncols=3, figsize=Ls)
+            fig, axes = plt.subplots(
+                ncols=3,
+                figsize=(fig_width, fig_height),
+                gridspec_kw=dict(width_ratios=widths),
+            )
+
             for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
-                BaseRegister._draw_2D(
+                super()._draw_2D(
                     ax,
                     pos,
                     self._ids,
@@ -842,7 +890,10 @@ class Register3D(BaseRegister):
                     draw_half_radius=draw_half_radius,
                 )
                 ax.set_title(
-                    "Projection onto the " + labels[ix] + labels[iy] + "-plane"
+                    "Projection onto\n the "
+                    + labels[ix]
+                    + labels[iy]
+                    + "-plane"
                 )
 
         else:
