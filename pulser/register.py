@@ -933,6 +933,7 @@ class Register3D(BaseRegister):
                         )
 
                 if draw_half_radius and blockade_radius is not None:
+                    mesh_num = 20 if len(self._ids) > 10 else 40
                     for r in pos:
                         x0, y0, z0 = r
                         radius = blockade_radius / 2
@@ -941,8 +942,8 @@ class Register3D(BaseRegister):
                         # u, v = np.pi * np.mgrid[0:2:50j, 0:1:50j]
 
                         v, u = np.meshgrid(
-                            np.linspace(0, np.pi, num=50),
-                            np.linspace(0, 2 * np.pi, num=50),
+                            np.linspace(0, np.pi, num=mesh_num),
+                            np.linspace(0, 2 * np.pi, num=mesh_num),
                         )
                         x = radius * np.cos(u) * np.sin(v) + x0
                         y = radius * np.sin(u) * np.sin(v) + y0
