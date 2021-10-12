@@ -797,6 +797,7 @@ class Register3D(BaseRegister):
         Args:
             tol_width (float): The allowed transverse width of
             the register to be projected.
+
         Returns:
             Register : Returns a 2D register with the coordinates
             of the atoms in a plane, if they are coplanar.
