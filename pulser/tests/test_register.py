@@ -327,16 +327,16 @@ def test_drawing3D():
             blockade_radius=5,
             draw_half_radius=True,
             draw_graph=True,
-            projection=True,
+            projection=False,
+            with_labels=True,
         )
-
-    reg = Register3D.cuboid(2, 2, 2)
     with patch("matplotlib.pyplot.show"):
         reg.draw(
             blockade_radius=5,
             draw_half_radius=True,
             draw_graph=False,
             projection=True,
+            with_labels=True,
         )
 
     reg = Register3D.cubic(1)

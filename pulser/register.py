@@ -116,7 +116,7 @@ class BaseRegister(ABC):
             plot_pos = list(pos[:, (ix, iy)])
             plot_ids = [f"{i}" for i in ids]
             # Threshold distance between points
-            epsilon = 1.0e-4
+            epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
             i = 0
             bbs = {}
@@ -142,16 +142,17 @@ class BaseRegister(ABC):
                     if bbs[q]
                     else None
                 )
+                v_al = "center" if bbs[q] else "bottom"
                 txt = ax.text(
                     coords[0],
                     coords[1],
                     q,
                     ha="left",
-                    va="bottom",
+                    va=v_al,
                     wrap=True,
                     bbox=bb,
                 )
-                txt._get_wrap_line_width = lambda: 40.0
+                txt._get_wrap_line_width = lambda: 50.0
 
         if draw_half_radius and blockade_radius is not None:
             for p in pos:
@@ -790,9 +791,12 @@ class Register3D(BaseRegister):
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
-    def to_2D(self) -> Register:
+    def to_2D(self, tol_width: float = 0.0) -> Register:
         """Converts a Register3D into a Register (if possible).
 
+        Args:
+            tol_width (float): The allowed transverse width of
+            the register to be projected.
         Returns:
             Register : Returns a 2D register with the coordinates
             of the atoms in a plane, if they are coplanar.
@@ -808,7 +812,7 @@ class Register3D(BaseRegister):
         u, s, vh = np.linalg.svd(coords - barycenter)
         width = min(s)
         # A set of vector is coplanar if one of the Singular values is 0
-        if width > 0:
+        if width > tol_width:
             raise ValueError(f"Atoms are not coplanar (`width` = {width} µm)")
         else:
             e_x = vh[0, :]
@@ -820,7 +824,7 @@ class Register3D(BaseRegister):
 
     def draw(
         self,
-        with_labels: bool = True,
+        with_labels: bool = False,
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
@@ -879,16 +883,21 @@ class Register3D(BaseRegister):
 
             fig_height = np.max([Ls[1] for Ls in proportions])
 
+            max_width = 0
             for i, (width, height) in enumerate(proportions):
                 proportions[i] = (width * fig_height / height, fig_height)
-            widths = [Ls[0] for Ls in proportions]
-            fig_width = np.sum(widths)
+                max_width = max(max_width, proportions[i][0])
+            widths = [max(Ls[0], max_width / 5) for Ls in proportions]
+            fig_width = min(np.sum(widths), fig_height * 4)
+
+            rescaling = 20 / max(max(fig_width, fig_height), 20)
+            figsize = (rescaling * fig_width, rescaling * fig_height)
 
             labels = "xyz"
 
             fig, axes = plt.subplots(
                 ncols=3,
-                figsize=(fig_width, fig_height),
+                figsize=figsize,
                 gridspec_kw=dict(width_ratios=widths),
             )
 
@@ -975,5 +984,4 @@ class Register3D(BaseRegister):
                 ax.set_xlabel("x (µm)")
                 ax.set_ylabel("y (µm)")
                 ax.set_zlabel("z (µm)")
-
         plt.show()
