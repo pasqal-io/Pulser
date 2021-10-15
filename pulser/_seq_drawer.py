@@ -446,4 +446,4 @@ def draw_sequence(
                 pts = np.array(all_points["detuning"])
                 b.scatter(pts[:, 0], pts[:, 1], color="indigo")
 
-    plt.show()
+    return fig

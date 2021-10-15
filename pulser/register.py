@@ -459,6 +459,9 @@ class Register:
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        savefig: bool = False,
+        savefig_args: tuple = (),
+        savefig_kwargs: dict = dict()
     ) -> None:
         """Draws the entire register.
 
@@ -541,6 +544,9 @@ class Register:
             # Only draw central axis lines when not drawing the graph
             ax.axvline(0, c="grey", alpha=0.5, linestyle=":")
             ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
+
+        if savefig:
+            plt.savefig(*savefig_args, **savefig_kwargs)
 
         plt.show()
 

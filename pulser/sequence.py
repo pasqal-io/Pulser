@@ -24,6 +24,7 @@ import json
 from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
+import matplotlib.pyplot as plt
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -928,12 +929,29 @@ class Sequence:
             Simulation.draw(): Draws the provided sequence and the one used by
             the solver.
         """
-        draw_sequence(
+        fig = draw_sequence(
             self,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
         )
+        plt.show()
+
+    def savefig(
+        self,
+        fig_name: str,
+        draw_phase_area: bool = False,
+        draw_interp_pts: bool = True,
+        draw_phase_shifts: bool = False,
+        kwargs_save_fig: dict = {}
+    ) -> None:
+        fig = draw_sequence(
+            self,
+            draw_phase_area=draw_phase_area,
+            draw_interp_pts=draw_interp_pts,
+            draw_phase_shifts=draw_phase_shifts,
+        )
+        fig.savefig(fig_name, **kwargs_save_fig)
 
     def _target(
         self, qubits: Union[Iterable[QubitId], QubitId], channel: str
