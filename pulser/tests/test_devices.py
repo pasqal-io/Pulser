@@ -87,10 +87,6 @@ def test_validate_register():
         coords = [(-10, 4, 0), (0, 0, 0)]
         Chadoq2.validate_register(Register3D(dict(enumerate(coords))))
 
-    with pytest.raises(ValueError, match="vectors of size 3"):
-        coords = [(-10, 4, 2, 1), (0, 0, 9, 12)]
-        MockDevice.validate_register(Register3D(dict(enumerate(coords))))
-
     with pytest.raises(ValueError, match="don't respect the minimal distance"):
         Chadoq2.validate_register(
             Register.triangular_lattice(3, 4, spacing=3.9)

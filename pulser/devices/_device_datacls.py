@@ -102,7 +102,7 @@ class Device:
         """
         return self.interaction_coeff / blockade_radius ** 6
 
-    def validate_register(self, register: Register) -> None:
+    def validate_register(self, register: BaseRegister) -> None:
         """Checks if 'register' is compatible with this device.
 
         Args:

@@ -259,7 +259,8 @@ def test_drawing():
         reg.draw(blockade_radius=0.0, draw_half_radius=True)
 
     reg = Register.from_coordinates([(1, 0), (0, 1)])
-    reg.draw(blockade_radius=0.1, draw_graph=True)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(blockade_radius=0.1, draw_graph=True)
 
     reg = Register.triangular_lattice(3, 8)
     with patch("matplotlib.pyplot.show"):
@@ -345,9 +346,10 @@ def test_drawing3D():
 
 
 def test_to_2D():
-    with pytest.raises(ValueError, match="e"):
-        reg = Register3D.cuboid(2, 2, 2)
+    reg = Register3D.cuboid(2, 2, 2)
+    with pytest.raises(ValueError, match="Atoms are not coplanar"):
         reg.to_2D()
+    reg.to_2D(tol_width=6)
 
     reg = Register3D.cuboid(2, 2, 1)
     reg.to_2D()

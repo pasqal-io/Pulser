@@ -136,7 +136,6 @@ class BaseRegister(ABC):
                 i += 1
 
             for q, coords in zip(plot_ids, plot_pos):
-                # ax.annotate(q, coords, fontsize=12, ha="left", va="bottom")
                 bb = (
                     dict(boxstyle="square", fill=False, ec="gray", ls="--")
                     if bbs[q]
@@ -186,7 +185,8 @@ class BaseRegister(ABC):
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
     ) -> np.ndarray:
-        diffs = np.max(pos, axis=0) - np.min(pos, axis=0)
+        """Returns the dimensions of the register to be drawn."""
+        diffs = np.ptp(pos, axis=0)
         diffs[diffs < 9] *= 1.5
         diffs[diffs < 9] += 2
         if blockade_radius and draw_half_radius:
@@ -811,10 +811,14 @@ class Register3D(BaseRegister):
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
         u, s, vh = np.linalg.svd(coords - barycenter)
-        width = min(s)
+        e_z = vh[2, :]
+        perp_extent = [e_z.dot(r) for r in coords]
+        width = np.ptp(perp_extent)
         # A set of vector is coplanar if one of the Singular values is 0
         if width > tol_width:
-            raise ValueError(f"Atoms are not coplanar (`width` = {width} µm)")
+            raise ValueError(
+                f"Atoms are not coplanar (`width` = {width:#.2f} µm)"
+            )
         else:
             e_x = vh[0, :]
             e_y = vh[1, :]
@@ -935,7 +939,7 @@ class Register3D(BaseRegister):
 
             for i in range(1, 3):
                 ax = fig.add_subplot(
-                    1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=30
+                    1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=15
                 )
 
                 ax.scatter(
@@ -969,7 +973,7 @@ class Register3D(BaseRegister):
                         # u, v = np.pi * np.mgrid[0:2:50j, 0:1:50j]
 
                         v, u = np.meshgrid(
-                            np.linspace(0, np.pi, num=mesh_num),
+                            np.arccos(np.linspace(-1, 1, num=mesh_num)),
                             np.linspace(0, 2 * np.pi, num=mesh_num),
                         )
                         x = radius * np.cos(u) * np.sin(v) + x0
