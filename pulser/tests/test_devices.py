@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import Chadoq2
 from pulser.register import Register, Register3D
 
 

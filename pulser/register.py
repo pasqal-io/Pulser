@@ -50,6 +50,7 @@ class BaseRegister(ABC):
             )
         self._ids = list(qubits.keys())
         self._coords = [np.array(v, dtype=float) for v in qubits.values()]
+        self._dim = 0
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
