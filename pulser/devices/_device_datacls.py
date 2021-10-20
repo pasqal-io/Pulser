@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from scipy.spatial.distance import pdist
+from scipy.spatial.distance import pdist, squareform
 
 from pulser import Pulse
 from pulser.register import BaseRegister
@@ -114,6 +114,7 @@ class Device:
                 "a pulser.Register3D instance."
             )
 
+        ids = list(register.qubits.keys())
         atoms = list(register.qubits.values())
         if len(atoms) > self.max_atom_num:
             raise ValueError(
@@ -131,17 +132,25 @@ class Device:
 
         if len(atoms) > 1:
             distances = pdist(atoms)  # Pairwise distance between atoms
-            if np.min(distances) < self.min_atom_distance:
+            if np.any(distances < self.min_atom_distance):
+                sq_dists = squareform(distances)
+                mask = np.triu(np.ones(len(atoms), dtype=bool), k=1)
+                bad_pairs = np.argwhere(
+                    np.logical_and(sq_dists < self.min_atom_distance, mask)
+                )
+                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
                 raise ValueError(
-                    "Qubit positions don't respect the minimal "
-                    "distance between atoms for this device."
+                    "The minimal distance between atoms in this device "
+                    f"({self.min_atom_distance} µm) is not respected for the "
+                    f"pairs: {bad_qbt_pairs}"
                 )
 
-        if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
+        too_far = np.linalg.norm(atoms, axis=1) > self.max_radial_distance
+        if np.any(too_far):
             raise ValueError(
-                "All qubits must be at most "
-                f"{self.max_radial_distance} μm away from the "
-                "center of the array."
+                f"All qubits must be at most {self.max_radial_distance} μm "
+                f"away from the center of the array, which is not the case "
+                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
             )
 
     def validate_pulse(self, pulse: Pulse, channel_id: str) -> None:
