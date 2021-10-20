@@ -17,7 +17,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser import Register
+from pulser import Register, Register3D
 from pulser.devices import Chadoq2
 
 
@@ -33,11 +33,11 @@ def test_creation():
         Register(coords)
         Register(ids)
 
-    with pytest.raises(ValueError, match="vectors of size 2 or 3"):
+    with pytest.raises(ValueError, match="vectors of size 2"):
         Register.from_coordinates([(0, 1, 0, 1)])
 
-    with pytest.raises(ValueError, match="vectors of size 2 or 3"):
-        Register.from_coordinates([((1, 0),), ((-1, 0),)])
+    with pytest.raises(ValueError, match="vectors of size 3"):
+        Register3D.from_coordinates([((1, 0),), ((-1, 0),)])
 
     reg1 = Register(qubits)
     reg2 = Register.from_coordinates(coords, center=False, prefix="q")
@@ -247,9 +247,6 @@ def test_max_connectivity():
 
 
 def test_rotation():
-    with pytest.raises(NotImplementedError):
-        reg_ = Register.from_coordinates([(1, 0, 0), (0, 1, 4)])
-        reg_.rotate(20)
     reg = Register.square(2, spacing=np.sqrt(2))
     reg.rotate(45)
     coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
@@ -257,13 +254,13 @@ def test_rotation():
 
 
 def test_drawing():
-    with pytest.raises(NotImplementedError, match="register layouts in 2D."):
-        reg_ = Register.from_coordinates([(1, 0, 0), (0, 1, 4)])
-        reg_.draw()
-
     with pytest.raises(ValueError, match="Blockade radius"):
         reg = Register.from_coordinates([(1, 0), (0, 1)])
-        reg.draw(blockade_radius=0.0)
+        reg.draw(blockade_radius=0.0, draw_half_radius=True)
+
+    reg = Register.from_coordinates([(1, 0), (0, 1)])
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(blockade_radius=0.1, draw_graph=True)
 
     reg = Register.triangular_lattice(3, 8)
     with patch("matplotlib.pyplot.show"):
@@ -279,3 +276,80 @@ def test_drawing():
     reg = Register.square(1)
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True)
+
+
+def test_orthorombic():
+    # Check rows
+    with pytest.raises(ValueError, match="The number of rows"):
+        Register3D.cuboid(0, 2, 2)
+
+    # Check columns
+    with pytest.raises(ValueError, match="The number of columns"):
+        Register3D.cuboid(2, 0, 2)
+
+    # Check layers
+    with pytest.raises(ValueError, match="The number of layers"):
+        Register3D.cuboid(2, 2, 0)
+
+    # Check spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register3D.cuboid(2, 2, 2, 0.0)
+
+
+def test_cubic():
+    # Check side
+    with pytest.raises(ValueError, match="The number of atoms per side"):
+        Register3D.cubic(0)
+
+    # Check spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register3D.cubic(2, 0.0)
+
+
+def test_drawing3D():
+    with pytest.raises(ValueError, match="Blockade radius"):
+        reg = Register3D.from_coordinates([(1, 0, 0), (0, 0, 1)])
+        reg.draw(blockade_radius=0.0)
+
+    reg = Register3D.cubic(3, 8)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw()
+
+    reg = Register3D.cuboid(1, 8, 2)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
+
+    with pytest.raises(ValueError, match="'blockade_radius' to draw."):
+        reg.draw(draw_half_radius=True)
+
+    reg = Register3D.cuboid(2, 2, 2)
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(
+            blockade_radius=5,
+            draw_half_radius=True,
+            draw_graph=True,
+            projection=False,
+            with_labels=True,
+        )
+    with patch("matplotlib.pyplot.show"):
+        reg.draw(
+            blockade_radius=5,
+            draw_half_radius=True,
+            draw_graph=False,
+            projection=True,
+            with_labels=True,
+        )
+
+    reg = Register3D.cubic(1)
+    with pytest.raises(NotImplementedError, match="Needs more than one atom"):
+        reg.draw(blockade_radius=5, draw_half_radius=True)
+
+
+def test_to_2D():
+    reg = Register3D.cuboid(2, 2, 2)
+    with pytest.raises(ValueError, match="Atoms are not coplanar"):
+        reg.to_2D()
+    reg.to_2D(tol_width=6)
+
+    reg = Register3D.cuboid(2, 2, 1)
+    reg.to_2D()

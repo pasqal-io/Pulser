@@ -20,7 +20,8 @@ from typing import Any
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
-from pulser import Register, Pulse
+from pulser import Pulse
+from pulser.register import BaseRegister
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
 
@@ -101,14 +102,17 @@ class Device:
         """
         return self.interaction_coeff / blockade_radius ** 6
 
-    def validate_register(self, register: Register) -> None:
+    def validate_register(self, register: BaseRegister) -> None:
         """Checks if 'register' is compatible with this device.
 
         Args:
             register(pulser.Register): The Register to validate.
         """
-        if not isinstance(register, Register):
-            raise TypeError("register has to be a pulser.Register instance.")
+        if not (isinstance(register, BaseRegister)):
+            raise TypeError(
+                "register has to be a pulser.Register or "
+                "a pulser.Register3D instance."
+            )
 
         ids = list(register.qubits.keys())
         atoms = list(register.qubits.values())
@@ -120,9 +124,10 @@ class Device:
                 f" ({self.max_atom_num})."
             )
 
-        if register._dim != self.dimensions:
+        if register._dim > self.dimensions:
             raise ValueError(
-                f"All qubit positions must be {self.dimensions}D " "vectors."
+                f"All qubit positions must be at most {self.dimensions}D "
+                "vectors."
             )
 
         if len(atoms) > 1:

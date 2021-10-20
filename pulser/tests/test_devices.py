@@ -20,7 +20,7 @@ import pytest
 
 import pulser
 from pulser.devices import Chadoq2
-from pulser.register import Register
+from pulser.register import Register, Register3D
 
 
 def test_init():
@@ -43,7 +43,7 @@ def test_init():
 
 def test_mock():
     dev = pulser.devices.MockDevice
-    assert dev.dimensions == 2
+    assert dev.dimensions == 3
     assert dev.max_atom_num > 1000
     assert dev.min_atom_distance <= 1
     assert dev.interaction_coeff == 5008713
@@ -83,9 +83,9 @@ def test_validate_register():
     with pytest.raises(ValueError, match="at most 50 μm away from the center"):
         Chadoq2.validate_register(Register.from_coordinates(coords))
 
-    with pytest.raises(ValueError, match="must be 2D vectors"):
+    with pytest.raises(ValueError, match="at most 2D vectors"):
         coords = [(-10, 4, 0), (0, 0, 0)]
-        Chadoq2.validate_register(Register(dict(enumerate(coords))))
+        Chadoq2.validate_register(Register3D(dict(enumerate(coords))))
 
     with pytest.raises(ValueError, match="The minimal distance between atoms"):
         Chadoq2.validate_register(
