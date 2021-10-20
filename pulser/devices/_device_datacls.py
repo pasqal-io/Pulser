@@ -130,7 +130,9 @@ class Device:
             if np.any(distances < self.min_atom_distance):
                 sq_dists = squareform(distances)
                 mask = np.triu(np.ones(len(atoms), dtype=bool), k=1)
-                bad_pairs = np.argwhere(np.logical_and(sq_dists < 5, mask))
+                bad_pairs = np.argwhere(
+                    np.logical_and(sq_dists < self.min_atom_distance, mask)
+                )
                 bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
                 raise ValueError(
                     "The minimal distance between atoms in this device "
