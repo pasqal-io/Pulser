@@ -24,7 +24,7 @@ from pulser import Pulse
 from pulser.register import BaseRegister
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
-
+from pulser.devices.C6_list import C6_list 
 
 @dataclass(frozen=True, repr=False)
 class Device:
@@ -37,6 +37,7 @@ class Device:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
+        rybderg level : The rydberg level used.
         interaction_coeff: :math:`C_6/\hbar`
             (in :math:`\mu m^6 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
@@ -52,8 +53,9 @@ class Device:
     max_radial_distance: int
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
+    rydberg_level: int = 60
     # Ising interaction coeff
-    interaction_coeff: float = 5008713.0
+    interaction_coeff: float = 2*np.pi*C6_list[rydberg_level]
     interaction_coeff_xy: float = 3700.0
 
     def __post_init__(self) -> None:
