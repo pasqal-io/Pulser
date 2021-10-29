@@ -74,15 +74,11 @@ class Waveform(ABC):
                 f"type {type(duration)} was provided."
             )
         if _duration <= 0:
-            raise ValueError(
-                "A waveform must have a positive duration, "
-                + f"not {duration}."
-            )
+            raise ValueError("A waveform must have a positive duration, " + f"not {duration}.")
         elif duration - _duration != 0:
             warnings.warn(
                 f"A waveform duration of {duration} ns is below the"
-                " supported precision of 1 ns. It was rounded down "
-                + f"to {_duration} ns.",
+                " supported precision of 1 ns. It was rounded down " + f"to {_duration} ns.",
                 stacklevel=3,
             )
 
@@ -137,8 +133,7 @@ class Waveform(ABC):
             new_duration(int): The duration of the new waveform.
         """
         raise NotImplementedError(
-            f"{self.__class__.__name__} does not support"
-            " modifications to its duration."
+            f"{self.__class__.__name__} does not support" " modifications to its duration."
         )
 
     @abstractmethod
@@ -153,9 +148,7 @@ class Waveform(ABC):
     def __repr__(self) -> str:
         pass
 
-    def __getitem__(
-        self, index_or_slice: Union[int, slice]
-    ) -> Union[float, np.ndarray]:
+    def __getitem__(self, index_or_slice: Union[int, slice]) -> Union[float, np.ndarray]:
         if isinstance(index_or_slice, slice):
             s: slice = self._check_slice(index_or_slice)
             return cast(np.ndarray, self._samples[s])
@@ -179,15 +172,9 @@ class Waveform(ABC):
 
         # Transform start and stop indexes into positive or null values
         # since they can be omitted (None) or negative (end-indexing)
-        start = (
-            0
-            if s.start is None
-            else (s.start if s.start >= 0 else self.duration + s.start)
-        )
+        start = 0 if s.start is None else (s.start if s.start >= 0 else self.duration + s.start)
         stop = (
-            self.duration
-            if s.stop is None
-            else (s.stop if s.stop >= 0 else self.duration + s.stop)
+            self.duration if s.stop is None else (s.stop if s.stop >= 0 else self.duration + s.stop)
         )
 
         # Correct out of bounds ranges
@@ -228,9 +215,7 @@ class Waveform(ABC):
     def __hash__(self) -> int:
         return hash(tuple(self.samples))
 
-    def _plot(
-        self, ax: Axes, ylabel: str, color: Optional[str] = None
-    ) -> None:
+    def _plot(self, ax: Axes, ylabel: str, color: Optional[str] = None) -> None:
         ax.set_xlabel("t (ns)")
         ts = np.arange(self.duration)
         if color:
@@ -254,9 +239,7 @@ class CompositeWaveform(Waveform):
     def __init__(self, *waveforms: Union[Parametrized, Waveform]):
         """Initializes a waveform from multiple waveforms."""
         if len(waveforms) < 2:
-            raise ValueError(
-                "Needs at least two waveforms to form a " "CompositeWaveform."
-            )
+            raise ValueError("Needs at least two waveforms to form a " "CompositeWaveform.")
         waveforms = cast(Tuple[Waveform], waveforms)
         for wf in waveforms:
             self._validate(wf)
@@ -278,9 +261,7 @@ class CompositeWaveform(Waveform):
         Returns:
             numpy.ndarray: A numpy array with a value for each time step.
         """
-        return cast(
-            np.ndarray, np.concatenate([wf.samples for wf in self._waveforms])
-        )
+        return cast(np.ndarray, np.concatenate([wf.samples for wf in self._waveforms]))
 
     @property
     def waveforms(self) -> list[Waveform]:
@@ -290,8 +271,7 @@ class CompositeWaveform(Waveform):
     def _validate(self, waveform: Waveform) -> None:
         if not isinstance(waveform, Waveform):
             raise TypeError(
-                f"{waveform!r} is not a valid waveform. "
-                "Please provide a valid Waveform."
+                f"{waveform!r} is not a valid waveform. " "Please provide a valid Waveform."
             )
 
     def _to_dict(self) -> dict[str, Any]:
@@ -402,10 +382,7 @@ class ConstantWaveform(Waveform):
         return f"{self._value:.3g} rad/µs"
 
     def __repr__(self) -> str:
-        return (
-            f"ConstantWaveform({self._duration} ns, "
-            + f"{self._value:.3g} rad/µs)"
-        )
+        return f"ConstantWaveform({self._duration} ns, " + f"{self._value:.3g} rad/µs)"
 
     def __mul__(self, other: float) -> ConstantWaveform:
         return ConstantWaveform(self._duration, self._value * float(other))
@@ -471,8 +448,7 @@ class RampWaveform(Waveform):
 
     def __repr__(self) -> str:
         return (
-            f"RampWaveform({self._duration} ns, "
-            + f"{self._start:.3g}->{self._stop:.3g} rad/µs)"
+            f"RampWaveform({self._duration} ns, " + f"{self._start:.3g}->{self._stop:.3g} rad/µs)"
         )
 
     def __mul__(self, other: float) -> RampWaveform:
@@ -501,16 +477,11 @@ class BlackmanWaveform(Waveform):
             self._area: float = float(cast(float, area))
         except (TypeError, ValueError):
             raise TypeError(
-                "area needs to be castable to a float but "
-                f"type {type(area)} was provided."
+                "area needs to be castable to a float but " f"type {type(area)} was provided."
             )
 
-        self._norm_samples: np.ndarray = np.clip(
-            np.blackman(self._duration), 0, np.inf
-        )
-        self._scaling: float = (
-            self._area / float(np.sum(self._norm_samples)) / 1e-3
-        )
+        self._norm_samples: np.ndarray = np.clip(np.blackman(self._duration), 0, np.inf)
+        self._scaling: float = self._area / float(np.sum(self._norm_samples)) / 1e-3
 
     @classmethod
     @parametrize
@@ -536,9 +507,7 @@ class BlackmanWaveform(Waveform):
         area = cast(float, area)
         area_sign = np.sign(area)
         if np.sign(max_val) != area_sign:
-            raise ValueError(
-                "The maximum value and the area must have " "matching signs."
-            )
+            raise ValueError("The maximum value and the area must have " "matching signs.")
 
         # Deal only with positive areas
         area *= float(area_sign)
@@ -643,18 +612,12 @@ class InterpolatedWaveform(Waveform):
                     f"({len(self._values)})."
                 )
             if np.any(times_ < 0):
-                raise ValueError(
-                    "All values in `times` must be greater than or equal to 0."
-                )
+                raise ValueError("All values in `times` must be greater than or equal to 0.")
             if np.any(times_ > 1):
-                raise ValueError(
-                    "All values in `times` must be less than or equal to 1."
-                )
+                raise ValueError("All values in `times` must be less than or equal to 1.")
             unique_times = np.unique(times)  # Sorted array of unique values
             if len(times_) != len(unique_times):
-                raise ValueError(
-                    "`times` must be an array of non-repeating values."
-                )
+                raise ValueError("`times` must be an array of non-repeating values.")
             self._times = times_
         else:
             self._times = np.linspace(0, 1, num=len(self._values))
@@ -667,12 +630,7 @@ class InterpolatedWaveform(Waveform):
             )
         interp_cls = getattr(interpolate, interpolator)
         self._data_pts = np.array(
-            [
-                (round(t), v)
-                for t, v in zip(
-                    self._times * (self._duration - 1), self._values
-                )
-            ]
+            [(round(t), v) for t, v in zip(self._times * (self._duration - 1), self._values)]
         )
         self._interp_func = interp_cls(
             self._data_pts[:, 0], self._data_pts[:, 1], **interpolator_kwargs
@@ -722,9 +680,7 @@ class InterpolatedWaveform(Waveform):
         """
         return InterpolatedWaveform(new_duration, self._values, **self._kwargs)
 
-    def _plot(
-        self, ax: Axes, ylabel: str, color: Optional[str] = None
-    ) -> None:
+    def _plot(self, ax: Axes, ylabel: str, color: Optional[str] = None) -> None:
         super()._plot(ax, ylabel, color=color)
         ax.scatter(self._data_pts[:, 0], self._data_pts[:, 1], c=color)
 
@@ -740,9 +696,7 @@ class InterpolatedWaveform(Waveform):
         return self.__str__()[:-1] + interp_str
 
     def __mul__(self, other: float) -> InterpolatedWaveform:
-        return InterpolatedWaveform(
-            self._duration, self._values * other, **self._kwargs
-        )
+        return InterpolatedWaveform(self._duration, self._values * other, **self._kwargs)
 
 
 class KaiserWaveform(Waveform):
@@ -774,31 +728,24 @@ class KaiserWaveform(Waveform):
             self._area: float = float(cast(float, area))
         except (TypeError, ValueError):
             raise TypeError(
-                "area needs to be castable to a float but "
-                f"type {type(area)} was provided."
+                "area needs to be castable to a float but " f"type {type(area)} was provided."
             )
 
         try:
             self._beta: float = float(cast(float, beta))
         except (TypeError, ValueError):
             raise TypeError(
-                "beta needs to be castable to a float but "
-                f"type {type(beta)} was provided."
+                "beta needs to be castable to a float but " f"type {type(beta)} was provided."
             )
 
         if self._beta < 0.0:
             raise ValueError(
-                f"The beta parameter (`beta` = {self._beta})"
-                " must be greater than 0."
+                f"The beta parameter (`beta` = {self._beta})" " must be greater than 0."
             )
 
-        self._norm_samples: np.ndarray = np.clip(
-            np.kaiser(self._duration, self._beta), 0, np.inf
-        )
+        self._norm_samples: np.ndarray = np.clip(np.kaiser(self._duration, self._beta), 0, np.inf)
 
-        self._scaling: float = (
-            self._area / float(np.sum(self._norm_samples)) / 1e-3
-        )
+        self._scaling: float = self._area / float(np.sum(self._norm_samples)) / 1e-3
 
     @classmethod
     @parametrize
@@ -827,9 +774,7 @@ class KaiserWaveform(Waveform):
         area = cast(float, area)
 
         if np.sign(max_val) != np.sign(area):
-            raise ValueError(
-                "The maximum value and the area must have matching signs."
-            )
+            raise ValueError("The maximum value and the area must have matching signs.")
 
         # All computations will be done on a positive area
 
@@ -918,10 +863,7 @@ class KaiserWaveform(Waveform):
         return obj_to_dict(self, self._duration, self._area, self._beta)
 
     def __str__(self) -> str:
-        return (
-            f"Kaiser({self._duration} ns, "
-            f"Area: {self._area:.3g}, Beta: {self._beta:.3g})"
-        )
+        return f"Kaiser({self._duration} ns, " f"Area: {self._area:.3g}, Beta: {self._beta:.3g})"
 
     def __repr__(self) -> str:
         return (
@@ -930,9 +872,7 @@ class KaiserWaveform(Waveform):
         )
 
     def __mul__(self, other: float) -> KaiserWaveform:
-        return KaiserWaveform(
-            self._duration, self._area * float(other), self._beta
-        )
+        return KaiserWaveform(self._duration, self._area * float(other), self._beta)
 
 
 # To replicate __init__'s signature in __new__ for every Waveform subclass

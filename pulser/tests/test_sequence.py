@@ -60,9 +60,7 @@ def test_channel_declaration():
         seq.declare_channel("ch0", "raman_local")
 
     chs = {"rydberg_global", "raman_local"}
-    assert seq._schedule["ch0"][-1] == _TimeSlot(
-        "target", -1, 0, set(seq.qubit_info.keys())
-    )
+    assert seq._schedule["ch0"][-1] == _TimeSlot("target", -1, 0, set(seq.qubit_info.keys()))
     assert set(seq.available_channels) == available_channels - chs
 
     seq2 = Sequence(reg, MockDevice)
@@ -153,14 +151,10 @@ def test_target():
     assert seq._schedule["ch0"][-1] == _TimeSlot("target", -1, 0, {"q1"})
     seq.target("q4", "ch0")
     retarget_t = seq.declared_channels["ch0"].retarget_time
-    assert seq._schedule["ch0"][-1] == _TimeSlot(
-        "target", 0, retarget_t, {"q4"}
-    )
+    assert seq._schedule["ch0"][-1] == _TimeSlot("target", 0, retarget_t, {"q4"})
     seq.target("q4", "ch0")  # targets the same qubit
     seq.target("q20", "ch0")
-    assert seq._schedule["ch0"][-1] == _TimeSlot(
-        "target", retarget_t, 2 * retarget_t, {"q20"}
-    )
+    assert seq._schedule["ch0"][-1] == _TimeSlot("target", retarget_t, 2 * retarget_t, {"q20"})
     seq.delay(216, "ch0")
     seq.target("q2", "ch0")
     ti = 2 * retarget_t + 216
@@ -212,9 +206,7 @@ def test_delay_min_duration():
     seq.target("q1", "ch1")
     seq.add(pulse1, "ch1")
     min_duration = seq._channels["ch1"].min_duration
-    assert seq._schedule["ch1"][3] == _TimeSlot(
-        "delay", 220, 220 + min_duration, {"q1"}
-    )
+    assert seq._schedule["ch1"][3] == _TimeSlot("delay", 220, 220 + min_duration, {"q1"})
 
 
 def test_min_pulse_duration():
@@ -328,7 +320,7 @@ def test_sequence():
 
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.pyplot.savefig"):
-            seq.draw(fig_name='my_sequence.pdf')
+            seq.draw(fig_name="my_sequence.pdf")
 
     pulse1 = Pulse(
         InterpolatedWaveform(500, [0, 1, 0]),
@@ -336,21 +328,13 @@ def test_sequence():
         phase=0,
         post_phase_shift=np.pi,
     )
-    pulse2 = Pulse.ConstantDetuning(
-        BlackmanWaveform(1e3, np.pi / 4), 25, np.pi, post_phase_shift=1
-    )
+    pulse2 = Pulse.ConstantDetuning(BlackmanWaveform(1e3, np.pi / 4), 25, np.pi, post_phase_shift=1)
     with pytest.raises(TypeError):
         seq.add([1, 5, 3], "ch0")
     with pytest.raises(ValueError, match="amplitude goes over the maximum"):
-        seq.add(
-            Pulse.ConstantPulse(20, 2 * np.pi * 10, -2 * np.pi * 100, 0), "ch2"
-        )
-    with pytest.raises(
-        ValueError, match="detuning values go out of the range"
-    ):
-        seq.add(
-            Pulse.ConstantPulse(500, 2 * np.pi, -2 * np.pi * 100, 0), "ch0"
-        )
+        seq.add(Pulse.ConstantPulse(20, 2 * np.pi * 10, -2 * np.pi * 100, 0), "ch2")
+    with pytest.raises(ValueError, match="detuning values go out of the range"):
+        seq.add(Pulse.ConstantPulse(500, 2 * np.pi, -2 * np.pi * 100, 0), "ch0")
     with pytest.raises(ValueError, match="qubits with different phase ref"):
         seq.add(pulse2, "ch2")
     with pytest.raises(ValueError, match="Invalid protocol"):
@@ -480,17 +464,13 @@ def test_slm_mask():
     # Try to set mask when Ising was already declared
     seq_ising1 = Sequence(reg, MockDevice)
     seq_ising1.declare_channel("ch_rg", "rydberg_global")
-    with pytest.raises(
-        NotImplementedError, match="SLM mask can only be added in XY mode"
-    ):
+    with pytest.raises(NotImplementedError, match="SLM mask can only be added in XY mode"):
         seq_ising1.config_slm_mask(targets)
 
     # Try to set mask and then declare Ising
     seq_ising2 = Sequence(reg, MockDevice)
     seq_ising2.config_slm_mask(targets)
-    with pytest.raises(
-        NotImplementedError, match="SLM mask is not yet available in Ising"
-    ):
+    with pytest.raises(NotImplementedError, match="SLM mask is not yet available in Ising"):
         seq_ising2.declare_channel("ch_rg", "rydberg_global")
 
     # Set mask when an XY pulse is already in the schedule

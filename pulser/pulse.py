@@ -71,20 +71,14 @@ class Pulse:
 
     def __post_init__(self) -> None:
         """Initializes a new Pulse."""
-        if not (
-            isinstance(self.amplitude, Waveform)
-            and isinstance(self.detuning, Waveform)
-        ):
+        if not (isinstance(self.amplitude, Waveform) and isinstance(self.detuning, Waveform)):
             raise TypeError("'amplitude' and 'detuning' have to be waveforms.")
 
         if self.detuning.duration != self.amplitude.duration:
-            raise ValueError(
-                "The duration of detuning and amplitude waveforms must match."
-            )
+            raise ValueError("The duration of detuning and amplitude waveforms must match.")
         if np.any(self.amplitude.samples < 0):
             raise ValueError(
-                "All samples of an amplitude waveform must be "
-                "greater than or equal to zero."
+                "All samples of an amplitude waveform must be " "greater than or equal to zero."
             )
 
         self.__dict__["phase"] %= 2 * np.pi
@@ -183,8 +177,7 @@ class Pulse:
 
     def __str__(self) -> str:
         return (
-            f"Pulse(Amp={self.amplitude!s}, Detuning={self.detuning!s}, "
-            f"Phase={self.phase:.3g})"
+            f"Pulse(Amp={self.amplitude!s}, Detuning={self.detuning!s}, " f"Phase={self.phase:.3g})"
         )
 
     def __repr__(self) -> str:

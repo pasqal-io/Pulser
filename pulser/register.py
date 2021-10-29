@@ -45,9 +45,7 @@ class BaseRegister(ABC):
                 "matching qubit ids to position coordinates."
             )
         if not qubits:
-            raise ValueError(
-                "Cannot create a Register with an empty qubit " "dictionary."
-            )
+            raise ValueError("Cannot create a Register with an empty qubit " "dictionary.")
         self._ids = list(qubits.keys())
         self._coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = 0
@@ -137,11 +135,7 @@ class BaseRegister(ABC):
                 i += 1
 
             for q, coords in zip(plot_ids, plot_pos):
-                bb = (
-                    dict(boxstyle="square", fill=False, ec="gray", ls="--")
-                    if bbs[q]
-                    else None
-                )
+                bb = dict(boxstyle="square", fill=False, ec="gray", ls="--") if bbs[q] else None
                 v_al = "center" if bbs[q] else "bottom"
                 txt = ax.text(
                     coords[0],
@@ -252,17 +246,11 @@ class Register(BaseRegister):
         """Initializes a custom Register."""
         super().__init__(qubits)
         self._dim = self._coords[0].size
-        if any(c.shape != (self._dim,) for c in self._coords) or (
-            self._dim != 2
-        ):
-            raise ValueError(
-                "All coordinates must be specified as vectors of size 2."
-            )
+        if any(c.shape != (self._dim,) for c in self._coords) or (self._dim != 2):
+            raise ValueError("All coordinates must be specified as vectors of size 2.")
 
     @classmethod
-    def square(
-        cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
-    ) -> Register:
+    def square(cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a square array.
 
         Args:
@@ -312,8 +300,7 @@ class Register(BaseRegister):
         # Check rows
         if rows < 1:
             raise ValueError(
-                f"The number of rows (`rows` = {rows})"
-                " must be greater than or equal to 1."
+                f"The number of rows (`rows` = {rows})" " must be greater than or equal to 1."
             )
 
         # Check columns
@@ -326,8 +313,7 @@ class Register(BaseRegister):
         # Check spacing
         if spacing <= 0.0:
             raise ValueError(
-                f"Spacing between atoms (`spacing` = {spacing})"
-                " must be greater than 0."
+                f"Spacing between atoms (`spacing` = {spacing})" " must be greater than 0."
             )
 
         coords = (
@@ -370,8 +356,7 @@ class Register(BaseRegister):
         # Check rows
         if rows < 1:
             raise ValueError(
-                f"The number of rows (`rows` = {rows})"
-                " must be greater than or equal to 1."
+                f"The number of rows (`rows` = {rows})" " must be greater than or equal to 1."
             )
 
         # Check atoms per row
@@ -385,8 +370,7 @@ class Register(BaseRegister):
         # Check spacing
         if spacing <= 0.0:
             raise ValueError(
-                f"Spacing between atoms (`spacing` = {spacing})"
-                " must be greater than 0."
+                f"Spacing between atoms (`spacing` = {spacing})" " must be greater than 0."
             )
 
         coords = np.array(
@@ -483,9 +467,7 @@ class Register(BaseRegister):
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
     @classmethod
-    def hexagon(
-        cls, layers: int, spacing: float = 4.0, prefix: Optional[str] = None
-    ) -> Register:
+    def hexagon(cls, layers: int, spacing: float = 4.0, prefix: Optional[str] = None) -> Register:
         """Initializes the register with the qubits in a hexagonal layout.
 
         Args:
@@ -503,15 +485,13 @@ class Register(BaseRegister):
         # Check layers
         if layers < 1:
             raise ValueError(
-                f"The number of layers (`layers` = {layers})"
-                " must be greater than or equal to 1."
+                f"The number of layers (`layers` = {layers})" " must be greater than or equal to 1."
             )
 
         # Check spacing
         if spacing <= 0.0:
             raise ValueError(
-                f"Spacing between atoms (`spacing` = {spacing})"
-                " must be greater than 0."
+                f"Spacing between atoms (`spacing` = {spacing})" " must be greater than 0."
             )
 
         return cls._hexagon_helper(layers, 0, spacing, prefix)
@@ -548,8 +528,7 @@ class Register(BaseRegister):
         # Check device
         if not isinstance(device, pulser.devices._device_datacls.Device):
             raise TypeError(
-                "'device' must be of type 'Device'. Import a valid"
-                " device from 'pulser.devices'."
+                "'device' must be of type 'Device'. Import a valid" " device from 'pulser.devices'."
             )
 
         # Check number of qubits (1 or above)
@@ -607,9 +586,7 @@ class Register(BaseRegister):
             degrees (float): The angle of rotation in degrees.
         """
         theta = np.deg2rad(degrees)
-        rot = np.array(
-            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
-        )
+        rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
         self._coords = [rot @ v for v in self._coords]
 
     def draw(
@@ -619,7 +596,7 @@ class Register(BaseRegister):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         fig_name: str = None,
-        kwargs_savefig: dict = {}
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
 
@@ -655,9 +632,7 @@ class Register(BaseRegister):
         )
         big_side = max(diffs)
         proportions = diffs / big_side
-        Ls = proportions * min(
-            big_side / 4, 10
-        )  # Figsize is, at most, (10,10)
+        Ls = proportions * min(big_side / 4, 10)  # Figsize is, at most, (10,10)
 
         fig, ax = plt.subplots(figsize=Ls)
         super()._draw_2D(
@@ -693,15 +668,11 @@ class Register3D(BaseRegister):
         coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = coords[0].size
         if any(c.shape != (self._dim,) for c in coords) or (self._dim != 3):
-            raise ValueError(
-                "All coordinates must be specified as vectors of size 3."
-            )
+            raise ValueError("All coordinates must be specified as vectors of size 3.")
         self._coords = coords
 
     @classmethod
-    def cubic(
-        cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
-    ) -> Register3D:
+    def cubic(cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None) -> Register3D:
         """Initializes the register with the qubits in a cubic array.
 
         Args:
@@ -755,8 +726,7 @@ class Register3D(BaseRegister):
         # Check rows
         if rows < 1:
             raise ValueError(
-                f"The number of rows (`rows` = {rows})"
-                " must be greater than or equal to 1."
+                f"The number of rows (`rows` = {rows})" " must be greater than or equal to 1."
             )
 
         # Check columns
@@ -769,25 +739,18 @@ class Register3D(BaseRegister):
         # Check layers
         if layers < 1:
             raise ValueError(
-                f"The number of layers (`layers` = {layers})"
-                " must be greater than or equal to 1."
+                f"The number of layers (`layers` = {layers})" " must be greater than or equal to 1."
             )
 
         # Check spacing
         if spacing <= 0.0:
             raise ValueError(
-                f"Spacing between atoms (`spacing` = {spacing})"
-                " must be greater than 0."
+                f"Spacing between atoms (`spacing` = {spacing})" " must be greater than 0."
             )
 
         coords = (
             np.array(
-                [
-                    (x, y, z)
-                    for z in range(layers)
-                    for y in range(rows)
-                    for x in range(columns)
-                ],
+                [(x, y, z) for z in range(layers) for y in range(rows) for x in range(columns)],
                 dtype=float,
             )
             * spacing
@@ -820,15 +783,11 @@ class Register3D(BaseRegister):
         width = np.ptp(perp_extent)
         # A set of vector is coplanar if one of the Singular values is 0
         if width > tol_width:
-            raise ValueError(
-                f"Atoms are not coplanar (`width` = {width:#.2f} µm)"
-            )
+            raise ValueError(f"Atoms are not coplanar (`width` = {width:#.2f} µm)")
         else:
             e_x = vh[0, :]
             e_y = vh[1, :]
-            coords_2D = np.array(
-                [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
-            )
+            coords_2D = np.array([np.array([e_x.dot(r), e_y.dot(r)]) for r in coords])
             return Register.from_coordinates(coords_2D, prefix=prefix)
 
     def draw(
@@ -839,7 +798,7 @@ class Register3D(BaseRegister):
         draw_half_radius: bool = False,
         projection: bool = False,
         fig_name: str = None,
-        kwargs_savefig: dict = {}
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
 
@@ -926,12 +885,7 @@ class Register3D(BaseRegister):
                     draw_graph=draw_graph,
                     draw_half_radius=draw_half_radius,
                 )
-                ax.set_title(
-                    "Projection onto\n the "
-                    + labels[ix]
-                    + labels[iy]
-                    + "-plane"
-                )
+                ax.set_title("Projection onto\n the " + labels[ix] + labels[iy] + "-plane")
 
         else:
             fig = plt.figure(figsize=2 * plt.figaspect(0.5))
@@ -944,9 +898,7 @@ class Register3D(BaseRegister):
                     bonds[(i, j)] = [[xi, xj], [yi, yj], [zi, zj]]
 
             for i in range(1, 3):
-                ax = fig.add_subplot(
-                    1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=15
-                )
+                ax = fig.add_subplot(1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=15)
 
                 ax.scatter(
                     pos[:, 0],

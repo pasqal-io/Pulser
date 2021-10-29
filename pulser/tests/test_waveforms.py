@@ -141,10 +141,7 @@ def test_composite():
     assert composite.waveforms == [blackman, constant, custom]
 
     wf = CompositeWaveform(blackman, constant)
-    msg = (
-        "BlackmanWaveform(40 ns, Area: 3.14), "
-        + "ConstantWaveform(100 ns, -3 rad/µs)"
-    )
+    msg = "BlackmanWaveform(40 ns, Area: 3.14), " + "ConstantWaveform(100 ns, -3 rad/µs)"
     assert wf.__str__() == f"Composite({msg})"
     assert wf.__repr__() == f"CompositeWaveform(140 ns, [{msg}])"
 
@@ -213,19 +210,13 @@ def test_interpolated():
     with pytest.raises(ValueError, match="must be less than or equal to 1"):
         InterpolatedWaveform(1000, interp_values, times=times + 0.21)
     with pytest.raises(ValueError, match="array of non-repeating values"):
-        InterpolatedWaveform(
-            1000, interp_values, times=[0.2] + times[:-1].tolist()
-        )
+        InterpolatedWaveform(1000, interp_values, times=[0.2] + times[:-1].tolist())
 
     with pytest.raises(ValueError, match="Invalid interpolator 'fake'"):
-        InterpolatedWaveform(
-            1000, interp_values, times=times, interpolator="fake"
-        )
+        InterpolatedWaveform(1000, interp_values, times=times, interpolator="fake")
 
     dt = 1000
-    interp_wf = InterpolatedWaveform(
-        dt, [0, 1], interpolator="interp1d", kind="linear"
-    )
+    interp_wf = InterpolatedWaveform(dt, [0, 1], interpolator="interp1d", kind="linear")
     assert isinstance(interp_wf.interp_function, interp1d)
     np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 1.0, num=dt))
 
@@ -237,12 +228,8 @@ def test_interpolated():
     assert repr(interp_wf) == wf_str + ", Interpolator=interp1d)"
 
     vals = np.linspace(0, 1, num=5) ** 2
-    interp_wf2 = InterpolatedWaveform(
-        dt, vals, interpolator="interp1d", kind="quadratic"
-    )
-    np.testing.assert_allclose(
-        interp_wf2.samples, np.linspace(0, 1, num=dt) ** 2, atol=1e-3
-    )
+    interp_wf2 = InterpolatedWaveform(dt, vals, interpolator="interp1d", kind="quadratic")
+    np.testing.assert_allclose(interp_wf2.samples, np.linspace(0, 1, num=dt) ** 2, atol=1e-3)
 
 
 def test_kaiser():
@@ -272,9 +259,7 @@ def test_kaiser():
     wf_default_beta = KaiserWaveform(duration, area)
     kaiser_beta_14: np.ndarray = np.kaiser(duration, 14.0)
     kaiser_beta_14 *= area / float(np.sum(kaiser_beta_14)) / 1e-3
-    np.testing.assert_allclose(
-        wf_default_beta.samples, kaiser_beta_14, atol=1e-3
-    )
+    np.testing.assert_allclose(wf_default_beta.samples, kaiser_beta_14, atol=1e-3)
 
     # Check area
     assert np.isclose(np.sum(wf.samples), area * 1000.0)
@@ -286,14 +271,11 @@ def test_kaiser():
     assert np.isclose(np.sum(wf.samples), np.sum(wf_change_duration.samples))
 
     # Check __str__
-    assert str(wf) == (
-        f"Kaiser({duration} ns, Area: {area:.3g}, Beta: {beta:.3g})"
-    )
+    assert str(wf) == (f"Kaiser({duration} ns, Area: {area:.3g}, Beta: {beta:.3g})")
 
     # Check __repr__
     assert repr(wf) == (
-        f"KaiserWaveform(duration: {duration}, "
-        f"area: {area:.3g}, beta: {beta:.3g})"
+        f"KaiserWaveform(duration: {duration}, " f"area: {area:.3g}, beta: {beta:.3g})"
     )
 
     # Check multiplication
@@ -357,9 +339,7 @@ def test_get_item():
     ):
         constant[-duration - 1]
 
-    with pytest.raises(
-        IndexError, match="The step of the slice must be None or 1."
-    ):
+    with pytest.raises(IndexError, match="The step of the slice must be None or 1."):
         constant[0:1:2]
 
     # Check nominal operations
@@ -382,25 +362,15 @@ def test_get_item():
         assert (wf[-1:] == samples[-1:]).all()
         assert (wf[:duration] == samples).all()
         assert (wf[:] == samples).all()
-        assert (
-            wf[duration14:duration34] == samples[duration14:duration34]
-        ).all()
-        assert (
-            wf[-duration34:-duration14] == samples[-duration34:-duration14]
-        ).all()
+        assert (wf[duration14:duration34] == samples[duration14:duration34]).all()
+        assert (wf[-duration34:-duration14] == samples[-duration34:-duration14]).all()
 
         # Check with out of bounds slices
         assert (wf[: duration * 2] == samples).all()
         assert (wf[-duration * 2 :] == samples).all()
         assert (wf[-duration * 2 : duration * 2] == samples).all()
-        assert (
-            wf[duration // 2 : duration * 2]
-            == samples[duration // 2 : duration * 2]
-        ).all()
-        assert (
-            wf[-duration * 2 : duration // 2]
-            == samples[-duration * 2 : duration // 2]
-        ).all()
+        assert (wf[duration // 2 : duration * 2] == samples[duration // 2 : duration * 2]).all()
+        assert (wf[-duration * 2 : duration // 2] == samples[-duration * 2 : duration // 2]).all()
         assert wf[2:1].size == 0
         assert wf[duration * 2 :].size == 0
         assert wf[duration * 2 : duration * 3].size == 0

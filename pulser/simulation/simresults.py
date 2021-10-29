@@ -36,9 +36,7 @@ class SimulationResults(ABC):
     from them.
     """
 
-    def __init__(
-        self, size: int, basis_name: str, sim_times: np.ndarray
-    ) -> None:
+    def __init__(self, size: int, basis_name: str, sim_times: np.ndarray) -> None:
         """Initializes a new SimulationResults instance.
 
         Args:
@@ -51,10 +49,7 @@ class SimulationResults(ABC):
         self._dim = 3 if basis_name == "all" else 2
         self._size = size
         if basis_name not in {"ground-rydberg", "digital", "all", "XY"}:
-            raise ValueError(
-                "`basis_name` must be 'ground-rydberg', 'digital', 'all' or "
-                "'XY'."
-            )
+            raise ValueError("`basis_name` must be 'ground-rydberg', 'digital', 'all' or " "'XY'.")
         self._basis_name = basis_name
         self._sim_times = sim_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
@@ -103,9 +98,7 @@ class SimulationResults(ABC):
         legal_dims = [[dim] * self._size] * 2
         legal_shape = (dim ** self._size, dim ** self._size)
         for obs in obs_list:
-            if not (
-                isinstance(obs, np.ndarray) or isinstance(obs, qutip.Qobj)
-            ):
+            if not (isinstance(obs, np.ndarray) or isinstance(obs, qutip.Qobj)):
                 raise TypeError(
                     f"Incompatible type {type(obs)} of "
                     + "observable. Type must be ArrayLike or "
@@ -120,18 +113,13 @@ class SimulationResults(ABC):
             if self._use_pseudo_dens:
                 if not isdiagonal(obs):
                     raise ValueError(f"Observable {obs!r} is non-diagonal.")
-                states = [
-                    self._calc_pseudo_density(ind)
-                    for ind in range(len(self._results))
-                ]
+                states = [self._calc_pseudo_density(ind) for ind in range(len(self._results))]
             else:
                 states = self.states
 
         return cast(list, qutip.expect(qobj_list, states))
 
-    def sample_state(
-        self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3
-    ) -> Counter:
+    def sample_state(self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3) -> Counter:
         """Returns the result of multiple measurements at time t.
 
         Args:
@@ -146,12 +134,7 @@ class SimulationResults(ABC):
         """
         t_index = self._get_index_from_time(t, t_tol)
         dist = np.random.multinomial(n_samples, self._calc_weights(t_index))
-        return Counter(
-            {
-                np.binary_repr(i, self._size): dist[i]
-                for i in np.nonzero(dist)[0]
-            }
-        )
+        return Counter({np.binary_repr(i, self._size): dist[i] for i in np.nonzero(dist)[0]})
 
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state.
@@ -209,9 +192,7 @@ class SimulationResults(ABC):
         """
 
         def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
-            proj = qutip.tensor(
-                [self._meas_projector(int(i)) for i in bitstring]
-            )
+            proj = qutip.tensor([self._meas_projector(int(i)) for i in bitstring])
             return proj
 
         w = self._calc_weights(t_index)
@@ -357,9 +338,7 @@ class NoisyResults(SimulationResults):
 
         if error_bars:
             moy, st = get_error_bars()
-            plt.errorbar(
-                self._sim_times, moy, st, fmt=fmt, lw=1, capsize=3, label=label
-            )
+            plt.errorbar(self._sim_times, moy, st, fmt=fmt, lw=1, capsize=3, label=label)
             plt.xlabel("Time (µs)")
             plt.ylabel("Expectation value")
         else:
@@ -402,14 +381,10 @@ class CoherentResults(SimulationResults):
         super().__init__(size, basis_name, sim_times)
         if self._basis_name == "all":
             if meas_basis not in {"ground-rydberg", "digital"}:
-                raise ValueError(
-                    "`meas_basis` must be 'ground-rydberg' or 'digital'."
-                )
+                raise ValueError("`meas_basis` must be 'ground-rydberg' or 'digital'.")
         else:
             if meas_basis != self._basis_name:
-                raise ValueError(
-                    "`meas_basis` and `basis_name` must have the same value."
-                )
+                raise ValueError("`meas_basis` and `basis_name` must have the same value.")
         self._meas_basis = meas_basis
         self._results = run_output
         if meas_errors is not None:
@@ -547,9 +522,7 @@ class CoherentResults(SimulationResults):
                 # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
                 # The same applies in XY mode, which is ordered with u first
-                weights = (
-                    probs if self._meas_basis == "digital" else probs[::-1]
-                )
+                weights = probs if self._meas_basis == "digital" else probs[::-1]
             else:
                 # Only 000...000 is measured
                 weights = np.zeros(probs.size)
@@ -578,8 +551,7 @@ class CoherentResults(SimulationResults):
                 weights[dec_val] = np.sum(probs[tuple(ind)])
         else:
             raise NotImplementedError(
-                "Cannot sample system with single-atom state vectors of "
-                "dimension > 3."
+                "Cannot sample system with single-atom state vectors of " "dimension > 3."
             )
         # Takes care of numerical artefacts in case sum(weights) != 1
         weights /= sum(weights)
@@ -588,9 +560,7 @@ class CoherentResults(SimulationResults):
     def _meas_projector(self, state_n: int) -> qutip.Qobj:
         if self._meas_errors:
             err_param = (
-                self._meas_errors["epsilon"]
-                if state_n == 0
-                else self._meas_errors["epsilon_prime"]
+                self._meas_errors["epsilon"] if state_n == 0 else self._meas_errors["epsilon_prime"]
             )
             # 'good' is the position of the state that measures to state_n
             # Matches for the digital basis, is inverted for ground-rydberg and
@@ -603,9 +573,7 @@ class CoherentResults(SimulationResults):
         # Returns normal projectors in the absence of measurement errors
         return super()._meas_projector(state_n)
 
-    def sample_state(
-        self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3
-    ) -> Counter:
+    def sample_state(self, t: float, n_samples: int = 1000, t_tol: float = 1.0e-3) -> Counter:
         """Returns the result of multiple measurements at time t.
 
         Args:
@@ -631,16 +599,11 @@ class CoherentResults(SimulationResults):
             # Probability of flipping each bit
             flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
             # 1 if it flips, 0 if it stays the same
-            flips = (
-                np.random.uniform(size=(n_detects, len(flip_probs)))
-                < flip_probs
-            ).astype(int)
+            flips = (np.random.uniform(size=(n_detects, len(flip_probs))) < flip_probs).astype(int)
             # XOR betwen the original array and the flips
             # Gives an array of n_detects individual shots
             new_shots = shot_arr ^ flips
             # Count all the new_shots
-            detected_sample_dict += Counter(
-                "".join(map(str, measured)) for measured in new_shots
-            )
+            detected_sample_dict += Counter("".join(map(str, measured)) for measured in new_shots)
 
         return detected_sample_dict

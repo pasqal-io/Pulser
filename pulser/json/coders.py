@@ -61,24 +61,18 @@ class PulserDecoder(JSONDecoder):
         except KeyError:
             return obj
 
-        if (
-            obj_name == "Variable"
-            and module_str == "pulser.parametrized.variable"
-        ):
+        if obj_name == "Variable" and module_str == "pulser.parametrized.variable":
             var_name = obj["name"]
             try:
                 var = self.vars[var_name]
                 assert var.name == var_name, (
-                    f"Variable {var.name} already "
-                    + f"declared under {var_name}."
+                    f"Variable {var.name} already " + f"declared under {var_name}."
                 )
                 assert var.dtype == obj["dtype"], (
-                    "Mismatching variable types for variables under the name "
-                    + f"'{var_name}'."
+                    "Mismatching variable types for variables under the name " + f"'{var_name}'."
                 )
                 assert var.size == obj["size"], (
-                    "Mismatching sizes for variables under the name "
-                    + f"'{var_name}'."
+                    "Mismatching sizes for variables under the name " + f"'{var_name}'."
                 )
             except KeyError:
                 var = Variable(var_name, obj["dtype"], obj["size"])

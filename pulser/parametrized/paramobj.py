@@ -101,10 +101,7 @@ class ParamObj(Parametrized, OpSupport):
         if vars_state != self._vars_state:
             self._vars_state = vars_state
             # Builds all Parametrized arguments before feeding them to cls
-            args_ = [
-                arg.build() if isinstance(arg, Parametrized) else arg
-                for arg in self.args
-            ]
+            args_ = [arg.build() if isinstance(arg, Parametrized) else arg for arg in self.args]
             kwargs_ = {
                 key: val.build() if isinstance(val, Parametrized) else val
                 for key, val in self.kwargs.items()
@@ -118,16 +115,12 @@ class ParamObj(Parametrized, OpSupport):
 
     def _to_dict(self) -> dict[str, Any]:
         def class_to_dict(cls: Callable) -> dict[str, Any]:
-            return obj_to_dict(
-                self, _build=False, _name=cls.__name__, _module=cls.__module__
-            )
+            return obj_to_dict(self, _build=False, _name=cls.__name__, _module=cls.__module__)
 
         args = list(self.args)
         if isinstance(self.cls, Parametrized):
             cls_dict = self.cls._to_dict()
-        elif hasattr(args[0], self.cls.__name__) and inspect.isfunction(
-            self.cls
-        ):
+        elif hasattr(args[0], self.cls.__name__) and inspect.isfunction(self.cls):
             # Check for parametrized methods
             if inspect.isclass(self.args[0]):
                 # classmethod
@@ -141,8 +134,7 @@ class ParamObj(Parametrized, OpSupport):
                 args[0] = class_to_dict(self.args[0])
             else:
                 raise NotImplementedError(
-                    "Instance or static method "
-                    "serialization is not supported."
+                    "Instance or static method " "serialization is not supported."
                 )
         else:
             cls_dict = class_to_dict(self.cls)

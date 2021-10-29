@@ -110,8 +110,7 @@ class Device:
         """
         if not (isinstance(register, BaseRegister)):
             raise TypeError(
-                "register has to be a pulser.Register or "
-                "a pulser.Register3D instance."
+                "register has to be a pulser.Register or " "a pulser.Register3D instance."
             )
 
         ids = list(register.qubits.keys())
@@ -125,19 +124,14 @@ class Device:
             )
 
         if register._dim > self.dimensions:
-            raise ValueError(
-                f"All qubit positions must be at most {self.dimensions}D "
-                "vectors."
-            )
+            raise ValueError(f"All qubit positions must be at most {self.dimensions}D " "vectors.")
 
         if len(atoms) > 1:
             distances = pdist(atoms)  # Pairwise distance between atoms
             if np.any(distances < self.min_atom_distance):
                 sq_dists = squareform(distances)
                 mask = np.triu(np.ones(len(atoms), dtype=bool), k=1)
-                bad_pairs = np.argwhere(
-                    np.logical_and(sq_dists < self.min_atom_distance, mask)
-                )
+                bad_pairs = np.argwhere(np.logical_and(sq_dists < self.min_atom_distance, mask))
                 bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
                 raise ValueError(
                     "The minimal distance between atoms in this device "
@@ -167,13 +161,9 @@ class Device:
                 "The pulse's amplitude goes over the maximum "
                 "value allowed for the chosen channel."
             )
-        if np.any(
-            np.round(np.abs(pulse.detuning.samples), decimals=6)
-            > ch.max_abs_detuning
-        ):
+        if np.any(np.round(np.abs(pulse.detuning.samples), decimals=6) > ch.max_abs_detuning):
             raise ValueError(
-                "The pulse's detuning values go out of the range "
-                "allowed for the chosen channel."
+                "The pulse's detuning values go out of the range " "allowed for the chosen channel."
             )
 
     def _specs(self, for_docs: bool = False) -> str:
@@ -182,10 +172,7 @@ class Device:
             f" - Dimensions: {self.dimensions}D",
             f" - Maximum number of atoms: {self.max_atom_num}",
             f" - Maximum distance from origin: {self.max_radial_distance} μm",
-            (
-                " - Minimum distance between neighbouring atoms: "
-                f"{self.min_atom_distance} μm"
-            ),
+            (" - Minimum distance between neighbouring atoms: " f"{self.min_atom_distance} μm"),
             (
                 r" - Interaction coefficient (:math:`C_6/\hbar`): "
                 fr"{self.interaction_coeff} :math:`\mu m^6 / \mu s`"
@@ -200,16 +187,8 @@ class Device:
                     f" - ID: '{name}'",
                     f"\t- Type: {ch.name} (*{ch.basis}* basis)",
                     f"\t- Addressing: {ch.addressing}",
-                    (
-                        "\t"
-                        + r"- Maximum :math:`\Omega`:"
-                        + f" {ch.max_amp:.4g} rad/µs"
-                    ),
-                    (
-                        "\t"
-                        + r"- Maximum :math:`|\delta|`:"
-                        + f" {ch.max_abs_detuning:.4g} rad/µs"
-                    ),
+                    ("\t" + r"- Maximum :math:`\Omega`:" + f" {ch.max_amp:.4g} rad/µs"),
+                    ("\t" + r"- Maximum :math:`|\delta|`:" + f" {ch.max_abs_detuning:.4g} rad/µs"),
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [
@@ -226,6 +205,4 @@ class Device:
         return "\n".join(lines + ch_lines)
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(
-            self, _build=False, _module="pulser.devices", _name=self.name
-        )
+        return obj_to_dict(self, _build=False, _module="pulser.devices", _name=self.name)
