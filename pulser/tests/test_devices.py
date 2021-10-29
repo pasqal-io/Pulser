@@ -87,7 +87,7 @@ def test_validate_register():
         coords = [(-10, 4, 0), (0, 0, 0)]
         Chadoq2.validate_register(Register3D(dict(enumerate(coords))))
 
-    with pytest.raises(ValueError, match="don't respect the minimal distance"):
+    with pytest.raises(ValueError, match="The minimal distance between atoms"):
         Chadoq2.validate_register(
             Register.triangular_lattice(3, 4, spacing=3.9)
         )
