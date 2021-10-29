@@ -17,11 +17,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Iterable
-import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
+import matplotlib.pyplot as plt
 from typing import Any, cast, Optional, Union, TypeVar, Type
 from itertools import combinations
 
@@ -618,9 +618,8 @@ class Register(BaseRegister):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
-        savefig: bool = False,
-        savefig_args: tuple = (),
-        savefig_kwargs: dict = dict()
+        fig_name: str = None,
+        kwargs_savefig: dict = {}
     ) -> None:
         """Draws the entire register.
 
@@ -670,7 +669,8 @@ class Register(BaseRegister):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
-
+        if fig_name is not None:
+            fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def _to_dict(self) -> dict[str, Any]:
@@ -838,6 +838,8 @@ class Register3D(BaseRegister):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         projection: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {}
     ) -> None:
         """Draws the entire register.
 
@@ -994,4 +996,6 @@ class Register3D(BaseRegister):
                 ax.set_ylabel("y (µm)")
                 ax.set_zlabel("z (µm)")
 
+        if fig_name is not None:
+            fig.savefig(fig_name, **kwargs_savefig)
         plt.show()

@@ -24,8 +24,8 @@ import json
 from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -913,6 +913,8 @@ class Sequence:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {}
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -935,23 +937,10 @@ class Sequence:
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
         )
+        if fig_name is not None:
+            fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
-    def savefig(
-        self,
-        fig_name: str,
-        draw_phase_area: bool = False,
-        draw_interp_pts: bool = True,
-        draw_phase_shifts: bool = False,
-        kwargs_save_fig: dict = {}
-    ) -> None:
-        fig = draw_sequence(
-            self,
-            draw_phase_area=draw_phase_area,
-            draw_interp_pts=draw_interp_pts,
-            draw_phase_shifts=draw_phase_shifts,
-        )
-        fig.savefig(fig_name, **kwargs_save_fig)
 
     def _target(
         self, qubits: Union[Iterable[QubitId], QubitId], channel: str
