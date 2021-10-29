@@ -18,6 +18,7 @@ from collections import defaultdict
 from typing import Any, cast, Optional, Union
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import numpy as np
 from scipy.interpolate import CubicSpline
 
@@ -107,7 +108,7 @@ def draw_sequence(
     draw_phase_area: bool = False,
     draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
-) -> None:
+) -> Figure:
     """Draws the entire sequence.
 
     Args:
