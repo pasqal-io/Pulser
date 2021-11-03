@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Iterable
+from collections.abc import Sequence as abcSequence
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
@@ -63,7 +64,7 @@ class BaseRegister(ABC):
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
-        labels: Optional[ArrayLike] = None,
+        labels: Optional[abcSequence[QubitId]] = None,
     ) -> T:
         """Creates the register from an array of coordinates.
 
@@ -95,6 +96,11 @@ class BaseRegister(ABC):
                 )
 
         elif labels is not None:
+            if len(coords) != len(labels):
+                raise ValueError(
+                    f"Label length ({len(labels)}) does not"
+                    f"match number of coordinates ({len(coords)})"
+                )
             qubits = dict(zip(cast(Iterable, labels), coords))
         else:
             qubits = dict(cast(Iterable, enumerate(coords)))
@@ -818,7 +824,6 @@ class Register3D(BaseRegister):
             If the atoms are not coplanar, raises an error.
         """
         coords = np.array(self._coords)
-        labels = self._ids
 
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
@@ -837,7 +842,7 @@ class Register3D(BaseRegister):
             coords_2D = np.array(
                 [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
             )
-            return Register.from_coordinates(coords_2D, labels=labels)
+            return Register.from_coordinates(coords_2D, labels=self._ids)
 
     def draw(
         self,

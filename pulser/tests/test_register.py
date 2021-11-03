@@ -52,6 +52,9 @@ def test_creation():
     reg2b = Register.from_coordinates(coords, center=False, labels=["a", "b"])
     assert reg2b._ids == ["a", "b"]
 
+    with pytest.raises(ValueError, match="Label length"):
+        Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
+
     reg3 = Register.from_coordinates(np.array(coords), prefix="foo")
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
     assert reg3._ids == ["foo0", "foo1"]
