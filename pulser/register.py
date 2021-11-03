@@ -63,6 +63,7 @@ class BaseRegister(ABC):
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
+        labels: Optional[ArrayLike] = None,
     ) -> T:
         """Creates the register from an array of coordinates.
 
@@ -76,6 +77,8 @@ class BaseRegister(ABC):
             prefix (str): The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+            labels (ArrayLike): The list of qubit ids. If defined, each qubit
+                id will be set to the corresponding value.
 
         Returns:
             Register: A register with qubits placed on the given coordinates.
@@ -85,6 +88,14 @@ class BaseRegister(ABC):
         if prefix is not None:
             pre = str(prefix)
             qubits = {pre + str(i): pos for i, pos in enumerate(coords)}
+            if labels is not None:
+                raise NotImplementedError(
+                    "It is impossible to specify a prefix and "
+                    "a set of labels at the same time"
+                )
+
+        elif labels is not None:
+            qubits = dict(zip(cast(Iterable, labels), coords))
         else:
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
@@ -807,7 +818,7 @@ class Register3D(BaseRegister):
             If the atoms are not coplanar, raises an error.
         """
         coords = np.array(self._coords)
-        prefix = str(self._ids[0])[:-1]
+        labels = self._ids
 
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
@@ -826,7 +837,7 @@ class Register3D(BaseRegister):
             coords_2D = np.array(
                 [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
             )
-            return Register.from_coordinates(coords_2D, prefix=prefix)
+            return Register.from_coordinates(coords_2D, labels=labels)
 
     def draw(
         self,
