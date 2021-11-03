@@ -24,6 +24,7 @@ from scipy.interpolate import CubicSpline
 import pulser
 from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 from pulser.pulse import Pulse
+from pulser.channels import Channel
 
 
 def gather_data(seq: pulser.sequence.Sequence) -> dict:
@@ -107,6 +108,7 @@ def draw_sequence(
     draw_phase_area: bool = False,
     draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
+    draw_register: bool = False,
 ) -> None:
     """Draws the entire sequence.
 
@@ -122,6 +124,9 @@ def draw_sequence(
             top of the respective waveforms (defaults to True).
         draw_phase_shifts (bool): Whether phase shift and reference information
             should be added to the plot, defaults to False.
+        draw_register (bool): Whether to draw the register after the pulse
+            sequence, with a visual indication (square halo) around the qubits
+            masked by the SLM, defaults to False.
     """
 
     def phase_str(phi: float) -> str:
@@ -147,11 +152,45 @@ def draw_sequence(
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    fig = plt.figure(constrained_layout=False, figsize=(20, 4.5 * n_channels))
-    gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
+    fig = plt.figure(
+        constrained_layout=False,
+        figsize=(20, 4.5 * n_channels + 10 * int(draw_register)),
+    )
+    gs = fig.add_gridspec(
+        n_channels + int(draw_register),
+        1,
+        hspace=0.075 + 0.027 * int(draw_register),
+    )
+
+    # Draw the register
+    if draw_register:
+        big_ax = fig.add_subplot(gs[0])
+        big_ax.set_ylabel("Masked register", labelpad=40, fontsize=18)
+        big_ax.spines["top"].set_color("none")
+        big_ax.spines["bottom"].set_color("none")
+        big_ax.spines["left"].set_color("none")
+        big_ax.spines["right"].set_color("none")
+        big_ax.tick_params(
+            labelcolor="w", top=False, bottom=False, left=False, right=False
+        )
+
+        subgs = gs[0].subgridspec(1, 2)
+        ax = fig.add_subplot(subgs[0, 0])
+        seq._register._draw_2D(
+            ax=ax,
+            pos=np.array(seq._register._coords),
+            ids=seq._register._ids,
+            masked_qubits=seq._slm_mask_targets,
+        )
 
     ch_axes = {}
-    for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
+    channel_plots = (
+        {} if not draw_register else {"dummy": cast(Channel, "dummy")}
+    )
+    channel_plots.update(seq._channels)
+    for i, (ch, gs_) in enumerate(zip(channel_plots, gs)):
+        if ch == "dummy":
+            continue
         ax = fig.add_subplot(gs_)
         ax.spines["top"].set_color("none")
         ax.spines["bottom"].set_color("none")

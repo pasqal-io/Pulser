@@ -912,6 +912,7 @@ class Sequence:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
+        draw_register: bool = False,
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -923,6 +924,9 @@ class Sequence:
                 on top of the respective waveforms (defaults to True).
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
+            draw_register (bool): Whether to draw the register after the pulse
+                sequence, with a visual indication (square halo) around the
+                qubits masked by the SLM, defaults to False.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
@@ -933,6 +937,7 @@ class Sequence:
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
+            draw_register=draw_register,
         )
 
     def _target(

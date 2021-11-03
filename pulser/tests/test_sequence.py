@@ -545,4 +545,4 @@ def test_slm_mask():
 
     # Check drawing method
     with patch("matplotlib.pyplot.show"):
-        seq_xy2.draw()
+        seq_xy2.draw(draw_register=True)

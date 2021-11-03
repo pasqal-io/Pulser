@@ -99,10 +99,27 @@ class BaseRegister(ABC):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        masked_qubits: set[QubitId] = set(),
     ) -> None:
         ix, iy = plane
 
         ax.scatter(pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen")
+
+        # Draw square halo around masked qubits
+        if masked_qubits:
+            mask_pos = []
+            for i, c in zip(ids, pos):
+                if i in masked_qubits:
+                    mask_pos.append(c)
+            mask_arr = np.array(mask_pos)
+            ax.scatter(
+                mask_arr[:, ix],
+                mask_arr[:, iy],
+                marker="s",
+                s=1200,
+                alpha=0.2,
+                c="black",
+            )
 
         axes = "xyz"
 
@@ -115,7 +132,7 @@ class BaseRegister(ABC):
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            plot_ids = [f"{i}" for i in ids]
+            plot_ids = [f"{i}" + "(m)" * (i in masked_qubits) for i in ids]
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
