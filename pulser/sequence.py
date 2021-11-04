@@ -36,7 +36,7 @@ from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.pulse import Pulse
-from pulser.register import BaseRegister, Register, Register3D
+from pulser.register import BaseRegister
 from pulser._seq_drawer import draw_sequence
 
 if version_info[:2] >= (3, 8):  # pragma: no cover

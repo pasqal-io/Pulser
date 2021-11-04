@@ -22,7 +22,7 @@ from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, cast, Optional, Union, TypeVar, Type
+from typing import Any, cast, Optional, Union, TypeVar, Type, Tuple
 from itertools import combinations
 
 import pulser
@@ -634,8 +634,8 @@ class Register(BaseRegister):
         pos: np.ndarray,
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
-    ) -> (matplotlib.figure.Figure, matplotlib.axes.Axes):
-        """Creates the Figure and Axes for drawing the register"""
+    ) -> Tuple[plt.figure.Figure, plt.axes.Axes]:
+        """Creates the Figure and Axes for drawing the register."""
         diffs = super()._register_dims(
             pos,
             blockade_radius=blockade_radius,
@@ -865,8 +865,8 @@ class Register3D(BaseRegister):
         pos: np.ndarray,
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
-    ) -> (matplotlib.figure.Figure, matplotlib.axes.Axes):
-        """Creates the Figure and Axes for drawing the register projections"""
+    ) -> Tuple[plt.figure.Figure, plt.axes.Axes]:
+        """Creates the Figure and Axes for drawing the register projections."""
         diffs = super()._register_dims(
             pos,
             blockade_radius=blockade_radius,

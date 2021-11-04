@@ -25,7 +25,6 @@ from itertools import combinations
 import pulser
 from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 from pulser.pulse import Pulse
-from pulser.channels import Channel
 from pulser import Register, Register3D
 
 
@@ -154,9 +153,9 @@ def draw_sequence(
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    # Register related
     pos = np.array(seq._register._coords)
 
+    # Draw masked register
     if draw_register:
         if isinstance(seq._register, Register3D):
             labels = "xyz"
@@ -164,12 +163,14 @@ def draw_sequence(
                 pos,
             )
 
-            for ax_reg, (ix, iy) in zip(axes_reg, combinations(np.arange(3), 2)):
+            for ax_reg, (ix, iy) in zip(
+                axes_reg, combinations(np.arange(3), 2)
+            ):
                 seq._register._draw_2D(
                     ax=ax_reg,
                     pos=pos,
                     ids=seq._register._ids,
-                    plane=(ix,iy),
+                    plane=(ix, iy),
                     masked_qubits=seq._slm_mask_targets,
                 )
                 ax_reg.set_title(

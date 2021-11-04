@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser import Sequence, Pulse, Register
+from pulser import Sequence, Pulse, Register, Register3D
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
@@ -545,4 +545,26 @@ def test_slm_mask():
 
     # Check drawing method
     with patch("matplotlib.pyplot.show"):
-        seq_xy2.draw(draw_register=True)
+        seq_xy2.draw()
+
+
+def test_draw_register():
+    # Draw 2d register from sequence
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    targets = ["q0", "q2"]
+    pulse = Pulse.ConstantPulse(100, 10, 0, 0)
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch_xy", "mw_global")
+    seq.add(pulse, "ch_xy")
+    seq.config_slm_mask(targets)
+    with patch("matplotlib.pyplot.show"):
+        seq.draw(draw_register=True)
+
+    # Draw 3d register from sequence
+    reg3d = Register3D.cubic(3, 8)
+    seq3d = Sequence(reg3d, MockDevice)
+    seq3d.declare_channel("ch_xy", "mw_global")
+    seq3d.add(pulse, "ch_xy")
+    seq3d.config_slm_mask([0])
+    with patch("matplotlib.pyplot.show"):
+        seq3d.draw(draw_register=True)
