@@ -629,12 +629,34 @@ class Register(BaseRegister):
         )
         self._coords = [rot @ v for v in self._coords]
 
+    def _initialize_fig_axes(
+        self,
+        pos: np.ndarray,
+        blockade_radius: Optional[float] = None,
+        draw_half_radius: bool = False,
+    ) -> (matplotlib.figure.Figure, matplotlib.axes.Axes):
+        """Creates the Figure and Axes for drawing the register"""
+        diffs = super()._register_dims(
+            pos,
+            blockade_radius=blockade_radius,
+            draw_half_radius=draw_half_radius,
+        )
+        big_side = max(diffs)
+        proportions = diffs / big_side
+        Ls = proportions * min(
+            big_side / 4, 10
+        )  # Figsize is, at most, (10,10)
+        fig, axes = plt.subplots(figsize=Ls)
+
+        return (fig, axes)
+
     def draw(
         self,
         with_labels: bool = True,
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        masked_qubits: set[QubitId] = set(),
     ) -> None:
         """Draws the entire register.
 
@@ -663,18 +685,11 @@ class Register(BaseRegister):
             draw_half_radius=draw_half_radius,
         )
         pos = np.array(self._coords)
-        diffs = super()._register_dims(
+        fig, ax = self._initialize_fig_axes(
             pos,
             blockade_radius=blockade_radius,
             draw_half_radius=draw_half_radius,
         )
-        big_side = max(diffs)
-        proportions = diffs / big_side
-        Ls = proportions * min(
-            big_side / 4, 10
-        )  # Figsize is, at most, (10,10)
-
-        fig, ax = plt.subplots(figsize=Ls)
         super()._draw_2D(
             ax,
             pos,
@@ -845,6 +860,48 @@ class Register3D(BaseRegister):
             )
             return Register.from_coordinates(coords_2D, prefix=prefix)
 
+    def _initialize_fig_axes_projection(
+        self,
+        pos: np.ndarray,
+        blockade_radius: Optional[float] = None,
+        draw_half_radius: bool = False,
+    ) -> (matplotlib.figure.Figure, matplotlib.axes.Axes):
+        """Creates the Figure and Axes for drawing the register projections"""
+        diffs = super()._register_dims(
+            pos,
+            blockade_radius=blockade_radius,
+            draw_half_radius=draw_half_radius,
+        )
+
+        proportions = []
+        for (ix, iy) in combinations(np.arange(3), 2):
+            big_side = max(diffs[[ix, iy]])
+            Ls = diffs[[ix, iy]] / big_side
+            Ls *= max(
+                min(big_side / 4, 10), 4
+            )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
+            proportions.append(Ls)
+
+        fig_height = np.max([Ls[1] for Ls in proportions])
+
+        max_width = 0
+        for i, (width, height) in enumerate(proportions):
+            proportions[i] = (width * fig_height / height, fig_height)
+            max_width = max(max_width, proportions[i][0])
+        widths = [max(Ls[0], max_width / 5) for Ls in proportions]
+        fig_width = min(np.sum(widths), fig_height * 4)
+
+        rescaling = 20 / max(max(fig_width, fig_height), 20)
+        figsize = (rescaling * fig_width, rescaling * fig_height)
+
+        fig, axes = plt.subplots(
+            ncols=3,
+            figsize=figsize,
+            gridspec_kw=dict(width_ratios=widths),
+        )
+
+        return (fig, axes)
+
     def draw(
         self,
         with_labels: bool = False,
@@ -889,39 +946,11 @@ class Register3D(BaseRegister):
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
 
         if projection:
-            diffs = super()._register_dims(
+            labels = "xyz"
+            fig, axes = self._initialize_fig_axes_projection(
                 pos,
                 blockade_radius=blockade_radius,
                 draw_half_radius=draw_half_radius,
-            )
-
-            proportions = []
-            for (ix, iy) in combinations(np.arange(3), 2):
-                big_side = max(diffs[[ix, iy]])
-                Ls = diffs[[ix, iy]] / big_side
-                Ls *= max(
-                    min(big_side / 4, 10), 4
-                )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
-                proportions.append(Ls)
-
-            fig_height = np.max([Ls[1] for Ls in proportions])
-
-            max_width = 0
-            for i, (width, height) in enumerate(proportions):
-                proportions[i] = (width * fig_height / height, fig_height)
-                max_width = max(max_width, proportions[i][0])
-            widths = [max(Ls[0], max_width / 5) for Ls in proportions]
-            fig_width = min(np.sum(widths), fig_height * 4)
-
-            rescaling = 20 / max(max(fig_width, fig_height), 20)
-            figsize = (rescaling * fig_width, rescaling * fig_height)
-
-            labels = "xyz"
-
-            fig, axes = plt.subplots(
-                ncols=3,
-                figsize=figsize,
-                gridspec_kw=dict(width_ratios=widths),
             )
 
             for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):

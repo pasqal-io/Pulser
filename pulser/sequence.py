@@ -36,7 +36,7 @@ from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.pulse import Pulse
-from pulser.register import Register
+from pulser.register import BaseRegister, Register, Register3D
 from pulser._seq_drawer import draw_sequence
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
@@ -147,7 +147,7 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register(Register): The atom register on which to apply the pulses.
+        register(BaseRegister): The atom register on which to apply the pulses.
         device(Device): A valid device in which to execute the Sequence (import
             it from ``pulser.devices``).
 
@@ -156,7 +156,7 @@ class Sequence:
         they are the same for all Sequences built from a parametrized Sequence.
     """
 
-    def __init__(self, register: Register, device: Device):
+    def __init__(self, register: BaseRegister, device: Device):
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
             raise TypeError(
@@ -179,7 +179,7 @@ class Sequence:
         # Checks if register is compatible with the device
         device.validate_register(register)
 
-        self._register: Register = register
+        self._register: BaseRegister = register
         self._device: Device = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None

@@ -20,11 +20,13 @@ from typing import Any, cast, Optional, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import CubicSpline
+from itertools import combinations
 
 import pulser
 from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 from pulser.pulse import Pulse
 from pulser.channels import Channel
+from pulser import Register, Register3D
 
 
 def gather_data(seq: pulser.sequence.Sequence) -> dict:
@@ -152,45 +154,53 @@ def draw_sequence(
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
+    # Register related
+    pos = np.array(seq._register._coords)
+
+    if draw_register:
+        if isinstance(seq._register, Register3D):
+            labels = "xyz"
+            fig_reg, axes_reg = seq._register._initialize_fig_axes_projection(
+                pos,
+            )
+
+            for ax_reg, (ix, iy) in zip(axes_reg, combinations(np.arange(3), 2)):
+                seq._register._draw_2D(
+                    ax=ax_reg,
+                    pos=pos,
+                    ids=seq._register._ids,
+                    plane=(ix,iy),
+                    masked_qubits=seq._slm_mask_targets,
+                )
+                ax_reg.set_title(
+                    "Masked register projected onto\n the "
+                    + labels[ix]
+                    + labels[iy]
+                    + "-plane"
+                )
+
+        elif isinstance(seq._register, Register):
+            fig_reg, ax_reg = seq._register._initialize_fig_axes(pos)
+            seq._register._draw_2D(
+                ax=ax_reg,
+                pos=pos,
+                ids=seq._register._ids,
+                masked_qubits=seq._slm_mask_targets,
+            )
+            ax_reg.set_title("Masked register", pad=10)
+
     fig = plt.figure(
         constrained_layout=False,
-        figsize=(20, 4.5 * n_channels + 10 * int(draw_register)),
+        figsize=(20, 4.5 * n_channels),
     )
     gs = fig.add_gridspec(
-        n_channels + int(draw_register),
+        n_channels,
         1,
-        hspace=0.075 + 0.027 * int(draw_register),
+        hspace=0.075,
     )
-
-    # Draw the register
-    if draw_register:
-        big_ax = fig.add_subplot(gs[0])
-        big_ax.set_ylabel("Masked register", labelpad=40, fontsize=18)
-        big_ax.spines["top"].set_color("none")
-        big_ax.spines["bottom"].set_color("none")
-        big_ax.spines["left"].set_color("none")
-        big_ax.spines["right"].set_color("none")
-        big_ax.tick_params(
-            labelcolor="w", top=False, bottom=False, left=False, right=False
-        )
-
-        subgs = gs[0].subgridspec(1, 2)
-        ax = fig.add_subplot(subgs[0, 0])
-        seq._register._draw_2D(
-            ax=ax,
-            pos=np.array(seq._register._coords),
-            ids=seq._register._ids,
-            masked_qubits=seq._slm_mask_targets,
-        )
 
     ch_axes = {}
-    channel_plots = (
-        {} if not draw_register else {"dummy": cast(Channel, "dummy")}
-    )
-    channel_plots.update(seq._channels)
-    for i, (ch, gs_) in enumerate(zip(channel_plots, gs)):
-        if ch == "dummy":
-            continue
+    for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
         ax = fig.add_subplot(gs_)
         ax.spines["top"].set_color("none")
         ax.spines["bottom"].set_color("none")
