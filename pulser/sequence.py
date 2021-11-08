@@ -928,7 +928,7 @@ class Sequence:
                 information should be added to the plot, defaults to False.
             fig_name(str, default=None): The name on which to save the figure.
                 If None the figure will not be saved.
-            kwargs_savefig(dict, default=None): Keywords arguments for
+            kwargs_savefig(dict, default={}): Keywords arguments for
                 `matplotlib.pyplot.savefig`. Not applicable if
                 `fig_name`is `None`.
 

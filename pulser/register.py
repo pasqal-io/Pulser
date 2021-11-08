@@ -637,7 +637,7 @@ class Register(BaseRegister):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         fig_name: str = None,
-        kwargs_savefig: dict = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
 
@@ -654,7 +654,7 @@ class Register(BaseRegister):
                 if the `blockade_radius` is defined.
             fig_name(str, default=None): The name on which to save the figure.
                 If None the figure will not be saved.
-            kwargs_savefig(dict, default=None): Keywords arguments for
+            kwargs_savefig(dict, default={}): Keywords arguments for
                 `matplotlib.pyplot.savefig`. Not applicable if
                 `fig_name`is `None`.
 
