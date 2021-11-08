@@ -78,7 +78,9 @@ def test_stored_calls():
             Pulse.ConstantPulse(20, 2 * np.pi * 100, -2 * np.pi * 100, 0),
             "ch1",
         )
-    with pytest.raises(ValueError, match="detuning values go out of the range"):
+    with pytest.raises(
+        ValueError, match="detuning values go out of the range"
+    ):
         sb.add(Pulse.ConstantPulse(500, 2 * np.pi, -2 * np.pi * 100, 0), "ch1")
 
     assert sb._to_build_calls[-1] == call

@@ -49,7 +49,9 @@ def test_rare_cases():
     var = seq.declare_variable("var")
 
     wf = BlackmanWaveform(100, var)
-    with pytest.warns(UserWarning, match="Calls to methods of parametrized " "objects"):
+    with pytest.warns(
+        UserWarning, match="Calls to methods of parametrized " "objects"
+    ):
         s = encode(wf.draw())
 
     with pytest.warns(UserWarning, match="not encode a Sequence"):

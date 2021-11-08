@@ -77,7 +77,8 @@ def _screen(func: Callable) -> Callable:
     def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
         if self.is_parametrized():
             raise RuntimeError(
-                f"Sequence.{func.__name__} can't be called in" " parametrized sequences."
+                f"Sequence.{func.__name__} can't be called in"
+                " parametrized sequences."
             )
         return func(self, *args, **kwargs)
 
@@ -109,7 +110,10 @@ def _store(func: Callable) -> Callable:
                     verify_variable(y)
 
         if self._is_measured and self.is_parametrized():
-            raise RuntimeError("The sequence has been measured, no further " "changes are allowed.")
+            raise RuntimeError(
+                "The sequence has been measured, no further "
+                "changes are allowed."
+            )
         # Check if all Parametrized inputs stem from declared variables
         for x in chain(args, kwargs.values()):
             verify_variable(x)
@@ -157,7 +161,8 @@ class Sequence:
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
             raise TypeError(
-                "'device' must be of type 'Device'. Import a valid" " device from 'pulser.devices'."
+                "'device' must be of type 'Device'. Import a valid"
+                " device from 'pulser.devices'."
             )
         cond1 = device not in pulser.devices._valid_devices
         cond2 = device not in pulser.devices._mock_devices
@@ -232,7 +237,10 @@ class Sequence:
             return {
                 id: ch
                 for id, ch in self._device.channels.items()
-                if (id not in self._taken_channels.values() or self._device == MockDevice)
+                if (
+                    id not in self._taken_channels.values()
+                    or self._device == MockDevice
+                )
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
@@ -248,7 +256,8 @@ class Sequence:
         """
         if not self._in_xy:
             raise AttributeError(
-                "The magnetic field is only defined when the " "sequence is in 'XY Mode'."
+                "The magnetic field is only defined when the "
+                "sequence is in 'XY Mode'."
             )
         return np.array(self._mag_field)
 
@@ -278,14 +287,20 @@ class Sequence:
             int: The duration of the channel or sequence, in ns.
         """
         if channel is None:
-            durations = [self._last(ch).tf for ch in self._schedule if self._schedule[ch]]
+            durations = [
+                self._last(ch).tf
+                for ch in self._schedule
+                if self._schedule[ch]
+            ]
             return 0 if not durations else max(durations)
 
         self._validate_channel(channel)
         return self._last(channel).tf if self._schedule[channel] else 0
 
     @_screen
-    def current_phase_ref(self, qubit: QubitId, basis: str = "digital") -> float:
+    def current_phase_ref(
+        self, qubit: QubitId, basis: str = "digital"
+    ) -> float:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
@@ -300,7 +315,8 @@ class Sequence:
         """
         if qubit not in self._qids:
             raise ValueError(
-                "'qubit' must be the id of a qubit declared in " "this sequence's device."
+                "'qubit' must be the id of a qubit declared in "
+                "this sequence's device."
             )
 
         if basis not in self._phase_ref:
@@ -308,7 +324,9 @@ class Sequence:
 
         return self._phase_ref[basis][qubit].last_phase
 
-    def set_magnetic_field(self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0) -> None:
+    def set_magnetic_field(
+        self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0
+    ) -> None:
         """Sets the magnetic field acting on the entire array.
 
         The magnetic field vector is defined on the reference frame of the
@@ -327,16 +345,22 @@ class Sequence:
         """
         if not self._in_xy:
             if self._channels:
-                raise ValueError("The magnetic field can only be set in 'XY " "Mode'.")
+                raise ValueError(
+                    "The magnetic field can only be set in 'XY " "Mode'."
+                )
             # No channels declared yet
             self._in_xy = True
         elif not self._empty_sequence:
             # Not all channels are empty
-            raise ValueError("The magnetic field can only be set on an empty " "sequence.")
+            raise ValueError(
+                "The magnetic field can only be set on an empty " "sequence."
+            )
 
         mag_vector = (bx, by, bz)
         if np.linalg.norm(mag_vector) == 0.0:
-            raise ValueError("The magnetic field must have a magnitude greater" " than 0.")
+            raise ValueError(
+                "The magnetic field must have a magnitude greater" " than 0."
+            )
         self._mag_field = mag_vector
 
         # No parametrization -> Always stored as a regular call
@@ -400,7 +424,9 @@ class Sequence:
 
         # Remove this check once SLM is available in Ising mode
         if self._slm_mask_targets and ch.basis != "XY":
-            raise NotImplementedError("SLM mask is not yet available in Ising mode")
+            raise NotImplementedError(
+                "SLM mask is not yet available in Ising mode"
+            )
 
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
@@ -411,14 +437,19 @@ class Sequence:
         self._last_target[name] = 0
 
         if ch.basis not in self._phase_ref:
-            self._phase_ref[ch.basis] = {q: _PhaseTracker(0) for q in self._qids}
+            self._phase_ref[ch.basis] = {
+                q: _PhaseTracker(0) for q in self._qids
+            }
             self._last_used[ch.basis] = {q: 0 for q in self._qids}
 
         if ch.addressing == "Global":
             self._add_to_schedule(name, _TimeSlot("target", -1, 0, self._qids))
         elif initial_target is not None:
             try:
-                cond = any(isinstance(t, Parametrized) for t in cast(Iterable, initial_target))
+                cond = any(
+                    isinstance(t, Parametrized)
+                    for t in cast(Iterable, initial_target)
+                )
             except TypeError:
                 cond = isinstance(initial_target, Parametrized)
             if cond:
@@ -431,7 +462,9 @@ class Sequence:
                 initial_target = None
             else:
                 # "_target" call is not saved
-                self._target(cast(Union[Iterable, QubitId], initial_target), name)
+                self._target(
+                    cast(Union[Iterable, QubitId], initial_target), name
+                )
 
         # Manually store the channel declaration as a regular call
         self._calls.append(
@@ -526,7 +559,9 @@ class Sequence:
             return
 
         if not isinstance(pulse, Pulse):
-            raise TypeError(f"'pulse' must be of type Pulse, not of type {type(pulse)}.")
+            raise TypeError(
+                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
+            )
 
         channel_obj = self._channels[channel]
         _duration = channel_obj.validate_duration(pulse.duration)
@@ -550,7 +585,9 @@ class Sequence:
         last = self._last(channel)
         t0 = last.tf  # Preliminary ti
         basis = channel_obj.basis
-        phase_barriers = [self._phase_ref[basis][q].last_time for q in last.targets]
+        phase_barriers = [
+            self._phase_ref[basis][q].last_time for q in last.targets
+        ]
         current_max_t = max(t0, *phase_barriers)
         if protocol != "no-delay":
             for ch, seq in self._schedule.items():
@@ -604,7 +641,9 @@ class Sequence:
                 self._last_used[basis][qubit] = tf
 
         if pulse.post_phase_shift:
-            self._phase_shift(pulse.post_phase_shift, *last.targets, basis=basis)
+            self._phase_shift(
+                pulse.post_phase_shift, *last.targets, basis=basis
+            )
 
         # Sequence is marked as non-empty on the first added pulse
         if self._empty_sequence:
@@ -657,7 +696,9 @@ class Sequence:
         self._delay(duration, channel)
 
     @_store
-    def measure(self, basis: Union[str, Parametrized] = "ground-rydberg") -> None:
+    def measure(
+        self, basis: Union[str, Parametrized] = "ground-rydberg"
+    ) -> None:
         """Measures in a valid basis.
 
         Note:
@@ -672,7 +713,11 @@ class Sequence:
                 ``supported_bases`` attribute of the selected device for
                 the available options).
         """
-        available = self._device.supported_bases - {"XY"} if not self._in_xy else {"XY"}
+        available = (
+            self._device.supported_bases - {"XY"}
+            if not self._in_xy
+            else {"XY"}
+        )
         if basis not in available:
             raise ValueError(
                 f"The basis '{basis}' is not supported by the "
@@ -730,7 +775,9 @@ class Sequence:
         ch_set = set(channels)
         # channels have to be a subset of the declared channels
         if not ch_set <= set(self._channels):
-            raise ValueError("All channel names must correspond to declared" " channels.")
+            raise ValueError(
+                "All channel names must correspond to declared" " channels."
+            )
         if len(channels) != len(ch_set):
             raise ValueError("The same channel was provided more than once.")
 
@@ -771,7 +818,8 @@ class Sequence:
         """
         if not self.is_parametrized():
             warnings.warn(
-                "Building a non-parametrized sequence simply returns" " a copy of itself.",
+                "Building a non-parametrized sequence simply returns"
+                " a copy of itself.",
                 stacklevel=2,
             )
             return copy.copy(self)
@@ -787,7 +835,10 @@ class Sequence:
                     vars.pop(k, None)
             missing_vars = all_keys - given_keys
             if missing_vars:
-                raise TypeError("Did not receive values for variables: " + ", ".join(missing_vars))
+                raise TypeError(
+                    "Did not receive values for variables: "
+                    + ", ".join(missing_vars)
+                )
 
         for name, value in vars.items():
             self._variables[name]._assign(value)
@@ -800,7 +851,10 @@ class Sequence:
         seq = copy.deepcopy(seq)
 
         for call in self._to_build_calls:
-            args_ = [arg.build() if isinstance(arg, Parametrized) else arg for arg in call.args]
+            args_ = [
+                arg.build() if isinstance(arg, Parametrized) else arg
+                for arg in call.args
+            ]
             kwargs_ = {
                 key: val.build() if isinstance(val, Parametrized) else val
                 for key, val in call.kwargs.items()
@@ -884,14 +938,20 @@ class Sequence:
             draw_phase_shifts=draw_phase_shifts,
         )
         if fig_name is not None:
-            fig.savefig(fig_name, **kwargs_savefig)
+            plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
-    def _target(self, qubits: Union[Iterable[QubitId], QubitId], channel: str) -> None:
+    def _target(
+        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+    ) -> None:
         self._validate_channel(channel)
 
         try:
-            qubits_set = set(cast(Iterable, qubits)) if not isinstance(qubits, str) else {qubits}
+            qubits_set = (
+                set(cast(Iterable, qubits))
+                if not isinstance(qubits, str)
+                else {qubits}
+            )
         except TypeError:
             qubits_set = {qubits}
 
@@ -906,7 +966,9 @@ class Sequence:
         if self.is_parametrized():
             for q in qubits_set:
                 if q not in self._qids and not isinstance(q, Parametrized):
-                    raise ValueError("All non-variable qubits must belong to the register.")
+                    raise ValueError(
+                        "All non-variable qubits must belong to the register."
+                    )
             return
 
         elif not qubits_set.issubset(self._qids):
@@ -931,7 +993,9 @@ class Sequence:
             if delta != 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    delta = self._channels[channel].validate_duration(16 if delta < 16 else delta)
+                    delta = self._channels[channel].validate_duration(
+                        16 if delta < 16 else delta
+                    )
             tf = ti + delta
 
         except ValueError:
@@ -949,20 +1013,27 @@ class Sequence:
         last = self._last(channel)
         ti = last.tf
         tf = ti + self._channels[channel].validate_duration(duration)
-        self._add_to_schedule(channel, _TimeSlot("delay", ti, tf, last.targets))
+        self._add_to_schedule(
+            channel, _TimeSlot("delay", ti, tf, last.targets)
+        )
 
-    def _phase_shift(self, phi: float, *targets: QubitId, basis: str = "digital") -> None:
+    def _phase_shift(
+        self, phi: float, *targets: QubitId, basis: str = "digital"
+    ) -> None:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
         if self.is_parametrized():
             for t in targets:
                 if t not in self._qids and not isinstance(t, Parametrized):
-                    raise ValueError("All non-variable targets must belong to the register.")
+                    raise ValueError(
+                        "All non-variable targets must belong to the register."
+                    )
             return
 
         elif not set(targets) <= self._qids:
             raise ValueError(
-                "All given targets have to be qubit ids declared" " in this sequence's register."
+                "All given targets have to be qubit ids declared"
+                " in this sequence's register."
             )
 
         if phi % (2 * np.pi) == 0:
@@ -1004,11 +1075,14 @@ class Sequence:
                     phase = self._phase_ref[basis][tgts[0]][ts.tf]
                     if first_slot:
                         full += (
-                            f"t: 0 | Initial targets: {tgt_txt} | " + f"Phase Reference: {phase} \n"
+                            f"t: 0 | Initial targets: {tgt_txt} | "
+                            + f"Phase Reference: {phase} \n"
                         )
                         first_slot = False
                     else:
-                        full += target_line.format(ts.ti, ts.tf, tgt_txt, phase)
+                        full += target_line.format(
+                            ts.ti, ts.tf, tgt_txt, phase
+                        )
             full += "\n"
 
         if hasattr(self, "_measurement"):
@@ -1019,7 +1093,9 @@ class Sequence:
             lines = ["Stored calls\n------------"]
             for i, c in enumerate(self._to_build_calls, 1):
                 args = [str(a) for a in c.args]
-                kwargs = [f"{key}={str(value)}" for key, value in c.kwargs.items()]
+                kwargs = [
+                    f"{key}={str(value)}" for key, value in c.kwargs.items()
+                ]
                 lines.append(f"{i}. {c.name}({', '.join(args+kwargs)})")
             full = prelude + "\n\n".join(lines)
 
@@ -1028,7 +1104,8 @@ class Sequence:
     def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
         if hasattr(self, "_measurement"):
             raise RuntimeError(
-                "The sequence has already been measured. " "Nothing more can be added."
+                "The sequence has already been measured. "
+                "Nothing more can be added."
             )
         self._schedule[channel].append(timeslot)
 
@@ -1123,7 +1200,9 @@ class _PhaseTracker:
         time_scale: float = 1.0,
     ) -> Generator[tuple[float, float], None, None]:
         """Changes in phases within ]ti, tf]."""
-        start, end = np.searchsorted(self._times, (ti * time_scale, tf * time_scale), side="right")
+        start, end = np.searchsorted(
+            self._times, (ti * time_scale, tf * time_scale), side="right"
+        )
         for i in range(start, end):
             change = self._phases[i] - self._phases[i - 1]
             yield (self._times[i] / time_scale, change)

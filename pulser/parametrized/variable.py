@@ -74,13 +74,15 @@ class Variable(Parametrized, OpSupport):
                 else all(isinstance(s, str) for s in cast(Iterable, value))
             ):
                 raise TypeError(
-                    f"Provided values for variable '{self.name}' " "must be of type 'str'."
+                    f"Provided values for variable '{self.name}' "
+                    "must be of type 'str'."
                 )
 
         val = np.array(value, dtype=self.dtype)
         if val.size != self.size:
             raise ValueError(
-                f"Can't assign array of size {val.size} to " + f"variable of size {self.size}."
+                f"Can't assign array of size {val.size} to "
+                + f"variable of size {self.size}."
             )
 
         self.__dict__["value"] = self.dtype(val) if self.size == 1 else val
@@ -132,12 +134,15 @@ class _VariableItem(Parametrized, OpSupport):
         return cast(collections.abc.Sequence, self.var.build())[self.key]
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, self.var, self.key, _module="operator", _name="getitem")
+        return obj_to_dict(
+            self, self.var, self.key, _module="operator", _name="getitem"
+        )
 
     def __str__(self) -> str:
         if isinstance(self.key, slice):
             items = [
-                "" if x is None else str(x) for x in [self.key.start, self.key.stop, self.key.step]
+                "" if x is None else str(x)
+                for x in [self.key.start, self.key.stop, self.key.step]
             ]
             key_str = ":".join(items)
         else:

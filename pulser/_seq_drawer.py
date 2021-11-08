@@ -158,7 +158,9 @@ def draw_sequence(
         ax.spines["bottom"].set_color("none")
         ax.spines["left"].set_color("none")
         ax.spines["right"].set_color("none")
-        ax.tick_params(labelcolor="w", top=False, bottom=False, left=False, right=False)
+        ax.tick_params(
+            labelcolor="w", top=False, bottom=False, left=False, right=False
+        )
         ax.set_ylabel(ch, labelpad=40, fontsize=18)
         subgs = gs_.subgridspec(2, 1, hspace=0.0)
         ax1 = fig.add_subplot(subgs[0, :])
@@ -251,27 +253,40 @@ def draw_sequence(
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
             draw_phase = any(
-                seq_.type.phase != 0 for seq_ in seq._schedule[ch] if isinstance(seq_.type, Pulse)
+                seq_.type.phase != 0
+                for seq_ in seq._schedule[ch]
+                if isinstance(seq_.type, Pulse)
             )
             for pulse_num, seq_ in enumerate(seq._schedule[ch]):
                 # Select only `Pulse` objects
                 if isinstance(seq_.type, Pulse):
                     if sampling_rate:
                         area_val = (
-                            np.sum(cs_amp(np.arange(seq_.ti, seq_.tf) / time_scale)) * 1e-3 / np.pi
+                            np.sum(
+                                cs_amp(
+                                    np.arange(seq_.ti, seq_.tf) / time_scale
+                                )
+                            )
+                            * 1e-3
+                            / np.pi
                         )
                     else:
                         area_val = seq_.type.amplitude.integral / np.pi
                     phase_val = seq_.type.phase
                     x_plot = (seq_.ti + seq_.tf) / 2 / time_scale
-                    if seq._schedule[ch][pulse_num - 1].type == "target" or not top:
+                    if (
+                        seq._schedule[ch][pulse_num - 1].type == "target"
+                        or not top
+                    ):
                         y_plot = np.max(seq_.type.amplitude.samples) / 2
                         top = True  # Next box at the top.
                     elif top:
                         y_plot = np.max(seq_.type.amplitude.samples)
                         top = False  # Next box at the center.
                     area_fmt = (
-                        r"A: $\pi$" if round(area_val, 2) == 1 else fr"A: {area_val:.2g}$\pi$"
+                        r"A: $\pi$"
+                        if round(area_val, 2) == 1
+                        else fr"A: {area_val:.2g}$\pi$"
                     )
                     if not draw_phase:
                         txt = area_fmt
@@ -331,7 +346,9 @@ def draw_sequence(
             else:
                 ti, tf = np.array(coords) / time_scale
                 target_regions[-1].append(ti)  # Closing previous regions
-                target_regions.append([tf + 1 / time_scale, targets])  # New one
+                target_regions.append(
+                    [tf + 1 / time_scale, targets]
+                )  # New one
                 phase = seq._phase_ref[basis][targets[0]][tf * time_scale + 1]
                 a.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
                 b.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
@@ -358,7 +375,9 @@ def draw_sequence(
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(t[-1])
-        for start, targets_, end in target_regions if draw_phase_shifts else []:
+        for start, targets_, end in (
+            target_regions if draw_phase_shifts else []
+        ):
             start = cast(float, start)
             targets_ = cast(list, targets_)
             end = cast(float, end)

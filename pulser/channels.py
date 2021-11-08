@@ -90,7 +90,9 @@ class Channel:
         )
 
     @classmethod
-    def Global(cls, max_abs_detuning: float, max_amp: float, **kwargs: int) -> Channel:
+    def Global(
+        cls, max_abs_detuning: float, max_amp: float, **kwargs: int
+    ) -> Channel:
         """Initializes the channel with global addressing.
 
         Args:
@@ -118,10 +120,14 @@ class Channel:
             )
 
         if duration < self.min_duration:
-            raise ValueError("duration has to be at least " + f"{self.min_duration} ns.")
+            raise ValueError(
+                "duration has to be at least " + f"{self.min_duration} ns."
+            )
 
         if duration > self.max_duration:
-            raise ValueError("duration can be at most " + f"{self.max_duration} ns.")
+            raise ValueError(
+                "duration can be at most " + f"{self.max_duration} ns."
+            )
 
         if duration % self.clock_period != 0:
             _duration += self.clock_period - _duration % self.clock_period

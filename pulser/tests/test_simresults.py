@@ -58,16 +58,22 @@ ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
         CoherentResults(state, 2, "bad_basis", None, [0])
-    with pytest.raises(ValueError, match="`meas_basis` must be 'ground-rydberg' or 'digital'."):
+    with pytest.raises(
+        ValueError, match="`meas_basis` must be 'ground-rydberg' or 'digital'."
+    ):
         CoherentResults(state, 1, "all", None, "XY")
     with pytest.raises(
         ValueError,
         match="`meas_basis` and `basis_name` must have the same value.",
     ):
-        CoherentResults(state, 1, "ground-rydberg", [0], "wrong_measurement_basis")
+        CoherentResults(
+            state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
+        )
     with pytest.raises(ValueError, match="`basis_name` must be"):
         NoisyResults(state, 2, "bad_basis", [0], 123)
-    with pytest.raises(ValueError, match="only values of 'epsilon' and 'epsilon_prime'"):
+    with pytest.raises(
+        ValueError, match="only values of 'epsilon' and 'epsilon_prime'"
+    ):
         CoherentResults(
             state,
             1,
@@ -88,7 +94,9 @@ def test_get_final_state():
     with pytest.raises(TypeError, match="Can't reduce"):
         results.get_final_state(reduce_to_basis="digital")
     assert (
-        results.get_final_state(reduce_to_basis="ground-rydberg", ignore_global_phase=False)
+        results.get_final_state(
+            reduce_to_basis="ground-rydberg", ignore_global_phase=False
+        )
         == results.states[-1].tidyup()
     )
     assert np.all(
@@ -121,7 +129,11 @@ def test_get_final_state():
 
     assert np.all(
         np.isclose(
-            np.abs(results_.get_final_state(reduce_to_basis="ground-rydberg").full()),
+            np.abs(
+                results_.get_final_state(
+                    reduce_to_basis="ground-rydberg"
+                ).full()
+            ),
             np.abs(results.states[-1].full()),
             atol=1e-5,
         )
@@ -145,7 +157,9 @@ def test_get_final_state_noisy():
         and final_state[2, 2] == 0.9333333333333333 + 0j
     )
     assert res3.states[-1] == final_state
-    assert res3.results[-1] == Counter({"10": 0.9333333333333333, "00": 0.06666666666666667})
+    assert res3.results[-1] == Counter(
+        {"10": 0.9333333333333333, "00": 0.06666666666666667}
+    )
 
 
 def test_get_state_float_time():
@@ -217,7 +231,9 @@ def test_expect():
     seq3dim.add(pi, "ram")
     seq3dim.add(pi, "ryd")
     sim3dim = Simulation(seq3dim)
-    exp3dim = sim3dim.run().expect([qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))])
+    exp3dim = sim3dim.run().expect(
+        [qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))]
+    )
     assert np.isclose(exp3dim[0][-1], 1.89690200e-14)
 
 
@@ -272,7 +288,9 @@ def test_sample_final_state_noisy():
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
         {"11": 787, "10": 219, "01": 176, "00": 52}
     )
-    res_3level = Simulation(seq_no_meas_noisy, config=SimConfig(noise=("SPAM", "doppler"), runs=10))
+    res_3level = Simulation(
+        seq_no_meas_noisy, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
+    )
     final_state = res_3level.run().states[-1]
     assert np.isclose(
         final_state.full(),
@@ -324,7 +342,11 @@ def test_results_xy():
 
     state = results.get_final_state(reduce_to_basis="XY")
 
-    assert np.all(np.isclose(np.abs(state.full()), np.abs(results.states[-1].full()), atol=1e-5))
+    assert np.all(
+        np.isclose(
+            np.abs(state.full()), np.abs(results.states[-1].full()), atol=1e-5
+        )
+    )
 
     # Check that measurement projectors are correct
     assert results._meas_projector(0) == qutip.basis(2, 1).proj()

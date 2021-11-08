@@ -84,8 +84,12 @@ class SimConfig:
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
     solver_options: qutip.Options = None
-    spam_dict: dict[str, float] = field(init=False, default_factory=dict, repr=False)
-    doppler_sigma: float = field(init=False, default=KEFF * np.sqrt(KB * 50.0e-6 / MASS))
+    spam_dict: dict[str, float] = field(
+        init=False, default_factory=dict, repr=False
+    )
+    doppler_sigma: float = field(
+        init=False, default=KEFF * np.sqrt(KB * 50.0e-6 / MASS)
+    )
 
     def __post_init__(self) -> None:
         self._process_temperature()
@@ -116,14 +120,17 @@ class SimConfig:
         if "dephasing" in self.noise:
             lines.append(f"Dephasing probability: {self.dephasing_prob}")
         if solver_options:
-            lines.append("Solver Options: \n" + f"{str(self.solver_options)[10:-1]}")
+            lines.append(
+                "Solver Options: \n" + f"{str(self.solver_options)[10:-1]}"
+            )
         return "\n".join(lines).rstrip()
 
     def _check_spam_dict(self) -> None:
         for param, value in self.spam_dict.items():
             if value > 1 or value < 0:
                 raise ValueError(
-                    f"SPAM parameter {param} = {value} must be" + " greater than 0 and less than 1."
+                    f"SPAM parameter {param} = {value} must be"
+                    + " greater than 0 and less than 1."
                 )
 
     def _process_temperature(self) -> None:
@@ -150,4 +157,6 @@ class SimConfig:
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        self.__dict__["doppler_sigma"] = KEFF * np.sqrt(KB * self.temperature / MASS)
+        self.__dict__["doppler_sigma"] = KEFF * np.sqrt(
+            KB * self.temperature / MASS
+        )

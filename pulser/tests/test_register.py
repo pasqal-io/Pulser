@@ -153,7 +153,9 @@ def test_max_connectivity():
         reg = Register.max_connectivity(2, None)
 
     # Check min number of atoms
-    with pytest.raises(ValueError, match=r"The number of qubits(.+)greater than"):
+    with pytest.raises(
+        ValueError, match=r"The number of qubits(.+)greater than"
+    ):
         reg = Register.max_connectivity(0, device)
 
     # Check max number of atoms
@@ -163,7 +165,9 @@ def test_max_connectivity():
     # Check spacing
     reg = Register.max_connectivity(max_atom_num, device, spacing=spacing)
     with pytest.raises(ValueError, match="Spacing "):
-        reg = Register.max_connectivity(max_atom_num, device, spacing=spacing - 1.0)
+        reg = Register.max_connectivity(
+            max_atom_num, device, spacing=spacing - 1.0
+        )
 
     # Check 1 atom
     reg = Register.max_connectivity(1, device)
@@ -184,7 +188,9 @@ def test_max_connectivity():
             ]
         )
         reg = Register.max_connectivity(i, device)
-        reg2 = Register.from_coordinates(spacing * hex_coords[:i], center=False)
+        reg2 = Register.from_coordinates(
+            spacing * hex_coords[:i], center=False
+        )
         assert len(reg.qubits) == i
         atoms = list(reg.qubits.values())
         atoms2 = list(reg2.qubits.values())
@@ -208,9 +214,13 @@ def test_max_connectivity():
     assert len(reg.qubits) == 19
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[7], [-1.5 * spacing, crest_y * spacing]))
-    assert np.all(np.isclose(atoms[8], [-1.0 * spacing, 2.0 * crest_y * spacing]))
+    assert np.all(
+        np.isclose(atoms[8], [-1.0 * spacing, 2.0 * crest_y * spacing])
+    )
     assert np.all(np.isclose(atoms[13], [1.5 * spacing, -crest_y * spacing]))
-    assert np.all(np.isclose(atoms[14], [1.0 * spacing, -2.0 * crest_y * spacing]))
+    assert np.all(
+        np.isclose(atoms[14], [1.0 * spacing, -2.0 * crest_y * spacing])
+    )
 
     # Check extra atoms (2 full layers + 7 extra atoms)
     # for C3 symmetry, C6 symmetry and offset for next atoms
@@ -218,12 +228,22 @@ def test_max_connectivity():
     assert len(reg.qubits) == 26
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[19], [-2.5 * spacing, crest_y * spacing]))
-    assert np.all(np.isclose(atoms[20], [-2.0 * spacing, 2.0 * crest_y * spacing]))
-    assert np.all(np.isclose(atoms[21], [-0.5 * spacing, 3.0 * crest_y * spacing]))
-    assert np.all(np.isclose(atoms[22], [2.0 * spacing, 2.0 * crest_y * spacing]))
+    assert np.all(
+        np.isclose(atoms[20], [-2.0 * spacing, 2.0 * crest_y * spacing])
+    )
+    assert np.all(
+        np.isclose(atoms[21], [-0.5 * spacing, 3.0 * crest_y * spacing])
+    )
+    assert np.all(
+        np.isclose(atoms[22], [2.0 * spacing, 2.0 * crest_y * spacing])
+    )
     assert np.all(np.isclose(atoms[23], [2.5 * spacing, -crest_y * spacing]))
-    assert np.all(np.isclose(atoms[24], [0.5 * spacing, -3.0 * crest_y * spacing]))
-    assert np.all(np.isclose(atoms[25], [-2.0 * spacing, -2.0 * crest_y * spacing]))
+    assert np.all(
+        np.isclose(atoms[24], [0.5 * spacing, -3.0 * crest_y * spacing])
+    )
+    assert np.all(
+        np.isclose(atoms[25], [-2.0 * spacing, -2.0 * crest_y * spacing])
+    )
 
 
 def test_rotation():

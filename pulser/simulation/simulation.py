@@ -77,11 +77,16 @@ class Simulation:
     ) -> None:
         """Instantiates a Simulation object."""
         if not isinstance(sequence, Sequence):
-            raise TypeError("The provided sequence has to be a valid " "pulser.Sequence instance.")
+            raise TypeError(
+                "The provided sequence has to be a valid "
+                "pulser.Sequence instance."
+            )
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
-            raise ValueError("No instructions given for the channels in the sequence.")
+            raise ValueError(
+                "No instructions given for the channels in the sequence."
+            )
         self._seq = sequence
         self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
@@ -94,7 +99,9 @@ class Simulation:
                 "less than or equal to 1."
             )
         if int(self._tot_duration * sampling_rate) < 4:
-            raise ValueError("`sampling_rate` is too small, less than 4 data points.")
+            raise ValueError(
+                "`sampling_rate` is too small, less than 4 data points."
+            )
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self._collapse_ops: list[qutip.Qobj] = []
@@ -163,7 +170,8 @@ class Simulation:
                 )
             k = np.sqrt(prob * (1 - prob) ** (n - 1))
             self._collapse_ops = [
-                np.sqrt((1 - prob) ** n) * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+                np.sqrt((1 - prob) ** n)
+                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
             self._collapse_ops += [
                 k
@@ -244,7 +252,10 @@ class Simulation:
         self._initial_state: qutip.Qobj
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
-                [self.basis["d" if self._interaction == "XY" else "g"] for _ in range(self._size)]
+                [
+                    self.basis["d" if self._interaction == "XY" else "g"]
+                    for _ in range(self._size)
+                ]
             )
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
@@ -253,7 +264,8 @@ class Simulation:
             legal_dims = [[self.dim] * self._size, [1] * self._size]
             if shape != legal_shape:
                 raise ValueError(
-                    "Incompatible shape of initial state." + f"Expected {legal_shape}, got {shape}."
+                    "Incompatible shape of initial state."
+                    + f"Expected {legal_shape}, got {shape}."
                 )
             self._initial_state = qutip.Qobj(state, dims=legal_dims)
 
@@ -284,15 +296,20 @@ class Simulation:
             if value == "Full":
                 self._eval_times_array = self._times
             elif value == "Minimal":
-                self._eval_times_array = np.array([self._times[0], self._times[-1]])
+                self._eval_times_array = np.array(
+                    [self._times[0], self._times[-1]]
+                )
             else:
                 raise ValueError(
                     "Wrong evaluation time label. It should "
-                    "be `Full`, `Minimal`, an array of times or" + " a float between 0 and 1."
+                    "be `Full`, `Minimal`, an array of times or"
+                    + " a float between 0 and 1."
                 )
         elif isinstance(value, float):
             if value > 1 or value <= 0:
-                raise ValueError("evaluation_times float must be between 0 " "and 1.")
+                raise ValueError(
+                    "evaluation_times float must be between 0 " "and 1."
+                )
             indices = np.linspace(
                 0,
                 len(self._times) - 1,
@@ -305,10 +322,14 @@ class Simulation:
             t_min = np.min(value)
             if t_max > self._times[-1]:
                 raise ValueError(
-                    "Provided evaluation-time list extends " "further than sequence duration."
+                    "Provided evaluation-time list extends "
+                    "further than sequence duration."
                 )
             if t_min < 0:
-                raise ValueError("Provided evaluation-time list contains " "negative values.")
+                raise ValueError(
+                    "Provided evaluation-time list contains "
+                    "negative values."
+                )
             # Ensure the list of times is sorted
             eval_times = np.array(np.sort(value))
             if t_min > 0:
@@ -320,7 +341,8 @@ class Simulation:
         else:
             raise ValueError(
                 "Wrong evaluation time label. It should "
-                "be `Full`, `Minimal`, an array of times or a " + "float between 0 and 1."
+                "be `Full`, `Minimal`, an array of times or a "
+                + "float between 0 and 1."
             )
         self._evaluation_times: Union[str, ArrayLike, float] = value
 
@@ -396,9 +418,15 @@ class Simulation:
                 position = self._qdict[qid[0]]
                 r = np.linalg.norm(position)
                 w0 = self.config.laser_waist
-                noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(-((r / w0) ** 2))
-            samples_dict["amp"][slot.ti : slot.tf] += _pulse.amplitude.samples * noise_amp
-            samples_dict["det"][slot.ti : slot.tf] += _pulse.detuning.samples + noise_det
+                noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
+                    -((r / w0) ** 2)
+                )
+            samples_dict["amp"][slot.ti : slot.tf] += (
+                _pulse.amplitude.samples * noise_amp
+            )
+            samples_dict["det"][slot.ti : slot.tf] += (
+                _pulse.detuning.samples + noise_det
+            )
             samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
         for channel in self._seq.declared_channels:
@@ -406,7 +434,9 @@ class Simulation:
             basis = self._seq.declared_channels[channel].basis
 
             # Case of coherent global simulations
-            if addr == "Global" and (set(self.config.noise).issubset({"dephasing"})):
+            if addr == "Global" and (
+                set(self.config.noise).issubset({"dephasing"})
+            ):
                 slm_on = bool(self._seq._slm_mask_targets)
                 for slot in self._seq._schedule[channel]:
                     if isinstance(slot.type, Pulse):
@@ -416,7 +446,9 @@ class Simulation:
                             for qubit in slot.targets:
                                 if qubit not in samples_dict:
                                     samples_dict[qubit] = prepare_dict()
-                                write_samples(slot, samples_dict[qubit], True, qubit)
+                                write_samples(
+                                    slot, samples_dict[qubit], True, qubit
+                                )
                             self.samples["Local"][basis] = samples_dict
                         # Otherwise, populate corresponding global
                         else:
@@ -439,7 +471,9 @@ class Simulation:
                                 samples_dict[qubit] = prepare_dict()
                             # We don't write samples for badly prep qubits
                             if not self._bad_atoms[qubit]:
-                                write_samples(slot, samples_dict[qubit], is_global, qubit)
+                                write_samples(
+                                    slot, samples_dict[qubit], is_global, qubit
+                                )
                 self.samples["Local"][basis] = samples_dict
 
             # Apply SLM mask if it was defined
@@ -478,13 +512,19 @@ class Simulation:
 
         for operator, qubits in operations:
             if qubits == "global":
-                return sum(self.build_operator([(operator, [q_id])]) for q_id in self._qdict)
+                return sum(
+                    self.build_operator([(operator, [q_id])])
+                    for q_id in self._qdict
+                )
             else:
                 qubits_set = set(qubits)
                 if len(qubits_set) < len(qubits):
                     raise ValueError("Duplicate atom ids in argument list.")
                 if not qubits_set.issubset(self._qdict.keys()):
-                    raise ValueError("Invalid qubit names: " f"{qubits_set - self._qdict.keys()}")
+                    raise ValueError(
+                        "Invalid qubit names: "
+                        f"{qubits_set - self._qdict.keys()}"
+                    )
                 if isinstance(operator, str):
                     try:
                         operator = self.op_matrix[operator]
@@ -512,10 +552,15 @@ class Simulation:
         atoms are set to be correctly prepared.
         """
         if "SPAM" in self.config.noise and self.config.eta > 0:
-            dist = np.random.uniform(size=len(self._qid_index)) < self.config.spam_dict["eta"]
+            dist = (
+                np.random.uniform(size=len(self._qid_index))
+                < self.config.spam_dict["eta"]
+            )
             self._bad_atoms = dict(zip(self._qid_index, dist))
         if "doppler" in self.config.noise:
-            detune = np.random.normal(0, self.config.doppler_sigma, size=len(self._qid_index))
+            detune = np.random.normal(
+                0, self.config.doppler_sigma, size=len(self._qid_index)
+            )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
     def _build_basis_and_op_matrices(self) -> None:
@@ -527,7 +572,10 @@ class Simulation:
             projectors = ["uu", "du", "ud", "dd"]
         else:
             # No samples => Empty dict entry => False
-            if not self.samples["Global"]["digital"] and not self.samples["Local"]["digital"]:
+            if (
+                not self.samples["Global"]["digital"]
+                and not self.samples["Local"]["digital"]
+            ):
                 self.basis_name = "ground-rydberg"
                 self.dim = 2
                 basis = ["r", "g"]
@@ -550,7 +598,9 @@ class Simulation:
         self.op_matrix = {"I": qutip.qeye(self.dim)}
 
         for proj in projectors:
-            self.op_matrix["sigma_" + proj] = self.basis[proj[0]] * self.basis[proj[1]].dag()
+            self.op_matrix["sigma_" + proj] = (
+                self.basis[proj[0]] * self.basis[proj[1]].dag()
+            )
 
     def _construct_hamiltonian(self) -> None:
         """Constructs the hamiltonian from the Sequence.
@@ -607,7 +657,10 @@ class Simulation:
                     or self._bad_atoms[q2]
                     or (
                         masked
-                        and (q1 in self._seq._slm_mask_targets or q2 in self._seq._slm_mask_targets)
+                        and (
+                            q1 in self._seq._slm_mask_targets
+                            or q2 in self._seq._slm_mask_targets
+                        )
                     )
                 ):
                     continue
@@ -623,8 +676,15 @@ class Simulation:
                         )
                         / (dist * mag_norm)
                     )
-                U = 0.5 * self._seq._device.interaction_coeff_xy * (1 - 3 * cosine ** 2) / dist ** 3
-                xy += U * self.build_operator([("sigma_du", [q1]), ("sigma_ud", [q2])])
+                U = (
+                    0.5
+                    * self._seq._device.interaction_coeff_xy
+                    * (1 - 3 * cosine ** 2)
+                    / dist ** 3
+                )
+                xy += U * self.build_operator(
+                    [("sigma_du", [q1]), ("sigma_ud", [q2])]
+                )
             return xy
 
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
@@ -655,7 +715,9 @@ class Simulation:
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
                         if op_id not in operators:
-                            operators[op_id] = self.build_operator([(op_id, "global")])
+                            operators[op_id] = self.build_operator(
+                                [(op_id, "global")]
+                            )
                         terms.append(
                             [
                                 operators[op_id],
@@ -667,13 +729,17 @@ class Simulation:
                     if q_id not in operators:
                         operators[q_id] = {}
                     coeffs = [
-                        0.5 * samples_q["amp"] * np.exp(-1j * samples_q["phase"]),
+                        0.5
+                        * samples_q["amp"]
+                        * np.exp(-1j * samples_q["phase"]),
                         -0.5 * samples_q["det"],
                     ]
                     for coeff, op_id in zip(coeffs, op_ids):
                         if np.any(coeff != 0):
                             if op_id not in operators[q_id]:
-                                operators[q_id][op_id] = self.build_operator([(op_id, [q_id])])
+                                operators[q_id][op_id] = self.build_operator(
+                                    [(op_id, [q_id])]
+                                )
                             terms.append(
                                 [
                                     operators[q_id][op_id],
@@ -705,7 +771,9 @@ class Simulation:
                 qobj_list += [
                     [
                         make_interaction_term(masked=True),
-                        self._adapt_to_sampling_rate(np.logical_not(coeff).astype(int)),
+                        self._adapt_to_sampling_rate(
+                            np.logical_not(coeff).astype(int)
+                        ),
                     ]
                 ]
             else:
@@ -745,7 +813,8 @@ class Simulation:
             )
         if time < 0:
             raise ValueError(
-                f"Provided time (`time` = {time}) must be " "greater than or equal to 0."
+                f"Provided time (`time` = {time}) must be "
+                "greater than or equal to 0."
             )
         return self._hamiltonian(time / 1000)  # Creates new Qutip.Qobj
 
@@ -776,7 +845,10 @@ class Simulation:
 
         meas_errors: Optional[Mapping[str, float]] = None
         if "SPAM" in self.config.noise:
-            meas_errors = {k: self.config.spam_dict[k] for k in ("epsilon", "epsilon_prime")}
+            meas_errors = {
+                k: self.config.spam_dict[k]
+                for k in ("epsilon", "epsilon_prime")
+            }
             if self.config.eta > 0 and self.initial_state != qutip.tensor(
                 [self.basis["g"] for _ in range(self._size)]
             ):
@@ -797,7 +869,9 @@ class Simulation:
 
             if "dephasing" in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
-                liouvillian = qutip.liouvillian(self._hamiltonian, self._collapse_ops)
+                liouvillian = qutip.liouvillian(
+                    self._hamiltonian, self._collapse_ops
+                )
                 result = qutip.mesolve(
                     liouvillian,
                     self.initial_state,
@@ -840,13 +914,16 @@ class Simulation:
             # Extract statistics at eval time:
             total_count += np.array(
                 [
-                    cleanres_noisyseq.sample_state(t, n_samples=self.config.samples_per_run)
+                    cleanres_noisyseq.sample_state(
+                        t, n_samples=self.config.samples_per_run
+                    )
                     for t in self._eval_times_array
                 ]
             )
         n_measures = self.config.runs * self.config.samples_per_run
         total_run_prob = [
-            Counter({k: v / n_measures for k, v in total_count[t].items()}) for t in time_indices
+            Counter({k: v / n_measures for k, v in total_count[t].items()})
+            for t in time_indices
         ]
         return NoisyResults(
             total_run_prob,

@@ -54,7 +54,9 @@ def test_creation():
 
 
 def test_str():
-    assert pls2.__str__() == ("Pulse(Amp=1 rad/µs, Detuning=-10 rad/µs, " + "Phase=3.14)")
+    assert pls2.__str__() == (
+        "Pulse(Amp=1 rad/µs, Detuning=-10 rad/µs, " + "Phase=3.14)"
+    )
     pls_ = Pulse(bwf, rwf, 1)
     msg = "Pulse(Amp=Blackman(Area: 3), Detuning=Ramp(0->1 rad/µs), Phase=1)"
     assert pls_.__str__() == msg

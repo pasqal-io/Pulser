@@ -35,7 +35,9 @@ reg = Register(q_dict)
 duration = 1000
 pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
 twopi = Pulse.ConstantDetuning(BlackmanWaveform(duration, 2 * np.pi), 0.0, 0)
-pi_Y = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2)
+pi_Y = Pulse.ConstantDetuning(
+    BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
+)
 
 seq = Sequence(reg, Chadoq2)
 
@@ -111,9 +113,17 @@ def test_extraction_of_sequences():
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
                     samples = sim.samples[addr][basis]
-                    assert (samples["amp"][slot.ti : slot.tf] == slot.type.amplitude.samples).all()
-                    assert (samples["det"][slot.ti : slot.tf] == slot.type.detuning.samples).all()
-                    assert (samples["phase"][slot.ti : slot.tf] == slot.type.phase).all()
+                    assert (
+                        samples["amp"][slot.ti : slot.tf]
+                        == slot.type.amplitude.samples
+                    ).all()
+                    assert (
+                        samples["det"][slot.ti : slot.tf]
+                        == slot.type.detuning.samples
+                    ).all()
+                    assert (
+                        samples["phase"][slot.ti : slot.tf] == slot.type.phase
+                    ).all()
 
         elif addr == "Local":
             for slot in seq._schedule[channel]:
@@ -121,12 +131,17 @@ def test_extraction_of_sequences():
                     for qubit in slot.targets:  # TO DO: multiaddressing??
                         samples = sim.samples[addr][basis][qubit]
                         assert (
-                            samples["amp"][slot.ti : slot.tf] == slot.type.amplitude.samples
+                            samples["amp"][slot.ti : slot.tf]
+                            == slot.type.amplitude.samples
                         ).all()
                         assert (
-                            samples["det"][slot.ti : slot.tf] == slot.type.detuning.samples
+                            samples["det"][slot.ti : slot.tf]
+                            == slot.type.detuning.samples
                         ).all()
-                        assert (samples["phase"][slot.ti : slot.tf] == slot.type.phase).all()
+                        assert (
+                            samples["phase"][slot.ti : slot.tf]
+                            == slot.type.phase
+                        ).all()
 
 
 def test_building_basis_and_projection_operators():
@@ -139,9 +154,18 @@ def test_building_basis_and_projection_operators():
         "g": qutip.basis(3, 1),
         "h": qutip.basis(3, 2),
     }
-    assert sim.op_matrix["sigma_rr"] == qutip.basis(3, 0) * qutip.basis(3, 0).dag()
-    assert sim.op_matrix["sigma_gr"] == qutip.basis(3, 1) * qutip.basis(3, 0).dag()
-    assert sim.op_matrix["sigma_hg"] == qutip.basis(3, 2) * qutip.basis(3, 1).dag()
+    assert (
+        sim.op_matrix["sigma_rr"]
+        == qutip.basis(3, 0) * qutip.basis(3, 0).dag()
+    )
+    assert (
+        sim.op_matrix["sigma_gr"]
+        == qutip.basis(3, 1) * qutip.basis(3, 0).dag()
+    )
+    assert (
+        sim.op_matrix["sigma_hg"]
+        == qutip.basis(3, 2) * qutip.basis(3, 1).dag()
+    )
 
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
@@ -164,8 +188,14 @@ def test_building_basis_and_projection_operators():
     assert sim2.basis_name == "ground-rydberg"
     assert sim2.dim == 2
     assert sim2.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
-    assert sim2.op_matrix["sigma_rr"] == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
-    assert sim2.op_matrix["sigma_gr"] == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    assert (
+        sim2.op_matrix["sigma_rr"]
+        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2.op_matrix["sigma_gr"]
+        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    )
 
     # Digital
     seq2b = Sequence(reg, Chadoq2)
@@ -175,8 +205,14 @@ def test_building_basis_and_projection_operators():
     assert sim2b.basis_name == "digital"
     assert sim2b.dim == 2
     assert sim2b.basis == {"g": qutip.basis(2, 0), "h": qutip.basis(2, 1)}
-    assert sim2b.op_matrix["sigma_gg"] == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
-    assert sim2b.op_matrix["sigma_hg"] == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    assert (
+        sim2b.op_matrix["sigma_gg"]
+        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2b.op_matrix["sigma_hg"]
+        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    )
 
     # Local ground-rydberg
     seq2c = Sequence(reg, Chadoq2)
@@ -186,8 +222,14 @@ def test_building_basis_and_projection_operators():
     assert sim2c.basis_name == "ground-rydberg"
     assert sim2c.dim == 2
     assert sim2c.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
-    assert sim2c.op_matrix["sigma_rr"] == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
-    assert sim2c.op_matrix["sigma_gr"] == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    assert (
+        sim2c.op_matrix["sigma_rr"]
+        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2c.op_matrix["sigma_gr"]
+        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    )
 
     # Global XY
     seq2 = Sequence(reg, MockDevice)
@@ -197,9 +239,18 @@ def test_building_basis_and_projection_operators():
     assert sim2.basis_name == "XY"
     assert sim2.dim == 2
     assert sim2.basis == {"u": qutip.basis(2, 0), "d": qutip.basis(2, 1)}
-    assert sim2.op_matrix["sigma_uu"] == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
-    assert sim2.op_matrix["sigma_du"] == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
-    assert sim2.op_matrix["sigma_ud"] == qutip.basis(2, 0) * qutip.basis(2, 1).dag()
+    assert (
+        sim2.op_matrix["sigma_uu"]
+        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2.op_matrix["sigma_du"]
+        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    )
+    assert (
+        sim2.op_matrix["sigma_ud"]
+        == qutip.basis(2, 0) * qutip.basis(2, 1).dag()
+    )
 
 
 def test_empty_sequences():
@@ -235,7 +286,9 @@ def test_get_hamiltonian():
     assert simple_ham[0, 0] == Chadoq2.interaction_coeff / 10 ** 6 - 2 * detun
 
     np.random.seed(123)
-    simple_sim_noise = Simulation(simple_seq, config=SimConfig(noise="doppler", temperature=20000))
+    simple_sim_noise = Simulation(
+        simple_seq, config=SimConfig(noise="doppler", temperature=20000)
+    )
     simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
     assert np.isclose(
         simple_ham_noise.full(),
@@ -269,7 +322,9 @@ def test_single_atom_simulation():
     one_reg = Register.from_coordinates([(0, 0)], "atom")
     one_seq = Sequence(one_reg, Chadoq2)
     one_seq.declare_channel("ch0", "rydberg_global")
-    one_seq.add(Pulse.ConstantDetuning(ConstantWaveform(16, 1.0), 1.0, 0), "ch0")
+    one_seq.add(
+        Pulse.ConstantDetuning(ConstantWaveform(16, 1.0), 1.0, 0), "ch0"
+    )
     one_sim = Simulation(one_seq)
     one_res = one_sim.run()
     assert one_res._size == one_sim._size
@@ -285,7 +340,9 @@ def test_add_max_step_and_delays():
     seq.delay(1500, "ch")
     seq.add(Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi), 0, 0), "ch")
     seq.delay(2000, "ch")
-    seq.add(Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi / 2), 0, 0), "ch")
+    seq.add(
+        Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi / 2), 0, 0), "ch"
+    )
     sim = Simulation(seq)
     res_large_max_step = sim.run(max_step=1)
     res_auto_max_step = sim.run()
@@ -303,13 +360,19 @@ def test_run():
         sim.draw(draw_phase_area=True)
     bad_initial = np.array([1.0])
     good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
-    good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0) for _ in range(sim._size)])
+    good_initial_qobj = qutip.tensor(
+        [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
+    )
     good_initial_qobj_no_dims = qutip.basis(sim.dim ** sim._size, 2)
 
-    with pytest.raises(ValueError, match="Incompatible shape of initial state"):
+    with pytest.raises(
+        ValueError, match="Incompatible shape of initial state"
+    ):
         sim.initial_state = bad_initial
 
-    with pytest.raises(ValueError, match="Incompatible shape of initial state"):
+    with pytest.raises(
+        ValueError, match="Incompatible shape of initial state"
+    ):
         sim.initial_state = qutip.Qobj(bad_initial)
 
     sim.initial_state = good_initial_array
@@ -341,7 +404,9 @@ def test_run():
 
 
 def test_eval_times():
-    with pytest.raises(ValueError, match="evaluation_times float must be between 0 " "and 1."):
+    with pytest.raises(
+        ValueError, match="evaluation_times float must be between 0 " "and 1."
+    ):
         sim = Simulation(seq, sampling_rate=1.0)
         sim.evaluation_times = 3.0
     with pytest.raises(ValueError, match="Wrong evaluation time label."):
@@ -361,7 +426,8 @@ def test_eval_times():
 
     with pytest.raises(
         ValueError,
-        match="Provided evaluation-time list extends " "further than sequence duration.",
+        match="Provided evaluation-time list extends "
+        "further than sequence duration.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
         sim.evaluation_times = [0, sim._times[-1] + 10]
@@ -373,7 +439,9 @@ def test_eval_times():
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Minimal"
-    np.testing.assert_almost_equal(sim._eval_times_array, np.array([sim._times[0], sim._times[-1]]))
+    np.testing.assert_almost_equal(
+        sim._eval_times_array, np.array([sim._times[0], sim._times[-1]])
+    )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = [0, sim._times[-3], sim._times[-1]]
@@ -391,7 +459,11 @@ def test_eval_times():
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = 0.4
     np.testing.assert_almost_equal(
-        sim._times[np.linspace(0, len(sim._times) - 1, int(0.4 * len(sim._times)), dtype=int)],
+        sim._times[
+            np.linspace(
+                0, len(sim._times) - 1, int(0.4 * len(sim._times)), dtype=int
+            )
+        ],
         sim._eval_times_array,
     )
 
@@ -415,14 +487,22 @@ def test_config():
     sim.set_config(new_cfg)
     assert sim.config == new_cfg
     noisy_ham = sim.get_hamiltonian(123)
-    assert noisy_ham[0, 0] != clean_ham[0, 0] and noisy_ham[3, 3] == clean_ham[3, 3]
+    assert (
+        noisy_ham[0, 0] != clean_ham[0, 0]
+        and noisy_ham[3, 3] == clean_ham[3, 3]
+    )
     sim.set_config(SimConfig(noise="amplitude"))
     noisy_amp_ham = sim.get_hamiltonian(123)
-    assert noisy_amp_ham[0, 0] == clean_ham[0, 0] and noisy_amp_ham[0, 1] != clean_ham[0, 1]
+    assert (
+        noisy_amp_ham[0, 0] == clean_ham[0, 0]
+        and noisy_amp_ham[0, 1] != clean_ham[0, 1]
+    )
 
 
 def test_noise():
-    sim2 = Simulation(seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.4))
+    sim2 = Simulation(
+        seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.4)
+    )
     sim2.run()
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="dephasing"))
@@ -441,7 +521,9 @@ def test_dephasing():
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = Simulation(seq, sampling_rate=0.01, config=SimConfig(noise="dephasing"))
+    sim = Simulation(
+        seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
+    )
     assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
@@ -465,10 +547,14 @@ def test_add_config():
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = Simulation(seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5))
+    sim = Simulation(
+        seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
+    )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
-    sim.add_config(SimConfig(noise=("dephasing", "SPAM", "doppler"), temperature=20000))
+    sim.add_config(
+        SimConfig(noise=("dephasing", "SPAM", "doppler"), temperature=20000)
+    )
     assert "dephasing" in sim.config.noise and "SPAM" in sim.config.noise
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.0e-6
@@ -505,7 +591,9 @@ def test_cuncurrent_pulses():
 
 
 def test_get_xy_hamiltonian():
-    simple_reg = Register.from_coordinates([[0, 10], [10, 0], [0, 0]], prefix="atom")
+    simple_reg = Register.from_coordinates(
+        [[0, 10], [10, 0], [0, 0]], prefix="atom"
+    )
     detun = 1.0
     amp = 3.0
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
@@ -517,14 +605,22 @@ def test_get_xy_hamiltonian():
     assert np.isclose(np.linalg.norm(simple_seq.magnetic_field[0:2]), 1)
 
     simple_sim = Simulation(simple_seq, sampling_rate=0.01)
-    with pytest.raises(ValueError, match="less than or equal to the sequence duration"):
+    with pytest.raises(
+        ValueError, match="less than or equal to the sequence duration"
+    ):
         simple_sim.get_hamiltonian(1650)
     with pytest.raises(ValueError, match="greater than or equal to 0"):
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
     assert simple_ham[1, 2] == 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3
-    assert np.abs(simple_ham[1, 4] - (-2 * 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3)) < 1e-10
+    assert (
+        np.abs(
+            simple_ham[1, 4]
+            - (-2 * 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3)
+        )
+        < 1e-10
+    )
     assert simple_ham[0, 1] == 0.5 * amp
     assert simple_ham[3, 3] == -2 * detun
 
@@ -541,7 +637,9 @@ def test_run_xy():
     sim = Simulation(simple_seq, sampling_rate=0.01)
 
     good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
-    good_initial_qobj = qutip.tensor([qutip.basis(sim.dim, 0) for _ in range(sim._size)])
+    good_initial_qobj = qutip.tensor(
+        [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
+    )
 
     sim.initial_state = good_initial_array
     sim.run()
@@ -565,7 +663,9 @@ def test_noisy_xy():
     simple_seq.add(rise, "ch0")
 
     sim = Simulation(simple_seq, sampling_rate=0.01)
-    with pytest.raises(NotImplementedError, match="mode 'XY' does not support simulation of"):
+    with pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
         sim.set_config(SimConfig(("SPAM", "doppler")))
 
     sim.set_config(SimConfig("SPAM", eta=0.4))
@@ -575,7 +675,9 @@ def test_noisy_xy():
         "atom2": True,
         "atom3": False,
     }
-    with pytest.raises(NotImplementedError, match="simulation of noise types: amplitude"):
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: amplitude"
+    ):
         sim.add_config(SimConfig("amplitude"))
 
 
