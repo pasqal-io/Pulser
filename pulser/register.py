@@ -18,7 +18,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Iterable
 from collections.abc import Sequence as abcSequence
-import matplotlib.pyplot as plt
 
 from matplotlib import collections as mc
 import numpy as np
@@ -638,7 +637,7 @@ class Register(BaseRegister):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         fig_name: str = None,
-        kwargs_savefig: dict = {},
+        kwargs_savefig: dict = None,
     ) -> None:
         """Draws the entire register.
 
@@ -653,6 +652,11 @@ class Register(BaseRegister):
             draw_graph(bool, default=True): Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
+            fig_name(str, default=None): The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig(dict, default=None): Keywords arguments for
+                `matplotlib.pyplot.savefig`. Not applicable if
+                `fig_name`is `None`.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade

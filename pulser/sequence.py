@@ -926,6 +926,11 @@ class Sequence:
                 on top of the respective waveforms (defaults to True).
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
+            fig_name(str, default=None): The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig(dict, default=None): Keywords arguments for
+                `matplotlib.pyplot.savefig`. Not applicable if
+                `fig_name`is `None`.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
