@@ -936,7 +936,7 @@ class Sequence:
             Simulation.draw(): Draws the provided sequence and the one used by
             the solver.
         """
-        fig = draw_sequence(
+        draw_sequence(
             self,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
