@@ -125,7 +125,7 @@ def draw_sequence(
             top of the respective waveforms (defaults to True).
         draw_phase_shifts (bool): Whether phase shift and reference information
             should be added to the plot, defaults to False.
-        draw_register (bool): Whether to draw the register after the pulse
+        draw_register (bool): Whether to draw the register before the pulse
             sequence, with a visual indication (square halo) around the qubits
             masked by the SLM, defaults to False.
     """
@@ -161,7 +161,10 @@ def draw_sequence(
             labels = "xyz"
             fig_reg, axes_reg = seq._register._initialize_fig_axes_projection(
                 pos,
+                blockade_radius=35,
+                draw_half_radius=True,
             )
+            fig_reg.tight_layout(w_pad=6.5)
 
             for ax_reg, (ix, iy) in zip(
                 axes_reg, combinations(np.arange(3), 2)
@@ -181,7 +184,11 @@ def draw_sequence(
                 )
 
         elif isinstance(seq._register, Register):
-            fig_reg, ax_reg = seq._register._initialize_fig_axes(pos)
+            fig_reg, ax_reg = seq._register._initialize_fig_axes(
+                pos,
+                blockade_radius=35,
+                draw_half_radius=True,
+            )
             seq._register._draw_2D(
                 ax=ax_reg,
                 pos=pos,

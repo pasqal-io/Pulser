@@ -23,7 +23,7 @@ from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, cast, Optional, Union, TypeVar, Type, Tuple
+from typing import Any, cast, Optional, Union, TypeVar, Type
 from itertools import combinations
 
 import pulser
@@ -651,7 +651,7 @@ class Register(BaseRegister):
         pos: np.ndarray,
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
-    ) -> Tuple[plt.figure.Figure, plt.axes.Axes]:
+    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
         """Creates the Figure and Axes for drawing the register."""
         diffs = super()._register_dims(
             pos,
@@ -673,7 +673,6 @@ class Register(BaseRegister):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
-        masked_qubits: set[QubitId] = set(),
     ) -> None:
         """Draws the entire register.
 
@@ -881,7 +880,7 @@ class Register3D(BaseRegister):
         pos: np.ndarray,
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
-    ) -> Tuple[plt.figure.Figure, plt.axes.Axes]:
+    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
         """Creates the Figure and Axes for drawing the register projections."""
         diffs = super()._register_dims(
             pos,
@@ -968,6 +967,7 @@ class Register3D(BaseRegister):
                 blockade_radius=blockade_radius,
                 draw_half_radius=draw_half_radius,
             )
+            fig.tight_layout(w_pad=6.5)
 
             for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
                 super()._draw_2D(
