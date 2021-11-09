@@ -924,7 +924,7 @@ class Sequence:
                 on top of the respective waveforms (defaults to True).
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
-            draw_register (bool): Whether to draw the register after the pulse
+            draw_register (bool): Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False.
 
