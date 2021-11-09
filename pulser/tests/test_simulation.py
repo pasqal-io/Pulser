@@ -358,7 +358,7 @@ def test_run():
     sim.set_config(SimConfig("SPAM", eta=0.0))
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.pyplot.savefig"):
-            sim.draw(draw_phase_area=True, fig_name='my_fig.pdf')
+            sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     bad_initial = np.array([1.0])
     good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
     good_initial_qobj = qutip.tensor(
