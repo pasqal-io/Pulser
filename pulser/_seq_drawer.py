@@ -446,5 +446,3 @@ def draw_sequence(
             if "detuning" in all_points:
                 pts = np.array(all_points["detuning"])
                 b.scatter(pts[:, 0], pts[:, 1], color="indigo")
-
-    return fig
