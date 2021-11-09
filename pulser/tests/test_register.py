@@ -277,6 +277,10 @@ def test_drawing():
     with patch("matplotlib.pyplot.show"):
         reg.draw()
 
+    with patch("matplotlib.pyplot.show"):
+        with patch("matplotlib.pyplot.savefig"):
+            reg.draw(fig_name="my_register.pdf")
+
     reg = Register.rectangle(1, 8)
     with patch("matplotlib.pyplot.show"):
         reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
@@ -324,7 +328,8 @@ def test_drawing3D():
 
     reg = Register3D.cubic(3, 8)
     with patch("matplotlib.pyplot.show"):
-        reg.draw()
+        with patch("matplotlib.pyplot.savefig"):
+            reg.draw(fig_name="my_register.pdf")
 
     reg = Register3D.cuboid(1, 8, 2)
     with patch("matplotlib.pyplot.show"):
