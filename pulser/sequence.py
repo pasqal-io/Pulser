@@ -914,9 +914,10 @@ class Sequence:
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
-        fig_name: str = None,
-        kwargs_savefig: dict = {},
-        kwargs_savefig_register: dict = {},
+        fig_name_seq: str = None,
+        fig_name_reg: str = None,
+        kwargs_savefig_seq: dict = {},
+        kwargs_savefig_reg: dict = {},
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -931,14 +932,18 @@ class Sequence:
             draw_register (bool): Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False.
-            fig_name(str, default=None): The name on which to save the figure.
-                If None the figure will not be saved.
-            kwargs_savefig(dict, default={}): Keywords arguments for
-                `matplotlib.pyplot.savefig`, pulse drawing. Not applicable if
-                `fig_name`is `None`.
-            kwargs_savefig_register(dict, default={}): Keywords arguments for
-                `matplotlib.pyplot.savefig`, register drawing. Not applicable
-                if `fig_name`is `None` or `draw_register` is `False`.
+            fig_name_seq(str, default=None): The name on which to save the
+                figure of the sequence. If None the figure will not be saved.
+            fig_name_reg(str, default=None): The name on which to save the
+                figure of the register. If None or draw_register is `False`,
+                the figure will not be saved.
+            kwargs_savefig_seq(dict, default={}): Keywords arguments for
+                `matplotlib.figure.Figure.savefig`, sequence drawing.
+                Not applicable if `fig_name_seq`is `None`.
+            kwargs_savefig_reg(dict, default={}): Keywords arguments for
+                `matplotlib.figure.Figure.savefig`, register drawing.
+                Not applicable if `fig_name`is `None` or `draw_register` is
+                `False`.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
@@ -951,11 +956,10 @@ class Sequence:
             draw_phase_shifts=draw_phase_shifts,
             draw_register=draw_register,
         )
-        if fig_name is not None and fig_reg is not None:
-            fig_reg.savefig("register_" + fig_name, **kwargs_savefig_register)
-            fig.savefig("pulses_" + fig_name, **kwargs_savefig)
-        elif fig_name is not None:
-            fig.savefig(fig_name, **kwargs_savefig)
+        if fig_name_seq is not None:
+            fig.savefig(fig_name_seq, **kwargs_savefig_seq)
+        if fig_name_reg is not None and draw_register:
+            fig_reg.savefig(fig_name_reg, **kwargs_savefig_reg)
         plt.show()
 
     def _target(
