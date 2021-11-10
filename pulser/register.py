@@ -150,7 +150,9 @@ class BaseRegister(ABC):
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            plot_ids = [f"{i}" + "(m)" * (i in masked_qubits) for i in ids]
+            plot_ids = [
+                f"[{i}]" if i in masked_qubits else f"{i}" for i in ids
+            ]
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
@@ -163,7 +165,13 @@ class BaseRegister(ABC):
                 while j < len(plot_ids):
                     r2 = plot_pos[j]
                     if np.max(np.abs(r - r2)) < epsilon:
-                        plot_ids[i] += ", " + plot_ids.pop(j)
+                        # Absorb square brackets for two adjacent masked qubits
+                        if plot_ids[i][-1] == "]" and plot_ids[j][0] == "[":
+                            plot_ids[i] = (
+                                plot_ids[i][:-1] + ", " + plot_ids.pop(j)[1:]
+                            )
+                        else:
+                            plot_ids[i] += ", " + plot_ids.pop(j)
                         plot_pos.pop(j)
                         overlap = True
                     else:

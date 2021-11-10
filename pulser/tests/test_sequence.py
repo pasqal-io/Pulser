@@ -567,6 +567,6 @@ def test_draw_register():
     seq3d = Sequence(reg3d, MockDevice)
     seq3d.declare_channel("ch_xy", "mw_global")
     seq3d.add(pulse, "ch_xy")
-    seq3d.config_slm_mask([0])
+    seq3d.config_slm_mask([6, 15])
     with patch("matplotlib.pyplot.show"):
         seq3d.draw(draw_register=True)
