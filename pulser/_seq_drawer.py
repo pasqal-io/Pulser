@@ -111,7 +111,7 @@ def draw_sequence(
     draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
     draw_register: bool = False,
-) -> Figure:
+) -> tuple[Figure, Figure]:
     """Draws the entire sequence.
 
     Args:
@@ -503,3 +503,5 @@ def draw_sequence(
             if "detuning" in all_points:
                 pts = np.array(all_points["detuning"])
                 b.scatter(pts[:, 0], pts[:, 1], color="indigo")
+
+    return (fig_reg if draw_register else None, fig)

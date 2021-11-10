@@ -916,6 +916,7 @@ class Sequence:
         draw_register: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
+        kwargs_savefig_register: dict = {},
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -933,22 +934,28 @@ class Sequence:
             fig_name(str, default=None): The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig(dict, default={}): Keywords arguments for
-                `matplotlib.pyplot.savefig`. Not applicable if
+                `matplotlib.pyplot.savefig`, pulse drawing. Not applicable if
                 `fig_name`is `None`.
+            kwargs_savefig_register(dict, default={}): Keywords arguments for
+                `matplotlib.pyplot.savefig`, register drawing. Not applicable
+                if `fig_name`is `None` or `draw_register` is `False`.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
             the solver.
         """
-        draw_sequence(
+        fig_reg, fig = draw_sequence(
             self,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
             draw_register=draw_register,
         )
-        if fig_name is not None:
-            plt.savefig(fig_name, **kwargs_savefig)
+        if fig_name is not None and fig_reg is not None:
+            fig_reg.savefig("register_" + fig_name, **kwargs_savefig_register)
+            fig.savefig("pulses_" + fig_name, **kwargs_savefig)
+        elif fig_name is not None:
+            fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def _target(

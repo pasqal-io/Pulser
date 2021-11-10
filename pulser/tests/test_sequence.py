@@ -327,8 +327,9 @@ def test_sequence():
     seq.phase_shift(np.pi, "q0", basis="ground-rydberg")
 
     with patch("matplotlib.pyplot.show"):
-        with patch("matplotlib.pyplot.savefig"):
+        with patch("matplotlib.figure.Figure.savefig"):
             seq.draw(fig_name="my_sequence.pdf")
+            seq.draw(draw_register=True, fig_name="my_sequence.pdf")
 
     pulse1 = Pulse(
         InterpolatedWaveform(500, [0, 1, 0]),
