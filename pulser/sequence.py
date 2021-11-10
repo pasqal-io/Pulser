@@ -25,6 +25,7 @@ from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -913,6 +914,8 @@ class Sequence:
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -927,6 +930,11 @@ class Sequence:
             draw_register (bool): Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False.
+            fig_name(str, default=None): The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig(dict, default={}): Keywords arguments for
+                `matplotlib.pyplot.savefig`. Not applicable if
+                `fig_name`is `None`.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
@@ -939,6 +947,9 @@ class Sequence:
             draw_phase_shifts=draw_phase_shifts,
             draw_register=draw_register,
         )
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
+        plt.show()
 
     def _target(
         self, qubits: Union[Iterable[QubitId], QubitId], channel: str

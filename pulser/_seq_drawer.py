@@ -18,6 +18,7 @@ from collections import defaultdict
 from typing import Any, cast, Optional, Union
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import numpy as np
 from scipy.interpolate import CubicSpline
 from itertools import combinations
@@ -110,7 +111,7 @@ def draw_sequence(
     draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
     draw_register: bool = False,
-) -> None:
+) -> Figure:
     """Draws the entire sequence.
 
     Args:
@@ -502,5 +503,3 @@ def draw_sequence(
             if "detuning" in all_points:
                 pts = np.array(all_points["detuning"])
                 b.scatter(pts[:, 0], pts[:, 1], color="indigo")
-
-    plt.show()
