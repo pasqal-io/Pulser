@@ -21,6 +21,7 @@ from pulser.channels import Raman, Rydberg
 Chadoq2 = Device(
     name="Chadoq2",
     dimensions=2,
+    rydberg_level = 60,
     max_atom_num=100,
     max_radial_distance=50,
     min_atom_distance=4,

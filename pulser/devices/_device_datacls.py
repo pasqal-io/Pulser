@@ -61,7 +61,16 @@ class Device:
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
         self.__dict__["__doc__"] = self._specs(for_docs=True)
-
+        
+    def change_ryd_lvl(self,ryd_lvl):
+        """Change the rydberg level and the corresponding interaction coeff used by the device
+        
+        Args:
+            ryd_lvl(int): the rydberg level used.
+        """
+        object.__setattr__(self, 'rydberg_level', ryd_lvl)
+        object.__setattr__(self, 'interaction_coeff', 2*np.pi*C6_list[ryd_lvl])
+        
     @property
     def channels(self) -> dict[str, Channel]:
         """Dictionary of available channels on this device."""
