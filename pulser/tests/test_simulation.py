@@ -93,11 +93,13 @@ def test_initialization_and_construction_of_hamiltonian():
         Simulation(seq, sampling_rate=-1)
 
     assert sim._sampling_rate == 0.011
-    assert len(sim._times) == int(sim._sampling_rate * sim._tot_duration)
+    assert len(sim._sampling_times) == int(
+        sim._sampling_rate * sim._tot_duration
+    )
 
     assert isinstance(sim._hamiltonian, qutip.QobjEvo)
     # Checks adapt() method:
-    assert bool(set(sim._hamiltonian.tlist).intersection(sim._times))
+    assert bool(set(sim._hamiltonian.tlist).intersection(sim._sampling_times))
     for qobjevo in sim._hamiltonian.ops:
         for sh in qobjevo.qobj.shape:
             assert sh == sim.dim ** sim._size
@@ -422,7 +424,7 @@ def test_eval_times():
         match="Provided evaluation-time list contains " "negative values.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [-1, 0, sim._times[-2]]
+        sim.evaluation_times = [-1, 0, sim._sampling_times[-2]]
 
     with pytest.raises(
         ValueError,
@@ -430,38 +432,58 @@ def test_eval_times():
         "further than sequence duration.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [0, sim._times[-1] + 10]
+        sim.evaluation_times = [0, sim._sampling_times[-1] + 10]
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Full"
-    assert sim.evaluation_times == "Full"
-    np.testing.assert_almost_equal(sim._eval_times_array, sim._times)
+    assert sim._eval_times_instruction == "Full"
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.append(sim._sampling_times, sim._tot_duration / 1000),
+    )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Minimal"
-    np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([sim._times[0], sim._times[-1]])
-    )
-
-    sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [0, sim._times[-3], sim._times[-1]]
-    np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([0, sim._times[-3], sim._times[-1]])
-    )
-
-    sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [sim._times[-10], sim._times[-3]]
+    assert sim._eval_times_instruction == "Minimal"
     np.testing.assert_almost_equal(
         sim._eval_times_array,
-        np.array([0, sim._times[-10], sim._times[-3], sim._times[-1]]),
+        np.r_[0.0, sim._tot_duration / 1000],
+    )
+
+    sim = Simulation(seq, sampling_rate=1.0)
+    sim.evaluation_times = [
+        0,
+        sim._sampling_times[-3],
+        sim._tot_duration / 1000,
+    ]
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array([0, sim._sampling_times[-3], sim._tot_duration / 1000]),
+    )
+
+    sim = Simulation(seq, sampling_rate=1.0)
+    sim.evaluation_times = [sim._sampling_times[-10], sim._sampling_times[-3]]
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array(
+            [
+                0,
+                sim._sampling_times[-10],
+                sim._sampling_times[-3],
+                sim._tot_duration / 1000,
+            ]
+        ),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = 0.4
     np.testing.assert_almost_equal(
-        sim._times[
+        sim._sampling_times[
             np.linspace(
-                0, len(sim._times) - 1, int(0.4 * len(sim._times)), dtype=int
+                0,
+                len(sim._sampling_times) - 1,
+                int(0.4 * len(sim._sampling_times)),
+                dtype=int,
             )
         ],
         sim._eval_times_array,
@@ -524,7 +546,7 @@ def test_dephasing():
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
+    assert sim.run().sample_final_state() == Counter({"0": 675, "1": 325})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
@@ -584,7 +606,7 @@ def test_cuncurrent_pulses():
     config_doppler = SimConfig(noise=("doppler"))
     sim_with_noise.set_config(config_doppler)
 
-    for t in sim_no_noise._times:
+    for t in sim_no_noise._sampling_times:
         ham_no_noise = sim_no_noise.get_hamiltonian(t)
         ham_with_noise = sim_with_noise.get_hamiltonian(t)
         assert ham_no_noise[0, 1] == ham_with_noise[0, 1]
@@ -723,7 +745,7 @@ def test_xy_mask_equals_remove():
     sim_two = Simulation(seq_two)
 
     # Check equality
-    for t in sim_two._times:
+    for t in sim_two._sampling_times:
         ham_masked = sim_masked.get_hamiltonian(t)
         ham_two = sim_two.get_hamiltonian(t)
         assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
@@ -768,7 +790,7 @@ def test_xy_mask_two_pulses():
 
     ti = seq_masked._slm_mask_time[0]
     tf = seq_masked._slm_mask_time[1]
-    for t in sim_masked._times:
+    for t in sim_masked._sampling_times:
         ham_masked = sim_masked.get_hamiltonian(t)
         ham_three = sim_three.get_hamiltonian(t)
         ham_two = sim_two.get_hamiltonian(t)

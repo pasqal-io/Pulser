@@ -26,7 +26,6 @@ from pulser.waveforms import BlackmanWaveform
 from pulser.simulation import Simulation, SimConfig
 from pulser.simulation.simresults import CoherentResults, NoisyResults
 
-np.random.seed(123)
 q_dict = {
     "A": np.array([0.0, 0.0]),
     "B": np.array([0.0, 10.0]),
@@ -41,12 +40,18 @@ seq = Sequence(reg, Chadoq2)
 # Declare Channels
 seq.declare_channel("ryd", "rydberg_global")
 seq.add(pi, "ryd")
+
+# Make two copies of `seq` before adding measurement basis:
 seq_no_meas = deepcopy(seq)
 seq_no_meas_noisy = deepcopy(seq)
+
+# Add measurement basis:
 seq.measure("ground-rydberg")
 
 sim = Simulation(seq)
 cfg_noisy = SimConfig(noise=("SPAM", "doppler", "amplitude"))
+
+np.random.seed(123)
 sim_noisy = Simulation(seq, config=cfg_noisy)
 results = sim.run()
 results_noisy = sim_noisy.run()
@@ -95,7 +100,7 @@ def test_get_final_state():
         results.get_final_state(reduce_to_basis="digital")
     assert (
         results.get_final_state(
-            reduce_to_basis="ground-rydberg", ignore_global_phase=False
+            reduce_to_basis="ground-rydberg", ignore_global_phase=True
         )
         == results.states[-1].tidyup()
     )
@@ -154,11 +159,11 @@ def test_get_final_state_noisy():
     res3._meas_basis = "ground-rydberg"
     assert (
         final_state[0, 0] == 0.06666666666666667 + 0j
-        and final_state[2, 2] == 0.9333333333333333 + 0j
+        and final_state[2, 2] == 0.92 + 0j
     )
     assert res3.states[-1] == final_state
     assert res3.results[-1] == Counter(
-        {"10": 0.9333333333333333, "00": 0.06666666666666667}
+        {"10": 0.92, "00": 0.06666666666666667, "11": 0.013333333333333334}
     )
 
 
@@ -166,19 +171,23 @@ def test_get_state_float_time():
     with pytest.raises(IndexError, match="is absent from"):
         results.get_state(-1.0)
     with pytest.raises(IndexError, match="is absent from"):
-        mean = (results._sim_times[-1] + results._sim_times[-2]) / 2
-        diff = (results._sim_times[-1] - results._sim_times[-2]) / 2
+        mean = (
+            results._evaluation_times[-1] + results._evaluation_times[-2]
+        ) / 2
+        diff = (
+            results._evaluation_times[-1] - results._evaluation_times[-2]
+        ) / 2
         results.get_state(mean, t_tol=diff / 2)
     state = results.get_state(mean, t_tol=3 * diff / 2)
-    assert state == results.get_state(results._sim_times[-2])
+    assert state == results.get_state(results._evaluation_times[-2])
     assert np.isclose(
         state.full(),
         np.array(
             [
-                [0.79602211 + 0.0j],
-                [0.02417478 - 0.37829574j],
-                [0.02417478 - 0.37829574j],
-                [-0.27423657 - 0.06131009j],
+                [0.79602201 + 0.0j],
+                [0.02606925 - 0.37817j],
+                [0.02606925 - 0.37817j],
+                [-0.27392611 - 0.0626829j],
             ]
         ),
     ).all()
@@ -200,7 +209,7 @@ def test_expect():
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
     assert np.isclose(exp[-1], 1)
-    assert len(exp) == duration
+    assert len(exp) == duration + 1  # +1 for the final evaluation time
     np.testing.assert_almost_equal(
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1, 0], [0, 0]]),
@@ -210,7 +219,9 @@ def test_expect():
     sim_single.set_config(config)
     sim_single.evaluation_times = "Minimal"
     results_single = sim_single.run()
+    print("states after run are:", results_single.states)
     exp = results_single.expect(op)[0]
+    print("expect results are", exp)
     assert len(exp) == 2
     assert isinstance(results_single, CoherentResults)
     assert results_single._meas_errors == {
@@ -238,12 +249,11 @@ def test_expect():
 
 
 def test_expect_noisy():
-    np.random.seed(123)
     bad_op = qutip.tensor([qutip.qeye(2), qutip.sigmap()])
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7733333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.72)
 
 
 def test_plot():
@@ -284,22 +294,30 @@ def test_sample_final_state():
 
 
 def test_sample_final_state_noisy():
+    # Sample final state of noisy simulation and check resulting Counter:
+    print(results_noisy.states[-1])
+    print(results_noisy.get_final_state())
     np.random.seed(123)
-    assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 787, "10": 219, "01": 176, "00": 52}
+    noisy_counts = results_noisy.sample_final_state(N_samples=1234)
+    print(noisy_counts)
+    assert noisy_counts == Counter(
+        {"11": 693, "01": 210, "10": 191, "00": 140}
     )
+
+    # Sample from 3 level system with noise:
     res_3level = Simulation(
         seq_no_meas_noisy, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
     )
     final_state = res_3level.run().states[-1]
+    print(final_state.full())
     assert np.isclose(
         final_state.full(),
         np.array(
             [
-                [0.62 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.64 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
                 [0.0 + 0.0j, 0.16 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.04 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.14 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.06 + 0.0j],
             ]
         ),
     ).all()

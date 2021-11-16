@@ -105,7 +105,7 @@ class Simulation:
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self._collapse_ops: list[qutip.Qobj] = []
-        self._sampling_indexes = self._adapt_to_sampling_rate(
+        self._sampling_times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double) / 1000
         )
 
@@ -294,10 +294,13 @@ class Simulation:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = np.append(self._sampling_indexes,
-                                                   self._tot_duration/1000)
+                self._eval_times_array = np.append(
+                    self._sampling_times, self._tot_duration / 1000
+                )
             elif value == "Minimal":
-                self._eval_times_array = np.array([0, self._tot_duration/1000])
+                self._eval_times_array = np.array(
+                    [0, self._tot_duration / 1000]
+                )
             else:
                 raise ValueError(
                     "Wrong evaluation time label. It should "
@@ -311,15 +314,15 @@ class Simulation:
                 )
             selected_idx = np.linspace(
                 0,
-                len(self._sampling_indexes) - 1,
-                int(value * len(self._sampling_indexes)),
+                len(self._sampling_times) - 1,
+                int(value * len(self._sampling_times)),
                 dtype=int,
             )
-            self._eval_times_array = self._sampling_indexes[selected_idx]
+            self._eval_times_array = self._sampling_times[selected_idx]
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
-            if t_max > self._tot_duration/1000:
+            if t_max > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
@@ -333,8 +336,8 @@ class Simulation:
             eval_times = np.array(np.sort(value))
             if t_min > 0:
                 eval_times = np.insert(eval_times, 0, 0.0)
-            if t_max < self._tot_duration/1000:
-                eval_times = np.append(eval_times, self._tot_duration/1000)
+            if t_max < self._tot_duration / 1000:
+                eval_times = np.append(eval_times, self._tot_duration / 1000)
             self._eval_times_array = eval_times
             # always include initial and final times
         else:
@@ -787,7 +790,7 @@ class Simulation:
         if not qobj_list:  # If qobj_list ends up empty
             qobj_list = [0 * self.build_operator([("I", "global")])]
 
-        ham = qutip.QobjEvo(qobj_list, tlist=self._sampling_indexes)
+        ham = qutip.QobjEvo(qobj_list, tlist=self._sampling_times)
         ham = ham + ham.dag()
         ham.compress()
         self._hamiltonian = ham
@@ -804,11 +807,11 @@ class Simulation:
             extracted from the effective sequence (determined by
             `self.sampling_rate`) at the specified time.
         """
-        if time > 1000 * self._sampling_indexes[-1]:
+        if time > 1000 * self._sampling_times[-1]:
             raise ValueError(
                 f"Provided time (`time` = {time}) must be "
                 "less than or equal to the sequence duration "
-                f"({1000 * self._sampling_indexes[-1]})."
+                f"({1000 * self._sampling_times[-1]})."
             )
         if time < 0:
             raise ValueError(
@@ -865,7 +868,6 @@ class Simulation:
                 p_bar = None  # type: ignore
             else:
                 raise ValueError("`progress_bar` must be a bool.")
-
             if "dephasing" in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(
@@ -874,7 +876,12 @@ class Simulation:
                 result = qutip.mesolve(
                     liouvillian,
                     self.initial_state,
-                    self._eval_times_array,
+                    np.linspace(
+                        0,
+                        self._tot_duration,
+                        int(self._sampling_rate * self._tot_duration) + 1,
+                    )
+                    / 1000,
                     progress_bar=p_bar,
                     options=solv_ops,
                 )
@@ -882,7 +889,12 @@ class Simulation:
                 result = qutip.sesolve(
                     self._hamiltonian,
                     self.initial_state,
-                    self._eval_times_array,
+                    np.linspace(
+                        0,
+                        self._tot_duration,
+                        int(self._sampling_rate * self._tot_duration) + 1,
+                    )
+                    / 1000,
                     progress_bar=p_bar,
                     options=solv_ops,
                 )

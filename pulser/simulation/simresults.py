@@ -37,7 +37,7 @@ class SimulationResults(ABC):
     """
 
     def __init__(
-        self, size: int, basis_name: str, sim_times: np.ndarray
+        self, size: int, basis_name: str, evaluation_times: np.ndarray
     ) -> None:
         """Initializes a new SimulationResults instance.
 
@@ -45,8 +45,8 @@ class SimulationResults(ABC):
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            sim_times (array): Array of times (µs) when simulation results are
-                returned.
+            evaluation_times (array): Array of times (µs) when simulation
+                results will be returned.
         """
         self._dim = 3 if basis_name == "all" else 2
         self._size = size
@@ -56,7 +56,7 @@ class SimulationResults(ABC):
                 "'XY'."
             )
         self._basis_name = basis_name
-        self._sim_times = sim_times
+        self._evaluation_times = evaluation_times
         self._results: Union[list[Counter], list[qutip.Qobj]]
         # Use the pseudo-density matrix when calculating expectation values
         self._use_pseudo_dens: bool = False
@@ -64,7 +64,7 @@ class SimulationResults(ABC):
     @property
     @abstractmethod
     def states(self) -> list[qutip.Qobj]:
-        """Lists states of the system at simulation times."""
+        """Lists states of the system at evaluation times."""
         pass
 
     @abstractmethod
@@ -121,12 +121,11 @@ class SimulationResults(ABC):
                 if not isdiagonal(obs):
                     raise ValueError(f"Observable {obs!r} is non-diagonal.")
                 states = [
-                    self._calc_pseudo_density(ind)
-                    for ind in range(len(self._results))
+                    self._calc_pseudo_density(int(1000 * ind))
+                    for ind in self._evaluation_times
                 ]
             else:
                 states = self.states
-
         return cast(list, qutip.expect(qobj_list, states))
 
     def sample_state(
@@ -163,7 +162,7 @@ class SimulationResults(ABC):
             Counter: Sample distribution of bitstrings corresponding to
             measured quantum states at the end of the simulation.
         """
-        return self.sample_state(self._sim_times[-1], N_samples)
+        return self.sample_state(self._evaluation_times[-1], N_samples)
 
     def plot(self, op: qutip.Qobj, fmt: str = "", label: str = "") -> None:
         """Plots the expectation value of a given operator op.
@@ -173,7 +172,9 @@ class SimulationResults(ABC):
             fmt (str): Curve plot format.
             label (str): Curve label.
         """
-        plt.plot(self._sim_times, self.expect([op])[0], fmt, label=label)
+        plt.plot(
+            self._evaluation_times, self.expect([op])[0], fmt, label=label
+        )
         plt.xlabel("Time (µs)")
         plt.ylabel("Expectation value")
 
@@ -186,7 +187,9 @@ class SimulationResults(ABC):
                 closest time.
         """
         try:
-            return int(np.where(abs(t_float - self._sim_times) < tol)[0][0])
+            return int(
+                np.where(abs(t_float - self._evaluation_times) < tol)[0][0]
+            )
         except IndexError:
             raise IndexError(
                 f"Given time {t_float} is absent from Simulation times within"
@@ -248,7 +251,7 @@ class NoisyResults(SimulationResults):
         run_output: list[Counter],
         size: int,
         basis_name: str,
-        sim_times: np.ndarray,
+        evaluation_times: np.ndarray,
         n_measures: int,
     ) -> None:
         """Initializes a new NoisyResults instance.
@@ -270,13 +273,13 @@ class NoisyResults(SimulationResults):
                 the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
                 makes no sense after projection on bitstrings). Defaults to
                 'digital' if given value 'all'.
-            sim_times (np.ndarray): Times at which Simulation object returned
-                the results.
+            evaluation_times (np.ndarray): Times at which the Simulation
+                object will evaluate the results.
             n_measures (int): Number of measurements needed to compute this
                 result when doing the simulation.
         """
         basis_name_ = "digital" if basis_name == "all" else basis_name
-        super().__init__(size, basis_name_, sim_times)
+        super().__init__(size, basis_name_, evaluation_times)
         self.n_measures = n_measures
         self._results = run_output
         self._use_pseudo_dens = True
@@ -284,7 +287,7 @@ class NoisyResults(SimulationResults):
     @property
     def states(self) -> list[qutip.Qobj]:
         """Measured states as a list of diagonal qutip.Qobj."""
-        return [self.get_state(t) for t in self._sim_times]
+        return [self.get_state(t) for t in self._evaluation_times]
 
     @property
     def results(self) -> list[Counter]:
@@ -320,7 +323,7 @@ class NoisyResults(SimulationResults):
         Returns:
             qutip.Qobj: States probability distribution as a density matrix.
         """
-        return self.get_state(self._sim_times[-1])
+        return self.get_state(self._evaluation_times[-1])
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
         weights = np.zeros(2 ** self._size)
@@ -358,7 +361,13 @@ class NoisyResults(SimulationResults):
         if error_bars:
             moy, st = get_error_bars()
             plt.errorbar(
-                self._sim_times, moy, st, fmt=fmt, lw=1, capsize=3, label=label
+                self._evaluation_times,
+                moy,
+                st,
+                fmt=fmt,
+                lw=1,
+                capsize=3,
+                label=label,
             )
             plt.xlabel("Time (µs)")
             plt.ylabel("Expectation value")
@@ -378,7 +387,7 @@ class CoherentResults(SimulationResults):
         run_output: list[qutip.Qobj],
         size: int,
         basis_name: str,
-        sim_times: np.ndarray,
+        evaluation_times: np.ndarray,
         meas_basis: str,
         meas_errors: Optional[Mapping[str, float]] = None,
     ) -> None:
@@ -391,15 +400,15 @@ class CoherentResults(SimulationResults):
             size (int): The number of atoms in the register.
             basis_name (str): The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            sim_times (list): Times at which Simulation object returned the
-                results.
+            evaluation_times (np.ndarray): Times at which Simulation object
+                will return the results.
             meas_basis (str): The basis in which a sampling measurement
                 is desired.
             meas_errors (Optional[Mapping[str, float]]): If measurement errors
                 are involved, give them in a dictionary with "epsilon" and
                 "epsilon_prime".
         """
-        super().__init__(size, basis_name, sim_times)
+        super().__init__(size, basis_name, evaluation_times)
         if self._basis_name == "all":
             if meas_basis not in {"ground-rydberg", "digital"}:
                 raise ValueError(
@@ -424,7 +433,7 @@ class CoherentResults(SimulationResults):
     @property
     def states(self) -> list[qutip.Qobj]:
         """List of ``qutip.Qobj`` for each state in the simulation."""
-        return list(self._results)
+        return [self.get_state(t) for t in self._evaluation_times]
 
     def get_state(
         self,
@@ -526,7 +535,7 @@ class CoherentResults(SimulationResults):
                 states with significant occupation probabilites.
         """
         return self.get_state(
-            self._sim_times[-1],
+            self._evaluation_times[-1],
             reduce_to_basis,
             ignore_global_phase,
             tol,
