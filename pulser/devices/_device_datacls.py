@@ -63,7 +63,7 @@ class Device:
         # Hack to override the docstring of an instance
         self.__dict__["__doc__"] = self._specs(for_docs=True)
 
-    def change_ryd_lvl(self, ryd_lvl):
+    def change_ryd_lvl(self, ryd_lvl: int) -> None:
         """Change the rydberg level and the corresponding
         interaction coeff used by the device.
 
