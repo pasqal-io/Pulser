@@ -17,13 +17,15 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Iterable
+from collections.abc import Sequence as abcSequence
+from typing import Any, cast, Optional, Union, TypeVar, Type
+from itertools import combinations
+
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, cast, Optional, Union, TypeVar, Type
-from itertools import combinations
 
 import pulser
 from pulser.json.utils import obj_to_dict
@@ -63,6 +65,7 @@ class BaseRegister(ABC):
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
+        labels: Optional[abcSequence[QubitId]] = None,
     ) -> T:
         """Creates the register from an array of coordinates.
 
@@ -76,6 +79,8 @@ class BaseRegister(ABC):
             prefix (str): The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+            labels (ArrayLike): The list of qubit ids. If defined, each qubit
+                id will be set to the corresponding value.
 
         Returns:
             Register: A register with qubits placed on the given coordinates.
@@ -85,6 +90,19 @@ class BaseRegister(ABC):
         if prefix is not None:
             pre = str(prefix)
             qubits = {pre + str(i): pos for i, pos in enumerate(coords)}
+            if labels is not None:
+                raise NotImplementedError(
+                    "It is impossible to specify a prefix and "
+                    "a set of labels at the same time"
+                )
+
+        elif labels is not None:
+            if len(coords) != len(labels):
+                raise ValueError(
+                    f"Label length ({len(labels)}) does not"
+                    f"match number of coordinates ({len(coords)})"
+                )
+            qubits = dict(zip(cast(Iterable, labels), coords))
         else:
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
@@ -618,6 +636,8 @@ class Register(BaseRegister):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
 
@@ -632,6 +652,11 @@ class Register(BaseRegister):
             draw_graph(bool, default=True): Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
+            fig_name(str, default=None): The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig(dict, default={}): Keywords arguments for
+                `matplotlib.pyplot.savefig`. Not applicable if
+                `fig_name`is `None`.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -667,7 +692,8 @@ class Register(BaseRegister):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
-
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def _to_dict(self) -> dict[str, Any]:
@@ -807,7 +833,6 @@ class Register3D(BaseRegister):
             If the atoms are not coplanar, raises an error.
         """
         coords = np.array(self._coords)
-        prefix = str(self._ids[0])[:-1]
 
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
@@ -826,7 +851,7 @@ class Register3D(BaseRegister):
             coords_2D = np.array(
                 [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
             )
-            return Register.from_coordinates(coords_2D, prefix=prefix)
+            return Register.from_coordinates(coords_2D, labels=self._ids)
 
     def draw(
         self,
@@ -835,6 +860,8 @@ class Register3D(BaseRegister):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         projection: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
 
@@ -990,4 +1017,7 @@ class Register3D(BaseRegister):
                 ax.set_xlabel("x (µm)")
                 ax.set_ylabel("y (µm)")
                 ax.set_zlabel("z (µm)")
+
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
