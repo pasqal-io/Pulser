@@ -68,6 +68,11 @@ class Device:
         Args:
             ryd_lvl(int): the rydberg level used.
         """
+        if not isinstance(ryd_lvl, int):
+            raise TypeError("rydberg level has to be an int")
+        if not ((49<ryd_lvl)&(101>ryd_lvl)):
+            raise ValueError("rydberg level should be between 50 and 100")
+                
         object.__setattr__(self, 'rydberg_level', ryd_lvl)
         object.__setattr__(self, 'interaction_coeff', 2*np.pi*C6_list[ryd_lvl])
         
