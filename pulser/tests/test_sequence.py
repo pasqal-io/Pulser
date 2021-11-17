@@ -328,8 +328,8 @@ def test_sequence():
 
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.figure.Figure.savefig"):
-            seq.draw(fig_name_seq="my_sequence.pdf")
-            seq.draw(draw_register=True, fig_name_reg="my_register.pdf")
+            seq.draw(fig_name="my_sequence.pdf")
+            seq.draw(draw_register=True, fig_name="both.pdf")
 
     pulse1 = Pulse(
         InterpolatedWaveform(500, [0, 1, 0]),

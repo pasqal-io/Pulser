@@ -24,6 +24,7 @@ import json
 from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -914,10 +915,8 @@ class Sequence:
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
-        fig_name_seq: str = None,
-        fig_name_reg: str = None,
-        kwargs_savefig_seq: dict = {},
-        kwargs_savefig_reg: dict = {},
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -932,18 +931,15 @@ class Sequence:
             draw_register (bool): Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False.
-            fig_name_seq(str, default=None): The name on which to save the
-                figure of the sequence. If None the figure will not be saved.
-            fig_name_reg(str, default=None): The name on which to save the
-                figure of the register. If None or draw_register is `False`,
-                the figure will not be saved.
-            kwargs_savefig_seq(dict, default={}): Keywords arguments for
-                `matplotlib.figure.Figure.savefig`, sequence drawing.
-                Not applicable if `fig_name_seq`is `None`.
-            kwargs_savefig_reg(dict, default={}): Keywords arguments for
-                `matplotlib.figure.Figure.savefig`, register drawing.
-                Not applicable if `fig_name`is `None` or `draw_register` is
-                `False`.
+            fig_name(str, default=None): The name on which to save the
+                figure. If draw_register is True, both pulses and register
+                will be saved as figures, with a suffix "_pulses" and
+                "_register" in the file name. If draw_register is False, only
+                the pulses are saved, with no suffix. If fig_name is None,
+                no figure is saved.
+            kwargs_savefig(dict, default={}): Keywords arguments for
+                `matplotlib.figure.Figure.savefig`.
+                Not applicable if `fig_name`is `None`.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
@@ -956,10 +952,12 @@ class Sequence:
             draw_phase_shifts=draw_phase_shifts,
             draw_register=draw_register,
         )
-        if fig_name_seq is not None:
-            fig.savefig(fig_name_seq, **kwargs_savefig_seq)
-        if fig_name_reg is not None and draw_register:
-            fig_reg.savefig(fig_name_reg, **kwargs_savefig_reg)
+        if fig_name is not None and draw_register:
+            name, ext = os.path.splitext(fig_name)
+            fig.savefig(name + "_pulses" + ext, **kwargs_savefig)
+            fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
+        elif fig_name:
+            fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def _target(

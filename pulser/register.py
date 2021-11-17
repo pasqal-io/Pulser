@@ -150,9 +150,7 @@ class BaseRegister(ABC):
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            plot_ids = [
-                f"[{i}]" if i in masked_qubits else f"{i}" for i in ids
-            ]
+            plot_ids: list[Union[list, str]] = [[f"{i}"] for i in ids]
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
@@ -162,20 +160,32 @@ class BaseRegister(ABC):
                 r = plot_pos[i]
                 j = i + 1
                 overlap = False
+                # Put in a list all qubits that overlap at position plot_pos[i]
                 while j < len(plot_ids):
                     r2 = plot_pos[j]
                     if np.max(np.abs(r - r2)) < epsilon:
-                        # Absorb square brackets for two adjacent masked qubits
-                        if plot_ids[i][-1] == "]" and plot_ids[j][0] == "[":
-                            plot_ids[i] = (
-                                plot_ids[i][:-1] + ", " + plot_ids.pop(j)[1:]
-                            )
-                        else:
-                            plot_ids[i] += ", " + plot_ids.pop(j)
+                        plot_ids[i] = plot_ids[i] + plot_ids.pop(j)
                         plot_pos.pop(j)
                         overlap = True
                     else:
                         j += 1
+                # Sort qubits in plot_ids[i] according to masked status
+                plot_ids[i] = sorted(
+                    plot_ids[i],
+                    key=lambda s: s in [str(q) for q in masked_qubits],
+                )
+                # Merge all masked qubits
+                has_masked = False
+                for j in range(len(plot_ids[i])):
+                    if plot_ids[i][j] in [str(q) for q in masked_qubits]:
+                        plot_ids[i][j:] = [", ".join(plot_ids[i][j:])]
+                        has_masked = True
+                        break
+                # Add a square bracket that encloses all masked qubits
+                if has_masked:
+                    plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
+                # Merge what remains
+                plot_ids[i] = ", ".join(plot_ids[i])
                 bbs[plot_ids[i]] = overlap
                 i += 1
 
