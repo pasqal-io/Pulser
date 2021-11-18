@@ -24,6 +24,7 @@ import json
 from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,7 +38,7 @@ from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.pulse import Pulse
-from pulser.register import Register
+from pulser.register import BaseRegister
 from pulser._seq_drawer import draw_sequence
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
@@ -148,7 +149,7 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register(Register): The atom register on which to apply the pulses.
+        register(BaseRegister): The atom register on which to apply the pulses.
         device(Device): A valid device in which to execute the Sequence (import
             it from ``pulser.devices``).
 
@@ -157,7 +158,7 @@ class Sequence:
         they are the same for all Sequences built from a parametrized Sequence.
     """
 
-    def __init__(self, register: Register, device: Device):
+    def __init__(self, register: BaseRegister, device: Device):
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
             raise TypeError(
@@ -180,7 +181,7 @@ class Sequence:
         # Checks if register is compatible with the device
         device.validate_register(register)
 
-        self._register: Register = register
+        self._register: BaseRegister = register
         self._device: Device = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
@@ -913,6 +914,7 @@ class Sequence:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
+        draw_register: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
     ) -> None:
@@ -926,24 +928,36 @@ class Sequence:
                 on top of the respective waveforms (defaults to True).
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
-            fig_name(str, default=None): The name on which to save the figure.
-                If None the figure will not be saved.
+            draw_register (bool): Whether to draw the register before the pulse
+                sequence, with a visual indication (square halo) around the
+                qubits masked by the SLM, defaults to False.
+            fig_name(str, default=None): The name on which to save the
+                figure. If draw_register is True, both pulses and register
+                will be saved as figures, with a suffix "_pulses" and
+                "_register" in the file name. If draw_register is False, only
+                the pulses are saved, with no suffix. If fig_name is None,
+                no figure is saved.
             kwargs_savefig(dict, default={}): Keywords arguments for
-                `matplotlib.pyplot.savefig`. Not applicable if
-                `fig_name`is `None`.
+                `matplotlib.figure.Figure.savefig`.
+                Not applicable if `fig_name`is `None`.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
             the solver.
         """
-        draw_sequence(
+        fig_reg, fig = draw_sequence(
             self,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
+            draw_register=draw_register,
         )
-        if fig_name is not None:
-            plt.savefig(fig_name, **kwargs_savefig)
+        if fig_name is not None and draw_register:
+            name, ext = os.path.splitext(fig_name)
+            fig.savefig(name + "_pulses" + ext, **kwargs_savefig)
+            fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
+        elif fig_name:
+            fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def _target(
