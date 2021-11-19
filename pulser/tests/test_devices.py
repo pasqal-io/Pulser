@@ -26,6 +26,8 @@ from pulser.register import Register, Register3D
 def test_init():
     for dev in pulser.devices._valid_devices:
         assert dev.dimensions in (2, 3)
+        assert dev.rydberg_level > 49
+        assert dev.rydberg_level < 101
         assert dev.max_atom_num > 10
         assert dev.max_radial_distance > 10
         assert dev.min_atom_distance > 0
@@ -43,10 +45,12 @@ def test_init():
 
 def test_mock():
     dev = pulser.devices.MockDevice
-    assert dev.dimensions == 3
+    assert dev.dimensions == 2
+    assert dev.rydberg_level > 49
+    assert dev.rydberg_level < 101
     assert dev.max_atom_num > 1000
     assert dev.min_atom_distance <= 1
-    assert dev.interaction_coeff == 5008713
+    assert dev.interaction_coeff > 0
     assert dev.interaction_coeff_xy == 3700
     names = ["Rydberg", "Raman", "Microwave"]
     basis = ["ground-rydberg", "digital", "XY"]
