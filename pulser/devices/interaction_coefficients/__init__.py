@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""C6 coefficients for Rydberg levels between 50 and 100"""
+"""C_6/hbar (in  um^6 / us`), coeffs for Rydberg levels between 50 and 100."""
 
 import json
 from pathlib import PurePath
 
-C6_dict = json.load(open(PurePath(__file__).parent / "C6_coeffs.json"))
+_json_dict = json.load(open(PurePath(__file__).parent / "C6_coeffs.json"))
+C6_dict = {int(key): value for key, value in _json_dict.items()}
