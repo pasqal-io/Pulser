@@ -38,7 +38,8 @@ class Device:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        rybderg level : The Rydberg level used.
+        rybderg level : The value of the principal quantum number n
+            when the Rydberg level used is of the form |nS_1/2, m_j = +1/2>.
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
@@ -46,13 +47,13 @@ class Device:
 
     name: str
     dimensions: int
+    rydberg_level: int
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
-    rydberg_level: int
     # Ising interaction coeff
-    interaction_coeff_xy: float = 3700.
+    interaction_coeff_xy: float = 3700.0
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
@@ -71,7 +72,7 @@ class Device:
     @property
     def interaction_coeff(self) -> float:
         """C_6/hbar coefficient of chosen Rydberg level."""
-        return C6_dict[self.rydberg_level]
+        return float(C6_dict[self.rydberg_level])
 
     def print_specs(self) -> None:
         """Prints the device specifications."""

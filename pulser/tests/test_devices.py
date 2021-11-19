@@ -45,7 +45,7 @@ def test_init():
 
 def test_mock():
     dev = pulser.devices.MockDevice
-    assert dev.dimensions == 2
+    assert dev.dimensions == 3
     assert dev.rydberg_level > 49
     assert dev.rydberg_level < 101
     assert dev.max_atom_num > 1000
@@ -68,8 +68,8 @@ def test_mock():
 
 def test_rydberg_blockade():
     dev = pulser.devices.MockDevice
-    assert np.isclose(dev.rydberg_blockade_radius(3 * np.pi), 9)
-    assert np.isclose(dev.rabi_from_blockade(9), 3 * np.pi)
+    assert np.isclose(dev.rydberg_blockade_radius(3 * np.pi), 9.119201)
+    assert np.isclose(dev.rabi_from_blockade(9), 10.198984)
     rand_omega = np.random.rand() * 2 * np.pi
     assert np.isclose(
         rand_omega,
