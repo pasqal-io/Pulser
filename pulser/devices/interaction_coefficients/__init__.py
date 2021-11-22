@@ -17,4 +17,4 @@ import json
 from pathlib import PurePath
 
 _json_dict = json.load(open(PurePath(__file__).parent / "C6_coeffs.json"))
-C6_dict = {int(key): value for key, value in _json_dict.items()}
+c6_dict = {int(key): value for key, value in _json_dict.items()}

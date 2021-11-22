@@ -24,7 +24,7 @@ from pulser import Pulse
 from pulser.register import BaseRegister
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
-from pulser.devices.interaction_coefficients import C6_dict
+from pulser.devices.interaction_coefficients import c6_dict
 
 
 @dataclass(frozen=True, repr=False)
@@ -38,7 +38,7 @@ class Device:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        rybderg level : The value of the principal quantum number n
+        rybderg_level : The value of the principal quantum number n
             when the Rydberg level used is of the form |nS_1/2, m_j = +1/2>.
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
@@ -72,7 +72,7 @@ class Device:
     @property
     def interaction_coeff(self) -> float:
         """C_6/hbar coefficient of chosen Rydberg level."""
-        return float(C6_dict[self.rydberg_level])
+        return float(c6_dict[self.rydberg_level])
 
     def print_specs(self) -> None:
         """Prints the device specifications."""
