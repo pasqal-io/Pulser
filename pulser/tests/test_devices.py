@@ -66,6 +66,20 @@ def test_mock():
             assert ch.max_targets == int(ch.max_targets)
 
 
+def test_change_rydberg_level():
+    dev = pulser.devices.MockDevice
+    dev.change_rydberg_level(60)
+    assert dev.rydberg_level == 60
+    assert np.isclose(dev.interaction_coeff, 865723.02)
+    with pytest.raises(TypeError, match="Rydberg level has to be an int."):
+        dev.change_rydberg_level(70.5)
+    with pytest.raises(
+        ValueError, match="Rydberg level should be between 50 and 100."
+    ):
+        dev.change_rydberg_level(110)
+    dev.change_rydberg_level(70)
+
+
 def test_rydberg_blockade():
     dev = pulser.devices.MockDevice
     assert np.isclose(dev.rydberg_blockade_radius(3 * np.pi), 9.119201)
