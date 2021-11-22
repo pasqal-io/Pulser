@@ -89,6 +89,10 @@ class Device:
 
         Args:
             ryd_lvl(int): the Rydberg level to use (between 50 and 100).
+
+        Note:
+            Modifications to the `rydberg_level` attribute only affect the
+            outcomes of local emulations.
         """
         if not isinstance(ryd_lvl, int):
             raise TypeError("Rydberg level has to be an int.")
