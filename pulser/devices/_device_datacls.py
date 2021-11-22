@@ -24,6 +24,7 @@ from pulser import Pulse
 from pulser.register import BaseRegister
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
+from pulser.devices.interaction_coefficients import c6_dict
 
 
 @dataclass(frozen=True, repr=False)
@@ -37,10 +38,8 @@ class Device:
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff: :math:`C_6/\hbar`
-            (in :math:`\mu m^6 / \mu s`),
-            which sets the van der Waals interaction strength between atoms in
-            the same Rydberg state.
+        rybderg_level : The value of the principal quantum number n
+            when the Rydberg level used is of the form |nS_1/2, m_j = +1/2>.
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
@@ -48,12 +47,12 @@ class Device:
 
     name: str
     dimensions: int
+    rydberg_level: int
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
     # Ising interaction coeff
-    interaction_coeff: float = 5008713.0
     interaction_coeff_xy: float = 3700.0
 
     def __post_init__(self) -> None:
@@ -70,6 +69,11 @@ class Device:
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channels.values()}
 
+    @property
+    def interaction_coeff(self) -> float:
+        """C_6/hbar coefficient of chosen Rydberg level."""
+        return float(c6_dict[self.rydberg_level])
+
     def print_specs(self) -> None:
         """Prints the device specifications."""
         title = f"{self.name} Specifications"
@@ -79,6 +83,23 @@ class Device:
 
     def __repr__(self) -> str:
         return self.name
+
+    def change_rydberg_level(self, ryd_lvl: int) -> None:
+        """Changes the Rydberg level used in the Device.
+
+        Args:
+            ryd_lvl(int): the Rydberg level to use (between 50 and 100).
+
+        Note:
+            Modifications to the `rydberg_level` attribute only affect the
+            outcomes of local emulations.
+        """
+        if not isinstance(ryd_lvl, int):
+            raise TypeError("Rydberg level has to be an int.")
+        if not ((49 < ryd_lvl) & (101 > ryd_lvl)):
+            raise ValueError("Rydberg level should be between 50 and 100.")
+
+        object.__setattr__(self, "rydberg_level", ryd_lvl)
 
     def rydberg_blockade_radius(self, rabi_frequency: float) -> float:
         """Calculates the Rydberg blockade radius for a given Rabi frequency.
