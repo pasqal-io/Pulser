@@ -64,7 +64,8 @@ class Variable(Parametrized, OpSupport):
 
     def _clear(self) -> None:
         object.__setattr__(self, "value", None)
-        self.__dict__["_count"] += 1
+        old_count = object.__getattribute__(self, "_count")
+        object.__setattr__(self, "_count", old_count + 1)
 
     def _assign(self, value: Union[ArrayLike, str, float, int]) -> None:
         if self.dtype == str:
@@ -89,7 +90,8 @@ class Variable(Parametrized, OpSupport):
             object.__setattr__(self, "value", self.dtype(val))
         else:
             object.__setattr__(self, "value", val)
-        self.__dict__["_count"] += 1
+        old_count = object.__getattribute__(self, "_count")
+        object.__setattr__(self, "_count", old_count + 1)
 
     def build(self) -> Union[ArrayLike, str, float, int]:
         """Returns the variable's current value."""

@@ -145,7 +145,8 @@ class SimConfig:
                 + f" (`temperature` = {self.temperature}) must be"
                 + " greater than 0."
             )
-        self.__dict__["temperature"] *= 1.0e-6
+        old_temp = object.__getattribute__(self, "temperature")
+        object.__setattr__(self, "temperature", old_temp * 1.0e-6)
 
     def _check_noise_types(self) -> None:
         # only one noise was given as argument : convert it to a tuple
