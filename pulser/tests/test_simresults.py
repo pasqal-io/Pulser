@@ -175,10 +175,10 @@ def test_get_state_float_time():
         state.full(),
         np.array(
             [
-                [0.79602211 + 0.0j],
-                [0.02417478 - 0.37829574j],
-                [0.02417478 - 0.37829574j],
-                [-0.27423657 - 0.06131009j],
+                [0.76522918 + 0.0j],
+                [0.08126436 - 0.39418836j],
+                [0.08126436 - 0.39418836j],
+                [-0.28037007 - 0.10881273j],
             ]
         ),
     ).all()
@@ -243,7 +243,7 @@ def test_expect_noisy():
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7733333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.76)
 
 
 def test_plot():
@@ -258,7 +258,7 @@ def test_sample_final_state():
     sim_no_meas = Simulation(seq_no_meas, config=SimConfig(runs=1))
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
-        {"00": 77, "01": 140, "10": 167, "11": 616}
+        {"00": 88, "01": 156, "10": 188, "11": 568}
     )
     with pytest.raises(NotImplementedError, match="dimension > 3"):
         results_large_dim = deepcopy(results)
@@ -286,7 +286,7 @@ def test_sample_final_state():
 def test_sample_final_state_noisy():
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 787, "10": 219, "01": 176, "00": 52}
+        {"00": 67, "01": 176, "10": 219, "11": 772}
     )
     res_3level = Simulation(
         seq_no_meas_noisy, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
@@ -296,10 +296,10 @@ def test_sample_final_state_noisy():
         final_state.full(),
         np.array(
             [
-                [0.62 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.16 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.58 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
                 [0.0 + 0.0j, 0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.04 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.06 + 0.0j],
             ]
         ),
     ).all()

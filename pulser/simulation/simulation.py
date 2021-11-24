@@ -26,6 +26,7 @@ import warnings
 import qutip
 import numpy as np
 from numpy.typing import ArrayLike
+import matplotlib.pyplot as plt
 
 from pulser import Pulse, Sequence
 from pulser.simulation.simresults import (
@@ -351,6 +352,8 @@ class Simulation:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = False,
         draw_phase_shifts: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the input sequence and the one used by the solver.
 
@@ -362,6 +365,11 @@ class Simulation:
                 on top of the respective waveforms (defaults to False).
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
+            fig_name(str, default=None): The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig(dict, default={}): Keywords arguments for
+                `matplotlib.pyplot.savefig`. Not applicable if
+                `fig_name`is `None`.
 
         See Also:
             Sequence.draw(): Draws the sequence in its current state.
@@ -373,6 +381,9 @@ class Simulation:
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
         )
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
+        plt.show()
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
