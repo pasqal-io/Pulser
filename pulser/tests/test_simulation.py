@@ -93,7 +93,9 @@ def test_initialization_and_construction_of_hamiltonian():
         Simulation(seq, sampling_rate=-1)
 
     assert sim._sampling_rate == 0.011
-    assert len(sim.sampling_times) == int(sim._sampling_rate * sim._tot_duration)
+    assert len(sim.sampling_times) == int(
+        sim._sampling_rate * sim._tot_duration
+    )
 
     assert isinstance(sim._hamiltonian, qutip.QobjEvo)
     # Checks adapt() method:
@@ -436,41 +438,53 @@ def test_eval_times():
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Full"
     assert sim._eval_times_instruction == "Full"
-    np.testing.assert_almost_equal(sim._eval_times_array,
-                                   np.append(sim.sampling_times,
-                                             sim._tot_duration/1000))
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.append(sim.sampling_times, sim._tot_duration / 1000),
+    )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Minimal"
     np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([sim.sampling_times[0],
-                                         sim._tot_duration/1000])
+        sim._eval_times_array,
+        np.array([sim.sampling_times[0], sim._tot_duration / 1000]),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [0, sim.sampling_times[-3], sim._tot_duration/1000]
+    sim.evaluation_times = [
+        0,
+        sim.sampling_times[-3],
+        sim._tot_duration / 1000,
+    ]
     np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([0, sim.sampling_times[-3],
-                                         sim._tot_duration/1000])
+        sim._eval_times_array,
+        np.array([0, sim.sampling_times[-3], sim._tot_duration / 1000]),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = [sim.sampling_times[-10], sim.sampling_times[-3]]
     np.testing.assert_almost_equal(
         sim._eval_times_array,
-        np.array([0, sim.sampling_times[-10], sim.sampling_times[-3],
-                  sim._tot_duration/1000]),
+        np.array(
+            [
+                0,
+                sim.sampling_times[-10],
+                sim.sampling_times[-3],
+                sim._tot_duration / 1000,
+            ]
+        ),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = 0.4
-    extended_tlist = np.append(sim.sampling_times,
-                               sim._tot_duration/1000)
+    extended_tlist = np.append(sim.sampling_times, sim._tot_duration / 1000)
     np.testing.assert_almost_equal(
-
         extended_tlist[
             np.linspace(
-                0, len(extended_tlist) - 1, int(0.4 * len(extended_tlist)), dtype=int
+                0,
+                len(extended_tlist) - 1,
+                int(0.4 * len(extended_tlist)),
+                dtype=int,
             )
         ],
         sim._eval_times_array,

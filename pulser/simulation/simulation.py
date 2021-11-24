@@ -271,7 +271,7 @@ class Simulation:
             self._initial_state = qutip.Qobj(state, dims=legal_dims)
 
     @property
-    def evaluation_times(self) -> Union[str, float, ArrayLike]:
+    def evaluation_times(self) -> ArrayLike:
         """The times at which the results of this simulation are returned.
 
         Args:
@@ -295,10 +295,12 @@ class Simulation:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = np.append(self.sampling_times, self._tot_duration/1000)
+                self._eval_times_array = np.append(
+                    self.sampling_times, self._tot_duration / 1000
+                )
             elif value == "Minimal":
                 self._eval_times_array = np.array(
-                    [self.sampling_times[0], self._tot_duration/1000]
+                    [self.sampling_times[0], self._tot_duration / 1000]
                 )
             else:
                 raise ValueError(
@@ -311,7 +313,9 @@ class Simulation:
                 raise ValueError(
                     "evaluation_times float must be between 0 " "and 1."
                 )
-            extended_times = np.append(self.sampling_times, self._tot_duration/1000)
+            extended_times = np.append(
+                self.sampling_times, self._tot_duration / 1000
+            )
             indices = np.linspace(
                 0,
                 len(extended_times) - 1,
@@ -322,7 +326,7 @@ class Simulation:
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
-            if t_max > self._tot_duration/1000:
+            if t_max > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
@@ -336,8 +340,8 @@ class Simulation:
             eval_times = np.array(np.sort(value))
             if t_min > 0:
                 eval_times = np.insert(eval_times, 0, 0.0)
-            if t_max < self._tot_duration/1000:
-                eval_times = np.append(eval_times, self._tot_duration/1000)
+            if t_max < self._tot_duration / 1000:
+                eval_times = np.append(eval_times, self._tot_duration / 1000)
             self._eval_times_array = eval_times
             # always include initial and final times
         else:

@@ -158,9 +158,7 @@ def test_get_final_state_noisy():
     )
     assert res3.states[-1] == final_state
     assert res3.results[-1] == Counter(
-        {"10": 0.92,
-         "00": 0.06666666666666667,
-         "11": 0.013333333333333334}
+        {"10": 0.92, "00": 0.06666666666666667, "11": 0.013333333333333334}
     )
 
 
@@ -177,10 +175,10 @@ def test_get_state_float_time():
         state.full(),
         np.array(
             [
-                [0.76522907+0.j],
-                [0.08339973-0.39374219j],
-                [0.08339973-0.39374219j],
-                [-0.27977623-0.1103308j],
+                [0.76522907 + 0.0j],
+                [0.08339973 - 0.39374219j],
+                [0.08339973 - 0.39374219j],
+                [-0.27977623 - 0.1103308j],
             ]
         ),
     ).all()
@@ -202,7 +200,7 @@ def test_expect():
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
     assert np.isclose(exp[-1], 1)
-    assert len(exp) == duration + 1 # +1 for the final instant
+    assert len(exp) == duration + 1  # +1 for the final instant
     np.testing.assert_almost_equal(
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1, 0], [0, 0]]),
@@ -245,8 +243,7 @@ def test_expect_noisy():
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1],
-                      0.6933333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.6933333333333334)
 
 
 def test_plot():
