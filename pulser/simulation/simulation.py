@@ -271,7 +271,7 @@ class Simulation:
             self._initial_state = qutip.Qobj(state, dims=legal_dims)
 
     @property
-    def evaluation_times(self) -> ArrayLike:
+    def evaluation_times(self) -> Union[ArrayLike, np.ndarray]:
         """The times at which the results of this simulation are returned.
 
         Args:
