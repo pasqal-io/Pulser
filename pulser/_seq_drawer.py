@@ -18,12 +18,15 @@ from collections import defaultdict
 from typing import Any, cast, Optional, Union
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import numpy as np
 from scipy.interpolate import CubicSpline
+from itertools import combinations
 
 import pulser
 from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 from pulser.pulse import Pulse
+from pulser import Register, Register3D
 
 
 def gather_data(seq: pulser.sequence.Sequence) -> dict:
@@ -107,7 +110,8 @@ def draw_sequence(
     draw_phase_area: bool = False,
     draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
-) -> None:
+    draw_register: bool = False,
+) -> tuple[Figure, Figure]:
     """Draws the entire sequence.
 
     Args:
@@ -122,6 +126,9 @@ def draw_sequence(
             top of the respective waveforms (defaults to True).
         draw_phase_shifts (bool): Whether phase shift and reference information
             should be added to the plot, defaults to False.
+        draw_register (bool): Whether to draw the register before the pulse
+            sequence, with a visual indication (square halo) around the qubits
+            masked by the SLM, defaults to False.
     """
 
     def phase_str(phi: float) -> str:
@@ -147,8 +154,59 @@ def draw_sequence(
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    fig = plt.figure(constrained_layout=False, figsize=(20, 4.5 * n_channels))
-    gs = fig.add_gridspec(n_channels, 1, hspace=0.075)
+    pos = np.array(seq._register._coords)
+
+    # Draw masked register
+    if draw_register:
+        if isinstance(seq._register, Register3D):
+            labels = "xyz"
+            fig_reg, axes_reg = seq._register._initialize_fig_axes_projection(
+                pos,
+                blockade_radius=35,
+                draw_half_radius=True,
+            )
+            fig_reg.tight_layout(w_pad=6.5)
+
+            for ax_reg, (ix, iy) in zip(
+                axes_reg, combinations(np.arange(3), 2)
+            ):
+                seq._register._draw_2D(
+                    ax=ax_reg,
+                    pos=pos,
+                    ids=seq._register._ids,
+                    plane=(ix, iy),
+                    masked_qubits=seq._slm_mask_targets,
+                )
+                ax_reg.set_title(
+                    "Masked register projected onto\n the "
+                    + labels[ix]
+                    + labels[iy]
+                    + "-plane"
+                )
+
+        elif isinstance(seq._register, Register):
+            fig_reg, ax_reg = seq._register._initialize_fig_axes(
+                pos,
+                blockade_radius=35,
+                draw_half_radius=True,
+            )
+            seq._register._draw_2D(
+                ax=ax_reg,
+                pos=pos,
+                ids=seq._register._ids,
+                masked_qubits=seq._slm_mask_targets,
+            )
+            ax_reg.set_title("Masked register", pad=10)
+
+    fig = plt.figure(
+        constrained_layout=False,
+        figsize=(20, 4.5 * n_channels),
+    )
+    gs = fig.add_gridspec(
+        n_channels,
+        1,
+        hspace=0.075,
+    )
 
     ch_axes = {}
     for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
@@ -446,4 +504,4 @@ def draw_sequence(
                 pts = np.array(all_points["detuning"])
                 b.scatter(pts[:, 0], pts[:, 1], color="indigo")
 
-    plt.show()
+    return (fig_reg if draw_register else None, fig)

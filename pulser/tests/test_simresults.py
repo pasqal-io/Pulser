@@ -268,7 +268,7 @@ def test_sample_final_state():
     sim_no_meas = Simulation(seq_no_meas, config=SimConfig(runs=1))
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
-        {"00": 77, "01": 140, "10": 167, "11": 616}
+        {"00": 88, "01": 156, "10": 188, "11": 568}
     )
     with pytest.raises(NotImplementedError, match="dimension > 3"):
         results_large_dim = deepcopy(results)

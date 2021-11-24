@@ -36,6 +36,11 @@ def test_creation():
     with pytest.raises(ValueError, match="vectors of size 2"):
         Register.from_coordinates([(0, 1, 0, 1)])
 
+    with pytest.raises(
+        NotImplementedError, match="a prefix and a set of labels"
+    ):
+        Register.from_coordinates(coords, prefix="a", labels=["a", "b"])
+
     with pytest.raises(ValueError, match="vectors of size 3"):
         Register3D.from_coordinates([((1, 0),), ((-1, 0),)])
 
@@ -43,6 +48,12 @@ def test_creation():
     reg2 = Register.from_coordinates(coords, center=False, prefix="q")
     assert np.all(np.array(reg1._coords) == np.array(reg2._coords))
     assert reg1._ids == reg2._ids
+
+    reg2b = Register.from_coordinates(coords, center=False, labels=["a", "b"])
+    assert reg2b._ids == ["a", "b"]
+
+    with pytest.raises(ValueError, match="Label length"):
+        Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
 
     reg3 = Register.from_coordinates(np.array(coords), prefix="foo")
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
@@ -266,6 +277,10 @@ def test_drawing():
     with patch("matplotlib.pyplot.show"):
         reg.draw()
 
+    with patch("matplotlib.pyplot.show"):
+        with patch("matplotlib.pyplot.savefig"):
+            reg.draw(fig_name="my_register.pdf")
+
     reg = Register.rectangle(1, 8)
     with patch("matplotlib.pyplot.show"):
         reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
@@ -313,7 +328,8 @@ def test_drawing3D():
 
     reg = Register3D.cubic(3, 8)
     with patch("matplotlib.pyplot.show"):
-        reg.draw()
+        with patch("matplotlib.pyplot.savefig"):
+            reg.draw(fig_name="my_register.pdf")
 
     reg = Register3D.cuboid(1, 8, 2)
     with patch("matplotlib.pyplot.show"):

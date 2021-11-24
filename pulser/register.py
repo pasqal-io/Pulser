@@ -17,13 +17,15 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Iterable
+from collections.abc import Sequence as abcSequence
+from typing import Any, cast, Optional, Union, TypeVar, Type
+from itertools import combinations
+
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
-from typing import Any, cast, Optional, Union, TypeVar, Type
-from itertools import combinations
 
 import pulser
 from pulser.json.utils import obj_to_dict
@@ -63,6 +65,7 @@ class BaseRegister(ABC):
         coords: np.ndarray,
         center: bool = True,
         prefix: Optional[str] = None,
+        labels: Optional[abcSequence[QubitId]] = None,
     ) -> T:
         """Creates the register from an array of coordinates.
 
@@ -76,6 +79,8 @@ class BaseRegister(ABC):
             prefix (str): The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+            labels (ArrayLike): The list of qubit ids. If defined, each qubit
+                id will be set to the corresponding value.
 
         Returns:
             Register: A register with qubits placed on the given coordinates.
@@ -85,6 +90,19 @@ class BaseRegister(ABC):
         if prefix is not None:
             pre = str(prefix)
             qubits = {pre + str(i): pos for i, pos in enumerate(coords)}
+            if labels is not None:
+                raise NotImplementedError(
+                    "It is impossible to specify a prefix and "
+                    "a set of labels at the same time"
+                )
+
+        elif labels is not None:
+            if len(coords) != len(labels):
+                raise ValueError(
+                    f"Label length ({len(labels)}) does not"
+                    f"match number of coordinates ({len(coords)})"
+                )
+            qubits = dict(zip(cast(Iterable, labels), coords))
         else:
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
@@ -99,10 +117,27 @@ class BaseRegister(ABC):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        masked_qubits: set[QubitId] = set(),
     ) -> None:
         ix, iy = plane
 
         ax.scatter(pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen")
+
+        # Draw square halo around masked qubits
+        if masked_qubits:
+            mask_pos = []
+            for i, c in zip(ids, pos):
+                if i in masked_qubits:
+                    mask_pos.append(c)
+            mask_arr = np.array(mask_pos)
+            ax.scatter(
+                mask_arr[:, ix],
+                mask_arr[:, iy],
+                marker="s",
+                s=1200,
+                alpha=0.2,
+                c="black",
+            )
 
         axes = "xyz"
 
@@ -115,7 +150,7 @@ class BaseRegister(ABC):
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            plot_ids = [f"{i}" for i in ids]
+            plot_ids: list[Union[list, str]] = [[f"{i}"] for i in ids]
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
@@ -125,14 +160,32 @@ class BaseRegister(ABC):
                 r = plot_pos[i]
                 j = i + 1
                 overlap = False
+                # Put in a list all qubits that overlap at position plot_pos[i]
                 while j < len(plot_ids):
                     r2 = plot_pos[j]
                     if np.max(np.abs(r - r2)) < epsilon:
-                        plot_ids[i] += ", " + plot_ids.pop(j)
+                        plot_ids[i] = plot_ids[i] + plot_ids.pop(j)
                         plot_pos.pop(j)
                         overlap = True
                     else:
                         j += 1
+                # Sort qubits in plot_ids[i] according to masked status
+                plot_ids[i] = sorted(
+                    plot_ids[i],
+                    key=lambda s: s in [str(q) for q in masked_qubits],
+                )
+                # Merge all masked qubits
+                has_masked = False
+                for j in range(len(plot_ids[i])):
+                    if plot_ids[i][j] in [str(q) for q in masked_qubits]:
+                        plot_ids[i][j:] = [", ".join(plot_ids[i][j:])]
+                        has_masked = True
+                        break
+                # Add a square bracket that encloses all masked qubits
+                if has_masked:
+                    plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
+                # Merge what remains
+                plot_ids[i] = ", ".join(plot_ids[i])
                 bbs[plot_ids[i]] = overlap
                 i += 1
 
@@ -612,12 +665,35 @@ class Register(BaseRegister):
         )
         self._coords = [rot @ v for v in self._coords]
 
+    def _initialize_fig_axes(
+        self,
+        pos: np.ndarray,
+        blockade_radius: Optional[float] = None,
+        draw_half_radius: bool = False,
+    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
+        """Creates the Figure and Axes for drawing the register."""
+        diffs = super()._register_dims(
+            pos,
+            blockade_radius=blockade_radius,
+            draw_half_radius=draw_half_radius,
+        )
+        big_side = max(diffs)
+        proportions = diffs / big_side
+        Ls = proportions * min(
+            big_side / 4, 10
+        )  # Figsize is, at most, (10,10)
+        fig, axes = plt.subplots(figsize=Ls)
+
+        return (fig, axes)
+
     def draw(
         self,
         with_labels: bool = True,
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
 
@@ -632,6 +708,11 @@ class Register(BaseRegister):
             draw_graph(bool, default=True): Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
+            fig_name(str, default=None): The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig(dict, default={}): Keywords arguments for
+                `matplotlib.pyplot.savefig`. Not applicable if
+                `fig_name`is `None`.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -646,18 +727,11 @@ class Register(BaseRegister):
             draw_half_radius=draw_half_radius,
         )
         pos = np.array(self._coords)
-        diffs = super()._register_dims(
+        fig, ax = self._initialize_fig_axes(
             pos,
             blockade_radius=blockade_radius,
             draw_half_radius=draw_half_radius,
         )
-        big_side = max(diffs)
-        proportions = diffs / big_side
-        Ls = proportions * min(
-            big_side / 4, 10
-        )  # Figsize is, at most, (10,10)
-
-        fig, ax = plt.subplots(figsize=Ls)
         super()._draw_2D(
             ax,
             pos,
@@ -667,7 +741,8 @@ class Register(BaseRegister):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
-
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def _to_dict(self) -> dict[str, Any]:
@@ -807,7 +882,6 @@ class Register3D(BaseRegister):
             If the atoms are not coplanar, raises an error.
         """
         coords = np.array(self._coords)
-        prefix = str(self._ids[0])[:-1]
 
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
@@ -826,7 +900,49 @@ class Register3D(BaseRegister):
             coords_2D = np.array(
                 [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
             )
-            return Register.from_coordinates(coords_2D, prefix=prefix)
+            return Register.from_coordinates(coords_2D, labels=self._ids)
+
+    def _initialize_fig_axes_projection(
+        self,
+        pos: np.ndarray,
+        blockade_radius: Optional[float] = None,
+        draw_half_radius: bool = False,
+    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
+        """Creates the Figure and Axes for drawing the register projections."""
+        diffs = super()._register_dims(
+            pos,
+            blockade_radius=blockade_radius,
+            draw_half_radius=draw_half_radius,
+        )
+
+        proportions = []
+        for (ix, iy) in combinations(np.arange(3), 2):
+            big_side = max(diffs[[ix, iy]])
+            Ls = diffs[[ix, iy]] / big_side
+            Ls *= max(
+                min(big_side / 4, 10), 4
+            )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
+            proportions.append(Ls)
+
+        fig_height = np.max([Ls[1] for Ls in proportions])
+
+        max_width = 0
+        for i, (width, height) in enumerate(proportions):
+            proportions[i] = (width * fig_height / height, fig_height)
+            max_width = max(max_width, proportions[i][0])
+        widths = [max(Ls[0], max_width / 5) for Ls in proportions]
+        fig_width = min(np.sum(widths), fig_height * 4)
+
+        rescaling = 20 / max(max(fig_width, fig_height), 20)
+        figsize = (rescaling * fig_width, rescaling * fig_height)
+
+        fig, axes = plt.subplots(
+            ncols=3,
+            figsize=figsize,
+            gridspec_kw=dict(width_ratios=widths),
+        )
+
+        return (fig, axes)
 
     def draw(
         self,
@@ -835,6 +951,8 @@ class Register3D(BaseRegister):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         projection: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
 
@@ -872,40 +990,13 @@ class Register3D(BaseRegister):
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
 
         if projection:
-            diffs = super()._register_dims(
+            labels = "xyz"
+            fig, axes = self._initialize_fig_axes_projection(
                 pos,
                 blockade_radius=blockade_radius,
                 draw_half_radius=draw_half_radius,
             )
-
-            proportions = []
-            for (ix, iy) in combinations(np.arange(3), 2):
-                big_side = max(diffs[[ix, iy]])
-                Ls = diffs[[ix, iy]] / big_side
-                Ls *= max(
-                    min(big_side / 4, 10), 4
-                )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
-                proportions.append(Ls)
-
-            fig_height = np.max([Ls[1] for Ls in proportions])
-
-            max_width = 0
-            for i, (width, height) in enumerate(proportions):
-                proportions[i] = (width * fig_height / height, fig_height)
-                max_width = max(max_width, proportions[i][0])
-            widths = [max(Ls[0], max_width / 5) for Ls in proportions]
-            fig_width = min(np.sum(widths), fig_height * 4)
-
-            rescaling = 20 / max(max(fig_width, fig_height), 20)
-            figsize = (rescaling * fig_width, rescaling * fig_height)
-
-            labels = "xyz"
-
-            fig, axes = plt.subplots(
-                ncols=3,
-                figsize=figsize,
-                gridspec_kw=dict(width_ratios=widths),
-            )
+            fig.tight_layout(w_pad=6.5)
 
             for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
                 super()._draw_2D(
@@ -990,4 +1081,7 @@ class Register3D(BaseRegister):
                 ax.set_xlabel("x (µm)")
                 ax.set_ylabel("y (µm)")
                 ax.set_zlabel("z (µm)")
+
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
         plt.show()

@@ -19,6 +19,7 @@ from pulser.channels import Rydberg, Raman, Microwave
 MockDevice = Device(
     name="MockDevice",
     dimensions=3,
+    rydberg_level=70,
     max_atom_num=2000,
     max_radial_distance=1000,
     min_atom_distance=1,

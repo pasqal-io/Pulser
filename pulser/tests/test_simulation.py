@@ -297,7 +297,7 @@ def test_get_hamiltonian():
         np.array(
             [
                 [
-                    4.0683997 + 0.0j,
+                    4.47984523 + 0.0j,
                     0.09606404 + 0.0j,
                     0.09606404 + 0.0j,
                     0.0 + 0.0j,
@@ -359,7 +359,8 @@ def test_run():
     sim = Simulation(seq, sampling_rate=0.01)
     sim.set_config(SimConfig("SPAM", eta=0.0))
     with patch("matplotlib.pyplot.show"):
-        sim.draw(draw_phase_area=True)
+        with patch("matplotlib.pyplot.savefig"):
+            sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     bad_initial = np.array([1.0])
     good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
     good_initial_qobj = qutip.tensor(
