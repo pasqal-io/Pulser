@@ -288,7 +288,7 @@ class Simulation:
 
                 - A float to act as a sampling rate for the resulting state.
         """
-        return self._evaluation_times
+        return self._eval_times_array
 
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
@@ -346,7 +346,7 @@ class Simulation:
                 "be `Full`, `Minimal`, an array of times or a "
                 + "float between 0 and 1."
             )
-        self._evaluation_times: Union[str, ArrayLike, float] = value
+        self._eval_times_instruction: Union[str, ArrayLike, float] = value
 
     def draw(
         self,
