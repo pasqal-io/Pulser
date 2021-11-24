@@ -295,10 +295,10 @@ class Simulation:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = self._times
+                self._eval_times_array = np.append(self._times, self._tot_duration/1000)
             elif value == "Minimal":
                 self._eval_times_array = np.array(
-                    [self._times[0], self._times[-1]]
+                    [self._times[0], self._tot_duration/1000]
                 )
             else:
                 raise ValueError(
@@ -311,17 +311,18 @@ class Simulation:
                 raise ValueError(
                     "evaluation_times float must be between 0 " "and 1."
                 )
+            extended_times = np.append(self._times, self._tot_duration/1000)
             indices = np.linspace(
                 0,
-                len(self._times) - 1,
-                int(value * len(self._times)),
+                len(extended_times) - 1,
+                int(value * len(extended_times)),
                 dtype=int,
             )
-            self._eval_times_array = self._times[indices]
+            self._eval_times_array = extended_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
-            if t_max > self._times[-1]:
+            if t_max > self._tot_duration/1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
@@ -335,8 +336,8 @@ class Simulation:
             eval_times = np.array(np.sort(value))
             if t_min > 0:
                 eval_times = np.insert(eval_times, 0, 0.0)
-            if t_max < self._times[-1]:
-                eval_times = np.append(eval_times, self._times[-1])
+            if t_max < self._tot_duration/1000:
+                eval_times = np.append(eval_times, self._tot_duration/1000)
             self._eval_times_array = eval_times
             # always include initial and final times
         else:
