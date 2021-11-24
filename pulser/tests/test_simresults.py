@@ -154,11 +154,13 @@ def test_get_final_state_noisy():
     res3._meas_basis = "ground-rydberg"
     assert (
         final_state[0, 0] == 0.06666666666666667 + 0j
-        and final_state[2, 2] == 0.9333333333333333 + 0j
+        and final_state[2, 2] == 0.92 + 0j
     )
     assert res3.states[-1] == final_state
     assert res3.results[-1] == Counter(
-        {"10": 0.9333333333333333, "00": 0.06666666666666667}
+        {"10": 0.92,
+         "00": 0.06666666666666667,
+         "11": 0.013333333333333334}
     )
 
 
@@ -175,10 +177,10 @@ def test_get_state_float_time():
         state.full(),
         np.array(
             [
-                [0.76522918 + 0.0j],
-                [0.08126436 - 0.39418836j],
-                [0.08126436 - 0.39418836j],
-                [-0.28037007 - 0.10881273j],
+                [0.76522907+0.j],
+                [0.08339973-0.39374219j],
+                [0.08339973-0.39374219j],
+                [-0.27977623-0.1103308j],
             ]
         ),
     ).all()
@@ -200,7 +202,7 @@ def test_expect():
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
     assert np.isclose(exp[-1], 1)
-    assert len(exp) == duration
+    assert len(exp) == duration + 1 # +1 for the final instant
     np.testing.assert_almost_equal(
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1, 0], [0, 0]]),
@@ -243,7 +245,8 @@ def test_expect_noisy():
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.76)
+    assert np.isclose(results_noisy.expect([op])[0][-1],
+                      0.6933333333333334)
 
 
 def test_plot():
@@ -286,7 +289,7 @@ def test_sample_final_state():
 def test_sample_final_state_noisy():
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"00": 67, "01": 176, "10": 219, "11": 772}
+        {"00": 140, "01": 227, "10": 221, "11": 646}
     )
     res_3level = Simulation(
         seq_no_meas_noisy, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
@@ -296,10 +299,10 @@ def test_sample_final_state_noisy():
         final_state.full(),
         np.array(
             [
-                [0.58 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.06 + 0.0j],
+                [0.64 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.14 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.1 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.12 + 0.0j],
             ]
         ),
     ).all()
