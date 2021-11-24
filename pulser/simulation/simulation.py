@@ -106,7 +106,7 @@ class Simulation:
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self._collapse_ops: list[qutip.Qobj] = []
-        self._times = self._adapt_to_sampling_rate(
+        self.sampling_times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double) / 1000
         )
 
@@ -295,10 +295,10 @@ class Simulation:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = np.append(self._times, self._tot_duration/1000)
+                self._eval_times_array = np.append(self.sampling_times, self._tot_duration/1000)
             elif value == "Minimal":
                 self._eval_times_array = np.array(
-                    [self._times[0], self._tot_duration/1000]
+                    [self.sampling_times[0], self._tot_duration/1000]
                 )
             else:
                 raise ValueError(
@@ -311,7 +311,7 @@ class Simulation:
                 raise ValueError(
                     "evaluation_times float must be between 0 " "and 1."
                 )
-            extended_times = np.append(self._times, self._tot_duration/1000)
+            extended_times = np.append(self.sampling_times, self._tot_duration/1000)
             indices = np.linspace(
                 0,
                 len(extended_times) - 1,
@@ -800,7 +800,7 @@ class Simulation:
         if not qobj_list:  # If qobj_list ends up empty
             qobj_list = [0 * self.build_operator([("I", "global")])]
 
-        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
+        ham = qutip.QobjEvo(qobj_list, tlist=self.sampling_times)
         ham = ham + ham.dag()
         ham.compress()
         self._hamiltonian = ham
@@ -817,11 +817,11 @@ class Simulation:
             extracted from the effective sequence (determined by
             `self.sampling_rate`) at the specified time.
         """
-        if time > 1000 * self._times[-1]:
+        if time > self._tot_duration:
             raise ValueError(
                 f"Provided time (`time` = {time}) must be "
                 "less than or equal to the sequence duration "
-                f"({1000 * self._times[-1]})."
+                f"({self._tot_duration})."
             )
         if time < 0:
             raise ValueError(
