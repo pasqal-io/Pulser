@@ -106,13 +106,12 @@ class Simulation:
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self._collapse_ops: list[qutip.Qobj] = []
+
         self.sampling_times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double) / 1000
         )
+        self.evaluation_times = evaluation_times  # type: ignore
 
-        self._eval_times_instruction: Union[str, ArrayLike, float] = (
-                                      evaluation_times
-                                     )
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
         # Sets the config as well as builds the hamiltonian
