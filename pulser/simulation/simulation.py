@@ -110,7 +110,9 @@ class Simulation:
             np.arange(self._tot_duration, dtype=np.double) / 1000
         )
 
-        self.evaluation_times = evaluation_times
+        self._eval_times_instruction: Union[str, ArrayLike, float] = (
+                                      evaluation_times
+                                     )
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
         # Sets the config as well as builds the hamiltonian
@@ -271,7 +273,7 @@ class Simulation:
             self._initial_state = qutip.Qobj(state, dims=legal_dims)
 
     @property
-    def evaluation_times(self) -> Union[ArrayLike, np.ndarray]:
+    def evaluation_times(self) -> np.ndarray:
         """The times at which the results of this simulation are returned.
 
         Args:
@@ -288,7 +290,7 @@ class Simulation:
 
                 - A float to act as a sampling rate for the resulting state.
         """
-        return self._eval_times_array
+        return np.array(self._eval_times_array)
 
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
@@ -350,7 +352,7 @@ class Simulation:
                 "be `Full`, `Minimal`, an array of times or a "
                 + "float between 0 and 1."
             )
-        self._eval_times_instruction: Union[str, ArrayLike, float] = value
+        self._eval_times_instruction = value
 
     def draw(
         self,
