@@ -619,14 +619,19 @@ class Simulation:
                 self.basis[proj[0]] * self.basis[proj[1]].dag()
             )
 
-    def _construct_hamiltonian(self) -> None:
+    def _construct_hamiltonian(self, update_and_extract: bool = True) -> None:
         """Constructs the hamiltonian from the Sequence.
 
         Also builds qutip.Qobjs related to the Sequence if not built already,
         and refreshes potential noise parameters by drawing new at random.
+
+        Args:
+            update_and_extract(bool=True): Whether to update the noise
+                parameters and extract the samples from the sequence.
         """
-        self._update_noise()
-        self._extract_samples()
+        if update_and_extract:
+            self._update_noise()
+            self._extract_samples()
         if not hasattr(self, "basis_name"):
             self._build_basis_and_op_matrices()
 
@@ -919,20 +924,50 @@ class Simulation:
             if "SPAM" not in self.config.noise or self.config.eta == 0:
                 return _run_solver()
 
-        # Did not obey the conditions above, will return NoisyResults
+            else:
+                # Stores the different initial configurations and frequency
+                initial_configs = Counter(
+                    "".join(
+                        (
+                            np.random.uniform(size=len(self._qid_index))
+                            < self.config.eta
+                        )
+                        .astype(int)
+                        .astype(str)  # Turns bool->int->str
+                    )
+                    for _ in range(self.config.runs)
+                ).most_common()
+                loop_runs = len(initial_configs)
+                update_ham = False
+        else:
+            loop_runs = self.config.runs
+            update_ham = True
+
+        # Will return NoisyResults
         time_indices = range(len(self._eval_times_array))
         total_count = np.array([Counter() for _ in time_indices])
         # We run the system multiple times
-        for _ in range(self.config.runs):
+        for i in range(loop_runs):
+            if not update_ham:
+                initial_state, reps = initial_configs[i]
+                # We load the initial state manually
+                self._bad_atoms = dict(
+                    zip(
+                        self._qid_index,
+                        np.array(list(initial_state)).astype(bool),
+                    )
+                )
+            else:
+                reps = 1
             # At each run, new random noise: new Hamiltonian
-            self._construct_hamiltonian()
+            self._construct_hamiltonian(update_and_extract=update_ham)
             # Get CoherentResults instance from sequence with added noise:
             cleanres_noisyseq = _run_solver()
             # Extract statistics at eval time:
             total_count += np.array(
                 [
                     cleanres_noisyseq.sample_state(
-                        t, n_samples=self.config.samples_per_run
+                        t, n_samples=self.config.samples_per_run * reps
                     )
                     for t in self._eval_times_array
                 ]
