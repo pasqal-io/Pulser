@@ -93,11 +93,13 @@ def test_initialization_and_construction_of_hamiltonian():
         Simulation(seq, sampling_rate=-1)
 
     assert sim._sampling_rate == 0.011
-    assert len(sim._times) == int(sim._sampling_rate * sim._tot_duration)
+    assert len(sim.sampling_times) == int(
+        sim._sampling_rate * sim._tot_duration
+    )
 
     assert isinstance(sim._hamiltonian, qutip.QobjEvo)
     # Checks adapt() method:
-    assert bool(set(sim._hamiltonian.tlist).intersection(sim._times))
+    assert bool(set(sim._hamiltonian.tlist).intersection(sim.sampling_times))
     for qobjevo in sim._hamiltonian.ops:
         for sh in qobjevo.qobj.shape:
             assert sh == sim.dim ** sim._size
@@ -423,7 +425,7 @@ def test_eval_times():
         match="Provided evaluation-time list contains " "negative values.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [-1, 0, sim._times[-2]]
+        sim.evaluation_times = [-1, 0, sim.sampling_times[-2]]
 
     with pytest.raises(
         ValueError,
@@ -431,38 +433,58 @@ def test_eval_times():
         "further than sequence duration.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [0, sim._times[-1] + 10]
+        sim.evaluation_times = [0, sim.sampling_times[-1] + 10]
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Full"
-    assert sim.evaluation_times == "Full"
-    np.testing.assert_almost_equal(sim._eval_times_array, sim._times)
+    assert sim._eval_times_instruction == "Full"
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.append(sim.sampling_times, sim._tot_duration / 1000),
+    )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Minimal"
     np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([sim._times[0], sim._times[-1]])
+        sim._eval_times_array,
+        np.array([sim.sampling_times[0], sim._tot_duration / 1000]),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [0, sim._times[-3], sim._times[-1]]
-    np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([0, sim._times[-3], sim._times[-1]])
-    )
-
-    sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [sim._times[-10], sim._times[-3]]
+    sim.evaluation_times = [
+        0,
+        sim.sampling_times[-3],
+        sim._tot_duration / 1000,
+    ]
     np.testing.assert_almost_equal(
         sim._eval_times_array,
-        np.array([0, sim._times[-10], sim._times[-3], sim._times[-1]]),
+        np.array([0, sim.sampling_times[-3], sim._tot_duration / 1000]),
+    )
+
+    sim = Simulation(seq, sampling_rate=1.0)
+    sim.evaluation_times = [sim.sampling_times[-10], sim.sampling_times[-3]]
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array(
+            [
+                0,
+                sim.sampling_times[-10],
+                sim.sampling_times[-3],
+                sim._tot_duration / 1000,
+            ]
+        ),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = 0.4
+    extended_tlist = np.append(sim.sampling_times, sim._tot_duration / 1000)
     np.testing.assert_almost_equal(
-        sim._times[
+        extended_tlist[
             np.linspace(
-                0, len(sim._times) - 1, int(0.4 * len(sim._times)), dtype=int
+                0,
+                len(extended_tlist) - 1,
+                int(0.4 * len(extended_tlist)),
+                dtype=int,
             )
         ],
         sim._eval_times_array,
@@ -585,7 +607,7 @@ def test_cuncurrent_pulses():
     config_doppler = SimConfig(noise=("doppler"))
     sim_with_noise.set_config(config_doppler)
 
-    for t in sim_no_noise._times:
+    for t in sim_no_noise.evaluation_times:
         ham_no_noise = sim_no_noise.get_hamiltonian(t)
         ham_with_noise = sim_with_noise.get_hamiltonian(t)
         assert ham_no_noise[0, 1] == ham_with_noise[0, 1]
