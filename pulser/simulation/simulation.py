@@ -29,6 +29,7 @@ from numpy.typing import ArrayLike
 import matplotlib.pyplot as plt
 
 from pulser import Pulse, Sequence
+from pulser.register import QubitId
 from pulser.simulation.simresults import (
     SimulationResults,
     CoherentResults,
@@ -624,7 +625,9 @@ class Simulation:
         if not hasattr(self, "basis_name"):
             self._build_basis_and_op_matrices()
 
-        def make_vdw_term() -> qutip.Qobj:
+        def make_vdw_term(
+            q1: Union[int, str], q2: Union[int, str]
+        ) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
             For each pair of qubits, calculate the distance between them,
@@ -632,18 +635,13 @@ class Simulation:
             The units are given so that the coefficient includes a
             1/hbar factor.
             """
-            vdw = cast(qutip.Qobj, 0)
-            # Get every pair without duplicates
-            for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
-                # no VdW interaction with other qubits for a badly prep. qubit
-                if self._bad_atoms[q1] or self._bad_atoms[q2]:
-                    continue
-                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-                U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
-                vdw += U * self.build_operator([("sigma_rr", [q1, q2])])
-            return vdw
+            dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+            U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
+            return U * self.build_operator([("sigma_rr", [q1, q2])])
 
-        def make_xy_term(masked: bool = False) -> qutip.Qobj:
+        def make_xy_term(
+            q1: Union[int, str], q2: Union[int, str]
+        ) -> qutip.Qobj:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
@@ -651,17 +649,40 @@ class Simulation:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            # Calculate the total number of good, unmasked qubits
+            dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+            mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
+            if mag_norm < 1e-8:
+                cosine = 0.0
+            else:
+                cosine = (
+                    np.dot(
+                        (self._qdict[q1] - self._qdict[q2]),
+                        self._seq.magnetic_field[0:2],
+                    )
+                    / (dist * mag_norm)
+                )
+            U = (
+                0.5
+                * self._seq._device.interaction_coeff_xy
+                * (1 - 3 * cosine ** 2)
+                / dist ** 3
+            )
+            return U * self.build_operator(
+                [("sigma_du", [q1]), ("sigma_ud", [q2])]
+            )
+
+        def make_interaction_term(masked: bool = False) -> qutip.Qobj:
             if masked:
+                # Calculate the total number of good, unmasked qubits
                 effective_size = self._size - sum(self._bad_atoms.values())
                 for q in self._seq._slm_mask_targets:
                     if not self._bad_atoms[q]:
                         effective_size -= 1
                 if effective_size < 2:
                     return 0 * self.build_operator([("I", "global")])
-
-            xy = cast(qutip.Qobj, 0)
-            # Get every pair without duplicates
+            
+            # make interaction term
+            dipole_interaction = cast(qutip.Qobj, 0)
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 if (
                     self._bad_atoms[q1]
@@ -675,34 +696,12 @@ class Simulation:
                     )
                 ):
                     continue
-                dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-                mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
-                if mag_norm < 1e-8:
-                    cosine = 0.0
-                else:
-                    cosine = (
-                        np.dot(
-                            (self._qdict[q1] - self._qdict[q2]),
-                            self._seq.magnetic_field[0:2],
-                        )
-                        / (dist * mag_norm)
-                    )
-                U = (
-                    0.5
-                    * self._seq._device.interaction_coeff_xy
-                    * (1 - 3 * cosine ** 2)
-                    / dist ** 3
-                )
-                xy += U * self.build_operator(
-                    [("sigma_du", [q1]), ("sigma_ud", [q2])]
-                )
-            return xy
 
-        def make_interaction_term(masked: bool = False) -> qutip.Qobj:
-            if self._interaction == "XY":
-                return make_xy_term(masked)
-            else:
-                return make_vdw_term()
+                if self._interaction == "XY":
+                    dipole_interaction += make_xy_term(q1, q2)
+                else:
+                    dipole_interaction += make_vdw_term(q1, q2)
+            return dipole_interaction
 
         def build_coeffs_ops(basis: str, addr: str) -> list[list]:
             """Build coefficients and operators for the hamiltonian QobjEvo."""
