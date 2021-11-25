@@ -87,7 +87,6 @@ computers and simulators, check the pages in :doc:`review`.
 
    tutorials/cz_gate
    tutorials/qaoa_mis
-   tutorials/qaoa_param_seq
    tutorials/qek
 
 .. toctree::
