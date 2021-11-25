@@ -106,11 +106,12 @@ class Simulation:
         self._sampling_rate = sampling_rate
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
         self._collapse_ops: list[qutip.Qobj] = []
-        self._times = self._adapt_to_sampling_rate(
+
+        self.sampling_times = self._adapt_to_sampling_rate(
             np.arange(self._tot_duration, dtype=np.double) / 1000
         )
+        self.evaluation_times = evaluation_times  # type: ignore
 
-        self.evaluation_times = evaluation_times
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
         # Sets the config as well as builds the hamiltonian
@@ -271,7 +272,7 @@ class Simulation:
             self._initial_state = qutip.Qobj(state, dims=legal_dims)
 
     @property
-    def evaluation_times(self) -> Union[str, float, ArrayLike]:
+    def evaluation_times(self) -> np.ndarray:
         """The times at which the results of this simulation are returned.
 
         Args:
@@ -288,17 +289,19 @@ class Simulation:
 
                 - A float to act as a sampling rate for the resulting state.
         """
-        return self._evaluation_times
+        return np.array(self._eval_times_array)
 
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = self._times
+                self._eval_times_array = np.append(
+                    self.sampling_times, self._tot_duration / 1000
+                )
             elif value == "Minimal":
                 self._eval_times_array = np.array(
-                    [self._times[0], self._times[-1]]
+                    [self.sampling_times[0], self._tot_duration / 1000]
                 )
             else:
                 raise ValueError(
@@ -311,17 +314,20 @@ class Simulation:
                 raise ValueError(
                     "evaluation_times float must be between 0 " "and 1."
                 )
+            extended_times = np.append(
+                self.sampling_times, self._tot_duration / 1000
+            )
             indices = np.linspace(
                 0,
-                len(self._times) - 1,
-                int(value * len(self._times)),
+                len(extended_times) - 1,
+                int(value * len(extended_times)),
                 dtype=int,
             )
-            self._eval_times_array = self._times[indices]
+            self._eval_times_array = extended_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
-            if t_max > self._times[-1]:
+            if t_max > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
@@ -335,8 +341,8 @@ class Simulation:
             eval_times = np.array(np.sort(value))
             if t_min > 0:
                 eval_times = np.insert(eval_times, 0, 0.0)
-            if t_max < self._times[-1]:
-                eval_times = np.append(eval_times, self._times[-1])
+            if t_max < self._tot_duration / 1000:
+                eval_times = np.append(eval_times, self._tot_duration / 1000)
             self._eval_times_array = eval_times
             # always include initial and final times
         else:
@@ -345,7 +351,7 @@ class Simulation:
                 "be `Full`, `Minimal`, an array of times or a "
                 + "float between 0 and 1."
             )
-        self._evaluation_times: Union[str, ArrayLike, float] = value
+        self._eval_times_instruction = value
 
     def draw(
         self,
@@ -799,7 +805,7 @@ class Simulation:
         if not qobj_list:  # If qobj_list ends up empty
             qobj_list = [0 * self.build_operator([("I", "global")])]
 
-        ham = qutip.QobjEvo(qobj_list, tlist=self._times)
+        ham = qutip.QobjEvo(qobj_list, tlist=self.sampling_times)
         ham = ham + ham.dag()
         ham.compress()
         self._hamiltonian = ham
@@ -816,11 +822,11 @@ class Simulation:
             extracted from the effective sequence (determined by
             `self.sampling_rate`) at the specified time.
         """
-        if time > 1000 * self._times[-1]:
+        if time > self._tot_duration:
             raise ValueError(
                 f"Provided time (`time` = {time}) must be "
                 "less than or equal to the sequence duration "
-                f"({1000 * self._times[-1]})."
+                f"({self._tot_duration})."
             )
         if time < 0:
             raise ValueError(
