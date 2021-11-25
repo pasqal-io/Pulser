@@ -63,6 +63,7 @@ computers and simulators, check the pages in :doc:`review`.
    :maxdepth: 1
    :caption: Advanced Features
 
+   tutorials/noisy_sim
    tutorials/phase_shifts_vz_gates
    tutorials/composite_wfs
    tutorials/paramseqs
@@ -71,13 +72,20 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Applications
+   :caption: Quantum Simulation
 
-   tutorials/noisy_sim
-   tutorials/cz_gate
    tutorials/afm_prep
-   tutorials/1D_crystals
    tutorials/optimization
+   tutorials/xy_spin_chain
+   tutorials/mw_engineering
+   tutorials/shadow_est
+   tutorials/1D_crystals
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Other Applications
+
+   tutorials/cz_gate
    tutorials/qaoa_mis
    tutorials/qaoa_param_seq
    tutorials/qek
