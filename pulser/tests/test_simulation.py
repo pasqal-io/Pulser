@@ -797,7 +797,7 @@ def test_mask_two_pulses():
 
         ti = seq_masked._slm_mask_time[0]
         tf = seq_masked._slm_mask_time[1]
-        for t in sim_masked._times:
+        for t in sim_masked.sampling_times:
             ham_masked = sim_masked.get_hamiltonian(t)
             ham_three = sim_three.get_hamiltonian(t)
             ham_two = sim_two.get_hamiltonian(t)
