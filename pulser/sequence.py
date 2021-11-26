@@ -1177,9 +1177,10 @@ class Sequence:
 
         # Find tentative initial and final time of SLM mask if possible
         for channel in self._channels:
-            if self._channels[channel].addressing == "Global":
-                # Cycle on slots in schedule until the first pulse is found
-                for slot in self._schedule[channel]:
+            if not self._channels[channel].addressing == "Global":
+                continue
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
                     if not isinstance(slot.type, Pulse):
                         continue
                     ti = slot.ti
