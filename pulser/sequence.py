@@ -1163,9 +1163,6 @@ class Sequence:
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register")
 
-        # if not self._in_xy and self._channels:
-        #    raise NotImplementedError("SLM mask can only be added in XY mode")
-
         if self.is_parametrized():
             return
 
@@ -1177,19 +1174,20 @@ class Sequence:
 
         # Find tentative initial and final time of SLM mask if possible
         for channel in self._channels:
-            if self._channels[channel].addressing == "Global":
-                # Cycle on slots in schedule until the first pulse is found
-                for slot in self._schedule[channel]:
-                    if not isinstance(slot.type, Pulse):
-                        continue
-                    ti = slot.ti
-                    tf = slot.tf
-                    if self._slm_mask_time:
-                        if ti < self._slm_mask_time[0]:
-                            self._slm_mask_time = [ti, tf]
-                    else:
+            if not self._channels[channel].addressing == "Global":
+                continue
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
+                if not isinstance(slot.type, Pulse):
+                    continue
+                ti = slot.ti
+                tf = slot.tf
+                if self._slm_mask_time:
+                    if ti < self._slm_mask_time[0]:
                         self._slm_mask_time = [ti, tf]
-                    break
+                else:
+                    self._slm_mask_time = [ti, tf]
+                break
 
 
 class _PhaseTracker:

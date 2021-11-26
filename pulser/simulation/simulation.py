@@ -636,9 +636,7 @@ class Simulation:
         if not hasattr(self, "basis_name"):
             self._build_basis_and_op_matrices()
 
-        def make_vdw_term(
-            q1: Union[int, str], q2: Union[int, str]
-        ) -> qutip.Qobj:
+        def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
 
             For each pair of qubits, calculate the distance between them,
@@ -650,9 +648,7 @@ class Simulation:
             U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
-        def make_xy_term(
-            q1: Union[int, str], q2: Union[int, str]
-        ) -> qutip.Qobj:
+        def make_xy_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
@@ -691,7 +687,7 @@ class Simulation:
                         effective_size -= 1
                 if effective_size < 2:
                     return 0 * self.build_operator([("I", "global")])
-            
+
             # make interaction term
             dipole_interaction = cast(qutip.Qobj, 0)
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
