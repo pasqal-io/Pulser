@@ -730,12 +730,21 @@ def test_mask_equals_remove():
     reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     reg_two = Register({"q0": (0, 0), "q1": (10, 10)})
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
+    local_pulse = Pulse.ConstantPulse(200, 10, 0, 0)
 
     for channel_type in ["mw_global", "rydberg_global", "raman_global"]:
         # Masked simulation
         seq_masked = Sequence(reg_three, MockDevice)
         if channel_type == "mw_global":
             seq_masked.set_magnetic_field(0, 1.0, 0.0)
+        else:
+            # Add a local channel acting on a masked qubit (has no effect)
+            seq_masked.declare_channel(
+                "local",
+                channel_type[: -len("global")] + "local",
+                initial_target="q2",
+            )
+            seq_masked.add(local_pulse, "local")
         seq_masked.declare_channel("ch_masked", channel_type)
         masked_qubits = ["q2"]
         seq_masked.config_slm_mask(masked_qubits)
@@ -747,6 +756,8 @@ def test_mask_equals_remove():
         if channel_type == "mw_global":
             seq_two.set_magnetic_field(0, 1.0, 0.0)
         seq_two.declare_channel("ch_two", channel_type)
+        if channel_type != "mw_global":
+            seq_two.delay(local_pulse.duration, "ch_two")
         seq_two.add(pulse, "ch_two")
         sim_two = Simulation(seq_two)
 
