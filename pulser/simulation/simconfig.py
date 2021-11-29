@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from sys import version_info
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Union, Any
 
 import numpy as np
 import qutip
@@ -93,8 +93,7 @@ class SimConfig:
 
     def __post_init__(self) -> None:
         self._process_temperature()
-        object.__setattr__(
-            self,
+        self._change_attribute(
             "spam_dict",
             {
                 "eta": self.eta,
@@ -145,12 +144,12 @@ class SimConfig:
                 + f" (`temperature` = {self.temperature}) must be"
                 + " greater than 0."
             )
-        object.__setattr__(self, "temperature", self.temperature * 1.0e-6)
+        self._change_attribute("temperature", self.temperature * 1.0e-6)
 
     def _check_noise_types(self) -> None:
         # only one noise was given as argument : convert it to a tuple
         if isinstance(self.noise, str):
-            object.__setattr__(self, "noise", (self.noise,))
+            self._change_attribute("noise", (self.noise,))
         for noise_type in self.noise:
             if noise_type not in get_args(NOISE_TYPES):
                 raise ValueError(
@@ -161,6 +160,9 @@ class SimConfig:
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        object.__setattr__(
-            self, "doppler_sigma", KEFF * np.sqrt(KB * self.temperature / MASS)
+        self._change_attribute(
+            "doppler_sigma", KEFF * np.sqrt(KB * self.temperature / MASS)
         )
+
+    def _change_attribute(self, attr_name: str, new_value: Any) -> None:
+        object.__setattr__(self, attr_name, new_value)
