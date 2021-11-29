@@ -657,14 +657,15 @@ class Simulation:
             includes a 1/hbar factor.
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            mag_norm = np.linalg.norm(self._seq.magnetic_field[0:2])
+            coords_dim = len(self._qdict[q1])
+            mag_norm = np.linalg.norm(self._seq.magnetic_field[:coords_dim])
             if mag_norm < 1e-8:
                 cosine = 0.0
             else:
                 cosine = (
                     np.dot(
                         (self._qdict[q1] - self._qdict[q2]),
-                        self._seq.magnetic_field[0:2],
+                        self._seq.magnetic_field[:coords_dim],
                     )
                     / (dist * mag_norm)
                 )
