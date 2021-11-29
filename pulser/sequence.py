@@ -423,12 +423,6 @@ class Sequence:
             else:
                 raise ValueError(f"Channel {channel_id} is not available.")
 
-        # Remove this check once SLM is available in Ising mode
-        if self._slm_mask_targets and ch.basis != "XY":
-            raise NotImplementedError(
-                "SLM mask is not yet available in Ising mode"
-            )
-
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
             self.set_magnetic_field()
@@ -1169,9 +1163,6 @@ class Sequence:
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register")
 
-        if not self._in_xy and self._channels:
-            raise NotImplementedError("SLM mask can only be added in XY mode")
-
         if self.is_parametrized():
             return
 
@@ -1183,6 +1174,8 @@ class Sequence:
 
         # Find tentative initial and final time of SLM mask if possible
         for channel in self._channels:
+            if not self._channels[channel].addressing == "Global":
+                continue
             # Cycle on slots in schedule until the first pulse is found
             for slot in self._schedule[channel]:
                 if not isinstance(slot.type, Pulse):
