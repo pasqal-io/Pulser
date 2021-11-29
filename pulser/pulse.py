@@ -87,8 +87,10 @@ class Pulse:
                 "greater than or equal to zero."
             )
 
-        self.__dict__["phase"] %= 2 * np.pi
-        self.__dict__["post_phase_shift"] %= 2 * np.pi
+        object.__setattr__(self, "phase", self.phase % (2 * np.pi))
+        object.__setattr__(
+            self, "post_phase_shift", self.post_phase_shift % (2 * np.pi)
+        )
 
     @property
     def duration(self) -> int:

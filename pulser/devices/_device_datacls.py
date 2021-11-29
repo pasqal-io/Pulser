@@ -58,7 +58,7 @@ class Device:
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
-        self.__dict__["__doc__"] = self._specs(for_docs=True)
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     def channels(self) -> dict[str, Channel]:

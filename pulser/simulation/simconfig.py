@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from sys import version_info
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Union, Any
 
 import numpy as np
 import qutip
@@ -93,11 +93,14 @@ class SimConfig:
 
     def __post_init__(self) -> None:
         self._process_temperature()
-        self.__dict__["spam_dict"] = {
-            "eta": self.eta,
-            "epsilon": self.epsilon,
-            "epsilon_prime": self.epsilon_prime,
-        }
+        self._change_attribute(
+            "spam_dict",
+            {
+                "eta": self.eta,
+                "epsilon": self.epsilon,
+                "epsilon_prime": self.epsilon_prime,
+            },
+        )
         self._check_noise_types()
         self._check_spam_dict()
         self._calc_sigma_doppler()
@@ -141,12 +144,12 @@ class SimConfig:
                 + f" (`temperature` = {self.temperature}) must be"
                 + " greater than 0."
             )
-        self.__dict__["temperature"] *= 1.0e-6
+        self._change_attribute("temperature", self.temperature * 1.0e-6)
 
     def _check_noise_types(self) -> None:
         # only one noise was given as argument : convert it to a tuple
         if isinstance(self.noise, str):
-            self.__dict__["noise"] = (self.noise,)
+            self._change_attribute("noise", (self.noise,))
         for noise_type in self.noise:
             if noise_type not in get_args(NOISE_TYPES):
                 raise ValueError(
@@ -157,6 +160,9 @@ class SimConfig:
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        self.__dict__["doppler_sigma"] = KEFF * np.sqrt(
-            KB * self.temperature / MASS
+        self._change_attribute(
+            "doppler_sigma", KEFF * np.sqrt(KB * self.temperature / MASS)
         )
+
+    def _change_attribute(self, attr_name: str, new_value: Any) -> None:
+        object.__setattr__(self, attr_name, new_value)
