@@ -93,11 +93,13 @@ def test_initialization_and_construction_of_hamiltonian():
         Simulation(seq, sampling_rate=-1)
 
     assert sim._sampling_rate == 0.011
-    assert len(sim._times) == int(sim._sampling_rate * sim._tot_duration)
+    assert len(sim.sampling_times) == int(
+        sim._sampling_rate * sim._tot_duration
+    )
 
     assert isinstance(sim._hamiltonian, qutip.QobjEvo)
     # Checks adapt() method:
-    assert bool(set(sim._hamiltonian.tlist).intersection(sim._times))
+    assert bool(set(sim._hamiltonian.tlist).intersection(sim.sampling_times))
     for qobjevo in sim._hamiltonian.ops:
         for sh in qobjevo.qobj.shape:
             assert sh == sim.dim ** sim._size
@@ -423,7 +425,7 @@ def test_eval_times():
         match="Provided evaluation-time list contains " "negative values.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [-1, 0, sim._times[-2]]
+        sim.evaluation_times = [-1, 0, sim.sampling_times[-2]]
 
     with pytest.raises(
         ValueError,
@@ -431,38 +433,58 @@ def test_eval_times():
         "further than sequence duration.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [0, sim._times[-1] + 10]
+        sim.evaluation_times = [0, sim.sampling_times[-1] + 10]
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Full"
-    assert sim.evaluation_times == "Full"
-    np.testing.assert_almost_equal(sim._eval_times_array, sim._times)
+    assert sim._eval_times_instruction == "Full"
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.append(sim.sampling_times, sim._tot_duration / 1000),
+    )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = "Minimal"
     np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([sim._times[0], sim._times[-1]])
+        sim._eval_times_array,
+        np.array([sim.sampling_times[0], sim._tot_duration / 1000]),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [0, sim._times[-3], sim._times[-1]]
-    np.testing.assert_almost_equal(
-        sim._eval_times_array, np.array([0, sim._times[-3], sim._times[-1]])
-    )
-
-    sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [sim._times[-10], sim._times[-3]]
+    sim.evaluation_times = [
+        0,
+        sim.sampling_times[-3],
+        sim._tot_duration / 1000,
+    ]
     np.testing.assert_almost_equal(
         sim._eval_times_array,
-        np.array([0, sim._times[-10], sim._times[-3], sim._times[-1]]),
+        np.array([0, sim.sampling_times[-3], sim._tot_duration / 1000]),
+    )
+
+    sim = Simulation(seq, sampling_rate=1.0)
+    sim.evaluation_times = [sim.sampling_times[-10], sim.sampling_times[-3]]
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array(
+            [
+                0,
+                sim.sampling_times[-10],
+                sim.sampling_times[-3],
+                sim._tot_duration / 1000,
+            ]
+        ),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = 0.4
+    extended_tlist = np.append(sim.sampling_times, sim._tot_duration / 1000)
     np.testing.assert_almost_equal(
-        sim._times[
+        extended_tlist[
             np.linspace(
-                0, len(sim._times) - 1, int(0.4 * len(sim._times)), dtype=int
+                0,
+                len(extended_tlist) - 1,
+                int(0.4 * len(extended_tlist)),
+                dtype=int,
             )
         ],
         sim._eval_times_array,
@@ -585,7 +607,7 @@ def test_cuncurrent_pulses():
     config_doppler = SimConfig(noise=("doppler"))
     sim_with_noise.set_config(config_doppler)
 
-    for t in sim_no_noise._times:
+    for t in sim_no_noise.evaluation_times:
         ham_no_noise = sim_no_noise.get_hamiltonian(t)
         ham_with_noise = sim_with_noise.get_hamiltonian(t)
         assert ham_no_noise[0, 1] == ham_with_noise[0, 1]
@@ -685,19 +707,21 @@ def test_noisy_xy():
 def test_mask_nopulses():
     """Check interaction between SLM mask and a simulation with no pulses."""
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
-    seq_empty = Sequence(reg, MockDevice)
-    seq_empty.set_magnetic_field(0, 1.0, 0.0)
-    seq_empty.declare_channel("ch", "mw_global")
-    seq_empty.delay(duration=100, channel="ch")
-    masked_qubits = ["q2"]
-    seq_empty.config_slm_mask(masked_qubits)
-    sim_empty = Simulation(seq_empty)
+    for channel_type in ["mw_global", "rydberg_global"]:
+        seq_empty = Sequence(reg, MockDevice)
+        if channel_type == "mw_global":
+            seq_empty.set_magnetic_field(0, 1.0, 0.0)
+        seq_empty.declare_channel("ch", channel_type)
+        seq_empty.delay(duration=100, channel="ch")
+        masked_qubits = ["q2"]
+        seq_empty.config_slm_mask(masked_qubits)
+        sim_empty = Simulation(seq_empty)
 
-    assert seq_empty._slm_mask_time == []
-    assert sim_empty._seq._slm_mask_time == []
+        assert seq_empty._slm_mask_time == []
+        assert sim_empty._seq._slm_mask_time == []
 
 
-def test_xy_mask_equals_remove():
+def test_mask_equals_remove():
     """Check that masking is equivalent to removing the masked qubits.
 
     A global pulse acting on three qubits of which one is masked, should be
@@ -706,32 +730,46 @@ def test_xy_mask_equals_remove():
     reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     reg_two = Register({"q0": (0, 0), "q1": (10, 10)})
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
+    local_pulse = Pulse.ConstantPulse(200, 10, 0, 0)
 
-    # Masked simulation
-    seq_masked = Sequence(reg_three, MockDevice)
-    seq_masked.set_magnetic_field(0, 1.0, 0.0)
-    seq_masked.declare_channel("ch_masked", "mw_global")
-    masked_qubits = ["q2"]
-    seq_masked.config_slm_mask(masked_qubits)
-    seq_masked.add(pulse, "ch_masked")
-    sim_masked = Simulation(seq_masked)
+    for channel_type in ["mw_global", "rydberg_global", "raman_global"]:
+        # Masked simulation
+        seq_masked = Sequence(reg_three, MockDevice)
+        if channel_type == "mw_global":
+            seq_masked.set_magnetic_field(0, 1.0, 0.0)
+        else:
+            # Add a local channel acting on a masked qubit (has no effect)
+            seq_masked.declare_channel(
+                "local",
+                channel_type[: -len("global")] + "local",
+                initial_target="q2",
+            )
+            seq_masked.add(local_pulse, "local")
+        seq_masked.declare_channel("ch_masked", channel_type)
+        masked_qubits = ["q2"]
+        seq_masked.config_slm_mask(masked_qubits)
+        seq_masked.add(pulse, "ch_masked")
+        sim_masked = Simulation(seq_masked)
 
-    # Simulation on reduced register
-    seq_two = Sequence(reg_two, MockDevice)
-    seq_two.set_magnetic_field(0, 1.0, 0.0)
-    seq_two.declare_channel("ch_two", "mw_global")
-    seq_two.add(pulse, "ch_two")
-    sim_two = Simulation(seq_two)
+        # Simulation on reduced register
+        seq_two = Sequence(reg_two, MockDevice)
+        if channel_type == "mw_global":
+            seq_two.set_magnetic_field(0, 1.0, 0.0)
+        seq_two.declare_channel("ch_two", channel_type)
+        if channel_type != "mw_global":
+            seq_two.delay(local_pulse.duration, "ch_two")
+        seq_two.add(pulse, "ch_two")
+        sim_two = Simulation(seq_two)
 
-    # Check equality
-    for t in sim_two._times:
-        ham_masked = sim_masked.get_hamiltonian(t)
-        ham_two = sim_two.get_hamiltonian(t)
-        assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
+        # Check equality
+        for t in sim_two.sampling_times:
+            ham_masked = sim_masked.get_hamiltonian(t)
+            ham_two = sim_two.get_hamiltonian(t)
+            assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
 
 
-def test_xy_mask_two_pulses():
-    """Similar to test_xy_mask_equals_remove, but with more pulses afterwards.
+def test_mask_two_pulses():
+    """Similar to test_mask_equals_remove, but with more pulses afterwards.
 
     Three global pulses act on a three qubit register, with one qubit masked
     during the first pulse.
@@ -741,79 +779,85 @@ def test_xy_mask_two_pulses():
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
     no_pulse = Pulse.ConstantPulse(100, 0, 0, 0)
 
-    # Masked simulation
-    seq_masked = Sequence(reg_three, MockDevice)
-    seq_masked.declare_channel("ch_masked", "mw_global")
-    masked_qubits = ["q2"]
-    seq_masked.config_slm_mask(masked_qubits)
-    seq_masked.add(pulse, "ch_masked")  # First pulse: masked
-    seq_masked.add(pulse, "ch_masked")  # Second pulse: unmasked
-    seq_masked.add(pulse, "ch_masked")  # Third pulse: unmasked
-    sim_masked = Simulation(seq_masked)
+    for channel_type in ["mw_global", "rydberg_global", "raman_global"]:
+        # Masked simulation
+        seq_masked = Sequence(reg_three, MockDevice)
+        seq_masked.declare_channel("ch_masked", channel_type)
+        masked_qubits = ["q2"]
+        seq_masked.config_slm_mask(masked_qubits)
+        seq_masked.add(pulse, "ch_masked")  # First pulse: masked
+        seq_masked.add(pulse, "ch_masked")  # Second pulse: unmasked
+        seq_masked.add(pulse, "ch_masked")  # Third pulse: unmasked
+        sim_masked = Simulation(seq_masked)
 
-    # Unmasked simulation on full register
-    seq_three = Sequence(reg_three, MockDevice)
-    seq_three.declare_channel("ch_three", "mw_global")
-    seq_three.add(no_pulse, "ch_three")
-    seq_three.add(pulse, "ch_three")
-    seq_three.add(pulse, "ch_three")
-    sim_three = Simulation(seq_three)
+        # Unmasked simulation on full register
+        seq_three = Sequence(reg_three, MockDevice)
+        seq_three.declare_channel("ch_three", channel_type)
+        seq_three.add(no_pulse, "ch_three")
+        seq_three.add(pulse, "ch_three")
+        seq_three.add(pulse, "ch_three")
+        sim_three = Simulation(seq_three)
 
-    # Unmasked simulation on reduced register
-    seq_two = Sequence(reg_two, MockDevice)
-    seq_two.declare_channel("ch_two", "mw_global")
-    seq_two.add(pulse, "ch_two")
-    seq_two.add(no_pulse, "ch_two")
-    seq_two.add(no_pulse, "ch_two")
-    sim_two = Simulation(seq_two)
+        # Unmasked simulation on reduced register
+        seq_two = Sequence(reg_two, MockDevice)
+        seq_two.declare_channel("ch_two", channel_type)
+        seq_two.add(pulse, "ch_two")
+        seq_two.add(no_pulse, "ch_two")
+        seq_two.add(no_pulse, "ch_two")
+        sim_two = Simulation(seq_two)
 
-    ti = seq_masked._slm_mask_time[0]
-    tf = seq_masked._slm_mask_time[1]
-    for t in sim_masked._times:
-        ham_masked = sim_masked.get_hamiltonian(t)
-        ham_three = sim_three.get_hamiltonian(t)
-        ham_two = sim_two.get_hamiltonian(t)
-        if ti <= t <= tf:
-            assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
-        else:
-            assert ham_masked == ham_three
+        ti = seq_masked._slm_mask_time[0]
+        tf = seq_masked._slm_mask_time[1]
+        for t in sim_masked.sampling_times:
+            ham_masked = sim_masked.get_hamiltonian(t)
+            ham_three = sim_three.get_hamiltonian(t)
+            ham_two = sim_two.get_hamiltonian(t)
+            if ti <= t <= tf:
+                assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
+            else:
+                assert ham_masked == ham_three
 
 
 def test_effective_size_intersection():
-    np.random.seed(15092021)
     simple_reg = Register.square(2, prefix="atom")
     rise = Pulse.ConstantPulse(1500, 0, 0, 0)
-    seq = Sequence(simple_reg, MockDevice)
-    seq.declare_channel("ch0", "mw_global")
-    seq.add(rise, "ch0")
-    seq.config_slm_mask(["atom0"])
+    for channel_type in ["mw_global", "rydberg_global"]:
+        np.random.seed(15092021)
+        seq = Sequence(simple_reg, MockDevice)
+        seq.declare_channel("ch0", channel_type)
+        seq.add(rise, "ch0")
+        seq.config_slm_mask(["atom0"])
 
-    sim = Simulation(seq, sampling_rate=0.01)
-    sim.set_config(SimConfig("SPAM", eta=0.4))
-    assert sim._bad_atoms == {
-        "atom0": True,
-        "atom1": False,
-        "atom2": True,
-        "atom3": False,
-    }
-    assert sim.get_hamiltonian(0) != 0 * sim.build_operator([("I", "global")])
+        sim = Simulation(seq, sampling_rate=0.01)
+        sim.set_config(SimConfig("SPAM", eta=0.4))
+        assert sim._bad_atoms == {
+            "atom0": True,
+            "atom1": False,
+            "atom2": True,
+            "atom3": False,
+        }
+        assert sim.get_hamiltonian(0) != 0 * sim.build_operator(
+            [("I", "global")]
+        )
 
 
 def test_effective_size_disjoint():
-    np.random.seed(15092021)
     simple_reg = Register.square(2, prefix="atom")
     rise = Pulse.ConstantPulse(1500, 0, 0, 0)
-    seq = Sequence(simple_reg, MockDevice)
-    seq.declare_channel("ch0", "mw_global")
-    seq.add(rise, "ch0")
-    seq.config_slm_mask(["atom1"])
-
-    sim = Simulation(seq, sampling_rate=0.01)
-    sim.set_config(SimConfig("SPAM", eta=0.4))
-    assert sim._bad_atoms == {
-        "atom0": True,
-        "atom1": False,
-        "atom2": True,
-        "atom3": False,
-    }
-    assert sim.get_hamiltonian(0) == 0 * sim.build_operator([("I", "global")])
+    for channel_type in ["mw_global", "rydberg_global", "raman_global"]:
+        np.random.seed(15092021)
+        seq = Sequence(simple_reg, MockDevice)
+        seq.declare_channel("ch0", channel_type)
+        seq.add(rise, "ch0")
+        seq.config_slm_mask(["atom1"])
+        sim = Simulation(seq, sampling_rate=0.01)
+        sim.set_config(SimConfig("SPAM", eta=0.4))
+        assert sim._bad_atoms == {
+            "atom0": True,
+            "atom1": False,
+            "atom2": True,
+            "atom3": False,
+        }
+        assert sim.get_hamiltonian(0) == 0 * sim.build_operator(
+            [("I", "global")]
+        )

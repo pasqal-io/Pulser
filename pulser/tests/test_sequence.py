@@ -478,22 +478,6 @@ def test_slm_mask():
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
     pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
 
-    # Try to set mask when Ising was already declared
-    seq_ising1 = Sequence(reg, MockDevice)
-    seq_ising1.declare_channel("ch_rg", "rydberg_global")
-    with pytest.raises(
-        NotImplementedError, match="SLM mask can only be added in XY mode"
-    ):
-        seq_ising1.config_slm_mask(targets)
-
-    # Try to set mask and then declare Ising
-    seq_ising2 = Sequence(reg, MockDevice)
-    seq_ising2.config_slm_mask(targets)
-    with pytest.raises(
-        NotImplementedError, match="SLM mask is not yet available in Ising"
-    ):
-        seq_ising2.declare_channel("ch_rg", "rydberg_global")
-
     # Set mask when an XY pulse is already in the schedule
     seq_xy1 = Sequence(reg, MockDevice)
     seq_xy1.declare_channel("ch_xy", "mw_global")

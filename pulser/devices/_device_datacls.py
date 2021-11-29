@@ -34,12 +34,13 @@ class Device:
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        rybderg_level : The value of the principal quantum number ``n``
+            when the Rydberg level used is of the form
+            ``|nS_1/2, m_j = +1/2>``.
         max_atom_num: Maximum number of atoms supported in an array.
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        rybderg_level : The value of the principal quantum number n
-            when the Rydberg level used is of the form |nS_1/2, m_j = +1/2>.
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
