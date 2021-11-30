@@ -375,8 +375,8 @@ class Simulation:
             fig_name(str, default=None): The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig(dict, default={}): Keywords arguments for
-                `matplotlib.pyplot.savefig`. Not applicable if
-                `fig_name`is `None`.
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
 
         See Also:
             Sequence.draw(): Draws the sequence in its current state.
@@ -502,26 +502,26 @@ class Simulation:
                         self.samples["Local"][basis][qubit][x][0:tf] = 0
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
-        """Creates an operator with non trivial actions on some qubits.
+        """Creates an operator with non-trivial actions on some qubits.
 
-        Takes as argument a list of tuples [(operator_1, qubits_1),
-        (operator_2, qubits_2)...]. Returns the operator given by the tensor
-        product of {operator_i applied on qubits_i} and Id on the rest.
-        (operator, 'global') returns the sum for all $j$ of operator
-        applied at qubit $j$ and identity elsewhere.
+        Takes as argument a list of tuples ``[(operator_1, qubits_1),
+        (operator_2, qubits_2)...]``. Returns the operator given by the tensor
+        product of {``operator_i`` applied on ``qubits_i``} and Id on the rest.
+        ``(operator, 'global')`` returns the sum for all ``j`` of operator
+        applied at ``qubit_j`` and identity elsewhere.
 
-        Example for 4 qubits: [(Z, [1, 2]), (Y, [3])] returns ZZYI
-        and [(X, 'global')] returns XIII + IXII + IIXI + IIIX
+        Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
+        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
 
         Args:
-            operations (list): List of tuples (operator, qubits)
-                operator can be a qutip.Quobj or a string key for
-                self.op_matrix qubits is the list on which operator
+            operations (list): List of tuples `(operator, qubits)`.
+                `operator` can be a ``qutip.Quobj`` or a string key for
+                ``self.op_matrix``. `qubits` is the list on which operator
                 will be applied. The qubits can be passed as their
                 index or their label in the register.
 
         Returns:
-            qutip.Qobj: the final operator.
+            qutip.Qobj: The final operator.
         """
         op_list = [self.op_matrix["I"] for j in range(self._size)]
 

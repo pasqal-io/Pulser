@@ -13,6 +13,7 @@ Register
 
 .. automodule:: pulser.register
   :members:
+  :show-inheritance:
 
 Pulse
 -------------------

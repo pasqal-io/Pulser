@@ -248,18 +248,15 @@ class BaseRegister(ABC):
 
         return np.array(diffs)
 
-    def draw(
+    def _draw_checks(
         self,
-        with_labels: bool = True,
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
     ) -> None:
-        """Draws the entire register.
+        """Checks common in all register drawings.
 
         Keyword Args:
-            with_labels(bool, default=True): If True, writes the qubit ID's
-                next to each qubit.
             blockade_radius(float, default=None): The distance (in μm) between
                 atoms below the Rydberg blockade effect occurs.
             draw_half_radius(bool, default=False): Whether or not to draw the
@@ -268,12 +265,6 @@ class BaseRegister(ABC):
             draw_graph(bool, default=True): Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
-
-        Note:
-            When drawing half the blockade radius, we say there is a blockade
-            effect between atoms whenever their respective circles overlap.
-            This representation is preferred over drawing the full Rydberg
-            radius because it helps in seeing the interactions between atoms.
         """
         # Check spacing
         if blockade_radius is not None and blockade_radius <= 0.0:
@@ -711,8 +702,8 @@ class Register(BaseRegister):
             fig_name(str, default=None): The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig(dict, default={}): Keywords arguments for
-                `matplotlib.pyplot.savefig`. Not applicable if
-                `fig_name`is `None`.
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -720,8 +711,7 @@ class Register(BaseRegister):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-        super().draw(
-            with_labels=with_labels,
+        super()._draw_checks(
             blockade_radius=blockade_radius,
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
@@ -786,8 +776,7 @@ class Register3D(BaseRegister):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register3D : A 3D register with qubits placed in
-                a cubic array.
+            Register3D : A 3D register with qubits placed in a cubic array.
         """
         # Check side
         if side < 1:
@@ -821,8 +810,7 @@ class Register3D(BaseRegister):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
         Returns:
-            Register3D : A 3D register with qubits placed in
-                an cuboid array.
+            Register3D : A 3D register with qubits placed in a cuboid array.
         """
         # Check rows
         if rows < 1:
@@ -875,11 +863,11 @@ class Register3D(BaseRegister):
             the register to be projected.
 
         Returns:
-            Register : Returns a 2D register with the coordinates
-            of the atoms in a plane, if they are coplanar.
+            Register: Returns a 2D register with the coordinates of the atoms
+                in a plane, if they are coplanar.
 
         Raises:
-            If the atoms are not coplanar, raises an error.
+            ValueError: If the atoms are not coplanar.
         """
         coords = np.array(self._coords)
 
@@ -969,6 +957,11 @@ class Register3D(BaseRegister):
                 if the `blockade_radius` is defined.
             projection(bool, default=False): Whether to draw a 2D projection
                 instead of a perspective view.
+            fig_name(str, default=None): The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig(dict, default={}): Keywords arguments for
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -976,8 +969,7 @@ class Register3D(BaseRegister):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-        super().draw(
-            with_labels=with_labels,
+        super()._draw_checks(
             blockade_radius=blockade_radius,
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
