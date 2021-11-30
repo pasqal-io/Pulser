@@ -69,6 +69,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/paramseqs
    tutorials/interpolated_wfs
    tutorials/serialization
+   tutorials/slm_mask
 
 .. toctree::
    :maxdepth: 1
