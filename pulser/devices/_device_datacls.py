@@ -34,9 +34,9 @@ class Device:
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
-        rybderg_level : The value of the principal quantum number ``n``
+        rybderg_level : The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
-            ``|nS_1/2, m_j = +1/2>``.
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
@@ -72,7 +72,7 @@ class Device:
 
     @property
     def interaction_coeff(self) -> float:
-        """C_6/hbar coefficient of chosen Rydberg level."""
+        r""":math:`C_6/\hbar` coefficient of chosen Rydberg level."""
         return float(c6_dict[self.rydberg_level])
 
     def print_specs(self) -> None:
@@ -202,15 +202,12 @@ class Device:
         lines = [
             "\nRegister requirements:",
             f" - Dimensions: {self.dimensions}D",
+            fr" - Rydberg level: {self.rydberg_level}",
             f" - Maximum number of atoms: {self.max_atom_num}",
             f" - Maximum distance from origin: {self.max_radial_distance} μm",
             (
                 " - Minimum distance between neighbouring atoms: "
                 f"{self.min_atom_distance} μm"
-            ),
-            (
-                r" - Interaction coefficient (:math:`C_6/\hbar`): "
-                fr"{self.interaction_coeff} :math:`\mu m^6 / \mu s`"
             ),
             "\nChannels:",
         ]

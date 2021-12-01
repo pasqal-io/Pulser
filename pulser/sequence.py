@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable, Set
+from collections.abc import Callable, Generator, Iterable
 import copy
 from functools import wraps
 from itertools import chain
@@ -64,7 +64,7 @@ class _TimeSlot(NamedTuple):
     type: Union[Pulse, str]
     ti: int
     tf: int
-    targets: Set[QubitId]
+    targets: set[QubitId]
 
 
 # Encodes a sequence building calls
@@ -366,6 +366,48 @@ class Sequence:
 
         # No parametrization -> Always stored as a regular call
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
+
+    @_store
+    def config_slm_mask(self, qubits: Iterable[QubitId]) -> None:
+        """Setup an SLM mask by specifying the qubits it targets.
+
+        Args:
+            qubits (Iterable[QubitId]): Iterable of qubit ID's to mask during
+                the first global pulse of the sequence.
+        """
+        try:
+            targets = set(qubits)
+        except TypeError:
+            raise TypeError("The SLM targets must be castable to set")
+
+        if not targets.issubset(self._qids):
+            raise ValueError("SLM mask targets must exist in the register")
+
+        if self.is_parametrized():
+            return
+
+        if self._slm_mask_targets:
+            raise ValueError("SLM mask can be configured only once.")
+
+        # If checks have passed, set the SLM mask targets
+        self._slm_mask_targets = targets
+
+        # Find tentative initial and final time of SLM mask if possible
+        for channel in self._channels:
+            if not self._channels[channel].addressing == "Global":
+                continue
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
+                if not isinstance(slot.type, Pulse):
+                    continue
+                ti = slot.ti
+                tf = slot.tf
+                if self._slm_mask_time:
+                    if ti < self._slm_mask_time[0]:
+                        self._slm_mask_time = [ti, tf]
+                else:
+                    self._slm_mask_time = [ti, tf]
+                break
 
     def declare_channel(
         self,
@@ -926,14 +968,14 @@ class Sequence:
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False.
             fig_name(str, default=None): The name on which to save the
-                figure. If draw_register is True, both pulses and register
-                will be saved as figures, with a suffix "_pulses" and
-                "_register" in the file name. If draw_register is False, only
-                the pulses are saved, with no suffix. If fig_name is None,
-                no figure is saved.
+                figure. If `draw_register` is True, both pulses and register
+                will be saved as figures, with a suffix ``_pulses`` and
+                ``_register`` in the file name. If `draw_register` is False,
+                only the pulses are saved, with no suffix. If `fig_name` is
+                None, no figure is saved.
             kwargs_savefig(dict, default={}): Keywords arguments for
-                `matplotlib.figure.Figure.savefig`.
-                Not applicable if `fig_name`is `None`.
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
@@ -1151,43 +1193,6 @@ class Sequence:
         self._is_measured = False
         self._variables = {}
         self._to_build_calls = []
-
-    @_store
-    def config_slm_mask(self, qubits: Set[QubitId]) -> None:
-        """Setup an SLM mask by specifying the qubits it targets."""
-        try:
-            targets = set(qubits)
-        except TypeError:
-            raise TypeError("The SLM targets must be castable to set")
-
-        if not targets.issubset(self._qids):
-            raise ValueError("SLM mask targets must exist in the register")
-
-        if self.is_parametrized():
-            return
-
-        if self._slm_mask_targets:
-            raise ValueError("SLM mask can be configured only once.")
-
-        # If checks have passed, set the SLM mask targets
-        self._slm_mask_targets = targets
-
-        # Find tentative initial and final time of SLM mask if possible
-        for channel in self._channels:
-            if not self._channels[channel].addressing == "Global":
-                continue
-            # Cycle on slots in schedule until the first pulse is found
-            for slot in self._schedule[channel]:
-                if not isinstance(slot.type, Pulse):
-                    continue
-                ti = slot.ti
-                tf = slot.tf
-                if self._slm_mask_time:
-                    if ti < self._slm_mask_time[0]:
-                        self._slm_mask_time = [ti, tf]
-                else:
-                    self._slm_mask_time = [ti, tf]
-                break
 
 
 class _PhaseTracker:
