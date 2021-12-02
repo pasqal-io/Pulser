@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable, Set
+from collections.abc import Callable, Generator, Iterable
 import copy
 from functools import wraps
 from itertools import chain
@@ -24,7 +24,9 @@ import json
 from sys import version_info
 from typing import Any, cast, NamedTuple, Optional, Tuple, Union
 import warnings
+import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -36,7 +38,7 @@ from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.pulse import Pulse
-from pulser.register import Register
+from pulser.register import BaseRegister
 from pulser._seq_drawer import draw_sequence
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
@@ -62,7 +64,7 @@ class _TimeSlot(NamedTuple):
     type: Union[Pulse, str]
     ti: int
     tf: int
-    targets: Set[QubitId]
+    targets: set[QubitId]
 
 
 # Encodes a sequence building calls
@@ -147,7 +149,7 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register(Register): The atom register on which to apply the pulses.
+        register(BaseRegister): The atom register on which to apply the pulses.
         device(Device): A valid device in which to execute the Sequence (import
             it from ``pulser.devices``).
 
@@ -156,7 +158,7 @@ class Sequence:
         they are the same for all Sequences built from a parametrized Sequence.
     """
 
-    def __init__(self, register: Register, device: Device):
+    def __init__(self, register: BaseRegister, device: Device):
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
             raise TypeError(
@@ -164,14 +166,14 @@ class Sequence:
                 " device from 'pulser.devices'."
             )
         cond1 = device not in pulser.devices._valid_devices
-        cond2 = device != MockDevice
+        cond2 = device not in pulser.devices._mock_devices
         if cond1 and cond2:
             names = [d.name for d in pulser.devices._valid_devices]
             warns_msg = (
                 "The Sequence's device should be imported from "
                 + "'pulser.devices'. Correct operation is not ensured"
-                + " for custom devices. Choose 'MockDevice' or one of"
-                + " the following real devices:\n"
+                + " for custom devices. Choose 'MockDevice'"
+                + " or one of the following real devices:\n"
                 + "\n".join(names)
             )
             warnings.warn(warns_msg, stacklevel=2)
@@ -179,9 +181,10 @@ class Sequence:
         # Checks if register is compatible with the device
         device.validate_register(register)
 
-        self._register: Register = register
+        self._register: BaseRegister = register
         self._device: Device = device
         self._in_xy: bool = False
+        self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
         self._channels: dict[str, Channel] = {}
         self._schedule: dict[str, list[_TimeSlot]] = {}
@@ -198,6 +201,11 @@ class Sequence:
         self._variables: dict[str, Variable] = {}
         self._to_build_calls: list[_Call] = []
         self._building: bool = True
+        # Marks the sequence as empty until the first pulse is added
+        self._empty_sequence: bool = True
+        # SLM mask targets and on/off times
+        self._slm_mask_targets: set[QubitId] = set()
+        self._slm_mask_time: list[int] = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
@@ -222,7 +230,8 @@ class Sequence:
         """Channels still available for declaration."""
         # Show all channels if none are declared, otherwise filter depending
         # on whether the sequence is working on XY mode
-        if not self._channels:
+        # If already in XY mode, filter right away
+        if not self._channels and not self._in_xy:
             return dict(self._device.channels)
         else:
             # MockDevice channels can be declared multiple times
@@ -235,6 +244,23 @@ class Sequence:
                 )
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
+
+    @property
+    def magnetic_field(self) -> np.ndarray:
+        """The magnetic field acting on the array of atoms.
+
+        The magnetic field vector is defined on the reference frame of the
+        atoms in the Register (with the z-axis coming outside of the plane).
+
+        Note:
+            Only defined in "XY Mode", the default value being (0, 0, 30) G.
+        """
+        if not self._in_xy:
+            raise AttributeError(
+                "The magnetic field is only defined when the "
+                "sequence is in 'XY Mode'."
+            )
+        return np.array(self._mag_field)
 
     def is_parametrized(self) -> bool:
         """States whether the sequence is parametrized.
@@ -299,6 +325,90 @@ class Sequence:
 
         return self._phase_ref[basis][qubit].last_phase
 
+    def set_magnetic_field(
+        self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0
+    ) -> None:
+        """Sets the magnetic field acting on the entire array.
+
+        The magnetic field vector is defined on the reference frame of the
+        atoms in the Register (with the z-axis coming outside of the plane).
+        Can only be defined before there are pulses added to the sequence.
+
+        Note:
+            The magnetic field only work in the "XY Mode". If not already
+            defined through the declaration of a Microwave channel, calling
+            this function will enable the "XY Mode".
+
+        Keyword Args:
+            bx (float): The magnetic field in the x direction (in Gauss).
+            by (float): The magnetic field in the y direction (in Gauss).
+            bz (float): The magnetic field in the z direction (in Gauss).
+        """
+        if not self._in_xy:
+            if self._channels:
+                raise ValueError(
+                    "The magnetic field can only be set in 'XY " "Mode'."
+                )
+            # No channels declared yet
+            self._in_xy = True
+        elif not self._empty_sequence:
+            # Not all channels are empty
+            raise ValueError(
+                "The magnetic field can only be set on an empty " "sequence."
+            )
+
+        mag_vector = (bx, by, bz)
+        if np.linalg.norm(mag_vector) == 0.0:
+            raise ValueError(
+                "The magnetic field must have a magnitude greater" " than 0."
+            )
+        self._mag_field = mag_vector
+
+        # No parametrization -> Always stored as a regular call
+        self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
+
+    @_store
+    def config_slm_mask(self, qubits: Iterable[QubitId]) -> None:
+        """Setup an SLM mask by specifying the qubits it targets.
+
+        Args:
+            qubits (Iterable[QubitId]): Iterable of qubit ID's to mask during
+                the first global pulse of the sequence.
+        """
+        try:
+            targets = set(qubits)
+        except TypeError:
+            raise TypeError("The SLM targets must be castable to set")
+
+        if not targets.issubset(self._qids):
+            raise ValueError("SLM mask targets must exist in the register")
+
+        if self.is_parametrized():
+            return
+
+        if self._slm_mask_targets:
+            raise ValueError("SLM mask can be configured only once.")
+
+        # If checks have passed, set the SLM mask targets
+        self._slm_mask_targets = targets
+
+        # Find tentative initial and final time of SLM mask if possible
+        for channel in self._channels:
+            if not self._channels[channel].addressing == "Global":
+                continue
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in self._schedule[channel]:
+                if not isinstance(slot.type, Pulse):
+                    continue
+                ti = slot.ti
+                tf = slot.tf
+                if self._slm_mask_time:
+                    if ti < self._slm_mask_time[0]:
+                        self._slm_mask_time = [ti, tf]
+                else:
+                    self._slm_mask_time = [ti, tf]
+                break
+
     def declare_channel(
         self,
         name: str,
@@ -357,6 +467,7 @@ class Sequence:
 
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
+            self.set_magnetic_field()
         self._channels[name] = ch
         self._taken_channels[name] = channel_id
         self._schedule[name] = []
@@ -479,6 +590,9 @@ class Sequence:
         if self.is_parametrized():
             if not isinstance(pulse, Parametrized):
                 self._validate_pulse(pulse, channel)
+            # Sequence is marked as non-empty on the first added pulse
+            if self._empty_sequence:
+                self._empty_sequence = False
             return
 
         if not isinstance(pulse, Pulse):
@@ -549,9 +663,13 @@ class Sequence:
             phase_ref = prs.pop()
 
         if phase_ref != 0:
-            # Has to copy to keep the original pulse intact
-            pulse = copy.deepcopy(pulse)
-            pulse.phase = (pulse.phase + phase_ref) % (2 * np.pi)
+            # Has to recriate the original pulse with a new phase
+            pulse = Pulse(
+                pulse.amplitude,
+                pulse.detuning,
+                pulse.phase + phase_ref,
+                post_phase_shift=pulse.post_phase_shift,
+            )
 
         self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
 
@@ -563,6 +681,19 @@ class Sequence:
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
             )
+
+        # Sequence is marked as non-empty on the first added pulse
+        if self._empty_sequence:
+            self._empty_sequence = False
+
+        # If the added pulse starts earlier than all previously added pulses,
+        # update SLM mask initial and final time
+        if self._slm_mask_targets:
+            try:
+                if self._slm_mask_time[0] > ti:
+                    self._slm_mask_time = [ti, tf]
+            except IndexError:
+                self._slm_mask_time = [ti, tf]
 
     @_store
     def target(
@@ -819,6 +950,9 @@ class Sequence:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
+        draw_register: bool = False,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -830,17 +964,37 @@ class Sequence:
                 on top of the respective waveforms (defaults to True).
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
+            draw_register (bool): Whether to draw the register before the pulse
+                sequence, with a visual indication (square halo) around the
+                qubits masked by the SLM, defaults to False.
+            fig_name(str, default=None): The name on which to save the
+                figure. If `draw_register` is True, both pulses and register
+                will be saved as figures, with a suffix ``_pulses`` and
+                ``_register`` in the file name. If `draw_register` is False,
+                only the pulses are saved, with no suffix. If `fig_name` is
+                None, no figure is saved.
+            kwargs_savefig(dict, default={}): Keywords arguments for
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
             the solver.
         """
-        draw_sequence(
+        fig_reg, fig = draw_sequence(
             self,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
+            draw_register=draw_register,
         )
+        if fig_name is not None and draw_register:
+            name, ext = os.path.splitext(fig_name)
+            fig.savefig(name + "_pulses" + ext, **kwargs_savefig)
+            fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
+        elif fig_name:
+            fig.savefig(fig_name, **kwargs_savefig)
+        plt.show()
 
     def _target(
         self, qubits: Union[Iterable[QubitId], QubitId], channel: str

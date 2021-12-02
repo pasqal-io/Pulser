@@ -11,23 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Definitions of real devices."""
-import numpy as np
+"""C_6/hbar (in  um^6 / us`), coeffs for Rydberg levels between 50 and 100."""
 
-from pulser.devices._device_datacls import Device
-from pulser.channels import Raman, Rydberg
+import json
+from pathlib import PurePath
 
-
-Chadoq2 = Device(
-    name="Chadoq2",
-    dimensions=2,
-    rydberg_level=70,
-    max_atom_num=100,
-    max_radial_distance=50,
-    min_atom_distance=4,
-    _channels=(
-        ("rydberg_global", Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)),
-        ("rydberg_local", Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10)),
-        ("raman_local", Raman.Local(2 * np.pi * 20, 2 * np.pi * 10)),
-    ),
-)
+_json_dict = json.load(open(PurePath(__file__).parent / "C6_coeffs.json"))
+c6_dict = {int(key): value for key, value in _json_dict.items()}

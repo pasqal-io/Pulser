@@ -18,11 +18,13 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from scipy.spatial.distance import pdist
+from scipy.spatial.distance import pdist, squareform
 
-from pulser import Register, Pulse
+from pulser import Pulse
+from pulser.register import BaseRegister
 from pulser.channels import Channel
 from pulser.json.utils import obj_to_dict
+from pulser.devices.interaction_coefficients import c6_dict
 
 
 @dataclass(frozen=True, repr=False)
@@ -32,26 +34,31 @@ class Device:
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
+        rybderg_level : The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff: :math:`C_6/\hbar` (in :math:`\mu m^6 / \mu s`),
+        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
-            the Rydberg state.
+            different Rydberg states.
     """
 
     name: str
     dimensions: int
+    rydberg_level: int
     max_atom_num: int
     max_radial_distance: int
     min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
-    interaction_coeff: float = 5008713.0
+    # Ising interaction coeff
+    interaction_coeff_xy: float = 3700.0
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
-        self.__dict__["__doc__"] = self._specs(for_docs=True)
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -63,6 +70,11 @@ class Device:
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channels.values()}
 
+    @property
+    def interaction_coeff(self) -> float:
+        r""":math:`C_6/\hbar` coefficient of chosen Rydberg level."""
+        return float(c6_dict[self.rydberg_level])
+
     def print_specs(self) -> None:
         """Prints the device specifications."""
         title = f"{self.name} Specifications"
@@ -72,6 +84,23 @@ class Device:
 
     def __repr__(self) -> str:
         return self.name
+
+    def change_rydberg_level(self, ryd_lvl: int) -> None:
+        """Changes the Rydberg level used in the Device.
+
+        Args:
+            ryd_lvl(int): the Rydberg level to use (between 50 and 100).
+
+        Note:
+            Modifications to the `rydberg_level` attribute only affect the
+            outcomes of local emulations.
+        """
+        if not isinstance(ryd_lvl, int):
+            raise TypeError("Rydberg level has to be an int.")
+        if not ((49 < ryd_lvl) & (101 > ryd_lvl)):
+            raise ValueError("Rydberg level should be between 50 and 100.")
+
+        object.__setattr__(self, "rydberg_level", ryd_lvl)
 
     def rydberg_blockade_radius(self, rabi_frequency: float) -> float:
         """Calculates the Rydberg blockade radius for a given Rabi frequency.
@@ -95,15 +124,19 @@ class Device:
         """
         return self.interaction_coeff / blockade_radius ** 6
 
-    def validate_register(self, register: Register) -> None:
+    def validate_register(self, register: BaseRegister) -> None:
         """Checks if 'register' is compatible with this device.
 
         Args:
             register(pulser.Register): The Register to validate.
         """
-        if not isinstance(register, Register):
-            raise TypeError("register has to be a pulser.Register instance.")
+        if not (isinstance(register, BaseRegister)):
+            raise TypeError(
+                "register has to be a pulser.Register or "
+                "a pulser.Register3D instance."
+            )
 
+        ids = list(register.qubits.keys())
         atoms = list(register.qubits.values())
         if len(atoms) > self.max_atom_num:
             raise ValueError(
@@ -113,24 +146,33 @@ class Device:
                 f" ({self.max_atom_num})."
             )
 
-        if register._dim != self.dimensions:
+        if register._dim > self.dimensions:
             raise ValueError(
-                f"All qubit positions must be {self.dimensions}D " "vectors."
+                f"All qubit positions must be at most {self.dimensions}D "
+                "vectors."
             )
 
         if len(atoms) > 1:
             distances = pdist(atoms)  # Pairwise distance between atoms
-            if np.min(distances) < self.min_atom_distance:
+            if np.any(distances < self.min_atom_distance):
+                sq_dists = squareform(distances)
+                mask = np.triu(np.ones(len(atoms), dtype=bool), k=1)
+                bad_pairs = np.argwhere(
+                    np.logical_and(sq_dists < self.min_atom_distance, mask)
+                )
+                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
                 raise ValueError(
-                    "Qubit positions don't respect the minimal "
-                    "distance between atoms for this device."
+                    "The minimal distance between atoms in this device "
+                    f"({self.min_atom_distance} µm) is not respected for the "
+                    f"pairs: {bad_qbt_pairs}"
                 )
 
-        if np.max(np.linalg.norm(atoms, axis=1)) > self.max_radial_distance:
+        too_far = np.linalg.norm(atoms, axis=1) > self.max_radial_distance
+        if np.any(too_far):
             raise ValueError(
-                "All qubits must be at most "
-                f"{self.max_radial_distance} μm away from the "
-                "center of the array."
+                f"All qubits must be at most {self.max_radial_distance} μm "
+                f"away from the center of the array, which is not the case "
+                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
             )
 
     def validate_pulse(self, pulse: Pulse, channel_id: str) -> None:
@@ -160,15 +202,12 @@ class Device:
         lines = [
             "\nRegister requirements:",
             f" - Dimensions: {self.dimensions}D",
+            fr" - Rydberg level: {self.rydberg_level}",
             f" - Maximum number of atoms: {self.max_atom_num}",
             f" - Maximum distance from origin: {self.max_radial_distance} μm",
             (
                 " - Minimum distance between neighbouring atoms: "
                 f"{self.min_atom_distance} μm"
-            ),
-            (
-                r" - Interaction coefficient (:math:`C_6/\hbar`): "
-                fr"{self.interaction_coeff} :math:`\mu m^6 / \mu s`"
             ),
             "\nChannels:",
         ]

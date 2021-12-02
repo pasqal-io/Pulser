@@ -21,7 +21,7 @@ import qutip
 from qutip.piqs import isdiagonal
 
 from pulser import Sequence, Pulse, Register
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
 from pulser.waveforms import BlackmanWaveform
 from pulser.simulation import Simulation, SimConfig
 from pulser.simulation.simresults import CoherentResults, NoisyResults
@@ -58,7 +58,14 @@ ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
 def test_initialization():
     with pytest.raises(ValueError, match="`basis_name` must be"):
         CoherentResults(state, 2, "bad_basis", None, [0])
-    with pytest.raises(ValueError, match="`meas_basis` must be"):
+    with pytest.raises(
+        ValueError, match="`meas_basis` must be 'ground-rydberg' or 'digital'."
+    ):
+        CoherentResults(state, 1, "all", None, "XY")
+    with pytest.raises(
+        ValueError,
+        match="`meas_basis` and `basis_name` must have the same value.",
+    ):
         CoherentResults(
             state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
         )
@@ -147,11 +154,11 @@ def test_get_final_state_noisy():
     res3._meas_basis = "ground-rydberg"
     assert (
         final_state[0, 0] == 0.06666666666666667 + 0j
-        and final_state[2, 2] == 0.9333333333333333 + 0j
+        and final_state[2, 2] == 0.92 + 0j
     )
     assert res3.states[-1] == final_state
     assert res3.results[-1] == Counter(
-        {"10": 0.9333333333333333, "00": 0.06666666666666667}
+        {"10": 0.92, "00": 0.06666666666666667, "11": 0.013333333333333334}
     )
 
 
@@ -168,10 +175,10 @@ def test_get_state_float_time():
         state.full(),
         np.array(
             [
-                [0.79602211 + 0.0j],
-                [0.02417478 - 0.37829574j],
-                [0.02417478 - 0.37829574j],
-                [-0.27423657 - 0.06131009j],
+                [0.76522907 + 0.0j],
+                [0.08339973 - 0.39374219j],
+                [0.08339973 - 0.39374219j],
+                [-0.27977623 - 0.1103308j],
             ]
         ),
     ).all()
@@ -193,7 +200,7 @@ def test_expect():
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
     assert np.isclose(exp[-1], 1)
-    assert len(exp) == duration
+    assert len(exp) == duration + 1  # +1 for the final instant
     np.testing.assert_almost_equal(
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1, 0], [0, 0]]),
@@ -236,7 +243,7 @@ def test_expect_noisy():
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7733333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.6933333333333334)
 
 
 def test_plot():
@@ -251,7 +258,7 @@ def test_sample_final_state():
     sim_no_meas = Simulation(seq_no_meas, config=SimConfig(runs=1))
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
-        {"00": 77, "01": 140, "10": 167, "11": 616}
+        {"00": 88, "01": 156, "10": 188, "11": 568}
     )
     with pytest.raises(NotImplementedError, match="dimension > 3"):
         results_large_dim = deepcopy(results)
@@ -279,7 +286,7 @@ def test_sample_final_state():
 def test_sample_final_state_noisy():
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 787, "10": 219, "01": 176, "00": 52}
+        {"00": 140, "01": 227, "10": 221, "11": 646}
     )
     res_3level = Simulation(
         seq_no_meas_noisy, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
@@ -289,10 +296,58 @@ def test_sample_final_state_noisy():
         final_state.full(),
         np.array(
             [
-                [0.62 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.16 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.18 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.04 + 0.0j],
+                [0.64 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.14 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.1 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.12 + 0.0j],
             ]
         ),
     ).all()
+
+
+def test_results_xy():
+    q_dict = {
+        "A": np.array([0.0, 0.0]),
+        "B": np.array([0.0, 10.0]),
+    }
+    reg = Register(q_dict)
+    duration = 1000
+    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+    seq = Sequence(reg, MockDevice)
+
+    # Declare Channels
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(pi, "ch0")
+    seq.measure("XY")
+
+    sim = Simulation(seq)
+    results = sim.run()
+
+    ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
+
+    assert results._dim == 2
+    assert results._size == 2
+    assert results._basis_name == "XY"
+    assert results._meas_basis == "XY"
+    assert results.states[0] == ground
+
+    with pytest.raises(TypeError, match="Can't reduce a system in"):
+        results.get_final_state(reduce_to_basis="all")
+
+    with pytest.raises(TypeError, match="Can't reduce a system in"):
+        results.get_final_state(reduce_to_basis="ground-rydberg")
+
+    with pytest.raises(TypeError, match="Can't reduce a system in"):
+        results.get_final_state(reduce_to_basis="digital")
+
+    state = results.get_final_state(reduce_to_basis="XY")
+
+    assert np.all(
+        np.isclose(
+            np.abs(state.full()), np.abs(results.states[-1].full()), atol=1e-5
+        )
+    )
+
+    # Check that measurement projectors are correct
+    assert results._meas_projector(0) == qutip.basis(2, 1).proj()
+    assert results._meas_projector(1) == qutip.basis(2, 0).proj()

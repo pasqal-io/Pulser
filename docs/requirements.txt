@@ -1,5 +1,5 @@
 # For generating documentation.
-Sphinx~=3.3.0
+Sphinx
 sphinx_rtd_theme
 nbsphinx
 nbsphinx-link
