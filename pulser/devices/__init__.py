@@ -27,4 +27,5 @@ if TYPE_CHECKING:  # pragma: no cover
     from pulser.devices._device_datacls import Device
 
 # Registers which devices can be used to avoid definition of custom devices
+_mock_devices: tuple[Device, ...] = (MockDevice,)
 _valid_devices: tuple[Device, ...] = (Chadoq2,)
