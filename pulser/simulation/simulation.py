@@ -878,10 +878,11 @@ class Simulation:
         def _run_solver() -> CoherentResults:
             """Returns CoherentResults: Object containing evolution results."""
             # Decide if progress bar will be fed to QuTiP solver
+            p_bar: Optional[bool]
             if progress_bar is True:
                 p_bar = True
             elif (progress_bar is False) or (progress_bar is None):
-                p_bar = None  # type: ignore
+                p_bar = None
             else:
                 raise ValueError("`progress_bar` must be a bool.")
 
