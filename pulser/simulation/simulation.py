@@ -881,7 +881,7 @@ class Simulation:
             if progress_bar is True:
                 p_bar = True
             elif (progress_bar is False) or (progress_bar is None):
-                p_bar = None  # type: ignore
+                p_bar = None
             else:
                 raise ValueError("`progress_bar` must be a bool.")
 
