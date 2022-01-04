@@ -124,7 +124,10 @@ class ParamObj(Parametrized, OpSupport):
 
         args = list(self.args)
         if isinstance(self.cls, Parametrized):
-            cls_dict = self.cls._to_dict()
+            raise ValueError(
+                "Serialization of calls to parametrized objects is not "
+                "supported."
+            )
         elif hasattr(args[0], self.cls.__name__) and inspect.isfunction(
             self.cls
         ):
@@ -164,6 +167,11 @@ class ParamObj(Parametrized, OpSupport):
 
     def __getattr__(self, name: str) -> ParamObj:
         if hasattr(self.cls, name):
+            warnings.warn(
+                "Serialization of 'getattr' calls to parametrized "
+                "objects is not supported, so this object can't be serialied.",
+                stacklevel=2,
+            )
             return ParamObj(getattr, self, name)
         else:
             raise AttributeError(f"No attribute named '{name}' in {self}.")

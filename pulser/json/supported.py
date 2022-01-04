@@ -19,7 +19,7 @@ from typing import Any, Mapping
 
 import pulser
 
-SUPPORTED_BUILTINS = ("float", "int", "str", "getattr", "set")
+SUPPORTED_BUILTINS = ("float", "int", "str", "set")
 
 SUPPORTED_OPERATORS = tuple(
     ["neg", "abs", "getitem"]

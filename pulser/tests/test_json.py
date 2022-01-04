@@ -49,24 +49,31 @@ def test_rare_cases():
     seq = Sequence(reg, Chadoq2)
     var = seq.declare_variable("var")
 
-    wf = BlackmanWaveform(100, var)
-    with pytest.warns(
-        UserWarning, match="Calls to methods of parametrized objects"
+    wf = BlackmanWaveform(var * 100 // 10, var)
+    with pytest.raises(
+        ValueError, match="Serialization of calls to parametrized objects"
     ):
         s = encode(wf.draw())
+    s = encode(wf)
 
     with pytest.raises(ValueError, match="not encode a Sequence"):
         wf_ = Sequence.deserialize(s)
 
     wf_ = decode(s)
-    var._assign(-10)
+    var._assign(10)
     with pytest.raises(ValueError, match="No value assigned"):
         wf_.build()
 
     var_ = wf_._variables["var"]
-    var_._assign(-10)
+    var_._assign(10)
+    assert wf_.build() == BlackmanWaveform(100, 10)
+    with pytest.warns(UserWarning, match="Serialization of 'getattr'"):
+        draw_func = wf_.draw
     with patch("matplotlib.pyplot.show"):
-        wf_.build()
+        with pytest.warns(
+            UserWarning, match="Calls to methods of parametrized objects"
+        ):
+            draw_func().build()
 
     rotated_reg = parametrize(Register.rotate)(reg, var)
     with pytest.raises(NotImplementedError):
