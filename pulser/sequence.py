@@ -622,36 +622,6 @@ class Sequence:
         last = self._last(channel)
         t0 = last.tf  # Preliminary ti
         basis = channel_obj.basis
-        phase_barriers = [
-            self._phase_ref[basis][q].last_time for q in last.targets
-        ]
-        current_max_t = max(t0, *phase_barriers)
-        if protocol != "no-delay":
-            for ch, seq in self._schedule.items():
-                if ch == channel:
-                    continue
-                for op in self._schedule[ch][::-1]:
-                    if op.tf <= current_max_t:
-                        break
-                    if not isinstance(op.type, Pulse):
-                        continue
-                    if op.targets & last.targets or protocol == "wait-for-all":
-                        current_max_t = op.tf
-                        break
-        ti = current_max_t
-        if ti > t0:
-            # Insert a delay
-            delay_duration = ti - t0
-
-            # Delay must not be shorter than the min duration for this channel
-            min_duration = self._channels[channel].min_duration
-            if delay_duration < min_duration:
-                ti += min_duration - delay_duration
-                delay_duration = min_duration
-
-            self._delay(delay_duration, channel)
-
-        tf = ti + pulse.duration
 
         prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
         if len(prs) != 1:
@@ -670,6 +640,44 @@ class Sequence:
                 pulse.phase + phase_ref,
                 post_phase_shift=pulse.post_phase_shift,
             )
+
+        phase_barriers = [
+            self._phase_ref[basis][q].last_time for q in last.targets
+        ]
+        current_max_t = max(t0, *phase_barriers)
+        if protocol != "no-delay":
+            for ch, seq in self._schedule.items():
+                if ch == channel:
+                    continue
+                for op in self._schedule[ch][::-1]:
+                    if op.tf <= current_max_t:
+                        break
+                    if not isinstance(op.type, Pulse):
+                        continue
+                    if op.targets & last.targets or protocol == "wait-for-all":
+                        current_max_t = op.tf
+                        break
+
+        delay_duration = current_max_t - t0
+        # Find last pulse and compare phase
+        for op in self._schedule[channel][::-1]:
+            if isinstance(op.type, Pulse):
+                if op.type.phase != pulse.phase:
+                    delay_duration = max(
+                        delay_duration, self._channels[channel].phase_jump_time
+                    )
+                break
+
+        if delay_duration > 0:
+            # Delay must not be shorter than the min duration for this channel
+            min_duration = self._channels[channel].min_duration
+            if delay_duration < min_duration:
+                delay_duration = min_duration
+
+            self._delay(delay_duration, channel)
+
+        ti = t0 + delay_duration
+        tf = ti + pulse.duration
 
         self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
 
