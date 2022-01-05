@@ -37,7 +37,11 @@ class Channel:
         max_abs_detuning: Maximum possible detuning (in rad/µs), in absolute
             value.
         max_amp: Maximum pulse amplitude (in rad/µs).
-        retarget_time: Maximum time to change the target (in ns).
+        phase_jump_time: Time taken to change the phase between consecutive
+            pulses (in ns).
+        retarget_time: Minimum time required between two target instructions
+            (in ns).
+        fixed_retarget_t: Time taken to change the target (in ns).
         max_targets: How many qubits can be addressed at once by the same beam.
         clock_period: The duration of a clock cycle (in ns). The duration of a
             pulse or delay instruction is enforced to be a multiple of the
@@ -55,7 +59,9 @@ class Channel:
     addressing: str
     max_abs_detuning: float
     max_amp: float
+    phase_jump_time: int = 0
     retarget_time: Optional[int] = None
+    fixed_retarget_t: Optional[int] = None
     max_targets: Optional[int] = None
     clock_period: int = 4  # ns
     min_duration: int = 16  # ns
@@ -66,7 +72,9 @@ class Channel:
         cls,
         max_abs_detuning: float,
         max_amp: float,
+        phase_jump_time: int = 0,
         retarget_time: int = 220,
+        fixed_retarget_t: int = 0,
         max_targets: int = 1,
         **kwargs: int,
     ) -> Channel:
@@ -76,7 +84,11 @@ class Channel:
             max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
-            retarget_time (int): Maximum time to change the target (in ns).
+            phase_jump_time (int): Time taken to change the phase between
+                consecutive pulses (in ns).
+            retarget_time (int): Minimum time required between two target
+                instructions (in ns).
+            fixed_retarget_t (int): Time taken to change the target (in ns).
             max_targets (int): Maximum number of atoms the channel can target
                 simultaneously.
         """
@@ -84,14 +96,20 @@ class Channel:
             "Local",
             max_abs_detuning,
             max_amp,
+            phase_jump_time,
             retarget_time,
+            fixed_retarget_t,
             max_targets,
             **kwargs,
         )
 
     @classmethod
     def Global(
-        cls, max_abs_detuning: float, max_amp: float, **kwargs: int
+        cls,
+        max_abs_detuning: float,
+        max_amp: float,
+        phase_jump_time: int = 0,
+        **kwargs: int,
     ) -> Channel:
         """Initializes the channel with global addressing.
 
@@ -99,8 +117,12 @@ class Channel:
             max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
+            phase_jump_time (int): Time taken to change the phase between
+                consecutive pulses (in ns).
         """
-        return cls("Global", max_abs_detuning, max_amp, **kwargs)
+        return cls(
+            "Global", max_abs_detuning, max_amp, phase_jump_time, **kwargs
+        )
 
     def validate_duration(self, duration: int) -> int:
         """Validates and adapts the duration of an instruction on this channel.
@@ -142,11 +164,14 @@ class Channel:
     def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
-            f"{self.max_abs_detuning} rad/µs, Max Amplitude: "
-            f"{self.max_amp} rad/µs"
+            f"{self.max_abs_detuning} rad/µs, Max Amplitude: {self.max_amp}"
+            f" rad/µs, Phase Jump Time: {self.phase_jump_time} ns"
         )
         if self.addressing == "Local":
-            config += f", Target time: {self.retarget_time} ns"
+            config += (
+                f", Minimum retarget time: {self.retarget_time} ns, "
+                f"Fixed retarget time: {self.fixed_retarget_t} ns"
+            )
             if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
         config += f", Basis: '{self.basis}'"
