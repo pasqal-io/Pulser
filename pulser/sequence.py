@@ -1051,7 +1051,7 @@ class Sequence:
                     delta = self._channels[channel].validate_duration(
                         16 if delta < 16 else delta
                     )
-            tf = ti + delta
+            tf = ti + max(delta, self._channels[channel].fixed_retarget_t)
 
         except ValueError:
             ti = -1
