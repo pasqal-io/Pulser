@@ -664,7 +664,9 @@ class Sequence:
             if isinstance(op.type, Pulse):
                 if op.type.phase != pulse.phase:
                     delay_duration = max(
-                        delay_duration, self._channels[channel].phase_jump_time
+                        delay_duration,
+                        # Considers that the last pulse might not be at t0
+                        self._channels[channel].phase_jump_time - (t0 - op.tf),
                     )
                 break
 
