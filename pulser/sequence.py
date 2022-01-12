@@ -623,17 +623,17 @@ class Sequence:
         t0 = last.tf  # Preliminary ti
         basis = channel_obj.basis
 
-        prs = {self._phase_ref[basis][q].last_phase for q in last.targets}
-        if len(prs) != 1:
+        ph_refs = {self._phase_ref[basis][q].last_phase for q in last.targets}
+        if len(ph_refs) != 1:
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
                 "phase references for the same basis."
             )
         else:
-            phase_ref = prs.pop()
+            phase_ref = ph_refs.pop()
 
         if phase_ref != 0:
-            # Has to recriate the original pulse with a new phase
+            # Has to recreate the original pulse with a new phase
             pulse = Pulse(
                 pulse.amplitude,
                 pulse.detuning,
@@ -666,16 +666,13 @@ class Sequence:
                     delay_duration = max(
                         delay_duration,
                         # Considers that the last pulse might not be at t0
-                        self._channels[channel].phase_jump_time - (t0 - op.tf),
+                        channel_obj.phase_jump_time - (t0 - op.tf),
                     )
                 break
 
         if delay_duration > 0:
             # Delay must not be shorter than the min duration for this channel
-            min_duration = self._channels[channel].min_duration
-            if delay_duration < min_duration:
-                delay_duration = min_duration
-
+            delay_duration = max(delay_duration, channel_obj.min_duration)
             self._delay(delay_duration, channel)
 
         ti = t0 + delay_duration
