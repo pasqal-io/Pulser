@@ -237,7 +237,7 @@ class Device:
                     ch_lines += [
                         "\t- Minimum time between retargets: "
                         f"{ch.min_retarget_interval} ns",
-                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns"
+                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
                         f"\t- Maximum simultaneous targets: {ch.max_targets}",
                     ]
                 ch_lines += [
