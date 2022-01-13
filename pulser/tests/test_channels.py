@@ -33,8 +33,10 @@ def test_device_channels():
             assert ch.clock_period >= 1
             assert ch.min_duration >= 1
             if ch.addressing == "Local":
-                assert ch.retarget_time >= 0
-                assert ch.retarget_time == int(ch.retarget_time)
+                assert ch.min_retarget_interval >= 0
+                assert ch.min_retarget_interval == int(
+                    ch.min_retarget_interval
+                )
                 assert ch.max_targets >= 1
                 assert ch.max_targets == int(ch.max_targets)
 
@@ -52,16 +54,20 @@ def test_validate_duration():
 
 
 def test_repr():
-    raman = Raman.Local(10, 2, retarget_time=1000, max_targets=4)
+    raman = Raman.Local(
+        10, 2, min_retarget_interval=1000, fixed_retarget_t=200, max_targets=4
+    )
     r1 = (
         "Raman.Local(Max Absolute Detuning: 10 rad/µs, Max Amplitude: "
-        "2 rad/µs, Target time: 1000 ns, Max targets: 4, Basis: 'digital')"
+        "2 rad/µs, Phase Jump Time: 0 ns, Minimum retarget time: 1000 ns, "
+        "Fixed retarget time: 200 ns, Max targets: 4, Basis: 'digital')"
     )
     assert raman.__str__() == r1
 
-    ryd = Rydberg.Global(50, 2.5)
+    ryd = Rydberg.Global(50, 2.5, phase_jump_time=300)
     r2 = (
         "Rydberg.Global(Max Absolute Detuning: 50 rad/µs, "
-        "Max Amplitude: 2.5 rad/µs, Basis: 'ground-rydberg')"
+        "Max Amplitude: 2.5 rad/µs, Phase Jump Time: 300 ns, "
+        "Basis: 'ground-rydberg')"
     )
     assert ryd.__str__() == r2
