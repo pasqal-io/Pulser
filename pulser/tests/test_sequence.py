@@ -152,7 +152,7 @@ def test_target():
 
     assert seq._schedule["ch0"][-1] == _TimeSlot("target", -1, 0, {"q1"})
     seq.target("q4", "ch0")
-    retarget_t = seq.declared_channels["ch0"].retarget_time
+    retarget_t = seq.declared_channels["ch0"].min_retarget_interval
     assert seq._schedule["ch0"][-1] == _TimeSlot(
         "target", 0, retarget_t, {"q4"}
     )
