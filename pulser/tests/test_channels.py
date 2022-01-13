@@ -33,8 +33,10 @@ def test_device_channels():
             assert ch.clock_period >= 1
             assert ch.min_duration >= 1
             if ch.addressing == "Local":
-                assert ch.retarget_time >= 0
-                assert ch.retarget_time == int(ch.retarget_time)
+                assert ch.min_retarget_interval >= 0
+                assert ch.min_retarget_interval == int(
+                    ch.min_retarget_interval
+                )
                 assert ch.max_targets >= 1
                 assert ch.max_targets == int(ch.max_targets)
 
@@ -53,7 +55,7 @@ def test_validate_duration():
 
 def test_repr():
     raman = Raman.Local(
-        10, 2, retarget_time=1000, fixed_retarget_t=200, max_targets=4
+        10, 2, min_retarget_interval=1000, fixed_retarget_t=200, max_targets=4
     )
     r1 = (
         "Raman.Local(Max Absolute Detuning: 10 rad/µs, Max Amplitude: "

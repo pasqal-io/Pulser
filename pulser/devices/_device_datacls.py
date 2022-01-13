@@ -231,10 +231,13 @@ class Device:
                         + r"- Maximum :math:`|\delta|`:"
                         + f" {ch.max_abs_detuning:.4g} rad/µs"
                     ),
+                    f"\t- Phase Jump Time: {ch.phase_jump_time} ns",
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [
-                        f"\t- Maximum time to retarget: {ch.retarget_time} ns",
+                        "\t- Minimum time between retargets: "
+                        f"{ch.min_retarget_interval} ns",
+                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns"
                         f"\t- Maximum simultaneous targets: {ch.max_targets}",
                     ]
                 ch_lines += [

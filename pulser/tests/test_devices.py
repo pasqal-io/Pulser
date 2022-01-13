@@ -61,7 +61,7 @@ def test_mock():
         assert ch.max_abs_detuning >= 1000
         assert ch.max_amp >= 200
         if ch.addressing == "Local":
-            assert ch.retarget_time == 0
+            assert ch.min_retarget_interval == 0
             assert ch.max_targets > 1
             assert ch.max_targets == int(ch.max_targets)
 

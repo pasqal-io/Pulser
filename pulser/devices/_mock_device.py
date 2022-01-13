@@ -33,7 +33,7 @@ MockDevice = Device(
             Rydberg.Local(
                 1000,
                 200,
-                retarget_time=0,
+                min_retarget_interval=0,
                 max_targets=2000,
                 clock_period=1,
                 min_duration=1,
@@ -48,7 +48,7 @@ MockDevice = Device(
             Raman.Local(
                 1000,
                 200,
-                retarget_time=0,
+                min_retarget_interval=0,
                 max_targets=2000,
                 clock_period=1,
                 min_duration=1,

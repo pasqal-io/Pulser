@@ -1049,7 +1049,7 @@ class Sequence:
             if last.targets == qubits_set:
                 return
             ti = last.tf
-            retarget = cast(int, self._channels[channel].retarget_time)
+            retarget = cast(int, self._channels[channel].min_retarget_interval)
             elapsed = ti - self._last_target[channel]
             delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
             if delta != 0:
