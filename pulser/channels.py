@@ -39,8 +39,8 @@ class Channel:
         max_amp: Maximum pulse amplitude (in rad/µs).
         phase_jump_time: Time taken to change the phase between consecutive
             pulses (in ns).
-        min_retarget_interval: Minimum time required between two target
-            instructions (in ns).
+        min_retarget_interval: Minimum time required between the ends of two
+            target instructions (in ns).
         fixed_retarget_t: Time taken to change the target (in ns).
         max_targets: How many qubits can be addressed at once by the same beam.
         clock_period: The duration of a clock cycle (in ns). The duration of a
