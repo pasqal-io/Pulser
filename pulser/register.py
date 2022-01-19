@@ -282,6 +282,29 @@ class BaseRegister(ABC):
                     "Needs more than one atom to draw " "the blockade radius."
                 )
 
+    @abstractmethod
+    def _to_dict(self) -> dict[str, Any]:
+        qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
+        return obj_to_dict(self, qs)
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, BaseRegister):
+            return False
+
+        return (
+            type(self) is type(other)
+            and set(self._ids) == set(other._ids)
+            and all(
+                (
+                    np.array_equal(
+                        self._coords[i],
+                        other._coords[other._ids.index(self._ids[i])],
+                    )
+                    for i in range(len(self._ids))
+                )
+            )
+        )
+
 
 class Register(BaseRegister):
     """A 2D quantum register containing a set of qubits.
@@ -736,8 +759,7 @@ class Register(BaseRegister):
         plt.show()
 
     def _to_dict(self) -> dict[str, Any]:
-        qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
-        return obj_to_dict(self, qs)
+        return super()._to_dict()
 
 
 class Register3D(BaseRegister):
@@ -1077,3 +1099,6 @@ class Register3D(BaseRegister):
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
+
+    def _to_dict(self) -> dict[str, Any]:
+        return super()._to_dict()
