@@ -288,20 +288,16 @@ class BaseRegister(ABC):
         return obj_to_dict(self, qs)
 
     def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, BaseRegister):
+        if type(other) is not type(self):
             return False
 
-        return (
-            type(self) is type(other)
-            and set(self._ids) == set(other._ids)
-            and all(
-                (
-                    np.array_equal(
-                        self._coords[i],
-                        other._coords[other._ids.index(self._ids[i])],
-                    )
-                    for i in range(len(self._ids))
+        return set(self._ids) == set(other._ids) and all(
+            (
+                np.array_equal(
+                    self._coords[i],
+                    other._coords[other._ids.index(id)],
                 )
+                for i, id in enumerate(self._ids)
             )
         )
 
