@@ -19,6 +19,10 @@ from dataclasses import dataclass
 from typing import cast, ClassVar, Optional
 import warnings
 
+import numpy as np
+from numpy.typing import ArrayLike
+from scipy.fft import fft, ifft, fftfreq
+
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
 
@@ -48,6 +52,7 @@ class Channel:
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
+        mod_bandwith: The modulation bandwith at -3dB (50% redution), in MHz.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -66,6 +71,16 @@ class Channel:
     clock_period: int = 4  # ns
     min_duration: int = 16  # ns
     max_duration: int = 67108864  # ns
+    mod_bandwith: float = 4.0  # MHz
+
+    @property
+    def rise_time(self) -> int:
+        """The rise time (in ns).
+
+        Defined as the time taken to go from 10% to 90% output in response to
+        a step change in the input.
+        """
+        return int(0.48 / self.mod_bandwith * 1e3)
 
     @classmethod
     def Local(
@@ -160,6 +175,21 @@ class Channel:
                 stacklevel=4,
             )
         return _duration
+
+    def modulate(self, input_samples: ArrayLike) -> np.ndarray:
+        """Modulates the input according to the channel's modulation bandwith.
+
+        Args:
+            input_samples (ArrayLike): The samples to modulate.
+
+        Returns:
+            np.ndarray: The modulated output signal.
+        """
+        fc = self.mod_bandwith * 1e-3 / np.sqrt(np.log(2))
+        samples = np.pad(input_samples, (self.rise_time,))
+        freqs = fftfreq(samples.size)
+        modulation = np.exp(-(freqs ** 2) / fc ** 2)
+        return ifft(fft(samples) * modulation).real
 
     def __repr__(self) -> str:
         config = (
