@@ -216,6 +216,11 @@ class Sequence:
         return self._register.qubits
 
     @property
+    def register(self) -> BaseRegister:
+        """Register with the qubit's IDs and positions."""
+        return self._register
+
+    @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
         return dict(self._channels)
