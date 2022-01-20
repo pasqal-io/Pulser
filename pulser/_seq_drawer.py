@@ -111,6 +111,8 @@ def draw_sequence(
     draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
     draw_register: bool = False,
+    draw_input: bool = True,
+    draw_modulation: bool = False,
 ) -> tuple[Figure, Figure]:
     """Draws the entire sequence.
 
@@ -257,8 +259,11 @@ def draw_sequence(
         teff = np.arange(0, max(solver_time), delta_t / 100)
 
     for ch, (a, b) in ch_axes.items():
-        basis = seq._channels[ch].basis
-        t = np.array(data[ch]["time"]) / time_scale
+        ch_obj = seq._channels[ch]
+        basis = ch_obj.basis
+        times = np.array(data[ch]["time"])
+        t = times / time_scale
+        final_t = t[-1]
         ya = data[ch]["amp"]
         yb = data[ch]["detuning"]
         if sampling_rate:
@@ -275,9 +280,16 @@ def draw_sequence(
             cs_detuning = CubicSpline(solver_time, yb2)
             yaeff = cs_amp(teff)
             ybeff = cs_detuning(teff)
+        if draw_modulation:
+            t_diffs = np.diff(times)
+            ya_mod = ch_obj.modulate(np.repeat(ya[1:], t_diffs))
+            yb_mod = ch_obj.modulate(np.repeat(yb[1:], t_diffs))
+            final_t = max(
+                final_t, len(ya_mod) / time_scale, len(yb_mod) / time_scale
+            )
 
-        t_min = -t[-1] * 0.03
-        t_max = t[-1] * 1.05
+        t_min = -final_t * 0.03
+        t_max = final_t * 1.05
         a.set_xlim(t_min, t_max)
         b.set_xlim(t_min, t_max)
 
@@ -304,6 +316,15 @@ def draw_sequence(
         else:
             a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
             b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
+        if draw_modulation:
+            a.plot(ya_mod, color="darkred", linewidth=0.8)
+            b.plot(yb_mod, color="gold", linewidth=0.8)
+            a.fill_between(
+                np.arange(ya_mod.size), 0, ya_mod, color="darkred", alpha=0.3
+            )
+            b.fill_between(
+                np.arange(yb_mod.size), 0, yb_mod, color="gold", alpha=0.3
+            )
         a.set_ylabel(r"$\Omega$ (rad/µs)", fontsize=14, labelpad=10)
         b.set_ylabel(r"$\delta$ (rad/µs)", fontsize=14)
 
