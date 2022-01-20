@@ -17,8 +17,8 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser import Sequence, Register
-from pulser.devices import Chadoq2
+from pulser import Sequence, Register, Register3D
+from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import BlackmanWaveform
@@ -41,6 +41,18 @@ def test_encoder():
     assert set(range(5)) == encode_decode(set(range(5)))
     with pytest.raises(TypeError, match="not JSON serializable"):
         encode(1j)
+
+
+def test_register_2d():
+    reg = Register({"c": (1, 2), "d": (8, 4)})
+    seq = Sequence(reg, device=Chadoq2)
+    assert reg == encode_decode(seq).register
+
+
+def test_register_3d():
+    reg = Register3D({"a": (1, 2, 3), "b": (8, 5, 6)})
+    seq = Sequence(reg, device=MockDevice)
+    assert reg == encode_decode(seq).register
 
 
 def test_rare_cases():
