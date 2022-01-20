@@ -111,9 +111,7 @@ class Device:
         Returns:
             float: The rydberg blockade radius, in μm.
         """
-        return cast(
-            float, (self.interaction_coeff / rabi_frequency) ** (1 / 6)
-        )
+        return (self.interaction_coeff / rabi_frequency) ** (1 / 6)
 
     def rabi_from_blockade(self, blockade_radius: float) -> float:
         """The maximum Rabi frequency value to enforce a given blockade radius.

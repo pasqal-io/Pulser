@@ -12,7 +12,7 @@ pytest
 pytest-cov
 flake8
 flake8-docstrings
-mypy
+mypy == 0.921
 black
 
 # tutorials
