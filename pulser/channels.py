@@ -191,6 +191,39 @@ class Channel:
         modulation = np.exp(-(freqs ** 2) / fc ** 2)
         return ifft(fft(samples) * modulation).real
 
+    def calc_modulation_buffer(
+        self,
+        input_samples: ArrayLike,
+        mod_samples: ArrayLike,
+        max_allowed_diff: float = 1e-2,
+    ) -> tuple[int, int]:
+        """Calculates the minimal buffers needed around a modulated waveform.
+
+        Args:
+            input_samples (ArrayLike): The input samples.
+            mod_samples (ArrayLike): The modulated samples. Must be of size
+                ``len(input_samples) + 2 * self.rise_time``.
+            max_allowed_diff (float): The maximum allowed difference between
+                the input and modulated samples at the end points.
+
+        Returns:
+            tuple[int, int]: The minimum buffer times at the left and right of
+            the samples, in ns.
+        """
+        tr = self.rise_time
+        samples = np.pad(input_samples, (tr,))
+        diffs = np.abs(samples - mod_samples) <= max_allowed_diff
+        try:
+            start = tr - np.argwhere(diffs[:tr])[-1][0] - 1
+        except IndexError:
+            start = tr
+        try:
+            end = np.argwhere(diffs[-tr:])[0][0]
+        except IndexError:
+            end = tr
+
+        return start, end
+
     def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
