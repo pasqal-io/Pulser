@@ -124,11 +124,28 @@ class Waveform(ABC):
         """Integral of the waveform (time in ns, value in rad/µs)."""
         return float(np.sum(self.samples)) * 1e-3  # ns * rad/µs = 1e-3
 
-    def draw(self) -> None:
-        """Draws the waveform."""
-        fig, ax = plt.subplots()
-        self._plot(ax, "rad/µs")
+    def draw(self, output_channel: Optional[Channel] = None) -> None:
+        """Draws the waveform.
 
+        Args:
+            output_channel: The output channel. If given, will draw the
+                modulated waveform on top of the input one.
+        """
+        fig, ax = plt.subplots()
+        if not output_channel:
+            self._plot(ax, "rad/µs")
+        else:
+            input_samples = np.pad(
+                self.samples, self.modulation_buffers(output_channel)
+            )
+            self._plot(
+                ax, "rad/µs", custom_samples=input_samples, label="Input"
+            )
+            self._plot(
+                ax,
+                custom_samples=self.modulated_samples(output_channel),
+                label="Output",
+            )
         plt.show()
 
     def change_duration(self, new_duration: int) -> Waveform:
@@ -142,9 +159,11 @@ class Waveform(ABC):
             " modifications to its duration."
         )
 
-    @functools.lru_cache
     def modulated_samples(self, channel: Channel) -> np.ndarray:
         """The waveform samples as output of a given channel.
+
+        This is not adjusted to the minimal buffer times. Use
+        ``Waveform.modulated_samples()`` to get the output already truncated.
 
         Args:
             channel (Channel): The channel modulating the waveform.
@@ -152,7 +171,11 @@ class Waveform(ABC):
         Returns:
             numpy.ndarray: The array of samples after modulation.
         """
-        return channel.modulate(self._samples)
+        left, right = self.modulation_buffers(channel)
+        mod_samples = self._modulated_samples(channel)
+        tr = channel.rise_time
+        trim = slice(tr - left, len(mod_samples) - tr + right)
+        return mod_samples[trim]
 
     @functools.lru_cache
     def modulation_buffers(self, channel: Channel) -> tuple[int, int]:
@@ -166,8 +189,23 @@ class Waveform(ABC):
             the samples, in ns.
         """
         return channel.calc_modulation_buffer(
-            self._samples, self.modulated_samples(channel)
+            self._samples, self._modulated_samples(channel)
         )
+
+    @functools.lru_cache
+    def _modulated_samples(self, channel: Channel) -> np.ndarray:
+        """The waveform samples as output of a given channel.
+
+        This is not adjusted to the minimal buffer times. Use
+        ``Waveform.modulated_samples()`` to get the output already truncated.
+
+        Args:
+            channel (Channel): The channel modulating the waveform.
+
+        Returns:
+            numpy.ndarray: The array of samples after modulation.
+        """
+        return channel.modulate(self._samples)
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
@@ -257,19 +295,29 @@ class Waveform(ABC):
         return hash(tuple(self.samples))
 
     def _plot(
-        self, ax: Axes, ylabel: str, color: Optional[str] = None
+        self,
+        ax: Axes,
+        ylabel: Optional[str] = None,
+        color: Optional[str] = None,
+        custom_samples: Optional[ArrayLike] = None,
+        label: str = "",
     ) -> None:
         ax.set_xlabel("t (ns)")
-        ts = np.arange(self.duration)
+        samples = self.samples if custom_samples is None else custom_samples
+        ts = np.arange(len(samples))
         if color:
-            ax.set_ylabel(ylabel, color=color, fontsize=14)
-            ax.plot(ts, self.samples, color=color)
+            if ylabel:
+                ax.set_ylabel(ylabel, color=color, fontsize=14)
+            ax.plot(ts, samples, color=color, label=label)
             ax.tick_params(axis="y", labelcolor=color)
             ax.axhline(0, color=color, linestyle=":", linewidth=0.5)
         else:
-            ax.set_ylabel(ylabel, fontsize=14)
-            ax.plot(ts, self.samples)
+            if ylabel:
+                ax.set_ylabel(ylabel, fontsize=14)
+            ax.plot(ts, samples, label=label)
             ax.axhline(0, color="black", linestyle=":", linewidth=0.5)
+        if label:
+            plt.legend()
 
 
 class CompositeWaveform(Waveform):
@@ -751,9 +799,13 @@ class InterpolatedWaveform(Waveform):
         return InterpolatedWaveform(new_duration, self._values, **self._kwargs)
 
     def _plot(
-        self, ax: Axes, ylabel: str, color: Optional[str] = None
+        self,
+        ax: Axes,
+        ylabel: str,
+        color: Optional[str] = None,
+        **kwargs,
     ) -> None:
-        super()._plot(ax, ylabel, color=color)
+        super()._plot(ax, ylabel, color=color, **kwargs)
         ax.scatter(self._data_pts[:, 0], self._data_pts[:, 1], c=color)
 
     def _to_dict(self) -> dict[str, Any]:
