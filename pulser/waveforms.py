@@ -31,6 +31,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 import scipy.interpolate as interpolate
 
+from pulser.channels import Channel
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.json.utils import obj_to_dict
@@ -139,6 +140,33 @@ class Waveform(ABC):
         raise NotImplementedError(
             f"{self.__class__.__name__} does not support"
             " modifications to its duration."
+        )
+
+    @functools.lru_cache
+    def modulated_samples(self, channel: Channel) -> np.ndarray:
+        """The waveform samples as output of a given channel.
+
+        Args:
+            channel (Channel): The channel modulating the waveform.
+
+        Returns:
+            numpy.ndarray: The array of samples after modulation.
+        """
+        return channel.modulate(self._samples)
+
+    @functools.lru_cache
+    def modulation_buffers(self, channel: Channel) -> tuple[int, int]:
+        """The minimal buffers needed around a modulated waveform.
+
+        Args:
+            channel (Channel): The channel modulating the waveform.
+
+        Returns:
+            tuple[int, int]: The minimum buffer times at the left and right of
+            the samples, in ns.
+        """
+        return channel.calc_modulation_buffer(
+            self._samples, self.modulated_samples(channel)
         )
 
     @abstractmethod

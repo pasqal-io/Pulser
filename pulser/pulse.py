@@ -23,6 +23,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pulser.channels import Channel
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import Waveform, ConstantWaveform
@@ -173,6 +174,13 @@ class Pulse:
 
         fig.tight_layout()
         plt.show()
+
+    def fall_time(self, channel: Channel) -> int:
+        """Calculates the extra time needed to ramp down to zero."""
+        return channel.rise_time + max(
+            self.amplitude.modulation_buffers(channel)[1],
+            self.detuning.modulation_buffers(channel)[1],
+        )
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
