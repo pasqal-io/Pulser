@@ -18,12 +18,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import wraps
 from itertools import chain
-from typing import Any
+from typing import Any, TypeVar, cast
 
 from pulser.parametrized import Parametrized, ParamObj
 
 
-def parametrize(func: Callable) -> Callable:
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def parametrize(func: F) -> F:
     """Makes a function support parametrized arguments.
 
     Note:
@@ -38,4 +41,4 @@ def parametrize(func: Callable) -> Callable:
                 return ParamObj(func, *args, **kwargs)
         return func(*args, **kwargs)
 
-    return wrapper
+    return cast(F, wrapper)

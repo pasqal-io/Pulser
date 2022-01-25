@@ -86,11 +86,11 @@ def _screen(func: Callable) -> Callable:
     return wrapper
 
 
-def _store(func: Callable) -> Callable:
+def _store(func):  # type: ignore
     """Stores any Sequence building call for deferred execution."""
 
     @wraps(func)
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
+    def wrapper(self: Sequence, *args, **kwargs):  # type: ignore
         def verify_variable(x: Any) -> None:
             if isinstance(x, Parametrized):
                 # If not already, the sequence becomes parametrized
