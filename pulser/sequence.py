@@ -654,13 +654,20 @@ class Sequence:
             for ch, seq in self._schedule.items():
                 if ch == channel:
                     continue
+                this_chobj = self._channels[ch]
                 for op in self._schedule[ch][::-1]:
-                    if op.tf <= current_max_t:
-                        break
                     if not isinstance(op.type, Pulse):
-                        continue
-                    if op.targets & last.targets or protocol == "wait-for-all":
-                        current_max_t = op.tf
+                        if op.tf + 2 * this_chobj.rise_time <= current_max_t:
+                            # No pulse behind 'op' needing a delay
+                            break
+                    elif (
+                        op.tf + op.type.fall_time(this_chobj) <= current_max_t
+                    ):
+                        break
+                    elif (
+                        op.targets & last.targets or protocol == "wait-for-all"
+                    ):
+                        current_max_t = op.tf + op.type.fall_time(this_chobj)
                         break
 
         delay_duration = current_max_t - t0
@@ -685,9 +692,10 @@ class Sequence:
 
         self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
 
+        true_finish = tf + pulse.fall_time(channel_obj)
         for qubit in last.targets:
-            if self._last_used[basis][qubit] < tf:
-                self._last_used[basis][qubit] = tf
+            if self._last_used[basis][qubit] < true_finish:
+                self._last_used[basis][qubit] = true_finish
 
         if pulse.post_phase_shift:
             self._phase_shift(
@@ -959,6 +967,7 @@ class Sequence:
     @_screen
     def draw(
         self,
+        mode: str = "input+output",
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
@@ -969,11 +978,18 @@ class Sequence:
         """Draws the sequence in its current state.
 
         Keyword Args:
+            mode (str, default="input+output"): The curves to draw. 'input'
+                draws only the programmed curves, 'output' the excepted curves
+                after modulation. 'input+output' will draw both curves except
+                for channels without a defined modulation bandwith, in which
+                case only the input is drawn.
             draw_phase_area (bool): Whether phase and area values need to be
-                shown as text on the plot, defaults to False.
+                shown as text on the plot, defaults to False. Doesn't work in
+                'output' mode.
             draw_interp_pts (bool): When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
-                on top of the respective waveforms (defaults to True).
+                on top of the respective input waveforms (defaults to True).
+                Doesn't work in 'output' mode.
             draw_phase_shifts (bool): Whether phase shift and reference
                 information should be added to the plot, defaults to False.
             draw_register (bool): Whether to draw the register before the pulse
@@ -993,12 +1009,34 @@ class Sequence:
             Simulation.draw(): Draws the provided sequence and the one used by
             the solver.
         """
+        valid_modes = ("input", "output", "input+output")
+        if mode not in valid_modes:
+            raise ValueError(
+                f"'mode' must be one of {valid_modes}, not '{mode}'."
+            )
+        if mode == "output":
+            if draw_phase_area:
+                warnings.warn(
+                    "'draw_phase_area' doesn't work in 'output' mode, so it "
+                    "will default to 'False'.",
+                    stacklevel=2,
+                )
+                draw_phase_area = False
+            if draw_interp_pts:
+                warnings.warn(
+                    "'draw_interp_pts' doesn't work in 'output' mode, so it "
+                    "will default to 'False'.",
+                    stacklevel=2,
+                )
+                draw_interp_pts = False
         fig_reg, fig = draw_sequence(
             self,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
             draw_register=draw_register,
+            draw_input="input" in mode,
+            draw_modulation="output" in mode,
         )
         if fig_name is not None and draw_register:
             name, ext = os.path.splitext(fig_name)
@@ -1050,6 +1088,18 @@ class Sequence:
             )
 
         try:
+            for op in self._schedule[channel][::-1]:
+                if isinstance(op.type, Pulse):
+                    fall_time = op.type.fall_time(self._channels[channel])
+                    if fall_time > 0:
+                        self.delay(
+                            max(
+                                fall_time, self._channels[channel].min_duration
+                            ),
+                            channel,
+                        )
+                        break
+
             last = self._last(channel)
             if last.targets == qubits_set:
                 return
@@ -1061,7 +1111,7 @@ class Sequence:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
-                        16 if delta < 16 else delta
+                        max(delta, self._channels[channel].min_duration)
                     )
             tf = ti + max(
                 delta, cast(int, self._channels[channel].fixed_retarget_t)

@@ -131,6 +131,11 @@ def draw_sequence(
         draw_register (bool): Whether to draw the register before the pulse
             sequence, with a visual indication (square halo) around the qubits
             masked by the SLM, defaults to False.
+        draw_input(bool): Draws the programmed pulses on the channels, defaults
+            to True.
+        draw_modulation(bool): Draws the expected channel output, defaults to
+            False. If the channel does not have a defined 'mod_bandwith', this
+            is skipped unless 'draw_input=False'.
     """
 
     def phase_str(phi: float) -> str:
@@ -258,12 +263,22 @@ def draw_sequence(
         # Compare pulse with an interpolated pulse with 100 times more samples
         teff = np.arange(0, max(solver_time), delta_t / 100)
 
+    # Make sure the time axis of all channels are aligned
+    final_t = total_duration / time_scale
+    if draw_modulation:
+        for ch, ch_obj in seq._channels.items():
+            final_t = max(
+                final_t,
+                (seq.get_duration(ch) + 2 * ch_obj.rise_time) / time_scale,
+            )
+    t_min = -final_t * 0.03
+    t_max = final_t * 1.05
+
     for ch, (a, b) in ch_axes.items():
         ch_obj = seq._channels[ch]
         basis = ch_obj.basis
         times = np.array(data[ch]["time"])
         t = times / time_scale
-        final_t = t[-1]
         ya = data[ch]["amp"]
         yb = data[ch]["detuning"]
         if sampling_rate:
@@ -280,16 +295,14 @@ def draw_sequence(
             cs_detuning = CubicSpline(solver_time, yb2)
             yaeff = cs_amp(teff)
             ybeff = cs_detuning(teff)
-        if draw_modulation:
+        if draw_modulation and (ch_obj.mod_bandwith or not draw_input):
             t_diffs = np.diff(times)
-            ya_mod = ch_obj.modulate(np.repeat(ya[1:], t_diffs))
-            yb_mod = ch_obj.modulate(np.repeat(yb[1:], t_diffs))
-            final_t = max(
-                final_t, len(ya_mod) / time_scale, len(yb_mod) / time_scale
-            )
+            input_a = np.repeat(ya[1:], t_diffs)
+            input_b = np.repeat(yb[1:], t_diffs)
+            end_index = int(final_t * time_scale)
+            ya_mod = ch_obj.modulate(input_a)[:end_index]
+            yb_mod = ch_obj.modulate(input_b)[:end_index]
 
-        t_min = -final_t * 0.03
-        t_max = final_t * 1.05
         a.set_xlim(t_min, t_max)
         b.set_xlim(t_min, t_max)
 
@@ -306,17 +319,18 @@ def draw_sequence(
         det_bottom = det_min - det_range * 0.05
         b.set_ylim(det_bottom, det_top)
 
-        a.plot(t, ya, color="darkgreen", linewidth=0.8)
-        b.plot(t, yb, color="indigo", linewidth=0.8)
+        if draw_input:
+            a.plot(t, ya, color="darkgreen", linewidth=0.8)
+            b.plot(t, yb, color="indigo", linewidth=0.8)
         if sampling_rate:
             a.plot(teff, yaeff, color="darkgreen", linewidth=0.8)
             b.plot(teff, ybeff, color="indigo", linewidth=0.8, ls="-")
             a.fill_between(teff, 0, yaeff, color="darkgreen", alpha=0.3)
             b.fill_between(teff, 0, ybeff, color="indigo", alpha=0.3)
-        else:
+        elif draw_input:
             a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
             b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
-        if draw_modulation:
+        if draw_modulation and (ch_obj.mod_bandwith or not draw_input):
             a.plot(ya_mod, color="darkred", linewidth=0.8)
             b.plot(yb_mod, color="gold", linewidth=0.8)
             a.fill_between(
@@ -388,7 +402,7 @@ def draw_sequence(
             tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
             tgt_str = "\n".join(tgt_strs)
             if coords == "initial":
-                x = t_min + t[-1] * 0.005
+                x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
                 if seq._channels[ch].addressing == "Global":
                     a.text(
@@ -431,7 +445,7 @@ def draw_sequence(
                 a.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
                 b.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
                 a.text(
-                    tf + t[-1] * 5e-3,
+                    tf + final_t * 5e-3,
                     tgt_txt_y,
                     tgt_str,
                     ha="left",
@@ -441,7 +455,7 @@ def draw_sequence(
                 if phase and draw_phase_shifts:
                     msg = r"$\phi=$" + phase_str(phase)
                     wrd_len = len(max(tgt_strs, key=len))
-                    x = tf + t[-1] * 0.01 * (wrd_len + 1)
+                    x = tf + final_t * 0.01 * (wrd_len + 1)
                     a.text(
                         x,
                         max_amp * 1.1,
@@ -452,7 +466,7 @@ def draw_sequence(
                     )
         # Terminate the last open regions
         if target_regions:
-            target_regions[-1].append(t[-1])
+            target_regions[-1].append(final_t)
         for start, targets_, end in (
             target_regions if draw_phase_shifts else []
         ):
@@ -470,7 +484,7 @@ def draw_sequence(
                 b.axvline(t_, **conf)
                 msg = "\u27F2 " + phase_str(delta)
                 a.text(
-                    t_ - t[-1] * 8e-3,
+                    t_ - final_t * 8e-3,
                     max_amp * 1.1,
                     msg,
                     ha="right",
@@ -484,7 +498,7 @@ def draw_sequence(
             a.axvspan(0, tf_m, color="black", alpha=0.1, zorder=-100)
             b.axvspan(0, tf_m, color="black", alpha=0.1, zorder=-100)
             tgt_strs = [str(q) for q in seq._slm_mask_targets]
-            tgt_txt_x = t[-1] * 0.005
+            tgt_txt_x = final_t * 0.005
             tgt_txt_y = b.get_ylim()[0]
             tgt_str = "\n".join(tgt_strs)
             b.text(
@@ -499,7 +513,7 @@ def draw_sequence(
         if "measurement" in data[ch]:
             msg = f"Basis: {data[ch]['measurement']}"
             b.text(
-                t[-1] * 1.025,
+                final_t * 1.025,
                 det_top,
                 msg,
                 ha="center",
@@ -508,8 +522,8 @@ def draw_sequence(
                 color="white",
                 rotation=90,
             )
-            a.axvspan(t[-1], t_max, color="midnightblue", alpha=1)
-            b.axvspan(t[-1], t_max, color="midnightblue", alpha=1)
+            a.axvspan(final_t, t_max, color="midnightblue", alpha=1)
+            b.axvspan(final_t, t_max, color="midnightblue", alpha=1)
             a.axhline(0, xmax=0.95, linestyle="-", linewidth=0.5, color="grey")
             b.axhline(0, xmax=0.95, linestyle=":", linewidth=0.5, color="grey")
         else:
