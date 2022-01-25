@@ -71,7 +71,7 @@ class Channel:
     clock_period: int = 4  # ns
     min_duration: int = 16  # ns
     max_duration: int = 67108864  # ns
-    mod_bandwith: float = 4.0  # MHz
+    mod_bandwith: Optional[float] = None  # MHz
 
     @property
     def rise_time(self) -> int:
@@ -80,7 +80,10 @@ class Channel:
         Defined as the time taken to go from 10% to 90% output in response to
         a step change in the input.
         """
-        return int(0.48 / self.mod_bandwith * 1e3)
+        if self.mod_bandwith:
+            return int(0.48 / self.mod_bandwith * 1e3)
+        else:
+            return 0
 
     @classmethod
     def Local(
@@ -185,6 +188,13 @@ class Channel:
         Returns:
             np.ndarray: The modulated output signal.
         """
+        if not self.mod_bandwith:
+            warnings.warn(
+                f"No modulation bandwith defined for channel '{self}',"
+                " 'Channel.modulate()' returns the 'input_samples' unchanged.",
+                stacklevel=2,
+            )
+            return input_samples
         fc = self.mod_bandwith * 1e-3 / np.sqrt(np.log(2))
         samples = np.pad(input_samples, (self.rise_time,))
         freqs = fftfreq(samples.size)
@@ -210,6 +220,9 @@ class Channel:
             tuple[int, int]: The minimum buffer times at the left and right of
             the samples, in ns.
         """
+        if not self.mod_bandwith:
+            return 0, 0
+
         tr = self.rise_time
         samples = np.pad(input_samples, (tr,))
         diffs = np.abs(samples - mod_samples) <= max_allowed_diff
