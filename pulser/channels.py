@@ -179,11 +179,11 @@ class Channel:
             )
         return _duration
 
-    def modulate(self, input_samples: ArrayLike) -> np.ndarray:
+    def modulate(self, input_samples: np.ndarray) -> np.ndarray:
         """Modulates the input according to the channel's modulation bandwith.
 
         Args:
-            input_samples (ArrayLike): The samples to modulate.
+            input_samples (np.ndarray): The samples to modulate.
 
         Returns:
             np.ndarray: The modulated output signal.
@@ -199,7 +199,7 @@ class Channel:
         samples = np.pad(input_samples, (self.rise_time,))
         freqs = fftfreq(samples.size)
         modulation = np.exp(-(freqs ** 2) / fc ** 2)
-        return ifft(fft(samples) * modulation).real
+        return cast(np.ndarray, ifft(fft(samples) * modulation).real)
 
     def calc_modulation_buffer(
         self,

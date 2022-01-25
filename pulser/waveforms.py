@@ -175,7 +175,7 @@ class Waveform(ABC):
         mod_samples = self._modulated_samples(channel)
         tr = channel.rise_time
         trim = slice(tr - left, len(mod_samples) - tr + right)
-        return mod_samples[trim]
+        return cast(np.ndarray, mod_samples[trim])
 
     @functools.lru_cache
     def modulation_buffers(self, channel: Channel) -> tuple[int, int]:
@@ -303,7 +303,11 @@ class Waveform(ABC):
         label: str = "",
     ) -> None:
         ax.set_xlabel("t (ns)")
-        samples = self.samples if custom_samples is None else custom_samples
+        samples = (
+            self.samples
+            if custom_samples is None
+            else np.array(custom_samples)
+        )
         ts = np.arange(len(samples))
         if color:
             if ylabel:
@@ -801,11 +805,14 @@ class InterpolatedWaveform(Waveform):
     def _plot(
         self,
         ax: Axes,
-        ylabel: str,
+        ylabel: Optional[str] = None,
         color: Optional[str] = None,
-        **kwargs,
+        custom_samples: Optional[ArrayLike] = None,
+        label: str = "",
     ) -> None:
-        super()._plot(ax, ylabel, color=color, **kwargs)
+        super()._plot(
+            ax, ylabel, color=color, custom_samples=custom_samples, label=label
+        )
         ax.scatter(self._data_pts[:, 0], self._data_pts[:, 1], c=color)
 
     def _to_dict(self) -> dict[str, Any]:
