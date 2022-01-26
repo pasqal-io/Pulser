@@ -40,7 +40,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
     """
     # The minimum time axis length is 100 ns
     total_duration = max(seq.get_duration(), 100)
-    data = {}
+    data: dict[str, Any] = {}
     for ch, sch in seq._schedule.items():
         time = [-1]  # To not break the "time[-1]" later on
         amp = []

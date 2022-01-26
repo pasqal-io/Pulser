@@ -22,7 +22,7 @@ from functools import wraps
 from itertools import chain
 import json
 from sys import version_info
-from typing import Any, cast, NamedTuple, Optional, Tuple, Union
+from typing import Any, cast, NamedTuple, Optional, Tuple, TypeVar, Union
 import warnings
 import os
 
@@ -56,6 +56,7 @@ else:  # pragma: no cover
 
 QubitId = Union[int, str]
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
+F = TypeVar("F", bound=Callable)
 
 
 class _TimeSlot(NamedTuple):
@@ -71,7 +72,7 @@ class _TimeSlot(NamedTuple):
 _Call = namedtuple("_Call", ["name", "args", "kwargs"])
 
 
-def _screen(func: Callable) -> Callable:
+def _screen(func: F) -> F:
     """Blocks the call to a function if the Sequence is parametrized."""
 
     @wraps(func)
@@ -83,14 +84,14 @@ def _screen(func: Callable) -> Callable:
             )
         return func(self, *args, **kwargs)
 
-    return wrapper
+    return cast(F, wrapper)
 
 
-def _store(func):  # type: ignore
+def _store(func: F) -> F:
     """Stores any Sequence building call for deferred execution."""
 
     @wraps(func)
-    def wrapper(self: Sequence, *args, **kwargs):  # type: ignore
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
         def verify_variable(x: Any) -> None:
             if isinstance(x, Parametrized):
                 # If not already, the sequence becomes parametrized
@@ -122,7 +123,7 @@ def _store(func):  # type: ignore
         func(self, *args, **kwargs)
         storage.append(_Call(func.__name__, args, kwargs))
 
-    return wrapper
+    return cast(F, wrapper)
 
 
 class Sequence:
@@ -419,10 +420,7 @@ class Sequence:
         name: str,
         channel_id: str,
         initial_target: Optional[
-            Union[
-                Iterable[Union[QubitId, Parametrized]],
-                Union[QubitId, Parametrized],
-            ]
+            Union[QubitId, Iterable[QubitId], Parametrized]
         ] = None,
     ) -> None:
         """Declares a new channel to the Sequence.
