@@ -681,8 +681,13 @@ class Sequence:
                 break
 
         if delay_duration > 0:
-            # Delay must not be shorter than the min duration for this channel
-            delay_duration = max(delay_duration, channel_obj.min_duration)
+            # Delay must not be shorter than the min duration of this channel
+            # and a multiple of the clock period (forced by validate_duration)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                delay_duration = channel_obj.validate_duration(
+                    max(delay_duration, channel_obj.min_duration)
+                )
             self._delay(delay_duration, channel)
 
         ti = t0 + delay_duration
@@ -842,7 +847,22 @@ class Sequence:
         if self.is_parametrized():
             return
 
-        last_ts = {id: self._last(cast(str, id)).tf for id in channels}
+        last_ts = {}
+        for id in channels:
+            this_chobj = self._channels[id]
+            for i, op in enumerate(self._schedule[id][::-1]):
+                if i == 0:
+                    temp_tf = op.tf
+                if isinstance(op.type, Pulse):
+                    temp_tf = max(
+                        temp_tf, op.tf + op.type.fall_time(this_chobj)
+                    )
+                    break
+                elif temp_tf - op.tf >= 2 * this_chobj.rise_time:
+                    # No pulse behind 'op' needing a delay
+                    break
+            last_ts[id] = temp_tf
+
         tf = max(last_ts.values())
 
         for id in channels:
@@ -1109,11 +1129,13 @@ class Sequence:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     delta = self._channels[channel].validate_duration(
-                        max(delta, self._channels[channel].min_duration)
+                        max(
+                            delta,
+                            self._channels[channel].min_duration,
+                            self._channels[channel].fixed_retarget_t,
+                        )
                     )
-            tf = ti + max(
-                delta, cast(int, self._channels[channel].fixed_retarget_t)
-            )
+            tf = ti + delta
 
         except ValueError:
             ti = -1

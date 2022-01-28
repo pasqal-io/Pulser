@@ -162,8 +162,7 @@ class Waveform(ABC):
     def modulated_samples(self, channel: Channel) -> np.ndarray:
         """The waveform samples as output of a given channel.
 
-        This is not adjusted to the minimal buffer times. Use
-        ``Waveform.modulated_samples()`` to get the output already truncated.
+        This duration is adjusted according to the minimal buffer times.
 
         Args:
             channel (Channel): The channel modulating the waveform.
