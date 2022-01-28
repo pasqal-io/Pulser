@@ -43,7 +43,7 @@ IroiseMVP = Device(
         (
             "rydberg_global",
             Rydberg.Global(
-                2 * np.pi * 22,
+                2 * np.pi * 12,
                 2 * np.pi * 2.5,
                 phase_jump_time=120,
                 mod_bandwith=4,

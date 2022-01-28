@@ -13,12 +13,10 @@
 # limitations under the License.
 """Valid devices for Pulser Sequence execution."""
 
-from pulser.devices._devices import (
-    Chadoq2,
-)
+from pulser.devices._devices import Chadoq2, IroiseMVP
 
 from pulser.devices._mock_device import MockDevice
 
 # Registers which devices can be used to avoid definition of custom devices
 _mock_devices = (MockDevice,)
-_valid_devices = (Chadoq2,)
+_valid_devices = (Chadoq2, IroiseMVP)
