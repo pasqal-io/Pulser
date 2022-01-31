@@ -180,7 +180,7 @@ class Channel:
         return _duration
 
     def modulate(
-        self, input_samples: np.ndarray, keep_ends=False
+        self, input_samples: np.ndarray, keep_ends: bool = False
     ) -> np.ndarray:
         """Modulates the input according to the channel's modulation bandwith.
 
@@ -206,12 +206,14 @@ class Channel:
             samples = np.pad(input_samples, (self.rise_time,))
         freqs = fftfreq(samples.size)
         modulation = np.exp(-(freqs ** 2) / fc ** 2)
-        mod_samples = cast(np.ndarray, ifft(fft(samples) * modulation).real)
+        mod_samples = ifft(fft(samples) * modulation).real
         if keep_ends:
             # Cut off the extra ends
-            return mod_samples[self.rise_time : -self.rise_time]
+            return cast(
+                np.ndarray, mod_samples[self.rise_time : -self.rise_time]
+            )
         else:
-            return mod_samples
+            return cast(np.ndarray, mod_samples)
 
     def calc_modulation_buffer(
         self,

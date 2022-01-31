@@ -847,6 +847,7 @@ class Sequence:
         if self.is_parametrized():
             return
 
+        channels = cast(Tuple[str], channels)
         last_ts = {}
         for id in channels:
             this_chobj = self._channels[id]
@@ -874,7 +875,7 @@ class Sequence:
                     delta = channel_obj.validate_duration(
                         max(delta, channel_obj.min_duration)
                     )
-                self._delay(delta, cast(str, id))
+                self._delay(delta, id)
 
     def build(self, **vars: Union[ArrayLike, float, int, str]) -> Sequence:
         """Builds a sequence from the programmed instructions.
