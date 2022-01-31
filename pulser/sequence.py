@@ -868,6 +868,12 @@ class Sequence:
         for id in channels:
             delta = tf - last_ts[id]
             if delta > 0:
+                channel_obj = self._channels[id]
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    delta = channel_obj.validate_duration(
+                        max(delta, channel_obj.min_duration)
+                    )
                 self._delay(delta, cast(str, id))
 
     def build(self, **vars: Union[ArrayLike, float, int, str]) -> Sequence:
@@ -1068,7 +1074,7 @@ class Sequence:
         self, qubits: Union[Iterable[QubitId], QubitId], channel: str
     ) -> None:
         self._validate_channel(channel)
-
+        channel_obj = self._channels[channel]
         try:
             qubits_set = (
                 set(cast(Iterable, qubits))
@@ -1078,12 +1084,12 @@ class Sequence:
         except TypeError:
             qubits_set = {qubits}
 
-        if self._channels[channel].addressing != "Local":
+        if channel_obj.addressing != "Local":
             raise ValueError("Can only choose target of 'Local' channels.")
-        elif len(qubits_set) > cast(int, self._channels[channel].max_targets):
+        elif len(qubits_set) > cast(int, channel_obj.max_targets):
             raise ValueError(
-                "This channel can target at most "
-                f"{self._channels[channel].max_targets} qubits at a time"
+                f"This channel can target at most {channel_obj.max_targets} "
+                "qubits at a time."
             )
 
         if self.is_parametrized():
@@ -1097,7 +1103,7 @@ class Sequence:
         elif not qubits_set.issubset(self._qids):
             raise ValueError("All given qubits must belong to the register.")
 
-        basis = self._channels[channel].basis
+        basis = channel_obj.basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
         if len(phase_refs) != 1:
             raise ValueError(
@@ -1108,33 +1114,33 @@ class Sequence:
         try:
             for op in self._schedule[channel][::-1]:
                 if isinstance(op.type, Pulse):
-                    fall_time = op.type.fall_time(self._channels[channel])
+                    fall_time = op.type.fall_time(channel_obj)
                     if fall_time > 0:
-                        self.delay(
-                            max(
-                                fall_time, self._channels[channel].min_duration
-                            ),
-                            channel,
-                        )
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            self.delay(
+                                max(fall_time, channel_obj.min_duration),
+                                channel,
+                            )
                         break
 
             last = self._last(channel)
             if last.targets == qubits_set:
                 return
             ti = last.tf
-            retarget = cast(int, self._channels[channel].min_retarget_interval)
+            retarget = cast(int, channel_obj.min_retarget_interval)
             elapsed = ti - self._last_target[channel]
             delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
+            print("Before delta:", delta)
+            if channel_obj.fixed_retarget_t:
+                delta = max(delta, channel_obj.fixed_retarget_t)
             if delta != 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    delta = self._channels[channel].validate_duration(
-                        max(
-                            delta,
-                            self._channels[channel].min_duration,
-                            self._channels[channel].fixed_retarget_t,
-                        )
+                    delta = channel_obj.validate_duration(
+                        max(delta, channel_obj.min_duration)
                     )
+            print("After delta:", delta)
             tf = ti + delta
 
         except ValueError:
