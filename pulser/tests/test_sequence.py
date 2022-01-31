@@ -562,7 +562,7 @@ def test_modulation_features():
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         phase_jump_time=120,  # ns
-        mod_bandwith=4,  # MHz
+        mod_bandwidth=4,  # MHz
     )
 
     raman_local = Raman.Local(
@@ -570,7 +570,7 @@ def test_modulation_features():
         2 * np.pi * 10,
         phase_jump_time=120,  # ns
         fixed_retarget_t=500,  # ns
-        mod_bandwith=7,  # MHz
+        mod_bandwidth=7,  # MHz
     )
 
     ConstrainedChadoq2 = Device(

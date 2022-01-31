@@ -1006,7 +1006,7 @@ class Sequence:
             mode (str, default="input+output"): The curves to draw. 'input'
                 draws only the programmed curves, 'output' the excepted curves
                 after modulation. 'input+output' will draw both curves except
-                for channels without a defined modulation bandwith, in which
+                for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
             draw_phase_area (bool): Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in

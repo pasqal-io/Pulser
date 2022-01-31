@@ -66,7 +66,7 @@ def test_repr():
     )
     assert raman.__str__() == r1
 
-    ryd = Rydberg.Global(50, 2.5, phase_jump_time=300, mod_bandwith=4)
+    ryd = Rydberg.Global(50, 2.5, phase_jump_time=300, mod_bandwidth=4)
     r2 = (
         "Rydberg.Global(Max Absolute Detuning: 50 rad/µs, "
         "Max Amplitude: 2.5 rad/µs, Phase Jump Time: 300 ns, "
@@ -81,16 +81,16 @@ def test_modulation():
     raman_local = Raman.Local(
         2 * np.pi * 20,
         2 * np.pi * 10,
-        mod_bandwith=4,  # MHz
+        mod_bandwidth=4,  # MHz
     )
 
     wf = ConstantWaveform(100, 1)
-    assert rydberg_global.mod_bandwith is None
+    assert rydberg_global.mod_bandwidth is None
     with pytest.warns(UserWarning, match="No modulation bandwidth defined"):
         out_samples = rydberg_global.modulate(wf.samples)
     assert np.all(out_samples == wf.samples)
 
-    with pytest.raises(TypeError, match="doesn't have a modulation bandwith"):
+    with pytest.raises(TypeError, match="doesn't have a modulation bandwidth"):
         rydberg_global.calc_modulation_buffer(wf.samples, out_samples)
 
     out_ = raman_local.modulate(wf.samples)

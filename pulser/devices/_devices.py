@@ -46,7 +46,7 @@ IroiseMVP = Device(
                 2 * np.pi * 12,
                 2 * np.pi * 2.5,
                 phase_jump_time=120,
-                mod_bandwith=4,
+                mod_bandwidth=4,
             ),
         ),
     ),

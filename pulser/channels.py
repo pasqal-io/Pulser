@@ -52,7 +52,7 @@ class Channel:
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
-        mod_bandwith: The modulation bandwith at -3dB (50% redution), in MHz.
+        mod_bandwidth: The modulation bandwidth at -3dB (50% redution), in MHz.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -71,7 +71,7 @@ class Channel:
     clock_period: int = 4  # ns
     min_duration: int = 16  # ns
     max_duration: int = 67108864  # ns
-    mod_bandwith: Optional[float] = None  # MHz
+    mod_bandwidth: Optional[float] = None  # MHz
 
     @property
     def rise_time(self) -> int:
@@ -80,8 +80,8 @@ class Channel:
         Defined as the time taken to go from 10% to 90% output in response to
         a step change in the input.
         """
-        if self.mod_bandwith:
-            return int(0.48 / self.mod_bandwith * 1e3)
+        if self.mod_bandwidth:
+            return int(0.48 / self.mod_bandwidth * 1e3)
         else:
             return 0
 
@@ -182,7 +182,7 @@ class Channel:
     def modulate(
         self, input_samples: np.ndarray, keep_ends: bool = False
     ) -> np.ndarray:
-        """Modulates the input according to the channel's modulation bandwith.
+        """Modulates the input according to the channel's modulation bandwidth.
 
         Args:
             input_samples (np.ndarray): The samples to modulate.
@@ -192,14 +192,14 @@ class Channel:
         Returns:
             np.ndarray: The modulated output signal.
         """
-        if not self.mod_bandwith:
+        if not self.mod_bandwidth:
             warnings.warn(
                 f"No modulation bandwidth defined for channel '{self}',"
                 " 'Channel.modulate()' returns the 'input_samples' unchanged.",
                 stacklevel=2,
             )
             return input_samples
-        fc = self.mod_bandwith * 1e-3 / np.sqrt(np.log(2))
+        fc = self.mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
         if keep_ends:
             samples = np.pad(input_samples, (2 * self.rise_time,), mode="edge")
         else:
@@ -233,9 +233,9 @@ class Channel:
             tuple[int, int]: The minimum buffer times at the left and right of
             the samples, in ns.
         """
-        if not self.mod_bandwith:
+        if not self.mod_bandwidth:
             raise TypeError(
-                f"The channel {self} doesn't have a modulation bandwith."
+                f"The channel {self} doesn't have a modulation bandwidth."
             )
 
         tr = self.rise_time
@@ -266,8 +266,8 @@ class Channel:
             if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
         config += f", Basis: '{self.basis}'"
-        if self.mod_bandwith:
-            config += f", Modulation Bandwidth: {self.mod_bandwith} MHz"
+        if self.mod_bandwidth:
+            config += f", Modulation Bandwidth: {self.mod_bandwidth} MHz"
         return self.name + config + ")"
 
 

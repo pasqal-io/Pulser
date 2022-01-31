@@ -103,7 +103,7 @@ def test_draw():
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         phase_jump_time=120,  # ns
-        mod_bandwith=4,  # MHz
+        mod_bandwidth=4,  # MHz
     )
     with patch("matplotlib.pyplot.show"):
         composite.draw()
@@ -419,7 +419,7 @@ def test_modulation():
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         phase_jump_time=120,  # ns
-        mod_bandwith=4,  # MHz
+        mod_bandwidth=4,  # MHz
     )
     mod_samples = constant.modulated_samples(rydberg_global)
     assert np.all(mod_samples == rydberg_global.modulate(constant.samples))
