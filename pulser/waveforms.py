@@ -135,15 +135,15 @@ class Waveform(ABC):
         if not output_channel:
             self._plot(ax, "rad/µs")
         else:
-            input_samples = np.pad(
-                self.samples, self.modulation_buffers(output_channel)
-            )
             self._plot(
-                ax, "rad/µs", custom_samples=input_samples, label="Input"
+                ax,
+                "rad/µs",
+                label="Input",
+                start_t=self.modulation_buffers(output_channel)[0],
             )
             self._plot(
                 ax,
-                custom_samples=self.modulated_samples(output_channel),
+                channel=output_channel,
                 label="Output",
             )
         plt.show()
@@ -298,16 +298,17 @@ class Waveform(ABC):
         ax: Axes,
         ylabel: Optional[str] = None,
         color: Optional[str] = None,
-        custom_samples: Optional[ArrayLike] = None,
+        channel: Optional[Channel] = None,
         label: str = "",
+        start_t: int = 0,
     ) -> None:
         ax.set_xlabel("t (ns)")
         samples = (
             self.samples
-            if custom_samples is None
-            else np.array(custom_samples)
+            if channel is None
+            else self.modulated_samples(channel)
         )
-        ts = np.arange(len(samples))
+        ts = np.arange(len(samples)) + start_t
         if color:
             if ylabel:
                 ax.set_ylabel(ylabel, color=color, fontsize=14)
@@ -806,13 +807,22 @@ class InterpolatedWaveform(Waveform):
         ax: Axes,
         ylabel: Optional[str] = None,
         color: Optional[str] = None,
-        custom_samples: Optional[ArrayLike] = None,
+        channel: Optional[Channel] = None,
         label: str = "",
+        start_t: int = 0,
     ) -> None:
         super()._plot(
-            ax, ylabel, color=color, custom_samples=custom_samples, label=label
+            ax,
+            ylabel,
+            color=color,
+            channel=channel,
+            label=label,
+            start_t=start_t,
         )
-        ax.scatter(self._data_pts[:, 0], self._data_pts[:, 1], c=color)
+        if not channel:
+            ax.scatter(
+                self._data_pts[:, 0] + start_t, self._data_pts[:, 1], c=color
+            )
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._values, **self._kwargs)
