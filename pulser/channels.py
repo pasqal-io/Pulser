@@ -194,7 +194,7 @@ class Channel:
         """
         if not self.mod_bandwith:
             warnings.warn(
-                f"No modulation bandwith defined for channel '{self}',"
+                f"No modulation bandwidth defined for channel '{self}',"
                 " 'Channel.modulate()' returns the 'input_samples' unchanged.",
                 stacklevel=2,
             )
@@ -212,8 +212,7 @@ class Channel:
             return cast(
                 np.ndarray, mod_samples[self.rise_time : -self.rise_time]
             )
-        else:
-            return cast(np.ndarray, mod_samples)
+        return cast(np.ndarray, mod_samples)
 
     def calc_modulation_buffer(
         self,
@@ -235,7 +234,9 @@ class Channel:
             the samples, in ns.
         """
         if not self.mod_bandwith:
-            return 0, 0
+            raise TypeError(
+                f"The channel {self} doesn't have a modulation bandwith."
+            )
 
         tr = self.rise_time
         samples = np.pad(input_samples, (tr,))
@@ -265,6 +266,8 @@ class Channel:
             if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
         config += f", Basis: '{self.basis}'"
+        if self.mod_bandwith:
+            config += f", Modulation Bandwidth: {self.mod_bandwith} MHz"
         return self.name + config + ")"
 
 

@@ -187,6 +187,9 @@ class Waveform(ABC):
             tuple[int, int]: The minimum buffer times at the left and right of
             the samples, in ns.
         """
+        if not channel.mod_bandwith:
+            return 0, 0
+
         return channel.calc_modulation_buffer(
             self._samples, self._modulated_samples(channel)
         )

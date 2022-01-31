@@ -1132,7 +1132,6 @@ class Sequence:
             retarget = cast(int, channel_obj.min_retarget_interval)
             elapsed = ti - self._last_target[channel]
             delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
-            print("Before delta:", delta)
             if channel_obj.fixed_retarget_t:
                 delta = max(delta, channel_obj.fixed_retarget_t)
             if delta != 0:
@@ -1141,7 +1140,6 @@ class Sequence:
                     delta = channel_obj.validate_duration(
                         max(delta, channel_obj.min_duration)
                     )
-            print("After delta:", delta)
             tf = ti + delta
 
         except ValueError:

@@ -19,6 +19,7 @@ import pytest
 
 import pulser
 from pulser import Sequence, Pulse, Register, Register3D
+from pulser.channels import Rydberg, Raman
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
@@ -554,3 +555,84 @@ def test_draw_register():
     seq3d.config_slm_mask([6, 15])
     with patch("matplotlib.pyplot.show"):
         seq3d.draw(draw_register=True)
+
+
+def test_modulation_features():
+    rydberg_global = Rydberg.Global(
+        2 * np.pi * 20,
+        2 * np.pi * 2.5,
+        phase_jump_time=120,  # ns
+        mod_bandwith=4,  # MHz
+    )
+
+    raman_local = Raman.Local(
+        2 * np.pi * 20,
+        2 * np.pi * 10,
+        phase_jump_time=120,  # ns
+        fixed_retarget_t=500,  # ns
+        mod_bandwith=7,  # MHz
+    )
+
+    ConstrainedChadoq2 = Device(
+        name="ConstrainedChadoq2",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=50,
+        min_atom_distance=4,
+        _channels=(
+            ("rydberg_global", rydberg_global),
+            ("raman_local", raman_local),
+        ),
+    )
+    with pytest.warns(
+        UserWarning, match="should be imported from 'pulser.devices'"
+    ):
+        seq = Sequence(reg, ConstrainedChadoq2)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q1")
+
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
+    black_wf = BlackmanWaveform(500, np.pi)
+    black_pls = Pulse.ConstantDetuning(black_wf, 0, 0)
+    seq.add(black_pls, "ch1")
+    blackman_slot = seq._last("ch1")
+    # The pulse accounts for the modulation buffer
+    assert blackman_slot.ti == 100 + rydberg_global.rise_time * 2
+    seq.target("q0", "ch1")
+    fall_time = black_pls.fall_time(raman_local)
+    assert (
+        fall_time
+        == raman_local.rise_time + black_wf.modulation_buffers(raman_local)[1]
+    )
+    fall_time += (
+        raman_local.clock_period - fall_time % raman_local.clock_period
+    )
+    assert seq._last("ch1").ti == blackman_slot.tf + fall_time
+
+    seq.add(black_pls, "ch0")
+    tf_ = seq.get_duration()
+    seq.align("ch0", "ch1")
+    fall_time = black_pls.fall_time(rydberg_global)
+    fall_time += (
+        raman_local.clock_period - fall_time % raman_local.clock_period
+    )
+    assert seq.get_duration() == tf_ + fall_time
+
+    with pytest.raises(ValueError, match="'mode' must be one of"):
+        seq.draw(mode="all")
+
+    with patch("matplotlib.pyplot.show"):
+        with pytest.warns(
+            UserWarning,
+            match="'draw_phase_area' doesn't work in 'output' mode",
+        ):
+            seq.draw(
+                mode="output", draw_interp_pts=False, draw_phase_area=True
+            )
+        with pytest.warns(
+            UserWarning,
+            match="'draw_interp_pts' doesn't work in 'output' mode",
+        ):
+            seq.draw(mode="output")
+        seq.draw(mode="input+output")
