@@ -282,27 +282,50 @@ class Sequence:
         return not self._building
 
     @_screen
-    def get_duration(self, channel: Optional[str] = None) -> int:
+    def get_duration(
+        self, channel: Optional[str] = None, include_fall_time: bool = False
+    ) -> int:
         """Returns the current duration of a channel or the whole sequence.
 
         Keyword Args:
             channel (Optional[str]): A specific channel to return the duration
                 of. If left as None, it will return the duration of the whole
                 sequence.
+            include_fall_time (bool): Whether to include in the duration the
+                extra time needed by the last pulse to finish, if there is
+                modulation.
 
         Returns:
             int: The duration of the channel or sequence, in ns.
         """
         if channel is None:
-            durations = [
-                self._last(ch).tf
-                for ch in self._schedule
-                if self._schedule[ch]
-            ]
-            return 0 if not durations else max(durations)
+            channels = self._channels.keys()
+            if not channels:
+                return 0
+        else:
+            self._validate_channel(channel)
+            channels = (channel,)
+        last_ts = {}
+        for id in channels:
+            this_chobj = self._channels[id]
+            temp_tf = 0
+            for i, op in enumerate(self._schedule[id][::-1]):
+                if i == 0:
+                    # Start with the last slot found
+                    temp_tf = op.tf
+                    if not include_fall_time:
+                        break
+                if isinstance(op.type, Pulse):
+                    temp_tf = max(
+                        temp_tf, op.tf + op.type.fall_time(this_chobj)
+                    )
+                    break
+                elif temp_tf - op.tf >= 2 * this_chobj.rise_time:
+                    # No pulse behind 'op' with a long enough fall time
+                    break
+            last_ts[id] = temp_tf
 
-        self._validate_channel(channel)
-        return self._last(channel).tf if self._schedule[channel] else 0
+        return max(last_ts.values())
 
     @_screen
     def current_phase_ref(
@@ -848,22 +871,10 @@ class Sequence:
             return
 
         channels = cast(Tuple[str], channels)
-        last_ts = {}
-        for id in channels:
-            this_chobj = self._channels[id]
-            for i, op in enumerate(self._schedule[id][::-1]):
-                if i == 0:
-                    temp_tf = op.tf
-                if isinstance(op.type, Pulse):
-                    temp_tf = max(
-                        temp_tf, op.tf + op.type.fall_time(this_chobj)
-                    )
-                    break
-                elif temp_tf - op.tf >= 2 * this_chobj.rise_time:
-                    # No pulse behind 'op' needing a delay
-                    break
-            last_ts[id] = temp_tf
-
+        last_ts = {
+            id: self.get_duration(id, include_fall_time=True)
+            for id in channels
+        }
         tf = max(last_ts.values())
 
         for id in channels:
@@ -1113,17 +1124,16 @@ class Sequence:
             )
 
         try:
-            for op in self._schedule[channel][::-1]:
-                if isinstance(op.type, Pulse):
-                    fall_time = op.type.fall_time(channel_obj)
-                    if fall_time > 0:
-                        with warnings.catch_warnings():
-                            warnings.simplefilter("ignore")
-                            self.delay(
-                                max(fall_time, channel_obj.min_duration),
-                                channel,
-                            )
-                        break
+            fall_time = self.get_duration(
+                channel, include_fall_time=True
+            ) - self.get_duration(channel)
+            if fall_time > 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    self.delay(
+                        max(fall_time, channel_obj.min_duration),
+                        channel,
+                    )
 
             last = self._last(channel)
             if last.targets == qubits_set:
