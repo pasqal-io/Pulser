@@ -21,6 +21,7 @@ import pytest
 from scipy.interpolate import interp1d, PchipInterpolator
 
 from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.channels import Rydberg
 from pulser.parametrized import Variable, ParamObj
 from pulser.waveforms import (
     ConstantWaveform,
@@ -98,10 +99,16 @@ def test_integral():
 
 
 def test_draw():
+    rydberg_global = Rydberg.Global(
+        2 * np.pi * 20,
+        2 * np.pi * 2.5,
+        phase_jump_time=120,  # ns
+        mod_bandwith=4,  # MHz
+    )
     with patch("matplotlib.pyplot.show"):
         composite.draw()
-        blackman.draw()
-        interp.draw()
+        blackman.draw(output_channel=rydberg_global)
+        interp.draw(output_channel=rydberg_global)
 
 
 def test_eq():
@@ -405,3 +412,19 @@ def test_get_item():
         assert wf[duration * 2 :].size == 0
         assert wf[duration * 2 : duration * 3].size == 0
         assert wf[-duration * 3 : -duration * 2].size == 0
+
+
+def test_modulation():
+    rydberg_global = Rydberg.Global(
+        2 * np.pi * 20,
+        2 * np.pi * 2.5,
+        phase_jump_time=120,  # ns
+        mod_bandwith=4,  # MHz
+    )
+    mod_samples = constant.modulated_samples(rydberg_global)
+    assert np.all(mod_samples == rydberg_global.modulate(constant.samples))
+    assert constant.modulation_buffers(rydberg_global) == (
+        rydberg_global.rise_time,
+        rydberg_global.rise_time,
+    )
+    assert len(mod_samples) == constant.duration + 2 * rydberg_global.rise_time
