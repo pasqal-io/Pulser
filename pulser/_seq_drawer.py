@@ -301,7 +301,7 @@ def draw_sequence(
             input_b = np.repeat(yb[1:], t_diffs)
             end_index = int(final_t * time_scale)
             ya_mod = ch_obj.modulate(input_a)[:end_index]
-            yb_mod = ch_obj.modulate(input_b)[:end_index]
+            yb_mod = ch_obj.modulate(input_b, keep_ends=True)[:end_index]
 
         a.set_xlim(t_min, t_max)
         b.set_xlim(t_min, t_max)
