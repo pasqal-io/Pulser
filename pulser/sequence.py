@@ -299,7 +299,7 @@ class Sequence:
             int: The duration of the channel or sequence, in ns.
         """
         if channel is None:
-            channels = self._channels.keys()
+            channels = tuple(self._channels.keys())
             if not channels:
                 return 0
         else:
