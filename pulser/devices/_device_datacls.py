@@ -122,7 +122,7 @@ class Device:
         Returns:
             float: The maximum rabi frequency value, in rad/µs.
         """
-        return self.interaction_coeff / blockade_radius ** 6
+        return self.interaction_coeff / blockade_radius**6
 
     def validate_register(self, register: BaseRegister) -> None:
         """Checks if 'register' is compatible with this device.
@@ -202,7 +202,7 @@ class Device:
         lines = [
             "\nRegister requirements:",
             f" - Dimensions: {self.dimensions}D",
-            fr" - Rydberg level: {self.rydberg_level}",
+            rf" - Rydberg level: {self.rydberg_level}",
             f" - Maximum number of atoms: {self.max_atom_num}",
             f" - Maximum distance from origin: {self.max_radial_distance} μm",
             (

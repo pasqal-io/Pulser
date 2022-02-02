@@ -101,7 +101,7 @@ class SimulationResults(ABC):
         qobj_list = []
         dim = self._dim if not self._use_pseudo_dens else 2
         legal_dims = [[dim] * self._size] * 2
-        legal_shape = (dim ** self._size, dim ** self._size)
+        legal_shape = (dim**self._size, dim**self._size)
         for obs in obs_list:
             if not (
                 isinstance(obs, np.ndarray) or isinstance(obs, qutip.Qobj)
@@ -323,7 +323,7 @@ class NoisyResults(SimulationResults):
         return self.get_state(self._sim_times[-1])
 
     def _calc_weights(self, t_index: int) -> np.ndarray:
-        weights = np.zeros(2 ** self._size)
+        weights = np.zeros(2**self._size)
         for bin_rep, prob in self._results[t_index].items():
             weights[int(bin_rep, base=2)] = prob
         return weights
@@ -484,7 +484,7 @@ class CoherentResults(SimulationResults):
                 )
             ex_inds = [
                 i
-                for i in range(3 ** self._size)
+                for i in range(3**self._size)
                 if ex_state in np.base_repr(i, base=3).zfill(self._size)
             ]
             ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
@@ -563,8 +563,8 @@ class CoherentResults(SimulationResults):
                 one_state = 2  # 1 = |h>
                 ex_one = slice(0, 2)
             probs = probs.reshape([3] * n)
-            weights = np.zeros(2 ** n)
-            for dec_val in range(2 ** n):
+            weights = np.zeros(2**n)
+            for dec_val in range(2**n):
                 ind: list[Union[int, slice]] = []
                 for v in np.binary_repr(dec_val, width=n):
                     if v == "0":
