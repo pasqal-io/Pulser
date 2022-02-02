@@ -139,7 +139,7 @@ def draw_sequence(
         elif value == 0:
             return "0"  # pragma: no cover - just for safety
         else:
-            return fr"{value:.2g}$\pi$"
+            return rf"{value:.2g}$\pi$"
 
     n_channels = len(seq._channels)
     if not n_channels:
@@ -343,12 +343,12 @@ def draw_sequence(
                     area_fmt = (
                         r"A: $\pi$"
                         if round(area_val, 2) == 1
-                        else fr"A: {area_val:.2g}$\pi$"
+                        else rf"A: {area_val:.2g}$\pi$"
                     )
                     if not draw_phase:
                         txt = area_fmt
                     else:
-                        phase_fmt = fr"$\phi$: {phase_str(phase_val)}"
+                        phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
                         txt = "\n".join([phase_fmt, area_fmt])
                     a.text(
                         x_plot,

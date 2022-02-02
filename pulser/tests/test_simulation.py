@@ -102,7 +102,7 @@ def test_initialization_and_construction_of_hamiltonian():
     assert bool(set(sim._hamiltonian.tlist).intersection(sim.sampling_times))
     for qobjevo in sim._hamiltonian.ops:
         for sh in qobjevo.qobj.shape:
-            assert sh == sim.dim ** sim._size
+            assert sh == sim.dim**sim._size
 
 
 def test_extraction_of_sequences():
@@ -285,7 +285,7 @@ def test_get_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert simple_ham[0, 0] == Chadoq2.interaction_coeff / 10 ** 6 - 2 * detun
+    assert simple_ham[0, 0] == Chadoq2.interaction_coeff / 10**6 - 2 * detun
 
     np.random.seed(123)
     simple_sim_noise = Simulation(
@@ -362,11 +362,11 @@ def test_run():
         with patch("matplotlib.pyplot.savefig"):
             sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     bad_initial = np.array([1.0])
-    good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
+    good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
     )
-    good_initial_qobj_no_dims = qutip.basis(sim.dim ** sim._size, 2)
+    good_initial_qobj_no_dims = qutip.basis(sim.dim**sim._size, 2)
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
@@ -636,11 +636,11 @@ def test_get_xy_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert simple_ham[1, 2] == 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3
+    assert simple_ham[1, 2] == 0.5 * MockDevice.interaction_coeff_xy / 10**3
     assert (
         np.abs(
             simple_ham[1, 4]
-            - (-2 * 0.5 * MockDevice.interaction_coeff_xy / 10 ** 3)
+            - (-2 * 0.5 * MockDevice.interaction_coeff_xy / 10**3)
         )
         < 1e-10
     )
@@ -659,7 +659,7 @@ def test_run_xy():
 
     sim = Simulation(simple_seq, sampling_rate=0.01)
 
-    good_initial_array = np.r_[1, np.zeros(sim.dim ** sim._size - 1)]
+    good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
     )

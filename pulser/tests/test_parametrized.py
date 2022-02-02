@@ -113,6 +113,6 @@ def test_opsupport():
     x = 8 * x  # x = [-16, -8]
     x = -x // 3  # x = [5, 2]
     assert np.all(x.build() == [5.0, 2.0])
-    assert (a ** a).build() == 0.25
+    assert (a**a).build() == 0.25
     assert abs(a).build() == 2.0
     assert (3 % a).build() == -1.0

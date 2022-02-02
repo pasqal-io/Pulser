@@ -25,7 +25,7 @@ def obj_to_dict(
     _module: Optional[str] = None,
     _name: Optional[str] = None,
     _submodule: Optional[str] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Encodes an object in a dictionary for serialization.
 
