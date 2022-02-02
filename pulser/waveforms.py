@@ -176,7 +176,7 @@ class Waveform(ABC):
         trim = slice(tr - left, len(mod_samples) - tr + right)
         return cast(np.ndarray, mod_samples[trim])
 
-    @functools.lru_cache
+    @functools.lru_cache()
     def modulation_buffers(self, channel: Channel) -> tuple[int, int]:
         """The minimal buffers needed around a modulated waveform.
 
@@ -194,7 +194,7 @@ class Waveform(ABC):
             self._samples, self._modulated_samples(channel)
         )
 
-    @functools.lru_cache
+    @functools.lru_cache()
     def _modulated_samples(self, channel: Channel) -> np.ndarray:
         """The waveform samples as output of a given channel.
 
