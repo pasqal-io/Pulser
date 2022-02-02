@@ -205,7 +205,7 @@ class Channel:
         else:
             samples = np.pad(input_samples, (self.rise_time,))
         freqs = fftfreq(samples.size)
-        modulation = np.exp(-(freqs ** 2) / fc ** 2)
+        modulation = np.exp(-(freqs**2) / fc**2)
         mod_samples = ifft(fft(samples) * modulation).real
         if keep_ends:
             # Cut off the extra ends
