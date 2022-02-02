@@ -311,11 +311,13 @@ class Waveform(ABC):
             if channel is None
             else self.modulated_samples(channel)
         )
-        if start_t and not channel:
-            # Adds zero on both ends to show rise and fall for ConstantWaveform
-            samples = np.pad(samples, (1,))
-
         ts = np.arange(len(samples)) + start_t
+        if not channel:
+            # Adds zero on both ends to show rise and fall
+            samples = np.pad(samples, (1,))
+            # Repeats the times on the edges once
+            ts = np.pad(ts, (1,), mode="edge")
+
         if color:
             if ylabel:
                 ax.set_ylabel(ylabel, color=color, fontsize=14)
