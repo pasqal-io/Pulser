@@ -1,6 +1,13 @@
 [flake8]
-exclude = ./build, ./docs
 docstring-convention = google
+exclude = ./build, ./docs
+extend-ignore =
+    # D105 Missing docstring in magic method
+    D105,
+    # E203 whitespace before ':' (for compliance with black)
+    E203,
+# for compliance with black
+max-line-length = 88
 per-file-ignores =
   # D100 Missing docstring in public module
   # D103 Missing docstring in public function
@@ -8,8 +15,3 @@ per-file-ignores =
   pulser/tests/*: D100, D103
   __init__.py: F401
   setup.py: D100
-extend-ignore =
-    # D105 Missing docstring in magic method
-    D105,
-    # E203 whitespace before ':' (for compliance with black)
-    E203,
