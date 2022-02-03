@@ -190,10 +190,12 @@ class Pulse:
 
     def fall_time(self, channel: Channel) -> int:
         """Calculates the extra time needed to ramp down to zero."""
-        return channel.rise_time + max(
+        aligned_start_extra_time = channel.rise_time
+        end_extra_time = max(
             self.amplitude.modulation_buffers(channel)[1],
             self.detuning.modulation_buffers(channel)[1],
         )
+        return aligned_start_extra_time + end_extra_time
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
