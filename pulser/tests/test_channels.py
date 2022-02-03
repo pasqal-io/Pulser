@@ -17,7 +17,7 @@ import pytest
 
 import pulser
 from pulser.channels import Raman, Rydberg
-from pulser.waveforms import ConstantWaveform
+from pulser.waveforms import ConstantWaveform, BlackmanWaveform
 
 
 def test_device_channels():
@@ -97,3 +97,12 @@ def test_modulation():
     tr = raman_local.rise_time
     assert len(out_) == wf.duration + 2 * tr
     assert raman_local.calc_modulation_buffer(wf.samples, out_) == (tr, tr)
+
+    wf2 = BlackmanWaveform(800, np.pi)
+    side_buffer_len = 45
+    out_ = raman_local.modulate(wf2.samples)
+    assert len(out_) == wf2.duration + 2 * tr  # modulate() does not truncate
+    assert raman_local.calc_modulation_buffer(wf2.samples, out_) == (
+        side_buffer_len,
+        side_buffer_len,
+    )

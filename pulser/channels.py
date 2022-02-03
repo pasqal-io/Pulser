@@ -26,6 +26,10 @@ from scipy.fft import fft, ifft, fftfreq
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
 
+# Conversion factor from modulation bandwith to rise time
+# For more info, see https://tinyurl.com/bdeumc8k
+MODBW_TO_TR = 0.48
+
 
 @dataclass(init=True, repr=False, frozen=True)
 class Channel:
@@ -81,7 +85,7 @@ class Channel:
         a step change in the input.
         """
         if self.mod_bandwidth:
-            return int(0.48 / self.mod_bandwidth * 1e3)
+            return int(MODBW_TO_TR / self.mod_bandwidth * 1e3)
         else:
             return 0
 
@@ -199,11 +203,14 @@ class Channel:
                 stacklevel=2,
             )
             return input_samples
+
+        # The cutoff frequency (fc) and the modulation transfer function
+        # are defined in https://tinyurl.com/bdeumc8k
         fc = self.mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
         if keep_ends:
-            samples = np.pad(input_samples, (2 * self.rise_time,), mode="edge")
+            samples = np.pad(input_samples, 2 * self.rise_time, mode="edge")
         else:
-            samples = np.pad(input_samples, (self.rise_time,))
+            samples = np.pad(input_samples, self.rise_time)
         freqs = fftfreq(samples.size)
         modulation = np.exp(-(freqs**2) / fc**2)
         mod_samples = ifft(fft(samples) * modulation).real
@@ -230,7 +237,7 @@ class Channel:
                 the input and modulated samples at the end points.
 
         Returns:
-            tuple[int, int]: The minimum buffer times at the left and right of
+            tuple[int, int]: The minimum buffer times at the start and end of
             the samples, in ns.
         """
         if not self.mod_bandwidth:
@@ -239,13 +246,19 @@ class Channel:
             )
 
         tr = self.rise_time
-        samples = np.pad(input_samples, (tr,))
+        samples = np.pad(input_samples, tr)
         diffs = np.abs(samples - mod_samples) <= max_allowed_diff
         try:
+            # Finds the last index in the start buffer that's below the max
+            # allowed diff. Considers that the waveform could start at the next
+            # indice (hence the -1, since we are subtracting from tr)
             start = tr - np.argwhere(diffs[:tr])[-1][0] - 1
         except IndexError:
             start = tr
         try:
+            # Finds the first index in the end buffer that's below the max
+            # allowed diff. The index value found matches the minimum length
+            # for this end buffer.
             end = np.argwhere(diffs[-tr:])[0][0]
         except IndexError:
             end = tr

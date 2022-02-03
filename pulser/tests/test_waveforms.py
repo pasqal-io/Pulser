@@ -428,3 +428,5 @@ def test_modulation():
         rydberg_global.rise_time,
     )
     assert len(mod_samples) == constant.duration + 2 * rydberg_global.rise_time
+    assert np.isclose(np.sum(mod_samples) * 1e-3, constant.integral)
+    assert max(np.abs(mod_samples)) < np.abs(constant[0])

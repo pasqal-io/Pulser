@@ -170,10 +170,10 @@ class Waveform(ABC):
         Returns:
             numpy.ndarray: The array of samples after modulation.
         """
-        left, right = self.modulation_buffers(channel)
+        start, end = self.modulation_buffers(channel)
         mod_samples = self._modulated_samples(channel)
         tr = channel.rise_time
-        trim = slice(tr - left, len(mod_samples) - tr + right)
+        trim = slice(tr - start, len(mod_samples) - tr + end)
         return cast(np.ndarray, mod_samples[trim])
 
     @functools.lru_cache()
@@ -184,7 +184,7 @@ class Waveform(ABC):
             channel (Channel): The channel modulating the waveform.
 
         Returns:
-            tuple[int, int]: The minimum buffer times at the left and right of
+            tuple[int, int]: The minimum buffer times at the start and end of
             the samples, in ns.
         """
         if not channel.mod_bandwidth:
@@ -314,21 +314,23 @@ class Waveform(ABC):
         ts = np.arange(len(samples)) + start_t
         if not channel:
             # Adds zero on both ends to show rise and fall
-            samples = np.pad(samples, (1,))
+            samples = np.pad(samples, 1)
             # Repeats the times on the edges once
-            ts = np.pad(ts, (1,), mode="edge")
+            ts = np.pad(ts, 1, mode="edge")
 
         if color:
-            if ylabel:
-                ax.set_ylabel(ylabel, color=color, fontsize=14)
-            ax.plot(ts, samples, color=color, label=label)
+            color_dict = {"color": color}
+            hline_color = color
             ax.tick_params(axis="y", labelcolor=color)
-            ax.axhline(0, color=color, linestyle=":", linewidth=0.5)
         else:
-            if ylabel:
-                ax.set_ylabel(ylabel, fontsize=14)
-            ax.plot(ts, samples, label=label)
-            ax.axhline(0, color="black", linestyle=":", linewidth=0.5)
+            color_dict = {}
+            hline_color = "black"
+
+        if ylabel:
+            ax.set_ylabel(ylabel, fontsize=14, **color_dict)
+        ax.plot(ts, samples, label=label, **color_dict)
+        ax.axhline(0, color=hline_color, linestyle=":", linewidth=0.5)
+
         if label:
             plt.legend()
 
