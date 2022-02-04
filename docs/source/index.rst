@@ -88,7 +88,6 @@ computers and simulators, check the pages in :doc:`review`.
 
    tutorials/cz_gate
    tutorials/qaoa_mis
-   tutorials/qek
 
 .. toctree::
    :maxdepth: 3

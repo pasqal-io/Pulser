@@ -40,7 +40,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
     """
     # The minimum time axis length is 100 ns
     total_duration = max(seq.get_duration(), 100)
-    data = {}
+    data: dict[str, Any] = {}
     for ch, sch in seq._schedule.items():
         time = [-1]  # To not break the "time[-1]" later on
         amp = []
@@ -139,7 +139,7 @@ def draw_sequence(
         elif value == 0:
             return "0"  # pragma: no cover - just for safety
         else:
-            return fr"{value:.2g}$\pi$"
+            return rf"{value:.2g}$\pi$"
 
     n_channels = len(seq._channels)
     if not n_channels:
@@ -154,13 +154,13 @@ def draw_sequence(
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    pos = np.array(seq._register._coords)
+    pos = np.array(seq.register._coords)
 
     # Draw masked register
     if draw_register:
-        if isinstance(seq._register, Register3D):
+        if isinstance(seq.register, Register3D):
             labels = "xyz"
-            fig_reg, axes_reg = seq._register._initialize_fig_axes_projection(
+            fig_reg, axes_reg = seq.register._initialize_fig_axes_projection(
                 pos,
                 blockade_radius=35,
                 draw_half_radius=True,
@@ -170,10 +170,10 @@ def draw_sequence(
             for ax_reg, (ix, iy) in zip(
                 axes_reg, combinations(np.arange(3), 2)
             ):
-                seq._register._draw_2D(
+                seq.register._draw_2D(
                     ax=ax_reg,
                     pos=pos,
-                    ids=seq._register._ids,
+                    ids=seq.register._ids,
                     plane=(ix, iy),
                     masked_qubits=seq._slm_mask_targets,
                 )
@@ -184,16 +184,16 @@ def draw_sequence(
                     + "-plane"
                 )
 
-        elif isinstance(seq._register, Register):
-            fig_reg, ax_reg = seq._register._initialize_fig_axes(
+        elif isinstance(seq.register, Register):
+            fig_reg, ax_reg = seq.register._initialize_fig_axes(
                 pos,
                 blockade_radius=35,
                 draw_half_radius=True,
             )
-            seq._register._draw_2D(
+            seq.register._draw_2D(
                 ax=ax_reg,
                 pos=pos,
-                ids=seq._register._ids,
+                ids=seq.register._ids,
                 masked_qubits=seq._slm_mask_targets,
             )
             ax_reg.set_title("Masked register", pad=10)
@@ -343,12 +343,12 @@ def draw_sequence(
                     area_fmt = (
                         r"A: $\pi$"
                         if round(area_val, 2) == 1
-                        else fr"A: {area_val:.2g}$\pi$"
+                        else rf"A: {area_val:.2g}$\pi$"
                     )
                     if not draw_phase:
                         txt = area_fmt
                     else:
-                        phase_fmt = fr"$\phi$: {phase_str(phase_val)}"
+                        phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
                         txt = "\n".join([phase_fmt, area_fmt])
                     a.text(
                         x_plot,

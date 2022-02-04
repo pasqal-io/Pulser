@@ -263,7 +263,7 @@ class Simulation:
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
             shape = state.shape[0]
-            legal_shape = self.dim ** self._size
+            legal_shape = self.dim**self._size
             legal_dims = [[self.dim] * self._size, [1] * self._size]
             if shape != legal_shape:
                 raise ValueError(
@@ -645,7 +645,7 @@ class Simulation:
             1/hbar factor.
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            U = 0.5 * self._seq._device.interaction_coeff / dist ** 6
+            U = 0.5 * self._seq._device.interaction_coeff / dist**6
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
         def make_xy_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
@@ -662,18 +662,15 @@ class Simulation:
             if mag_norm < 1e-8:
                 cosine = 0.0
             else:
-                cosine = (
-                    np.dot(
-                        (self._qdict[q1] - self._qdict[q2]),
-                        self._seq.magnetic_field[:coords_dim],
-                    )
-                    / (dist * mag_norm)
-                )
+                cosine = np.dot(
+                    (self._qdict[q1] - self._qdict[q2]),
+                    self._seq.magnetic_field[:coords_dim],
+                ) / (dist * mag_norm)
             U = (
                 0.5
                 * self._seq._device.interaction_coeff_xy
-                * (1 - 3 * cosine ** 2)
-                / dist ** 3
+                * (1 - 3 * cosine**2)
+                / dist**3
             )
             return U * self.build_operator(
                 [("sigma_du", [q1]), ("sigma_ud", [q2])]
