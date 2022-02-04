@@ -33,7 +33,8 @@ SUPPORTED_MODULES = {
     "_operator": SUPPORTED_OPERATORS,
     "operator": SUPPORTED_OPERATORS,
     "numpy": ("array",),
-    "pulser.register": ("Register", "Register3D"),
+    "pulser.register.register": ("Register",),
+    "pulser.register.register3d": ("Register3D",),
     "pulser.devices": tuple(
         [dev.name for dev in pulser.devices._valid_devices] + ["MockDevice"]
     ),
