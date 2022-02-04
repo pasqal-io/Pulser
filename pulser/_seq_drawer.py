@@ -295,7 +295,11 @@ def draw_sequence(
             cs_detuning = CubicSpline(solver_time, yb2)
             yaeff = cs_amp(teff)
             ybeff = cs_detuning(teff)
-        if draw_modulation and (ch_obj.mod_bandwidth or not draw_input):
+
+        draw_output = draw_modulation and (
+            ch_obj.mod_bandwidth or not draw_input
+        )
+        if draw_output:
             t_diffs = np.diff(times)
             input_a = np.repeat(ya[1:], t_diffs)
             input_b = np.repeat(yb[1:], t_diffs)
@@ -330,7 +334,7 @@ def draw_sequence(
         elif draw_input:
             a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
             b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
-        if draw_modulation and (ch_obj.mod_bandwidth or not draw_input):
+        if draw_output:
             a.plot(ya_mod, color="darkred", linewidth=0.8)
             b.plot(yb_mod, color="gold", linewidth=0.8)
             a.fill_between(
