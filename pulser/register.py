@@ -640,7 +640,7 @@ class Register(BaseRegister):
             )
 
         full_layers = int((-3.0 + np.sqrt(9 + 12 * (n_qubits - 1))) / 6.0)
-        atoms_left = n_qubits - 1 - (full_layers ** 2 + full_layers) * 3
+        atoms_left = n_qubits - 1 - (full_layers**2 + full_layers) * 3
 
         return cls._hexagon_helper(full_layers, atoms_left, spacing, prefix)
 
