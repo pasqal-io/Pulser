@@ -8,9 +8,9 @@ The steps to take will depend on what you want to do, but generally you'll want 
 
 1. Do a quick search for keywords over the existing issues to ensure yours has not been added yet.
 2. If you can't find your issue already listed, create a new one. Please try to be as clear and detailed as possible in your description.
+
 - If you just want to give a suggestion or report a bug, that's already excellent and we thank you for it! Your issue will be listed and, hopefully, someone will take care of it at some point.
 - However, you may also want to be the one solving your issue, which would be even better! In these cases, you would proceed by preparing a [Pull Request](#making-a-pull-request).
-
 
 ## Making a Pull Request
 
@@ -19,12 +19,15 @@ We're thrilled that you want to contribute to Pulser! For general contributions,
 Here are the steps you should follow to make your contribution:
 
 0. Fork the Pulser repository and add the main Pulser repository as the `upstream`. You only have to do this once and you do so by clicking the "Fork" button at the upper right corner of the [repo page](https://github.com/pasqal-io/Pulser). This will create a new GitHub repo at `https://github.com/USERNAME/Pulser`, where `USERNAME` is your GitHub ID. Then, `cd` into the folder where you would like to place your new fork and clone it by doing:
+
     ```bash
     git clone https://github.com/USERNAME/Pulser.git
     ```
+
     **Note**: `USERNAME` should be replaced by your own GitHub ID.
 
    Then, you'll want to go into the directory of your brand new Pulser fork and add the main Pulser repository as the `upstream` by running:
+
    ```bash
    git remote add upstream https://github.com/pasqal-io/Pulser.git
    ```
@@ -32,10 +35,12 @@ Here are the steps you should follow to make your contribution:
 1. Have the related issue assigned to you. We suggest that you work only on issues that have been assigned to you; by doing this, you make sure to be the only one working on this and we prevent everyone from doing duplicate work. If a related issue does not exist yet, consult the [section above](#reporting-a-bug-or-suggesting-a-feature) to see how to proceed.
 
 2. You'll want to create a new branch where you will do your changes. The starting point will be `upstream/develop`, which is where you'll ultimately merge your changes. Inside your fork's root folder, run:
+
     ```bash
     git fetch upstream
     git checkout -b branch-name-here upstream/develop
     ```
+
     This will create and checkout the new branch, where you will do your changes.
 
     **Note**: `branch-name-here` should be replaced by the name you'll give your branch. Try to be descriptive, pick a name that identifies your new feature.
@@ -43,12 +48,15 @@ Here are the steps you should follow to make your contribution:
 3. Do your work and commit the changes to this new branch. Try to make the first line of your commit messages short but informative; in case you want to go into more detail, you have the option to do so in the next lines.
 
 4. At this point, your branch might have drifted out of sync with Pulser's `develop` branch (the `upstream`). By running
+
     ```shell
     git pull upstream develop
     ```
+
    you will fetch the latest changes in `upstream/develop` and merge them with your working branch, at which point you'll have to solve any merge conflicts that may    arise. This will keep your working branch in sync with `upstream/develop`.
 
 5. Finally, you push your code to your local branch:
+
     ```bash
     git push origin branch-name-here
     ```
@@ -66,29 +74,37 @@ pip install -r requirements.txt
 ```
 
 - **Tests**: We use [`pytest`](https://docs.pytest.org/en/latest/) to run unit tests on our code. If your changes break existing tests, you'll have to update these tests accordingly. Additionally, we aim for 100% coverage over our code. Try to cover all the new lines of code with simple tests, which should be placed in the `Pulser/pulser/tests` folder. To run all tests and check coverage, run:
+
     ```bash
     pytest --cov pulser
     ```
+
     All lines that are not meant to be tested must be tagged with `# pragma: no cover`. Use it sparingly,
     every decision to leave a line uncovered must be well justified.
 
 - **Style**: We use [`flake8`](https://flake8.pycqa.org/en/latest/) and the `flake8-docstrings` extension to enforce PEP8 style guidelines. To lint your code with `flake8`, simply run:
+
     ```bash
     flake8 .
     ```
+
     To help you keep your code compliant with PEP8 guidelines effortlessly, we suggest you look into installing a linter for your text editor of choice.
 
 - **Format**: We use the [`black`](https://black.readthedocs.io/en/stable/index.html) auto-formatter to enforce a consistent style throughout the entire code base. It will also ensure your code is compliant with the formatting enforced by `flake8` for you. To automatically format your code with black, just run:
+
     ```bash
     black .
     ```
+
     Note that some IDE's and text editors support plug-ins which auto-format your code with `black` upon saving, so you don't have to worry about code format at all.
 
 - **Type hints**: We use [mypy](http://mypy-lang.org/) to type check the code. Your code should have type
 annotations and pass the type checks from running:
+
     ```bash
     mypy
     ```
+
     In case `mypy` produces a false positive, you can ignore the respective line by adding the `# type: ignore` annotation.
 
     **Note**: Type hints for `numpy` have only been added in version 1.20. Make sure you have `numpy >= 1.20`
