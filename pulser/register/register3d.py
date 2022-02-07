@@ -26,9 +26,10 @@ from scipy.spatial import KDTree
 
 from pulser.register.base_register import BaseRegister
 from pulser.register.register import Register
+from pulser.register._reg_drawer import RegDrawer
 
 
-class Register3D(BaseRegister):
+class Register3D(BaseRegister, RegDrawer):
     """A 3D quantum register containing a set of qubits.
 
     Args:
