@@ -33,6 +33,7 @@ setup(
         ],
     },
     packages=find_packages(),
+    package_data={"pulser": ["py.typed"]}
     include_package_data=True,
     description="A pulse-level composer for neutral-atom quantum devices.",
     long_description=open("README.md").read(),
@@ -45,4 +46,5 @@ setup(
         "Programming Language :: Python :: 3",
     ],
     url="https://github.com/pasqal-io/Pulser",
+    zip_safe=False
 )
