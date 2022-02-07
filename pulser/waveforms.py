@@ -15,25 +15,25 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import functools
 import inspect
 import itertools
 import sys
+import warnings
+from abc import ABC, abstractmethod
 from sys import version_info
 from types import FunctionType
-from typing import Any, cast, Optional, Tuple, Union
-import warnings
+from typing import Any, Optional, Tuple, Union, cast
 
-from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.typing import ArrayLike
 import scipy.interpolate as interpolate
+from matplotlib.axes import Axes
+from numpy.typing import ArrayLike
 
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
-from pulser.json.utils import obj_to_dict
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from functools import cached_property

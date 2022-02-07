@@ -16,16 +16,16 @@
 from __future__ import annotations
 
 import collections.abc  # To use collections.abc.Sequence
-from collections.abc import Iterable
 import dataclasses
-from typing import Union, Any, cast
+from collections.abc import Iterable
+from typing import Any, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
-from pulser.json.utils import obj_to_dict
 
 
 @dataclasses.dataclass(frozen=True, eq=False)

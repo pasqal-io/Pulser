@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import cast, ClassVar, Optional
 import warnings
+from dataclasses import dataclass
+from typing import ClassVar, Optional, cast
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")

@@ -14,7 +14,5 @@
 """Classes for qubit register definition."""
 
 from pulser.register.base_register import QubitId
-
 from pulser.register.register import Register
-
 from pulser.register.register3d import Register3D

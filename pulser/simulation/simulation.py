@@ -15,30 +15,29 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, cast, Any
-from collections.abc import Mapping
 import itertools
+import warnings
 from collections import Counter
+from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import asdict
-import warnings
+from typing import Any, Optional, Union, cast
 
-import qutip
-import numpy as np
-from numpy.typing import ArrayLike
 import matplotlib.pyplot as plt
+import numpy as np
+import qutip
+from numpy.typing import ArrayLike
 
 from pulser import Pulse, Sequence
+from pulser._seq_drawer import draw_sequence
 from pulser.register import QubitId
+from pulser.sequence import _TimeSlot
+from pulser.simulation.simconfig import SimConfig
 from pulser.simulation.simresults import (
-    SimulationResults,
     CoherentResults,
     NoisyResults,
+    SimulationResults,
 )
-from pulser.simulation.simconfig import SimConfig
-from pulser._seq_drawer import draw_sequence
-from pulser.sequence import _TimeSlot
-
 
 SUPPORTED_NOISE = {
     "ising": {"dephasing", "doppler", "amplitude", "SPAM"},

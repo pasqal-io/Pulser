@@ -18,15 +18,15 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser import Sequence, Pulse, Register, Register3D
+from pulser import Pulse, Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
-    RampWaveform,
     InterpolatedWaveform,
+    RampWaveform,
 )
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix="q")

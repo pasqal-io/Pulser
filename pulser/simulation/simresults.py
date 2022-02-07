@@ -15,17 +15,17 @@
 
 from __future__ import annotations
 
-from collections import Counter
 import collections.abc
 from abc import ABC, abstractmethod
+from collections import Counter
 from functools import lru_cache
-from typing import Optional, Union, cast, Tuple, Mapping
+from typing import Mapping, Optional, Tuple, Union, cast
 
 import matplotlib.pyplot as plt
-import qutip
-from qutip.piqs import isdiagonal
 import numpy as np
+import qutip
 from numpy.typing import ArrayLike
+from qutip.piqs import isdiagonal
 
 
 class SimulationResults(ABC):

@@ -15,13 +15,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from functools import partialmethod
-from itertools import chain
 import inspect
 import operator
 import warnings
-from typing import Any, Union, TYPE_CHECKING
+from collections.abc import Callable
+from functools import partialmethod
+from itertools import chain
+from typing import TYPE_CHECKING, Any, Union
 
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
