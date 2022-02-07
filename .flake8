@@ -6,8 +6,6 @@ extend-ignore =
     D105,
     # E203 whitespace before ':' (for compliance with black)
     E203,
-# for compliance with black
-max-line-length = 88
 per-file-ignores =
   # D100 Missing docstring in public module
   # D103 Missing docstring in public function
