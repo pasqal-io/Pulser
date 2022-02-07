@@ -312,7 +312,7 @@ class Waveform(ABC):
             else self.modulated_samples(channel)
         )
         ts = np.arange(len(samples)) + start_t
-        if not channel:
+        if not channel and start_t:
             # Adds zero on both ends to show rise and fall
             samples = np.pad(samples, 1)
             # Repeats the times on the edges once
