@@ -9,6 +9,7 @@ typing-extensions; python_version == '3.7'
 
 # tests
 black
+black[jupyter]
 flake8
 flake8-docstrings
 mypy == 0.921
