@@ -38,10 +38,16 @@ class RegDrawer:
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         masked_qubits: set[QubitId] = set(),
+        are_traps: bool = False,
     ) -> None:
         ix, iy = plane
 
-        ax.scatter(pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen")
+        if are_traps:
+            params = dict(s=50, edgecolors="black", facecolors="none")
+        else:
+            params = dict(s=30, c="darkgreen")
+
+        ax.scatter(pos[:, ix], pos[:, iy], alpha=0.7, **params)
 
         # Draw square halo around masked qubits
         if masked_qubits:
@@ -124,6 +130,7 @@ class RegDrawer:
                     va=v_al,
                     wrap=True,
                     bbox=bb,
+                    fontsize=12,
                 )
                 txt._get_wrap_line_width = lambda: 50.0
 
@@ -167,3 +174,60 @@ class RegDrawer:
             diffs[diffs < blockade_radius] = blockade_radius
 
         return np.array(diffs)
+
+    @staticmethod
+    def _initialize_fig_axes(
+        pos: np.ndarray,
+        blockade_radius: Optional[float] = None,
+        draw_half_radius: bool = False,
+    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
+        """Creates the Figure and Axes for drawing the register."""
+        diffs = RegDrawer._register_dims(
+            pos,
+            blockade_radius=blockade_radius,
+            draw_half_radius=draw_half_radius,
+        )
+        big_side = max(diffs)
+        proportions = diffs / big_side
+        Ls = proportions * min(
+            big_side / 4, 10
+        )  # Figsize is, at most, (10,10)
+        fig, axes = plt.subplots(figsize=Ls)
+
+        return (fig, axes)
+
+    @staticmethod
+    def _draw_checks(
+        n_atoms: int,
+        blockade_radius: Optional[float] = None,
+        draw_graph: bool = True,
+        draw_half_radius: bool = False,
+    ) -> None:
+        """Checks common in all register drawings.
+
+        Args:
+            n_atoms(int): Number of atoms in the register.
+            blockade_radius(float, default=None): The distance (in μm) between
+                atoms below the Rydberg blockade effect occurs.
+            draw_half_radius(bool, default=False): Whether or not to draw the
+                half the blockade radius surrounding each atoms. If `True`,
+                requires `blockade_radius` to be defined.
+            draw_graph(bool, default=True): Whether or not to draw the
+                interaction between atoms as edges in a graph. Will only draw
+                if the `blockade_radius` is defined.
+        """
+        # Check spacing
+        if blockade_radius is not None and blockade_radius <= 0.0:
+            raise ValueError(
+                "Blockade radius (`blockade_radius` ="
+                f" {blockade_radius})"
+                " must be greater than 0."
+            )
+
+        if draw_half_radius:
+            if blockade_radius is None:
+                raise ValueError("Define 'blockade_radius' to draw.")
+            if n_atoms < 2:
+                raise NotImplementedError(
+                    "Needs more than one atom to draw the blockade radius."
+                )

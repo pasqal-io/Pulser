@@ -259,6 +259,7 @@ class Register3D(BaseRegister, RegDrawer):
             radius because it helps in seeing the interactions between atoms.
         """
         super()._draw_checks(
+            len(self._ids),
             blockade_radius=blockade_radius,
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,

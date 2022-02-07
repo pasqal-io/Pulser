@@ -18,18 +18,34 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Iterable
 from collections.abc import Sequence as abcSequence
-from typing import Any, cast, Optional, Union, TypeVar, Type
+from typing import (
+    Any,
+    cast,
+    Optional,
+    Union,
+    TypeVar,
+    Type,
+    NamedTuple,
+    TYPE_CHECKING,
+)
 
-import matplotlib.pyplot as plt
-from matplotlib import collections as mc
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.spatial import KDTree
 
 from pulser.json.utils import obj_to_dict
 
+if TYPE_CHECKING:
+    from pulser.register.register_layout import RegisterLayout
+
 T = TypeVar("T", bound="BaseRegister")
 QubitId = Union[int, str]
+
+
+class _LayoutInfo(NamedTuple):
+    """Auxiliary class to store the register layout information."""
+
+    layout: RegisterLayout
+    trap_ids: tuple[int, ...]
 
 
 class BaseRegister(ABC):
@@ -50,6 +66,7 @@ class BaseRegister(ABC):
         self._ids = list(qubits.keys())
         self._coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = 0
+        self._layout_info: Optional[_LayoutInfo] = None
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
@@ -104,42 +121,17 @@ class BaseRegister(ABC):
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
+    def _set_layout(
+        self, register_layout: RegisterLayout, *trap_ids: int
     ) -> None:
+        trap_coords = register_layout.coords
+        for reg_coord, trap_id in zip(self._coords, trap_ids):
+            if np.any(reg_coord != trap_coords[trap_id]):
+                raise ValueError(
+                    "The chosen traps from the RegisterLayout don't match this"
+                    " register's coordinates."
                 )
-
-    def _draw_checks(
-        self,
-        blockade_radius: Optional[float] = None,
-        draw_graph: bool = True,
-        draw_half_radius: bool = False,
-    ) -> None:
-        """Checks common in all register drawings.
-
-        Keyword Args:
-            blockade_radius(float, default=None): The distance (in μm) between
-                atoms below the Rydberg blockade effect occurs.
-            draw_half_radius(bool, default=False): Whether or not to draw the
-                half the blockade radius surrounding each atoms. If `True`,
-                requires `blockade_radius` to be defined.
-            draw_graph(bool, default=True): Whether or not to draw the
-                interaction between atoms as edges in a graph. Will only draw
-                if the `blockade_radius` is defined.
-        """
-        # Check spacing
-        if blockade_radius is not None and blockade_radius <= 0.0:
-            raise ValueError(
-                "Blockade radius (`blockade_radius` ="
-                f" {blockade_radius})"
-                " must be greater than 0."
-            )
-
-        if draw_half_radius:
-            if blockade_radius is None:
-                raise ValueError("Define 'blockade_radius' to draw.")
-            if len(self._ids) == 1:
-                raise NotImplementedError(
-                    "Needs more than one atom to draw the blockade radius."
-                )
+        self._layout_info = _LayoutInfo(register_layout, trap_ids)
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:

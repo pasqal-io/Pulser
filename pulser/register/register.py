@@ -400,27 +400,6 @@ class Register(BaseRegister, RegDrawer):
         )
         self._coords = [rot @ v for v in self._coords]
 
-    def _initialize_fig_axes(
-        self,
-        pos: np.ndarray,
-        blockade_radius: Optional[float] = None,
-        draw_half_radius: bool = False,
-    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
-        """Creates the Figure and Axes for drawing the register."""
-        diffs = super()._register_dims(
-            pos,
-            blockade_radius=blockade_radius,
-            draw_half_radius=draw_half_radius,
-        )
-        big_side = max(diffs)
-        proportions = diffs / big_side
-        Ls = proportions * min(
-            big_side / 4, 10
-        )  # Figsize is, at most, (10,10)
-        fig, axes = plt.subplots(figsize=Ls)
-
-        return (fig, axes)
-
     def draw(
         self,
         with_labels: bool = True,
@@ -456,6 +435,7 @@ class Register(BaseRegister, RegDrawer):
             radius because it helps in seeing the interactions between atoms.
         """
         super()._draw_checks(
+            len(self._ids),
             blockade_radius=blockade_radius,
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
