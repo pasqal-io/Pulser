@@ -90,7 +90,7 @@ pip install -r requirements.txt
 
     To help you keep your code compliant with PEP8 guidelines effortlessly, we suggest you look into installing a linter for your text editor of choice.
 
-- **Format**: We use the [`black`](https://black.readthedocs.io/en/stable/index.html) auto-formatter to enforce a consistent style throughout the entire code base. It will also ensure your code is compliant with the formatting enforced by `flake8` for you. To automatically format your code with black, just run:
+- **Format**: We use the [`black`](https://black.readthedocs.io/en/stable/index.html) auto-formatter to enforce a consistent style throughout the entire code base, including the Jupyter notebooks (so make sure to install `black[jupyter]`). It will also ensure your code is compliant with the formatting enforced by `flake8` for you. To automatically format your code with black, just run:
 
     ```bash
     black .
@@ -98,7 +98,13 @@ pip install -r requirements.txt
 
     Note that some IDE's and text editors support plug-ins which auto-format your code with `black` upon saving, so you don't have to worry about code format at all.
 
-- **Type hints**: We use [mypy](http://mypy-lang.org/) to type check the code. Your code should have type
+- **Import sorting**: We use [`isort`](https://pycqa.github.io/isort/) to automatically sort all library imports. You can do the same by running:
+
+    ```bash
+    isort .
+    ```
+
+- **Type hints**: We use [`mypy`](http://mypy-lang.org/) to type check the code. Your code should have type
 annotations and pass the type checks from running:
 
     ```bash
