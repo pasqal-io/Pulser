@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pulser.channels import Microwave, Raman, Rydberg
 from pulser.devices._device_datacls import Device
-from pulser.channels import Rydberg, Raman, Microwave
-
 
 MockDevice = Device(
     name="MockDevice",

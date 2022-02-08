@@ -16,8 +16,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Optional
 from itertools import combinations
+from typing import Any, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np

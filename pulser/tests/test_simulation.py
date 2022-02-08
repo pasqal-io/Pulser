@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch
-
 from collections import Counter
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 import qutip
 
-from pulser import Sequence, Pulse, Register
+from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
-from pulser.waveforms import BlackmanWaveform, RampWaveform, ConstantWaveform
 from pulser.simulation import SimConfig, Simulation
+from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
 q_dict = {
     "control1": np.array([-4.0, 0.0]),

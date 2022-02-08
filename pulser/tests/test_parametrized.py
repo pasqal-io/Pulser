@@ -21,7 +21,6 @@ from pulser import Pulse
 from pulser.parametrized import Variable
 from pulser.waveforms import BlackmanWaveform, CompositeWaveform
 
-
 a = Variable("a", float)
 b = Variable("b", int, size=2)
 b._assign([-1.5, 1.5])

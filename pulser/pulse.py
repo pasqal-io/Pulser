@@ -15,19 +15,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import functools
 import itertools
-from typing import Any, cast, Union
+from dataclasses import dataclass, field
+from typing import Any, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.channels import Channel
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
-from pulser.waveforms import Waveform, ConstantWaveform
-from pulser.json.utils import obj_to_dict
+from pulser.waveforms import ConstantWaveform, Waveform
 
 
 @dataclass(init=False, repr=False, frozen=True)

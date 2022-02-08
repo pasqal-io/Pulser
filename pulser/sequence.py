@@ -15,31 +15,31 @@
 
 from __future__ import annotations
 
+import copy
+import json
+import os
+import warnings
 from collections import namedtuple
 from collections.abc import Callable, Generator, Iterable
-import copy
 from functools import wraps
 from itertools import chain
-import json
 from sys import version_info
-from typing import Any, cast, NamedTuple, Optional, Tuple, TypeVar, Union
-import warnings
-import os
+from typing import Any, NamedTuple, Optional, Tuple, TypeVar, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
+from pulser._seq_drawer import draw_sequence
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
-from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
-from pulser._seq_drawer import draw_sequence
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args

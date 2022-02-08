@@ -15,18 +15,18 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, cast, Optional, Union
+from itertools import combinations
+from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 import numpy as np
+from matplotlib.figure import Figure
 from scipy.interpolate import CubicSpline
-from itertools import combinations
 
 import pulser
-from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
-from pulser.pulse import Pulse
 from pulser import Register, Register3D
+from pulser.pulse import Pulse
+from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 
 
 def gather_data(seq: pulser.sequence.Sequence) -> dict:
