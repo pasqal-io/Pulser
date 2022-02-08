@@ -17,7 +17,7 @@ import pytest
 
 import pulser
 from pulser.channels import Raman, Rydberg
-from pulser.waveforms import ConstantWaveform, BlackmanWaveform
+from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
 
 def test_device_channels():

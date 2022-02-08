@@ -18,19 +18,19 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from scipy.interpolate import interp1d, PchipInterpolator
+from scipy.interpolate import PchipInterpolator, interp1d
 
-from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.channels import Rydberg
-from pulser.parametrized import Variable, ParamObj
+from pulser.json.coders import PulserDecoder, PulserEncoder
+from pulser.parametrized import ParamObj, Variable
 from pulser.waveforms import (
+    BlackmanWaveform,
+    CompositeWaveform,
     ConstantWaveform,
+    CustomWaveform,
+    InterpolatedWaveform,
     KaiserWaveform,
     RampWaveform,
-    BlackmanWaveform,
-    CustomWaveform,
-    CompositeWaveform,
-    InterpolatedWaveform,
 )
 
 np.random.seed(20201105)

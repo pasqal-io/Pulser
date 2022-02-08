@@ -21,7 +21,7 @@ from typing import ClassVar, Optional, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.fft import fft, ifft, fftfreq
+from scipy.fft import fft, fftfreq, ifft
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
