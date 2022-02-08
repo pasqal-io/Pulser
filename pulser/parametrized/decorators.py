@@ -22,7 +22,6 @@ from typing import Any, TypeVar, cast
 
 from pulser.parametrized import Parametrized, ParamObj
 
-
 F = TypeVar("F", bound=Callable)
 
 

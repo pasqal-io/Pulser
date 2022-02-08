@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
-from json import JSONEncoder, JSONDecoder
+from json import JSONDecoder, JSONEncoder
 from typing import Any, cast
 
 import numpy as np

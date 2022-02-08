@@ -17,7 +17,7 @@ import copy
 import numpy as np
 import pytest
 
-from pulser import Sequence, Register, Pulse
+from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.parametrized import Variable
 from pulser.waveforms import BlackmanWaveform

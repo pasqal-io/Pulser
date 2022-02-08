@@ -16,13 +16,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Iterable
+from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
-from typing import Any, cast, Optional, Union, TypeVar, Type
+from typing import Any, Optional, Type, TypeVar, Union, cast
 
 import matplotlib.pyplot as plt
-from matplotlib import collections as mc
 import numpy as np
+from matplotlib import collections as mc
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 

@@ -14,9 +14,8 @@
 """Definitions of real devices."""
 import numpy as np
 
-from pulser.devices._device_datacls import Device
 from pulser.channels import Raman, Rydberg
-
+from pulser.devices._device_datacls import Device
 
 Chadoq2 = Device(
     name="Chadoq2",

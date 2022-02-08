@@ -17,7 +17,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser import Sequence, Register, Register3D
+from pulser import Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserEncoder, PulserDecoder
 from pulser.json.supported import validate_serialization

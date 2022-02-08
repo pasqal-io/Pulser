@@ -4,18 +4,20 @@ qutip
 scipy
 
 # version specific
-typing-extensions; python_version == '3.7'
 backports.cached-property; python_version == '3.7'
+typing-extensions; python_version == '3.7'
 
 # tests
-pytest
-pytest-cov
+black
+black[jupyter]
 flake8
 flake8-docstrings
+isort
 mypy == 0.921
-black
+pytest
+pytest-cov
 
 # tutorials
 notebook
-scikit-optimize
 python-igraph
+scikit-optimize
