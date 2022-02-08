@@ -19,8 +19,16 @@ import warnings
 from dataclasses import dataclass
 from typing import ClassVar, Optional, cast
 
+import numpy as np
+from numpy.typing import ArrayLike
+from scipy.fft import fft, ifft, fftfreq
+
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
+
+# Conversion factor from modulation bandwith to rise time
+# For more info, see https://tinyurl.com/bdeumc8k
+MODBW_TO_TR = 0.48
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -48,6 +56,7 @@ class Channel:
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
+        mod_bandwidth: The modulation bandwidth at -3dB (50% redution), in MHz.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -66,6 +75,19 @@ class Channel:
     clock_period: int = 4  # ns
     min_duration: int = 16  # ns
     max_duration: int = 67108864  # ns
+    mod_bandwidth: Optional[float] = None  # MHz
+
+    @property
+    def rise_time(self) -> int:
+        """The rise time (in ns).
+
+        Defined as the time taken to go from 10% to 90% output in response to
+        a step change in the input.
+        """
+        if self.mod_bandwidth:
+            return int(MODBW_TO_TR / self.mod_bandwidth * 1e3)
+        else:
+            return 0
 
     @classmethod
     def Local(
@@ -161,6 +183,88 @@ class Channel:
             )
         return _duration
 
+    def modulate(
+        self, input_samples: np.ndarray, keep_ends: bool = False
+    ) -> np.ndarray:
+        """Modulates the input according to the channel's modulation bandwidth.
+
+        Args:
+            input_samples (np.ndarray): The samples to modulate.
+            keep_ends (bool): Assume the end values of the samples were kept
+                constant (i.e. there is no ramp from zero on the ends).
+
+        Returns:
+            np.ndarray: The modulated output signal.
+        """
+        if not self.mod_bandwidth:
+            warnings.warn(
+                f"No modulation bandwidth defined for channel '{self}',"
+                " 'Channel.modulate()' returns the 'input_samples' unchanged.",
+                stacklevel=2,
+            )
+            return input_samples
+
+        # The cutoff frequency (fc) and the modulation transfer function
+        # are defined in https://tinyurl.com/bdeumc8k
+        fc = self.mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
+        if keep_ends:
+            samples = np.pad(input_samples, 2 * self.rise_time, mode="edge")
+        else:
+            samples = np.pad(input_samples, self.rise_time)
+        freqs = fftfreq(samples.size)
+        modulation = np.exp(-(freqs**2) / fc**2)
+        mod_samples = ifft(fft(samples) * modulation).real
+        if keep_ends:
+            # Cut off the extra ends
+            return cast(
+                np.ndarray, mod_samples[self.rise_time : -self.rise_time]
+            )
+        return cast(np.ndarray, mod_samples)
+
+    def calc_modulation_buffer(
+        self,
+        input_samples: ArrayLike,
+        mod_samples: ArrayLike,
+        max_allowed_diff: float = 1e-2,
+    ) -> tuple[int, int]:
+        """Calculates the minimal buffers needed around a modulated waveform.
+
+        Args:
+            input_samples (ArrayLike): The input samples.
+            mod_samples (ArrayLike): The modulated samples. Must be of size
+                ``len(input_samples) + 2 * self.rise_time``.
+            max_allowed_diff (float): The maximum allowed difference between
+                the input and modulated samples at the end points.
+
+        Returns:
+            tuple[int, int]: The minimum buffer times at the start and end of
+            the samples, in ns.
+        """
+        if not self.mod_bandwidth:
+            raise TypeError(
+                f"The channel {self} doesn't have a modulation bandwidth."
+            )
+
+        tr = self.rise_time
+        samples = np.pad(input_samples, tr)
+        diffs = np.abs(samples - mod_samples) <= max_allowed_diff
+        try:
+            # Finds the last index in the start buffer that's below the max
+            # allowed diff. Considers that the waveform could start at the next
+            # indice (hence the -1, since we are subtracting from tr)
+            start = tr - np.argwhere(diffs[:tr])[-1][0] - 1
+        except IndexError:
+            start = tr
+        try:
+            # Finds the first index in the end buffer that's below the max
+            # allowed diff. The index value found matches the minimum length
+            # for this end buffer.
+            end = np.argwhere(diffs[-tr:])[0][0]
+        except IndexError:
+            end = tr
+
+        return start, end
+
     def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
@@ -175,6 +279,8 @@ class Channel:
             if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
         config += f", Basis: '{self.basis}'"
+        if self.mod_bandwidth:
+            config += f", Modulation Bandwidth: {self.mod_bandwidth} MHz"
         return self.name + config + ")"
 
 
