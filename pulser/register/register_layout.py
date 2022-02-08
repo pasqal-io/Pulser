@@ -19,14 +19,14 @@ from dataclasses import dataclass
 from sys import version_info
 from typing import Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
-import matplotlib.pyplot as plt
 
-from pulser.register.base_register import QubitId, BaseRegister
+from pulser.register._reg_drawer import RegDrawer
+from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
-from pulser.register._reg_drawer import RegDrawer
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from functools import cached_property

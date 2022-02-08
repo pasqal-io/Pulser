@@ -11,20 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from copy import deepcopy
-
 from collections import Counter
+from copy import deepcopy
 
 import numpy as np
 import pytest
 import qutip
 from qutip.piqs import isdiagonal
 
-from pulser import Sequence, Pulse, Register
+from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
-from pulser.waveforms import BlackmanWaveform
-from pulser.simulation import Simulation, SimConfig
+from pulser.simulation import SimConfig, Simulation
 from pulser.simulation.simresults import CoherentResults, NoisyResults
+from pulser.waveforms import BlackmanWaveform
 
 np.random.seed(123)
 q_dict = {

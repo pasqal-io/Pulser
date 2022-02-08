@@ -16,17 +16,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Iterable
+from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
 from typing import (
-    Any,
-    cast,
-    Optional,
-    Union,
-    TypeVar,
-    Type,
-    NamedTuple,
     TYPE_CHECKING,
+    Any,
+    NamedTuple,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    cast,
 )
 
 import numpy as np

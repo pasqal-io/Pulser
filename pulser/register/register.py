@@ -23,8 +23,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
-from pulser.register.base_register import BaseRegister
 from pulser.register._reg_drawer import RegDrawer
+from pulser.register.base_register import BaseRegister
 
 
 class Register(BaseRegister, RegDrawer):

@@ -16,17 +16,17 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Optional
 from itertools import combinations
+from typing import Any, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 
+from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister
 from pulser.register.register import Register
-from pulser.register._reg_drawer import RegDrawer
 
 
 class Register3D(BaseRegister, RegDrawer):

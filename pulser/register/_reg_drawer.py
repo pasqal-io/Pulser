@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import collections as mc
 from scipy.spatial import KDTree
 

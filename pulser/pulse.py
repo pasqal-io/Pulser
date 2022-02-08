@@ -15,18 +15,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import functools
 import itertools
-from typing import Any, cast, Union
+from dataclasses import dataclass, field
+from typing import Any, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pulser.channels import Channel
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
-from pulser.waveforms import Waveform, ConstantWaveform
-from pulser.json.utils import obj_to_dict
+from pulser.waveforms import ConstantWaveform, Waveform
 
 
 @dataclass(init=False, repr=False, frozen=True)
@@ -186,6 +187,15 @@ class Pulse:
 
         fig.tight_layout()
         plt.show()
+
+    def fall_time(self, channel: Channel) -> int:
+        """Calculates the extra time needed to ramp down to zero."""
+        aligned_start_extra_time = channel.rise_time
+        end_extra_time = max(
+            self.amplitude.modulation_buffers(channel)[1],
+            self.detuning.modulation_buffers(channel)[1],
+        )
+        return aligned_start_extra_time + end_extra_time
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(

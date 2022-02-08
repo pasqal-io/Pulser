@@ -13,5 +13,5 @@
 # limitations under the License.
 """Classes for classical emulation of a Sequence."""
 
-from pulser.simulation.simulation import Simulation
 from pulser.simulation.simconfig import SimConfig
+from pulser.simulation.simulation import Simulation
