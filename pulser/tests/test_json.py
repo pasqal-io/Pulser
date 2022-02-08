@@ -19,7 +19,7 @@ import pytest
 
 from pulser import Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
-from pulser.json.coders import PulserEncoder, PulserDecoder
+from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.supported import validate_serialization
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import BlackmanWaveform

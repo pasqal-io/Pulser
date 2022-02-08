@@ -22,8 +22,8 @@ from typing import Any, cast
 
 import numpy as np
 
-from pulser.json.utils import obj_to_dict
 from pulser.json.supported import validate_serialization
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Variable
 
 

@@ -17,10 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pulser.devices._devices import (
-    Chadoq2,
-)
-
+from pulser.devices._devices import Chadoq2
 from pulser.devices._mock_device import MockDevice
 
 if TYPE_CHECKING:  # pragma: no cover
