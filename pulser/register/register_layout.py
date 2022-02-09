@@ -161,6 +161,7 @@ class RegisterLayout(RegDrawer):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = False,
         draw_half_radius: bool = False,
+        projection: bool = True,
     ) -> None:
         """Draws the entire register layout.
 
@@ -173,6 +174,8 @@ class RegisterLayout(RegDrawer):
             draw_graph(bool, default=True): Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
+            projection(bool, default=True): If the layout is in 3D, draws it
+                as projections on different planes.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -187,20 +190,33 @@ class RegisterLayout(RegDrawer):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
-        fig, ax = self._initialize_fig_axes(
-            coords,
-            blockade_radius=blockade_radius,
-            draw_half_radius=draw_half_radius,
-        )
-        self._draw_2D(
-            ax,
-            coords,
-            list(range(self.number_of_traps)),
-            blockade_radius=blockade_radius,
-            draw_graph=draw_graph,
-            draw_half_radius=draw_half_radius,
-            are_traps=True,
-        )
+        ids = list(range(self.number_of_traps))
+        if self.dimensionality == 2:
+            fig, ax = self._initialize_fig_axes(
+                coords,
+                blockade_radius=blockade_radius,
+                draw_half_radius=draw_half_radius,
+            )
+            self._draw_2D(
+                ax,
+                coords,
+                ids,
+                blockade_radius=blockade_radius,
+                draw_graph=draw_graph,
+                draw_half_radius=draw_half_radius,
+                are_traps=True,
+            )
+        elif self.dimensionality == 3:
+            self._draw_3D(
+                coords,
+                ids,
+                projection=projection,
+                with_labels=True,
+                blockade_radius=blockade_radius,
+                draw_graph=draw_graph,
+                draw_half_radius=draw_half_radius,
+                are_traps=True,
+            )
         plt.show()
 
     def _safe_hash(self) -> bytes:

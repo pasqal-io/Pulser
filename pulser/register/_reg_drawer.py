@@ -132,6 +132,7 @@ class RegDrawer:
                     wrap=True,
                     bbox=bb,
                     fontsize=12,
+                    multialignment="right",
                 )
                 txt._get_wrap_line_width = lambda: 50.0
 
@@ -198,6 +199,7 @@ class RegDrawer:
                     blockade_radius=blockade_radius,
                     draw_graph=draw_graph,
                     draw_half_radius=draw_half_radius,
+                    are_traps=are_traps,
                 )
                 ax.set_title(
                     "Projection onto\n the "
@@ -216,18 +218,18 @@ class RegDrawer:
                     xj, yj, zj = pos[j]
                     bonds[(i, j)] = [[xi, xj], [yi, yj], [zi, zj]]
 
+            if are_traps:
+                params = dict(s=50, c="white", edgecolors="black")
+            else:
+                params = dict(s=30, c="darkgreen")
+
             for i in range(1, 3):
                 ax = fig.add_subplot(
                     1, 2, i, projection="3d", azim=-60 * (-1) ** i, elev=15
                 )
 
                 ax.scatter(
-                    pos[:, 0],
-                    pos[:, 1],
-                    pos[:, 2],
-                    s=30,
-                    alpha=0.7,
-                    c="darkgreen",
+                    pos[:, 0], pos[:, 1], pos[:, 2], alpha=0.7, **params
                 )
 
                 if with_labels:
