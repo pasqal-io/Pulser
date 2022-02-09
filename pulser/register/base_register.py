@@ -34,7 +34,7 @@ from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pulser.register.register_layout import RegisterLayout
 
 T = TypeVar("T", bound="BaseRegister")
@@ -124,7 +124,19 @@ class BaseRegister(ABC):
     def _set_layout(
         self, register_layout: RegisterLayout, *trap_ids: int
     ) -> None:
+        """Sets the RegisterLayout that originated this register."""
         trap_coords = register_layout.coords
+        if register_layout.dimensionality != self._dim:
+            raise ValueError(
+                "The RegisterLayout dimensionality is not the same as this "
+                "register's."
+            )
+        if len(trap_ids) != len(self._ids):
+            raise ValueError(
+                "The amount of 'trap_ids' must be equal to the number of atoms"
+                " in the register."
+            )
+
         for reg_coord, trap_id in zip(self._coords, trap_ids):
             if np.any(reg_coord != trap_coords[trap_id]):
                 raise ValueError(
