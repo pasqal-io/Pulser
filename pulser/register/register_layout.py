@@ -47,9 +47,9 @@ else:  # pragma: no cover
 class RegisterLayout(RegDrawer):
     """A layout of traps out of which registers can be defined.
 
-    The traps are always sorted under the same convention: from left to right,
-    then from bottom to top. Respecting this order, the traps are then numbered
-    starting from 0.
+    The traps are always sorted under the same convention: ascending order
+    along x, then along y, then along z (if applicable). Respecting this order,
+    the traps are then numbered starting from 0.
 
     Args:
         trap_coordinates(ArrayLike): The trap coordinates defining the layout.
@@ -58,7 +58,7 @@ class RegisterLayout(RegDrawer):
     trap_coordinates: ArrayLike
 
     def __post_init__(self) -> None:
-        shape = self._coords.shape
+        shape = np.array(self.trap_coordinates).shape
         if len(shape) != 2:
             raise ValueError(
                 "'trap_coordinates' must be an array or list of coordinates."
@@ -78,7 +78,9 @@ class RegisterLayout(RegDrawer):
         coords = np.array(self.trap_coordinates, dtype=float)
         # Sorting the coordinates 1st left to right, 2nd bottom to top
         rounded_coords = np.round(coords, decimals=6)
-        sorting = np.lexsort((rounded_coords[:, 1], rounded_coords[:, 0]))
+        dims = rounded_coords.shape[1]
+        sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
+        sorting = np.lexsort(tuple(sorter))
         return cast(np.ndarray, coords[sorting])
 
     @property
@@ -119,7 +121,7 @@ class RegisterLayout(RegDrawer):
         trap_ids_set = set(trap_ids)
 
         if len(trap_ids_set) != len(trap_ids):
-            raise ValueError("Every 'trap_id' must a unique integer.")
+            raise ValueError("Every 'trap_id' must be a unique integer.")
 
         if not trap_ids_set.issubset(self.traps_dict):
             raise ValueError(
