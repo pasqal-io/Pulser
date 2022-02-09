@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -76,7 +76,7 @@ class RegDrawer:
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            plot_ids: list[QubitId] = [[f"{i}"] for i in ids]
+            plot_ids: list[Union[str, list[str]]] = [[f"{i}"] for i in ids]
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 

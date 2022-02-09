@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Defines a generic Register layout, from which a Register can be created."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
+from hashlib import sha256
 from sys import version_info
-from typing import Optional
+from typing import Any, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,12 +43,22 @@ else:  # pragma: no cover
         )
 
 
-@dataclass(frozen=True)
+@dataclass(repr=False, eq=False, frozen=True)
 class RegisterLayout(RegDrawer):
+    """A layout of traps out of which registers can be defined.
+
+    The traps are always sorted under the same convention: from left to right,
+    then from bottom to top. Respecting this order, the traps are then numbered
+    starting from 0.
+
+    Args:
+        trap_coordinates(ArrayLike): The trap coordinates defining the layout.
+    """
+
     trap_coordinates: ArrayLike
 
-    def __post_init__(self):
-        shape = self.coords.shape
+    def __post_init__(self) -> None:
+        shape = self._coords.shape
         if len(shape) != 2:
             raise ValueError(
                 "'trap_coordinates' must be an array or list of coordinates."
@@ -56,34 +68,54 @@ class RegisterLayout(RegDrawer):
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
             )
 
-    @cached_property
+    @property
     def traps_dict(self) -> dict:
+        """Mapping between trap IDs and coordinates."""
         return dict(enumerate(self.coords))
 
-    @cached_property
-    def coords(self) -> np.ndarray:
+    @cached_property  # Acts as an attribute in a frozen dataclass
+    def _coords(self) -> np.ndarray:
         coords = np.array(self.trap_coordinates, dtype=float)
         # Sorting the coordinates 1st left to right, 2nd bottom to top
         rounded_coords = np.round(coords, decimals=6)
         sorting = np.lexsort((rounded_coords[:, 1], rounded_coords[:, 0]))
-        return coords[sorting]
+        return cast(np.ndarray, coords[sorting])
+
+    @property
+    def coords(self) -> np.ndarray:
+        """The sorted trap coordinates."""
+        # Copies to prevent direct access to self._coords
+        return self._coords.copy()
 
     @property
     def number_of_traps(self) -> int:
-        return len(self.coords)
+        """The number of traps in the layout."""
+        return len(self._coords)
 
     @property
     def max_atom_num(self) -> int:
+        """Maximum number of atoms that can be trapped to form a Register."""
         return self.number_of_traps // 2
 
     @property
     def dimensionality(self) -> int:
-        return self.coords.shape[1]
+        """The dimensionality of the layout (2 or 3)."""
+        return self._coords.shape[1]
 
     def define_register(
         self, *trap_ids: int, qubit_ids: Optional[abcSequence[QubitId]] = None
     ) -> BaseRegister:
+        """Defines a register from selected traps.
 
+        Args:
+            *trap_ids (int): The trap IDs selected to form the Register.
+            qubit_ids (Optional[abcSequence[QubitId]] = None): A sequence of
+                unique qubit IDs to associated to the selected traps. Must be
+                of the same length as the selected traps.
+
+        Returns:
+            BaseRegister: The respective register instance.
+        """
         trap_ids_set = set(trap_ids)
 
         if len(trap_ids_set) != len(trap_ids):
@@ -114,7 +146,7 @@ class RegisterLayout(RegDrawer):
         ids = (
             qubit_ids if qubit_ids else [f"q{i}" for i in range(len(trap_ids))]
         )
-        coords = self.coords[list(trap_ids)]
+        coords = self._coords[list(trap_ids)]
         qubits = dict(zip(ids, coords))
 
         reg_class = Register3D if self.dimensionality == 3 else Register
@@ -146,6 +178,7 @@ class RegisterLayout(RegDrawer):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
+        coords = self.coords
         self._draw_checks(
             self.number_of_traps,
             blockade_radius=blockade_radius,
@@ -153,13 +186,13 @@ class RegisterLayout(RegDrawer):
             draw_half_radius=draw_half_radius,
         )
         fig, ax = self._initialize_fig_axes(
-            self.coords,
+            coords,
             blockade_radius=blockade_radius,
             draw_half_radius=draw_half_radius,
         )
         self._draw_2D(
             ax,
-            self.coords,
+            coords,
             list(range(self.number_of_traps)),
             blockade_radius=blockade_radius,
             draw_graph=draw_graph,
@@ -167,3 +200,20 @@ class RegisterLayout(RegDrawer):
             are_traps=True,
         )
         plt.show()
+
+    def _safe_hash(self) -> bytes:
+        # Include dimensionality because the array is flattened with tobytes()
+        hash = sha256(bytes(self.dimensionality))
+        hash.update(self.coords.tobytes())
+        return hash.digest()
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, RegisterLayout):
+            return False
+        return self._safe_hash() == other._safe_hash()
+
+    def __hash__(self) -> int:
+        return hash(self._safe_hash())
+
+    def __repr__(self) -> str:
+        return f"RegisterLayout_{self._safe_hash().hex()}"
