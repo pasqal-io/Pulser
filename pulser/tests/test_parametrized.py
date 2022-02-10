@@ -26,7 +26,7 @@ b = Variable("b", int, size=2)
 b._assign([-1.5, 1.5])
 c = Variable("c", str)
 d = Variable("d", float, size=1)
-d._assign([.5])
+d._assign([0.5])
 t = Variable("t", int)
 bwf = BlackmanWaveform(t, a)
 pulse = Pulse.ConstantDetuning(bwf, b[0], b[1])
@@ -85,9 +85,9 @@ def test_varitem():
     assert str(b1) == "b[1]"
     assert str(b01) == "b[100::-1]"
     assert str(d0) == "d[0]"
-    assert b1.build() == 1 #TODO should be 1.5
+    assert b1.build() == 1  # TODO should be 1.5
     assert np.all(b01.build() == np.array([1, -1]))
-    assert d0.build() == .5
+    assert d0.build() == 0.5
     with pytest.raises(FrozenInstanceError):
         b1.key = 0
 
