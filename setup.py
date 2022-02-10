@@ -22,9 +22,9 @@ setup(
     version=__version__,
     install_requires=[
         "matplotlib",
-        "numpy>=1.20, <1.22",
+        "numpy>=1.20",
         "scipy",
-        "qutip",
+        "qutip>=4.6.3",
     ],
     extras_require={
         ":python_version == '3.7'": [
