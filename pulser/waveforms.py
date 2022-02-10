@@ -174,7 +174,7 @@ class Waveform(ABC):
         mod_samples = self._modulated_samples(channel)
         tr = channel.rise_time
         trim = slice(tr - start, len(mod_samples) - tr + end)
-        return cast(np.ndarray, mod_samples[trim])
+        return mod_samples[trim]
 
     @functools.lru_cache()
     def modulation_buffers(self, channel: Channel) -> tuple[int, int]:
@@ -226,7 +226,7 @@ class Waveform(ABC):
     ) -> Union[float, np.ndarray]:
         if isinstance(index_or_slice, slice):
             s: slice = self._check_slice(index_or_slice)
-            return cast(np.ndarray, self._samples[s])
+            return self._samples[s]
         else:
             index: int = self._check_index(index_or_slice)
             return cast(float, self._samples[index])
@@ -726,6 +726,7 @@ class InterpolatedWaveform(Waveform):
         super().__init__(duration)
         self._values = np.array(values, dtype=float)
         if times is not None:
+            times = cast(ArrayLike, times)
             times_ = np.array(times, dtype=float)
             if len(times_) != len(self._values):
                 raise ValueError(
@@ -932,6 +933,7 @@ class KaiserWaveform(Waveform):
         """
         max_val = cast(float, max_val)
         area = cast(float, area)
+        beta = cast(float, beta)
 
         if np.sign(max_val) != np.sign(area):
             raise ValueError(

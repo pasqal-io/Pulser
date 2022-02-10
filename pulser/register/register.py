@@ -266,7 +266,7 @@ class Register(BaseRegister, RegDrawer):
             coords = np.concatenate((coords, coords2))
 
         coords *= spacing
-        coords = np.concatenate(([(0.0, 0.0)], coords))
+        coords = np.concatenate((np.zeros((1, 2)), coords))
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
