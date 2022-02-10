@@ -1,6 +1,6 @@
 matplotlib
-numpy >= 1.20, < 1.22
-qutip
+numpy >= 1.20
+qutip >= 4.6.3
 scipy
 
 # version specific
