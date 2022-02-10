@@ -172,7 +172,7 @@ class RegDrawer:
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         are_traps: bool = False,
-    ):
+    ) -> None:
         if draw_graph and blockade_radius is not None:
             epsilon = 1e-9  # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
