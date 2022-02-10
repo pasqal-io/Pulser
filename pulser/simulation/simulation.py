@@ -67,12 +67,15 @@ class Simulation:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
+        mod_output (bool, default False): toggles the use of modulated samples
+            in the simulation.
     """
 
     def __init__(
         self,
         sequence: Sequence,
         sampling_rate: float = 1.0,
+        mod_output: bool = False,
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
     ) -> None:
@@ -98,6 +101,13 @@ class Simulation:
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = self._seq.get_duration()
+
+        self.mod_output = mod_output
+        if self.mod_output:
+            max_rise_time = max(
+                [ch.rise_time for ch in self._seq.declared_channels.values()]
+            )
+            self._tot_duration += 2 * max_rise_time
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -405,9 +415,178 @@ class Simulation:
             plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
+    def _extract_and_modulate_samples(self) -> tuple[dict, int]:
+        """Populate samples dictionary with every pulse in the sequence.
+
+        Alignment is handled naively: modulate every chunks and paste them.
+        (Multiple group on local channels would create a much longer sample
+        list than the one for a global channel)
+
+        Limitations:
+            Process local channels and global channels with SLM off.
+            Does not consider any noise.
+        """
+        self.modulated_samples: dict[str, dict[str, dict]]
+        # max_rise_time = max(
+        #     [ch.rise_time for ch in self._seq.declared_channels.values()]
+        # )
+        total_mod_duration = (
+            self._tot_duration
+        )  # already changed in the init()
+
+        if self._interaction == "ising":
+            self.modulated_samples = {
+                addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
+                for addr in ["Global", "Local"]
+            }
+        else:
+            self.modulated_samples = {
+                addr: {"XY": {}} for addr in ["Global", "Local"]
+            }
+
+        def prepare_samples_dict(length: int) -> dict[str, np.ndarray]:
+            return {
+                "amp": np.zeros(length),
+                "det": np.zeros(length),
+                "phase": np.zeros(length),
+            }
+
+        def prepare_qubit_dict(
+            length: int,
+        ) -> dict[QubitId, dict[str, np.ndarray]]:
+            return {
+                qubit: prepare_samples_dict(length)
+                for qubit in self._qdict.keys()
+            }
+
+        def write_global_samples(
+            slot: _TimeSlot,
+            samples_dict: Mapping[str, np.ndarray],
+        ) -> None:
+            """Write samples of a _TimeSlot in the given samples_dict."""
+            _pulse = cast(Pulse, slot.type)
+            samples_dict["amp"][slot.ti : slot.tf] += _pulse.amplitude.samples
+            samples_dict["det"][slot.ti : slot.tf] += _pulse.detuning.samples
+            samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
+
+        # Process declared channels one by one
+        for channel, channel_obj in self._seq.declared_channels.items():
+            addr = self._seq.declared_channels[channel].addressing
+            basis = self._seq.declared_channels[channel].basis
+
+            # if the channel is global but with the SLM, pass and process the
+            # next one
+            slm_on = bool(self._seq._slm_mask_targets)
+            if addr == "Global" and slm_on:
+                continue
+
+            if addr == "Global":
+                modulated_samples_dict = prepare_samples_dict(
+                    self._tot_duration
+                )
+
+                for slot in self._seq._schedule[channel]:
+                    if isinstance(slot.type, Pulse):
+                        write_global_samples(slot, modulated_samples_dict)
+
+                for qty in ["amp", "det", "phase"]:
+                    modulated_samples_dict[qty] = channel_obj.modulate(
+                        modulated_samples_dict[qty]
+                    )
+                self.modulated_samples["Global"][
+                    basis
+                ] = modulated_samples_dict
+
+            elif addr == "Local":
+                if not self.modulated_samples["Local"][basis]:
+                    self.modulated_samples["Local"][
+                        basis
+                    ] = prepare_qubit_dict(total_mod_duration)
+
+                # gather pulses between retarget operations
+
+                def key_func(x: _TimeSlot) -> str:
+                    if isinstance(x.type, Pulse):
+                        return Pulse.__name__
+                    else:
+                        return x.type
+
+                for key, group in itertools.groupby(
+                    self._seq._schedule[channel], key_func
+                ):
+                    if key == "Pulse":
+                        slots = list(group)
+                        pulses = [cast(Pulse, s.type) for s in slots]
+                        start_time = slots[0].ti
+                        total_duration = slots[-1].tf - slots[0].ti
+
+                        # all the slots have the same targets
+                        targets = slots[-1].targets
+
+                        # the samples of the group of pulses
+                        amp = np.zeros(total_duration)
+                        det = np.zeros(total_duration)
+                        phase = np.zeros(total_duration)
+
+                        for s, p in zip(slots, pulses):
+                            amp[
+                                s.ti - start_time : s.tf - start_time
+                            ] = p.amplitude.samples
+                            det[
+                                s.ti - start_time : s.tf - start_time
+                            ] = p.detuning.samples
+                            phase[
+                                s.ti - start_time : s.tf - start_time
+                            ] = p.phase
+
+                        # Modulate:
+                        # Samples from each group of pulses are modulated
+                        # together, and then are pasted from the starting time
+                        # of the first pulse of the group.
+                        mod_amp = channel_obj.modulate(amp)
+                        mod_det = channel_obj.modulate(det)
+                        mod_phase = channel_obj.modulate(phase)
+
+                        def paste_from_start_time(
+                            target: np.ndarray, origin: np.ndarray
+                        ) -> None:
+                            """Pasting strategy.
+
+                            Using this all moduulated channels are ensured to
+                            have the same duration.
+                            """
+                            target[
+                                start_time : start_time + len(origin)
+                            ] += origin
+
+                        # Paste the modulated samples to the corresponding
+                        # array
+                        for qubit in targets:
+                            paste_from_start_time(
+                                self.modulated_samples["Local"][basis][qubit][
+                                    "amp"
+                                ],
+                                mod_amp,
+                            )
+                            paste_from_start_time(
+                                self.modulated_samples["Local"][basis][qubit][
+                                    "det"
+                                ],
+                                mod_det,
+                            )
+                            paste_from_start_time(
+                                self.modulated_samples["Local"][basis][qubit][
+                                    "phase"
+                                ],
+                                mod_phase,
+                            )
+
+        return (self.modulated_samples, total_mod_duration)
+
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         self.samples: dict[str, dict[str, dict]]
+
         if self._interaction == "ising":
             self.samples = {
                 addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
@@ -418,6 +597,14 @@ class Simulation:
 
         if not hasattr(self, "operators"):
             self.operators = deepcopy(self.samples)
+
+        # If there is modulation, delegate all the work to the right function.
+        if self.mod_output:
+            (
+                self.samples,
+                self._tot_duration,
+            ) = self._extract_and_modulate_samples()
+            return
 
         def prepare_dict() -> dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
