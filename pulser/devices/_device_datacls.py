@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -56,10 +56,15 @@ class Device:
     _channels: tuple[tuple[str, Channel], ...]
     # Ising interaction coeff
     interaction_coeff_xy: float = 3700.0
+    pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
+        default_factory=tuple
+    )
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
         object.__setattr__(self, "__doc__", self._specs(for_docs=True))
+        for layout in self.pre_calibrated_layouts:
+            self.validate_layout(layout)
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -75,6 +80,11 @@ class Device:
     def interaction_coeff(self) -> float:
         r""":math:`C_6/\hbar` coefficient of chosen Rydberg level."""
         return float(c6_dict[self.rydberg_level])
+
+    @property
+    def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
+        """Register layouts already calibrated on this device."""
+        return {str(layout): layout for layout in self.pre_calibrated_layouts}
 
     def print_specs(self) -> None:
         """Prints the device specifications."""
