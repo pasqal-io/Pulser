@@ -21,6 +21,7 @@ import pytest
 import pulser
 from pulser.devices import Chadoq2
 from pulser.register import Register, Register3D
+from pulser.register.register_layout import RegisterLayout
 
 
 def test_init():
@@ -111,3 +112,30 @@ def test_validate_register():
         )
 
     Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))
+
+
+def test_validate_layout():
+    with pytest.raises(ValueError, match="The number of traps"):
+        Chadoq2.validate_layout(RegisterLayout(Register.square(20)._coords))
+
+    coords = [(100, 0), (-100, 0)]
+    with pytest.raises(TypeError):
+        Chadoq2.validate_layout(Register.from_coordinates(coords))
+    with pytest.raises(ValueError, match="at most 50 μm away from the center"):
+        Chadoq2.validate_layout(RegisterLayout(coords))
+
+    with pytest.raises(ValueError, match="at most 2 dimensions"):
+        coords = [(-10, 4, 0), (0, 0, 0)]
+        Chadoq2.validate_layout(RegisterLayout(coords))
+
+    with pytest.raises(ValueError, match="The minimal distance between traps"):
+        Chadoq2.validate_layout(
+            RegisterLayout(
+                Register.triangular_lattice(3, 4, spacing=3.9)._coords
+            )
+        )
+
+    valid_layout = RegisterLayout(
+        Register.square(int(np.sqrt(Chadoq2.max_atom_num * 2)))._coords
+    )
+    Chadoq2.validate_layout(valid_layout)

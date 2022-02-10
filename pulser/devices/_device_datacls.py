@@ -24,7 +24,8 @@ from pulser import Pulse
 from pulser.channels import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.utils import obj_to_dict
-from pulser.register.base_register import BaseRegister
+from pulser.register.base_register import BaseRegister, QubitId
+from pulser.register.register_layout import RegisterLayout
 
 
 @dataclass(frozen=True, repr=False)
@@ -128,11 +129,11 @@ class Device:
         """Checks if 'register' is compatible with this device.
 
         Args:
-            register(pulser.Register): The Register to validate.
+            register(BaseRegister): The Register to validate.
         """
-        if not (isinstance(register, BaseRegister)):
+        if not isinstance(register, BaseRegister):
             raise TypeError(
-                "register has to be a pulser.Register or "
+                "'register' must be a pulser.Register or "
                 "a pulser.Register3D instance."
             )
 
@@ -142,6 +143,23 @@ class Device:
                 "vectors."
             )
         self._validate_coords(register.qubits, kind="atoms")
+
+    def validate_layout(self, layout: RegisterLayout) -> None:
+        """Checks if a register layout is compatible with this device.
+
+        Args:
+            layout(RegisterLayout): The RegisterLayout to validate.
+        """
+        if not isinstance(layout, RegisterLayout):
+            raise TypeError("'layout' must be a RegisterLayout instance.")
+
+        if layout.dimensionality > self.dimensions:
+            raise ValueError(
+                "The device supports register layouts of at most "
+                f"{self.dimensions} dimensions."
+            )
+
+        self._validate_coords(layout.traps_dict, kind="traps")
 
     def validate_pulse(self, pulse: Pulse, channel_id: str) -> None:
         """Checks if a pulse can be executed on a specific device channel.
@@ -215,7 +233,9 @@ class Device:
 
         return "\n".join(lines + ch_lines)
 
-    def _validate_coords(self, coords_dict, kind="atoms"):
+    def _validate_coords(
+        self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
+    ) -> None:
         ids = list(coords_dict.keys())
         coords = list(coords_dict.values())
         max_number = self.max_atom_num * (2 if kind == "traps" else 1)
