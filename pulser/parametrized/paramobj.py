@@ -56,6 +56,48 @@ class OpSupport:
     def __abs__(self) -> ParamObj:
         return ParamObj(operator.abs, self)
 
+    def __add__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __radd__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __sub__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __rsub__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __mul__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __rmul__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __truediv__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __rtruediv__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __floordiv__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __pow__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __rpow__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __mod__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
+    def __rmod__(self, other: Union[int, float]) -> ParamObj:
+        pass
+
 
 # Inject operator magic methods into OpSupport
 for method in reversible_ops:
