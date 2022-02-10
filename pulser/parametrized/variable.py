@@ -25,8 +25,7 @@ from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
-from pulser.parametrized.decorators import parametrize
-from pulser.parametrized.paramobj import OpSupport, ParamObj
+from pulser.parametrized.paramobj import OpSupport
 
 
 @dataclasses.dataclass(frozen=True, eq=False)
