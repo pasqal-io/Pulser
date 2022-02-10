@@ -18,7 +18,7 @@ from __future__ import annotations
 import collections.abc  # To use collections.abc.Sequence
 import dataclasses
 from collections.abc import Iterable
-from typing import Any, Optional, Union, cast
+from typing import Any, Iterator, Optional, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -114,6 +114,10 @@ class Variable(Parametrized, OpSupport):
                 raise IndexError(f"{key} outside of range for '{self.name}'.")
 
         return _VariableItem(self, key)
+
+    def __iter__(self) -> Iterator[_VariableItem]:
+        for i in range(len(self)):
+            yield self[i]
 
 
 @dataclasses.dataclass(frozen=True)
