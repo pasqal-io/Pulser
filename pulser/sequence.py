@@ -555,7 +555,7 @@ class Sequence:
         *,
         dtype: Union[type[int], type[float], type[str]] = float,
     ) -> _VariableItem:
-        ...
+        pass
 
     @overload
     def declare_variable(
@@ -565,7 +565,7 @@ class Sequence:
         size: int,
         dtype: Union[type[int], type[float], type[str]] = float,
     ) -> Variable:
-        ...
+        pass
 
     def declare_variable(
         self,
