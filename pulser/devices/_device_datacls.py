@@ -136,44 +136,12 @@ class Device:
                 "a pulser.Register3D instance."
             )
 
-        ids = list(register.qubits.keys())
-        atoms = list(register.qubits.values())
-        if len(atoms) > self.max_atom_num:
-            raise ValueError(
-                f"The number of atoms ({len(atoms)})"
-                " must be less than or equal to the maximum"
-                " number of atoms supported by this device"
-                f" ({self.max_atom_num})."
-            )
-
         if register._dim > self.dimensions:
             raise ValueError(
                 f"All qubit positions must be at most {self.dimensions}D "
                 "vectors."
             )
-
-        if len(atoms) > 1:
-            distances = pdist(atoms)  # Pairwise distance between atoms
-            if np.any(distances < self.min_atom_distance):
-                sq_dists = squareform(distances)
-                mask = np.triu(np.ones(len(atoms), dtype=bool), k=1)
-                bad_pairs = np.argwhere(
-                    np.logical_and(sq_dists < self.min_atom_distance, mask)
-                )
-                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
-                raise ValueError(
-                    "The minimal distance between atoms in this device "
-                    f"({self.min_atom_distance} µm) is not respected for the "
-                    f"pairs: {bad_qbt_pairs}"
-                )
-
-        too_far = np.linalg.norm(atoms, axis=1) > self.max_radial_distance
-        if np.any(too_far):
-            raise ValueError(
-                f"All qubits must be at most {self.max_radial_distance} μm "
-                f"away from the center of the array, which is not the case "
-                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
-            )
+        self._validate_coords(register.qubits, kind="atoms")
 
     def validate_pulse(self, pulse: Pulse, channel_id: str) -> None:
         """Checks if a pulse can be executed on a specific device channel.
@@ -246,6 +214,41 @@ class Device:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
         return "\n".join(lines + ch_lines)
+
+    def _validate_coords(self, coords_dict, kind="atoms"):
+        ids = list(coords_dict.keys())
+        coords = list(coords_dict.values())
+        max_number = self.max_atom_num * (2 if kind == "traps" else 1)
+        if len(coords) > max_number:
+            raise ValueError(
+                f"The number of {kind} ({len(coords)})"
+                " must be less than or equal to the maximum"
+                f" number of {kind} supported by this device"
+                f" ({max_number})."
+            )
+
+        if len(coords) > 1:
+            distances = pdist(coords)  # Pairwise distance between atoms
+            if np.any(distances < self.min_atom_distance):
+                sq_dists = squareform(distances)
+                mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
+                bad_pairs = np.argwhere(
+                    np.logical_and(sq_dists < self.min_atom_distance, mask)
+                )
+                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
+                raise ValueError(
+                    f"The minimal distance between {kind} in this device "
+                    f"({self.min_atom_distance} µm) is not respected for the "
+                    f"pairs: {bad_qbt_pairs}"
+                )
+
+        too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
+        if np.any(too_far):
+            raise ValueError(
+                f"All {kind} must be at most {self.max_radial_distance} μm "
+                f"away from the center of the array, which is not the case "
+                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
+            )
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
