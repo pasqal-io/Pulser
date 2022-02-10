@@ -18,14 +18,15 @@ from __future__ import annotations
 import collections.abc  # To use collections.abc.Sequence
 import dataclasses
 from collections.abc import Iterable
-from typing import Any, Union, cast
+from typing import Any, Optional, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
-from pulser.parametrized.paramobj import OpSupport
+from pulser.parametrized.decorators import parametrize
+from pulser.parametrized.paramobj import OpSupport, ParamObj
 
 
 @dataclasses.dataclass(frozen=True, eq=False)
@@ -63,7 +64,7 @@ class Variable(Parametrized, OpSupport):
         return {self.name: self}
 
     def _clear(self) -> None:
-        object.__setattr__(self, "value", None)
+        object.__setattr__(self, "value", None)  # TODO rename _value?
         object.__setattr__(self, "_count", self._count + 1)
 
     def _assign(self, value: Union[ArrayLike, str, float, int]) -> None:
@@ -78,22 +79,19 @@ class Variable(Parametrized, OpSupport):
                     "must be of type 'str'."
                 )
 
-        val = np.array(value, dtype=self.dtype)
+        val = np.array(value, dtype=self.dtype, ndmin=1)
         if val.size != self.size:
             raise ValueError(
                 f"Can't assign array of size {val.size} to "
                 + f"variable of size {self.size}."
             )
 
-        if self.size == 1:
-            object.__setattr__(self, "value", self.dtype(val))
-        else:
-            object.__setattr__(self, "value", val)
+        object.__setattr__(self, "value", val)
         object.__setattr__(self, "_count", self._count + 1)
 
-    def build(self) -> Union[ArrayLike, str, float, int]:
+    def build(self) -> ArrayLike:
         """Returns the variable's current value."""
-        self.value: Union[ArrayLike, str, float, int]
+        self.value: Optional[ArrayLike]
         if self.value is None:
             raise ValueError(f"No value assigned to variable '{self.name}'.")
         return self.value
@@ -112,8 +110,6 @@ class Variable(Parametrized, OpSupport):
     def __getitem__(self, key: Union[int, slice]) -> _VariableItem:
         if not isinstance(key, (int, slice)):
             raise TypeError(f"Invalid key type {type(key)} for '{self.name}'.")
-        if self.size == 1:
-            raise TypeError(f"Variable '{self.name}' is not subscriptable.")
         if isinstance(key, int):
             if not -self.size <= key < self.size:
                 raise IndexError(f"{key} outside of range for '{self.name}'.")
