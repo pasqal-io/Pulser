@@ -25,6 +25,7 @@ from numpy.typing import ArrayLike
 import pulser
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister
+import pulser.register._patterns as patterns
 
 
 class Register(BaseRegister, RegDrawer):
@@ -118,13 +119,7 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than 0."
             )
 
-        coords = (
-            np.array(
-                [(x, y) for y in range(rows) for x in range(columns)],
-                dtype=float,
-            )
-            * spacing
-        )
+        coords = patterns.square_rect(rows, columns) * spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
@@ -177,98 +172,9 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than 0."
             )
 
-        coords = np.array(
-            [(x, y) for y in range(rows) for x in range(atoms_per_row)],
-            dtype=float,
-        )
-        coords[:, 0] += 0.5 * np.mod(coords[:, 1], 2)
-        coords[:, 1] *= np.sqrt(3) / 2
-        coords *= spacing
+        coords = patterns.triangular_rect(rows, atoms_per_row) * spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
-
-    @classmethod
-    def _hexagon_helper(
-        cls,
-        layers: int,
-        atoms_left: int,
-        spacing: float,
-        prefix: Optional[str] = None,
-    ) -> Register:
-        """Helper function for building hexagonal arrays.
-
-        Args:
-            layers (int): Number of full layers around a central atom.
-            atoms_left (int): Number of atoms on the external layer.
-
-        Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
-                id starts with the prefix, followed by an int from 0 to N-1
-                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
-
-        Returns:
-            Register: A register with qubits placed in a hexagonal layout
-                with extra atoms on the outermost layer if needed.
-        """
-        # y coordinates of the top vertex of a triangle
-        crest_y = np.sqrt(3) / 2.0
-
-        # Coordinates of vertices
-        start_x = [-1.0, -0.5, 0.5, 1.0, 0.5, -0.5]
-        start_y = [0.0, crest_y, crest_y, 0, -crest_y, -crest_y]
-
-        # Steps to place atoms, starting from a vertex
-        delta_x = [0.5, 1.0, 0.5, -0.5, -1.0, -0.5]
-        delta_y = [crest_y, 0.0, -crest_y, -crest_y, 0.0, crest_y]
-
-        coords = np.array(
-            [
-                (
-                    start_x[side] * layer + atom * delta_x[side],
-                    start_y[side] * layer + atom * delta_y[side],
-                )
-                for layer in range(1, layers + 1)
-                for side in range(6)
-                for atom in range(1, layer + 1)
-            ],
-            dtype=float,
-        )
-
-        if atoms_left > 0:
-            layer = layers + 1
-            min_atoms_per_side = atoms_left // 6
-            # Extra atoms after balancing all sides
-            atoms_left %= 6
-
-            # Order for placing left atoms
-            # Top-Left, Top-Right, Bottom (C3 symmetry)...
-            # ...Top, Bottom-Right, Bottom-Left (C6 symmetry)
-            sides_order = [0, 3, 1, 4, 2, 5]
-
-            coords2 = np.array(
-                [
-                    (
-                        start_x[side] * layer + atom * delta_x[side],
-                        start_y[side] * layer + atom * delta_y[side],
-                    )
-                    for side in range(6)
-                    for atom in range(
-                        1,
-                        min_atoms_per_side + 2
-                        if atoms_left > sides_order[side]
-                        else min_atoms_per_side + 1,
-                    )
-                ],
-                dtype=float,
-            )
-
-            coords = np.concatenate((coords, coords2))
-
-        coords *= spacing
-        coords = np.concatenate((np.zeros((1, 2)), coords))
-
-        return cls.from_coordinates(coords, center=False, prefix=prefix)
 
     @classmethod
     def hexagon(
@@ -302,7 +208,10 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than 0."
             )
 
-        return cls._hexagon_helper(layers, 0, spacing, prefix)
+        n_atoms = 1 + 3 * (layers**2 + layers)
+        coords = patterns.triangular_hex(n_atoms) * spacing
+
+        return cls.from_coordinates(coords, center=False, prefix=prefix)
 
     @classmethod
     def max_connectivity(
@@ -367,26 +276,9 @@ class Register(BaseRegister, RegDrawer):
                 f" ({device.min_atom_distance})."
             )
 
-        if n_qubits < 7:
-            crest_y = np.sqrt(3) / 2.0
-            hex_coords = np.array(
-                [
-                    (0.0, 0.0),
-                    (-0.5, crest_y),
-                    (0.5, crest_y),
-                    (1.0, 0.0),
-                    (0.5, -crest_y),
-                    (-0.5, -crest_y),
-                ]
-            )
-            return cls.from_coordinates(
-                spacing * hex_coords[:n_qubits], prefix=prefix, center=False
-            )
+        coords = patterns.triangular_hex(n_qubits) * spacing
 
-        full_layers = int((-3.0 + np.sqrt(9 + 12 * (n_qubits - 1))) / 6.0)
-        atoms_left = n_qubits - 1 - (full_layers**2 + full_layers) * 3
-
-        return cls._hexagon_helper(full_layers, atoms_left, spacing, prefix)
+        return cls.from_coordinates(coords, center=False, prefix=prefix)
 
     def rotate(self, degrees: float) -> None:
         """Rotates the array around the origin by the given angle.
