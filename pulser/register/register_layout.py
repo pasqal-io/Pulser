@@ -42,6 +42,8 @@ else:  # pragma: no cover
             " `pip install backports.cached-property`."
         )
 
+COORD_PRECISION = 6
+
 
 @dataclass(repr=False, eq=False, frozen=True)
 class RegisterLayout(RegDrawer):
@@ -77,11 +79,15 @@ class RegisterLayout(RegDrawer):
     def _coords(self) -> np.ndarray:
         coords = np.array(self.trap_coordinates, dtype=float)
         # Sorting the coordinates 1st left to right, 2nd bottom to top
-        rounded_coords = np.round(coords, decimals=6)
+        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
         dims = rounded_coords.shape[1]
         sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
         sorting = np.lexsort(tuple(sorter))
-        return cast(np.ndarray, coords[sorting])
+        return cast(np.ndarray, rounded_coords[sorting])
+
+    @cached_property  # Acts as an attribute in a frozen dataclass
+    def _coords_to_traps(self) -> dict[tuple[float, ...], int]:
+        return {tuple(coord): id for id, coord in self.traps_dict.items()}
 
     @property
     def coords(self) -> np.ndarray:
@@ -103,6 +109,29 @@ class RegisterLayout(RegDrawer):
     def dimensionality(self) -> int:
         """The dimensionality of the layout (2 or 3)."""
         return self._coords.shape[1]
+
+    def get_traps_from_coordinates(self, *coordinates: ArrayLike) -> list[int]:
+        """Finds the trap ID for a given set of trap coordinates.
+
+        Args:
+            *coordinates (ArrayLike): The coordinates to return the trap IDs.
+
+        Returns
+            list[int]: The list of trap IDs corresponding to the coordinates.
+        """
+        traps = []
+        rounded_coords = np.round(
+            cast(ArrayLike, coordinates), decimals=COORD_PRECISION
+        )
+        for coord, rounded in zip(coordinates, rounded_coords):
+            key = tuple(rounded)
+            if key not in self._coords_to_traps:
+                raise ValueError(
+                    f"The coordinate '{coord!s}' is not a part of the "
+                    "RegisterLayout."
+                )
+            traps.append(self._coords_to_traps[key])
+        return traps
 
     def define_register(
         self, *trap_ids: int, qubit_ids: Optional[abcSequence[QubitId]] = None
