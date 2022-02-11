@@ -121,3 +121,16 @@ def test_opsupport():
     assert abs(a).build() == 2.0
     assert (3 % a).build() == -1.0
     assert (-a).build() == 2.0
+
+    x = a + 11
+    assert x.build() == 9
+    x = x % 6
+    assert x.build() == 3
+    x = 2 - x
+    assert x.build() == -1
+    x = 4 / x
+    assert x.build() == -4
+    x = 9 // x
+    assert x.build() == -3
+    x = 2**x
+    assert x.build() == 0.125

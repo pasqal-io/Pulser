@@ -19,7 +19,6 @@ import inspect
 import operator
 import warnings
 from collections.abc import Callable
-from functools import partialmethod
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union
 
