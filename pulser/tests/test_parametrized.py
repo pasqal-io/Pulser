@@ -120,3 +120,4 @@ def test_opsupport():
     assert (a**a).build() == 0.25
     assert abs(a).build() == 2.0
     assert (3 % a).build() == -1.0
+    assert (-a).build() == 2.0
