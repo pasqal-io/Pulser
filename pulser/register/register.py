@@ -286,6 +286,10 @@ class Register(BaseRegister, RegDrawer):
         Args:
             degrees (float): The angle of rotation in degrees.
         """
+        if self._layout_info is not None:
+            raise TypeError(
+                "A register defined from a RegisterLayout cannot be rotated."
+            )
         theta = np.deg2rad(degrees)
         rot = np.array(
             [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
