@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 
-from sys import version_info
 from dataclasses import dataclass, field
-from typing import Union, Any
+from sys import version_info
+from typing import Any, Union
 
 import numpy as np
 import qutip

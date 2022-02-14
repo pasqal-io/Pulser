@@ -21,7 +21,6 @@ from pulser import Pulse
 from pulser.parametrized import Variable
 from pulser.waveforms import BlackmanWaveform, CompositeWaveform
 
-
 a = Variable("a", float)
 b = Variable("b", int, size=2)
 b._assign([-1.5, 1.5])
@@ -113,6 +112,6 @@ def test_opsupport():
     x = 8 * x  # x = [-16, -8]
     x = -x // 3  # x = [5, 2]
     assert np.all(x.build() == [5.0, 2.0])
-    assert (a ** a).build() == 0.25
+    assert (a**a).build() == 0.25
     assert abs(a).build() == 2.0
     assert (3 % a).build() == -1.0

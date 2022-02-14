@@ -1,4 +1,4 @@
-# Copyright 2020 Pulser Development Team
+# Copyright 2022 Pulser Development Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classes for classical emulation of a Sequence."""
+"""Classes for qubit register definition."""
 
-from pulser.simulation.simconfig import SimConfig
-from pulser.simulation.simulation import Simulation
+from pulser.register.base_register import QubitId
+from pulser.register.register import Register
+from pulser.register.register3d import Register3D
