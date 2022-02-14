@@ -156,7 +156,7 @@ class BaseRegister(ABC):
 
         return set(self._ids) == set(other._ids) and all(
             (
-                np.array_equal(
+                np.allclose(  # Accounts for rounding errors
                     self._coords[i],
                     other._coords[other._ids.index(id)],
                 )

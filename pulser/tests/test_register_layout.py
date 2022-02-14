@@ -19,6 +19,10 @@ import numpy as np
 import pytest
 
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import (
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
 from pulser.register import Register3D, Register
 
 layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
@@ -84,6 +88,9 @@ def test_register_definition():
     ):
         reg2d._set_layout(layout, 0, 1)
 
+    with pytest.raises(TypeError, match="cannot be rotated"):
+        reg2d.rotate(30)
+
 
 def test_draw():
     with patch("matplotlib.pyplot.show"):
@@ -111,3 +118,64 @@ def test_eq():
     layout2 = RegisterLayout([[1, 0], [0, 0]])
     assert layout1 == layout2
     assert hash(layout1) == hash(layout2)
+
+
+def test_traps_from_coordinates():
+    assert layout._coords_to_traps == {
+        (0, 0): 0,
+        (0, 1): 1,
+        (1, 0): 2,
+        (1, 1): 3,
+    }
+    assert layout.get_traps_from_coordinates(
+        (0.9999995, 0.0000004), (0, 1), (1, 1)
+    ) == [2, 1, 3]
+    with pytest.raises(ValueError, match="not a part of the RegisterLayout"):
+        layout.get_traps_from_coordinates((0.9999994, 1))
+
+
+def test_square_lattice_layout():
+    square = SquareLatticeLayout(9, 7, 5)
+    assert str(square) == "SquareLatticeLayout(9x7, 5µm)"
+    assert square.square_register(3) == Register.square(
+        3, spacing=5, prefix="q"
+    )
+    # An even number of atoms on the side won't align the center with an atom
+    assert square.square_register(4) != Register.square(
+        3, spacing=5, prefix="q"
+    )
+    with pytest.raises(
+        ValueError, match="'6 x 6' array has more atoms than those available"
+    ):
+        square.square_register(6)
+
+    assert square.rectangular_register(3, 7, prefix="r") == Register.rectangle(
+        3, 7, spacing=5, prefix="r"
+    )
+    with pytest.raises(ValueError, match="'10 x 3' array doesn't fit"):
+        square.rectangular_register(10, 3)
+
+
+def test_triangular_lattice_layout():
+    tri = TriangularLatticeLayout(50, 5)
+    assert str(tri) == "TriangularLatticeLayout(50, 5µm)"
+
+    assert tri.hexagonal_register(19) == Register.hexagon(
+        2, spacing=5, prefix="q"
+    )
+    with pytest.raises(ValueError, match="hold at most 25 atoms, not '26'"):
+        tri.hexagonal_register(26)
+
+    with pytest.raises(
+        ValueError, match="has more atoms than those available"
+    ):
+        tri.rectangular_register(7, 4)
+
+    # Case where the register doesn't fit
+    with pytest.raises(ValueError, match="not a part of the RegisterLayout"):
+        tri.rectangular_register(8, 3)
+
+    # But this fits fine, though off-centered with the Register default
+    tri.rectangular_register(5, 5) != Register.triangular_lattice(
+        5, 5, spacing=5, prefix="q"
+    )

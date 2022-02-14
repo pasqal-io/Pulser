@@ -92,7 +92,7 @@ class SquareLatticeLayout(RegisterLayout):
     def __str__(self) -> str:
         return (
             f"SquareLatticeLayout({self._rows}x{self._columns}, "
-            f"{self._spacing} µm)"
+            f"{self._spacing}µm)"
         )
 
 
@@ -162,4 +162,7 @@ class TriangularLatticeLayout(RegisterLayout):
         )
 
     def __str__(self) -> str:
-        return f"TriangularLatticeLayout({self.number_of_traps})"
+        return (
+            f"TriangularLatticeLayout({self.number_of_traps}, "
+            f"{self._spacing}µm)"
+        )
