@@ -296,9 +296,16 @@ class Simulation:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = np.append(
-                    self.sampling_times, self._tot_duration / 1000
-                )
+                if self._sampling_rate == 1.0:
+                    self._eval_times_array = np.append(
+                        self.sampling_times, self._tot_duration / 1000
+                    )
+                else:
+                    self._eval_times_array = np.linspace(
+                        0,
+                        self._tot_duration/1000,
+                        int(self._tot_duration * self._sampling_rate),
+                    )
             elif value == "Minimal":
                 self._eval_times_array = np.array(
                     [self.sampling_times[0], self._tot_duration / 1000]
@@ -314,16 +321,21 @@ class Simulation:
                 raise ValueError(
                     "evaluation_times float must be between 0 " "and 1."
                 )
-            extended_times = np.append(
-                self.sampling_times, self._tot_duration / 1000
-            )
+            uniform_times = np.linspace(
+                 0,
+                 self._tot_duration / 1000,
+                 int(self._tot_duration * self._sampling_rate),
+                )
             indices = np.linspace(
                 0,
-                len(extended_times) - 1,
-                int(value * len(extended_times)),
+                len(self.sampling_times) - 1,
+                int(value * len(self.sampling_times)),
                 dtype=int,
             )
-            self._eval_times_array = extended_times[indices]
+            # Return sorted array with 0 and final time if needed
+            self._eval_times_array = np.union1d(
+                uniform_times[indices],
+                [0, self._tot_duration / 1000])
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
