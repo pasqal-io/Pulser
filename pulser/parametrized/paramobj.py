@@ -19,7 +19,6 @@ import inspect
 import operator
 import warnings
 from collections.abc import Callable
-from functools import partialmethod
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union
 
@@ -29,26 +28,9 @@ from pulser.parametrized import Parametrized
 if TYPE_CHECKING:
     from pulser.parametrized import Variable  # pragma: no cover
 
-# Available operations on parametrized objects with OpSupport
-reversible_ops: list[str] = [
-    "__add__",
-    "__sub__",
-    "__mul__",
-    "__truediv__",
-    "__floordiv__",
-    "__pow__",
-    "__mod__",
-]
-
 
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
-
-    def _do_op(self, op_name: str, other: Union[int, float]) -> ParamObj:
-        return ParamObj(getattr(operator, op_name), self, other)
-
-    def _do_rop(self, op_name: str, other: Union[int, float]) -> ParamObj:
-        return ParamObj(getattr(operator, op_name), other, self)
 
     def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
@@ -56,12 +38,47 @@ class OpSupport:
     def __abs__(self) -> ParamObj:
         return ParamObj(operator.abs, self)
 
+    def __add__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__add__, self, other)
 
-# Inject operator magic methods into OpSupport
-for method in reversible_ops:
-    rmethod = "__r" + method[2:]
-    setattr(OpSupport, method, partialmethod(OpSupport._do_op, method))
-    setattr(OpSupport, rmethod, partialmethod(OpSupport._do_rop, method))
+    def __radd__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__add__, other, self)
+
+    def __sub__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__sub__, self, other)
+
+    def __rsub__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__sub__, other, self)
+
+    def __mul__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__mul__, self, other)
+
+    def __rmul__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__mul__, other, self)
+
+    def __truediv__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__truediv__, self, other)
+
+    def __rtruediv__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__truediv__, other, self)
+
+    def __floordiv__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__floordiv__, self, other)
+
+    def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__floordiv__, other, self)
+
+    def __pow__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__pow__, self, other)
+
+    def __rpow__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__pow__, other, self)
+
+    def __mod__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__mod__, self, other)
+
+    def __rmod__(self, other: Union[int, float]) -> ParamObj:
+        return ParamObj(operator.__mod__, other, self)
 
 
 class ParamObj(Parametrized, OpSupport):

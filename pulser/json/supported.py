@@ -22,8 +22,16 @@ import pulser
 SUPPORTED_BUILTINS = ("float", "int", "str", "set")
 
 SUPPORTED_OPERATORS = tuple(
-    ["neg", "abs", "getitem"]
-    + [op[2:-2] for op in pulser.parametrized.paramobj.reversible_ops]
+    "neg",
+    "abs",
+    "getitem",
+    "add",
+    "sub",
+    "mul",
+    "truediv",
+    "floordiv",
+    "pow",
+    "mod",
 )
 
 SUPPORTS_SUBMODULE = ("Pulse", "BlackmanWaveform", "KaiserWaveform")

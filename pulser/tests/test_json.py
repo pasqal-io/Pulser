@@ -72,7 +72,7 @@ def test_rare_cases():
         wf_ = Sequence.deserialize(s)
 
     wf_ = decode(s)
-    var._assign(10)
+    seq._variables["var"]._assign(-10)
     with pytest.raises(ValueError, match="No value assigned"):
         wf_.build()
 

@@ -20,6 +20,7 @@ import pytest
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.parametrized import Variable
+from pulser.parametrized.variable import VariableItem
 from pulser.waveforms import BlackmanWaveform
 
 reg = Register.rectangle(4, 3)
@@ -29,7 +30,7 @@ device = Chadoq2
 def test_var_declarations():
     sb = Sequence(reg, device)
     assert sb.declared_variables == {}
-    var = sb.declare_variable("var")
+    var = sb.declare_variable("var", size=1)
     assert sb.declared_variables == {"var": var}
     assert isinstance(var, Variable)
     assert var.dtype == float
@@ -39,6 +40,9 @@ def test_var_declarations():
     var2 = sb.declare_variable("var2", 4, str)
     assert var2.dtype == str
     assert len(var2) == 4
+    var3 = sb.declare_variable("var3")
+    assert sb.declared_variables["var3"] == var3.var
+    assert isinstance(var3, VariableItem)
 
 
 def test_stored_calls():
@@ -175,7 +179,8 @@ def test_str():
     sb.add(pls, "ch1")
     s = (
         f"Prelude\n-------\n{str(seq)}Stored calls\n------------\n\n"
-        + "1. add(Pulse.ConstantPulse(mul(var, 100), var, -1, var), ch1)"
+        + "1. add(Pulse.ConstantPulse(mul(var[0], 100), var[0],"
+        + " -1, var[0]), ch1)"
     )
     assert s == str(sb)
 
