@@ -21,7 +21,7 @@ import pulser
 
 SUPPORTED_BUILTINS = ("float", "int", "str", "set")
 
-SUPPORTED_OPERATORS = tuple(
+SUPPORTED_OPERATORS = (
     "neg",
     "abs",
     "getitem",
