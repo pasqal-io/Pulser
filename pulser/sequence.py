@@ -47,7 +47,7 @@ from pulser.devices._device_datacls import Device
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
-from pulser.parametrized.variable import _VariableItem
+from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
 
@@ -554,7 +554,7 @@ class Sequence:
         name: str,
         *,
         dtype: Union[type[int], type[float], type[str]] = float,
-    ) -> _VariableItem:
+    ) -> VariableItem:
         pass
 
     @overload
@@ -572,7 +572,7 @@ class Sequence:
         name: str,
         size: Optional[int] = None,
         dtype: Union[type[int], type[float], type[str]] = float,
-    ) -> Union[Variable, _VariableItem]:
+    ) -> Union[Variable, VariableItem]:
         """Declare a new variable within this Sequence.
 
         The declared variables can be used to create parametrized versions of

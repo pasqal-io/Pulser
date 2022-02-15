@@ -20,6 +20,7 @@ import pytest
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.parametrized import Variable
+from pulser.parametrized.variable import VariableItem
 from pulser.waveforms import BlackmanWaveform
 
 reg = Register.rectangle(4, 3)
@@ -39,6 +40,9 @@ def test_var_declarations():
     var2 = sb.declare_variable("var2", 4, str)
     assert var2.dtype == str
     assert len(var2) == 4
+    var3 = sb.declare_variable("var3")
+    assert sb.declared_variables["var3"] == var3.var
+    assert isinstance(var3, VariableItem)
 
 
 def test_stored_calls():

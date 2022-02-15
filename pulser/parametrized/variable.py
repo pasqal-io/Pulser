@@ -106,22 +106,22 @@ class Variable(Parametrized, OpSupport):
     def __len__(self) -> int:
         return self.size
 
-    def __getitem__(self, key: Union[int, slice]) -> _VariableItem:
+    def __getitem__(self, key: Union[int, slice]) -> VariableItem:
         if not isinstance(key, (int, slice)):
             raise TypeError(f"Invalid key type {type(key)} for '{self.name}'.")
         if isinstance(key, int):
             if not -self.size <= key < self.size:
                 raise IndexError(f"{key} outside of range for '{self.name}'.")
 
-        return _VariableItem(self, key)
+        return VariableItem(self, key)
 
-    def __iter__(self) -> Iterator[_VariableItem]:
+    def __iter__(self) -> Iterator[VariableItem]:
         for i in range(len(self)):
             yield self[i]
 
 
 @dataclasses.dataclass(frozen=True)
-class _VariableItem(Parametrized, OpSupport):
+class VariableItem(Parametrized, OpSupport):
     """Stores access to items of a variable with multiple values."""
 
     var: Variable
