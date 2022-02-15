@@ -52,7 +52,7 @@ class BaseRegister(ABC):
     """The abstract class for a register."""
 
     @abstractmethod
-    def __init__(self, qubits: Mapping[Any, ArrayLike]):
+    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError(
@@ -65,8 +65,18 @@ class BaseRegister(ABC):
             )
         self._ids = list(qubits.keys())
         self._coords = [np.array(v, dtype=float) for v in qubits.values()]
-        self._dim = 0
+        self._dim = self._coords[0].size
         self._layout_info: Optional[_LayoutInfo] = None
+        if kwargs:
+            if kwargs.keys() != {"layout", "trap_ids"}:
+                raise ValueError(
+                    "If specifying 'kwargs', they must only be 'layout' and "
+                    "'trap_ids'."
+                )
+            layout: RegisterLayout = kwargs["layout"]
+            trap_ids: tuple[int, ...] = tuple(kwargs["trap_ids"])
+            self._validate_layout(layout, trap_ids)
+            self._layout_info = _LayoutInfo(layout, trap_ids)
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
@@ -121,8 +131,8 @@ class BaseRegister(ABC):
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
-    def _set_layout(
-        self, register_layout: RegisterLayout, *trap_ids: int
+    def _validate_layout(
+        self, register_layout: RegisterLayout, trap_ids: tuple[int, ...]
     ) -> None:
         """Sets the RegisterLayout that originated this register."""
         trap_coords = register_layout.coords
@@ -143,11 +153,12 @@ class BaseRegister(ABC):
                     "The chosen traps from the RegisterLayout don't match this"
                     " register's coordinates."
                 )
-        self._layout_info = _LayoutInfo(register_layout, trap_ids)
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
         qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
+        if self._layout_info is not None:
+            return obj_to_dict(self, qs, **(self._layout_info._asdict()))
         return obj_to_dict(self, qs)
 
     def __eq__(self, other: Any) -> bool:

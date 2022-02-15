@@ -36,16 +36,15 @@ class Register3D(BaseRegister, RegDrawer):
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike]):
+    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
-        super().__init__(qubits)
-        coords = [np.array(v, dtype=float) for v in qubits.values()]
-        self._dim = coords[0].size
-        if any(c.shape != (self._dim,) for c in coords) or (self._dim != 3):
+        super().__init__(qubits, **kwargs)
+        if any(c.shape != (self._dim,) for c in self._coords) or (
+            self._dim != 3
+        ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 3."
             )
-        self._coords = coords
 
     @classmethod
     def cubic(

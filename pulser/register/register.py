@@ -37,10 +37,9 @@ class Register(BaseRegister, RegDrawer):
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike]):
+    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
-        super().__init__(qubits)
-        self._dim = self._coords[0].size
+        super().__init__(qubits, **kwargs)
         if any(c.shape != (self._dim,) for c in self._coords) or (
             self._dim != 2
         ):

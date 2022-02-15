@@ -181,8 +181,7 @@ class RegisterLayout(RegDrawer):
         qubits = dict(zip(ids, coords))
 
         reg_class = Register3D if self.dimensionality == 3 else Register
-        reg = reg_class(qubits)
-        reg._set_layout(self, *trap_ids)
+        reg = reg_class(qubits, layout=self, trap_ids=trap_ids)
         return reg
 
     def draw(

@@ -78,15 +78,15 @@ def test_register_definition():
     reg2d = layout.define_register(0, 2)
     assert reg2d._layout_info == (layout, (0, 2))
     with pytest.raises(ValueError, match="dimensionality is not the same"):
-        reg2d._set_layout(layout3d, 0, 2)
+        reg2d._validate_layout(layout3d, (0, 2))
     with pytest.raises(
         ValueError, match="must be equal to the number of atoms"
     ):
-        reg2d._set_layout(layout, 0)
+        reg2d._validate_layout(layout, (0,))
     with pytest.raises(
         ValueError, match="don't match this register's coordinates"
     ):
-        reg2d._set_layout(layout, 0, 1)
+        reg2d._validate_layout(layout, (0, 1))
 
     with pytest.raises(TypeError, match="cannot be rotated"):
         reg2d.rotate(30)
