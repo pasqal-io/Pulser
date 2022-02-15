@@ -129,6 +129,7 @@ class VariableItem(Parametrized, OpSupport):
 
     @property
     def variables(self) -> dict[str, Variable]:
+        """All the variables involved with this object."""
         return self.var.variables
 
     def build(self) -> Union[ArrayLike, str, float, int]:
