@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.register import Register
@@ -263,3 +264,6 @@ class RegisterLayout(RegDrawer):
 
     def __repr__(self) -> str:
         return f"RegisterLayout_{self._safe_hash().hex()}"
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self.trap_coordinates)
