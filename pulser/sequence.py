@@ -24,7 +24,16 @@ from collections.abc import Callable, Generator, Iterable
 from functools import wraps
 from itertools import chain
 from sys import version_info
-from typing import Any, NamedTuple, Optional, Tuple, TypeVar, Union, cast
+from typing import (
+    Any,
+    NamedTuple,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,6 +47,7 @@ from pulser.devices._device_datacls import Device
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
+from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
 
@@ -538,12 +548,31 @@ class Sequence:
             )
         )
 
+    @overload
     def declare_variable(
         self,
         name: str,
-        size: int = 1,
+        *,
+        dtype: Union[type[int], type[float], type[str]] = float,
+    ) -> VariableItem:
+        pass
+
+    @overload
+    def declare_variable(
+        self,
+        name: str,
+        *,
+        size: int,
         dtype: Union[type[int], type[float], type[str]] = float,
     ) -> Variable:
+        pass
+
+    def declare_variable(
+        self,
+        name: str,
+        size: Optional[int] = None,
+        dtype: Union[type[int], type[float], type[str]] = float,
+    ) -> Union[Variable, VariableItem]:
         """Declare a new variable within this Sequence.
 
         The declared variables can be used to create parametrized versions of
@@ -570,9 +599,14 @@ class Sequence:
         """
         if name in self._variables:
             raise ValueError("Name for variable is already being used.")
-        var = Variable(name, dtype, size=size)
-        self._variables[name] = var
-        return var
+
+        if size is None:
+            var = self.declare_variable(name, size=1, dtype=dtype)
+            return var[0]
+        else:
+            var = Variable(name, dtype, size=size)
+            self._variables[name] = var
+            return var
 
     @_store
     def add(
