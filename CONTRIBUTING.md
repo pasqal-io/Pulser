@@ -115,3 +115,23 @@ annotations and pass the type checks from running:
 
     **Note**: Type hints for `numpy` have only been added in version 1.20. Make sure you have `numpy >= 1.20`
     installed before running the type checks.
+
+### Use `pre-commit` to automate CI checks
+
+[`pre-commit`](https://pre-commit.com/) is a tool to easily setup and manage [git hooks](https://git-scm.com/docs/githooks).
+
+Run
+
+```bash
+pre-commit install --hook-type pre-push
+```
+
+to install `black`, `isort`, `flake8` and `mypy` hooks in your local repository (at `.git/hooks/` by defaults)
+and run them automatically before any push to remote git repository.
+If an issue is found by these tools, the git hook will abort the push. `black` and `isort` hooks may reformat guilty files.
+
+Disable the hooks with
+
+```bash
+pre-commit uninstall --hook-type pre-push
+```
