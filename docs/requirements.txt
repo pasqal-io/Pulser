@@ -1,6 +1,6 @@
 # For generating documentation.
 Sphinx
-furo # documentation theme
+sphinx-book-theme # documentation theme
 nbsphinx
 nbsphinx-link
 
