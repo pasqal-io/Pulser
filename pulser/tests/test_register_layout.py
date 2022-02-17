@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch
 from hashlib import sha256
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
 )
-from pulser.register import Register3D, Register
 
 layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
 layout3d = RegisterLayout([[0, 0, 0], [1, 1, 1], [0, 1, 0], [1, 0, 1]])

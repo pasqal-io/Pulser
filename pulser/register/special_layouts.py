@@ -17,9 +17,9 @@ from __future__ import annotations
 
 from typing import cast
 
-from pulser.register.register_layout import RegisterLayout
-from pulser.register import Register
 import pulser.register._patterns as patterns
+from pulser.register import Register
+from pulser.register.register_layout import RegisterLayout
 
 
 class SquareLatticeLayout(RegisterLayout):

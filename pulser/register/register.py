@@ -23,9 +23,9 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
+import pulser.register._patterns as patterns
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister
-import pulser.register._patterns as patterns
 
 
 class Register(BaseRegister, RegDrawer):
