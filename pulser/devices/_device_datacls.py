@@ -159,8 +159,8 @@ class Device:
                 self.validate_layout(register._layout_info.layout)
             except (ValueError, TypeError):
                 raise ValueError(
-                    "The 'register' is associated to an incompatible register "
-                    "layout."
+                    "The 'register' is associated with an incompatible "
+                    "register layout."
                 )
 
     def validate_layout(self, layout: RegisterLayout) -> None:

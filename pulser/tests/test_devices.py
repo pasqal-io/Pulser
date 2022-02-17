@@ -19,9 +19,10 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, Device
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import TriangularLatticeLayout
 
 
 def test_init():
@@ -111,6 +112,12 @@ def test_validate_register():
             Register.triangular_lattice(3, 4, spacing=3.9)
         )
 
+    with pytest.raises(
+        ValueError, match="associated with an incompatible register layout"
+    ):
+        tri_layout = TriangularLatticeLayout(201, 5)
+        Chadoq2.validate_register(tri_layout.hexagonal_register(10))
+
     Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))
 
 
@@ -139,3 +146,31 @@ def test_validate_layout():
         Register.square(int(np.sqrt(Chadoq2.max_atom_num * 2)))._coords
     )
     Chadoq2.validate_layout(valid_layout)
+
+
+def test_calibrated_layouts():
+    with pytest.raises(ValueError, match="The number of traps"):
+        Device(
+            name="TestDevice",
+            dimensions=2,
+            rydberg_level=70,
+            max_atom_num=100,
+            max_radial_distance=50,
+            min_atom_distance=4,
+            _channels=(),
+            pre_calibrated_layouts=(TriangularLatticeLayout(201, 5),),
+        )
+
+    TestDevice = Device(
+        name="TestDevice",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=50,
+        min_atom_distance=4,
+        _channels=(),
+        pre_calibrated_layouts=(TriangularLatticeLayout(100, 5),),
+    )
+    assert TestDevice.calibrated_register_layouts.keys() == {
+        "TriangularLatticeLayout(100, 5µm)"
+    }
