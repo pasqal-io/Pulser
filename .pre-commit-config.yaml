@@ -14,7 +14,6 @@ repos:
     hooks:
       - id: isort
         name: isort (python)
-        args: [--profile black]
 
   # Calling mypy from a bash script, as I cannot figure out how to pass the
   # .mypy.ini config file when using the hook at
