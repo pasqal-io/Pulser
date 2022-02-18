@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 22.1.0
+    hooks:
+      - id: black-jupyter
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        name: isort (python)
+
+  # Calling mypy from a bash script, as I cannot figure out how to pass the
+  # .mypy.ini config file when using the hook at
+  # https://github.com/pre-commit/mirrors-mypy
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: ./.mypy_script
+        language: script

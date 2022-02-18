@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+mypy --config-file .mypy.ini

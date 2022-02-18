@@ -17,6 +17,9 @@ mypy == 0.921
 pytest
 pytest-cov
 
+# CI
+pre-commit
+
 # tutorials
 notebook
 python-igraph
