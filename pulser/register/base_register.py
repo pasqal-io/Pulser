@@ -141,6 +141,9 @@ class BaseRegister(ABC):
                 "The RegisterLayout dimensionality is not the same as this "
                 "register's."
             )
+        if len(set(trap_ids)) != len(trap_ids):
+            raise ValueError("Every 'trap_id' must be a unique integer.")
+
         if len(trap_ids) != len(self._ids):
             raise ValueError(
                 "The amount of 'trap_ids' must be equal to the number of atoms"

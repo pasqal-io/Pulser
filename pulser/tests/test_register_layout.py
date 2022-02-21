@@ -80,6 +80,10 @@ def test_register_definition():
     with pytest.raises(ValueError, match="dimensionality is not the same"):
         reg2d._validate_layout(layout3d, (0, 2))
     with pytest.raises(
+        ValueError, match="Every 'trap_id' must be a unique integer"
+    ):
+        reg2d._validate_layout(layout, (0, 2, 2))
+    with pytest.raises(
         ValueError, match="must be equal to the number of atoms"
     ):
         reg2d._validate_layout(layout, (0,))
@@ -142,7 +146,7 @@ def test_square_lattice_layout():
     )
     # An even number of atoms on the side won't align the center with an atom
     assert square.square_register(4) != Register.square(
-        3, spacing=5, prefix="q"
+        4, spacing=5, prefix="q"
     )
     with pytest.raises(
         ValueError, match="'6 x 6' array has more atoms than those available"

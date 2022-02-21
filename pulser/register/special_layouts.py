@@ -44,7 +44,7 @@ class SquareLatticeLayout(RegisterLayout):
         """Defines a register with a square shape.
 
         Args:
-            side (int): The lenght of the square's side, in number of atoms.
+            side (int): The length of the square's side, in number of atoms.
             prefix (str): The prefix for the qubit ids. Each qubit ID starts
                 with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).

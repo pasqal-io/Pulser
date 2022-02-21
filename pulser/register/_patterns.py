@@ -58,9 +58,6 @@ def triangular_hex(n_points: int) -> np.ndarray:
     Returns:
         np.ndarray: The coordinates of the points in the pattern.
     """
-    layers = int((-3.0 + np.sqrt(9 + 12 * (n_points - 1))) / 6.0)
-    points_left = n_points - 1 - (layers**2 + layers) * 3
-
     # y coordinates of the top vertex of a triangle
     crest_y = np.sqrt(3) / 2.0
 
@@ -76,6 +73,9 @@ def triangular_hex(n_points: int) -> np.ndarray:
             ]
         )
         return hex_coords[:n_points]
+
+    layers = int((-3.0 + np.sqrt(9 + 12 * (n_points - 1))) / 6.0)
+    points_left = n_points - 1 - (layers**2 + layers) * 3
 
     # Coordinates of vertices
     start_x = [-1.0, -0.5, 0.5, 1.0, 0.5, -0.5]
