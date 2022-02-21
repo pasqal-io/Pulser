@@ -27,7 +27,7 @@ def test_creation():
         Register(empty_dict)
 
     coords = [(0, 0), (1, 0)]
-    ids = ["q0", "q1"]
+    ids = ("q0", "q1")
     qubits = dict(zip(ids, coords))
     with pytest.raises(TypeError):
         Register(coords)
@@ -50,14 +50,14 @@ def test_creation():
     assert reg1._ids == reg2._ids
 
     reg2b = Register.from_coordinates(coords, center=False, labels=["a", "b"])
-    assert reg2b._ids == ["a", "b"]
+    assert reg2b._ids == ("a", "b")
 
     with pytest.raises(ValueError, match="Label length"):
         Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
 
     reg3 = Register.from_coordinates(np.array(coords), prefix="foo")
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
-    assert reg3._ids == ["foo0", "foo1"]
+    assert reg3._ids == ("foo0", "foo1")
     assert np.all(reg3._coords == coords_)
     assert not np.all(coords_ == coords)
 

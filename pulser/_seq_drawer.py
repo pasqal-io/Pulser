@@ -161,10 +161,9 @@ def draw_sequence(
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    pos = np.array(seq.register._coords)
-
     # Draw masked register
     if draw_register:
+        pos = np.array(seq.register._coords)
         if isinstance(seq.register, Register3D):
             labels = "xyz"
             fig_reg, axes_reg = seq.register._initialize_fig_axes_projection(

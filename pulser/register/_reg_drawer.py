@@ -14,8 +14,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Optional, Union
+from typing import Optional, Union, List, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,7 +33,7 @@ class RegDrawer:
     def _draw_2D(
         ax: plt.axes._subplots.AxesSubplot,
         pos: np.ndarray,
-        ids: list,
+        ids: abcSequence[QubitId],
         plane: tuple = (0, 1),
         with_labels: bool = True,
         blockade_radius: Optional[float] = None,
@@ -91,7 +92,9 @@ class RegDrawer:
                 while j < len(plot_ids):
                     r2 = plot_pos[j]
                     if np.max(np.abs(r - r2)) < epsilon:
-                        plot_ids[i] = plot_ids[i] + plot_ids.pop(j)
+                        plot_ids[i] = cast(List[str], plot_ids[i]) + cast(
+                            List[str], plot_ids.pop(j)
+                        )
                         plot_pos.pop(j)
                         overlap = True
                     else:
@@ -105,12 +108,16 @@ class RegDrawer:
                 has_masked = False
                 for j in range(len(plot_ids[i])):
                     if plot_ids[i][j] in [str(q) for q in masked_qubits]:
-                        plot_ids[i][j:] = [", ".join(plot_ids[i][j:])]
+                        cast(List[str], plot_ids[i])[j:] = [
+                            ", ".join(plot_ids[i][j:])
+                        ]
                         has_masked = True
                         break
                 # Add a square bracket that encloses all masked qubits
                 if has_masked:
-                    plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
+                    cast(List[str], plot_ids[i])[-1] = (
+                        "[" + plot_ids[i][-1] + "]"
+                    )
                 # Merge what remains
                 plot_ids[i] = ", ".join(plot_ids[i])
                 bbs[plot_ids[i]] = overlap
@@ -165,7 +172,7 @@ class RegDrawer:
     @staticmethod
     def _draw_3D(
         pos: np.ndarray,
-        ids: list,
+        ids: abcSequence[QubitId],
         projection: bool = False,
         with_labels: bool = True,
         blockade_radius: Optional[float] = None,
