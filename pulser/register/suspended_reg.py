@@ -15,15 +15,24 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:
+from pulser.json.utils import obj_to_dict
+
+if TYPE_CHECKING:  # pragma: no cover
     from pulser.register.base_register import QubitId, BaseRegister
     from pulser.register.register_layout import RegisterLayout
 
 
 class SuspendedRegister:
-    """A register with the traps of each qubit still to be defined."""
+    """A register with the traps of each qubit still to be defined.
+
+    Args:
+        register_layout (RegisterLayout): The register layout on which this
+            register will be defined.
+        qubit_ids (QubitId): The Ids for the qubits to pre-declare on this
+            register.
+    """
 
     def __init__(self, register_layout: RegisterLayout, *qubit_ids: QubitId):
         """Initializes the suspended register."""
@@ -61,3 +70,6 @@ class SuspendedRegister:
         return self._layout.define_register(
             *tuple(qubits.values()), qubit_ids=chosen_ids
         )
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self._layout, *self._qubit_ids)

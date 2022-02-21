@@ -22,6 +22,7 @@ from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
@@ -658,3 +659,49 @@ def test_hardware_constraints():
         ):
             seq.draw(mode="output")
         seq.draw(mode="input+output")
+
+
+def test_suspended_register():
+    layout = TriangularLatticeLayout(100, 5)
+    susp_reg = layout.make_suspended_register(10)
+    seq = Sequence(susp_reg, Chadoq2)
+    assert seq._reg_suspended
+    reserved_qids = tuple([f"q{i}" for i in range(10)])
+    assert seq._qids == set(reserved_qids)
+    with pytest.raises(RuntimeError, match="Can't access the qubit info"):
+        seq.qubit_info
+    with pytest.raises(
+        RuntimeError, match="Can't access the sequence's register"
+    ):
+        seq.register
+
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.declare_channel("ram", "raman_local", initial_target="q2")
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd")
+    seq.add(Pulse.ConstantPulse(200, 1, 0, 0), "ram")
+    assert seq._last("ryd").targets == set(reserved_qids)
+    assert seq._last("ram").targets == {"q2"}
+
+    with pytest.raises(ValueError, match="Can't draw the register"):
+        seq.draw(draw_register=True)
+
+    # Can draw if 'draw_register=False'
+    with patch("matplotlib.pyplot.show"):
+        seq.draw()
+
+    with pytest.raises(ValueError, match="'qubits' must be specified"):
+        seq.build()
+
+    with pytest.raises(
+        ValueError, match="targeted but have not been assigned"
+    ):
+        seq.build(qubits={"q0": 1, "q1": 10})
+
+    seq_ = seq.build(qubits={"q2": 20, "q0": 10})
+    seq_._last("ryd").targets == {"q2", "q0"}
+    assert not seq_._reg_suspended
+    assert seq_.register == Register(
+        {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}
+    )
+    with pytest.raises(ValueError, match="already has a concrete register"):
+        seq_.build(qubits={"q2": 20, "q0": 10})
