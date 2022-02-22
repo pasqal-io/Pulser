@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import List, Optional, Union, cast
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -78,12 +78,13 @@ class RegDrawer:
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            plot_ids: list[Union[str, list[str]]] = [[f"{i}"] for i in ids]
+            plot_ids: list[list[str]] = [[f"{i}"] for i in ids]
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
             i = 0
             bbs = {}
+            final_plot_ids: list[str] = []
             while i < len(plot_ids):
                 r = plot_pos[i]
                 j = i + 1
@@ -92,9 +93,7 @@ class RegDrawer:
                 while j < len(plot_ids):
                     r2 = plot_pos[j]
                     if np.max(np.abs(r - r2)) < epsilon:
-                        plot_ids[i] = cast(List[str], plot_ids[i]) + cast(
-                            List[str], plot_ids.pop(j)
-                        )
+                        plot_ids[i] = plot_ids[i] + plot_ids.pop(j)
                         plot_pos.pop(j)
                         overlap = True
                     else:
@@ -108,22 +107,18 @@ class RegDrawer:
                 has_masked = False
                 for j in range(len(plot_ids[i])):
                     if plot_ids[i][j] in [str(q) for q in masked_qubits]:
-                        cast(List[str], plot_ids[i])[j:] = [
-                            ", ".join(plot_ids[i][j:])
-                        ]
+                        plot_ids[i][j:] = [", ".join(plot_ids[i][j:])]
                         has_masked = True
                         break
                 # Add a square bracket that encloses all masked qubits
                 if has_masked:
-                    cast(List[str], plot_ids[i])[-1] = (
-                        "[" + plot_ids[i][-1] + "]"
-                    )
+                    plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
                 # Merge what remains
-                plot_ids[i] = ", ".join(plot_ids[i])
-                bbs[plot_ids[i]] = overlap
+                final_plot_ids.append(", ".join(plot_ids[i]))
+                bbs[final_plot_ids[i]] = overlap
                 i += 1
 
-            for q, coords in zip(plot_ids, plot_pos):
+            for q, coords in zip(final_plot_ids, plot_pos):
                 bb = (
                     dict(boxstyle="square", fill=False, ec="gray", ls="--")
                     if bbs[q]

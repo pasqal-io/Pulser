@@ -98,6 +98,15 @@ class Simulation:
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = self._seq.get_duration()
+
+        # Type hints for attributes defined outside of __init__
+        self.basis_name: str
+        self._config: SimConfig
+        self.op_matrix: dict[str, qutip.Qobj]
+        self.basis: dict[str, qutip.Qobj]
+        self.dim: int
+        self._eval_times_array: np.ndarray
+
         if not (0 < sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "
