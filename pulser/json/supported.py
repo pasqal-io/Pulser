@@ -43,6 +43,8 @@ SUPPORTED_MODULES = {
     "numpy": ("array",),
     "pulser.register.register": ("Register",),
     "pulser.register.register3d": ("Register3D",),
+    "pulser.register.register_layout": ("RegisterLayout",),
+    "pulser.register.mappable_reg": ("MappableRegister",),
     "pulser.devices": tuple(
         [dev.name for dev in pulser.devices._valid_devices] + ["MockDevice"]
     ),
