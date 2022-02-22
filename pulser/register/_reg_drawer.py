@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Optional, Union, List, cast
+from typing import List, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
