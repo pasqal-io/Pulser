@@ -63,7 +63,7 @@ class BaseRegister(ABC):
             raise ValueError(
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
-        self._ids = list(qubits.keys())
+        self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
         self._coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = self._coords[0].size
         self._layout_info: Optional[_LayoutInfo] = None
@@ -82,6 +82,11 @@ class BaseRegister(ABC):
     def qubits(self) -> dict[QubitId, np.ndarray]:
         """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))
+
+    @property
+    def qubit_ids(self) -> tuple[QubitId, ...]:
+        """The qubit IDs of this register."""
+        return self._ids
 
     @classmethod
     def from_coordinates(

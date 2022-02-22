@@ -28,6 +28,7 @@ from numpy.typing import ArrayLike
 from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
+from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
 
@@ -247,6 +248,29 @@ class RegisterLayout(RegDrawer):
                 are_traps=True,
             )
         plt.show()
+
+    def make_mappable_register(
+        self, n_qubits: int, prefix: str = "q"
+    ) -> MappableRegister:
+        """Creates a mappable register associated with this layout.
+
+        A mappable register is a register whose atoms' positions have not yet
+        been defined. It can be used to create a sequence whose register is
+        only defined when it is built. Note that not all the qubits 'reserved'
+        in a MappableRegister need to be in the final Register, as qubits not
+        associated with trap IDs won't be included. If you intend on defining
+        registers of different sizes from the same mappable register, reserve
+        as many qubits as you need for your largest register.
+
+        Args:
+            n_qubits(int): The number of qubits to reserve in the mappable
+                register.
+            prefix (str): The prefix for the qubit ids. Each qubit ID starts
+                with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+        """
+        qubit_ids = [f"{prefix}{i}" for i in range(n_qubits)]
+        return MappableRegister(self, *qubit_ids)
 
     def _safe_hash(self) -> bytes:
         # Include dimensionality because the array is flattened with tobytes()

@@ -183,3 +183,22 @@ def test_triangular_lattice_layout():
     tri.rectangular_register(5, 5) != Register.triangular_lattice(
         5, 5, spacing=5, prefix="q"
     )
+
+
+def test_mappable_register_creation():
+    tri = TriangularLatticeLayout(50, 5)
+    with pytest.raises(ValueError, match="greater than the maximum"):
+        tri.make_mappable_register(26)
+
+    mapp_reg = tri.make_mappable_register(5)
+    assert mapp_reg.qubit_ids == ("q0", "q1", "q2", "q3", "q4")
+
+    with pytest.raises(
+        ValueError, match="labeled with pre-declared qubit IDs"
+    ):
+        mapp_reg.build_register({"q0": 0, "q5": 2})
+
+    reg = mapp_reg.build_register({"q0": 10, "q1": 49})
+    assert reg == Register(
+        {"q0": tri.traps_dict[10], "q1": tri.traps_dict[49]}
+    )

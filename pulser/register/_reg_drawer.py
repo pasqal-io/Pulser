@@ -14,8 +14,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Optional, Union
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,7 +33,7 @@ class RegDrawer:
     def _draw_2D(
         ax: plt.axes._subplots.AxesSubplot,
         pos: np.ndarray,
-        ids: list,
+        ids: abcSequence[QubitId],
         plane: tuple = (0, 1),
         with_labels: bool = True,
         blockade_radius: Optional[float] = None,
@@ -77,12 +78,13 @@ class RegDrawer:
         if with_labels:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
-            plot_ids: list[Union[str, list[str]]] = [[f"{i}"] for i in ids]
+            plot_ids: list[list[str]] = [[f"{i}"] for i in ids]
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
             i = 0
             bbs = {}
+            final_plot_ids: list[str] = []
             while i < len(plot_ids):
                 r = plot_pos[i]
                 j = i + 1
@@ -112,11 +114,11 @@ class RegDrawer:
                 if has_masked:
                     plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
                 # Merge what remains
-                plot_ids[i] = ", ".join(plot_ids[i])
-                bbs[plot_ids[i]] = overlap
+                final_plot_ids.append(", ".join(plot_ids[i]))
+                bbs[final_plot_ids[i]] = overlap
                 i += 1
 
-            for q, coords in zip(plot_ids, plot_pos):
+            for q, coords in zip(final_plot_ids, plot_pos):
                 bb = (
                     dict(boxstyle="square", fill=False, ec="gray", ls="--")
                     if bbs[q]
@@ -165,7 +167,7 @@ class RegDrawer:
     @staticmethod
     def _draw_3D(
         pos: np.ndarray,
-        ids: list,
+        ids: abcSequence[QubitId],
         projection: bool = False,
         with_labels: bool = True,
         blockade_radius: Optional[float] = None,
