@@ -82,7 +82,7 @@ class Simulation:
                 "The provided sequence has to be a valid "
                 "pulser.Sequence instance."
             )
-        if sequence.is_parametrized() or sequence._reg_suspended:
+        if sequence.is_parametrized() or sequence.is_register_mappable():
             raise ValueError(
                 "The provided sequence needs to be built to be simulated. Call"
                 " `Sequence.build()` with the necessary parameters."

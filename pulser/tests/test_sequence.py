@@ -661,11 +661,11 @@ def test_hardware_constraints():
         seq.draw(mode="input+output")
 
 
-def test_suspended_register():
+def test_mappable_register():
     layout = TriangularLatticeLayout(100, 5)
-    susp_reg = layout.make_suspended_register(10)
-    seq = Sequence(susp_reg, Chadoq2)
-    assert seq._reg_suspended
+    mapp_reg = layout.make_mappable_register(10)
+    seq = Sequence(mapp_reg, Chadoq2)
+    assert seq.is_register_mappable()
     reserved_qids = tuple([f"q{i}" for i in range(10)])
     assert seq._qids == set(reserved_qids)
     with pytest.raises(RuntimeError, match="Can't access the qubit info"):
@@ -699,7 +699,7 @@ def test_suspended_register():
 
     seq_ = seq.build(qubits={"q2": 20, "q0": 10})
     seq_._last("ryd").targets == {"q2", "q0"}
-    assert not seq_._reg_suspended
+    assert not seq_.is_register_mappable()
     assert seq_.register == Register(
         {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}
     )

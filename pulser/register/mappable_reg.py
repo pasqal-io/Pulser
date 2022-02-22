@@ -24,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from pulser.register.register_layout import RegisterLayout
 
 
-class SuspendedRegister:
+class MappableRegister:
     """A register with the traps of each qubit still to be defined.
 
     Args:
@@ -35,7 +35,7 @@ class SuspendedRegister:
     """
 
     def __init__(self, register_layout: RegisterLayout, *qubit_ids: QubitId):
-        """Initializes the suspended register."""
+        """Initializes the mappable register."""
         self._layout = register_layout
         if len(qubit_ids) > self._layout.max_atom_num:
             raise ValueError(
@@ -47,7 +47,7 @@ class SuspendedRegister:
 
     @property
     def qubit_ids(self) -> tuple[QubitId, ...]:
-        """The qubit IDs of this suspended register."""
+        """The qubit IDs of this mappable register."""
         return self._qubit_ids
 
     def build_register(self, qubits: Mapping[QubitId, int]) -> BaseRegister:
@@ -56,7 +56,7 @@ class SuspendedRegister:
         Args:
             qubits (Mapping[QubitId, int]): A map between the qubit IDs to use
                 and the layout traps where the qubits will be placed. Qubit IDs
-                declared in the SuspendedRegister but not defined here will
+                declared in the MappableRegister but not defined here will
                 simply be left out of the final register.
 
         Returns:

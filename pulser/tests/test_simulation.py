@@ -113,9 +113,9 @@ def test_initialization_and_construction_of_hamiltonian():
         Simulation(seq_copy)
 
     layout = RegisterLayout([[0, 0], [10, 10]])
-    susp_reg = layout.make_suspended_register(1)
-    seq_ = Sequence(susp_reg, Chadoq2)
-    assert seq_._reg_suspended and not seq_.is_parametrized()
+    mapp_reg = layout.make_mappable_register(1)
+    seq_ = Sequence(mapp_reg, Chadoq2)
+    assert seq_.is_register_mappable() and not seq_.is_parametrized()
     with pytest.raises(ValueError, match="needs to be built"):
         Simulation(seq_)
 

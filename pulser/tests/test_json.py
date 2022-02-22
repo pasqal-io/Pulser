@@ -67,12 +67,12 @@ def test_register_from_layout():
     assert new_reg._layout_info.trap_ids == (1, 0)
 
 
-def test_suspended_register():
+def test_mappable_register():
     layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
-    susp_reg = layout.make_suspended_register(2)
-    new_susp_reg = encode_decode(susp_reg)
-    assert new_susp_reg._layout == layout
-    assert new_susp_reg.qubit_ids == ("q0", "q1")
+    mapp_reg = layout.make_mappable_register(2)
+    new_mapp_reg = encode_decode(mapp_reg)
+    assert new_mapp_reg._layout == layout
+    assert new_mapp_reg.qubit_ids == ("q0", "q1")
 
 
 def test_rare_cases():

@@ -50,7 +50,7 @@ from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
-from pulser.register.suspended_reg import SuspendedRegister
+from pulser.register.mappable_reg import MappableRegister
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
@@ -161,8 +161,8 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register(Union[BaseRegister, SuspendedRegister]): The atom register on
-            which to apply the pulses. If given as a SuspendedRegister
+        register(Union[BaseRegister, MappableRegister]): The atom register on
+            which to apply the pulses. If given as a MappableRegister
             instance, the traps corrresponding to each qubit ID must be given
             when building the sequence.
         device(Device): A valid device in which to execute the Sequence (import
@@ -174,7 +174,7 @@ class Sequence:
     """
 
     def __init__(
-        self, register: Union[BaseRegister, SuspendedRegister], device: Device
+        self, register: Union[BaseRegister, MappableRegister], device: Device
     ):
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
@@ -196,14 +196,12 @@ class Sequence:
             warnings.warn(warns_msg, stacklevel=2)
 
         # Checks if register is compatible with the device
-        if isinstance(register, SuspendedRegister):
+        if isinstance(register, MappableRegister):
             device.validate_layout(register._layout)
-            self._reg_suspended = True
         else:
             device.validate_register(register)
-            self._reg_suspended = False
 
-        self._register: Union[BaseRegister, SuspendedRegister] = register
+        self._register: Union[BaseRegister, MappableRegister] = register
         self._device: Device = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
@@ -235,20 +233,20 @@ class Sequence:
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
         """Dictionary with the qubit's IDs and positions."""
-        if self._reg_suspended:
+        if self.is_register_mappable():
             raise RuntimeError(
                 "Can't access the qubit information when the register is "
-                "suspended."
+                "mappable."
             )
         return cast(BaseRegister, self._register).qubits
 
     @property
     def register(self) -> BaseRegister:
         """Register with the qubit's IDs and positions."""
-        if self._reg_suspended:
+        if self.is_register_mappable():
             raise RuntimeError(
                 "Can't access the sequence's register because the register "
-                "defintion is suspended."
+                "is mappable."
             )
         return cast(BaseRegister, self._register)
 
@@ -311,6 +309,18 @@ class Sequence:
             bool: Whether the sequence is parametrized.
         """
         return not self._building
+
+    def is_register_mappable(self) -> bool:
+        """States whether the sequence's register is mappable.
+
+        A sequence with a mappable register will require its qubit Id's to be
+        mapped to trap Ids of its associated RegisterLayout through the
+        `Sequence.build()` call.
+
+        Returns:
+            bool: Whether the register is a MappableRegister.
+        """
+        return isinstance(self._register, MappableRegister)
 
     @_screen
     def get_duration(
@@ -962,7 +972,7 @@ class Sequence:
             qubits (Optional[Mapping[QubitId, int]]): A mapping between qubit
                 IDs and trap IDs used to define the register. Must only be
                 provided when the sequence is initialized with a
-                SuspendedRegister.
+                MappableRegister.
             vars: The values for all the variables declared in this Sequence
                 instance, indexed by the name given upon declaration. Check
                 ``Sequence.declared_variables`` to see all the variables.
@@ -983,15 +993,13 @@ class Sequence:
         # Shallow copy with stored parametrized objects (if any)
         seq = copy.copy(self)
 
-        if self._reg_suspended:
+        if self.is_register_mappable():
             if qubits is None:
                 raise ValueError(
                     "'qubits' must be specified when the sequence is created "
-                    "with a SuspendedRegister."
+                    "with a MappableRegister."
                 )
-            reg = cast(SuspendedRegister, self._register).build_register(
-                qubits
-            )
+            reg = cast(MappableRegister, self._register).build_register(qubits)
             self._set_register(seq, reg)
 
         elif qubits is not None:
@@ -1001,7 +1009,7 @@ class Sequence:
             )
 
         if not self.is_parametrized():
-            if not self._reg_suspended:
+            if not self.is_register_mappable():
                 warnings.warn(
                     "Building a non-parametrized sequence simply returns"
                     " a copy of itself.",
@@ -1122,7 +1130,7 @@ class Sequence:
             draw_register (bool): Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False. Can't be set to
-                True if the sequence is defined with a suspended register.
+                True if the sequence is defined with a mappable register.
             fig_name(str, default=None): The name on which to save the
                 figure. If `draw_register` is True, both pulses and register
                 will be saved as figures, with a suffix ``_pulses`` and
@@ -1157,7 +1165,7 @@ class Sequence:
                     stacklevel=2,
                 )
                 draw_interp_pts = False
-        if draw_register and self._reg_suspended:
+        if draw_register and self.is_register_mappable():
             raise ValueError(
                 "Can't draw the register for a sequence without a defined "
                 "register."
@@ -1391,10 +1399,9 @@ class Sequence:
         self._to_build_calls = []
 
     def _set_register(self, seq: Sequence, reg: BaseRegister) -> None:
-        """Sets the register on a sequence who had a suspended register."""
+        """Sets the register on a sequence who had a mappable register."""
         self._device.validate_register(reg)
         seq._register = reg
-        seq._reg_suspended = False
         seq._qids = set(seq.register.qubit_ids)
         used_qubits = set()
         for ch, ch_obj in self._channels.items():
