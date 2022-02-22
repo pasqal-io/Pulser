@@ -79,6 +79,11 @@ def test_creation():
     )
     assert np.all(np.array(reg6._coords) == coords_)
 
+    with pytest.raises(
+        ValueError, match="must only be 'layout' and 'trap_ids'"
+    ):
+        Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
+
 
 def test_rectangle():
     # Check rows
