@@ -82,6 +82,11 @@ class Simulation:
                 "The provided sequence has to be a valid "
                 "pulser.Sequence instance."
             )
+        if sequence.is_parametrized() or sequence._reg_suspended:
+            raise ValueError(
+                "The provided sequence needs to be built to be simulated. Call"
+                " `Sequence.build()` with the necessary parameters."
+            )
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
