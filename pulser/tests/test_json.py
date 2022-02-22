@@ -22,6 +22,7 @@ from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.supported import validate_serialization
 from pulser.parametrized.decorators import parametrize
+from pulser.register.register_layout import RegisterLayout
 from pulser.waveforms import BlackmanWaveform
 
 
@@ -54,6 +55,25 @@ def test_register_3d():
     reg = Register3D({"a": (1, 2, 3), "b": (8, 5, 6)})
     seq = Sequence(reg, device=MockDevice)
     assert reg == encode_decode(seq).register
+
+
+def test_register_from_layout():
+    layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
+    reg = layout.define_register(1, 0)
+    assert reg == Register({"q0": [0, 1], "q1": [0, 0]})
+    seq = Sequence(reg, device=MockDevice)
+    new_reg = encode_decode(seq).register
+    assert reg == new_reg
+    assert new_reg._layout_info.layout == layout
+    assert new_reg._layout_info.trap_ids == (1, 0)
+
+
+def test_mappable_register():
+    layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
+    mapp_reg = layout.make_mappable_register(2)
+    new_mapp_reg = encode_decode(mapp_reg)
+    assert new_mapp_reg._layout == layout
+    assert new_mapp_reg.qubit_ids == ("q0", "q1")
 
 
 def test_rare_cases():

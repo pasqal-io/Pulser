@@ -18,25 +18,41 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
-from typing import Any, Optional, Type, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    NamedTuple,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import collections as mc
 from numpy.typing import ArrayLike
-from scipy.spatial import KDTree
 
 from pulser.json.utils import obj_to_dict
 
+if TYPE_CHECKING:  # pragma: no cover
+    from pulser.register.register_layout import RegisterLayout
+
 T = TypeVar("T", bound="BaseRegister")
 QubitId = Union[int, str]
+
+
+class _LayoutInfo(NamedTuple):
+    """Auxiliary class to store the register layout information."""
+
+    layout: RegisterLayout
+    trap_ids: tuple[int, ...]
 
 
 class BaseRegister(ABC):
     """The abstract class for a register."""
 
     @abstractmethod
-    def __init__(self, qubits: Mapping[Any, ArrayLike]):
+    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError(
@@ -47,14 +63,30 @@ class BaseRegister(ABC):
             raise ValueError(
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
-        self._ids = list(qubits.keys())
+        self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
         self._coords = [np.array(v, dtype=float) for v in qubits.values()]
-        self._dim = 0
+        self._dim = self._coords[0].size
+        self._layout_info: Optional[_LayoutInfo] = None
+        if kwargs:
+            if kwargs.keys() != {"layout", "trap_ids"}:
+                raise ValueError(
+                    "If specifying 'kwargs', they must only be 'layout' and "
+                    "'trap_ids'."
+                )
+            layout: RegisterLayout = kwargs["layout"]
+            trap_ids: tuple[int, ...] = tuple(kwargs["trap_ids"])
+            self._validate_layout(layout, trap_ids)
+            self._layout_info = _LayoutInfo(layout, trap_ids)
 
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
         """Dictionary of the qubit names and their position coordinates."""
         return dict(zip(self._ids, self._coords))
+
+    @property
+    def qubit_ids(self) -> tuple[QubitId, ...]:
+        """The qubit IDs of this register."""
+        return self._ids
 
     @classmethod
     def from_coordinates(
@@ -104,184 +136,37 @@ class BaseRegister(ABC):
             qubits = dict(cast(Iterable, enumerate(coords)))
         return cls(qubits)
 
-    @staticmethod
-    def _draw_2D(
-        ax: plt.axes._subplots.AxesSubplot,
-        pos: np.ndarray,
-        ids: list,
-        plane: tuple = (0, 1),
-        with_labels: bool = True,
-        blockade_radius: Optional[float] = None,
-        draw_graph: bool = True,
-        draw_half_radius: bool = False,
-        masked_qubits: set[QubitId] = set(),
+    def _validate_layout(
+        self, register_layout: RegisterLayout, trap_ids: tuple[int, ...]
     ) -> None:
-        ix, iy = plane
-
-        ax.scatter(pos[:, ix], pos[:, iy], s=30, alpha=0.7, c="darkgreen")
-
-        # Draw square halo around masked qubits
-        if masked_qubits:
-            mask_pos = []
-            for i, c in zip(ids, pos):
-                if i in masked_qubits:
-                    mask_pos.append(c)
-            mask_arr = np.array(mask_pos)
-            ax.scatter(
-                mask_arr[:, ix],
-                mask_arr[:, iy],
-                marker="s",
-                s=1200,
-                alpha=0.2,
-                c="black",
-            )
-
-        axes = "xyz"
-
-        ax.set_xlabel(axes[ix] + " (µm)")
-        ax.set_ylabel(axes[iy] + " (µm)")
-        ax.axis("equal")
-        ax.spines["right"].set_color("none")
-        ax.spines["top"].set_color("none")
-
-        if with_labels:
-            # Determine which labels would overlap and merge those
-            plot_pos = list(pos[:, (ix, iy)])
-            plot_ids: list[Union[list, str]] = [[f"{i}"] for i in ids]
-            # Threshold distance between points
-            epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
-
-            i = 0
-            bbs = {}
-            while i < len(plot_ids):
-                r = plot_pos[i]
-                j = i + 1
-                overlap = False
-                # Put in a list all qubits that overlap at position plot_pos[i]
-                while j < len(plot_ids):
-                    r2 = plot_pos[j]
-                    if np.max(np.abs(r - r2)) < epsilon:
-                        plot_ids[i] = plot_ids[i] + plot_ids.pop(j)
-                        plot_pos.pop(j)
-                        overlap = True
-                    else:
-                        j += 1
-                # Sort qubits in plot_ids[i] according to masked status
-                plot_ids[i] = sorted(
-                    plot_ids[i],
-                    key=lambda s: s in [str(q) for q in masked_qubits],
-                )
-                # Merge all masked qubits
-                has_masked = False
-                for j in range(len(plot_ids[i])):
-                    if plot_ids[i][j] in [str(q) for q in masked_qubits]:
-                        plot_ids[i][j:] = [", ".join(plot_ids[i][j:])]
-                        has_masked = True
-                        break
-                # Add a square bracket that encloses all masked qubits
-                if has_masked:
-                    plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
-                # Merge what remains
-                plot_ids[i] = ", ".join(plot_ids[i])
-                bbs[plot_ids[i]] = overlap
-                i += 1
-
-            for q, coords in zip(plot_ids, plot_pos):
-                bb = (
-                    dict(boxstyle="square", fill=False, ec="gray", ls="--")
-                    if bbs[q]
-                    else None
-                )
-                v_al = "center" if bbs[q] else "bottom"
-                txt = ax.text(
-                    coords[0],
-                    coords[1],
-                    q,
-                    ha="left",
-                    va=v_al,
-                    wrap=True,
-                    bbox=bb,
-                )
-                txt._get_wrap_line_width = lambda: 50.0
-
-        if draw_half_radius and blockade_radius is not None:
-            for p in pos:
-                circle = plt.Circle(
-                    tuple(p[[ix, iy]]),
-                    blockade_radius / 2,
-                    alpha=0.1,
-                    color="darkgreen",
-                )
-                ax.add_patch(circle)
-                ax.autoscale()
-        if draw_graph and blockade_radius is not None:
-            epsilon = 1e-9  # Accounts for rounding errors
-            edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
-            bonds = pos[(tuple(edges),)]
-            if len(bonds) > 0:
-                lines = bonds[:, :, (ix, iy)]
-            else:
-                lines = []
-            lc = mc.LineCollection(lines, linewidths=0.6, colors="grey")
-            ax.add_collection(lc)
-
-        else:
-            # Only draw central axis lines when not drawing the graph
-            ax.axvline(0, c="grey", alpha=0.5, linestyle=":")
-            ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
-
-    @staticmethod
-    def _register_dims(
-        pos: np.ndarray,
-        blockade_radius: Optional[float] = None,
-        draw_half_radius: bool = False,
-    ) -> np.ndarray:
-        """Returns the dimensions of the register to be drawn."""
-        diffs = np.ptp(pos, axis=0)
-        diffs[diffs < 9] *= 1.5
-        diffs[diffs < 9] += 2
-        if blockade_radius and draw_half_radius:
-            diffs[diffs < blockade_radius] = blockade_radius
-
-        return np.array(diffs)
-
-    def _draw_checks(
-        self,
-        blockade_radius: Optional[float] = None,
-        draw_graph: bool = True,
-        draw_half_radius: bool = False,
-    ) -> None:
-        """Checks common in all register drawings.
-
-        Keyword Args:
-            blockade_radius(float, default=None): The distance (in μm) between
-                atoms below the Rydberg blockade effect occurs.
-            draw_half_radius(bool, default=False): Whether or not to draw the
-                half the blockade radius surrounding each atoms. If `True`,
-                requires `blockade_radius` to be defined.
-            draw_graph(bool, default=True): Whether or not to draw the
-                interaction between atoms as edges in a graph. Will only draw
-                if the `blockade_radius` is defined.
-        """
-        # Check spacing
-        if blockade_radius is not None and blockade_radius <= 0.0:
+        """Sets the RegisterLayout that originated this register."""
+        trap_coords = register_layout.coords
+        if register_layout.dimensionality != self._dim:
             raise ValueError(
-                "Blockade radius (`blockade_radius` ="
-                f" {blockade_radius})"
-                " must be greater than 0."
+                "The RegisterLayout dimensionality is not the same as this "
+                "register's."
+            )
+        if len(set(trap_ids)) != len(trap_ids):
+            raise ValueError("Every 'trap_id' must be a unique integer.")
+
+        if len(trap_ids) != len(self._ids):
+            raise ValueError(
+                "The amount of 'trap_ids' must be equal to the number of atoms"
+                " in the register."
             )
 
-        if draw_half_radius:
-            if blockade_radius is None:
-                raise ValueError("Define 'blockade_radius' to draw.")
-            if len(self._ids) == 1:
-                raise NotImplementedError(
-                    "Needs more than one atom to draw " "the blockade radius."
+        for reg_coord, trap_id in zip(self._coords, trap_ids):
+            if np.any(reg_coord != trap_coords[trap_id]):
+                raise ValueError(
+                    "The chosen traps from the RegisterLayout don't match this"
+                    " register's coordinates."
                 )
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
         qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
+        if self._layout_info is not None:
+            return obj_to_dict(self, qs, **(self._layout_info._asdict()))
         return obj_to_dict(self, qs)
 
     def __eq__(self, other: Any) -> bool:
@@ -290,7 +175,7 @@ class BaseRegister(ABC):
 
         return set(self._ids) == set(other._ids) and all(
             (
-                np.array_equal(
+                np.allclose(  # Accounts for rounding errors
                     self._coords[i],
                     other._coords[other._ids.index(id)],
                 )
