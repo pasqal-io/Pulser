@@ -43,6 +43,8 @@ def test_var_declarations():
     var3 = sb.declare_variable("var3")
     assert sb.declared_variables["var3"] == var3.var
     assert isinstance(var3, VariableItem)
+    with pytest.raises(ValueError, match="'qubits' is a protected name"):
+        sb.declare_variable("qubits", size=10, dtype=str)
 
 
 def test_stored_calls():

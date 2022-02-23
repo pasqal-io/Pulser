@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -24,7 +24,8 @@ from pulser import Pulse
 from pulser.channels import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.utils import obj_to_dict
-from pulser.register.base_register import BaseRegister
+from pulser.register.base_register import BaseRegister, QubitId
+from pulser.register.register_layout import RegisterLayout
 
 
 @dataclass(frozen=True, repr=False)
@@ -55,10 +56,15 @@ class Device:
     _channels: tuple[tuple[str, Channel], ...]
     # Ising interaction coeff
     interaction_coeff_xy: float = 3700.0
+    pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
+        default_factory=tuple
+    )
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
         object.__setattr__(self, "__doc__", self._specs(for_docs=True))
+        for layout in self.pre_calibrated_layouts:
+            self.validate_layout(layout)
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -74,6 +80,11 @@ class Device:
     def interaction_coeff(self) -> float:
         r""":math:`C_6/\hbar` coefficient of chosen Rydberg level."""
         return float(c6_dict[self.rydberg_level])
+
+    @property
+    def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
+        """Register layouts already calibrated on this device."""
+        return {str(layout): layout for layout in self.pre_calibrated_layouts}
 
     def print_specs(self) -> None:
         """Prints the device specifications."""
@@ -128,22 +139,12 @@ class Device:
         """Checks if 'register' is compatible with this device.
 
         Args:
-            register(pulser.Register): The Register to validate.
+            register(BaseRegister): The Register to validate.
         """
-        if not (isinstance(register, BaseRegister)):
+        if not isinstance(register, BaseRegister):
             raise TypeError(
-                "register has to be a pulser.Register or "
+                "'register' must be a pulser.Register or "
                 "a pulser.Register3D instance."
-            )
-
-        ids = list(register.qubits.keys())
-        atoms = list(register.qubits.values())
-        if len(atoms) > self.max_atom_num:
-            raise ValueError(
-                f"The number of atoms ({len(atoms)})"
-                " must be less than or equal to the maximum"
-                " number of atoms supported by this device"
-                f" ({self.max_atom_num})."
             )
 
         if register._dim > self.dimensions:
@@ -151,29 +152,33 @@ class Device:
                 f"All qubit positions must be at most {self.dimensions}D "
                 "vectors."
             )
+        self._validate_coords(register.qubits, kind="atoms")
 
-        if len(atoms) > 1:
-            distances = pdist(atoms)  # Pairwise distance between atoms
-            if np.any(distances < self.min_atom_distance):
-                sq_dists = squareform(distances)
-                mask = np.triu(np.ones(len(atoms), dtype=bool), k=1)
-                bad_pairs = np.argwhere(
-                    np.logical_and(sq_dists < self.min_atom_distance, mask)
-                )
-                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
+        if register._layout_info is not None:
+            try:
+                self.validate_layout(register._layout_info.layout)
+            except (ValueError, TypeError):
                 raise ValueError(
-                    "The minimal distance between atoms in this device "
-                    f"({self.min_atom_distance} µm) is not respected for the "
-                    f"pairs: {bad_qbt_pairs}"
+                    "The 'register' is associated with an incompatible "
+                    "register layout."
                 )
 
-        too_far = np.linalg.norm(atoms, axis=1) > self.max_radial_distance
-        if np.any(too_far):
+    def validate_layout(self, layout: RegisterLayout) -> None:
+        """Checks if a register layout is compatible with this device.
+
+        Args:
+            layout(RegisterLayout): The RegisterLayout to validate.
+        """
+        if not isinstance(layout, RegisterLayout):
+            raise TypeError("'layout' must be a RegisterLayout instance.")
+
+        if layout.dimensionality > self.dimensions:
             raise ValueError(
-                f"All qubits must be at most {self.max_radial_distance} μm "
-                f"away from the center of the array, which is not the case "
-                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
+                "The device supports register layouts of at most "
+                f"{self.dimensions} dimensions."
             )
+
+        self._validate_coords(layout.traps_dict, kind="traps")
 
     def validate_pulse(self, pulse: Pulse, channel_id: str) -> None:
         """Checks if a pulse can be executed on a specific device channel.
@@ -246,6 +251,43 @@ class Device:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
         return "\n".join(lines + ch_lines)
+
+    def _validate_coords(
+        self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
+    ) -> None:
+        ids = list(coords_dict.keys())
+        coords = list(coords_dict.values())
+        max_number = self.max_atom_num * (2 if kind == "traps" else 1)
+        if len(coords) > max_number:
+            raise ValueError(
+                f"The number of {kind} ({len(coords)})"
+                " must be less than or equal to the maximum"
+                f" number of {kind} supported by this device"
+                f" ({max_number})."
+            )
+
+        if len(coords) > 1:
+            distances = pdist(coords)  # Pairwise distance between atoms
+            if np.any(distances < self.min_atom_distance):
+                sq_dists = squareform(distances)
+                mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
+                bad_pairs = np.argwhere(
+                    np.logical_and(sq_dists < self.min_atom_distance, mask)
+                )
+                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
+                raise ValueError(
+                    f"The minimal distance between {kind} in this device "
+                    f"({self.min_atom_distance} µm) is not respected for the "
+                    f"pairs: {bad_qbt_pairs}"
+                )
+
+        too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
+        if np.any(too_far):
+            raise ValueError(
+                f"All {kind} must be at most {self.max_radial_distance} μm "
+                f"away from the center of the array, which is not the case "
+                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
+            )
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
