@@ -23,6 +23,10 @@ from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.supported import validate_serialization
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import (
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
 from pulser.waveforms import BlackmanWaveform
 
 
@@ -55,6 +59,23 @@ def test_register_3d():
     reg = Register3D({"a": (1, 2, 3), "b": (8, 5, 6)})
     seq = Sequence(reg, device=MockDevice)
     assert reg == encode_decode(seq).register
+
+
+def test_layout():
+    custom_layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
+    new_custom_layout = encode_decode(custom_layout)
+    assert new_custom_layout == custom_layout
+    assert type(new_custom_layout) is RegisterLayout
+
+    tri_layout = TriangularLatticeLayout(100, 10)
+    new_tri_layout = encode_decode(tri_layout)
+    assert new_tri_layout == tri_layout
+    assert isinstance(new_tri_layout, TriangularLatticeLayout)
+
+    square_layout = SquareLatticeLayout(8, 10, 6)
+    new_square_layout = encode_decode(square_layout)
+    assert new_square_layout == square_layout
+    assert isinstance(new_square_layout, SquareLatticeLayout)
 
 
 def test_register_from_layout():

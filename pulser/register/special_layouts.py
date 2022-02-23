@@ -15,9 +15,10 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import pulser.register._patterns as patterns
+from pulser.json.utils import obj_to_dict
 from pulser.register import Register
 from pulser.register.register_layout import RegisterLayout
 
@@ -95,6 +96,9 @@ class SquareLatticeLayout(RegisterLayout):
             f"{self._spacing}µm)"
         )
 
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self._rows, self._columns, self._spacing)
+
 
 class TriangularLatticeLayout(RegisterLayout):
     """A RegisterLayout with a triangular lattice pattern in an hexagonal shape.
@@ -166,3 +170,6 @@ class TriangularLatticeLayout(RegisterLayout):
             f"TriangularLatticeLayout({self.number_of_traps}, "
             f"{self._spacing}µm)"
         )
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self.number_of_traps, self._spacing)
