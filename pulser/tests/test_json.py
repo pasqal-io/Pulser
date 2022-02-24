@@ -20,8 +20,13 @@ import pytest
 from pulser import Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
+from pulser.json.supported import validate_serialization
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import (
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
 from pulser.waveforms import BlackmanWaveform
 
 
@@ -56,6 +61,23 @@ def test_register_3d():
     assert reg == encode_decode(seq).register
 
 
+def test_layout():
+    custom_layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
+    new_custom_layout = encode_decode(custom_layout)
+    assert new_custom_layout == custom_layout
+    assert type(new_custom_layout) is RegisterLayout
+
+    tri_layout = TriangularLatticeLayout(100, 10)
+    new_tri_layout = encode_decode(tri_layout)
+    assert new_tri_layout == tri_layout
+    assert type(new_tri_layout) is TriangularLatticeLayout
+
+    square_layout = SquareLatticeLayout(8, 10, 6)
+    new_square_layout = encode_decode(square_layout)
+    assert new_square_layout == square_layout
+    assert type(new_square_layout) is SquareLatticeLayout
+
+
 def test_register_from_layout():
     layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
     reg = layout.define_register(1, 0)
@@ -80,24 +102,64 @@ def test_rare_cases():
     seq = Sequence(reg, Chadoq2)
     var = seq.declare_variable("var")
 
-    wf = BlackmanWaveform(100, var)
-    with pytest.warns(
-        UserWarning, match="Calls to methods of parametrized " "objects"
+    wf = BlackmanWaveform(var * 100 // 10, var)
+    with pytest.raises(
+        ValueError, match="Serialization of calls to parametrized objects"
     ):
         s = encode(wf.draw())
+    s = encode(wf)
 
-    with pytest.warns(UserWarning, match="not encode a Sequence"):
+    with pytest.raises(ValueError, match="not encode a Sequence"):
         wf_ = Sequence.deserialize(s)
 
+    wf_ = decode(s)
     seq._variables["var"]._assign(-10)
     with pytest.raises(ValueError, match="No value assigned"):
         wf_.build()
 
     var_ = wf_._variables["var"]
-    var_._assign(-10)
+    var_._assign(10)
+    assert wf_.build() == BlackmanWaveform(100, 10)
+    with pytest.warns(UserWarning, match="Serialization of 'getattr'"):
+        draw_func = wf_.draw
     with patch("matplotlib.pyplot.show"):
-        wf_.build()
+        with pytest.warns(
+            UserWarning, match="Calls to methods of parametrized objects"
+        ):
+            draw_func().build()
 
     rotated_reg = parametrize(Register.rotate)(reg, var)
     with pytest.raises(NotImplementedError):
         encode(rotated_reg)
+
+
+def test_support():
+    seq = Sequence(Register.square(2), Chadoq2)
+    var = seq.declare_variable("var")
+
+    obj_dict = BlackmanWaveform.from_max_val(1, var)._to_dict()
+    del obj_dict["__module__"]
+    with pytest.raises(TypeError, match="Invalid 'obj_dict'."):
+        validate_serialization(obj_dict)
+
+    obj_dict["__module__"] = "pulser.fake"
+    with pytest.raises(
+        SystemError, match="No serialization support for module 'pulser.fake'."
+    ):
+        validate_serialization(obj_dict)
+
+    wf_obj_dict = obj_dict["__args__"][0]
+    wf_obj_dict["__submodule__"] = "RampWaveform"
+    with pytest.raises(
+        SystemError,
+        match="No serialization support for attributes of "
+        "'pulser.waveforms.RampWaveform'",
+    ):
+        validate_serialization(wf_obj_dict)
+
+    del wf_obj_dict["__submodule__"]
+    with pytest.raises(
+        SystemError,
+        match="No serialization support for 'pulser.waveforms.from_max_val'",
+    ):
+        validate_serialization(wf_obj_dict)

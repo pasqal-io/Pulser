@@ -148,7 +148,7 @@ def test_build():
     sb.delay(var * 50, "ch1")
     sb.align("ch2", "ch1")
     sb.phase_shift(var, targ_var[0])
-    pls2 = Pulse.ConstantPulse(wf.duration, var, var, 0)
+    pls2 = Pulse.ConstantPulse(var * 100, var, var, 0)
     sb.add(pls2, "ch2")
     sb.measure()
     with pytest.warns(UserWarning, match="No declared variables"):
