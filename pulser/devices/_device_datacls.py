@@ -25,7 +25,7 @@ from pulser.channels import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
-from pulser.register.register_layout import RegisterLayout
+from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 
 
 @dataclass(frozen=True, repr=False)
@@ -268,7 +268,10 @@ class Device:
 
         if len(coords) > 1:
             distances = pdist(coords)  # Pairwise distance between atoms
-            if np.any(distances < self.min_atom_distance):
+            if np.any(
+                distances - self.min_atom_distance
+                < -(10 ** (-COORD_PRECISION))
+            ):
                 sq_dists = squareform(distances)
                 mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
                 bad_pairs = np.argwhere(
