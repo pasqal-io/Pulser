@@ -111,7 +111,7 @@ class TriangularLatticeLayout(RegisterLayout):
     def __init__(self, n_traps: int, spacing: int):
         """Initializes a TriangularLatticeLayout."""
         self._spacing = int(spacing)
-        super().__init__(patterns.triangular_hex(n_traps) * self._spacing)
+        super().__init__(patterns.triangular_hex(int(n_traps)) * self._spacing)
 
     def hexagonal_register(self, n_atoms: int, prefix: str = "q") -> Register:
         """Defines a register with an hexagonal shape.

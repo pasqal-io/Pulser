@@ -70,12 +70,12 @@ def test_layout():
     tri_layout = TriangularLatticeLayout(100, 10)
     new_tri_layout = encode_decode(tri_layout)
     assert new_tri_layout == tri_layout
-    assert isinstance(new_tri_layout, TriangularLatticeLayout)
+    assert type(new_tri_layout) is TriangularLatticeLayout
 
     square_layout = SquareLatticeLayout(8, 10, 6)
     new_square_layout = encode_decode(square_layout)
     assert new_square_layout == square_layout
-    assert isinstance(new_square_layout, SquareLatticeLayout)
+    assert type(new_square_layout) is SquareLatticeLayout
 
 
 def test_register_from_layout():
