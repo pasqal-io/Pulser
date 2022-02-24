@@ -35,16 +35,16 @@ IroiseMVP = Device(
     name="IroiseMVP",
     dimensions=2,
     rydberg_level=60,
-    max_atom_num=50,
-    max_radial_distance=40,
-    min_atom_distance=5,
+    max_atom_num=100,
+    max_radial_distance=60,
+    min_atom_distance=6,
     _channels=(
         (
             "rydberg_global",
             Rydberg.Global(
-                2 * np.pi * 12,
-                2 * np.pi * 2.5,
-                phase_jump_time=120,
+                max_abs_detuning=2 * np.pi * 4,
+                max_amp=2 * np.pi * 3,
+                phase_jump_time=500,
                 mod_bandwidth=4,
             ),
         ),
