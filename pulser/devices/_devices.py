@@ -45,7 +45,6 @@ IroiseMVP = Device(
                 max_abs_detuning=2 * np.pi * 4,
                 max_amp=2 * np.pi * 3,
                 phase_jump_time=500,
-                mod_bandwidth=4,
             ),
         ),
     ),
