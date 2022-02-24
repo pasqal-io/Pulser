@@ -290,4 +290,10 @@ class RegisterLayout(RegDrawer):
         return f"RegisterLayout_{self._safe_hash().hex()}"
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, self.trap_coordinates)
+        # Allows for serialization of subclasses without a special _to_dict()
+        return obj_to_dict(
+            self,
+            self.trap_coordinates,
+            _module=__name__,
+            _name="RegisterLayout",
+        )
