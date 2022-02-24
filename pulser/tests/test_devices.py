@@ -137,15 +137,18 @@ def test_validate_layout():
 
     with pytest.raises(ValueError, match="The minimal distance between traps"):
         Chadoq2.validate_layout(
-            RegisterLayout(
-                Register.triangular_lattice(3, 4, spacing=3.9)._coords
-            )
+            TriangularLatticeLayout(12, Chadoq2.min_atom_distance - 1e-6)
         )
 
     valid_layout = RegisterLayout(
         Register.square(int(np.sqrt(Chadoq2.max_atom_num * 2)))._coords
     )
     Chadoq2.validate_layout(valid_layout)
+
+    valid_tri_layout = TriangularLatticeLayout(
+        Chadoq2.max_atom_num * 2, Chadoq2.min_atom_distance
+    )
+    Chadoq2.validate_layout(valid_tri_layout)
 
 
 def test_calibrated_layouts():
