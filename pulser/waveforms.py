@@ -15,25 +15,26 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import functools
 import inspect
 import itertools
 import sys
+import warnings
+from abc import ABC, abstractmethod
 from sys import version_info
 from types import FunctionType
-from typing import Any, cast, Optional, Tuple, Union
-import warnings
+from typing import Any, Optional, Tuple, Union, cast
 
-from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.typing import ArrayLike
 import scipy.interpolate as interpolate
+from matplotlib.axes import Axes
+from numpy.typing import ArrayLike
 
+from pulser.channels import Channel
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
-from pulser.json.utils import obj_to_dict
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from functools import cached_property
@@ -123,11 +124,28 @@ class Waveform(ABC):
         """Integral of the waveform (time in ns, value in rad/µs)."""
         return float(np.sum(self.samples)) * 1e-3  # ns * rad/µs = 1e-3
 
-    def draw(self) -> None:
-        """Draws the waveform."""
-        fig, ax = plt.subplots()
-        self._plot(ax, "rad/µs")
+    def draw(self, output_channel: Optional[Channel] = None) -> None:
+        """Draws the waveform.
 
+        Args:
+            output_channel: The output channel. If given, will draw the
+                modulated waveform on top of the input one.
+        """
+        fig, ax = plt.subplots()
+        if not output_channel:
+            self._plot(ax, "rad/µs")
+        else:
+            self._plot(
+                ax,
+                "rad/µs",
+                label="Input",
+                start_t=self.modulation_buffers(output_channel)[0],
+            )
+            self._plot(
+                ax,
+                channel=output_channel,
+                label="Output",
+            )
         plt.show()
 
     def change_duration(self, new_duration: int) -> Waveform:
@@ -140,6 +158,56 @@ class Waveform(ABC):
             f"{self.__class__.__name__} does not support"
             " modifications to its duration."
         )
+
+    def modulated_samples(self, channel: Channel) -> np.ndarray:
+        """The waveform samples as output of a given channel.
+
+        This duration is adjusted according to the minimal buffer times.
+
+        Args:
+            channel (Channel): The channel modulating the waveform.
+
+        Returns:
+            numpy.ndarray: The array of samples after modulation.
+        """
+        start, end = self.modulation_buffers(channel)
+        mod_samples = self._modulated_samples(channel)
+        tr = channel.rise_time
+        trim = slice(tr - start, len(mod_samples) - tr + end)
+        return mod_samples[trim]
+
+    @functools.lru_cache()
+    def modulation_buffers(self, channel: Channel) -> tuple[int, int]:
+        """The minimal buffers needed around a modulated waveform.
+
+        Args:
+            channel (Channel): The channel modulating the waveform.
+
+        Returns:
+            tuple[int, int]: The minimum buffer times at the start and end of
+            the samples, in ns.
+        """
+        if not channel.mod_bandwidth:
+            return 0, 0
+
+        return channel.calc_modulation_buffer(
+            self._samples, self._modulated_samples(channel)
+        )
+
+    @functools.lru_cache()
+    def _modulated_samples(self, channel: Channel) -> np.ndarray:
+        """The waveform samples as output of a given channel.
+
+        This is not adjusted to the minimal buffer times. Use
+        ``Waveform.modulated_samples()`` to get the output already truncated.
+
+        Args:
+            channel (Channel): The channel modulating the waveform.
+
+        Returns:
+            numpy.ndarray: The array of samples after modulation.
+        """
+        return channel.modulate(self._samples)
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
@@ -158,7 +226,7 @@ class Waveform(ABC):
     ) -> Union[float, np.ndarray]:
         if isinstance(index_or_slice, slice):
             s: slice = self._check_slice(index_or_slice)
-            return cast(np.ndarray, self._samples[s])
+            return self._samples[s]
         else:
             index: int = self._check_index(index_or_slice)
             return cast(float, self._samples[index])
@@ -229,19 +297,42 @@ class Waveform(ABC):
         return hash(tuple(self.samples))
 
     def _plot(
-        self, ax: Axes, ylabel: str, color: Optional[str] = None
+        self,
+        ax: Axes,
+        ylabel: Optional[str] = None,
+        color: Optional[str] = None,
+        channel: Optional[Channel] = None,
+        label: str = "",
+        start_t: int = 0,
     ) -> None:
         ax.set_xlabel("t (ns)")
-        ts = np.arange(self.duration)
+        samples = (
+            self.samples
+            if channel is None
+            else self.modulated_samples(channel)
+        )
+        ts = np.arange(len(samples)) + start_t
+        if not channel and start_t:
+            # Adds zero on both ends to show rise and fall
+            samples = np.pad(samples, 1)
+            # Repeats the times on the edges once
+            ts = np.pad(ts, 1, mode="edge")
+
         if color:
-            ax.set_ylabel(ylabel, color=color, fontsize=14)
-            ax.plot(ts, self.samples, color=color)
+            color_dict = {"color": color}
+            hline_color = color
             ax.tick_params(axis="y", labelcolor=color)
-            ax.axhline(0, color=color, linestyle=":", linewidth=0.5)
         else:
-            ax.set_ylabel(ylabel, fontsize=14)
-            ax.plot(ts, self.samples)
-            ax.axhline(0, color="black", linestyle=":", linewidth=0.5)
+            color_dict = {}
+            hline_color = "black"
+
+        if ylabel:
+            ax.set_ylabel(ylabel, fontsize=14, **color_dict)
+        ax.plot(ts, samples, label=label, **color_dict)
+        ax.axhline(0, color=hline_color, linestyle=":", linewidth=0.5)
+
+        if label:
+            plt.legend()
 
 
 class CompositeWaveform(Waveform):
@@ -635,6 +726,7 @@ class InterpolatedWaveform(Waveform):
         super().__init__(duration)
         self._values = np.array(values, dtype=float)
         if times is not None:
+            times = cast(ArrayLike, times)
             times_ = np.array(times, dtype=float)
             if len(times_) != len(self._values):
                 raise ValueError(
@@ -723,10 +815,26 @@ class InterpolatedWaveform(Waveform):
         return InterpolatedWaveform(new_duration, self._values, **self._kwargs)
 
     def _plot(
-        self, ax: Axes, ylabel: str, color: Optional[str] = None
+        self,
+        ax: Axes,
+        ylabel: Optional[str] = None,
+        color: Optional[str] = None,
+        channel: Optional[Channel] = None,
+        label: str = "",
+        start_t: int = 0,
     ) -> None:
-        super()._plot(ax, ylabel, color=color)
-        ax.scatter(self._data_pts[:, 0], self._data_pts[:, 1], c=color)
+        super()._plot(
+            ax,
+            ylabel,
+            color=color,
+            channel=channel,
+            label=label,
+            start_t=start_t,
+        )
+        if not channel:
+            ax.scatter(
+                self._data_pts[:, 0] + start_t, self._data_pts[:, 1], c=color
+            )
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._values, **self._kwargs)
@@ -825,6 +933,7 @@ class KaiserWaveform(Waveform):
         """
         max_val = cast(float, max_val)
         area = cast(float, area)
+        beta = cast(float, beta)
 
         if np.sign(max_val) != np.sign(area):
             raise ValueError(

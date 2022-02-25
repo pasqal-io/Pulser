@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pulser.channels import Microwave, Raman, Rydberg
 from pulser.devices._device_datacls import Device
-from pulser.channels import Rydberg, Raman, Microwave
-
 
 MockDevice = Device(
     name="MockDevice",
@@ -31,7 +30,12 @@ MockDevice = Device(
         (
             "rydberg_local",
             Rydberg.Local(
-                1000, 200, 0, max_targets=2000, clock_period=1, min_duration=1
+                1000,
+                200,
+                min_retarget_interval=0,
+                max_targets=2000,
+                clock_period=1,
+                min_duration=1,
             ),
         ),
         (
@@ -41,7 +45,12 @@ MockDevice = Device(
         (
             "raman_local",
             Raman.Local(
-                1000, 200, 0, max_targets=2000, clock_period=1, min_duration=1
+                1000,
+                200,
+                min_retarget_interval=0,
+                max_targets=2000,
+                clock_period=1,
+                min_duration=1,
             ),
         ),
         (

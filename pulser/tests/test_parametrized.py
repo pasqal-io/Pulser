@@ -21,11 +21,12 @@ from pulser import Pulse
 from pulser.parametrized import Variable
 from pulser.waveforms import BlackmanWaveform, CompositeWaveform
 
-
 a = Variable("a", float)
 b = Variable("b", int, size=2)
 b._assign([-1.5, 1.5])
 c = Variable("c", str)
+d = Variable("d", float, size=1)
+d._assign([0.5])
 t = Variable("t", int)
 bwf = BlackmanWaveform(t, a)
 pulse = Pulse.ConstantDetuning(bwf, b[0], b[1])
@@ -70,20 +71,23 @@ def test_var():
 
     with pytest.raises(TypeError, match="Invalid key type"):
         b[[0, 1]]
-    with pytest.raises(TypeError, match="not subscriptable"):
-        a[0]
     with pytest.raises(IndexError):
         b[2]
 
 
 def test_varitem():
+    a0 = a[0]
     b1 = b[1]
     b01 = b[100::-1]
+    d0 = d[0]
     assert b01.variables == {"b": b}
+    assert str(a0) == "a[0]"
     assert str(b1) == "b[1]"
     assert str(b01) == "b[100::-1]"
-    assert b1.build() == 1
+    assert str(d0) == "d[0]"
+    assert b1.build() == 1  # TODO should be 1.5
     assert np.all(b01.build() == np.array([1, -1]))
+    assert d0.build() == 0.5
     with pytest.raises(FrozenInstanceError):
         b1.key = 0
 
@@ -116,3 +120,17 @@ def test_opsupport():
     assert (a**a).build() == 0.25
     assert abs(a).build() == 2.0
     assert (3 % a).build() == -1.0
+    assert (-a).build() == 2.0
+
+    x = a + 11
+    assert x.build() == 9
+    x = x % 6
+    assert x.build() == 3
+    x = 2 - x
+    assert x.build() == -1
+    x = 4 / x
+    assert x.build() == -4
+    x = 9 // x
+    assert x.build() == -3
+    x = 2**x
+    assert x.build() == 0.125

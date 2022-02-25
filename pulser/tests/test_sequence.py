@@ -18,15 +18,17 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser import Sequence, Pulse, Register, Register3D
+from pulser import Pulse, Register, Register3D, Sequence
+from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
-    RampWaveform,
     InterpolatedWaveform,
+    RampWaveform,
 )
 
 reg = Register.triangular_lattice(4, 7, spacing=5, prefix="q")
@@ -152,7 +154,7 @@ def test_target():
 
     assert seq._schedule["ch0"][-1] == _TimeSlot("target", -1, 0, {"q1"})
     seq.target("q4", "ch0")
-    retarget_t = seq.declared_channels["ch0"].retarget_time
+    retarget_t = seq.declared_channels["ch0"].min_retarget_interval
     assert seq._schedule["ch0"][-1] == _TimeSlot(
         "target", 0, retarget_t, {"q4"}
     )
@@ -554,3 +556,152 @@ def test_draw_register():
     seq3d.config_slm_mask([6, 15])
     with patch("matplotlib.pyplot.show"):
         seq3d.draw(draw_register=True)
+
+
+def test_hardware_constraints():
+    rydberg_global = Rydberg.Global(
+        2 * np.pi * 20,
+        2 * np.pi * 2.5,
+        phase_jump_time=120,  # ns
+        mod_bandwidth=4,  # MHz
+    )
+
+    raman_local = Raman.Local(
+        2 * np.pi * 20,
+        2 * np.pi * 10,
+        phase_jump_time=120,  # ns
+        fixed_retarget_t=200,  # ns
+        mod_bandwidth=7,  # MHz
+    )
+
+    ConstrainedChadoq2 = Device(
+        name="ConstrainedChadoq2",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=50,
+        min_atom_distance=4,
+        _channels=(
+            ("rydberg_global", rydberg_global),
+            ("raman_local", raman_local),
+        ),
+    )
+    with pytest.warns(
+        UserWarning, match="should be imported from 'pulser.devices'"
+    ):
+        seq = Sequence(reg, ConstrainedChadoq2)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="q1")
+
+    const_pls = Pulse.ConstantPulse(100, 1, 0, np.pi)
+    seq.add(const_pls, "ch0")
+    black_wf = BlackmanWaveform(500, np.pi)
+    black_pls = Pulse.ConstantDetuning(black_wf, 0, 0)
+    seq.add(black_pls, "ch1")
+    blackman_slot = seq._last("ch1")
+    # The pulse accounts for the modulation buffer
+    assert (
+        blackman_slot.ti == const_pls.duration + rydberg_global.rise_time * 2
+    )
+    seq.target("q0", "ch1")
+    target_slot = seq._last("ch1")
+    fall_time = black_pls.fall_time(raman_local)
+    assert (
+        fall_time
+        == raman_local.rise_time + black_wf.modulation_buffers(raman_local)[1]
+    )
+    fall_time += (
+        raman_local.clock_period - fall_time % raman_local.clock_period
+    )
+    assert target_slot.ti == blackman_slot.tf + fall_time
+    assert target_slot.tf == target_slot.ti + raman_local.fixed_retarget_t
+
+    assert raman_local.min_retarget_interval > raman_local.fixed_retarget_t
+    seq.target("q2", "ch1")
+    assert (
+        seq.get_duration("ch1")
+        == target_slot.tf + raman_local.min_retarget_interval
+    )
+
+    # Check for phase jump buffer
+    seq.add(black_pls, "ch0")  # Phase = 0
+    tf_ = seq.get_duration("ch0")
+    mid_delay = 40
+    seq.delay(mid_delay, "ch0")
+    seq.add(const_pls, "ch0")  # Phase = π
+    assert seq._last("ch0").ti - tf_ == rydberg_global.phase_jump_time
+    added_delay_slot = seq._schedule["ch0"][-2]
+    assert added_delay_slot.type == "delay"
+    assert (
+        added_delay_slot.tf - added_delay_slot.ti
+        == rydberg_global.phase_jump_time - mid_delay
+    )
+
+    tf_ = seq.get_duration("ch0")
+    seq.align("ch0", "ch1")
+    fall_time = const_pls.fall_time(rydberg_global)
+    assert seq.get_duration() == tf_ + fall_time
+
+    with pytest.raises(ValueError, match="'mode' must be one of"):
+        seq.draw(mode="all")
+
+    with patch("matplotlib.pyplot.show"):
+        with pytest.warns(
+            UserWarning,
+            match="'draw_phase_area' doesn't work in 'output' mode",
+        ):
+            seq.draw(
+                mode="output", draw_interp_pts=False, draw_phase_area=True
+            )
+        with pytest.warns(
+            UserWarning,
+            match="'draw_interp_pts' doesn't work in 'output' mode",
+        ):
+            seq.draw(mode="output")
+        seq.draw(mode="input+output")
+
+
+def test_mappable_register():
+    layout = TriangularLatticeLayout(100, 5)
+    mapp_reg = layout.make_mappable_register(10)
+    seq = Sequence(mapp_reg, Chadoq2)
+    assert seq.is_register_mappable()
+    reserved_qids = tuple([f"q{i}" for i in range(10)])
+    assert seq._qids == set(reserved_qids)
+    with pytest.raises(RuntimeError, match="Can't access the qubit info"):
+        seq.qubit_info
+    with pytest.raises(
+        RuntimeError, match="Can't access the sequence's register"
+    ):
+        seq.register
+
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.declare_channel("ram", "raman_local", initial_target="q2")
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd")
+    seq.add(Pulse.ConstantPulse(200, 1, 0, 0), "ram")
+    assert seq._last("ryd").targets == set(reserved_qids)
+    assert seq._last("ram").targets == {"q2"}
+
+    with pytest.raises(ValueError, match="Can't draw the register"):
+        seq.draw(draw_register=True)
+
+    # Can draw if 'draw_register=False'
+    with patch("matplotlib.pyplot.show"):
+        seq.draw()
+
+    with pytest.raises(ValueError, match="'qubits' must be specified"):
+        seq.build()
+
+    with pytest.raises(
+        ValueError, match="targeted but have not been assigned"
+    ):
+        seq.build(qubits={"q0": 1, "q1": 10})
+
+    seq_ = seq.build(qubits={"q2": 20, "q0": 10})
+    seq_._last("ryd").targets == {"q2", "q0"}
+    assert not seq_.is_register_mappable()
+    assert seq_.register == Register(
+        {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}
+    )
+    with pytest.raises(ValueError, match="already has a concrete register"):
+        seq_.build(qubits={"q2": 20, "q0": 10})

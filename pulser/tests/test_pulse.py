@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from pulser import Pulse
-from pulser.waveforms import ConstantWaveform, BlackmanWaveform, RampWaveform
+from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
 cwf = ConstantWaveform(100, -10)
 bwf = BlackmanWaveform(200, 3)

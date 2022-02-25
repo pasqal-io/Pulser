@@ -14,9 +14,8 @@
 """Definitions of real devices."""
 import numpy as np
 
-from pulser.devices._device_datacls import Device
 from pulser.channels import Raman, Rydberg
-
+from pulser.devices._device_datacls import Device
 
 Chadoq2 = Device(
     name="Chadoq2",
@@ -29,5 +28,24 @@ Chadoq2 = Device(
         ("rydberg_global", Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)),
         ("rydberg_local", Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10)),
         ("raman_local", Raman.Local(2 * np.pi * 20, 2 * np.pi * 10)),
+    ),
+)
+
+IroiseMVP = Device(
+    name="IroiseMVP",
+    dimensions=2,
+    rydberg_level=60,
+    max_atom_num=100,
+    max_radial_distance=60,
+    min_atom_distance=5,
+    _channels=(
+        (
+            "rydberg_global",
+            Rydberg.Global(
+                max_abs_detuning=2 * np.pi * 4,
+                max_amp=2 * np.pi * 3,
+                phase_jump_time=500,
+            ),
+        ),
     ),
 )

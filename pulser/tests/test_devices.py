@@ -19,8 +19,10 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, Device
 from pulser.register import Register, Register3D
+from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import TriangularLatticeLayout
 
 
 def test_init():
@@ -61,7 +63,7 @@ def test_mock():
         assert ch.max_abs_detuning >= 1000
         assert ch.max_amp >= 200
         if ch.addressing == "Local":
-            assert ch.retarget_time == 0
+            assert ch.min_retarget_interval == 0
             assert ch.max_targets > 1
             assert ch.max_targets == int(ch.max_targets)
 
@@ -110,4 +112,72 @@ def test_validate_register():
             Register.triangular_lattice(3, 4, spacing=3.9)
         )
 
+    with pytest.raises(
+        ValueError, match="associated with an incompatible register layout"
+    ):
+        tri_layout = TriangularLatticeLayout(201, 5)
+        Chadoq2.validate_register(tri_layout.hexagonal_register(10))
+
     Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))
+
+
+def test_validate_layout():
+    with pytest.raises(ValueError, match="The number of traps"):
+        Chadoq2.validate_layout(RegisterLayout(Register.square(20)._coords))
+
+    coords = [(100, 0), (-100, 0)]
+    with pytest.raises(TypeError):
+        Chadoq2.validate_layout(Register.from_coordinates(coords))
+    with pytest.raises(ValueError, match="at most 50 μm away from the center"):
+        Chadoq2.validate_layout(RegisterLayout(coords))
+
+    with pytest.raises(ValueError, match="at most 2 dimensions"):
+        coords = [(-10, 4, 0), (0, 0, 0)]
+        Chadoq2.validate_layout(RegisterLayout(coords))
+
+    with pytest.raises(ValueError, match="The minimal distance between traps"):
+        Chadoq2.validate_layout(
+            TriangularLatticeLayout(12, Chadoq2.min_atom_distance - 1e-6)
+        )
+
+    valid_layout = RegisterLayout(
+        Register.square(int(np.sqrt(Chadoq2.max_atom_num * 2)))._coords
+    )
+    Chadoq2.validate_layout(valid_layout)
+
+    valid_tri_layout = TriangularLatticeLayout(
+        Chadoq2.max_atom_num * 2, Chadoq2.min_atom_distance
+    )
+    Chadoq2.validate_layout(valid_tri_layout)
+
+
+def test_calibrated_layouts():
+    with pytest.raises(ValueError, match="The number of traps"):
+        Device(
+            name="TestDevice",
+            dimensions=2,
+            rydberg_level=70,
+            max_atom_num=100,
+            max_radial_distance=50,
+            min_atom_distance=4,
+            _channels=(),
+            pre_calibrated_layouts=(TriangularLatticeLayout(201, 5),),
+        )
+
+    TestDevice = Device(
+        name="TestDevice",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=50,
+        min_atom_distance=4,
+        _channels=(),
+        pre_calibrated_layouts=(
+            TriangularLatticeLayout(100, 6.8),  # Rounds down with int()
+            TriangularLatticeLayout(200, 5),
+        ),
+    )
+    assert TestDevice.calibrated_register_layouts.keys() == {
+        "TriangularLatticeLayout(100, 6µm)",
+        "TriangularLatticeLayout(200, 5µm)",
+    }

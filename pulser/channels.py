@@ -15,12 +15,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import cast, ClassVar, Optional
 import warnings
+from dataclasses import dataclass
+from typing import ClassVar, Optional, cast
+
+import numpy as np
+from numpy.typing import ArrayLike
+from scipy.fft import fft, fftfreq, ifft
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
+
+# Conversion factor from modulation bandwith to rise time
+# For more info, see https://tinyurl.com/bdeumc8k
+MODBW_TO_TR = 0.48
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -37,13 +45,18 @@ class Channel:
         max_abs_detuning: Maximum possible detuning (in rad/µs), in absolute
             value.
         max_amp: Maximum pulse amplitude (in rad/µs).
-        retarget_time: Maximum time to change the target (in ns).
+        phase_jump_time: Time taken to change the phase between consecutive
+            pulses (in ns).
+        min_retarget_interval: Minimum time required between the ends of two
+            target instructions (in ns).
+        fixed_retarget_t: Time taken to change the target (in ns).
         max_targets: How many qubits can be addressed at once by the same beam.
         clock_period: The duration of a clock cycle (in ns). The duration of a
             pulse or delay instruction is enforced to be a multiple of the
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
+        mod_bandwidth: The modulation bandwidth at -3dB (50% redution), in MHz.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -55,18 +68,35 @@ class Channel:
     addressing: str
     max_abs_detuning: float
     max_amp: float
-    retarget_time: Optional[int] = None
+    phase_jump_time: int = 0
+    min_retarget_interval: Optional[int] = None
+    fixed_retarget_t: Optional[int] = None
     max_targets: Optional[int] = None
     clock_period: int = 4  # ns
     min_duration: int = 16  # ns
     max_duration: int = 67108864  # ns
+    mod_bandwidth: Optional[float] = None  # MHz
+
+    @property
+    def rise_time(self) -> int:
+        """The rise time (in ns).
+
+        Defined as the time taken to go from 10% to 90% output in response to
+        a step change in the input.
+        """
+        if self.mod_bandwidth:
+            return int(MODBW_TO_TR / self.mod_bandwidth * 1e3)
+        else:
+            return 0
 
     @classmethod
     def Local(
         cls,
         max_abs_detuning: float,
         max_amp: float,
-        retarget_time: int = 220,
+        phase_jump_time: int = 0,
+        min_retarget_interval: int = 220,
+        fixed_retarget_t: int = 0,
         max_targets: int = 1,
         **kwargs: int,
     ) -> Channel:
@@ -76,7 +106,11 @@ class Channel:
             max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
-            retarget_time (int): Maximum time to change the target (in ns).
+            phase_jump_time (int): Time taken to change the phase between
+                consecutive pulses (in ns).
+            min_retarget_interval (int): Minimum time required between two
+                target instructions (in ns).
+            fixed_retarget_t (int): Time taken to change the target (in ns).
             max_targets (int): Maximum number of atoms the channel can target
                 simultaneously.
         """
@@ -84,14 +118,20 @@ class Channel:
             "Local",
             max_abs_detuning,
             max_amp,
-            retarget_time,
+            phase_jump_time,
+            min_retarget_interval,
+            fixed_retarget_t,
             max_targets,
             **kwargs,
         )
 
     @classmethod
     def Global(
-        cls, max_abs_detuning: float, max_amp: float, **kwargs: int
+        cls,
+        max_abs_detuning: float,
+        max_amp: float,
+        phase_jump_time: int = 0,
+        **kwargs: int,
     ) -> Channel:
         """Initializes the channel with global addressing.
 
@@ -99,8 +139,12 @@ class Channel:
             max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
                 absolute value.
             max_amp(float): Maximum pulse amplitude (in rad/µs).
+            phase_jump_time (int): Time taken to change the phase between
+                consecutive pulses (in ns).
         """
-        return cls("Global", max_abs_detuning, max_amp, **kwargs)
+        return cls(
+            "Global", max_abs_detuning, max_amp, phase_jump_time, **kwargs
+        )
 
     def validate_duration(self, duration: int) -> int:
         """Validates and adapts the duration of an instruction on this channel.
@@ -139,17 +183,104 @@ class Channel:
             )
         return _duration
 
+    def modulate(
+        self, input_samples: np.ndarray, keep_ends: bool = False
+    ) -> np.ndarray:
+        """Modulates the input according to the channel's modulation bandwidth.
+
+        Args:
+            input_samples (np.ndarray): The samples to modulate.
+            keep_ends (bool): Assume the end values of the samples were kept
+                constant (i.e. there is no ramp from zero on the ends).
+
+        Returns:
+            np.ndarray: The modulated output signal.
+        """
+        if not self.mod_bandwidth:
+            warnings.warn(
+                f"No modulation bandwidth defined for channel '{self}',"
+                " 'Channel.modulate()' returns the 'input_samples' unchanged.",
+                stacklevel=2,
+            )
+            return input_samples
+
+        # The cutoff frequency (fc) and the modulation transfer function
+        # are defined in https://tinyurl.com/bdeumc8k
+        fc = self.mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
+        if keep_ends:
+            samples = np.pad(input_samples, 2 * self.rise_time, mode="edge")
+        else:
+            samples = np.pad(input_samples, self.rise_time)
+        freqs = fftfreq(samples.size)
+        modulation = np.exp(-(freqs**2) / fc**2)
+        mod_samples = ifft(fft(samples) * modulation).real
+        if keep_ends:
+            # Cut off the extra ends
+            return cast(
+                np.ndarray, mod_samples[self.rise_time : -self.rise_time]
+            )
+        return cast(np.ndarray, mod_samples)
+
+    def calc_modulation_buffer(
+        self,
+        input_samples: ArrayLike,
+        mod_samples: ArrayLike,
+        max_allowed_diff: float = 1e-2,
+    ) -> tuple[int, int]:
+        """Calculates the minimal buffers needed around a modulated waveform.
+
+        Args:
+            input_samples (ArrayLike): The input samples.
+            mod_samples (ArrayLike): The modulated samples. Must be of size
+                ``len(input_samples) + 2 * self.rise_time``.
+            max_allowed_diff (float): The maximum allowed difference between
+                the input and modulated samples at the end points.
+
+        Returns:
+            tuple[int, int]: The minimum buffer times at the start and end of
+            the samples, in ns.
+        """
+        if not self.mod_bandwidth:
+            raise TypeError(
+                f"The channel {self} doesn't have a modulation bandwidth."
+            )
+
+        tr = self.rise_time
+        samples = np.pad(input_samples, tr)
+        diffs = np.abs(samples - mod_samples) <= max_allowed_diff
+        try:
+            # Finds the last index in the start buffer that's below the max
+            # allowed diff. Considers that the waveform could start at the next
+            # indice (hence the -1, since we are subtracting from tr)
+            start = tr - np.argwhere(diffs[:tr])[-1][0] - 1
+        except IndexError:
+            start = tr
+        try:
+            # Finds the first index in the end buffer that's below the max
+            # allowed diff. The index value found matches the minimum length
+            # for this end buffer.
+            end = np.argwhere(diffs[-tr:])[0][0]
+        except IndexError:
+            end = tr
+
+        return start, end
+
     def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
-            f"{self.max_abs_detuning} rad/µs, Max Amplitude: "
-            f"{self.max_amp} rad/µs"
+            f"{self.max_abs_detuning} rad/µs, Max Amplitude: {self.max_amp}"
+            f" rad/µs, Phase Jump Time: {self.phase_jump_time} ns"
         )
         if self.addressing == "Local":
-            config += f", Target time: {self.retarget_time} ns"
+            config += (
+                f", Minimum retarget time: {self.min_retarget_interval} ns, "
+                f"Fixed retarget time: {self.fixed_retarget_t} ns"
+            )
             if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
         config += f", Basis: '{self.basis}'"
+        if self.mod_bandwidth:
+            config += f", Modulation Bandwidth: {self.mod_bandwidth} MHz"
         return self.name + config + ")"
 
 
