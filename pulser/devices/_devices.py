@@ -37,7 +37,7 @@ IroiseMVP = Device(
     rydberg_level=60,
     max_atom_num=100,
     max_radial_distance=60,
-    min_atom_distance=6,
+    min_atom_distance=5,
     _channels=(
         (
             "rydberg_global",
