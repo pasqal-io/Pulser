@@ -268,6 +268,10 @@ class RegisterLayout(RegDrawer):
             prefix (str): The prefix for the qubit ids. Each qubit ID starts
                 with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
+
+        Returns:
+            MappableRegister: A substitute for a regular register that can be
+            used to initialize a Sequence.
         """
         qubit_ids = [f"{prefix}{i}" for i in range(n_qubits)]
         return MappableRegister(self, *qubit_ids)
