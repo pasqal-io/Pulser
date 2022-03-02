@@ -426,23 +426,10 @@ class Simulation:
             Process local channels and global channels with SLM off.
             Does not consider any noise.
         """
-        self.modulated_samples: dict[str, dict[str, dict]]
-        # max_rise_time = max(
-        #     [ch.rise_time for ch in self._seq.declared_channels.values()]
-        # )
+        self.modulated_samples = self.samples
         total_mod_duration = (
             self._tot_duration
         )  # already changed in the init()
-
-        if self._interaction == "ising":
-            self.modulated_samples = {
-                addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
-                for addr in ["Global", "Local"]
-            }
-        else:
-            self.modulated_samples = {
-                addr: {"XY": {}} for addr in ["Global", "Local"]
-            }
 
         def prepare_samples_dict(length: int) -> dict[str, np.ndarray]:
             return {
@@ -473,12 +460,6 @@ class Simulation:
         for channel, channel_obj in self._seq.declared_channels.items():
             addr = self._seq.declared_channels[channel].addressing
             basis = self._seq.declared_channels[channel].basis
-
-            # if the channel is global but with the SLM, pass and process the
-            # next one
-            slm_on = bool(self._seq._slm_mask_targets)
-            if addr == "Global" and slm_on:
-                continue
 
             if addr == "Global":
                 modulated_samples_dict = prepare_samples_dict(
@@ -598,8 +579,9 @@ class Simulation:
         if not hasattr(self, "operators"):
             self.operators = deepcopy(self.samples)
 
-        # If there is modulation, delegate all the work to the right function.
-        if self.mod_output:
+        # If there is modulation and no slm, delegate all the work to the right
+        # function.
+        if self.mod_output and not bool(self._seq._slm_mask_targets):
             (
                 self.samples,
                 self._tot_duration,
