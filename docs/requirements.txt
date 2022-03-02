@@ -1,6 +1,6 @@
 # For generating documentation.
 Sphinx
-sphinx_rtd_theme
+sphinx-book-theme # documentation theme
 nbsphinx
 nbsphinx-link
 
