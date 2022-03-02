@@ -204,6 +204,7 @@ def test_max_connectivity():
             ]
         )
         reg = Register.max_connectivity(i, device)
+        device.validate_register(reg)
         reg2 = Register.from_coordinates(
             spacing * hex_coords[:i], center=False
         )
@@ -215,6 +216,7 @@ def test_max_connectivity():
 
     # Check full layers on a small hexagon (1 layer)
     reg = Register.max_connectivity(7, device)
+    device.validate_register(reg)
     assert len(reg.qubits) == 7
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[0], [0.0, 0.0]))
@@ -227,6 +229,7 @@ def test_max_connectivity():
 
     # Check full layers for a bigger hexagon (2 layers)
     reg = Register.max_connectivity(19, device)
+    device.validate_register(reg)
     assert len(reg.qubits) == 19
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[7], [-1.5 * spacing, crest_y * spacing]))
@@ -241,6 +244,7 @@ def test_max_connectivity():
     # Check extra atoms (2 full layers + 7 extra atoms)
     # for C3 symmetry, C6 symmetry and offset for next atoms
     reg = Register.max_connectivity(26, device)
+    device.validate_register(reg)
     assert len(reg.qubits) == 26
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[19], [-2.5 * spacing, crest_y * spacing]))

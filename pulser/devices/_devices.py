@@ -30,3 +30,22 @@ Chadoq2 = Device(
         ("raman_local", Raman.Local(2 * np.pi * 20, 2 * np.pi * 10)),
     ),
 )
+
+IroiseMVP = Device(
+    name="IroiseMVP",
+    dimensions=2,
+    rydberg_level=60,
+    max_atom_num=100,
+    max_radial_distance=60,
+    min_atom_distance=5,
+    _channels=(
+        (
+            "rydberg_global",
+            Rydberg.Global(
+                max_abs_detuning=2 * np.pi * 4,
+                max_amp=2 * np.pi * 3,
+                phase_jump_time=500,
+            ),
+        ),
+    ),
+)
