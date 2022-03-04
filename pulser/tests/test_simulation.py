@@ -21,6 +21,7 @@ import qutip
 
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
+from pulser.register.register_layout import RegisterLayout
 from pulser.simulation import SimConfig, Simulation
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
@@ -102,6 +103,21 @@ def test_initialization_and_construction_of_hamiltonian():
     for qobjevo in sim._hamiltonian.ops:
         for sh in qobjevo.qobj.shape:
             assert sh == sim.dim**sim._size
+
+    assert not seq.is_parametrized()
+    seq_copy = seq.build()  # Take a copy of the sequence
+    x = seq_copy.declare_variable("x")
+    seq_copy.add(Pulse.ConstantPulse(x, 1, 0, 0), "ryd")
+    assert seq_copy.is_parametrized()
+    with pytest.raises(ValueError, match="needs to be built"):
+        Simulation(seq_copy)
+
+    layout = RegisterLayout([[0, 0], [10, 10]])
+    mapp_reg = layout.make_mappable_register(1)
+    seq_ = Sequence(mapp_reg, Chadoq2)
+    assert seq_.is_register_mappable() and not seq_.is_parametrized()
+    with pytest.raises(ValueError, match="needs to be built"):
+        Simulation(seq_)
 
 
 def test_extraction_of_sequences():

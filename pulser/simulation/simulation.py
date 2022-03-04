@@ -82,6 +82,11 @@ class Simulation:
                 "The provided sequence has to be a valid "
                 "pulser.Sequence instance."
             )
+        if sequence.is_parametrized() or sequence.is_register_mappable():
+            raise ValueError(
+                "The provided sequence needs to be built to be simulated. Call"
+                " `Sequence.build()` with the necessary parameters."
+            )
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
         if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
@@ -93,6 +98,15 @@ class Simulation:
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = self._seq.get_duration()
+
+        # Type hints for attributes defined outside of __init__
+        self.basis_name: str
+        self._config: SimConfig
+        self.op_matrix: dict[str, qutip.Qobj]
+        self.basis: dict[str, qutip.Qobj]
+        self.dim: int
+        self._eval_times_array: np.ndarray
+
         if not (0 < sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "
@@ -886,6 +900,7 @@ class Simulation:
         def _run_solver() -> CoherentResults:
             """Returns CoherentResults: Object containing evolution results."""
             # Decide if progress bar will be fed to QuTiP solver
+            p_bar: Optional[bool]
             if progress_bar is True:
                 p_bar = True
             elif (progress_bar is False) or (progress_bar is None):

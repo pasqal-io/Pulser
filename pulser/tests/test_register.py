@@ -27,7 +27,7 @@ def test_creation():
         Register(empty_dict)
 
     coords = [(0, 0), (1, 0)]
-    ids = ["q0", "q1"]
+    ids = ("q0", "q1")
     qubits = dict(zip(ids, coords))
     with pytest.raises(TypeError):
         Register(coords)
@@ -50,14 +50,14 @@ def test_creation():
     assert reg1._ids == reg2._ids
 
     reg2b = Register.from_coordinates(coords, center=False, labels=["a", "b"])
-    assert reg2b._ids == ["a", "b"]
+    assert reg2b._ids == ("a", "b")
 
     with pytest.raises(ValueError, match="Label length"):
         Register.from_coordinates(coords, center=False, labels=["a", "b", "c"])
 
     reg3 = Register.from_coordinates(np.array(coords), prefix="foo")
     coords_ = np.array([(-0.5, 0), (0.5, 0)])
-    assert reg3._ids == ["foo0", "foo1"]
+    assert reg3._ids == ("foo0", "foo1")
     assert np.all(reg3._coords == coords_)
     assert not np.all(coords_ == coords)
 
@@ -78,6 +78,11 @@ def test_creation():
         ]
     )
     assert np.all(np.array(reg6._coords) == coords_)
+
+    with pytest.raises(
+        ValueError, match="must only be 'layout' and 'trap_ids'"
+    ):
+        Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
 
 
 def test_rectangle():
@@ -199,6 +204,7 @@ def test_max_connectivity():
             ]
         )
         reg = Register.max_connectivity(i, device)
+        device.validate_register(reg)
         reg2 = Register.from_coordinates(
             spacing * hex_coords[:i], center=False
         )
@@ -210,6 +216,7 @@ def test_max_connectivity():
 
     # Check full layers on a small hexagon (1 layer)
     reg = Register.max_connectivity(7, device)
+    device.validate_register(reg)
     assert len(reg.qubits) == 7
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[0], [0.0, 0.0]))
@@ -222,6 +229,7 @@ def test_max_connectivity():
 
     # Check full layers for a bigger hexagon (2 layers)
     reg = Register.max_connectivity(19, device)
+    device.validate_register(reg)
     assert len(reg.qubits) == 19
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[7], [-1.5 * spacing, crest_y * spacing]))
@@ -236,6 +244,7 @@ def test_max_connectivity():
     # Check extra atoms (2 full layers + 7 extra atoms)
     # for C3 symmetry, C6 symmetry and offset for next atoms
     reg = Register.max_connectivity(26, device)
+    device.validate_register(reg)
     assert len(reg.qubits) == 26
     atoms = list(reg.qubits.values())
     assert np.all(np.isclose(atoms[19], [-2.5 * spacing, crest_y * spacing]))

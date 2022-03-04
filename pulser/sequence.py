@@ -20,11 +20,20 @@ import json
 import os
 import warnings
 from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, Mapping
 from functools import wraps
 from itertools import chain
 from sys import version_info
-from typing import Any, NamedTuple, Optional, Tuple, TypeVar, Union, cast
+from typing import (
+    Any,
+    NamedTuple,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,8 +47,10 @@ from pulser.devices._device_datacls import Device
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
+from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
+from pulser.register.mappable_reg import MappableRegister
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
@@ -150,7 +161,10 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register(BaseRegister): The atom register on which to apply the pulses.
+        register(Union[BaseRegister, MappableRegister]): The atom register on
+            which to apply the pulses. If given as a MappableRegister
+            instance, the traps corrresponding to each qubit ID must be given
+            when building the sequence.
         device(Device): A valid device in which to execute the Sequence (import
             it from ``pulser.devices``).
 
@@ -159,7 +173,9 @@ class Sequence:
         they are the same for all Sequences built from a parametrized Sequence.
     """
 
-    def __init__(self, register: BaseRegister, device: Device):
+    def __init__(
+        self, register: Union[BaseRegister, MappableRegister], device: Device
+    ):
         """Initializes a new pulse sequence."""
         if not isinstance(device, Device):
             raise TypeError(
@@ -180,9 +196,12 @@ class Sequence:
             warnings.warn(warns_msg, stacklevel=2)
 
         # Checks if register is compatible with the device
-        device.validate_register(register)
+        if isinstance(register, MappableRegister):
+            device.validate_layout(register._layout)
+        else:
+            device.validate_register(register)
 
-        self._register: BaseRegister = register
+        self._register: Union[BaseRegister, MappableRegister] = register
         self._device: Device = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
@@ -194,7 +213,7 @@ class Sequence:
         # Stores the names and dict ids of declared channels
         self._taken_channels: dict[str, str] = {}
         # IDs of all qubits in device
-        self._qids: set[QubitId] = set(self.qubit_info.keys())
+        self._qids: set[QubitId] = set(self._register.qubit_ids)
         # Last time each qubit was used, by basis
         self._last_used: dict[str, dict[QubitId, int]] = {}
         # Last time a target happened, by channel
@@ -214,12 +233,22 @@ class Sequence:
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
         """Dictionary with the qubit's IDs and positions."""
-        return self._register.qubits
+        if self.is_register_mappable():
+            raise RuntimeError(
+                "Can't access the qubit information when the register is "
+                "mappable."
+            )
+        return cast(BaseRegister, self._register).qubits
 
     @property
     def register(self) -> BaseRegister:
         """Register with the qubit's IDs and positions."""
-        return self._register
+        if self.is_register_mappable():
+            raise RuntimeError(
+                "Can't access the sequence's register because the register "
+                "is mappable."
+            )
+        return cast(BaseRegister, self._register)
 
     @property
     def declared_channels(self) -> dict[str, Channel]:
@@ -280,6 +309,18 @@ class Sequence:
             bool: Whether the sequence is parametrized.
         """
         return not self._building
+
+    def is_register_mappable(self) -> bool:
+        """States whether the sequence's register is mappable.
+
+        A sequence with a mappable register will require its qubit Id's to be
+        mapped to trap Ids of its associated RegisterLayout through the
+        `Sequence.build()` call.
+
+        Returns:
+            bool: Whether the register is a MappableRegister.
+        """
+        return isinstance(self._register, MappableRegister)
 
     @_screen
     def get_duration(
@@ -346,7 +387,7 @@ class Sequence:
         if qubit not in self._qids:
             raise ValueError(
                 "'qubit' must be the id of a qubit declared in "
-                "this sequence's device."
+                "this sequence's register."
             )
 
         if basis not in self._phase_ref:
@@ -538,12 +579,31 @@ class Sequence:
             )
         )
 
+    @overload
     def declare_variable(
         self,
         name: str,
-        size: int = 1,
+        *,
+        dtype: Union[type[int], type[float], type[str]] = float,
+    ) -> VariableItem:
+        pass
+
+    @overload
+    def declare_variable(
+        self,
+        name: str,
+        *,
+        size: int,
         dtype: Union[type[int], type[float], type[str]] = float,
     ) -> Variable:
+        pass
+
+    def declare_variable(
+        self,
+        name: str,
+        size: Optional[int] = None,
+        dtype: Union[type[int], type[float], type[str]] = float,
+    ) -> Union[Variable, VariableItem]:
         """Declare a new variable within this Sequence.
 
         The declared variables can be used to create parametrized versions of
@@ -568,11 +628,23 @@ class Sequence:
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
+        if name == "qubits":
+            # Necessary because 'qubits' is a keyword arg in self.build()
+            raise ValueError(
+                "'qubits' is a protected name. Please choose a different name "
+                "for the variable."
+            )
+
         if name in self._variables:
             raise ValueError("Name for variable is already being used.")
-        var = Variable(name, dtype, size=size)
-        self._variables[name] = var
-        return var
+
+        if size is None:
+            var = self.declare_variable(name, size=1, dtype=dtype)
+            return var[0]
+        else:
+            var = Variable(name, dtype, size=size)
+            self._variables[name] = var
+            return var
 
     @_store
     def add(
@@ -888,10 +960,19 @@ class Sequence:
                     )
                 self._delay(delta, id)
 
-    def build(self, **vars: Union[ArrayLike, float, int, str]) -> Sequence:
+    def build(
+        self,
+        *,
+        qubits: Optional[Mapping[QubitId, int]] = None,
+        **vars: Union[ArrayLike, float, int, str],
+    ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
         Keyword Args:
+            qubits (Optional[Mapping[QubitId, int]]): A mapping between qubit
+                IDs and trap IDs used to define the register. Must only be
+                provided when the sequence is initialized with a
+                MappableRegister.
             vars: The values for all the variables declared in this Sequence
                 instance, indexed by the name given upon declaration. Check
                 ``Sequence.declared_variables`` to see all the variables.
@@ -909,13 +990,33 @@ class Sequence:
                 # Build a sequence with specific values for both variables
                 >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
         """
-        if not self.is_parametrized():
-            warnings.warn(
-                "Building a non-parametrized sequence simply returns"
-                " a copy of itself.",
-                stacklevel=2,
+        # Shallow copy with stored parametrized objects (if any)
+        seq = copy.copy(self)
+
+        if self.is_register_mappable():
+            if qubits is None:
+                raise ValueError(
+                    "'qubits' must be specified when the sequence is created "
+                    "with a MappableRegister."
+                )
+            reg = cast(MappableRegister, self._register).build_register(qubits)
+            self._set_register(seq, reg)
+
+        elif qubits is not None:
+            raise ValueError(
+                "'qubits' must not be specified when the sequence already has "
+                "a concrete register."
             )
-            return copy.copy(self)
+
+        if not self.is_parametrized():
+            if not self.is_register_mappable():
+                warnings.warn(
+                    "Building a non-parametrized sequence simply returns"
+                    " a copy of itself.",
+                    stacklevel=2,
+                )
+            return seq
+
         all_keys, given_keys = self._variables.keys(), vars.keys()
         if given_keys != all_keys:
             invalid_vars = given_keys - all_keys
@@ -936,8 +1037,6 @@ class Sequence:
         for name, value in vars.items():
             self._variables[name]._assign(value)
 
-        # Shallow copy with stored parametrized objects
-        seq = copy.copy(self)
         # Eliminates the source of recursiveness errors
         seq._reset_parametrized()
         # Deepcopy the base sequence (what remains)
@@ -993,9 +1092,8 @@ class Sequence:
             formatted string.
         """
         if "Sequence" not in obj:
-            warnings.warn(
-                "The given JSON formatted string does not encode a Sequence.",
-                stacklevel=2,
+            raise ValueError(
+                "The given JSON formatted string does not encode a Sequence."
             )
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
@@ -1030,7 +1128,8 @@ class Sequence:
                 information should be added to the plot, defaults to False.
             draw_register (bool): Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
-                qubits masked by the SLM, defaults to False.
+                qubits masked by the SLM, defaults to False. Can't be set to
+                True if the sequence is defined with a mappable register.
             fig_name(str, default=None): The name on which to save the
                 figure. If `draw_register` is True, both pulses and register
                 will be saved as figures, with a suffix ``_pulses`` and
@@ -1065,6 +1164,11 @@ class Sequence:
                     stacklevel=2,
                 )
                 draw_interp_pts = False
+        if draw_register and self.is_register_mappable():
+            raise ValueError(
+                "Can't draw the register for a sequence without a defined "
+                "register."
+            )
         fig_reg, fig = draw_sequence(
             self,
             draw_phase_area=draw_phase_area,
@@ -1292,6 +1396,30 @@ class Sequence:
         self._is_measured = False
         self._variables = {}
         self._to_build_calls = []
+
+    def _set_register(self, seq: Sequence, reg: BaseRegister) -> None:
+        """Sets the register on a sequence who had a mappable register."""
+        self._device.validate_register(reg)
+        seq._register = reg
+        seq._qids = set(seq.register.qubit_ids)
+        used_qubits = set()
+        for ch, ch_obj in self._channels.items():
+            # Correct the targets of global channels
+            if ch_obj.addressing == "Global":
+                for i, slot in enumerate(self._schedule[ch]):
+                    stored_values = slot._asdict()
+                    stored_values["targets"] = seq._qids
+                    seq._schedule[ch][i] = _TimeSlot(**stored_values)
+            else:
+                # Make sure all explicit targets are in the register
+                for slot in self._schedule[ch]:
+                    used_qubits.update(slot.targets)
+
+        if not used_qubits <= seq._qids:
+            raise ValueError(
+                f"Qubits {used_qubits - seq._qids} are being targeted but"
+                " have not been assigned a trap."
+            )
 
 
 class _PhaseTracker:
