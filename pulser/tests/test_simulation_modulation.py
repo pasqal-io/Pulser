@@ -100,7 +100,7 @@ def test_simulation_modulation():
     seq = complex_sequence()
     sim = Simulation(
         seq,
-        mod_output=True,
+        samples_modulation=True,
     )
 
     assert sim._tot_duration == seq.get_duration() + 2 * max(

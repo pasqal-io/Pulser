@@ -67,7 +67,7 @@ class Simulation:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
-        mod_output (bool, default False): toggles the use of modulated samples
+        samples_modulation (bool, default False): toggles the use of modulated samples
             in the simulation.
     """
 
@@ -75,7 +75,7 @@ class Simulation:
         self,
         sequence: Sequence,
         sampling_rate: float = 1.0,
-        mod_output: bool = False,
+        samples_modulation: bool = False,
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
     ) -> None:
@@ -102,8 +102,8 @@ class Simulation:
         self._size = len(self._qdict)
         self._tot_duration = self._seq.get_duration()
 
-        self.mod_output = mod_output
-        if self.mod_output:
+        self.samples_modulation = samples_modulation
+        if self.samples_modulation:
             max_rise_time = max(
                 [ch.rise_time for ch in self._seq.declared_channels.values()]
             )
@@ -581,7 +581,7 @@ class Simulation:
 
         # If there is modulation and no slm, delegate all the work to the right
         # function.
-        if self.mod_output and not bool(self._seq._slm_mask_targets):
+        if self.samples_modulation and not bool(self._seq._slm_mask_targets):
             (
                 self.samples,
                 self._tot_duration,
