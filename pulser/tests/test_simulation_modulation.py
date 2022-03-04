@@ -8,15 +8,6 @@ from pulser.waveforms import BlackmanWaveform
 
 def modulated_mock_device() -> Device:
     """A Mock device with only one modulated channel."""
-    global_chan = Rydberg(
-        "Global",
-        1000,
-        200,
-        clock_period=1,
-        min_duration=1,
-        mod_bandwidth=4.00,  # MHz
-    )
-
     return Device(
         name="ModDevice",
         dimensions=3,
@@ -25,22 +16,19 @@ def modulated_mock_device() -> Device:
         max_radial_distance=1000,
         min_atom_distance=1,
         _channels=(
-            ("rydberg_global", global_chan),
             (
-                "rydberg_local",
+                "rydberg_global",
                 Rydberg(
-                    "Local",
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    max_targets=2,
-                    phase_jump_time=0,
-                    fixed_retarget_t=0,
-                    min_retarget_interval=220,
-                    mod_bandwidth=4,
+                    "Global",
+                    1000,
+                    200,
+                    clock_period=1,
+                    min_duration=1,
+                    mod_bandwidth=4.00,  # MHz
                 ),
             ),
             (
-                "rydberg_local_2",
+                "rydberg_local",
                 Rydberg(
                     "Local",
                     2 * np.pi * 20,
