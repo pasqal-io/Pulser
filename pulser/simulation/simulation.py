@@ -67,8 +67,8 @@ class Simulation:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
-        samples_modulation (bool, default False): toggles the use of modulated samples
-            in the simulation.
+        samples_modulation (bool, default False): toggles the use of modulated
+            samples in the simulation.
     """
 
     def __init__(
@@ -579,8 +579,8 @@ class Simulation:
         if not hasattr(self, "operators"):
             self.operators = deepcopy(self.samples)
 
-        # If there is modulation and no slm, delegate all the work to the right
-        # function.
+        # If there is modulation and no slm, delegate all the work to the
+        # designated method.
         if self.samples_modulation and not bool(self._seq._slm_mask_targets):
             (
                 self.samples,
