@@ -97,7 +97,8 @@ class Simulation:
         self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
-        self._tot_duration = self._seq.get_duration()
+        # Include one ns final time-step
+        self._tot_duration = self._seq.get_duration() + 1
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -308,21 +309,13 @@ class Simulation:
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
         """Sets times at which the results of this simulation are returned."""
+        final_seq_time = (self._tot_duration-1) / 1000
         if isinstance(value, str):
             if value == "Full":
-                if self._sampling_rate == 1.0:
-                    self._eval_times_array = np.append(
-                        self.sampling_times, self._tot_duration / 1000
-                    )
-                else:
-                    self._eval_times_array = np.linspace(
-                        0,
-                        self._tot_duration/1000,
-                        int(self._tot_duration * self._sampling_rate),
-                    )
+                self._eval_times_array = np.copy(self.sampling_times)
             elif value == "Minimal":
                 self._eval_times_array = np.array(
-                    [self.sampling_times[0], self._tot_duration / 1000]
+                    [self.sampling_times[0], ]
                 )
             else:
                 raise ValueError(
@@ -335,25 +328,20 @@ class Simulation:
                 raise ValueError(
                     "evaluation_times float must be between 0 " "and 1."
                 )
-            uniform_times = np.linspace(
-                 0,
-                 self._tot_duration / 1000,
-                 int(self._tot_duration * self._sampling_rate),
-                )
             indices = np.linspace(
                 0,
                 len(self.sampling_times) - 1,
                 int(value * len(self.sampling_times)),
                 dtype=int,
             )
-            # Return sorted array with 0 and final time if needed
+            # Return sorted array with 0 and final time (if needed)
             self._eval_times_array = np.union1d(
-                uniform_times[indices],
-                [0, self._tot_duration / 1000])
+                                        self.sampling_times[indices],
+                                        [0, final_seq_time])
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
-            if t_max > self._tot_duration / 1000:
+            if t_max > final_seq_time:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
@@ -367,8 +355,9 @@ class Simulation:
             eval_times = np.array(np.sort(value))
             if t_min > 0:
                 eval_times = np.insert(eval_times, 0, 0.0)
-            if t_max < self._tot_duration / 1000:
-                eval_times = np.append(eval_times, self._tot_duration / 1000)
+            if t_max < final_seq_time:
+                eval_times = np.append(eval_times, final_seq_time)
+
             self._eval_times_array = eval_times
             # always include initial and final times
         else:
@@ -464,6 +453,7 @@ class Simulation:
                 noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
                     -((r / w0) ** 2)
                 )
+
             samples_dict["amp"][slot.ti : slot.tf] += (
                 _pulse.amplitude.samples * noise_amp
             )
@@ -471,6 +461,12 @@ class Simulation:
                 _pulse.detuning.samples + noise_det
             )
             samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
+
+            # Final time-step: repeat last sample
+            if slot.tf == self._tot_duration - 1:
+                samples_dict["amp"][-1] = _pulse.amplitude.samples[-1]
+                samples_dict["det"][-1] = _pulse.detuning.samples[-1]
+                samples_dict["phase"][-1] = _pulse.phase
 
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
