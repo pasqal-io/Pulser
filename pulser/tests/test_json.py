@@ -96,6 +96,13 @@ def test_mappable_register():
     assert new_mapp_reg._layout == layout
     assert new_mapp_reg.qubit_ids == ("q0", "q1")
 
+    seq = Sequence(mapp_reg, MockDevice)
+    assert seq.is_register_mappable()
+    mapped_seq = seq.build(qubits={"q0": 2, "q1": 1})
+    assert not mapped_seq.is_register_mappable()
+    new_mapped_seq = Sequence.deserialize(mapped_seq.serialize())
+    assert not new_mapped_seq.is_register_mappable()
+
 
 def test_rare_cases():
     reg = Register.square(4)
