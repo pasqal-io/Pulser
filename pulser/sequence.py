@@ -1400,26 +1400,28 @@ class Sequence:
     def _set_register(self, seq: Sequence, reg: BaseRegister) -> None:
         """Sets the register on a sequence who had a mappable register."""
         self._device.validate_register(reg)
-        seq._register = reg
-        seq._qids = set(seq.register.qubit_ids)
+        qids = set(reg.qubit_ids)
         used_qubits = set()
         for ch, ch_obj in self._channels.items():
             # Correct the targets of global channels
             if ch_obj.addressing == "Global":
                 for i, slot in enumerate(self._schedule[ch]):
                     stored_values = slot._asdict()
-                    stored_values["targets"] = seq._qids
+                    stored_values["targets"] = qids
                     seq._schedule[ch][i] = _TimeSlot(**stored_values)
             else:
                 # Make sure all explicit targets are in the register
                 for slot in self._schedule[ch]:
                     used_qubits.update(slot.targets)
 
-        if not used_qubits <= seq._qids:
+        if not used_qubits <= qids:
             raise ValueError(
-                f"Qubits {used_qubits - seq._qids} are being targeted but"
+                f"Qubits {used_qubits - qids} are being targeted but"
                 " have not been assigned a trap."
             )
+        seq._register = reg
+        seq._qids = qids
+        seq._calls[0] = _Call("__init__", (seq._register, seq._device), {})
 
 
 class _PhaseTracker:
