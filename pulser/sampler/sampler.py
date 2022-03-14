@@ -13,16 +13,16 @@ import numpy as np
 import pulser.sampler.noises as noises
 from pulser.channels import Channel
 from pulser.pulse import Pulse
-from pulser.sampler.noises import LocalNoise
+from pulser.sampler.noises import NoiseModel
 from pulser.sampler.samples import GlobalSamples, QubitSamples
 from pulser.sequence import QubitId, Sequence, _TimeSlot
 
 
 def sample(
     seq: Sequence,
-    local_noises: Optional[list[LocalNoise]] = None,
-    global_noises: Optional[list[LocalNoise]] = None,
     modulation: bool = False,
+    local_noises: Optional[list[NoiseModel]] = None,
+    global_noises: Optional[list[NoiseModel]] = None,
 ) -> dict:
     """Samples the given Sequence and returns a nested dictionary.
 

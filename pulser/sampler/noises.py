@@ -5,40 +5,14 @@ import functools
 from typing import Callable
 
 import numpy as np
-from samples import QubitSamples
 
 from pulser.register import Register
+from pulser.sampler.samples import QubitSamples
 
-LocalNoise = Callable[[QubitSamples], QubitSamples]
-
-
-# It might be better to pass a Sequence rather than a Register.
+NoiseModel = Callable[[QubitSamples], QubitSamples]
 
 
-def doppler_noise(reg: Register, std_dev: float, seed: int = 0) -> LocalNoise:
-    """Generate a LocalNoise modelling the Doppler effect detuning shifts."""
-    rng = np.random.default_rng(seed)
-    errs = rng.normal(0.0, std_dev, size=len(reg.qubit_ids))
-    detunings = dict(zip(reg.qubit_ids, errs))
-
-    def f(s: QubitSamples) -> QubitSamples:
-        det = s.det
-        det[np.nonzero(s.det)] += detunings[s.qubit]
-        return QubitSamples(
-            amp=s.amp,
-            det=det,
-            phase=s.phase,
-            qubit=s.qubit,
-        )
-
-    return f
-
-
-# ! For now "malformed". It should be used only for global channels. The
-# ! current LocalNoise type seems not suited for this use.
-def amplitude_noise(
-    reg: Register, waist_width: float, seed: int = 0
-) -> LocalNoise:
+def amplitude(reg: Register, waist_width: float, seed: int = 0) -> NoiseModel:
     """Generate a LocalNoise modelling the amplitude profile of laser beams.
 
     The laser of a global channel has a non-constant amplitude profile in the
@@ -65,7 +39,26 @@ def amplitude_noise(
     return f
 
 
-def compose_local_noises(*functions: LocalNoise) -> LocalNoise:
+def doppler(reg: Register, std_dev: float, seed: int = 0) -> NoiseModel:
+    """Generate a LocalNoise modelling the Doppler effect detuning shifts."""
+    rng = np.random.default_rng(seed)
+    errs = rng.normal(0.0, std_dev, size=len(reg.qubit_ids))
+    detunings = dict(zip(reg.qubit_ids, errs))
+
+    def f(s: QubitSamples) -> QubitSamples:
+        det = s.det
+        det[np.nonzero(s.det)] += detunings[s.qubit]
+        return QubitSamples(
+            amp=s.amp,
+            det=det,
+            phase=s.phase,
+            qubit=s.qubit,
+        )
+
+    return f
+
+
+def compose_local_noises(*functions: NoiseModel) -> NoiseModel:
     """Helper to compose multiple functions."""
     if functions is None:
         return lambda x: x
@@ -75,7 +68,7 @@ def compose_local_noises(*functions: LocalNoise) -> LocalNoise:
 
 
 def apply(
-    samples: list[QubitSamples], noises: list[LocalNoise]
+    samples: list[QubitSamples], noises: list[NoiseModel]
 ) -> list[QubitSamples]:
     """Apply a list of noises on a list of QubitSamples."""
     tot_noise = compose_local_noises(*noises)
