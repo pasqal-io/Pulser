@@ -10,10 +10,17 @@ from pulser.register import Register
 from pulser.sampler.samples import QubitSamples
 
 NoiseModel = Callable[[QubitSamples], QubitSamples]
+"""A function that apply some noise on a list of QubitSamples.
+
+A NoiseModel corresponds to a source of noises present in a device which is
+relevant when sampling the input pulses. Physical effects contributing to
+modifications of the shined amplitude, detuning and phase felt by qubits of the
+register are susceptible to be implemented by a NoiseModel.
+"""
 
 
 def amplitude(reg: Register, waist_width: float, seed: int = 0) -> NoiseModel:
-    """Generate a LocalNoise modelling the amplitude profile of laser beams.
+    """Generate a NoiseModel for the gaussian amplitude profile of laser beams.
 
     The laser of a global channel has a non-constant amplitude profile in the
     register plane. It makes global channels act differently on each qubit,
@@ -40,7 +47,7 @@ def amplitude(reg: Register, waist_width: float, seed: int = 0) -> NoiseModel:
 
 
 def doppler(reg: Register, std_dev: float, seed: int = 0) -> NoiseModel:
-    """Generate a LocalNoise modelling the Doppler effect detuning shifts."""
+    """Generate a NoiseModel for the Doppler effect detuning shifts."""
     rng = np.random.default_rng(seed)
     errs = rng.normal(0.0, std_dev, size=len(reg.qubit_ids))
     detunings = dict(zip(reg.qubit_ids, errs))
@@ -59,7 +66,7 @@ def doppler(reg: Register, std_dev: float, seed: int = 0) -> NoiseModel:
 
 
 def compose_local_noises(*functions: NoiseModel) -> NoiseModel:
-    """Helper to compose multiple functions."""
+    """Helper to compose multiple NoiseModel."""
     if functions is None:
         return lambda x: x
     return functools.reduce(
@@ -70,7 +77,7 @@ def compose_local_noises(*functions: NoiseModel) -> NoiseModel:
 def apply(
     samples: list[QubitSamples], noises: list[NoiseModel]
 ) -> list[QubitSamples]:
-    """Apply a list of noises on a list of QubitSamples."""
+    """Apply a list of NoiseModel on a list of QubitSamples."""
     tot_noise = compose_local_noises(*noises)
 
     return [tot_noise(s) for s in samples]

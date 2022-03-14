@@ -14,31 +14,33 @@ import pulser.sampler.noises as noises
 from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.noises import NoiseModel
-from pulser.sampler.samples import GlobalSamples, QubitSamples
+from pulser.sampler.samples import QubitSamples, Samples
 from pulser.sequence import QubitId, Sequence, _TimeSlot
 
 
 def sample(
     seq: Sequence,
     modulation: bool = False,
-    local_noises: Optional[list[NoiseModel]] = None,
+    common_noises: Optional[list[NoiseModel]] = None,
     global_noises: Optional[list[NoiseModel]] = None,
 ) -> dict:
     """Samples the given Sequence and returns a nested dictionary.
 
     Args:
         seq (Sequence): a pulser.Sequence instance.
-        local_noise (Optional[list[LocalNoise]]): a list of the noise sources
-            to account for.
         modulation (bool): a flag to account for the modulation of AOM/EOM
             before sampling.
+        common_noises (Optional[list[LocalNoise]]): a list of the noise sources
+            for all channels.
+        global_noises (Optional[list[LocalNoise]]): a list of the noise sources
+            for global channels.
 
     Returns:
         A nested dictionnary of the samples of the amplitude, detuning and
         phase at every nanoseconds for all channels.
     """
-    if local_noises is None:
-        local_noises = []
+    if common_noises is None:
+        common_noises = []
     if global_noises is None:
         global_noises = []
     # The noises are applied in the reversed order of the list
@@ -48,10 +50,10 @@ def sample(
         addr = seq.declared_channels[ch_name].addressing
         basis = seq.declared_channels[ch_name].basis
 
-        samples: list[QubitSamples] = []
+        ls: list[QubitSamples] = []
 
         if addr == "Global":
-            # 1. determine if decay
+            # 1. determine if the global channel decay to a local one
             # 2. extract samples
             # 3. modulate
             # 4. apply noises/SLM
@@ -59,19 +61,17 @@ def sample(
 
             decay = len(seq._slm_mask_targets) > 0 or len(global_noises) > 0
 
-            ch_samples = _sample_global_channel(seq, ch_name)
+            gs = _sample_global_channel(seq, ch_name)
             if modulation:
-                ch_samples = _modulate_global(
-                    seq.declared_channels[ch_name], ch_samples
-                )
+                gs = _modulate_global(seq.declared_channels[ch_name], gs)
 
             if not decay:
-                _write_global_samples(d, basis, ch_samples)
+                _write_global_samples(d, basis, gs)
             else:
                 qs = seq._qids - seq._slm_mask_targets
-                samples = [QubitSamples.from_global(q, ch_samples) for q in qs]
-                samples = noises.apply(samples, global_noises)
-                _write_local_samples(d, basis, samples)
+                ls = [QubitSamples.from_global(q, gs) for q in qs]
+                ls = noises.apply(ls, common_noises + global_noises)
+                _write_local_samples(d, basis, ls)
 
         elif addr == "Local":
             # 1. determine if modulation
@@ -79,25 +79,23 @@ def sample(
             # 3. apply noises/SLM
             # 4. write samples
             if modulation:
-                # gatering the samples of consecutive pulses with same targets
+                # gatering the samples for consecutive pulses with same targets
                 # that can be safely modulated.
-                samples = _sample_local_channel(
+                ls = _sample_local_channel(
                     seq, ch_name, _group_between_retarget
                 )
-                samples = _modulate_local(
-                    seq.declared_channels[ch_name], samples
-                )
+                ls = _modulate_local(seq.declared_channels[ch_name], ls)
             else:
-                samples = _sample_local_channel(seq, ch_name, _regular)
+                ls = _sample_local_channel(seq, ch_name, _regular)
             qs = seq._qids - seq._slm_mask_targets
-            samples = [s for s in samples if s.qubit in qs]
-            samples = noises.apply(samples, local_noises)
-            _write_local_samples(d, basis, samples)
+            ls = [s for s in ls if s.qubit in qs]
+            ls = noises.apply(ls, common_noises)
+            _write_local_samples(d, basis, ls)
 
     return d
 
 
-def _write_global_samples(d: dict, basis: str, samples: GlobalSamples) -> None:
+def _write_global_samples(d: dict, basis: str, samples: Samples) -> None:
     d["Global"][basis]["amp"] += samples.amp
     d["Global"][basis]["det"] += samples.det
     d["Global"][basis]["phase"] += samples.phase
@@ -146,9 +144,10 @@ def _prepare_dict(seq: Sequence, N: int) -> dict:
         }
 
 
-def _sample_global_channel(seq: Sequence, ch_name: str) -> GlobalSamples:
-    if ch_name not in seq.declared_channels:
-        raise ValueError(f"{ch_name} is not declared in the given Sequence")
+def _sample_global_channel(seq: Sequence, ch_name: str) -> Samples:
+    """Compute Samples for a global channel."""
+    if seq.declared_channels[ch_name].addressing != "Global":
+        raise ValueError(f"{ch_name} is no a global channel")
     slots = seq._schedule[ch_name]
     return _sample_slots(seq.get_duration(), *slots)
 
@@ -156,16 +155,24 @@ def _sample_global_channel(seq: Sequence, ch_name: str) -> GlobalSamples:
 def _sample_local_channel(
     seq: Sequence, ch_name: str, strategy: TimeSlotExtractionStrategy
 ) -> list[QubitSamples]:
-    if ch_name not in seq.declared_channels:
-        raise ValueError(f"{ch_name} is not declared in the given Sequence")
+    """Compute Samples for a local channel."""
     if seq.declared_channels[ch_name].addressing != "Local":
         raise ValueError(f"{ch_name} is no a local channel")
 
     return strategy(seq.get_duration(), seq._schedule[ch_name])
 
 
-def _sample_slots(N: int, *slots: _TimeSlot) -> GlobalSamples:
-    samples = GlobalSamples(np.zeros(N), np.zeros(N), np.zeros(N))
+def _sample_slots(N: int, *slots: _TimeSlot) -> Samples:
+    """Gather samples of a list of _TimeSlot in a single Samples instance.
+
+    Args:
+        N (int): the size of the samples arrays.
+        *slots (tuple[_TimeSlots]): the _TimeSlots to sample
+
+    Returns:
+        A Samples instance.
+    """
+    samples = Samples(np.zeros(N), np.zeros(N), np.zeros(N))
     for s in slots:
         if type(s.type) is str:
             continue
@@ -177,15 +184,24 @@ def _sample_slots(N: int, *slots: _TimeSlot) -> GlobalSamples:
     return samples
 
 
-# This strategy type is used mostly for the necessity to extract samples
-# differently when taking into account the modulation of AOM/EOM. Still it's
-# nice to keep modularity here, to accomodate for future needs.
 TimeSlotExtractionStrategy = Callable[
     [int, List[_TimeSlot]], List[QubitSamples]
 ]
+"""Extraction strategy of _TimeSlot's of a Channel.
+
+This strategy type is used mostly for the necessity to extract samples
+differently when taking into account the modulation of AOM/EOM. Despite there
+is only two cases, wheter it's necessary to modulate a local channel or not,
+this patterns is nice and can accomodate for future needs.
+"""
 
 
 def _regular(N: int, ts: list[_TimeSlot]) -> list[QubitSamples]:
+    """No grouping performed.
+
+    Fallback on the extraction procedure for a Global-like channel, and create
+    QubitSamples for each targeted qubit from the result.
+    """
     return [
         QubitSamples.from_global(q, _sample_slots(N, slot))
         for slot in ts
@@ -195,6 +211,7 @@ def _regular(N: int, ts: list[_TimeSlot]) -> list[QubitSamples]:
 
 def _group_between_retarget(N: int, ts: list[_TimeSlot]) -> list[QubitSamples]:
     qs: list[QubitSamples] = []
+    """Group a list of _TimeSlot by consecutive Pulse between retarget ops."""
     grouped_slots = _consecutive_slots_between_retargets(ts)
     for targets, group in grouped_slots:
         ss = [
@@ -209,6 +226,13 @@ class _GroupType(enum.Enum):
     PULSE_AND_DELAYS = "pulses_and_delays"
     TARGET = "target"
     OTHER = "other"
+
+
+def _key_func(x: _TimeSlot) -> _GroupType:
+    if isinstance(x.type, Pulse) or x.type == "delay":
+        return _GroupType.PULSE_AND_DELAYS
+    else:
+        return _GroupType.OTHER
 
 
 def _consecutive_slots_between_retargets(
@@ -226,13 +250,7 @@ def _consecutive_slots_between_retargets(
     """
     grouped_slots: list = []
 
-    def key_func(x: _TimeSlot) -> _GroupType:
-        if isinstance(x.type, Pulse) or x.type == "delay":
-            return _GroupType.PULSE_AND_DELAYS
-        else:
-            return _GroupType.OTHER
-
-    for key, group in itertools.groupby(ts, key_func):
+    for key, group in itertools.groupby(ts, _key_func):
         g = list(group)
         if key != _GroupType.PULSE_AND_DELAYS:
             continue
@@ -241,12 +259,12 @@ def _consecutive_slots_between_retargets(
     return grouped_slots
 
 
-def _modulate_global(ch: Channel, samples: GlobalSamples) -> GlobalSamples:
+def _modulate_global(ch: Channel, samples: Samples) -> Samples:
     """Modulate global samples according to the hardware specs.
 
     Additional parameters will probably be needed (keep_end, etc).
     """
-    return GlobalSamples(
+    return Samples(
         amp=ch.modulate(samples.amp),
         det=ch.modulate(samples.det),
         phase=ch.modulate(samples.phase),

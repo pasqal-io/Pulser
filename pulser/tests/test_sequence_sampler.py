@@ -55,7 +55,7 @@ def test_doppler_noise(seq):
     doppler_sigma = KEFF * np.sqrt(KB * 50.0e-6 / MASS)
 
     local_noises = [doppler(seq.register, doppler_sigma, seed=0)]
-    samples = sample(seq, local_noises=local_noises)
+    samples = sample(seq, common_noises=local_noises)
     got = samples["Local"]["ground-rydberg"]["q0"]["det"]
 
     np.random.seed(0)
