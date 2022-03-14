@@ -2,7 +2,8 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser.sampler import doppler_noise, sample
+from pulser.sampler.noises import doppler_noise
+from sampler.sampler import sample
 from pulser.devices import MockDevice
 from pulser.pulse import Pulse
 from pulser.simulation.simconfig import SimConfig
