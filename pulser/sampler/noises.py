@@ -1,4 +1,6 @@
 """Contains the noise models."""
+from __future__ import annotations
+
 import functools
 from typing import Callable
 
@@ -32,6 +34,8 @@ def doppler_noise(reg: Register, std_dev: float, seed: int = 0) -> LocalNoise:
     return f
 
 
+# ! For now "malformed". It should be used only for global channels. The
+# ! current LocalNoise type seems not suited for this use.
 def amplitude_noise(
     reg: Register, waist_width: float, seed: int = 0
 ) -> LocalNoise:
@@ -68,3 +72,12 @@ def compose_local_noises(*functions: LocalNoise) -> LocalNoise:
     return functools.reduce(
         lambda f, g: lambda x: f(g(x)), functions, lambda x: x
     )
+
+
+def apply(
+    samples: list[QubitSamples], noises: list[LocalNoise]
+) -> list[QubitSamples]:
+    """Apply a list of noises on a list of QubitSamples."""
+    tot_noise = compose_local_noises(*noises)
+
+    return [tot_noise(s) for s in samples]

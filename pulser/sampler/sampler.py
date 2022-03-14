@@ -10,9 +10,10 @@ from typing import Callable, List, Optional, cast
 
 import numpy as np
 
+import pulser.sampler.noises as noises
 from pulser.channels import Channel
 from pulser.pulse import Pulse
-from pulser.sampler.noises import LocalNoise, compose_local_noises
+from pulser.sampler.noises import LocalNoise
 from pulser.sampler.samples import GlobalSamples, QubitSamples
 from pulser.sequence import QubitId, Sequence, _TimeSlot
 
@@ -20,6 +21,7 @@ from pulser.sequence import QubitId, Sequence, _TimeSlot
 def sample(
     seq: Sequence,
     local_noises: Optional[list[LocalNoise]] = None,
+    global_noises: Optional[list[LocalNoise]] = None,
     modulation: bool = False,
 ) -> dict:
     """Samples the given Sequence and returns a nested dictionary.
@@ -37,37 +39,77 @@ def sample(
     """
     if local_noises is None:
         local_noises = []
+    if global_noises is None:
+        global_noises = []
+    # The noises are applied in the reversed order of the list
 
     d = _prepare_dict(seq, seq.get_duration())
     for ch_name in seq.declared_channels:
         addr = seq.declared_channels[ch_name].addressing
         basis = seq.declared_channels[ch_name].basis
 
+        samples: list[QubitSamples] = []
+
         if addr == "Global":
+            # 1. determine if decay
+            # 2. extract samples
+            # 3. modulate
+            # 4. apply noises/SLM
+            # 5. write samples
+
+            decay = len(seq._slm_mask_targets) > 0 or len(global_noises) > 0
+
             ch_samples = _sample_global_channel(seq, ch_name)
-            d[addr][basis]["amp"] += ch_samples.amp
-            d[addr][basis]["det"] += ch_samples.det
-            d[addr][basis]["phase"] += ch_samples.phase
-        elif addr == "Local":
-            samples: list[QubitSamples] = []
             if modulation:
-                # Gatering the samples of consecutive pulses with same targets.
-                # These can be safely modulated.
-                samples = _sample_local_channel(
-                    seq, ch_name, strategy=_group_between_retarget
+                ch_samples = _modulate_global(
+                    seq.declared_channels[ch_name], ch_samples
                 )
-                samples = _modulate(seq.declared_channels[ch_name], samples)
+
+            if not decay:
+                _write_global_samples(d, basis, ch_samples)
+            else:
+                qs = seq._qids - seq._slm_mask_targets
+                samples = [QubitSamples.from_global(q, ch_samples) for q in qs]
+                samples = noises.apply(samples, global_noises)
+                _write_local_samples(d, basis, samples)
+
+        elif addr == "Local":
+            # 1. determine if modulation
+            # 2. extract samples (depends on modulation)
+            # 3. apply noises/SLM
+            # 4. write samples
+            if modulation:
+                # gatering the samples of consecutive pulses with same targets
+                # that can be safely modulated.
+                samples = _sample_local_channel(
+                    seq, ch_name, _group_between_retarget
+                )
+                samples = _modulate_local(
+                    seq.declared_channels[ch_name], samples
+                )
             else:
                 samples = _sample_local_channel(seq, ch_name, _regular)
-            for s in samples:
-                if len(local_noises) > 0:
-                    # The noises are applied in the reversed order of the list
-                    noise_func = compose_local_noises(*local_noises)
-                    s = noise_func(s)
-                d[addr][basis][s.qubit]["amp"] += s.amp
-                d[addr][basis][s.qubit]["det"] += s.det
-                d[addr][basis][s.qubit]["phase"] += s.phase
+            qs = seq._qids - seq._slm_mask_targets
+            samples = [s for s in samples if s.qubit in qs]
+            samples = noises.apply(samples, local_noises)
+            _write_local_samples(d, basis, samples)
+
     return d
+
+
+def _write_global_samples(d: dict, basis: str, samples: GlobalSamples) -> None:
+    d["Global"][basis]["amp"] += samples.amp
+    d["Global"][basis]["det"] += samples.det
+    d["Global"][basis]["phase"] += samples.phase
+
+
+def _write_local_samples(
+    d: dict, basis: str, samples: list[QubitSamples]
+) -> None:
+    for s in samples:
+        d["Local"][basis][s.qubit]["amp"] += s.amp
+        d["Local"][basis][s.qubit]["det"] += s.det
+        d["Local"][basis][s.qubit]["phase"] += s.phase
 
 
 def _prepare_dict(seq: Sequence, N: int) -> dict:
@@ -199,14 +241,27 @@ def _consecutive_slots_between_retargets(
     return grouped_slots
 
 
-def _modulate(ch: Channel, samples: list[QubitSamples]) -> list[QubitSamples]:
-    """Modulate samples according to the hardware specs.
+def _modulate_global(ch: Channel, samples: GlobalSamples) -> GlobalSamples:
+    """Modulate global samples according to the hardware specs.
+
+    Additional parameters will probably be needed (keep_end, etc).
+    """
+    return GlobalSamples(
+        amp=ch.modulate(samples.amp),
+        det=ch.modulate(samples.det),
+        phase=ch.modulate(samples.phase),
+    )
+
+
+def _modulate_local(
+    ch: Channel, samples: list[QubitSamples]
+) -> list[QubitSamples]:
+    """Modulate local samples according to the hardware specs.
 
     Additional parameters will probably be needed (keep_end, etc).
     """
     modulated_samples: list[QubitSamples] = []
     for s in samples:
-
         modulated_samples.append(
             QubitSamples(
                 amp=ch.modulate(s.amp),
@@ -215,5 +270,4 @@ def _modulate(ch: Channel, samples: list[QubitSamples]) -> list[QubitSamples]:
                 qubit=s.qubit,
             )
         )
-
     return modulated_samples
