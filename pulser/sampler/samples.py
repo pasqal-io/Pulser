@@ -10,7 +10,7 @@ from pulser.sequence import QubitId
 
 @dataclass
 class Samples:
-    """Gather sampleswith for unspecified qubits."""
+    """Gather samples for unspecified qubits."""
 
     amp: np.ndarray
     det: np.ndarray

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module sampler allow the sampling of pulser sequences.
+"""Module sampler enables the sampling of pulser sequences.
 
 Samples of a sequence are needed for plotting and simulation.
 

@@ -1,4 +1,4 @@
-"""Expose the sample() functions.
+"""Exposes the sample() functions.
 
 It contains many helpers.
 """
@@ -113,8 +113,7 @@ def _write_local_samples(
 def _prepare_dict(seq: Sequence, N: int) -> dict:
     """Constructs empty dict of size N.
 
-    Usually N is the duration of seq, but we allow for a longer one, in case of
-    modulation for example.
+    Usually N is the duration of seq.
     """
 
     def new_qty_dict() -> dict:
@@ -191,8 +190,8 @@ TimeSlotExtractionStrategy = Callable[
 
 This strategy type is used mostly for the necessity to extract samples
 differently when taking into account the modulation of AOM/EOM. Despite there
-is only two cases, wheter it's necessary to modulate a local channel or not,
-this patterns is nice and can accomodate for future needs.
+are only two cases, whether it's necessary to modulate a local channel or not,
+this pattern can accomodate for future needs.
 """
 
 
