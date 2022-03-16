@@ -20,3 +20,4 @@ Samples of a sequence are needed for plotting and simulation.
 
   sampler.sample(sequence)
 """
+from pulser.sampler.sampler import sample
