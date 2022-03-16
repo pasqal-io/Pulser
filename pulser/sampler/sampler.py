@@ -59,7 +59,11 @@ def sample(
             # 4. apply noises/SLM
             # 5. write samples
 
-            decay = len(seq._slm_mask_targets) > 0 or len(global_noises) > 0
+            decay = (
+                len(seq._slm_mask_targets) > 0
+                or len(global_noises) > 0
+                or len(common_noises) > 0
+            )
 
             gs = _sample_global_channel(seq, ch_name)
             if modulation:
