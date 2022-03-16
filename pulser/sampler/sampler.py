@@ -46,6 +46,10 @@ def sample(
     # The noises are applied in the reversed order of the list
 
     d = _prepare_dict(seq, seq.get_duration())
+    if modulation:
+        max_rt = max([ch.rise_time for ch in seq.declared_channels.values()])
+        d = _prepare_dict(seq, seq.get_duration() + 2 * max_rt)
+
     for ch_name in seq.declared_channels:
         addr = seq.declared_channels[ch_name].addressing
         basis = seq.declared_channels[ch_name].basis
@@ -287,7 +291,7 @@ def _modulate_local(
             QubitSamples(
                 amp=ch.modulate(s.amp),
                 det=ch.modulate(s.det),
-                phase=s.phase * np.ones(len(ch.modulate(s.amp))),
+                phase=ch.modulate(s.phase),
                 qubit=s.qubit,
             )
         )
