@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.channels import Channel
-from pulser.json.utils import obj_to_dict
+from pulser.json.utils import abstract_repr, obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import ConstantWaveform, Waveform
@@ -200,6 +200,15 @@ class Pulse:
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
             self,
+            self.amplitude,
+            self.detuning,
+            self.phase,
+            post_phase_shift=self.post_phase_shift,
+        )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr(
+            "Pulse",
             self.amplitude,
             self.detuning,
             self.phase,

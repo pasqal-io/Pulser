@@ -32,7 +32,7 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 from pulser.channels import Channel
-from pulser.json.utils import obj_to_dict
+from pulser.json.utils import abstract_repr, obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 
@@ -214,6 +214,10 @@ class Waveform(ABC):
         pass
 
     @abstractmethod
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        pass
+
+    @abstractmethod
     def __str__(self) -> str:
         pass
 
@@ -388,6 +392,9 @@ class CompositeWaveform(Waveform):
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, *self._waveforms)
 
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr("CompositeWaveform", *self._waveforms)
+
     def __str__(self) -> str:
         contents_list = ["{!r}"] * len(self._waveforms)
         contents = ", ".join(contents_list)
@@ -432,6 +439,9 @@ class CustomWaveform(Waveform):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._samples)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr("CustomWaveform", self._samples)
 
     def __str__(self) -> str:
         return "Custom"
@@ -488,6 +498,9 @@ class ConstantWaveform(Waveform):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._value)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr("ConstantWaveform", self._duration, self._value)
 
     def __str__(self) -> str:
         return f"{self._value:.3g} rad/µs"
@@ -556,6 +569,11 @@ class RampWaveform(Waveform):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._start, self._stop)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr(
+            "RampWaveform", self._duration, self._start, self._stop
+        )
 
     def __str__(self) -> str:
         return f"Ramp({self._start:.3g}->{self._stop:.3g} rad/µs)"
@@ -687,6 +705,9 @@ class BlackmanWaveform(Waveform):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._area)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr("BlackmanWaveform", self._duration, self._area)
 
     def __str__(self) -> str:
         return f"Blackman(Area: {self._area:.3g})"
@@ -838,6 +859,15 @@ class InterpolatedWaveform(Waveform):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._values, **self._kwargs)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr(
+            "InterpolatedWaveform",
+            self._duration,
+            self._values,
+            times=self._kwargs["times"],
+            interpolator=self._kwargs["interpolator"],
+        )
 
     def __str__(self) -> str:
         coords = [f"({int(x)}, {y:.4g})" for x, y in self.data_points]
@@ -1025,6 +1055,11 @@ class KaiserWaveform(Waveform):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._duration, self._area, self._beta)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr(
+            "KaiserWaveform", self._duration, self._area, beta=self._beta
+        )
 
     def __str__(self) -> str:
         return (
