@@ -1071,6 +1071,70 @@ class Sequence:
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
+    def abstract_repr(self) -> dict[str, Any]:
+        """Serializes the Sequence into an abstract JSON object.
+
+        Returns:
+            dict[str, Any]: The sequence encoded as an abstract JSON object.
+
+        See Also:
+            ``serialize``
+        """
+
+        res = {"register": [], "channels": [], "operations": []}
+        operations = res["operations"]
+        for call in self._calls:
+            if call.name == "__init__":
+                register, device = call.args
+                # process register
+                res["device"] = device.name
+                for name, (x, y) in register.qubits.items():
+                    res["register"].append({"name": name, "x": x, "y": y})
+            elif call.name == "declare_channel":
+                ch_name, ch_kind = call.args
+                res["channels"].append({"name": ch_name, "kind": ch_kind})
+                operations.append(
+                    {
+                        "op": "retarget",
+                        "channel": ch_name,
+                        "target": call.kwargs["initial_target"],
+                    }
+                )
+            elif call.name == "target":
+                target, ch_name = call.args
+                operations.append(
+                    {"op": "retarget", "channel": ch_name, "target": target}
+                )
+            elif call.name == "align":
+                operations.append({"op": "align", "channels": list(call.args)})
+            elif call.name == "measure":
+                res["measurement"] = call.args[0]
+            elif call.name == "add":
+                pulse, ch_name = call.args
+                amplitude = pulse.amplitude._to_dict()
+                detuning = pulse.detuning._to_dict()
+                operations.append(
+                    {
+                        "op": "pulse",
+                        "channel": ch_name,
+                        "amplitude": {
+                            "kind": amplitude["__name__"],
+                            "duration": amplitude["__args__"][0],
+                            "area": amplitude["__args__"][1],
+                        },
+                        "detuning": {
+                            "kind": detuning["__name__"],
+                            "duration": detuning["__args__"][0],
+                            "value": detuning["__args__"][1],
+                        },
+                        "phase": pulse.phase,
+                        "post_phase_shift": pulse.post_phase_shift,
+                    }
+                )
+            else:
+                raise Exception(f"Call name '{call.name}' is not supported")
+        return res
+
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:
         """Deserializes a JSON formatted string.
