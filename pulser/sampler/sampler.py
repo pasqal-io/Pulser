@@ -46,22 +46,17 @@ def sample(
     if global_noises is None:
         global_noises = []
 
-    # The idea of this refactor: every channel is local behind the scene A
-    # global channel is just a convenient abstraction for an ideal case. But as
-    # soon as we introduce noises it's useless. Hence, the distinction between
-    # the two should be very thin: no big if diverging branches
-    #
     # 1. determine if the global channel decay to a local one
     # 2. extract samples
     # 3. modulate
     # 4. apply noises/SLM
     # 5. write samples
 
-    samples: dict[str, Samples | list[QubitSamples]] = {}
+    samples: dict[str, list[QubitSamples]] = {}
+    addrs: dict[str, str] = {}
 
-    # First extract to the internal representation
     for ch_name, ch in seq.declared_channels.items():
-        s: Samples | list[QubitSamples]
+        s: list[QubitSamples]
 
         addr = seq.declared_channels[ch_name].addressing
 
@@ -74,21 +69,15 @@ def sample(
                 or len(common_noises) > 0
             )
             if decay:
-                addr = "Local"
+                addr = "Decayed"
                 ch_noises.extend(global_noises)
 
-        if addr == "Global":
-            s = _sample_global_channel(seq, ch_name)
-            if modulation:
-                s = _modulate_global(ch, s)
-            # No SLM since not decayed
-            samples[ch_name] = s
-            continue
+        addrs[ch_name] = addr
 
         strategy = _group_between_retargets if modulation else _regular
         s = _sample_channel(seq, ch_name, strategy)
         if modulation:
-            s = _modulate_local(ch, s)
+            s = _modulate(ch, s)
 
         unmasked_qubits = seq._qids - seq._slm_mask_targets
         s = [x for x in s if x.qubit in unmasked_qubits]  # SLM
@@ -97,25 +86,10 @@ def sample(
 
         samples[ch_name] = s
 
-    # Output: format the samples in the simulation dict form
-    d = _write_dict(seq, modulation, samples)
+    # format the samples in the simulation dict form
+    d = _write_dict(seq, samples, addrs)
 
     return d
-
-
-def _write_global_samples(d: dict, basis: str, samples: Samples) -> None:
-    d["Global"][basis]["amp"] += samples.amp
-    d["Global"][basis]["det"] += samples.det
-    d["Global"][basis]["phase"] += samples.phase
-
-
-def _write_local_samples(
-    d: dict, basis: str, samples: list[QubitSamples]
-) -> None:
-    for s in samples:
-        d["Local"][basis][s.qubit]["amp"] += s.amp
-        d["Local"][basis][s.qubit]["det"] += s.det
-        d["Local"][basis][s.qubit]["phase"] += s.phase
 
 
 def _prepare_dict(seq: Sequence, N: int) -> dict:
@@ -153,31 +127,56 @@ def _prepare_dict(seq: Sequence, N: int) -> dict:
 
 def _write_dict(
     seq: Sequence,
-    modulation: bool,
-    samples: dict[str, Samples | list[QubitSamples]],
+    samples: dict[str, list[QubitSamples]],
+    addrs: dict[str, str],
 ) -> dict:
-    """Needs to be rewritten: do not need the sequence nor modulation args."""
-    N = seq.get_duration()
-    if modulation:
-        max_rt = max([ch.rise_time for ch in seq.declared_channels.values()])
-        N += 2 * max_rt
+    """Export the given samples to a nested dictionary."""
+    # Get the duration
+    if not _same_duration(samples):  # Defensive coding
+        raise ValueError("All the samples do not share the same duration.")
+    N = list(samples.values())[0][0].amp.size
+
     d = _prepare_dict(seq, N)
 
     for ch_name, a in samples.items():
         basis = seq.declared_channels[ch_name].basis
-        if isinstance(a, Samples):
-            _write_global_samples(d, basis, a)
+        addr = addrs[ch_name]
+        if addr == "Global":
+            # Take samples on only one qubit and write them
+            a_qubit = next(iter(seq._qids))
+            to_write = [x for x in a if x.qubit == a_qubit]
+            _write_global_samples(d, basis, to_write)
         else:
             _write_local_samples(d, basis, a)
     return d
 
 
-def _sample_global_channel(seq: Sequence, ch_name: str) -> Samples:
-    """Compute Samples for a global channel."""
-    if seq.declared_channels[ch_name].addressing != "Global":
-        raise ValueError(f"{ch_name} is no a global channel")
-    slots = seq._schedule[ch_name]
-    return _sample_slots(seq.get_duration(), *slots)
+def _write_global_samples(
+    d: dict, basis: str, samples: list[QubitSamples]
+) -> None:
+    for s in samples:
+        d["Global"][basis]["amp"] += s.amp
+        d["Global"][basis]["det"] += s.det
+        d["Global"][basis]["phase"] += s.phase
+
+
+def _write_local_samples(
+    d: dict, basis: str, samples: list[QubitSamples]
+) -> None:
+    for s in samples:
+        d["Local"][basis][s.qubit]["amp"] += s.amp
+        d["Local"][basis][s.qubit]["det"] += s.det
+        d["Local"][basis][s.qubit]["phase"] += s.phase
+
+
+def _same_duration(samples: dict[str, list[QubitSamples]]) -> bool:
+    ds: list[int] = []
+    ss: list[QubitSamples] = []
+    for s in samples.values():
+        ss.extend(s)
+    for x in ss:
+        ds.extend((x.amp.size, x.det.size, x.phase.size))
+    return ds.count(ds[0]) == len(ds)
 
 
 def _sample_channel(
@@ -238,8 +237,8 @@ NOTE:
 
 
 def _regular(ts: list[_TimeSlot]) -> list[list[_TimeSlot]]:
-    """No grouping performed."""
-    return [[x] for x in ts]
+    """No grouping performed, return only the pulses."""
+    return [[x] for x in ts if isinstance(x.type, Pulse)]
 
 
 class _GroupType(enum.Enum):
@@ -289,21 +288,7 @@ def _group_between_retargets(
     return grouped_slots
 
 
-def _modulate_global(ch: Channel, samples: Samples) -> Samples:
-    """Modulate global samples according to the hardware specs.
-
-    Additional parameters will probably be needed (keep_end, etc).
-    """
-    return Samples(
-        amp=ch.modulate(samples.amp),
-        det=ch.modulate(samples.det),
-        phase=ch.modulate(samples.phase),
-    )
-
-
-def _modulate_local(
-    ch: Channel, samples: list[QubitSamples]
-) -> list[QubitSamples]:
+def _modulate(ch: Channel, samples: list[QubitSamples]) -> list[QubitSamples]:
     """Modulate local samples according to the hardware specs.
 
     Additional parameters will probably be needed (keep_end, etc).
