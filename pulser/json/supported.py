@@ -68,6 +68,12 @@ SUPPORTED_MODULES = {
 }
 
 
+class SerializationError(Exception):
+    """Exception raised when sequence serialization fails."""
+
+    pass
+
+
 def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
     """Checks if 'obj_dict' can be serialized."""
     try:
@@ -78,20 +84,20 @@ def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
         raise TypeError("Invalid 'obj_dict'.")
 
     if module_str not in SUPPORTED_MODULES:
-        raise SystemError(
+        raise SerializationError(
             f"No serialization support for module '{module_str}'."
         )
 
     if "__submodule__" in obj_dict:
         submodule_str = obj_dict["__submodule__"]
         if submodule_str not in SUPPORTS_SUBMODULE:
-            raise SystemError(
+            raise SerializationError(
                 "No serialization support for attributes of "
                 f"'{module_str}.{submodule_str}'."
             )
         obj_str = submodule_str
 
     if obj_str not in SUPPORTED_MODULES[module_str]:
-        raise SystemError(
+        raise SerializationError(
             f"No serialization support for '{module_str}.{obj_str}'."
         )
