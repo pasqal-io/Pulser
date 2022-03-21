@@ -44,6 +44,17 @@ class PulserEncoder(JSONEncoder):
             return cast(dict, JSONEncoder.default(self, o))
 
 
+class AbstractReprEncoder(JSONEncoder):
+    """The custom encoder for abstract representation of Pulser objects."""
+
+    def default(self, o: Any) -> dict[str, Any]:
+        """Handles JSON encoding of objects not supported by default."""
+        if hasattr(o, "_to_abstract_repr"):
+            return cast(dict, o._to_abstract_repr())
+        else:
+            return cast(dict, JSONEncoder.default(self, o))
+
+
 class PulserDecoder(JSONDecoder):
     """The custom decoder for Pulser objects."""
 
