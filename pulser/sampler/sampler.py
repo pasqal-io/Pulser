@@ -110,7 +110,7 @@ def _prepare_dict(seq: Sequence, N: int) -> dict:
 
     if seq._in_xy:
         return {
-            "Global": {"XY", new_qty_dict()},
+            "Global": {"XY": new_qty_dict()},
             "Local": {"XY": new_qdict()},
         }
     else:
@@ -132,7 +132,7 @@ def _write_dict(
 ) -> dict:
     """Export the given samples to a nested dictionary."""
     # Get the duration
-    if not _same_duration(samples):  # Defensive coding
+    if not _same_duration(samples):  # pragma: no cover
         raise ValueError("All the samples do not share the same duration.")
     N = list(samples.values())[0][0].amp.size
 
@@ -212,7 +212,7 @@ def _sample_slots(N: int, *slots: _TimeSlot) -> Samples:
     """
     samples = Samples(np.zeros(N), np.zeros(N), np.zeros(N))
     for s in slots:
-        if type(s.type) is str:
+        if type(s.type) is str:  # pragma: no cover
             continue
         pulse = cast(Pulse, s.type)
         samples.amp[s.ti : s.tf] += pulse.amplitude.samples

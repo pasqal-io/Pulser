@@ -91,8 +91,6 @@ def doppler(reg: Register, std_dev: float, seed: int = 0) -> NoiseModel:
 
 def compose_local_noises(*functions: NoiseModel) -> NoiseModel:
     """Helper to compose multiple NoiseModel."""
-    if functions is None:
-        return lambda x: x
     return functools.reduce(
         lambda f, g: lambda x: f(g(x)), functions, lambda x: x
     )
