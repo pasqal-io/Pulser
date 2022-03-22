@@ -14,7 +14,7 @@ import pulser.sampler.noises as noises
 from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.noises import NoiseModel
-from pulser.sampler.samples import QubitSamples, Samples
+from pulser.sampler.samples import QubitSamples
 from pulser.sequence import Sequence, _TimeSlot
 
 
@@ -187,39 +187,31 @@ def _sample_channel(
     grouped_slots = strategy(seq._schedule[ch_name])
 
     for group in grouped_slots:
-        # Same target in one group, guaranteed by the strategy (this seems
-        # weird, it's not enforced by the structure,bad design?)
-        targets = group[0].targets
-        ss = [
-            QubitSamples.from_global(
-                q, _sample_slots(seq.get_duration(), *group)
-            )
-            for q in targets
-        ]
+        ss = _sample_slots(seq.get_duration(), *group)
         qs.extend(ss)
     return qs
 
 
-def _sample_slots(N: int, *slots: _TimeSlot) -> Samples:
-    """Gather samples of a list of _TimeSlot in a single Samples instance.
-
-    Args:
-        N (int): the size of the samples arrays.
-        *slots (tuple[_TimeSlots]): the _TimeSlots to sample
-
-    Returns:
-        A Samples instance.
-    """
-    samples = Samples(np.zeros(N), np.zeros(N), np.zeros(N))
+def _sample_slots(N: int, *slots: _TimeSlot) -> list[QubitSamples]:
+    """Gather samples of a list of _TimeSlot in a single Samples instance."""
+    # Same target in one group, guaranteed by the strategy (this seems
+    # weird, it's not enforced by the structure,bad design?)
+    qubits = slots[0].targets
+    amp, det, phase = np.zeros(N), np.zeros(N), np.zeros(N)
     for s in slots:
         if type(s.type) is str:  # pragma: no cover
             continue
         pulse = cast(Pulse, s.type)
-        samples.amp[s.ti : s.tf] += pulse.amplitude.samples
-        samples.det[s.ti : s.tf] += pulse.detuning.samples
-        samples.phase[s.ti : s.tf] += pulse.phase
-
-    return samples
+        amp[s.ti : s.tf] += pulse.amplitude.samples
+        det[s.ti : s.tf] += pulse.detuning.samples
+        phase[s.ti : s.tf] += pulse.phase
+    qs = [
+        QubitSamples(
+            amp=amp.copy(), det=det.copy(), phase=phase.copy(), qubit=q
+        )
+        for q in qubits
+    ]
+    return qs
 
 
 TimeSlotExtractionStrategy = Callable[[List[_TimeSlot]], List[List[_TimeSlot]]]
