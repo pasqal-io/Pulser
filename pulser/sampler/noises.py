@@ -31,6 +31,7 @@ def amplitude(
     Args:
         reg (Register): a Pulser register
         waist_width (float): the laser waist_width in µm
+        random (bool): adds an additional random noise on the amplitude
         seed (int): optional, seed for the numpy.random.Generator
     """
     rng = np.random.default_rng(seed)
