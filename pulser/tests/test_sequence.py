@@ -756,20 +756,34 @@ def test_abstract_repr():
     jsonschema.validate(instance=abstract, schema=schema)
 
     assert set(abstract.keys()) == set(
-        ["device", "register", "channels", "operations", "measurement"]
+        [
+            "version",
+            "device",
+            "register",
+            "parameters",
+            "channels",
+            "operations",
+            "measurement",
+        ]
     )
     assert abstract["device"] == "Chadoq2"
     assert abstract["register"] == {
         "control": {"x": -2.0, "y": 0.0},
         "target": {"x": 2.0, "y": 0.0},
     }
-    assert abstract["channels"] == [
-        {"name": "digital", "kind": "raman_local"},
-        {"name": "rydberg", "kind": "rydberg_local"},
-    ]
+    assert abstract["channels"] == {
+        "digital": {
+            "hardware_channel": "raman_local",
+            "initial_target": "control",
+        },
+        "rydberg": {
+            "hardware_channel": "rydberg_local",
+            "initial_target": "control",
+        },
+    }
     assert len(abstract["operations"]) == 13
     assert abstract["operations"][0] == {
-        "op": "retarget",
+        "op": "target",
         "channel": "digital",
         "target": "control",
     }
@@ -782,11 +796,7 @@ def test_abstract_repr():
             "duration": 200,
             "area": 1.5707963267948966,
         },
-        "detuning": {
-            "kind": "constant",
-            "duration": 200,
-            "value": 0.0,
-        },
+        "detuning": {"kind": "constant", "duration": 200, "value": 0.0},
         "phase": 4.71238898038469,
         "post_phase_shift": 0.0,
     }
