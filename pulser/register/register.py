@@ -25,7 +25,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.register._patterns as patterns
 from pulser.register._reg_drawer import RegDrawer
-from pulser.register.base_register import BaseRegister
+from pulser.register.base_register import BaseRegister, QubitId
 
 
 class Register(BaseRegister, RegDrawer):
@@ -356,3 +356,10 @@ class Register(BaseRegister, RegDrawer):
 
     def _to_dict(self) -> dict[str, Any]:
         return super()._to_dict()
+
+    def _to_abstract_repr(self) -> dict[str, dict[QubitId, dict[str, float]]]:
+        return dict(
+            register={
+                name: {"x": x, "y": y} for name, (x, y) in self.qubits.items()
+            }
+        )

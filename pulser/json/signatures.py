@@ -45,26 +45,16 @@ SIGNATURES: dict[str, PulserSignature] = {
     "Pulse": PulserSignature(
         pos=("amplitude", "detuning", "phase"), keyword=("post_phase_shift",)
     ),
-    "Pulse.ConstantDetuning": PulserSignature(
-        pos=("amplitude", "detuning", "phase"), keyword=("post_phase_shift",)
-    ),
-    "Pulse.ConstantAmplitude": PulserSignature(
-        pos=("amplitude", "detuning", "phase"), keyword=("post_phase_shift",)
-    ),
-    "Pulse.ConstantPulse": PulserSignature(
-        pos=("duration", "amplitude", "detuning", "phase"),
-        keyword=("post_phase_shift",),
-    ),
 }
 
 EXTRA_PROPERTIES: dict[str, dict[str, str]] = {
-    "CompositeWaveform": {"type": "composite"},
+    "CompositeWaveform": {"kind": "composite"},
     "CustomWaveform": {"kind": "custom"},
     "ConstantWaveform": {"kind": "constant"},
     "RampWaveform": {"kind": "ramp"},
     "BlackmanWaveform": {"kind": "blackman"},
-    "BlackmanWaveform.from_max_val": {"kind": "blackman"},  # TODO: Confirm
+    "BlackmanWaveform.from_max_val": {"kind": "blackman_max"},  # TODO: Confirm
     "InterpolatedWaveform": {"kind": "interpolated"},
     "KaiserWaveform": {"kind": "kaiser"},
-    "KaiserWaveform.from_max_val": {"kind": "kaiser"},  # TODO: Confirm
+    "KaiserWaveform.from_max_val": {"kind": "kaiser_max"},  # TODO: Confirm
 }

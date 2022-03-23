@@ -154,7 +154,6 @@ class Pulse:
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
-    @parametrize
     def ConstantPulse(
         cls,
         duration: Union[int, Parametrized],

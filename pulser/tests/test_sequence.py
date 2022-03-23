@@ -747,15 +747,15 @@ def test_abstract_repr():
     seq.add(ry, "digital")
     seq.measure("digital")
 
-    abstract = seq.abstract_repr()
+    abstract = json.loads(seq.abstract_repr())
     assert set(abstract.keys()) == set(
         ["device", "register", "channels", "operations", "measurement"]
     )
     assert abstract["device"] == "Chadoq2"
-    assert abstract["register"] == [
-        {"name": "control", "x": -2.0, "y": 0.0},
-        {"name": "target", "x": 2.0, "y": 0.0},
-    ]
+    assert abstract["register"] == {
+        "control": {"x": -2.0, "y": 0.0},
+        "target": {"x": 2.0, "y": 0.0},
+    }
     assert abstract["channels"] == [
         {"name": "digital", "kind": "raman_local"},
         {"name": "rydberg", "kind": "rydberg_local"},
@@ -769,13 +769,14 @@ def test_abstract_repr():
     assert abstract["operations"][2] == {
         "op": "pulse",
         "channel": "digital",
+        "protocol": "min-delay",
         "amplitude": {
-            "kind": "BlackmanWaveform",
+            "kind": "blackman",
             "duration": 200,
             "area": 1.5707963267948966,
         },
         "detuning": {
-            "kind": "ConstantWaveform",
+            "kind": "constant",
             "duration": 200,
             "value": 0.0,
         },

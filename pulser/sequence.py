@@ -44,7 +44,11 @@ from pulser._seq_drawer import draw_sequence
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
-from pulser.json.coders import PulserDecoder, PulserEncoder
+from pulser.json.coders import (
+    AbstractReprEncoder,
+    PulserDecoder,
+    PulserEncoder,
+)
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
@@ -1071,35 +1075,35 @@ class Sequence:
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
-    def abstract_repr(self) -> dict[str, Any]:
+    def abstract_repr(self) -> str:
         """Serializes the Sequence into an abstract JSON object.
 
         Returns:
-            dict[str, Any]: The sequence encoded as an abstract JSON object.
+            str: The sequence encoded as an abstract JSON object.
 
         See Also:
             ``serialize``
         """
-
-        res = {"register": [], "channels": [], "operations": []}
+        res: dict[str, Any] = {"channels": [], "operations": []}
+        # TODO: Parameters
         operations = res["operations"]
-        for call in self._calls:
+        for call in chain(self._calls, self._to_build_calls):
             if call.name == "__init__":
                 register, device = call.args
                 # process register
                 res["device"] = device.name
-                for name, (x, y) in register.qubits.items():
-                    res["register"].append({"name": name, "x": x, "y": y})
+                res.update(register._to_abstract_repr())
             elif call.name == "declare_channel":
                 ch_name, ch_kind = call.args
                 res["channels"].append({"name": ch_name, "kind": ch_kind})
-                operations.append(
-                    {
-                        "op": "retarget",
-                        "channel": ch_name,
-                        "target": call.kwargs["initial_target"],
-                    }
-                )
+                if call.kwargs["initial_target"] is not None:
+                    operations.append(
+                        {
+                            "op": "retarget",
+                            "channel": ch_name,
+                            "target": call.kwargs["initial_target"],
+                        }
+                    )
             elif call.name == "target":
                 target, ch_name = call.args
                 operations.append(
@@ -1110,30 +1114,23 @@ class Sequence:
             elif call.name == "measure":
                 res["measurement"] = call.args[0]
             elif call.name == "add":
-                pulse, ch_name = call.args
-                amplitude = pulse.amplitude._to_dict()
-                detuning = pulse.detuning._to_dict()
-                operations.append(
-                    {
-                        "op": "pulse",
-                        "channel": ch_name,
-                        "amplitude": {
-                            "kind": amplitude["__name__"],
-                            "duration": amplitude["__args__"][0],
-                            "area": amplitude["__args__"][1],
-                        },
-                        "detuning": {
-                            "kind": detuning["__name__"],
-                            "duration": detuning["__args__"][0],
-                            "value": detuning["__args__"][1],
-                        },
-                        "phase": pulse.phase,
-                        "post_phase_shift": pulse.post_phase_shift,
-                    }
-                )
+                pulse, ch_name = call.args[:2]
+                if len(call.args) > 2:
+                    protocol = call.args[2]
+                elif "protocol" in call.kwargs:
+                    protocol = call.kwargs["protocol"]
+                else:
+                    protocol = "min-delay"
+                op_dict = {
+                    "op": "pulse",
+                    "channel": ch_name,
+                    "protocol": protocol,
+                }
+                op_dict.update(pulse._to_abstract_repr())
+                operations.append(op_dict)
             else:
                 raise Exception(f"Call name '{call.name}' is not supported")
-        return res
+        return json.dumps(res, cls=AbstractReprEncoder)
 
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:

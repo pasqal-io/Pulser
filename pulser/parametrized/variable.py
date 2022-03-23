@@ -100,6 +100,9 @@ class Variable(Parametrized, OpSupport):
         d.update(dataclasses.asdict(self))
         return d
 
+    def _to_abstract_repr(self) -> dict[str, str]:
+        return {"parameter": self.name}
+
     def __str__(self) -> str:
         return self.name
 
@@ -140,6 +143,9 @@ class VariableItem(Parametrized, OpSupport):
         return obj_to_dict(
             self, self.var, self.key, _module="operator", _name="getitem"
         )
+
+    def _to_abstract_repr(self) -> dict[str, str]:
+        return {"parameter": str(self)}
 
     def __str__(self) -> str:
         if isinstance(self.key, slice):

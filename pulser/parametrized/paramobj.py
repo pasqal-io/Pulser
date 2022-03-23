@@ -22,7 +22,9 @@ from collections.abc import Callable
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union
 
-from pulser.json.utils import obj_to_dict
+import pulser
+from pulser.json.signatures import SIGNATURES
+from pulser.json.utils import abstract_repr, obj_to_dict
 from pulser.parametrized import Parametrized
 
 if TYPE_CHECKING:
@@ -39,46 +41,46 @@ class OpSupport:
         return ParamObj(operator.abs, self)
 
     def __add__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__add__, self, other)
+        return ParamObj(operator.add, self, other)
 
     def __radd__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__add__, other, self)
+        return ParamObj(operator.add, other, self)
 
     def __sub__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__sub__, self, other)
+        return ParamObj(operator.sub, self, other)
 
     def __rsub__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__sub__, other, self)
+        return ParamObj(operator.sub, other, self)
 
     def __mul__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mul__, self, other)
+        return ParamObj(operator.mul, self, other)
 
     def __rmul__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mul__, other, self)
+        return ParamObj(operator.mul, other, self)
 
     def __truediv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__truediv__, self, other)
+        return ParamObj(operator.truediv, self, other)
 
     def __rtruediv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__truediv__, other, self)
+        return ParamObj(operator.truediv, other, self)
 
     def __floordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__floordiv__, self, other)
+        return ParamObj(operator.floordiv, self, other)
 
     def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__floordiv__, other, self)
+        return ParamObj(operator.floordiv, other, self)
 
     def __pow__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__pow__, self, other)
+        return ParamObj(operator.pow, self, other)
 
     def __rpow__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__pow__, other, self)
+        return ParamObj(operator.pow, other, self)
 
     def __mod__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mod__, self, other)
+        return ParamObj(operator.mod, self, other)
 
     def __rmod__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mod__, other, self)
+        return ParamObj(operator.mod, other, self)
 
 
 class ParamObj(Parametrized, OpSupport):
@@ -168,6 +170,61 @@ class ParamObj(Parametrized, OpSupport):
             cls_dict = class_to_dict(self.cls)
 
         return obj_to_dict(self, cls_dict, *args, **self.kwargs)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        op_name = self.cls.__name__
+        if isinstance(self.cls, Parametrized):
+            raise ValueError(
+                "Serialization of calls to parametrized objects is not "
+                "supported."
+            )
+        elif hasattr(self.args[0], op_name) and inspect.isfunction(self.cls):
+            # Check for parametrized methods
+            if inspect.isclass(self.args[0]):
+                # classmethod
+                name = f"{self.args[0].__name__}.{op_name}"
+                if name == "Pulse.ConstantAmplitude":
+                    return abstract_repr(
+                        "Pulse",
+                        abstract_repr("ConstantWaveform", 0, self.args[1]),
+                        *self.args[2:],
+                        **self.kwargs,
+                    )
+                elif name == "Pulse.ConstantDetuning":
+                    return abstract_repr(
+                        "Pulse",
+                        self.args[1],
+                        abstract_repr("ConstantWaveform", 0, self.args[2]),
+                        self.args[3],
+                        **self.kwargs,
+                    )
+                else:
+                    return abstract_repr(name, *self.args[1:], **self.kwargs)
+
+            raise NotImplementedError(
+                "Instance or static method serialization is not supported."
+            )
+        elif op_name in SIGNATURES:
+            return abstract_repr(op_name, *self.args, **self.kwargs)
+
+        elif op_name in pulser.json.supported.SUPPORTED_OPERATORS:
+            dtype = (
+                "int"
+                if all(var.dtype is int for var in self.variables.values())
+                else "float"
+            )
+            if op_name in ("neg", "abs"):
+                return dict(type=dtype, expression=op_name, lhs=self.args[0])
+            return dict(
+                type=dtype,
+                expression=op_name,
+                lhs=self.args[0],
+                rhs=self.args[1],
+            )
+        else:
+            raise NotImplementedError(
+                f"No abstract representation for '{op_name}'."
+            )
 
     def __call__(self, *args: Any, **kwargs: Any) -> ParamObj:
         """Returns a new ParamObj storing a call to the current ParamObj."""
