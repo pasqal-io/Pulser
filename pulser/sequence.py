@@ -1084,30 +1084,42 @@ class Sequence:
         See Also:
             ``serialize``
         """
-        res: dict[str, Any] = {"channels": [], "operations": []}
-        # TODO: Parameters
+
+        res: dict[str, Any] = {
+            "version": "1",
+            "register": {},
+            "channels": {},
+            "parameters": {},
+            "operations": [],
+        }
         operations = res["operations"]
         for call in chain(self._calls, self._to_build_calls):
             if call.name == "__init__":
                 register, device = call.args
                 # process register
                 res["device"] = device.name
-                res.update(register._to_abstract_repr())
+                for name, (x, y) in register.qubits.items():
+                    res["register"][name] = {"x": x, "y": y}
             elif call.name == "declare_channel":
                 ch_name, ch_kind = call.args
-                res["channels"].append({"name": ch_name, "kind": ch_kind})
-                if call.kwargs["initial_target"] is not None:
-                    operations.append(
-                        {
-                            "op": "retarget",
-                            "channel": ch_name,
-                            "target": call.kwargs["initial_target"],
-                        }
-                    )
+                res["channels"][ch_name] = {"hardware_channel": ch_kind}
+                # TODO initial_target + target operations are temporary
+                # so to addhere to the last schema
+                if "initial_target" in call.kwargs:
+                    res["channels"][ch_name]["initial_target"] = call.kwargs[
+                        "initial_target"
+                    ]
+                operations.append(
+                    {
+                        "op": "target",
+                        "channel": ch_name,
+                        "target": call.kwargs["initial_target"],
+                    }
+                )
             elif call.name == "target":
                 target, ch_name = call.args
                 operations.append(
-                    {"op": "retarget", "channel": ch_name, "target": target}
+                    {"op": "target", "channel": ch_name, "target": target}
                 )
             elif call.name == "align":
                 operations.append({"op": "align", "channels": list(call.args)})
