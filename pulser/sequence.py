@@ -1084,15 +1084,6 @@ class Sequence:
         See Also:
             ``serialize``
         """
-        mapping = {
-            "CompositeWaveform": "composite",
-            "CustomWaveform": "custom",
-            "ConstantWaveform": "constant",
-            "RampWaveform": "ramp",
-            "BlackmanWaveform": "blackman",
-            "InterpolatedWaveform": "interpolated",
-            "KaiserWavewform": "kaiser",
-        }
 
         res: dict[str, Any] = {
             "version": "1",
@@ -1112,6 +1103,8 @@ class Sequence:
             elif call.name == "declare_channel":
                 ch_name, ch_kind = call.args
                 res["channels"][ch_name] = {"hardware_channel": ch_kind}
+                # TODO initial_target + target operations are temporary
+                # so to addhere to the last schema
                 if "initial_target" in call.kwargs:
                     res["channels"][ch_name]["initial_target"] = call.kwargs[
                         "initial_target"
