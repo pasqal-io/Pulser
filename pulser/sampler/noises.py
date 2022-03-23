@@ -47,7 +47,7 @@ def amplitude(
         noise_amp *= np.exp(-((r / waist_width) ** 2))
 
         amp = s.amp.copy()
-        amp[np.nonzero(amp)] *= noise_amp
+        amp *= noise_amp
 
         return QubitSamples(
             amp=amp,
