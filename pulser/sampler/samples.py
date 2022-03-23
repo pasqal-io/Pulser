@@ -20,5 +20,5 @@ class QubitSamples:
     def __post_init__(self) -> None:
         if not len(self.amp) == len(self.det) == len(self.phase):
             raise ValueError(
-                "ndarrays amp, det and phase must have the same length"
+                "ndarrays amp, det and phase must have the same length."
             )

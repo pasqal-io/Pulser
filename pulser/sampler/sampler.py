@@ -126,7 +126,7 @@ def _write_dict(
 ) -> dict:
     """Export the given samples to a nested dictionary."""
     # Get the duration
-    if not _same_duration(samples):  # pragma: no cover
+    if not _same_duration(samples):
         raise ValueError("All the samples do not share the same duration.")
     N = list(samples.values())[0][0].amp.size
 

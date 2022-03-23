@@ -11,6 +11,7 @@ from pulser.channels import Rydberg
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
+from pulser.sampler.sampler import _write_dict
 from pulser.sampler.samples import QubitSamples
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
@@ -18,7 +19,7 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 def test_corner_cases():
     with pytest.raises(
         ValueError,
-        match=".*must have the same length.*",
+        match="ndarrays amp, det and phase must have the same length.",
     ):
         _ = QubitSamples(
             amp=np.array([1.0]),
@@ -26,6 +27,18 @@ def test_corner_cases():
             phase=np.array([1.0, 1.0]),
             qubit="q0",
         )
+
+    reg = pulser.Register.square(1, prefix="q")
+    seq = pulser.Sequence(reg, MockDevice)
+    N, M = 10, 11
+    samples_dict = {
+        "a": [QubitSamples(np.zeros(N), np.zeros(N), np.zeros(N), "q0")],
+        "b": [QubitSamples(np.zeros(M), np.zeros(M), np.zeros(M), "q0")],
+    }
+    with pytest.raises(
+        ValueError, match="All the samples do not share the same duration."
+    ):
+        _write_dict(seq, samples_dict, {})
 
 
 def test_sequence_sampler(seq):
