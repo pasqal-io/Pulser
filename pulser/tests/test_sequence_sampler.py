@@ -72,6 +72,99 @@ def test_sequence_sampler(seq):
         )
 
 
+def test_table_sequence(seqs: list[pulser.Sequence]):
+    for seq in seqs:
+
+        global_keys = [
+            ("Global", basis, qty)
+            for basis in ["ground-rydberg", "digital"]
+            for qty in ["amp", "det", "phase"]
+        ]
+        local_keys = [
+            ("Local", basis, qubit, qty)
+            for basis in ["ground-rydberg", "digital"]
+            for qubit in seq._qids
+            for qty in ["amp", "det", "phase"]
+        ]
+
+        sim = pulser.Simulation(seq)
+        want = sim.samples
+        got = sample(seq)
+
+        for k1 in global_keys:
+            try:
+                np.testing.assert_array_equal(
+                    got[k1[0]][k1[1]][k1[2]], want[k1[0]][k1[1]][k1[2]]
+                )
+            except KeyError:
+                np.testing.assert_array_equal(
+                    got[k1[0]][k1[1]][k1[2]],
+                    np.zeros(len(got[k1[0]][k1[1]][k1[2]])),
+                )
+
+        for k2 in local_keys:
+            try:
+                np.testing.assert_array_equal(
+                    got[k2[0]][k2[1]][k2[2]][k2[3]],
+                    want[k2[0]][k2[1]][k2[2]][k2[3]],
+                )
+            except KeyError:
+                np.testing.assert_array_equal(
+                    got[k2[0]][k2[1]][k2[2]][k2[3]],
+                    np.zeros(len(got[k2[0]][k2[1]][k2[2]][k2[3]])),
+                )
+
+
+def test_inXY() -> None:
+
+    pulse = Pulse(
+        BlackmanWaveform(200, np.pi / 2),
+        RampWaveform(200, -np.pi / 2, np.pi / 2),
+        0.0,
+    )
+
+    reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
+    seq = pulser.Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(pulse, "ch0")
+    seq.measure(basis="XY")
+
+    sim = pulser.Simulation(seq)
+
+    want = sim.samples
+    got = sample(seq)
+
+    for qty in ["amp", "det", "phase"]:
+        np.testing.assert_array_equal(
+            got["Global"]["XY"][qty], want["Global"]["XY"][qty]
+        )
+
+    for q in seq._qids:
+        for qty in ["amp", "det", "phase"]:
+            try:
+                np.testing.assert_array_equal(
+                    got["Local"]["XY"][q][qty], want["Local"]["XY"][q][qty]
+                )
+            except KeyError:
+                np.testing.assert_array_equal(
+                    got["Local"]["XY"][q][qty],
+                    np.zeros(len(got["Local"]["XY"][q][qty])),
+                )
+
+
+def test_modulation(mod_seq: pulser.Sequence) -> None:
+    """Test sampling for modulated channels."""
+    got = sample(mod_seq, modulation=True)["Global"]["ground-rydberg"]["amp"]
+
+    chan = mod_seq.declared_channels["ch0"]
+    input = np.pi / 2 / 0.42 * np.blackman(1000)
+    want = chan.modulate(input)
+
+    np.testing.assert_allclose(got, want, atol=1e-2)
+    # Equality at 1e-2 only... Why are they not equal? channel.modulate is
+    # called in both cases.
+
+
 @pytest.mark.xfail(
     reason="Test a different doppler effect than the one implemented."
 )
@@ -152,49 +245,6 @@ def test_amplitude_noise():
         np.testing.assert_equal(got, want)
 
 
-def test_table_sequence(seqs: list[pulser.Sequence]):
-    for seq in seqs:
-
-        global_keys = [
-            ("Global", basis, qty)
-            for basis in ["ground-rydberg", "digital"]
-            for qty in ["amp", "det", "phase"]
-        ]
-        local_keys = [
-            ("Local", basis, qubit, qty)
-            for basis in ["ground-rydberg", "digital"]
-            for qubit in seq._qids
-            for qty in ["amp", "det", "phase"]
-        ]
-
-        sim = pulser.Simulation(seq)
-        want = sim.samples
-        got = sample(seq)
-
-        for k1 in global_keys:
-            try:
-                np.testing.assert_array_equal(
-                    got[k1[0]][k1[1]][k1[2]], want[k1[0]][k1[1]][k1[2]]
-                )
-            except KeyError:
-                np.testing.assert_array_equal(
-                    got[k1[0]][k1[1]][k1[2]],
-                    np.zeros(len(got[k1[0]][k1[1]][k1[2]])),
-                )
-
-        for k2 in local_keys:
-            try:
-                np.testing.assert_array_equal(
-                    got[k2[0]][k2[1]][k2[2]][k2[3]],
-                    want[k2[0]][k2[1]][k2[2]][k2[3]],
-                )
-            except KeyError:
-                np.testing.assert_array_equal(
-                    got[k2[0]][k2[1]][k2[2]][k2[3]],
-                    np.zeros(len(got[k2[0]][k2[1]][k2[2]][k2[3]])),
-                )
-
-
 @pytest.fixture
 def seqs() -> list[pulser.Sequence]:
     seqs: list[pulser.Sequence] = []
@@ -248,52 +298,6 @@ def seq() -> pulser.Sequence:
     )
     seq.measure()
     return seq
-
-
-def test_inXY() -> None:
-    pulse = Pulse(
-        BlackmanWaveform(200, np.pi / 2),
-        RampWaveform(200, -np.pi / 2, np.pi / 2),
-        0.0,
-    )
-
-    reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
-    seq = pulser.Sequence(reg, MockDevice)
-    seq.declare_channel("ch0", "mw_global")
-    seq.add(pulse, "ch0")
-    seq.measure(basis="XY")
-
-    sim = pulser.Simulation(seq)
-
-    want = sim.samples
-    got = sample(seq)
-
-    for qty in ["amp", "det", "phase"]:
-        np.testing.assert_array_equal(
-            got["Global"]["XY"][qty], want["Global"]["XY"][qty]
-        )
-
-    for q in seq._qids:
-        for qty in ["amp", "det", "phase"]:
-            try:
-                np.testing.assert_array_equal(
-                    got["Local"]["XY"][q][qty], want["Local"]["XY"][q][qty]
-                )
-            except KeyError:
-                np.testing.assert_array_equal(
-                    got["Local"]["XY"][q][qty],
-                    np.zeros(len(got["Local"]["XY"][q][qty])),
-                )
-
-
-def test_modulation(mod_seq: pulser.Sequence) -> None:
-    """Not the smartest test I have ever written."""
-    got = sample(mod_seq, modulation=True)["Global"]["ground-rydberg"]["amp"]
-
-    chan = mod_seq.declared_channels["ch0"]
-    input = np.pi / 2 / 0.42 * np.blackman(1000)
-    want = chan.modulate(input)
-    np.testing.assert_allclose(got, want, atol=1e-2)  # 1e-2 !
 
 
 @pytest.fixture
