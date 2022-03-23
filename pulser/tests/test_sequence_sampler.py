@@ -16,7 +16,10 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
 
 def test_corner_cases():
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match=".*must have the same length.*",
+    ):
         _ = QubitSamples(
             amp=np.array([1.0]),
             det=np.array([1.0]),
