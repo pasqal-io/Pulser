@@ -138,16 +138,16 @@ def _write_dict(
 
     d = _prepare_dict(seq, N)
 
-    for ch_name, a in samples.items():
+    for ch_name, some_samples in samples.items():
         basis = seq.declared_channels[ch_name].basis
         addr = addrs[ch_name]
         if addr == "Global":
             # Take samples on only one qubit and write them
             a_qubit = next(iter(seq._qids))
-            to_write = [x for x in a if x.qubit == a_qubit]
+            to_write = [x for x in some_samples if x.qubit == a_qubit]
             _write_global_samples(d, basis, to_write)
         else:
-            _write_local_samples(d, basis, a)
+            _write_local_samples(d, basis, some_samples)
     return d
 
 
@@ -170,13 +170,13 @@ def _write_local_samples(
 
 
 def _same_duration(samples: dict[str, list[QubitSamples]]) -> bool:
-    ds: list[int] = []
-    ss: list[QubitSamples] = []
-    for s in samples.values():
-        ss.extend(s)
-    for x in ss:
-        ds.extend((x.amp.size, x.det.size, x.phase.size))
-    return ds.count(ds[0]) == len(ds)
+    durations: list[int] = []
+    flatten_samples: list[QubitSamples] = []
+    for some_samples in samples.values():
+        flatten_samples.extend(some_samples)
+    for s in flatten_samples:
+        durations.extend((s.amp.size, s.det.size, s.phase.size))
+    return durations.count(durations[0]) == len(durations)
 
 
 def _sample_channel(
