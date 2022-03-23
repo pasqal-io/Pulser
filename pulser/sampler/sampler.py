@@ -79,10 +79,10 @@ def sample(
         if modulation:
             s = _modulate(ch, s)
 
+        s = noises.apply(s, ch_noises)
+
         unmasked_qubits = seq._qids - seq._slm_mask_targets
         s = [x for x in s if x.qubit in unmasked_qubits]  # SLM
-
-        s = noises.apply(s, ch_noises)
 
         samples[ch_name] = s
 
