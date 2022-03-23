@@ -44,15 +44,15 @@ def test_sequence_sampler(seq):
         for qty in ["amp", "det", "phase"]
     ]
 
-    for k in global_keys:
+    for addr, basis, qty in global_keys:
         np.testing.assert_array_equal(
-            samples[k[0]][k[1]][k[2]], sim.samples[k[0]][k[1]][k[2]]
+            samples[addr][basis][qty], sim.samples[addr][basis][qty]
         )
 
-    for k in local_keys:
+    for addr, basis, qubit, qty in local_keys:
         np.testing.assert_array_equal(
-            samples[k[0]][k[1]][k[2]][k[3]],
-            sim.samples[k[0]][k[1]][k[2]][k[3]],
+            samples[addr][basis][qubit][qty],
+            sim.samples[addr][basis][qubit][qty],
         )
 
 
