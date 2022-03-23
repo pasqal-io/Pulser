@@ -4,7 +4,6 @@ It contains many helpers.
 """
 from __future__ import annotations
 
-import enum
 import itertools
 from typing import Callable, List, Optional, cast
 
@@ -233,18 +232,6 @@ def _regular(ts: list[_TimeSlot]) -> list[list[_TimeSlot]]:
     return [[x] for x in ts if isinstance(x.type, Pulse)]
 
 
-class _GroupType(enum.Enum):
-    PULSE_AND_DELAYS = "pulses_and_delays"
-    OTHER = "other"
-
-
-def _key_func(x: _TimeSlot) -> _GroupType:
-    if isinstance(x.type, Pulse) or x.type == "delay":
-        return _GroupType.PULSE_AND_DELAYS
-    else:
-        return _GroupType.OTHER
-
-
 def _group_between_retargets(
     ts: list[_TimeSlot],
 ) -> list[list[_TimeSlot]]:
@@ -272,11 +259,19 @@ def _group_between_retargets(
         share the same targets. They are of type either Pulse or "delay", all
         "target" ones are discarded.
     """
+    TO_KEEP = "pulses_and_delays"
+
+    def key_func(x: _TimeSlot) -> str:
+        if isinstance(x.type, Pulse) or x.type == "delay":
+            return TO_KEEP
+        else:
+            return "other"
+
     grouped_slots: list[list[_TimeSlot]] = []
 
-    for key, group in itertools.groupby(ts, _key_func):
+    for key, group in itertools.groupby(ts, key_func):
         g = list(group)
-        if key != _GroupType.PULSE_AND_DELAYS:
+        if key != TO_KEEP:
             continue
         grouped_slots.append(g)
 
