@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+import jsonschema
 
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence
@@ -748,6 +749,12 @@ def test_abstract_repr():
     seq.measure("digital")
 
     abstract = json.loads(seq.abstract_repr())
+
+    with open("pulser/json/abstract_repr_schema.json") as f:
+        schema = json.load(f)
+
+    jsonschema.validate(instance=abstract, schema=schema)
+
     assert set(abstract.keys()) == set(
         ["device", "register", "channels", "operations", "measurement"]
     )
