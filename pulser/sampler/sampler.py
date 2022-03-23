@@ -139,28 +139,16 @@ def _write_dict(
             # Take samples on only one qubit and write them
             a_qubit = next(iter(seq._qids))
             to_write = [x for x in some_samples if x.qubit == a_qubit]
-            _write_global_samples(d, basis, to_write)
+            for s in to_write:
+                d["Global"][basis]["amp"] += s.amp
+                d["Global"][basis]["det"] += s.det
+                d["Global"][basis]["phase"] += s.phase
         else:
-            _write_local_samples(d, basis, some_samples)
+            for s in some_samples:
+                d["Local"][basis][s.qubit]["amp"] += s.amp
+                d["Local"][basis][s.qubit]["det"] += s.det
+                d["Local"][basis][s.qubit]["phase"] += s.phase
     return d
-
-
-def _write_global_samples(
-    d: dict, basis: str, samples: list[QubitSamples]
-) -> None:
-    for s in samples:
-        d["Global"][basis]["amp"] += s.amp
-        d["Global"][basis]["det"] += s.det
-        d["Global"][basis]["phase"] += s.phase
-
-
-def _write_local_samples(
-    d: dict, basis: str, samples: list[QubitSamples]
-) -> None:
-    for s in samples:
-        d["Local"][basis][s.qubit]["amp"] += s.amp
-        d["Local"][basis][s.qubit]["det"] += s.det
-        d["Local"][basis][s.qubit]["phase"] += s.phase
 
 
 def _same_duration(samples: dict[str, list[QubitSamples]]) -> bool:
