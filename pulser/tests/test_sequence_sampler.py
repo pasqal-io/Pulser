@@ -41,6 +41,24 @@ def test_corner_cases():
         _write_dict(seq, samples_dict, {})
 
 
+def test_one_pulse_sampling():
+    """Test the sample function on a one-pulse sequence."""
+    reg = pulser.Register.square(1, prefix="q")
+    seq = pulser.Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_global")
+    N = 1000
+    amp_wf = BlackmanWaveform(N, np.pi)
+    det_wf = RampWaveform(N, -np.pi / 2, np.pi / 2)
+    phase = 1.234
+    seq.add(Pulse(amp_wf, det_wf, phase), "ch0")
+    seq.measure()
+
+    got = sample(seq)["Global"]["ground-rydberg"]
+    want = (amp_wf.samples, det_wf.samples, np.ones(N) * phase)
+    for i, key in enumerate(["amp", "det", "phase"]):
+        np.testing.assert_array_equal(got[key], want[i])
+
+
 def test_sequence_sampler(seq):
     """Check against the legacy sample extraction in the simulation module."""
     samples = sample(seq)
