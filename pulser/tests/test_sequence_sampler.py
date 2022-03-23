@@ -111,27 +111,27 @@ def test_table_sequence(seqs: list[pulser.Sequence]):
         want = sim.samples
         got = sample(seq)
 
-        for k1 in global_keys:
+        for addr, basis, qty in global_keys:
             try:
                 np.testing.assert_array_equal(
-                    got[k1[0]][k1[1]][k1[2]], want[k1[0]][k1[1]][k1[2]]
+                    got[addr][basis][qty], want[addr][basis][qty]
                 )
             except KeyError:
                 np.testing.assert_array_equal(
-                    got[k1[0]][k1[1]][k1[2]],
-                    np.zeros(len(got[k1[0]][k1[1]][k1[2]])),
+                    got[addr][basis][qty],
+                    np.zeros(len(got[addr][basis][qty])),
                 )
 
-        for k2 in local_keys:
+        for addr, basis, qubit, qty in local_keys:
             try:
                 np.testing.assert_array_equal(
-                    got[k2[0]][k2[1]][k2[2]][k2[3]],
-                    want[k2[0]][k2[1]][k2[2]][k2[3]],
+                    got[addr][basis][qubit][qty],
+                    want[addr][basis][qubit][qty],
                 )
             except KeyError:
                 np.testing.assert_array_equal(
-                    got[k2[0]][k2[1]][k2[2]][k2[3]],
-                    np.zeros(len(got[k2[0]][k2[1]][k2[2]][k2[3]])),
+                    got[addr][basis][qubit][qty],
+                    np.zeros(len(got[addr][basis][qubit][qty])),
                 )
 
 
