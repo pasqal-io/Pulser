@@ -29,12 +29,12 @@ def sample(
     It is intended to be used like the json.dumps() function.
 
     Args:
-        seq (Sequence): a pulser.Sequence instance.
-        modulation (bool): a flag to account for the modulation of AOM/EOM
+        seq (Sequence): A pulser.Sequence instance.
+        modulation (bool): Flag to account for the modulation of AOM/EOM
             before sampling.
-        common_noises (Optional[list[LocalNoise]]): a list of the noise sources
+        common_noises (Optional[list[LocalNoise]]): A list of the noise sources
             for all channels.
-        global_noises (Optional[list[LocalNoise]]): a list of the noise sources
+        global_noises (Optional[list[LocalNoise]]): A list of the noise sources
             for global channels.
 
     Returns:
@@ -250,9 +250,9 @@ def _group_between_retargets(
 ) -> list[list[_TimeSlot]]:
     """Filter and group _TimeSlots together.
 
-    Group the input slots by group of consecutive Pulses and delays between two
-    target operations. Consider the following sequence consisting of pulses A B
-    C D E F, targeting different qubits:
+    Group the input slots by groups of successive Pulses and delays between
+    two target operations. Consider the following sequence consisting of pulses
+    A B C D E F, targeting different qubits:
 
     .---A---B------.---C--D--E---.----F--
     ^              ^             ^
@@ -260,14 +260,17 @@ def _group_between_retargets(
     target q0   target q1     target q0
 
     It will group the pulses' _TimeSlot's in batches (A B), (C D E) and (F),
-    returning the following list of tuples:
+    returning the following list of list of _TimeSlot instances:
 
-    [("q0", [A, B]), ("q1", [C, D, E]), ("q0", [F])]
+    [[A, B], [C, D, E], [F]]
+
+    Args:
+        ts (list[_TimeSlot]): A list of TimeSlot from a Sequence schedule.
 
     Returns:
-        A list of tuples (a, b) where a is the list of common targeted qubits
-        and b is a list of consecutive _TimeSlot of type Pulse or "delay". All
-        "target" _TimeSlots are discarded.
+        A list of list of _TimeSlot. _TimeSlot instances are successive and
+        share the same targets. They are of type either Pulse or "delay", all
+        "target" ones are discarded.
     """
     grouped_slots: list[list[_TimeSlot]] = []
 

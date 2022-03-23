@@ -29,10 +29,14 @@ def amplitude(
     becoming local.
 
     Args:
-        reg (Register): a Pulser register
-        waist_width (float): the laser waist_width in µm
-        random (bool): adds an additional random noise on the amplitude
-        seed (int): optional, seed for the numpy.random.Generator
+        reg (Register): A Pulser register
+        waist_width (float): The laser waist_width in µm
+        random (bool): Adds an additional random noise on the amplitude
+        seed (int): Optional, seed for the numpy.random.Generator
+
+    Return:
+        NoiseModel: The function that applies the amplitude noise to some
+        QubitSamples.
     """
     rng = np.random.default_rng(seed)
 
@@ -68,10 +72,14 @@ def doppler(reg: Register, std_dev: float, seed: int = 0) -> NoiseModel:
         ...
 
     Args:
-        reg (Register): a Pulser register
-        std_dev (float): the standard deviation of the normal distribution used
+        reg (Register): A Pulser register
+        std_dev (float): The standard deviation of the normal distribution used
             to sample the random detuning shifts
-        seed (int): optional, seed for the numpy.random.Generator
+        seed (int): Optional, seed for the numpy.random.Generator
+
+    Return:
+        NoiseModel: The function that applies the doppler noise to some
+        QubitSamples.
     """
     rng = np.random.default_rng(seed)
     errs = rng.normal(0.0, std_dev, size=len(reg.qubit_ids))
