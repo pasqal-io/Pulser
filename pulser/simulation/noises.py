@@ -1,4 +1,9 @@
-"""Contains the noise models."""
+"""Contains noise models.
+
+For now, only the amplitude and doppler noises are implemented in the form a
+NoiseModel, which are the laser-atom interaction related noises relevant at
+sampling time.
+"""
 from __future__ import annotations
 
 import functools
