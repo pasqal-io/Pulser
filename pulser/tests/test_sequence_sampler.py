@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import pulser
-import pulser.sampler.noises as noises
+import pulser.simulation.noises as noises
 from pulser.channels import Rydberg
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
