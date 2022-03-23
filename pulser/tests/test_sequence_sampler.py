@@ -17,6 +17,7 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
 
 def test_corner_cases():
+    """Test corner cases of helper functions."""
     with pytest.raises(
         ValueError,
         match="ndarrays amp, det and phase must have the same length.",
@@ -91,6 +92,7 @@ def test_sequence_sampler(seq):
 
 
 def test_table_sequence(seqs: list[pulser.Sequence]):
+    """A table-driven test designed to be extended easily."""
     for seq in seqs:
 
         global_keys = [
@@ -134,7 +136,7 @@ def test_table_sequence(seqs: list[pulser.Sequence]):
 
 
 def test_inXY() -> None:
-
+    """Test sequence in XY mode."""
     pulse = Pulse(
         BlackmanWaveform(200, np.pi / 2),
         RampWaveform(200, -np.pi / 2, np.pi / 2),
@@ -184,7 +186,8 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
 
 
 @pytest.mark.xfail(
-    reason="Test a different doppler effect than the one implemented."
+    reason="Test a different doppler effect than the one implemented; "
+    "no surprise it fails."
 )
 def test_doppler_noise():
     """What is exactly the doppler noise here?
@@ -231,6 +234,7 @@ def test_doppler_noise():
 
 
 def test_amplitude_noise():
+    """Test the noise related to the amplitude profile of global pulses."""
     N = 100
     amplitude = 1.0
     waist_width = 2.0  # µm
