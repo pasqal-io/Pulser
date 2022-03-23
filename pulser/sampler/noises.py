@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -20,7 +20,10 @@ register are susceptible to be implemented by a NoiseModel.
 
 
 def amplitude(
-    reg: Register, waist_width: float, random: bool = True, seed: int = 0
+    reg: Register,
+    waist_width: float,
+    random: bool = True,
+    seed: Optional[int] = None,
 ) -> NoiseModel:
     """Generate a NoiseModel for the gaussian amplitude profile of laser beams.
 
@@ -59,7 +62,7 @@ def amplitude(
     return f
 
 
-def doppler(reg: Register, std_dev: float, seed: int = 0) -> NoiseModel:
+def doppler(reg: Register, std_dev: float, seed: Optional[int]) -> NoiseModel:
     """Generate a NoiseModel for the Doppler effect detuning shifts.
 
     Example usage:
