@@ -5,6 +5,7 @@ It contains many helpers.
 from __future__ import annotations
 
 import itertools
+from collections import defaultdict
 from typing import Callable, List, Optional, cast
 
 import numpy as np
@@ -114,13 +115,8 @@ def _prepare_dict(seq: Sequence, N: int) -> dict:
         }
     else:
         return {
-            "Global": {
-                basis: new_qty_dict()
-                for basis in ["ground-rydberg", "digital"]
-            },
-            "Local": {
-                basis: new_qdict() for basis in ["ground-rydberg", "digital"]
-            },
+            "Global": defaultdict(new_qty_dict),
+            "Local": defaultdict(new_qdict),
         }
 
 
