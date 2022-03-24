@@ -462,12 +462,6 @@ class Simulation:
             )
             samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
 
-            # Final time-step: repeat last sample
-            if slot.tf == self._tot_duration - 1:
-                samples_dict["amp"][-1] = _pulse.amplitude.samples[-1]
-                samples_dict["det"][-1] = _pulse.detuning.samples[-1]
-                samples_dict["phase"][-1] = _pulse.phase
-
         for channel in self._seq.declared_channels:
             addr = self._seq.declared_channels[channel].addressing
             basis = self._seq.declared_channels[channel].basis
