@@ -309,13 +309,15 @@ class Simulation:
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
         """Sets times at which the results of this simulation are returned."""
-        final_seq_time = (self._tot_duration-1) / 1000
+        final_seq_time = (self._tot_duration - 1) / 1000
         if isinstance(value, str):
             if value == "Full":
                 self._eval_times_array = np.copy(self.sampling_times)
             elif value == "Minimal":
                 self._eval_times_array = np.array(
-                    [self.sampling_times[0], ]
+                    [
+                        self.sampling_times[0],
+                    ]
                 )
             else:
                 raise ValueError(
@@ -336,8 +338,8 @@ class Simulation:
             )
             # Return sorted array with 0 and final time (if needed)
             self._eval_times_array = np.union1d(
-                                        self.sampling_times[indices],
-                                        [0, final_seq_time])
+                self.sampling_times[indices], [0, final_seq_time]
+            )
         elif isinstance(value, (list, tuple, np.ndarray)):
             t_max = np.max(value)
             t_min = np.min(value)
