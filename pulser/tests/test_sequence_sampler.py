@@ -65,30 +65,19 @@ def test_sequence_sampler(seq):
     samples = sample(seq)
     sim = pulser.Simulation(seq)
 
-    # Exclude the digital basis, since filled with zero vs empty.
-    # it's just a way to check the coherence
-    global_keys = [
-        ("Global", basis, qty)
-        for basis in ["ground-rydberg"]
-        for qty in ["amp", "det", "phase"]
-    ]
-    local_keys = [
-        ("Local", basis, qubit, qty)
-        for basis in ["ground-rydberg"]
-        for qubit in seq._qids
-        for qty in ["amp", "det", "phase"]
-    ]
-
-    for addr, basis, qty in global_keys:
-        np.testing.assert_array_equal(
-            samples[addr][basis][qty], sim.samples[addr][basis][qty]
-        )
-
-    for addr, basis, qubit, qty in local_keys:
-        np.testing.assert_array_equal(
-            samples[addr][basis][qubit][qty],
-            sim.samples[addr][basis][qubit][qty],
-        )
+    for basis in sim.samples["Global"]:
+        for qty in sim.samples["Global"][basis]:
+            np.testing.assert_array_equal(
+                samples["Global"][basis][qty],
+                sim.samples["Global"][basis][qty],
+            )
+    for basis in sim.samples["Local"]:
+        for qubit in sim.samples["Local"][basis]:
+            for qty in sim.samples["Local"][basis][qubit]:
+                np.testing.assert_array_equal(
+                    samples["Local"][basis][qubit][qty],
+                    sim.samples["Local"][basis][qubit][qty],
+                )
 
 
 def test_table_sequence(seqs: list[pulser.Sequence]):
