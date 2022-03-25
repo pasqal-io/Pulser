@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import textwrap
 from copy import deepcopy
 
 import numpy as np
@@ -133,6 +134,46 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     got = sample(mod_seq, modulation=True)["Global"]["ground-rydberg"]["amp"]
 
     np.testing.assert_array_equal(got, want)
+
+
+slm_reason = textwrap.dedent(
+    """
+    If the SLM is on, Global channels decay to local ones in the
+    sampler, such that the Global key in the output dict is empty and
+    all the samples are written in the Local dict. On the contrary, the
+    simulation module use the Local dict only for the first pulse, and
+    then write the remaining in the Global dict.
+    """
+)
+
+
+@pytest.mark.xfail(reason=slm_reason)
+def test_SLM():
+    q_dict = {
+        "batman": np.array([-4.0, 0.0]),  # sometimes masked
+        "superman": np.array([4.0, 0.0]),  # always unmasked
+    }
+
+    reg = pulser.Register(q_dict)
+    seq = pulser.Sequence(reg, MockDevice)
+
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.config_slm_mask(["batman"])
+
+    seq.add(
+        Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0),
+        "ch0",
+    )
+    seq.add(
+        Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0),
+        "ch0",
+    )
+    seq.measure()
+
+    print(sample(seq))
+    print(pulser.Simulation(seq).samples)
+
+    check_same_samples_as_sim(seq)
 
 
 @pytest.fixture
