@@ -1,6 +1,9 @@
 """Exposes the sample() functions.
 
 It contains many helpers.
+
+NOTE(perf): it not very efficient to hold the same data for all qubit in global
+channels, but i remains manageable for register # with less than 100 qubits.
 """
 from __future__ import annotations
 
