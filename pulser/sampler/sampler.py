@@ -185,9 +185,8 @@ def _sample_slots(N: int, *slots: _TimeSlot) -> list[QubitSamples]:
     # weird, it's not enforced by the structure,bad design?)
     qubits = slots[0].targets
     amp, det, phase = np.zeros(N), np.zeros(N), np.zeros(N)
-    for s in slots:
-        if type(s.type) is str:  # pragma: no cover
-            continue
+    pulse_slots = [s for s in slots if isinstance(s.type, Pulse)]
+    for s in pulse_slots:
         pulse = cast(Pulse, s.type)
         amp[s.ti : s.tf] += pulse.amplitude.samples
         det[s.ti : s.tf] += pulse.detuning.samples
