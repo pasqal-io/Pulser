@@ -125,15 +125,15 @@ def test_inXY() -> None:
 
 def test_modulation(mod_seq: pulser.Sequence) -> None:
     """Test sampling for modulated channels."""
+    N = mod_seq.get_duration()
+    chan = mod_seq.declared_channels["ch0"]
+    blackman = np.clip(np.blackman(N), 0, np.inf)
+    input = (np.pi / 2) / (np.sum(blackman) / N) * blackman
+
+    want = chan.modulate(input)
     got = sample(mod_seq, modulation=True)["Global"]["ground-rydberg"]["amp"]
 
-    chan = mod_seq.declared_channels["ch0"]
-    input = np.pi / 2 / 0.42 * np.blackman(1000)
-    want = chan.modulate(input)
-
-    np.testing.assert_allclose(got, want, atol=1e-2)
-    # Equality at 1e-2 only... Why are they not equal? channel.modulate is
-    # called in both cases.
+    np.testing.assert_array_equal(got, want)
 
 
 @pytest.mark.xfail(
