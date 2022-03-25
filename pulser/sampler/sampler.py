@@ -61,12 +61,10 @@ def sample(
 
         ch_noises = list(common_noises)
 
+        slm_on = len(seq._slm_mask_targets) > 0 and len(seq._slm_mask_time) > 0
+
         if addr == "Global":
-            decay = (
-                len(seq._slm_mask_targets) > 0
-                or len(global_noises) > 0
-                or len(common_noises) > 0
-            )
+            decay = slm_on or len(global_noises) > 0 or len(common_noises) > 0
             if decay:
                 addr = "Decayed"
                 ch_noises.extend(global_noises)
@@ -80,8 +78,12 @@ def sample(
 
         s = noises.apply(s, ch_noises)
 
-        unmasked_qubits = seq._qids - seq._slm_mask_targets
-        s = [x for x in s if x.qubit in unmasked_qubits]  # SLM
+        if slm_on:  # Update the samples of masked qubits during SLM on times
+            for i, _ in enumerate(s):
+                if s[i].qubit in seq._slm_mask_targets:
+                    ti, tf = seq._slm_mask_time[0], seq._slm_mask_time[1]
+                    s[i].amp[ti:tf] = 0.0
+                    # apply only on amp since it's just a shutter
 
         samples[ch_name] = s
 
