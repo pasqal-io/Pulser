@@ -107,7 +107,7 @@ def _prepare_dict(seq: Sequence, N: int) -> dict:
         }
 
     def new_qdict() -> dict:
-        return {qubit: new_qty_dict() for qubit in seq._qids}
+        return defaultdict(new_qty_dict)
 
     if seq._in_xy:
         return {
