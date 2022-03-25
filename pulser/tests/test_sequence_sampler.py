@@ -60,68 +60,30 @@ def test_one_pulse_sampling():
         np.testing.assert_array_equal(got[key], want[i])
 
 
-def test_sequence_sampler(seq):
+def check_same_samples_as_sim(seq: pulser.Sequence):
     """Check against the legacy sample extraction in the simulation module."""
-    samples = sample(seq)
-    sim = pulser.Simulation(seq)
+    got = sample(seq)
+    want = pulser.Simulation(seq).samples
 
-    for basis in sim.samples["Global"]:
-        for qty in sim.samples["Global"][basis]:
+    for basis in want["Global"]:
+        for qty in want["Global"][basis]:
             np.testing.assert_array_equal(
-                samples["Global"][basis][qty],
-                sim.samples["Global"][basis][qty],
+                got["Global"][basis][qty],
+                want["Global"][basis][qty],
             )
-    for basis in sim.samples["Local"]:
-        for qubit in sim.samples["Local"][basis]:
-            for qty in sim.samples["Local"][basis][qubit]:
+    for basis in want["Local"]:
+        for qubit in want["Local"][basis]:
+            for qty in want["Local"][basis][qubit]:
                 np.testing.assert_array_equal(
-                    samples["Local"][basis][qubit][qty],
-                    sim.samples["Local"][basis][qubit][qty],
+                    got["Local"][basis][qubit][qty],
+                    want["Local"][basis][qubit][qty],
                 )
 
 
-def test_table_sequence(seqs: list[pulser.Sequence]):
+def test_table_sequence(seqs):
     """A table-driven test designed to be extended easily."""
     for seq in seqs:
-
-        global_keys = [
-            ("Global", basis, qty)
-            for basis in ["ground-rydberg", "digital"]
-            for qty in ["amp", "det", "phase"]
-        ]
-        local_keys = [
-            ("Local", basis, qubit, qty)
-            for basis in ["ground-rydberg", "digital"]
-            for qubit in seq._qids
-            for qty in ["amp", "det", "phase"]
-        ]
-
-        sim = pulser.Simulation(seq)
-        want = sim.samples
-        got = sample(seq)
-
-        for addr, basis, qty in global_keys:
-            try:
-                np.testing.assert_array_equal(
-                    got[addr][basis][qty], want[addr][basis][qty]
-                )
-            except KeyError:
-                np.testing.assert_array_equal(
-                    got[addr][basis][qty],
-                    np.zeros(len(got[addr][basis][qty])),
-                )
-
-        for addr, basis, qubit, qty in local_keys:
-            try:
-                np.testing.assert_array_equal(
-                    got[addr][basis][qubit][qty],
-                    want[addr][basis][qubit][qty],
-                )
-            except KeyError:
-                np.testing.assert_array_equal(
-                    got[addr][basis][qubit][qty],
-                    np.zeros(len(got[addr][basis][qubit][qty])),
-                )
+        check_same_samples_as_sim(seq)
 
 
 def test_inXY() -> None:
@@ -257,7 +219,7 @@ def test_amplitude_noise():
 
 
 @pytest.fixture
-def seqs() -> list[pulser.Sequence]:
+def seqs(seq_rydberg) -> list[pulser.Sequence]:
     seqs: list[pulser.Sequence] = []
 
     pulse = Pulse(
@@ -273,11 +235,13 @@ def seqs() -> list[pulser.Sequence]:
     seq.measure()
     seqs.append(deepcopy(seq))
 
+    seqs.append(seq_rydberg)
+
     return seqs
 
 
 @pytest.fixture
-def seq() -> pulser.Sequence:
+def seq_rydberg() -> pulser.Sequence:
     reg = pulser.Register.from_coordinates(
         np.array([[0.0, 0.0], [2.0, 0.0]]), prefix="q"
     )
