@@ -65,7 +65,7 @@ def sample(
 
         ch_noises = list(common_noises)
 
-        slm_on = len(seq._slm_mask_targets) > 0 and len(seq._slm_mask_time) > 0
+        slm_on = seq._slm_mask_targets and seq._slm_mask_time
 
         if addr == "Global":
             decay = slm_on or len(global_noises) > 0 or len(common_noises) > 0
