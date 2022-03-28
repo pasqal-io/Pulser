@@ -15,31 +15,34 @@ from pulser.sampler.sampler import _write_dict
 from pulser.sampler.samples import QubitSamples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
 
+# Helpers
 
-def test_corner_cases():
-    """Test corner cases of helper functions."""
-    with pytest.raises(
-        ValueError,
-        match="ndarrays amp, det and phase must have the same length.",
-    ):
-        _ = QubitSamples(
-            amp=np.array([1.0]),
-            det=np.array([1.0]),
-            phase=np.array([1.0, 1.0]),
-            qubit="q0",
-        )
 
-    reg = pulser.Register.square(1, prefix="q")
-    seq = pulser.Sequence(reg, MockDevice)
-    N, M = 10, 11
-    samples_dict = {
-        "a": [QubitSamples(np.zeros(N), np.zeros(N), np.zeros(N), "q0")],
-        "b": [QubitSamples(np.zeros(M), np.zeros(M), np.zeros(M), "q0")],
-    }
-    with pytest.raises(
-        ValueError, match="All the samples do not share the same duration."
-    ):
-        _write_dict(seq, samples_dict, {})
+def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
+    """Check against the legacy sample extraction in the simulation module."""
+    got = sample(seq)
+    want = pulser.Simulation(seq).samples
+
+    assert_nested_dict_equality(got, want)
+
+
+def assert_nested_dict_equality(got, want: dict) -> None:
+    for basis in want["Global"]:
+        for qty in want["Global"][basis]:
+            np.testing.assert_array_equal(
+                got["Global"][basis][qty],
+                want["Global"][basis][qty],
+            )
+    for basis in want["Local"]:
+        for qubit in want["Local"][basis]:
+            for qty in want["Local"][basis][qubit]:
+                np.testing.assert_array_equal(
+                    got["Local"][basis][qubit][qty],
+                    want["Local"][basis][qubit][qty],
+                )
+
+
+# Tests
 
 
 def test_one_pulse_sampling():
@@ -60,18 +63,10 @@ def test_one_pulse_sampling():
         np.testing.assert_array_equal(got[key], want[i])
 
 
-def check_same_samples_as_sim(seq: pulser.Sequence):
-    """Check against the legacy sample extraction in the simulation module."""
-    got = sample(seq)
-    want = pulser.Simulation(seq).samples
-
-    assert_nested_dict_equality(got, want)
-
-
 def test_table_sequence(seqs):
     """A table-driven test designed to be extended easily."""
     for seq in seqs:
-        check_same_samples_as_sim(seq)
+        assert_same_samples_as_sim(seq)
 
 
 def test_inXY() -> None:
@@ -87,7 +82,7 @@ def test_inXY() -> None:
     seq.add(pulse, "ch0")
     seq.measure(basis="XY")
 
-    check_same_samples_as_sim(seq)
+    assert_same_samples_as_sim(seq)
 
 
 def test_modulation(mod_seq: pulser.Sequence) -> None:
@@ -165,23 +160,36 @@ then write the remaining in the Global dict.
 
 @pytest.mark.xfail(reason=slm_reason)
 def test_SLM_against_simulation(seq_with_SLM):
-    check_same_samples_as_sim(seq_with_SLM)
+    assert_same_samples_as_sim(seq_with_SLM)
 
 
-def assert_nested_dict_equality(got, want: dict) -> None:
-    for basis in want["Global"]:
-        for qty in want["Global"][basis]:
-            np.testing.assert_array_equal(
-                got["Global"][basis][qty],
-                want["Global"][basis][qty],
-            )
-    for basis in want["Local"]:
-        for qubit in want["Local"][basis]:
-            for qty in want["Local"][basis][qubit]:
-                np.testing.assert_array_equal(
-                    got["Local"][basis][qubit][qty],
-                    want["Local"][basis][qubit][qty],
-                )
+def test_corner_cases():
+    """Test corner cases of helper functions."""
+    with pytest.raises(
+        ValueError,
+        match="ndarrays amp, det and phase must have the same length.",
+    ):
+        _ = QubitSamples(
+            amp=np.array([1.0]),
+            det=np.array([1.0]),
+            phase=np.array([1.0, 1.0]),
+            qubit="q0",
+        )
+
+    reg = pulser.Register.square(1, prefix="q")
+    seq = pulser.Sequence(reg, MockDevice)
+    N, M = 10, 11
+    samples_dict = {
+        "a": [QubitSamples(np.zeros(N), np.zeros(N), np.zeros(N), "q0")],
+        "b": [QubitSamples(np.zeros(M), np.zeros(M), np.zeros(M), "q0")],
+    }
+    with pytest.raises(
+        ValueError, match="All the samples do not share the same duration."
+    ):
+        _write_dict(seq, samples_dict, {})
+
+
+# Fixtures
 
 
 @pytest.fixture
