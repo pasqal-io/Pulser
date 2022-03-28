@@ -22,6 +22,8 @@ from collections.abc import Callable
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union
 
+import numpy as np
+
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 
@@ -32,53 +34,86 @@ if TYPE_CHECKING:
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
+    # Unary operators
     def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
 
     def __abs__(self) -> ParamObj:
         return ParamObj(operator.abs, self)
 
+    def __ceil__(self) -> ParamObj:
+        return ParamObj(np.ceil, self)
+
+    def sqrt(self) -> ParamObj:
+        """Calculates the square root of the object."""
+        return ParamObj(np.sqrt, self)
+
+    def exp(self) -> ParamObj:
+        """Calculates the exponential of the object."""
+        return ParamObj(np.exp, self)
+
+    def log2(self) -> ParamObj:
+        """Calculates the base-2 logarithm of the object."""
+        return ParamObj(np.log2, self)
+
+    def log(self) -> ParamObj:
+        """Calculates the natural logarithm of the object."""
+        return ParamObj(np.log, self)
+
+    def sin(self) -> ParamObj:
+        """Calculates the trigonometric sine of the object."""
+        return ParamObj(np.sin, self)
+
+    def cos(self) -> ParamObj:
+        """Calculates the trigonometric cosine of the object."""
+        return ParamObj(np.cos, self)
+
+    def tan(self) -> ParamObj:
+        """Calculates the trigonometric tangent of the object."""
+        return ParamObj(np.tan, self)
+
+    # Binary operators
     def __add__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__add__, self, other)
+        return ParamObj(operator.add, self, other)
 
     def __radd__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__add__, other, self)
+        return ParamObj(operator.add, other, self)
 
     def __sub__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__sub__, self, other)
+        return ParamObj(operator.sub, self, other)
 
     def __rsub__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__sub__, other, self)
+        return ParamObj(operator.sub, other, self)
 
     def __mul__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mul__, self, other)
+        return ParamObj(operator.mul, self, other)
 
     def __rmul__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mul__, other, self)
+        return ParamObj(operator.mul, other, self)
 
     def __truediv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__truediv__, self, other)
+        return ParamObj(operator.truediv, self, other)
 
     def __rtruediv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__truediv__, other, self)
+        return ParamObj(operator.truediv, other, self)
 
     def __floordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__floordiv__, self, other)
+        return ParamObj(operator.floordiv, self, other)
 
     def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__floordiv__, other, self)
+        return ParamObj(operator.floordiv, other, self)
 
     def __pow__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__pow__, self, other)
+        return ParamObj(operator.pow, self, other)
 
     def __rpow__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__pow__, other, self)
+        return ParamObj(operator.pow, other, self)
 
     def __mod__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mod__, self, other)
+        return ParamObj(operator.mod, self, other)
 
     def __rmod__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.__mod__, other, self)
+        return ParamObj(operator.mod, other, self)
 
 
 class ParamObj(Parametrized, OpSupport):
