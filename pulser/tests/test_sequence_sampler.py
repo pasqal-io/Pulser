@@ -149,8 +149,6 @@ def test_SLM():
     )
     seq.measure()
 
-    print(sample(seq))
-    print(pulser.Simulation(seq).samples)
 
     check_same_samples_as_sim(seq)
 
