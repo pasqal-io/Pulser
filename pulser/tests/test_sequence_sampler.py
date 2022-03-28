@@ -65,19 +65,7 @@ def check_same_samples_as_sim(seq: pulser.Sequence):
     got = sample(seq)
     want = pulser.Simulation(seq).samples
 
-    for basis in want["Global"]:
-        for qty in want["Global"][basis]:
-            np.testing.assert_array_equal(
-                got["Global"][basis][qty],
-                want["Global"][basis][qty],
-            )
-    for basis in want["Local"]:
-        for qubit in want["Local"][basis]:
-            for qty in want["Local"][basis][qubit]:
-                np.testing.assert_array_equal(
-                    got["Local"][basis][qubit][qty],
-                    want["Local"][basis][qubit][qty],
-                )
+    assert_nested_dict_equality(got, want)
 
 
 def test_table_sequence(seqs):
