@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any, Optional
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -358,8 +359,17 @@ class Register(BaseRegister, RegDrawer):
         return super()._to_dict()
 
     def _to_abstract_repr(self) -> dict[str, dict[QubitId, dict[str, float]]]:
-        return dict(
-            register={
-                name: {"x": x, "y": y} for name, (x, y) in self.qubits.items()
-            }
-        )
+        not_str = [id for id in self._ids if not isinstance(id, str)]
+        names = [str(id) for id in self._ids]
+        if not_str:
+            warnings.warn(
+                "Register serialization to an abstract representation "
+                "irreversibly converts all qubit ID's to strings.",
+                stacklevel=7,
+            )
+            if len(set(names)) < len(names):
+                collisions = [id for id in not_str if str(id) in self._ids]
+                # TODO: Write serialization error with the name collisions
+        return {
+            name: {"x": x, "y": y} for name, (x, y) in zip(names, self._coords)
+        }

@@ -208,15 +208,9 @@ class ParamObj(Parametrized, OpSupport):
             return abstract_repr(op_name, *self.args, **self.kwargs)
 
         elif op_name in pulser.json.supported.SUPPORTED_OPERATORS:
-            dtype = (
-                "int"
-                if all(var.dtype is int for var in self.variables.values())
-                else "float"
-            )
             if op_name in ("neg", "abs"):
-                return dict(type=dtype, expression=op_name, lhs=self.args[0])
+                return dict(expression=op_name, lhs=self.args[0])
             return dict(
-                type=dtype,
                 expression=op_name,
                 lhs=self.args[0],
                 rhs=self.args[1],

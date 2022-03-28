@@ -1089,17 +1089,17 @@ class Sequence:
             "version": "1",
             "register": {},
             "channels": {},
-            "parameters": {},
+            "variables": {},
             "operations": [],
         }
         operations = res["operations"]
+        # TODO: Process variables
         for call in chain(self._calls, self._to_build_calls):
             if call.name == "__init__":
                 register, device = call.args
                 # process register
                 res["device"] = device.name
-                for name, (x, y) in register.qubits.items():
-                    res["register"][name] = {"x": x, "y": y}
+                res["register"] = register
             elif call.name == "declare_channel":
                 ch_name, ch_kind = call.args
                 res["channels"][ch_name] = {"hardware_channel": ch_kind}

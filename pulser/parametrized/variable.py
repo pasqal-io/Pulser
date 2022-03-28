@@ -101,7 +101,7 @@ class Variable(Parametrized, OpSupport):
         return d
 
     def _to_abstract_repr(self) -> dict[str, str]:
-        return {"parameter": self.name}
+        return {"variable": self.name}
 
     def __str__(self) -> str:
         return self.name
@@ -145,7 +145,8 @@ class VariableItem(Parametrized, OpSupport):
         )
 
     def _to_abstract_repr(self) -> dict[str, str]:
-        return {"parameter": str(self)}
+        indices = list(range(self.var.size))[self.key]
+        return {"expression": "index", "lhs": self.var, "rhs": indices}
 
     def __str__(self) -> str:
         if isinstance(self.key, slice):
