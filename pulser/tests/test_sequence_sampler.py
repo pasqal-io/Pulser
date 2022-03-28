@@ -115,19 +115,8 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     np.testing.assert_array_equal(got, want)
 
 
-slm_reason = textwrap.dedent(
-    """
-    If the SLM is on, Global channels decay to local ones in the
-    sampler, such that the Global key in the output dict is empty and
-    all the samples are written in the Local dict. On the contrary, the
-    simulation module use the Local dict only for the first pulse, and
-    then write the remaining in the Global dict.
-    """
-)
-
-
-@pytest.mark.xfail(reason=slm_reason)
-def test_SLM():
+@pytest.fixture
+def seq_with_SLM() -> pulser.Sequence:
     q_dict = {
         "batman": np.array([-4.0, 0.0]),  # sometimes masked
         "superman": np.array([4.0, 0.0]),  # always unmasked
@@ -148,9 +137,63 @@ def test_SLM():
         "ch0",
     )
     seq.measure()
+    return seq
 
 
-    check_same_samples_as_sim(seq)
+def test_SLM_samples(seq_with_SLM):
+    pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0)
+    a_samples = pulse.amplitude.samples
+
+    def z() -> np.ndarray:
+        return np.zeros(seq_with_SLM.get_duration())
+
+    want: dict = {
+        "Global": {},
+        "Local": {
+            "ground-rydberg": {
+                "batman": {"amp": z(), "det": z(), "phase": z()},
+                "superman": {"amp": z(), "det": z(), "phase": z()},
+            }
+        },
+    }
+    want["Local"]["ground-rydberg"]["batman"]["amp"][200:401] = a_samples
+    want["Local"]["ground-rydberg"]["superman"]["amp"][0:200] = a_samples
+    want["Local"]["ground-rydberg"]["superman"]["amp"][200:401] = a_samples
+
+    got = sample(seq_with_SLM)
+    assert_nested_dict_equality(got, want)
+
+
+slm_reason = textwrap.dedent(
+    """
+If the SLM is on, Global channels decay to local ones in the
+sampler, such that the Global key in the output dict is empty and
+all the samples are written in the Local dict. On the contrary, the
+simulation module use the Local dict only for the first pulse, and
+then write the remaining in the Global dict.
+"""
+)
+
+
+@pytest.mark.xfail(reason=slm_reason)
+def test_SLM_against_simulation(seq_with_SLM):
+    check_same_samples_as_sim(seq_with_SLM)
+
+
+def assert_nested_dict_equality(got, want: dict) -> None:
+    for basis in want["Global"]:
+        for qty in want["Global"][basis]:
+            np.testing.assert_array_equal(
+                got["Global"][basis][qty],
+                want["Global"][basis][qty],
+            )
+    for basis in want["Local"]:
+        for qubit in want["Local"][basis]:
+            for qty in want["Local"][basis][qubit]:
+                np.testing.assert_array_equal(
+                    got["Local"][basis][qubit][qty],
+                    want["Local"][basis][qubit][qty],
+                )
 
 
 @pytest.fixture
