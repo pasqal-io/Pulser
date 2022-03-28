@@ -20,7 +20,7 @@ import pytest
 from pulser import Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.json.supported import validate_serialization
+from pulser.json.supported import SerializationError, validate_serialization
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -151,14 +151,15 @@ def test_support():
 
     obj_dict["__module__"] = "pulser.fake"
     with pytest.raises(
-        SystemError, match="No serialization support for module 'pulser.fake'."
+        SerializationError,
+        match="No serialization support for module 'pulser.fake'.",
     ):
         validate_serialization(obj_dict)
 
     wf_obj_dict = obj_dict["__args__"][0]
     wf_obj_dict["__submodule__"] = "RampWaveform"
     with pytest.raises(
-        SystemError,
+        SerializationError,
         match="No serialization support for attributes of "
         "'pulser.waveforms.RampWaveform'",
     ):
@@ -166,7 +167,7 @@ def test_support():
 
     del wf_obj_dict["__submodule__"]
     with pytest.raises(
-        SystemError,
+        SerializationError,
         match="No serialization support for 'pulser.waveforms.from_max_val'",
     ):
         validate_serialization(wf_obj_dict)
