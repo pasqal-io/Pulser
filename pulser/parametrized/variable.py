@@ -67,6 +67,13 @@ class Variable(Parametrized, OpSupport):
         object.__setattr__(self, "_count", self._count + 1)
 
     def _assign(self, value: Union[ArrayLike, str, float, int]) -> None:
+        val = self._validate_value(value)
+        object.__setattr__(self, "value", val)
+        object.__setattr__(self, "_count", self._count + 1)
+
+    def _validate_value(
+        self, value: Union[ArrayLike, str, float, int]
+    ) -> np.ndarray:
         if self.dtype == str:
             if not (
                 isinstance(value, str)
@@ -84,9 +91,7 @@ class Variable(Parametrized, OpSupport):
                 f"Can't assign array of size {val.size} to "
                 + f"variable of size {self.size}."
             )
-
-        object.__setattr__(self, "value", val)
-        object.__setattr__(self, "_count", self._count + 1)
+        return val
 
     def build(self) -> ArrayLike:
         """Returns the variable's current value."""
@@ -144,7 +149,7 @@ class VariableItem(Parametrized, OpSupport):
             self, self.var, self.key, _module="operator", _name="getitem"
         )
 
-    def _to_abstract_repr(self) -> dict[str, str]:
+    def _to_abstract_repr(self) -> dict[str, Any]:
         indices = list(range(self.var.size))[self.key]
         return {"expression": "index", "lhs": self.var, "rhs": indices}
 

@@ -25,6 +25,7 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.register._patterns as patterns
+from pulser.json.exceptions import AbstractReprError
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 
@@ -369,7 +370,10 @@ class Register(BaseRegister, RegDrawer):
             )
             if len(set(names)) < len(names):
                 collisions = [id for id in not_str if str(id) in self._ids]
-                # TODO: Write serialization error with the name collisions
+                raise AbstractReprError(
+                    "Name collisions encountered when converting qubit IDs to "
+                    f"strings for IDs: {[(id, str(id)) for id in collisions]}"
+                )
         return {
             name: {"x": x, "y": y} for name, (x, y) in zip(names, self._coords)
         }
