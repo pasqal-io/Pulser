@@ -93,34 +93,13 @@ def test_inXY() -> None:
         RampWaveform(200, -np.pi / 2, np.pi / 2),
         0.0,
     )
-
     reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
     seq = pulser.Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "mw_global")
     seq.add(pulse, "ch0")
     seq.measure(basis="XY")
 
-    sim = pulser.Simulation(seq)
-
-    want = sim.samples
-    got = sample(seq)
-
-    for qty in ["amp", "det", "phase"]:
-        np.testing.assert_array_equal(
-            got["Global"]["XY"][qty], want["Global"]["XY"][qty]
-        )
-
-    for q in seq._qids:
-        for qty in ["amp", "det", "phase"]:
-            try:
-                np.testing.assert_array_equal(
-                    got["Local"]["XY"][q][qty], want["Local"]["XY"][q][qty]
-                )
-            except KeyError:
-                np.testing.assert_array_equal(
-                    got["Local"]["XY"][q][qty],
-                    np.zeros(len(got["Local"]["XY"][q][qty])),
-                )
+    check_same_samples_as_sim(seq)
 
 
 def test_modulation(mod_seq: pulser.Sequence) -> None:
