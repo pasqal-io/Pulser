@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 import pulser
+from pulser.json.exceptions import SerializationError
 
 SUPPORTED_BUILTINS = ("float", "int", "str", "set")
 
@@ -66,12 +67,6 @@ SUPPORTED_MODULES = {
     "pulser.parametrized.variable": ("Variable",),
     "pulser.parametrized.paramobj": ("ParamObj",),
 }
-
-
-class SerializationError(Exception):
-    """Exception raised when sequence serialization fails."""
-
-    pass
 
 
 def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
