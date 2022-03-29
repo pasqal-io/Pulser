@@ -1078,6 +1078,8 @@ class Sequence:
         def str_var_finder(
             target_type: str, *potential_vars: Any, convert_int: bool = False
         ) -> None:
+            """Finds the 'str' type vars and changes them 'target_type'."""
+
             def str_type_specifier(var_name: str) -> None:
                 """Specifies the type of a 'str' var, when possible."""
                 stored_type = res["variables"][var_name]["type"]
@@ -1126,9 +1128,18 @@ class Sequence:
             "channels": {},
             "variables": {},
             "operations": [],
+            "measurement": None,
         }
 
         self._cross_check_vars(defaults)
+        seq_copy = copy.deepcopy(self)
+        try:
+            seq_copy.build(**defaults)
+        except Exception:
+            raise ValueError(
+                "The given 'defaults' produce an invalid sequence."
+            )
+
         for var in self._variables.values():
             value = var._validate_value(defaults[var.name])
             # String vars are stored with type='str' at this stage
@@ -1169,7 +1180,7 @@ class Sequence:
                 str_var_finder("channel_name", *call.args)
                 operations.append({"op": "align", "channels": list(call.args)})
             elif call.name == "measure":
-                # TODO: Variable handling
+                str_var_finder("measurement", call.args[0])
                 res["measurement"] = call.args[0]
             elif call.name == "add":
                 pulse, ch_name = call.args[:2]
@@ -1190,6 +1201,19 @@ class Sequence:
                 raise AbstractReprError(
                     f"Call name '{call.name}' is not supported."
                 )
+
+        undefined_str_vars = [
+            var_name
+            for var_name, var_dict in res["variables"].items()
+            if var_dict["type"] == "str"
+        ]
+        if undefined_str_vars:
+            raise AbstractReprError(
+                "All 'str' type variables must be used to refer to a qubit, a "
+                "channel or a measurement. Condition not respected for:"
+                f"{undefined_str_vars}"
+            )
+
         return json.dumps(res, cls=AbstractReprEncoder)
 
     @staticmethod

@@ -33,7 +33,7 @@ SIGNATURES: dict[str, PulserSignature] = {
     "BlackmanWaveform": PulserSignature(pos=("duration", "area")),
     "BlackmanWaveform.from_max_val": PulserSignature(pos=("max_val", "area")),
     "InterpolatedWaveform": PulserSignature(
-        pos=("duration", "values"), keyword=("times", "interpolator")
+        pos=("duration", "values"), keyword=("times",)
     ),
     "KaiserWaveform": PulserSignature(
         pos=("duration", "area"), keyword=("beta",)
@@ -53,8 +53,8 @@ EXTRA_PROPERTIES: dict[str, dict[str, str]] = {
     "ConstantWaveform": {"kind": "constant"},
     "RampWaveform": {"kind": "ramp"},
     "BlackmanWaveform": {"kind": "blackman"},
-    "BlackmanWaveform.from_max_val": {"kind": "blackman_max"},  # TODO: Confirm
+    "BlackmanWaveform.from_max_val": {"kind": "blackman_max"},
     "InterpolatedWaveform": {"kind": "interpolated"},
     "KaiserWaveform": {"kind": "kaiser"},
-    "KaiserWaveform.from_max_val": {"kind": "kaiser_max"},  # TODO: Confirm
+    "KaiserWaveform.from_max_val": {"kind": "kaiser_max"},
 }
