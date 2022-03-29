@@ -1132,9 +1132,8 @@ class Sequence:
         }
 
         self._cross_check_vars(defaults)
-        seq_copy = copy.deepcopy(self)
         try:
-            seq_copy.build(**defaults)
+            self.build(**defaults)
         except Exception:
             raise ValueError(
                 "The given 'defaults' produce an invalid sequence."
@@ -1210,7 +1209,7 @@ class Sequence:
         if undefined_str_vars:
             raise AbstractReprError(
                 "All 'str' type variables must be used to refer to a qubit, a "
-                "channel or a measurement. Condition not respected for:"
+                "channel or a measurement. Condition not respected for: "
                 f"{undefined_str_vars}"
             )
 

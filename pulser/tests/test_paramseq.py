@@ -181,8 +181,8 @@ def test_str():
     sb.add(pls, "ch1")
     s = (
         f"Prelude\n-------\n{str(seq)}Stored calls\n------------\n\n"
-        + "1. add(Pulse.ConstantPulse(mul(var[0], 100), var[0],"
-        + " -1, var[0]), ch1)"
+        + "1. add(Pulse(ConstantWaveform(mul(var[0], 100), var[0]), "
+        + "ConstantWaveform(mul(var[0], 100), -1), var[0], 0.0), ch1)"
     )
     assert s == str(sb)
 
