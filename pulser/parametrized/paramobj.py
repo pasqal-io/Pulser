@@ -44,6 +44,12 @@ class OpSupport:
     def __ceil__(self) -> ParamObj:
         return ParamObj(np.ceil, self)
 
+    def __floor__(self) -> ParamObj:
+        return ParamObj(np.floor, self)
+
+    def __round__(self) -> ParamObj:
+        return ParamObj(np.round, self)
+
     def sqrt(self) -> ParamObj:
         """Calculates the square root of the object."""
         return ParamObj(np.sqrt, self)
