@@ -49,7 +49,7 @@ def test_var():
         x.value = 0.5
 
     assert a.variables == {"a": a}
-    assert len(b) == 2
+    assert b.size == 2
     assert str(c) == "c"
 
     with pytest.raises(ValueError, match="to variable of size 2"):

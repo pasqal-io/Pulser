@@ -34,12 +34,12 @@ def test_var_declarations():
     assert sb.declared_variables == {"var": var}
     assert isinstance(var, Variable)
     assert var.dtype == float
-    assert len(var) == 1
+    assert var.size == 1
     with pytest.raises(ValueError, match="already being used"):
         sb.declare_variable("var", dtype=int, size=10)
     var2 = sb.declare_variable("var2", 4, str)
     assert var2.dtype == str
-    assert len(var2) == 4
+    assert var.size == 4
     var3 = sb.declare_variable("var3")
     assert sb.declared_variables["var3"] == var3.var
     assert isinstance(var3, VariableItem)
