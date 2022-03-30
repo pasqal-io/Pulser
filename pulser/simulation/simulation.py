@@ -131,7 +131,7 @@ class Simulation:
         # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
         if hasattr(self._seq, "_measurement"):
-            self._meas_basis = cast(str, self._seq._measurement)
+            self._meas_basis = self._seq._measurement
         else:
             if self.basis_name in {"digital", "all"}:
                 self._meas_basis = "digital"

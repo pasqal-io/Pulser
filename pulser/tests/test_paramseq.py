@@ -68,6 +68,12 @@ def test_stored_calls():
     with pytest.raises(ValueError, match="non-variable qubits must belong"):
         sb.target("q20", "ch1")
 
+    with pytest.raises(
+        NotImplementedError,
+        match="Using parametrized objects or variables to refer to channels",
+    ):
+        sb.target("q0", var)
+
     sb.delay(var, "ch1")
     call = sb._to_build_calls[1]
     assert call.name == "delay"
@@ -128,7 +134,8 @@ def test_stored_calls():
         sb.align("ch1")
 
     with pytest.raises(ValueError, match="not supported"):
-        sb.measure(basis="z")
+        sb.measure(basis=var)
+
     sb.measure()
     with pytest.raises(RuntimeError):
         sb.delay(var * 50, "ch1")

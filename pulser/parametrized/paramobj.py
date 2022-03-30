@@ -47,7 +47,7 @@ class OpSupport:
     def __floor__(self) -> ParamObj:
         return ParamObj(np.floor, self)
 
-    def __round__(self, n=0) -> ParamObj:
+    def __round__(self, n: int = 0) -> ParamObj:
         return ParamObj(np.round, self, decimals=n)
 
     def rint(self) -> ParamObj:
