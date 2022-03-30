@@ -134,3 +134,28 @@ def test_opsupport():
     assert x.build() == -3
     x = 2**x
     assert x.build() == 0.125
+    x = np.log2(x)
+    assert x.build() == -3.0
+
+    # Trigonometric functions
+    pi = -a * np.pi / 2
+    x = np.sin(pi)
+    np.testing.assert_almost_equal(x.build(), 0.0)
+    x = np.cos(pi)
+    np.testing.assert_almost_equal(x.build(), -1.0)
+    x = np.tan(pi / 4)
+    np.testing.assert_almost_equal(x.build(), 1.0)
+
+    # Other transcendentals
+    x = np.exp(b)
+    np.testing.assert_almost_equal(x.build(), [1 / np.e, np.e])
+    x = np.log(x)
+    np.testing.assert_almost_equal(x.build(), b.build())
+    x = x + 0.4  # x = [-0.6, 1.4]
+    np.testing.assert_array_equal(np.floor(x).build(), [-1.0, 1.0])
+    np.testing.assert_array_equal(np.round(x).build(), [-1.0, 1.0])
+    np.testing.assert_array_equal(np.round(x, 1).build(), [-0.6, 1.4])
+    np.testing.assert_array_equal(round(x).build(), np.round(x).build())
+    np.testing.assert_array_equal(round(x, 1).build(), np.round(x, 1).build())
+    np.testing.assert_array_equal(np.ceil(x).build(), [0.0, 2.0])
+    np.testing.assert_array_equal(abs(x).build(), np.sqrt(x**2).build())

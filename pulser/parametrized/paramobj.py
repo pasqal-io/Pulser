@@ -47,8 +47,12 @@ class OpSupport:
     def __floor__(self) -> ParamObj:
         return ParamObj(np.floor, self)
 
-    def __round__(self) -> ParamObj:
-        return ParamObj(np.round, self)
+    def __round__(self, n=0) -> ParamObj:
+        return ParamObj(np.round, self, decimals=n)
+
+    def rint(self) -> ParamObj:
+        """Rounds the value to the nearest int."""
+        return self.__round__(n=0)
 
     def sqrt(self) -> ParamObj:
         """Calculates the square root of the object."""

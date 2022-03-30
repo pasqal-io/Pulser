@@ -39,7 +39,7 @@ def test_var_declarations():
         sb.declare_variable("var", dtype=int, size=10)
     var2 = sb.declare_variable("var2", 4, str)
     assert var2.dtype == str
-    assert var.size == 4
+    assert var2.size == 4
     var3 = sb.declare_variable("var3")
     assert sb.declared_variables["var3"] == var3.var
     assert isinstance(var3, VariableItem)
