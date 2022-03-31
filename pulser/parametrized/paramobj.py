@@ -109,10 +109,10 @@ class OpSupport:
         return ParamObj(operator.truediv, other, self)
 
     def __floordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.floordiv, self, other)
+        return (self / other).__floor__()
 
     def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.floordiv, other, self)
+        return (other / self).__floor__()
 
     def __pow__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.pow, self, other)
