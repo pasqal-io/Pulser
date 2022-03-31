@@ -113,16 +113,21 @@ def test_paramobj():
 
 def test_opsupport():
     a._assign(-2.0)
-    x = 5 + a
-    x = b - x  # x = [-4, -2]
-    x = x / 2
-    x = 8 * x  # x = [-16, -8]
-    x = -x // 3  # x = [5, 2]
-    assert np.all(x.build() == [5.0, 2.0])
-    assert (a**a).build() == 0.25
-    assert abs(a).build() == 2.0
-    assert (3 % a).build() == -1.0
-    assert (-a).build() == 2.0
+    u = 5 + a
+    u = b - u  # u = [-4, -2]
+    u = u / 2
+    u = 8 * u  # u = [-16, -8]
+    u = -u // 3  # u = [5, 2]
+    assert np.all(u.build() == [5.0, 2.0])
+
+    v = a**a
+    assert v.build() == 0.25
+    v = abs(-v * 8)
+    assert v.build() == 2.0
+    v = 3 % v
+    assert v.build() == 1.0
+    v = -v
+    assert v.build() == -1.0
 
     x = a + 11
     assert x.build() == 9
@@ -153,14 +158,20 @@ def test_opsupport():
     np.testing.assert_almost_equal(y.build(), [1 / np.e, np.e])
     y = np.log(y)
     np.testing.assert_almost_equal(y.build(), b.build())
-    y = y + 0.4  # y = [-0.6, 1.4]
-    np.testing.assert_array_equal(np.floor(y).build(), [-1.0, 1.0])
-    np.testing.assert_array_equal(np.round(y).build(), [-1.0, 1.0])
-    np.testing.assert_array_equal(np.round(y, 1).build(), [-0.6, 1.4])
-    np.testing.assert_array_equal(round(y).build(), np.round(y).build())
-    np.testing.assert_array_equal(round(y, 1).build(), np.round(y, 1).build())
-    np.testing.assert_array_equal(np.ceil(y).build(), [0.0, 2.0])
-    np.testing.assert_array_equal(abs(y).build(), np.sqrt(y**2).build())
+    y_ = y + 0.4  # y_ = [-0.6, 1.4]
+    y = np.round(y_, 1)
+    np.testing.assert_array_equal(y.build(), y_.build())
+    np.testing.assert_array_equal(round(y_).build(), np.round(y_).build())
+    np.testing.assert_array_equal(round(y_, 1).build(), y.build())
+
+    y = round(y)
+    np.testing.assert_array_equal(y.build(), [-1.0, 1.0])
+    y = np.floor(y + 0.1)
+    np.testing.assert_array_equal(y.build(), [-1.0, 1.0])
+    y = np.ceil(y + 0.1)
+    np.testing.assert_array_equal(y.build(), [0.0, 2.0])
+    y = np.sqrt((y - 1) ** 2)
+    np.testing.assert_array_equal(y.build(), [1.0, 1.0])
 
     # Test serialization support for operations
     def encode_decode(obj):
@@ -169,12 +180,23 @@ def test_opsupport():
         )
 
     # Will raise a SerializationError if they fail
+    u2 = encode_decode(u)
+    assert set(u2.variables) == {"a", "b"}
+    u2.variables["a"]._assign(a.value)
+    u2.variables["b"]._assign(b.value)
+    np.testing.assert_array_equal(u2.build(), u.build())
+
+    v2 = encode_decode(v)
+    assert list(v2.variables) == ["a"]
+    v2.variables["a"]._assign(a.value)
+    assert v2.build() == v.build()
+
     x2 = encode_decode(x)
     assert list(x2.variables) == ["a"]
-    x2.variables["a"]._assign(-2.0)
+    x2.variables["a"]._assign(a.value)
     assert x2.build() == x.build()
 
     y2 = encode_decode(y)
     assert list(y2.variables) == ["b"]
-    y2.variables["b"]._assign([-1.0, 1.0])
-    assert x2.build() == x.build()
+    y2.variables["b"]._assign(b.value)
+    np.testing.assert_array_equal(y2.build(), y.build())

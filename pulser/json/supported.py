@@ -29,14 +29,13 @@ SUPPORTED_OPERATORS = (
     "sub",
     "mul",
     "truediv",
-    "floordiv",
     "pow",
     "mod",
 )
 
 SUPPORTED_NUMPY = (
     "array",
-    "round",
+    "round_",
     "ceil",
     "floor",
     "sqrt",
