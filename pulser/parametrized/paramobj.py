@@ -180,8 +180,9 @@ class ParamObj(Parametrized, OpSupport):
 
     def _to_dict(self) -> dict[str, Any]:
         def class_to_dict(cls: Callable) -> dict[str, Any]:
+            module = "numpy" if isinstance(cls, np.ufunc) else cls.__module__
             return obj_to_dict(
-                self, _build=False, _name=cls.__name__, _module=cls.__module__
+                self, _build=False, _name=cls.__name__, _module=module
             )
 
         args = list(self.args)

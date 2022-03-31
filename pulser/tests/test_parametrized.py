@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from dataclasses import FrozenInstanceError
 
 import numpy as np
 import pytest
 
 from pulser import Pulse
+from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.parametrized import Variable
 from pulser.waveforms import BlackmanWaveform, CompositeWaveform
 
@@ -147,15 +149,32 @@ def test_opsupport():
     np.testing.assert_almost_equal(x.build(), 1.0)
 
     # Other transcendentals
-    x = np.exp(b)
-    np.testing.assert_almost_equal(x.build(), [1 / np.e, np.e])
-    x = np.log(x)
-    np.testing.assert_almost_equal(x.build(), b.build())
-    x = x + 0.4  # x = [-0.6, 1.4]
-    np.testing.assert_array_equal(np.floor(x).build(), [-1.0, 1.0])
-    np.testing.assert_array_equal(np.round(x).build(), [-1.0, 1.0])
-    np.testing.assert_array_equal(np.round(x, 1).build(), [-0.6, 1.4])
-    np.testing.assert_array_equal(round(x).build(), np.round(x).build())
-    np.testing.assert_array_equal(round(x, 1).build(), np.round(x, 1).build())
-    np.testing.assert_array_equal(np.ceil(x).build(), [0.0, 2.0])
-    np.testing.assert_array_equal(abs(x).build(), np.sqrt(x**2).build())
+    y = np.exp(b)
+    np.testing.assert_almost_equal(y.build(), [1 / np.e, np.e])
+    y = np.log(y)
+    np.testing.assert_almost_equal(y.build(), b.build())
+    y = y + 0.4  # y = [-0.6, 1.4]
+    np.testing.assert_array_equal(np.floor(y).build(), [-1.0, 1.0])
+    np.testing.assert_array_equal(np.round(y).build(), [-1.0, 1.0])
+    np.testing.assert_array_equal(np.round(y, 1).build(), [-0.6, 1.4])
+    np.testing.assert_array_equal(round(y).build(), np.round(y).build())
+    np.testing.assert_array_equal(round(y, 1).build(), np.round(y, 1).build())
+    np.testing.assert_array_equal(np.ceil(y).build(), [0.0, 2.0])
+    np.testing.assert_array_equal(abs(y).build(), np.sqrt(y**2).build())
+
+    # Test serialization support for operations
+    def encode_decode(obj):
+        return json.loads(
+            json.dumps(obj, cls=PulserEncoder), cls=PulserDecoder
+        )
+
+    # Will raise a SerializationError if they fail
+    x2 = encode_decode(x)
+    assert list(x2.variables) == ["a"]
+    x2.variables["a"]._assign(-2.0)
+    assert x2.build() == x.build()
+
+    y2 = encode_decode(y)
+    assert list(y2.variables) == ["b"]
+    y2.variables["b"]._assign([-1.0, 1.0])
+    assert x2.build() == x.build()
