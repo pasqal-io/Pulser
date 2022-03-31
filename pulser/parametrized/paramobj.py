@@ -20,7 +20,7 @@ import operator
 import warnings
 from collections.abc import Callable
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
@@ -48,11 +48,12 @@ class OpSupport:
         return ParamObj(np.floor, self)
 
     def __round__(self, n: int = 0) -> ParamObj:
-        return ParamObj(np.round, self, decimals=n)
+        return cast(ParamObj, (self * 10**n).rint() / 10**n)
 
     def rint(self) -> ParamObj:
         """Rounds the value to the nearest int."""
-        return self.__round__(n=0)
+        # Defined because np.round looks for 'rint'
+        return ParamObj(np.round, self)
 
     def sqrt(self) -> ParamObj:
         """Calculates the square root of the object."""
