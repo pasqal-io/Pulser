@@ -1154,7 +1154,7 @@ class Sequence:
                 res["register"] = register
             elif call.name == "declare_channel":
                 ch_name, ch_kind = call.args[:2]
-                res["channels"][ch_name] = {"hardware_channel": ch_kind}
+                res["channels"][ch_name] = ch_kind
                 initial_target = None
                 if len(call.args) == 3:
                     initial_target = call.args[2]
@@ -1170,16 +1170,13 @@ class Sequence:
                     )
             elif call.name == "target":
                 target, ch_name = call.args
-                str_var_finder("channel_name", ch_name)
                 str_var_finder("atom_name", target, convert_int=True)
                 operations.append(
                     {"op": "target", "channel": ch_name, "target": target}
                 )
             elif call.name == "align":
-                str_var_finder("channel_name", *call.args)
                 operations.append({"op": "align", "channels": list(call.args)})
             elif call.name == "measure":
-                str_var_finder("measurement", call.args[0])
                 res["measurement"] = call.args[0]
             elif call.name == "add":
                 pulse, ch_name = call.args[:2]
@@ -1208,9 +1205,8 @@ class Sequence:
         ]
         if undefined_str_vars:
             raise AbstractReprError(
-                "All 'str' type variables must be used to refer to a qubit, a "
-                "channel or a measurement. Condition not respected for: "
-                f"{undefined_str_vars}"
+                "All 'str' type variables must be used to refer to a qubit. "
+                f"Condition not respected for: {undefined_str_vars}"
             )
 
         return json.dumps(res, cls=AbstractReprEncoder)

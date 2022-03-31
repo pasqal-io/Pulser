@@ -183,12 +183,16 @@ class ParamObj(Parametrized, OpSupport):
             if inspect.isclass(self.args[0]):
                 # classmethod
                 name = f"{self.args[0].__name__}.{op_name}"
+                if "post_phase_shift" in self.kwargs:
+                    post_phase_shift = self.kwargs["post_phase_shift"]
+                else:
+                    post_phase_shift = 0.0
                 if name == "Pulse.ConstantAmplitude":
                     return abstract_repr(
                         "Pulse",
                         abstract_repr("ConstantWaveform", 0, self.args[1]),
                         *self.args[2:],
-                        **self.kwargs,
+                        post_phase_shift=post_phase_shift,
                     )
                 elif name == "Pulse.ConstantDetuning":
                     return abstract_repr(
@@ -197,6 +201,7 @@ class ParamObj(Parametrized, OpSupport):
                         abstract_repr("ConstantWaveform", 0, self.args[2]),
                         self.args[3],
                         **self.kwargs,
+                        post_phase_shift=post_phase_shift,
                     )
                 else:
                     return abstract_repr(name, *self.args[1:], **self.kwargs)
@@ -208,8 +213,12 @@ class ParamObj(Parametrized, OpSupport):
             return abstract_repr(op_name, *self.args, **self.kwargs)
 
         elif op_name in pulser.json.supported.SUPPORTED_OPERATORS:
-            if op_name in ("neg", "abs"):
+            if op_name in ("neg", "abs"):  # TODO: Add new operators
                 return dict(expression=op_name, lhs=self.args[0])
+            elif op_name in ("floordiv", "truediv"):
+                return dict(
+                    expression="div", lhs=self.args[0], rhs=self.args[1]
+                )  # TODO: Check this
             return dict(
                 expression=op_name,
                 lhs=self.args[0],

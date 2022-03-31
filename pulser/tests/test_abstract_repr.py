@@ -32,21 +32,15 @@ seq.declare_channel("digital", "raman_local", initial_target="control")
 seq.declare_channel("rydberg", "rydberg_local", initial_target="control")
 
 target_atom = seq.declare_variable("target_atom", dtype=str)
-channel_var = seq.declare_variable("channel_var", dtype=str)
 duration = seq.declare_variable("duration", dtype=int)
 amps = seq.declare_variable("amps", dtype=float, size=2)
 
 half_pi_wf = BlackmanWaveform(200, np.pi / 2)
 
 ry = Pulse.ConstantDetuning(amplitude=half_pi_wf, detuning=0, phase=-np.pi / 2)
-ry_dag = Pulse.ConstantDetuning(
-    amplitude=half_pi_wf, detuning=0, phase=np.pi / 2
-)
 
 seq.add(ry, "digital")
-seq.target(target_atom, channel_var)
-print("passed")
-seq.add(ry_dag, "digital")
+seq.target(target_atom, "digital")
 
 pi_2_wf = BlackmanWaveform(duration, amps[0] / 2)
 pi_pulse = Pulse.ConstantDetuning(CompositeWaveform(pi_2_wf, pi_2_wf), 0, 0)
@@ -69,7 +63,6 @@ seq.measure("digital")
 abstract = json.loads(
     seq.abstract_repr(
         target_atom="target",
-        channel_var="digital",
         amps=[np.pi, 2 * np.pi],
         duration=200,
     )
@@ -79,7 +72,7 @@ abstract = json.loads(
 def test_schema():
     with open("pulser/json/abstract_repr_schema.json") as f:
         schema = json.load(f)
-
+    print(abstract)
     jsonschema.validate(instance=abstract, schema=schema)
 
 
@@ -101,57 +94,33 @@ def test_values():
         "target": {"x": 2.0, "y": 0.0},
     }
     assert abstract["channels"] == {
-        "digital": {
-            "hardware_channel": "raman_local",
-        },
-        "rydberg": {
-            "hardware_channel": "rydberg_local",
-        },
+        "digital": "raman_local",
+        "rydberg": "rydberg_local",
     }
     assert abstract["variables"] == {
         "target_atom": {"type": "atom_name", "value": ["target"]},
-        "channel_var": {"type": "channel_name", "value": ["digital"]},
         "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
         "duration": {"type": "int", "value": [200]},
     }
-    assert len(abstract["operations"]) == 13
+    assert len(abstract["operations"]) == 12
     assert abstract["operations"][0] == {
         "op": "target",
         "channel": "digital",
         "target": "control",
     }
 
-    duration_ref = {
-        "expression": "index",
-        "lhs": {"variable": "duration"},
-        "rhs": 0,
-    }
-
-    amp0_ref = {
-        "expression": "index",
-        "lhs": {"variable": "amps"},
-        "rhs": 0,
-    }
-
-    blackman_wf_dict = {
-        "kind": "blackman",
-        "duration": duration_ref,
-        "area": {"expression": "truediv", "lhs": amp0_ref, "rhs": 2},
-    }
-
-    composite_wf_dict = {
-        "kind": "composite",
-        "waveforms": [blackman_wf_dict, blackman_wf_dict],
-    }
-
     assert abstract["operations"][2] == {
         "op": "pulse",
         "channel": "digital",
         "protocol": "min-delay",
-        "amplitude": composite_wf_dict,
+        "amplitude": {
+            "area": 1.5707963267948966,
+            "duration": 200,
+            "kind": "blackman",
+        },
         "detuning": {
             "kind": "constant",
-            "duration": duration_ref,
+            "duration": 200,
             "value": 0.0,
         },
         "phase": 4.71238898038469,
@@ -168,9 +137,39 @@ def test_values():
         },
     }
 
-    assert abstract["operations"][5] == {
+    assert abstract["operations"][4] == {
         "op": "align",
         "channels": ["digital", "rydberg"],
+    }
+
+    duration_ref = {
+        "expression": "index",
+        "lhs": {"variable": "duration"},
+        "rhs": 0,
+    }
+    amp0_ref = {
+        "expression": "index",
+        "lhs": {"variable": "amps"},
+        "rhs": 0,
+    }
+    blackman_wf_dict = {
+        "kind": "blackman",
+        "duration": duration_ref,
+        "area": {"expression": "div", "lhs": amp0_ref, "rhs": 2},
+    }
+    composite_wf_dict = {
+        "kind": "composite",
+        "waveforms": [blackman_wf_dict, blackman_wf_dict],
+    }
+
+    assert abstract["operations"][5] == {
+        "op": "pulse",
+        "channel": "rydberg",
+        "protocol": "min-delay",
+        "amplitude": composite_wf_dict,
+        "detuning": {"kind": "constant", "duration": 0, "value": 0.0},
+        "phase": 0.0,
+        "post_phase_shift": 0.0,
     }
     assert abstract["measurement"] == "digital"
 
