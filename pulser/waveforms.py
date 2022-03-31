@@ -32,6 +32,7 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 from pulser.channels import Channel
+from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import abstract_repr, obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
@@ -861,6 +862,13 @@ class InterpolatedWaveform(Waveform):
         return obj_to_dict(self, self._duration, self._values, **self._kwargs)
 
     def _to_abstract_repr(self) -> dict[str, Any]:
+        if self._kwargs["interpolator"] != "PchipInterpolator" or set(
+            self._kwargs
+        ) - {"times", "interpolator"}:
+            raise AbstractReprError(
+                "Export of an InterpolatedWaveform is only supported for the "
+                "'PchipInterpolator' and without any 'interpolator_kwargs'."
+            )
         return abstract_repr(
             "InterpolatedWaveform",
             self._duration,
