@@ -26,7 +26,7 @@
     },
     "BlackmanMaxWaveform": {
       "additionalProperties": false,
-      "description": "A Blackman window of a specified duration and area.",
+      "description": "A Blackman window of a specified max value and area.",
       "properties": {
         "area": {
           "$ref": "#/definitions/ParametrizedNum",
@@ -304,7 +304,7 @@
       ],
       "type": "object"
     },
-    "KaiserMaxWavewform": {
+    "KaiserMaxWaveform": {
       "additionalProperties": false,
       "description": "A Kaiser window of a specified max value, area and beta parameter.",
       "properties": {
@@ -333,7 +333,7 @@
       ],
       "type": "object"
     },
-    "KaiserWavewform": {
+    "KaiserWaveform": {
       "additionalProperties": false,
       "description": "A Kaiser window of a specified duration, area and beta parameter.",
       "properties": {
@@ -739,10 +739,10 @@
           "$ref": "#/definitions/InterpolatedWaveform"
         },
         {
-          "$ref": "#/definitions/KaiserWavewform"
+          "$ref": "#/definitions/KaiserWaveform"
         },
         {
-          "$ref": "#/definitions/KaiserMaxWavewform"
+          "$ref": "#/definitions/KaiserMaxWaveform"
         }
       ],
       "description": "Modulation waveform of any kind"

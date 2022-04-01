@@ -213,12 +213,13 @@ class ParamObj(Parametrized, OpSupport):
             return abstract_repr(op_name, *self.args, **self.kwargs)
 
         elif op_name in pulser.json.supported.SUPPORTED_OPERATORS:
+            # TODO: Special case for 'round_' -> 'round' and 'truediv' -> 'div'
             if op_name in ("neg", "abs"):  # TODO: Add new operators
                 return dict(expression=op_name, lhs=self.args[0])
             elif op_name in ("floordiv", "truediv"):
                 return dict(
                     expression="div", lhs=self.args[0], rhs=self.args[1]
-                )  # TODO: Check this
+                )
             return dict(
                 expression=op_name,
                 lhs=self.args[0],
