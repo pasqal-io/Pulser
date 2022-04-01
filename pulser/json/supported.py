@@ -30,9 +30,22 @@ SUPPORTED_OPERATORS = (
     "sub",
     "mul",
     "truediv",
-    "floordiv",
     "pow",
     "mod",
+)
+
+SUPPORTED_NUMPY = (
+    "array",
+    "round_",
+    "ceil",
+    "floor",
+    "sqrt",
+    "exp",
+    "log2",
+    "log",
+    "sin",
+    "cos",
+    "tan",
 )
 
 SUPPORTS_SUBMODULE = ("Pulse", "BlackmanWaveform", "KaiserWaveform")
@@ -41,7 +54,7 @@ SUPPORTED_MODULES = {
     "builtins": SUPPORTED_BUILTINS,
     "_operator": SUPPORTED_OPERATORS,
     "operator": SUPPORTED_OPERATORS,
-    "numpy": ("array",),
+    "numpy": SUPPORTED_NUMPY,
     "pulser.register.register": ("Register",),
     "pulser.register.register3d": ("Register3D",),
     "pulser.register.register_layout": ("RegisterLayout",),

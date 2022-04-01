@@ -20,7 +20,9 @@ import operator
 import warnings
 from collections.abc import Callable
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, cast
+
+import numpy as np
 
 import pulser
 from pulser.json.signatures import SIGNATURES
@@ -34,12 +36,56 @@ if TYPE_CHECKING:
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
+    # Unary operators
     def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
 
     def __abs__(self) -> ParamObj:
         return ParamObj(operator.abs, self)
 
+    def __ceil__(self) -> ParamObj:
+        return ParamObj(np.ceil, self)
+
+    def __floor__(self) -> ParamObj:
+        return ParamObj(np.floor, self)
+
+    def __round__(self, n: int = 0) -> ParamObj:
+        return cast(ParamObj, (self * 10**n).rint() / 10**n)
+
+    def rint(self) -> ParamObj:
+        """Rounds the value to the nearest int."""
+        # Defined because np.round looks for 'rint'
+        return ParamObj(np.round, self)
+
+    def sqrt(self) -> ParamObj:
+        """Calculates the square root of the object."""
+        return ParamObj(np.sqrt, self)
+
+    def exp(self) -> ParamObj:
+        """Calculates the exponential of the object."""
+        return ParamObj(np.exp, self)
+
+    def log2(self) -> ParamObj:
+        """Calculates the base-2 logarithm of the object."""
+        return ParamObj(np.log2, self)
+
+    def log(self) -> ParamObj:
+        """Calculates the natural logarithm of the object."""
+        return ParamObj(np.log, self)
+
+    def sin(self) -> ParamObj:
+        """Calculates the trigonometric sine of the object."""
+        return ParamObj(np.sin, self)
+
+    def cos(self) -> ParamObj:
+        """Calculates the trigonometric cosine of the object."""
+        return ParamObj(np.cos, self)
+
+    def tan(self) -> ParamObj:
+        """Calculates the trigonometric tangent of the object."""
+        return ParamObj(np.tan, self)
+
+    # Binary operators
     def __add__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.add, self, other)
 
@@ -65,10 +111,10 @@ class OpSupport:
         return ParamObj(operator.truediv, other, self)
 
     def __floordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.floordiv, self, other)
+        return (self / other).__floor__()
 
     def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
-        return ParamObj(operator.floordiv, other, self)
+        return (other / self).__floor__()
 
     def __pow__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.pow, self, other)
@@ -137,8 +183,9 @@ class ParamObj(Parametrized, OpSupport):
 
     def _to_dict(self) -> dict[str, Any]:
         def class_to_dict(cls: Callable) -> dict[str, Any]:
+            module = "numpy" if isinstance(cls, np.ufunc) else cls.__module__
             return obj_to_dict(
-                self, _build=False, _name=cls.__name__, _module=cls.__module__
+                self, _build=False, _name=cls.__name__, _module=module
             )
 
         args = list(self.args)
