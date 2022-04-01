@@ -34,12 +34,12 @@ def test_var_declarations():
     assert sb.declared_variables == {"var": var}
     assert isinstance(var, Variable)
     assert var.dtype == float
-    assert len(var) == 1
+    assert var.size == 1
     with pytest.raises(ValueError, match="already being used"):
         sb.declare_variable("var", dtype=int, size=10)
     var2 = sb.declare_variable("var2", 4, str)
     assert var2.dtype == str
-    assert len(var2) == 4
+    assert var2.size == 4
     var3 = sb.declare_variable("var3")
     assert sb.declared_variables["var3"] == var3.var
     assert isinstance(var3, VariableItem)
@@ -67,6 +67,12 @@ def test_stored_calls():
 
     with pytest.raises(ValueError, match="non-variable qubits must belong"):
         sb.target("q20", "ch1")
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Using parametrized objects or variables to refer to channels",
+    ):
+        sb.target("q0", var)
 
     sb.delay(var, "ch1")
     call = sb._to_build_calls[1]
@@ -128,7 +134,8 @@ def test_stored_calls():
         sb.align("ch1")
 
     with pytest.raises(ValueError, match="not supported"):
-        sb.measure(basis="z")
+        sb.measure(basis=var)
+
     sb.measure()
     with pytest.raises(RuntimeError):
         sb.delay(var * 50, "ch1")
