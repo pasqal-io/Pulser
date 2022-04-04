@@ -25,7 +25,11 @@ from typing import TYPE_CHECKING, Any, Union, cast
 import numpy as np
 
 import pulser
-from pulser.json.signatures import SIGNATURES
+from pulser.json.signatures import (
+    SIGNATURES,
+    BINARY_OPERATORS,
+    UNARY_OPERATORS,
+)
 from pulser.json.utils import abstract_repr, obj_to_dict
 from pulser.parametrized import Parametrized
 
@@ -259,14 +263,10 @@ class ParamObj(Parametrized, OpSupport):
         elif op_name in SIGNATURES:
             return abstract_repr(op_name, *self.args, **self.kwargs)
 
-        elif op_name in pulser.json.supported.SUPPORTED_OPERATORS:
-            # TODO: Special case for 'round_' -> 'round' and 'truediv' -> 'div'
-            if op_name in ("neg", "abs"):  # TODO: Add new operators
-                return dict(expression=op_name, lhs=self.args[0])
-            elif op_name in ("floordiv", "truediv"):
-                return dict(
-                    expression="div", lhs=self.args[0], rhs=self.args[1]
-                )
+        elif op_name in UNARY_OPERATORS:
+            return dict(expression=op_name, lhs=self.args[0])
+
+        elif op_name in BINARY_OPERATORS:
             return dict(
                 expression=op_name,
                 lhs=self.args[0],

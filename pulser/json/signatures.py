@@ -45,9 +45,29 @@ SIGNATURES: dict[str, PulserSignature] = {
     "Pulse": PulserSignature(
         pos=("amplitude", "detuning", "phase"), keyword=("post_phase_shift",)
     ),
+    # Special case operators
+    "truediv": PulserSignature(pos=("lhs", "rhs")),
+    "round_": PulserSignature(pos=("lhs",)),
 }
 
+BINARY_OPERATORS = ("add", "sub", "mul", "truediv", "pow", "mod")
+
+UNARY_OPERATORS = (
+    "neg",
+    "abs",
+    "ceil",
+    "floor",
+    "sqrt",
+    "exp",
+    "log2",
+    "log",
+    "sin",
+    "cos",
+    "tan",
+)
+
 EXTRA_PROPERTIES: dict[str, dict[str, str]] = {
+    # Waveforms
     "CompositeWaveform": {"kind": "composite"},
     "CustomWaveform": {"kind": "custom"},
     "ConstantWaveform": {"kind": "constant"},
@@ -57,4 +77,7 @@ EXTRA_PROPERTIES: dict[str, dict[str, str]] = {
     "InterpolatedWaveform": {"kind": "interpolated"},
     "KaiserWaveform": {"kind": "kaiser"},
     "KaiserWaveform.from_max_val": {"kind": "kaiser_max"},
+    # Special case operators
+    "truediv": {"expression": "div"},
+    "round_": {"expression": "round"},
 }
