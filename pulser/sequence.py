@@ -49,8 +49,8 @@ from pulser.json.coders import (
     PulserDecoder,
     PulserEncoder,
 )
-from pulser.json.utils import obj_to_dict
 from pulser.json.exceptions import AbstractReprError
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse

@@ -18,7 +18,7 @@ from __future__ import annotations
 import importlib
 import inspect
 from json import JSONDecoder, JSONEncoder
-from typing import Any, cast
+from typing import Any, Union, cast
 
 import numpy as np
 
@@ -47,12 +47,12 @@ class PulserEncoder(JSONEncoder):
 class AbstractReprEncoder(JSONEncoder):
     """The custom encoder for abstract representation of Pulser objects."""
 
-    def default(self, o: Any) -> dict[str, Any]:
+    def default(self, o: Any) -> Union[dict[str, Any], list[Any]]:
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_abstract_repr"):
             return cast(dict, o._to_abstract_repr())
         elif isinstance(o, np.ndarray):
-            return o.tolist()
+            return cast(list, o.tolist())
         elif isinstance(o, set):
             return list(o)
         else:

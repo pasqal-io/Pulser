@@ -13,9 +13,9 @@
 # limitations under the License.
 import json
 
+import jsonschema
 import numpy as np
 import pytest
-import jsonschema
 
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice

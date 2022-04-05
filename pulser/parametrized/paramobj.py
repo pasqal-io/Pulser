@@ -24,10 +24,9 @@ from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
-import pulser
 from pulser.json.signatures import (
-    SIGNATURES,
     BINARY_OPERATORS,
+    SIGNATURES,
     UNARY_OPERATORS,
 )
 from pulser.json.utils import abstract_repr, obj_to_dict

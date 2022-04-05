@@ -74,7 +74,8 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
             f"Not enough positional arguments given for '{name}' (expected "
             f"{len(signature.pos)}, got {len(args)})."
         )
-    res = signature.extra.copy()  # Starts with extra info ({} if undefined)
+    res: dict[str, Any] = {}
+    res.update(signature.extra)  # Starts with extra info ({} if undefined)
     res.update(
         {arg_name: arg_val for arg_name, arg_val in zip(signature.pos, args)}
     )

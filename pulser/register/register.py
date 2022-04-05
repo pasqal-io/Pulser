@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
 from typing import Any, Optional
-import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
