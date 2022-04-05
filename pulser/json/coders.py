@@ -51,6 +51,10 @@ class AbstractReprEncoder(JSONEncoder):
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_abstract_repr"):
             return cast(dict, o._to_abstract_repr())
+        elif isinstance(o, np.ndarray):
+            return o.tolist()
+        elif isinstance(o, set):
+            return list(o)
         else:
             return cast(dict, JSONEncoder.default(self, o))
 
