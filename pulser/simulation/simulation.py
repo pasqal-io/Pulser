@@ -586,7 +586,7 @@ class Simulation:
         """Adapt list to correspond to sampling rate."""
         indices = np.linspace(
             0,
-            self._tot_duration,
+            len(full_array) - 1,
             int(self._sampling_rate * (self._tot_duration + 1)),
             dtype=int,
         )
