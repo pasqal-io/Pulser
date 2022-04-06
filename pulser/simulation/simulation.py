@@ -323,7 +323,7 @@ class Simulation:
             if value == "Full":
                 eval_times = np.copy(self.sampling_times)
             elif value == "Minimal":
-                eval_times = [] # type: ignore
+                eval_times = []  # type: ignore
             else:
                 raise ValueError(
                     "Wrong evaluation time label. It should "
