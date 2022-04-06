@@ -300,7 +300,7 @@ def test_get_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert simple_ham[0, 0] == Chadoq2.interaction_coeff / 10**6 - 2 * detun
+    assert np.isclose(simple_ham[0, 0], Chadoq2.interaction_coeff / 10**6 - 2 * detun)
 
     np.random.seed(123)
     simple_sim_noise = Simulation(
@@ -455,7 +455,7 @@ def test_eval_times():
     assert sim._eval_times_instruction == "Full"
     np.testing.assert_almost_equal(
         sim._eval_times_array,
-        np.append(sim.sampling_times, sim._tot_duration / 1000),
+        sim.sampling_times,
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
@@ -492,13 +492,12 @@ def test_eval_times():
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = 0.4
-    extended_tlist = np.append(sim.sampling_times, sim._tot_duration / 1000)
     np.testing.assert_almost_equal(
-        extended_tlist[
+        sim.sampling_times[
             np.linspace(
                 0,
-                len(extended_tlist) - 1,
-                int(0.4 * len(extended_tlist)),
+                len(sim.sampling_times) - 1,
+                int(0.4 * len(sim.sampling_times)),
                 dtype=int,
             )
         ],
@@ -562,7 +561,7 @@ def test_dephasing():
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
+    assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
@@ -659,8 +658,8 @@ def test_get_xy_hamiltonian():
         )
         < 1e-10
     )
-    assert simple_ham[0, 1] == 0.5 * amp
-    assert simple_ham[3, 3] == -2 * detun
+    assert np.isclose(simple_ham[0, 1], 0.5 * amp)
+    assert np.isclose(simple_ham[3, 3], -2 * detun)
 
 
 def test_run_xy():
