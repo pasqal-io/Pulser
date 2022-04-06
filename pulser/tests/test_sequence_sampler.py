@@ -31,14 +31,16 @@ def assert_nested_dict_equality(got, want: dict) -> None:
         for qty in want["Global"][basis]:
             np.testing.assert_array_equal(
                 got["Global"][basis][qty],
-                want["Global"][basis][qty],
+                # skip final 0 sample from comparison
+                want["Global"][basis][qty][:-1],
             )
     for basis in want["Local"]:
         for qubit in want["Local"][basis]:
             for qty in want["Local"][basis][qubit]:
                 np.testing.assert_array_equal(
                     got["Local"][basis][qubit][qty],
-                    want["Local"][basis][qubit][qty],
+                    # skip final 0 sample from comparison
+                    want["Local"][basis][qubit][qty][:-1],
                 )
 
 
@@ -128,7 +130,7 @@ def test_SLM_samples(seq_with_SLM):
     a_samples = pulse.amplitude.samples
 
     def z() -> np.ndarray:
-        return np.zeros(seq_with_SLM.get_duration())
+        return np.zeros(seq_with_SLM.get_duration() + 1)
 
     want: dict = {
         "Global": {},
@@ -139,9 +141,9 @@ def test_SLM_samples(seq_with_SLM):
             }
         },
     }
-    want["Local"]["ground-rydberg"]["batman"]["amp"][200:401] = a_samples
+    want["Local"]["ground-rydberg"]["batman"]["amp"][200:400] = a_samples
     want["Local"]["ground-rydberg"]["superman"]["amp"][0:200] = a_samples
-    want["Local"]["ground-rydberg"]["superman"]["amp"][200:401] = a_samples
+    want["Local"]["ground-rydberg"]["superman"]["amp"][200:400] = a_samples
 
     got = sample(seq_with_SLM)
     assert_nested_dict_equality(got, want)
