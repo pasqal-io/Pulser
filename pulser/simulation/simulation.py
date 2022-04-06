@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import itertools
+from multiprocessing.sharedctypes import Value
 import warnings
 from collections import Counter
 from collections.abc import Mapping
@@ -97,8 +98,7 @@ class Simulation:
         self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
-        # Include one ns final time-step
-        self._tot_duration = self._seq.get_duration() + 1
+        self._tot_duration = self._seq.get_duration()
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -123,7 +123,8 @@ class Simulation:
         self._collapse_ops: list[qutip.Qobj] = []
 
         self.sampling_times = self._adapt_to_sampling_rate(
-            np.arange(self._tot_duration, dtype=np.double) / 1000
+            # Include extra time step for final instruction from samples:
+            np.arange(self._tot_duration + 1, dtype=np.double) / 1000
         )
         self.evaluation_times = evaluation_times  # type: ignore
 
@@ -318,14 +319,13 @@ class Simulation:
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
         """Sets times at which the results of this simulation are returned."""
-        final_seq_time = (self._tot_duration - 1) / 1000
         if isinstance(value, str):
             if value == "Full":
                 self._eval_times_array = np.copy(self.sampling_times)
             elif value == "Minimal":
                 self._eval_times_array = np.array(
                     [
-                        self.sampling_times[0],
+                        0.0, self._tot_duration/1000
                     ]
                 )
             else:
@@ -345,14 +345,20 @@ class Simulation:
                 int(value * len(self.sampling_times)),
                 dtype=int,
             )
-            # Return sorted array with 0 and final time (if needed)
+            # Return sorted array including 0 and final time 
+            # (needed if value is very small)
             self._eval_times_array = np.union1d(
-                self.sampling_times[indices], [0, final_seq_time]
-            )
+                self.sampling_times[indices],
+                [0.0, self._tot_duration / 1000]
+                )
         elif isinstance(value, (list, tuple, np.ndarray)):
+            if len(value) == 0:
+                raise ValueError(
+                    "Provided evaluation-time list is empty."
+                )
             t_max = np.max(value)
             t_min = np.min(value)
-            if t_max > final_seq_time:
+            if t_max > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
@@ -362,15 +368,11 @@ class Simulation:
                     "Provided evaluation-time list contains "
                     "negative values."
                 )
-            # Ensure the list of times is sorted
-            eval_times = np.array(np.sort(value))
-            if t_min > 0:
-                eval_times = np.insert(eval_times, 0, 0.0)
-            if t_max < final_seq_time:
-                eval_times = np.append(eval_times, final_seq_time)
-
-            self._eval_times_array = eval_times
-            # always include initial and final times
+            # Ensure 0 and final time are included:
+            self._eval_times_array = np.union1d(
+                value, 
+                [0.0, self._tot_duration / 1000]
+                )
         else:
             raise ValueError(
                 "Wrong evaluation time label. It should "
@@ -432,11 +434,12 @@ class Simulation:
             self.operators = deepcopy(self.samples)
 
         def prepare_dict() -> dict[str, np.ndarray]:
-            # Duration includes retargeting, delays, etc.
+            # Duration includes retargeting, delays, etc. 
+            # Also adds extra time step for final instruction
             return {
-                "amp": np.zeros(self._tot_duration),
-                "det": np.zeros(self._tot_duration),
-                "phase": np.zeros(self._tot_duration),
+                "amp": np.zeros(self._tot_duration + 1),
+                "det": np.zeros(self._tot_duration + 1),
+                "phase": np.zeros(self._tot_duration + 1),
             }
 
         def write_samples(
@@ -583,8 +586,8 @@ class Simulation:
         """Adapt list to correspond to sampling rate."""
         indices = np.linspace(
             0,
-            self._tot_duration - 1,
-            int(self._sampling_rate * self._tot_duration),
+            self._tot_duration,
+            int(self._sampling_rate * (self._tot_duration + 1)),
             dtype=int,
         )
         return cast(np.ndarray, full_array[indices])
