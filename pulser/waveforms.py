@@ -873,7 +873,7 @@ class InterpolatedWaveform(Waveform):
             "InterpolatedWaveform",
             self._duration,
             self._values,
-            times=self._kwargs["times"],
+            times=self._times,
         )
 
     def __str__(self) -> str:
