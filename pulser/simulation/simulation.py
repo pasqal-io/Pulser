@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import itertools
-from multiprocessing.sharedctypes import Value
 import warnings
 from collections import Counter
 from collections.abc import Mapping
@@ -324,7 +323,7 @@ class Simulation:
             if value == "Full":
                 eval_times = np.copy(self.sampling_times)
             elif value == "Minimal":
-                eval_times = []
+                eval_times = [] # type: ignore
             else:
                 raise ValueError(
                     "Wrong evaluation time label. It should "
