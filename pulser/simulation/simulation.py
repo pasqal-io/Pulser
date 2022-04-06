@@ -345,14 +345,12 @@ class Simulation:
             # Note: if `value` is very small `eval_times` is an empty list:
             eval_times = self.sampling_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
-            if len(value) == 0:
-                raise ValueError("Provided evaluation-time list is empty.")
-            if np.max(value) > self._tot_duration / 1000:
+            if np.max(value, initial=0) > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
                 )
-            if np.min(value) < 0:
+            if np.min(value, initial=0) < 0:
                 raise ValueError(
                     "Provided evaluation-time list contains "
                     "negative values."
