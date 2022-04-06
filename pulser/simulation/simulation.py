@@ -321,13 +321,9 @@ class Simulation:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = np.copy(self.sampling_times)
+                eval_times = np.copy(self.sampling_times)
             elif value == "Minimal":
-                self._eval_times_array = np.array(
-                    [
-                        0.0, self._tot_duration/1000
-                    ]
-                )
+                eval_times = []
             else:
                 raise ValueError(
                     "Wrong evaluation time label. It should "
@@ -345,40 +341,34 @@ class Simulation:
                 int(value * len(self.sampling_times)),
                 dtype=int,
             )
-            # Return sorted array including 0 and final time 
-            # (needed if value is very small)
-            self._eval_times_array = np.union1d(
-                self.sampling_times[indices],
-                [0.0, self._tot_duration / 1000]
-                )
+            # Note: if `value` is very small `eval_times` is an empty list:
+            eval_times = self.sampling_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
             if len(value) == 0:
                 raise ValueError(
                     "Provided evaluation-time list is empty."
                 )
-            t_max = np.max(value)
-            t_min = np.min(value)
-            if t_max > self._tot_duration / 1000:
+            if np.max(value) > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
                 )
-            if t_min < 0:
+            if np.min(value) < 0:
                 raise ValueError(
                     "Provided evaluation-time list contains "
                     "negative values."
                 )
-            # Ensure 0 and final time are included:
-            self._eval_times_array = np.union1d(
-                value, 
-                [0.0, self._tot_duration / 1000]
-                )
+            eval_times = value
         else:
             raise ValueError(
                 "Wrong evaluation time label. It should "
                 "be `Full`, `Minimal`, an array of times or a "
                 + "float between 0 and 1."
             )
+        # Ensure 0 and final time are included:
+        self._eval_times_array = np.union1d(
+                eval_times, [0.0, self._tot_duration / 1000]
+                )
         self._eval_times_instruction = value
 
     def draw(
