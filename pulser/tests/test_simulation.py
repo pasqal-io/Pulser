@@ -300,7 +300,9 @@ def test_get_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert np.isclose(simple_ham[0, 0], Chadoq2.interaction_coeff / 10**6 - 2 * detun)
+    assert np.isclose(
+        simple_ham[0, 0], Chadoq2.interaction_coeff / 10**6 - 2 * detun
+    )
 
     np.random.seed(123)
     simple_sim_noise = Simulation(

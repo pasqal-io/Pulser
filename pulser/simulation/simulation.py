@@ -124,7 +124,8 @@ class Simulation:
 
         self.sampling_times = self._adapt_to_sampling_rate(
             # Include extra time step for final instruction from samples:
-            np.arange(self._tot_duration + 1, dtype=np.double) / 1000
+            np.arange(self._tot_duration + 1, dtype=np.double)
+            / 1000
         )
         self.evaluation_times = evaluation_times  # type: ignore
 
@@ -345,9 +346,7 @@ class Simulation:
             eval_times = self.sampling_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
             if len(value) == 0:
-                raise ValueError(
-                    "Provided evaluation-time list is empty."
-                )
+                raise ValueError("Provided evaluation-time list is empty.")
             if np.max(value) > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
@@ -367,8 +366,8 @@ class Simulation:
             )
         # Ensure 0 and final time are included:
         self._eval_times_array = np.union1d(
-                eval_times, [0.0, self._tot_duration / 1000]
-                )
+            eval_times, [0.0, self._tot_duration / 1000]
+        )
         self._eval_times_instruction = value
 
     def draw(
@@ -424,7 +423,7 @@ class Simulation:
             self.operators = deepcopy(self.samples)
 
         def prepare_dict() -> dict[str, np.ndarray]:
-            # Duration includes retargeting, delays, etc. 
+            # Duration includes retargeting, delays, etc.
             # Also adds extra time step for final instruction
             return {
                 "amp": np.zeros(self._tot_duration + 1),
