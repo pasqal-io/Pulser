@@ -24,6 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from pulser.register.register_layout import RegisterLayout
 from typing import Sequence as abcSequence
 
+
 class MappableRegister:
     """A register with the traps of each qubit still to be defined.
 
@@ -67,12 +68,17 @@ class MappableRegister:
             raise ValueError(
                 f"All qubits must be labeled with pre-declared qubit IDs."
             )
-        trap_ordered_qubits = {id: qubits[id] for id in self._qubit_ids if id in chosen_ids}
+        trap_ordered_qubits = {
+            id: qubits[id] for id in self._qubit_ids if id in chosen_ids
+        }
         return self._layout.define_register(
-            *tuple(trap_ordered_qubits.values()), qubit_ids=tuple(trap_ordered_qubits.keys())
+            *tuple(trap_ordered_qubits.values()),
+            qubit_ids=tuple(trap_ordered_qubits.keys()),
         )
 
-    def find_indices(self, chosen_ids: set[QubitId], id_list: abcSequence[QubitId]) -> list[int]:
+    def find_indices(
+        self, chosen_ids: set[QubitId], id_list: abcSequence[QubitId]
+    ) -> list[int]:
         """
         Computes indices for the given qubit IDs for a given register mapping.
 
@@ -93,9 +99,13 @@ class MappableRegister:
             Indices of the qubits to denote, only valid for the given mapping.
         """
         if not chosen_ids <= set(self._qubit_ids):
-            raise ValueError("Chosen IDs must be selected among pre-declared qubit IDs.")
+            raise ValueError(
+                "Chosen IDs must be selected among pre-declared qubit IDs."
+            )
         if not set(id_list) <= chosen_ids:
-            raise ValueError("The IDs list must be selected among the chosen IDs.")
+            raise ValueError(
+                "The IDs list must be selected among the chosen IDs."
+            )
         ordered_ids = [id for id in self.qubit_ids if id in chosen_ids]
         return [ordered_ids.index(id) for id in id_list]
 

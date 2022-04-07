@@ -848,8 +848,11 @@ class Sequence:
         self._target(qubits, channel)
 
     @_verify_parametrization
-    def target_index(self, qubits: Union[int, Iterable[int], Parametrized],
-                     channel: Union[str, Parametrized]) -> None:
+    def target_index(
+        self,
+        qubits: Union[int, Iterable[int], Parametrized],
+        channel: Union[str, Parametrized],
+    ) -> None:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
@@ -1233,25 +1236,32 @@ class Sequence:
             self._perform_target_non_parametrized(qubits_set, channel)
 
     @_store
-    def _target_index(self, qubits: Union[Iterable[int], int], channel: str) -> None:
+    def _target_index(
+        self, qubits: Union[Iterable[int], int], channel: str
+    ) -> None:
 
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
         if not self.is_parametrized():
-            qubit_ids_set = {self.register.qubit_ids[index] for index in qubits_set} # TODO try except
+            qubit_ids_set = {
+                self.register.qubit_ids[index] for index in qubits_set
+            }  # TODO try except
             self._perform_target_non_parametrized(qubit_ids_set, channel)
 
     @overload
-    def _precheck_target_qubits_set(self, qubits: Union[Iterable[int], int], channel: str) \
-        -> Union[Set[int]]:
+    def _precheck_target_qubits_set(
+        self, qubits: Union[Iterable[int], int], channel: str
+    ) -> Union[Set[int]]:
         pass
 
     @overload
-    def _precheck_target_qubits_set(self, qubits: Union[Iterable[QubitId], QubitId], channel: str) \
-        -> Union[Set[QubitId], Set[int]]:
+    def _precheck_target_qubits_set(
+        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+    ) -> Union[Set[QubitId], Set[int]]:
         pass
 
-    def _precheck_target_qubits_set(self, qubits: Union[Iterable[QubitId], QubitId], channel: str) \
-        -> Union[Set[QubitId], Set[int]]:
+    def _precheck_target_qubits_set(
+        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+    ) -> Union[Set[QubitId], Set[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
         try:
@@ -1281,11 +1291,13 @@ class Sequence:
         return qubits_set
 
     def _perform_target_non_parametrized(
-            self, qubits_set: Set[QubitId], channel: str
+        self, qubits_set: Set[QubitId], channel: str
     ) -> None:
         for qubit in qubits_set:
             if qubit not in self._qids:
-                raise ValueError(f"The qubit ID '{qubit}' does not belong to the register.")
+                raise ValueError(
+                    f"The qubit ID '{qubit}' does not belong to the register."
+                )
 
         channel_obj = self._channels[channel]
         basis = channel_obj.basis
@@ -1330,9 +1342,11 @@ class Sequence:
             tf = 0
 
         self._last_target[channel] = tf
-        self._add_to_schedule(channel, _TimeSlot("target", ti, tf, set(qubits_set)))
+        self._add_to_schedule(
+            channel, _TimeSlot("target", ti, tf, set(qubits_set))
+        )
 
-    def _delay(self, duration: int, channel: str) -> None: # check
+    def _delay(self, duration: int, channel: str) -> None:
         self._validate_channel(channel)
         if self.is_parametrized():
             return
