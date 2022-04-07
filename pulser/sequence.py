@@ -119,10 +119,11 @@ def _verify_variable(seq: Sequence, x: Any) -> None:
 
 
 def _verify_parametrization(func: F) -> F:
-    """Checks the correctness of the call depending on the sequence status and update it.
+    """Checks and updates the sequence status' consistency with the call.
 
     - Checks the sequence can still be modified.
-    - Checks if all Parametrized inputs stem from declared variables."""
+    - Checks if all Parametrized inputs stem from declared variables.
+    """
 
     @wraps(func)
     def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
@@ -139,7 +140,7 @@ def _verify_parametrization(func: F) -> F:
 
 
 def _store(func: F) -> F:
-    """Checks parametrization status and stores the call for deferred execution when building the Sequence."""
+    """Checks and stores the call to call it when building the Sequence."""
 
     @wraps(func)
     @_verify_parametrization
@@ -864,7 +865,6 @@ class Sequence:
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
         """
-
         if not self.is_parametrized():
             raise RuntimeError(
                 f"Sequence.{self.target_index.__name__} can't be called in"

@@ -66,7 +66,7 @@ class MappableRegister:
         chosen_ids = tuple(qubits.keys())
         if not set(chosen_ids) <= set(self._qubit_ids):
             raise ValueError(
-                f"All qubits must be labeled with pre-declared qubit IDs."
+                "All qubits must be labeled with pre-declared qubit IDs."
             )
         trap_ordered_qubits = {
             id: qubits[id] for id in self._qubit_ids if id in chosen_ids
@@ -79,20 +79,24 @@ class MappableRegister:
     def find_indices(
         self, chosen_ids: set[QubitId], id_list: abcSequence[QubitId]
     ) -> list[int]:
-        """
-        Computes indices for the given qubit IDs for a given register mapping.
+        """Computes indices of qubits according to a register mapping.
 
-        This can especially be useful when building a Pulser Sequence with a parameter denoting qubits.
+        This can especially be useful when building a Pulser Sequence
+        with a parameter denoting qubits.
+
         Example:
             ``
             mapp_reg = TriangularLatticeLayout(50, 5).make_mappable_register(5)
             qubit_map = {"q0": 1, "q2": 4, "q4": 2}
-            indices = mapp_reg.find_indices(qubit_map, ["q4", "q2", "q1", "q2"])
+            indices = mapp_reg.find_indices(
+                qubit_map,
+                ["q4", "q2", "q1", "q2"])
             seq.build(qubits=qubit_map, qubit_indices=indices)
             ``
 
         Args:
-            chosen_ids: IDs of the qubits that are chosen to map the MappableRegister
+            chosen_ids: IDs of the qubits that are chosen to map the
+                MappableRegister
             id_list: IDs of the qubits to denote
 
         Returns:
