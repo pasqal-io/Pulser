@@ -354,7 +354,7 @@ class Simulation:
                     "Provided evaluation-time list contains "
                     "negative values."
                 )
-            eval_times = value  # type: ignore
+            eval_times = np.array(value)  # type: ignore
         else:
             raise ValueError(
                 "Wrong evaluation time label. It should "
