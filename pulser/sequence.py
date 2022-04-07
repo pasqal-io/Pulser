@@ -594,6 +594,73 @@ class Sequence:
             )
         )
 
+    @overload
+    def declare_variable(
+        self,
+        name: str,
+        *,
+        dtype: Union[type[int], type[float], type[str]] = float,
+    ) -> VariableItem:
+        pass
+
+    @overload
+    def declare_variable(
+        self,
+        name: str,
+        *,
+        size: int,
+        dtype: Union[type[int], type[float], type[str]] = float,
+    ) -> Variable:
+        pass
+
+    def declare_variable(
+        self,
+        name: str,
+        size: Optional[int] = None,
+        dtype: Union[type[int], type[float], type[str]] = float,
+    ) -> Union[Variable, VariableItem]:
+        """Declare a new variable within this Sequence.
+
+        The declared variables can be used to create parametrized versions of
+        ``Waveform`` and ``Pulse`` objects, which in turn can be added to the
+        ``Sequence``. Additionally, simple arithmetic operations involving
+        variables are also supported and will return parametrized objects that
+        are dependent on the involved variables.
+
+        Args:
+            name (str): The name for the variable. Must be unique within a
+                Sequence.
+
+        Keyword Args:
+            size (int=1): The number of entries stored in the variable.
+            dtype (default=float): The type of the data that will be assigned
+                to the variable. Must be ``float``, ``int`` or ``str``.
+
+        Returns:
+            Variable: The declared Variable instance.
+
+        Note:
+            To avoid confusion, it is recommended to store the returned
+            Variable instance in a Python variable with the same name.
+        """
+        if name == "qubits":
+            # Necessary because 'qubits' is a keyword arg in self.build()
+            raise ValueError(
+                "'qubits' is a protected name. Please choose a different name "
+                "for the variable."
+            )
+
+        if name in self._variables:
+            raise ValueError("Name for variable is already being used.")
+
+        if size is None:
+            var = self.declare_variable(name, size=1, dtype=dtype)
+            return var[0]
+        else:
+            var = Variable(name, dtype, size=size)
+            self._variables[name] = var
+            return var
+
     @_store
     def add(
         self,
@@ -1162,86 +1229,19 @@ class Sequence:
         plt.show()
 
     @overload
-    def declare_variable(
-        self,
-        name: str,
-        *,
-        dtype: Union[type[int], type[float], type[str]] = float,
-    ) -> VariableItem:
-        pass
-
-    @overload
-    def declare_variable(
-        self,
-        name: str,
-        *,
-        size: int,
-        dtype: Union[type[int], type[float], type[str]] = float,
-    ) -> Variable:
-        pass
-
-    def declare_variable(
-        self,
-        name: str,
-        size: Optional[int] = None,
-        dtype: Union[type[int], type[float], type[str]] = float,
-    ) -> Union[Variable, VariableItem]:
-        """Declare a new variable within this Sequence.
-
-        The declared variables can be used to create parametrized versions of
-        ``Waveform`` and ``Pulse`` objects, which in turn can be added to the
-        ``Sequence``. Additionally, simple arithmetic operations involving
-        variables are also supported and will return parametrized objects that
-        are dependent on the involved variables.
-
-        Args:
-            name (str): The name for the variable. Must be unique within a
-                Sequence.
-
-        Keyword Args:
-            size (int=1): The number of entries stored in the variable.
-            dtype (default=float): The type of the data that will be assigned
-                to the variable. Must be ``float``, ``int`` or ``str``.
-
-        Returns:
-            Variable: The declared Variable instance.
-
-        Note:
-            To avoid confusion, it is recommended to store the returned
-            Variable instance in a Python variable with the same name.
-        """
-        if name == "qubits":
-            # Necessary because 'qubits' is a keyword arg in self.build()
-            raise ValueError(
-                "'qubits' is a protected name. Please choose a different name "
-                "for the variable."
-            )
-
-        if name in self._variables:
-            raise ValueError("Name for variable is already being used.")
-
-        if size is None:
-            var = self.declare_variable(name, size=1, dtype=dtype)
-            return var[0]
-        else:
-            var = Variable(name, dtype, size=size)
-            self._variables[name] = var
-            return var
-
-    @overload
     def _precheck_target_qubits_set(
-            self, qubits: Union[Iterable[int], int], channel: str
+        self, qubits: Union[Iterable[int], int], channel: str
     ) -> Union[Set[int]]:
         pass
 
     @overload
     def _precheck_target_qubits_set(
-            self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
     ) -> Union[Set[QubitId], Set[int]]:
         pass
 
     def _precheck_target_qubits_set(
-            self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
     ) -> Union[Set[QubitId], Set[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
