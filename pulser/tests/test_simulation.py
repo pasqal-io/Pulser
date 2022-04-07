@@ -478,6 +478,18 @@ def test_eval_times():
         np.array([0, sim.sampling_times[-3], sim._tot_duration / 1000]),
     )
 
+    sim.evaluation_times = []
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array([0, sim._tot_duration / 1000]),
+    )
+
+    sim.evaluation_times = 0.0001
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array([0, sim._tot_duration / 1000]),
+    )
+
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = [sim.sampling_times[-10], sim.sampling_times[-3]]
     np.testing.assert_almost_equal(
