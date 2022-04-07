@@ -698,7 +698,7 @@ def test_mappable_register():
         seq.build(qubits={"q0": 1, "q1": 10})
 
     seq_ = seq.build(qubits={"q2": 20, "q0": 10})
-    seq_._last("ryd").targets == {"q2", "q0"}
+    assert seq_._last("ryd").targets == {"q2", "q0"}
     assert not seq_.is_register_mappable()
     assert seq_.register == Register(
         {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}
@@ -707,14 +707,18 @@ def test_mappable_register():
         seq_.build(qubits={"q2": 20, "q0": 10})
 
 
-def test_target_index():
-    layout = TriangularLatticeLayout(100, 5)
-    mapp_reg = layout.make_mappable_register(10)
-    seq = Sequence(mapp_reg, Chadoq2)
+@pytest.mark.parametrize("reg, build_params, expected_target",
+                         [(TriangularLatticeLayout(100, 5).make_mappable_register(10), dict(qubits=dict(q0=1, q4=2, q3=0), index=2), "q4"),
+                          (Register(dict(b=[10,10], c=[5,5], a=[0,0])), dict(index=0), "b"),
+                          (TriangularLatticeLayout(100, 5).define_register(2, 3, 0, qubit_ids=["a", "b", "c"]), dict(index=2), "c"),
+                          (TriangularLatticeLayout(100, 5).define_register(2, 3, 0), dict(index=2), "q2")])
+def test_target_index(reg, build_params, expected_target):
+    seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
     with pytest.raises(RuntimeError, match="Sequence.target_index can't be called in"
-                " non parametrized sequences"):
+                                           " non parametrized sequences"):
         seq.target_index(1, channel="ch0")
     index = seq.declare_variable("index", dtype=int)
     seq.target_index(index, channel="ch0")
-    seq.build(qubits=dict(q0=1), index=0)
+    built_seq = seq.build(**build_params)
+    assert built_seq._last("ch0").targets == {expected_target}

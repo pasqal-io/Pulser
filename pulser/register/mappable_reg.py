@@ -65,10 +65,11 @@ class MappableRegister:
         chosen_ids = tuple(qubits.keys())
         if not set(chosen_ids) <= set(self._qubit_ids):
             raise ValueError(
-                f"All qubits must be labeled with pre-declared qubit IDs. {chosen_ids!r}, {self._qubit_ids!r}"
+                f"All qubits must be labeled with pre-declared qubit IDs."
             )
+        trap_ordered_qubits = {id: qubits[id] for id in self._qubit_ids if id in chosen_ids}
         return self._layout.define_register(
-            *tuple(qubits.values()), qubit_ids=chosen_ids
+            *tuple(trap_ordered_qubits.values()), qubit_ids=tuple(trap_ordered_qubits.keys())
         )
 
     def find_indices(self, chosen_ids: set[QubitId], id_list: abcSequence[QubitId]) -> list[int]:
