@@ -131,7 +131,7 @@ class Simulation:
         # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
         if hasattr(self._seq, "_measurement"):
-            self._meas_basis = cast(str, self._seq._measurement)
+            self._meas_basis = self._seq._measurement
         else:
             if self.basis_name in {"digital", "all"}:
                 self._meas_basis = "digital"
@@ -642,19 +642,18 @@ class Simulation:
                 self.basis[proj[0]] * self.basis[proj[1]].dag()
             )
 
-    def _construct_hamiltonian(self, update_and_extract: bool = True) -> None:
+    def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the Sequence.
 
         Also builds qutip.Qobjs related to the Sequence if not built already,
         and refreshes potential noise parameters by drawing new at random.
 
         Args:
-            update_and_extract(bool=True): Whether to update the noise
-                parameters and extract the samples from the sequence.
+            update(bool=True): Whether to update the noise parameters.
         """
-        if update_and_extract:
+        if update:
             self._update_noise()
-            self._extract_samples()
+        self._extract_samples()
         if not hasattr(self, "basis_name"):
             self._build_basis_and_op_matrices()
 
@@ -976,7 +975,7 @@ class Simulation:
             else:
                 reps = 1
             # At each run, new random noise: new Hamiltonian
-            self._construct_hamiltonian(update_and_extract=update_ham)
+            self._construct_hamiltonian(update=update_ham)
             # Get CoherentResults instance from sequence with added noise:
             cleanres_noisyseq = _run_solver()
             # Extract statistics at eval time:

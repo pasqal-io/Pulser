@@ -103,9 +103,6 @@ class Variable(Parametrized, OpSupport):
     def __str__(self) -> str:
         return self.name
 
-    def __len__(self) -> int:
-        return self.size
-
     def __getitem__(self, key: Union[int, slice]) -> VariableItem:
         if not isinstance(key, (int, slice)):
             raise TypeError(f"Invalid key type {type(key)} for '{self.name}'.")
@@ -116,7 +113,7 @@ class Variable(Parametrized, OpSupport):
         return VariableItem(self, key)
 
     def __iter__(self) -> Iterator[VariableItem]:
-        for i in range(len(self)):
+        for i in range(self.size):
             yield self[i]
 
 

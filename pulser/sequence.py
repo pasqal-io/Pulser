@@ -665,7 +665,7 @@ class Sequence:
     def add(
         self,
         pulse: Union[Pulse, Parametrized],
-        channel: Union[str, Parametrized],
+        channel: str,
         protocol: PROTOCOLS = "min-delay",
     ) -> None:
         """Adds a pulse to a channel.
@@ -688,9 +688,6 @@ class Sequence:
                   that idles the channel until the end of the other channels'
                   latest pulse.
         """
-        pulse = cast(Pulse, pulse)
-        channel = cast(str, channel)
-
         self._validate_channel(channel)
 
         valid_protocols = get_args(PROTOCOLS)
@@ -832,7 +829,7 @@ class Sequence:
     def target(
         self,
         qubits: Union[QubitId, Iterable[QubitId], Parametrized],
-        channel: Union[str, Parametrized],
+        channel: str,
     ) -> None:
         """Changes the target qubit of a 'Local' channel.
 
@@ -844,7 +841,6 @@ class Sequence:
                 a channel with 'Local' addressing.
         """
         qubits = cast(QubitId, qubits)
-        channel = cast(str, channel)
 
         self._target(qubits, channel)
 
@@ -879,7 +875,7 @@ class Sequence:
     def delay(
         self,
         duration: Union[int, Parametrized],
-        channel: Union[str, Parametrized],
+        channel: str,
     ) -> None:
         """Idles a given channel for a specific duration.
 
@@ -887,15 +883,10 @@ class Sequence:
             duration (int): Time to delay (in multiples of 4 ns).
             channel (str): The channel's name provided when declared.
         """
-        duration = cast(int, duration)
-        channel = cast(str, channel)
-
         self._delay(duration, channel)
 
     @_store
-    def measure(
-        self, basis: Union[str, Parametrized] = "ground-rydberg"
-    ) -> None:
+    def measure(self, basis: str = "ground-rydberg") -> None:
         """Measures in a valid basis.
 
         Note:
@@ -935,7 +926,7 @@ class Sequence:
         self,
         phi: Union[float, Parametrized],
         *targets: Union[QubitId, Parametrized],
-        basis: Union[str, Parametrized] = "digital",
+        basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
@@ -951,14 +942,10 @@ class Sequence:
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
-        phi = cast(float, phi)
-        basis = cast(str, basis)
-        targets = cast(Tuple[QubitId], targets)
-
         self._phase_shift(phi, *targets, basis=basis)
 
     @_store
-    def align(self, *channels: Union[str, Parametrized]) -> None:
+    def align(self, *channels: str) -> None:
         """Aligns multiple channels in time.
 
         Introduces delays that align the provided channels with the one that
@@ -984,7 +971,6 @@ class Sequence:
         if self.is_parametrized():
             return
 
-        channels = cast(Tuple[str], channels)
         last_ts = {
             id: self.get_duration(id, include_fall_time=True)
             for id in channels
@@ -1241,7 +1227,7 @@ class Sequence:
         pass
 
     def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+        self, qubits: Union[Iterable[QubitId], QubitId, Parametrized], channel: str
     ) -> Union[Set[QubitId], Set[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
@@ -1346,11 +1332,12 @@ class Sequence:
             channel, _TimeSlot("target", ti, tf, set(qubits_set))
         )
 
-    def _delay(self, duration: int, channel: str) -> None:
+    def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
         self._validate_channel(channel)
         if self.is_parametrized():
             return
 
+        duration = cast(int, duration)
         last = self._last(channel)
         ti = last.tf
         tf = ti + self._channels[channel].validate_duration(duration)
@@ -1359,7 +1346,10 @@ class Sequence:
         )
 
     def _phase_shift(
-        self, phi: float, *targets: QubitId, basis: str = "digital"
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[QubitId, Parametrized],
+        basis: str,
     ) -> None:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
@@ -1376,7 +1366,8 @@ class Sequence:
                 "All given targets have to be qubit ids declared"
                 " in this sequence's register."
             )
-
+        phi = cast(float, phi)
+        targets = cast(Tuple[QubitId], targets)
         if phi % (2 * np.pi) == 0:
             return
 
@@ -1466,6 +1457,11 @@ class Sequence:
             raise ValueError("The chosen channel has no target.")
 
     def _validate_channel(self, channel: str) -> None:
+        if isinstance(channel, Parametrized):
+            raise NotImplementedError(
+                "Using parametrized objects or variables to refer to channels "
+                "is not supported."
+            )
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
 
