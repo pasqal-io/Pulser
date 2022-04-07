@@ -1228,39 +1228,20 @@ class Sequence:
             self._variables[name] = var
             return var
 
-    def _target(
-        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
-    ) -> None:
-        qubits_set = self._precheck_target_qubits_set(qubits, channel)
-        if not self.is_parametrized():
-            self._perform_target_non_parametrized(qubits_set, channel)
-
-    @_store
-    def _target_index(
-        self, qubits: Union[Iterable[int], int], channel: str
-    ) -> None:
-
-        qubits_set = self._precheck_target_qubits_set(qubits, channel)
-        if not self.is_parametrized():
-            qubit_ids_set = {
-                self.register.qubit_ids[index] for index in qubits_set
-            }  # TODO try except
-            self._perform_target_non_parametrized(qubit_ids_set, channel)
-
     @overload
     def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[int], int], channel: str
+            self, qubits: Union[Iterable[int], int], channel: str
     ) -> Union[Set[int]]:
         pass
 
     @overload
     def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+            self, qubits: Union[Iterable[QubitId], QubitId], channel: str
     ) -> Union[Set[QubitId], Set[int]]:
         pass
 
     def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+            self, qubits: Union[Iterable[QubitId], QubitId], channel: str
     ) -> Union[Set[QubitId], Set[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
@@ -1289,6 +1270,25 @@ class Sequence:
                     )
 
         return qubits_set
+
+    def _target(
+        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+    ) -> None:
+        qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        if not self.is_parametrized():
+            self._perform_target_non_parametrized(qubits_set, channel)
+
+    @_store
+    def _target_index(
+        self, qubits: Union[Iterable[int], int], channel: str
+    ) -> None:
+
+        qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        if not self.is_parametrized():
+            qubit_ids_set = {
+                self.register.qubit_ids[index] for index in qubits_set
+            }  # TODO try except
+            self._perform_target_non_parametrized(qubit_ids_set, channel)
 
     def _perform_target_non_parametrized(
         self, qubits_set: Set[QubitId], channel: str
