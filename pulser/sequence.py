@@ -98,38 +98,52 @@ def _screen(func: F) -> F:
     return cast(F, wrapper)
 
 
-def _store(func: F) -> F:
-    """Stores any Sequence building call for deferred execution."""
+def _verify_variable(seq: Sequence, x: Any) -> None:
+    if isinstance(x, Parametrized):
+        # If not already, the sequence becomes parametrized
+        seq._building = False
+        for name, var in x.variables.items():
+            if name not in seq._variables:
+                raise ValueError(f"Unknown variable '{name}'.")
+            elif seq._variables[name] is not var:
+                raise ValueError(
+                    f"{x} has variables that don't come from this "
+                    "Sequence. Use only what's returned by this"
+                    "Sequence's 'declare_variable' method as your"
+                    "variables."
+                )
+    elif isinstance(x, Iterable) and not isinstance(x, str):
+        # Recursively look for parametrized objs inside the arguments
+        for y in x:
+            _verify_variable(seq, y)
+
+
+def _verify_parametrization(func: F) -> F:
+    """Checks the correctness of the call depending on the sequence status and update it.
+
+    - Checks the sequence can still be modified.
+    - Checks if all Parametrized inputs stem from declared variables."""
 
     @wraps(func)
     def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        def verify_variable(x: Any) -> None:
-            if isinstance(x, Parametrized):
-                # If not already, the sequence becomes parametrized
-                self._building = False
-                for name, var in x.variables.items():
-                    if name not in self._variables:
-                        raise ValueError(f"Unknown variable '{name}'.")
-                    elif self._variables[name] is not var:
-                        raise ValueError(
-                            f"{x} has variables that don't come from this "
-                            "Sequence. Use only what's returned by this"
-                            "Sequence's 'declare_variable' method as your"
-                            "variables."
-                        )
-            elif isinstance(x, Iterable) and not isinstance(x, str):
-                # Recursively look for parametrized objs inside the arguments
-                for y in x:
-                    verify_variable(y)
-
         if self._is_measured and self.is_parametrized():
             raise RuntimeError(
                 "The sequence has been measured, no further "
                 "changes are allowed."
             )
-        # Check if all Parametrized inputs stem from declared variables
         for x in chain(args, kwargs.values()):
-            verify_variable(x)
+            _verify_variable(self, x)
+        func(self, *args, **kwargs)
+
+    return cast(F, wrapper)
+
+
+def _store(func: F) -> F:
+    """Checks parametrization status and stores the call for deferred execution when building the Sequence."""
+
+    @wraps(func)
+    @_verify_parametrization
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
         storage = self._calls if self._building else self._to_build_calls
         func(self, *args, **kwargs)
         storage.append(_Call(func.__name__, args, kwargs))
@@ -833,6 +847,31 @@ class Sequence:
 
         self._target(qubits, channel)
 
+    @_verify_parametrization
+    def target_index(self, qubits: Union[int, Iterable[int], Parametrized],
+                     channel: Union[str, Parametrized]) -> None:
+        """Changes the target qubit of a 'Local' channel.
+
+        Args:
+            qubits (Union[int, str, Iterable]): The new target for this
+                channel. Must correspond to a qubit index (a number between 0
+                 and the number of qubits, which is determined at build time
+                 when using a MappableRegister) or an iterable
+                of qubit indices, when multi-qubit addressing is possible.
+            channel (str): The channel's name provided when declared. Must be
+                a channel with 'Local' addressing.
+        """
+
+        if not self.is_parametrized():
+            raise RuntimeError(
+                f"Sequence.{self.target_index.__name__} can't be called in"
+                " non parametrized sequences."
+            )
+
+        qubits = cast(int, qubits)
+        channel = cast(str, channel)
+        self._target_index(qubits, channel)
+
     @_store
     def delay(
         self,
@@ -1189,16 +1228,40 @@ class Sequence:
     def _target(
         self, qubits: Union[Iterable[QubitId], QubitId], channel: str
     ) -> None:
+        qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        if not self.is_parametrized():
+            self._perform_target_non_parametrized(qubits_set, channel)
+
+    @_store
+    def _target_index(self, qubits: Union[Iterable[int], int], channel: str) -> None:
+
+        qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        if not self.is_parametrized():
+            qubit_ids_set = frozenset({self.register.qubit_ids[index] for index in qubits_set}) # TODO try except
+            self._perform_target_non_parametrized(qubit_ids_set, channel)
+
+    @overload
+    def _precheck_target_qubits_set(self, qubits: Union[Iterable[int], int], channel: str) \
+        -> Union[frozenset[int]]:
+        pass
+
+    @overload
+    def _precheck_target_qubits_set(self, qubits: Union[Iterable[QubitId], QubitId], channel: str) \
+        -> Union[frozenset[QubitId], frozenset[int]]:
+        pass
+
+    def _precheck_target_qubits_set(self, qubits: Union[Iterable[QubitId], QubitId], channel: str) \
+        -> Union[frozenset[QubitId], frozenset[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
         try:
             qubits_set = (
-                set(cast(Iterable, qubits))
+                frozenset(cast(Iterable, qubits))
                 if not isinstance(qubits, str)
-                else {qubits}
+                else frozenset({qubits})
             )
         except TypeError:
-            qubits_set = {qubits}
+            qubits_set = frozenset({qubits})
 
         if channel_obj.addressing != "Local":
             raise ValueError("Can only choose target of 'Local' channels.")
@@ -1214,11 +1277,16 @@ class Sequence:
                     raise ValueError(
                         "All non-variable qubits must belong to the register."
                     )
-            return
 
-        elif not qubits_set.issubset(self._qids):
+        return qubits_set
+
+    def _perform_target_non_parametrized(
+            self, qubits_set: frozenset[QubitId], channel: str
+    ) -> None:
+        if not qubits_set.issubset(self._qids):
             raise ValueError("All given qubits must belong to the register.")
 
+        channel_obj = self._channels[channel]
         basis = channel_obj.basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
         if len(phase_refs) != 1:
@@ -1261,9 +1329,9 @@ class Sequence:
             tf = 0
 
         self._last_target[channel] = tf
-        self._add_to_schedule(channel, _TimeSlot("target", ti, tf, qubits_set))
+        self._add_to_schedule(channel, _TimeSlot("target", ti, tf, set(qubits_set)))
 
-    def _delay(self, duration: int, channel: str) -> None:
+    def _delay(self, duration: int, channel: str) -> None: # check
         self._validate_channel(channel)
         if self.is_parametrized():
             return

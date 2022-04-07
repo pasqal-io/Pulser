@@ -705,3 +705,16 @@ def test_mappable_register():
     )
     with pytest.raises(ValueError, match="already has a concrete register"):
         seq_.build(qubits={"q2": 20, "q0": 10})
+
+
+def test_target_index():
+    layout = TriangularLatticeLayout(100, 5)
+    mapp_reg = layout.make_mappable_register(10)
+    seq = Sequence(mapp_reg, Chadoq2)
+    seq.declare_channel("ch0", "rydberg_local")
+    with pytest.raises(RuntimeError, match="Sequence.target_index can't be called in"
+                " non parametrized sequences"):
+        seq.target_index(1, channel="ch0")
+    index = seq.declare_variable("index", dtype=int)
+    seq.target_index(index, channel="ch0")
+    seq.build(qubits=dict(q0=1), index=0)
