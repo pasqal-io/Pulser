@@ -1227,7 +1227,9 @@ class Sequence:
         pass
 
     def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[QubitId], QubitId, Parametrized], channel: str
+        self,
+        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        channel: str,
     ) -> Union[Set[QubitId], Set[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
