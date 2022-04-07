@@ -21,9 +21,18 @@ from pulser.waveforms import BlackmanWaveform, RampWaveform
 def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     """Check against the legacy sample extraction in the simulation module."""
     got = sample(seq)
-    want = pulser.Simulation(seq).samples
+    want = pulser.Simulation(seq).samples.copy()
 
-    assert_nested_dict_equality(got, want)
+    def truncate_samples(samples_dict):
+        for key, value in samples_dict.items():
+            if isinstance(value, dict):
+                if value:  # Dictionary is not empty
+                    samples_dict[key] = truncate_samples(value)
+            else:
+                samples_dict[key] = value[:-1]
+        return samples_dict
+
+    assert_nested_dict_equality(got, truncate_samples(want))
 
 
 def assert_nested_dict_equality(got, want: dict) -> None:
@@ -139,9 +148,9 @@ def test_SLM_samples(seq_with_SLM):
             }
         },
     }
-    want["Local"]["ground-rydberg"]["batman"]["amp"][200:401] = a_samples
+    want["Local"]["ground-rydberg"]["batman"]["amp"][200:400] = a_samples
     want["Local"]["ground-rydberg"]["superman"]["amp"][0:200] = a_samples
-    want["Local"]["ground-rydberg"]["superman"]["amp"][200:401] = a_samples
+    want["Local"]["ground-rydberg"]["superman"]["amp"][200:400] = a_samples
 
     got = sample(seq_with_SLM)
     assert_nested_dict_equality(got, want)
