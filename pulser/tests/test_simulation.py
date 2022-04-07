@@ -655,7 +655,7 @@ def test_get_xy_hamiltonian():
 
     assert np.isclose(np.linalg.norm(simple_seq.magnetic_field[0:2]), 1)
 
-    simple_sim = Simulation(simple_seq, sampling_rate=0.01)
+    simple_sim = Simulation(simple_seq, sampling_rate=0.03)
     with pytest.raises(
         ValueError, match="less than or equal to the sequence duration"
     ):
@@ -672,8 +672,8 @@ def test_get_xy_hamiltonian():
         )
         < 1e-10
     )
-    assert np.isclose(simple_ham[0, 1], 0.5 * amp)
-    assert np.isclose(simple_ham[3, 3], -2 * detun)
+    assert simple_ham[0, 1] == 0.5 * amp
+    assert simple_ham[3, 3] == -2 * detun
 
 
 def test_run_xy():
