@@ -144,7 +144,7 @@ def test_target():
 
     with pytest.raises(ValueError, match="name of a declared channel"):
         seq.target("q0", "ch2")
-    with pytest.raises(ValueError, match="qubits must belong"):
+    with pytest.raises(ValueError, match="does not belong"):
         seq.target(0, "ch0")
         seq.target("0", "ch1")
     with pytest.raises(ValueError, match="Can only choose target of 'Local'"):

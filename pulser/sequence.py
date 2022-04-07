@@ -20,7 +20,7 @@ import json
 import os
 import warnings
 from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable, Mapping
+from collections.abc import Callable, Generator, Iterable, Mapping, Set
 from functools import wraps
 from itertools import chain
 from sys import version_info
@@ -1237,31 +1237,31 @@ class Sequence:
 
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
         if not self.is_parametrized():
-            qubit_ids_set = frozenset({self.register.qubit_ids[index] for index in qubits_set}) # TODO try except
+            qubit_ids_set = {self.register.qubit_ids[index] for index in qubits_set} # TODO try except
             self._perform_target_non_parametrized(qubit_ids_set, channel)
 
     @overload
     def _precheck_target_qubits_set(self, qubits: Union[Iterable[int], int], channel: str) \
-        -> Union[frozenset[int]]:
+        -> Union[Set[int]]:
         pass
 
     @overload
     def _precheck_target_qubits_set(self, qubits: Union[Iterable[QubitId], QubitId], channel: str) \
-        -> Union[frozenset[QubitId], frozenset[int]]:
+        -> Union[Set[QubitId], Set[int]]:
         pass
 
     def _precheck_target_qubits_set(self, qubits: Union[Iterable[QubitId], QubitId], channel: str) \
-        -> Union[frozenset[QubitId], frozenset[int]]:
+        -> Union[Set[QubitId], Set[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
         try:
             qubits_set = (
-                frozenset(cast(Iterable, qubits))
+                set(cast(Iterable, qubits))
                 if not isinstance(qubits, str)
-                else frozenset({qubits})
+                else {qubits}
             )
         except TypeError:
-            qubits_set = frozenset({qubits})
+            qubits_set = {qubits}
 
         if channel_obj.addressing != "Local":
             raise ValueError("Can only choose target of 'Local' channels.")
@@ -1281,10 +1281,11 @@ class Sequence:
         return qubits_set
 
     def _perform_target_non_parametrized(
-            self, qubits_set: frozenset[QubitId], channel: str
+            self, qubits_set: Set[QubitId], channel: str
     ) -> None:
-        if not qubits_set.issubset(self._qids):
-            raise ValueError("All given qubits must belong to the register.")
+        for qubit in qubits_set:
+            if qubit not in self._qids:
+                raise ValueError(f"The qubit ID '{qubit}' does not belong to the register.")
 
         channel_obj = self._channels[channel]
         basis = channel_obj.basis
