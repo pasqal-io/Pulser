@@ -21,9 +21,18 @@ from pulser.waveforms import BlackmanWaveform, RampWaveform
 def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     """Check against the legacy sample extraction in the simulation module."""
     got = sample(seq)
-    want = pulser.Simulation(seq).samples
+    want = pulser.Simulation(seq).samples.copy()
 
-    assert_nested_dict_equality(got, want)
+    def truncate_samples(samples_dict):
+        for key, value in samples_dict.items():
+            if isinstance(value, dict):
+                if value:  # Dictionary is not empty
+                    samples_dict[key] = truncate_samples(value)
+            else:
+                samples_dict[key] = value[:-1]
+        return samples_dict
+
+    assert_nested_dict_equality(got, truncate_samples(want))
 
 
 def assert_nested_dict_equality(got, want: dict) -> None:
@@ -31,16 +40,14 @@ def assert_nested_dict_equality(got, want: dict) -> None:
         for qty in want["Global"][basis]:
             np.testing.assert_array_equal(
                 got["Global"][basis][qty],
-                # skip final 0 sample from comparison
-                want["Global"][basis][qty][:-1],
+                want["Global"][basis][qty],
             )
     for basis in want["Local"]:
         for qubit in want["Local"][basis]:
             for qty in want["Local"][basis][qubit]:
                 np.testing.assert_array_equal(
                     got["Local"][basis][qubit][qty],
-                    # skip final 0 sample from comparison
-                    want["Local"][basis][qubit][qty][:-1],
+                    want["Local"][basis][qubit][qty],
                 )
 
 
@@ -130,7 +137,7 @@ def test_SLM_samples(seq_with_SLM):
     a_samples = pulse.amplitude.samples
 
     def z() -> np.ndarray:
-        return np.zeros(seq_with_SLM.get_duration() + 1)
+        return np.zeros(seq_with_SLM.get_duration())
 
     want: dict = {
         "Global": {},
