@@ -7,6 +7,6 @@ exclude_lines =
     # Don't test pass statements
     pass
 
-omit = pulser/tests/*
+omit = tests/*
 
 show_missing = True
