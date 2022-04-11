@@ -1293,9 +1293,12 @@ class Sequence:
 
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
         if not self.is_parametrized():
-            qubit_ids_set = {
-                self.register.qubit_ids[index] for index in qubits_set
-            }  # TODO try except
+            try:
+                qubit_ids_set = {
+                    self.register.qubit_ids[index] for index in qubits_set
+                }
+            except IndexError:
+                raise IndexError("Indices must exist for the register.")
             self._perform_target_non_parametrized(qubit_ids_set, channel)
 
     def _perform_target_non_parametrized(
@@ -1420,8 +1423,12 @@ class Sequence:
         self._precheck_phase_shift(*targets, basis=basis)
         if not self.is_parametrized():  # TODO
             targets = cast(Tuple[int], targets)
-            target_ids = [self.register.qubit_ids[index] for index in targets]
-            # TODO try except
+            try:
+                target_ids = [
+                    self.register.qubit_ids[index] for index in targets
+                ]
+            except IndexError:
+                raise IndexError("Indices must exist for the register.")
             self._phase_shift_non_parametrized(phi, *target_ids, basis=basis)
 
     def _to_dict(self) -> dict[str, Any]:

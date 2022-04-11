@@ -708,17 +708,19 @@ def test_mappable_register():
 
 
 index_function_non_mappable_register_values = [
-    (Register(dict(b=[10, 10], c=[5, 5], a=[0, 0])), dict(index=0), "b"),
+    (Register(dict(b=[10, 10], c=[5, 5], a=[0, 0])), dict(), 0, "b"),
     (
         TriangularLatticeLayout(100, 5).define_register(
             2, 3, 0, qubit_ids=["a", "b", "c"]
         ),
-        dict(index=2),
+        dict(),
+        2,
         "c",
     ),
     (
         TriangularLatticeLayout(100, 5).define_register(2, 3, 0),
-        dict(index=2),
+        dict(),
+        2,
         "q2",
     ),
 ]
@@ -726,12 +728,13 @@ index_function_non_mappable_register_values = [
 index_function_mappable_register_values = [
     (
         TriangularLatticeLayout(100, 5).make_mappable_register(10),
-        dict(qubits=dict(q0=1, q4=2, q3=0), index=2),
+        dict(qubits=dict(q0=1, q4=2, q3=0)),
+        2,
         "q4",
     ),
 ]
 
-index_function_params = "reg, build_params, expected_target"
+index_function_params = "reg, build_params, index, expected_target"
 
 
 @pytest.mark.parametrize(
@@ -741,12 +744,44 @@ index_function_params = "reg, build_params, expected_target"
         *index_function_mappable_register_values,
     ],
 )
-def test_parametrized_index_functions(reg, build_params, expected_target):
+def test_parametrized_index_functions(
+    reg, build_params, index, expected_target
+):
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
     phi = np.pi / 4
-    index = seq.declare_variable("index", dtype=int)
+    index_var = seq.declare_variable("index", dtype=int)
+    seq.target_index(index_var, channel="ch0")
+    seq.phase_shift_index(phi, index_var)
+    built_seq = seq.build(**build_params, index=index)
+    assert built_seq._last("ch0").targets == {expected_target}
+    assert built_seq.current_phase_ref(expected_target, "digital") == phi
+
+    with pytest.raises(
+        IndexError, match="Indices must exist for the register"
+    ):
+        seq.build(**build_params, index=20)
+
+
+@pytest.mark.parametrize(
+    index_function_params, index_function_non_mappable_register_values
+)
+def test_non_parametrized_non_mappable_register_index_functions(
+    reg, build_params, index, expected_target
+):
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch0", "rydberg_local")
+    seq.declare_channel("ch1", "raman_local")
+    phi = np.pi / 4
+    with pytest.raises(
+        IndexError, match="Indices must exist for the register"
+    ):
+        seq.target_index(20, channel="ch0")
+    with pytest.raises(
+        IndexError, match="Indices must exist for the register"
+    ):
+        seq.phase_shift_index(phi, 20)
     seq.target_index(index, channel="ch0")
     seq.phase_shift_index(phi, index)
     built_seq = seq.build(**build_params)
@@ -755,29 +790,10 @@ def test_parametrized_index_functions(reg, build_params, expected_target):
 
 
 @pytest.mark.parametrize(
-    index_function_params, index_function_non_mappable_register_values
-)
-def test_non_parametrized_non_mappable_register_index_functions(
-    reg, build_params, expected_target
-):
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("ch0", "rydberg_local")
-    seq.declare_channel("ch1", "raman_local")
-    phi = np.pi / 4
-    build_params_copy = build_params.copy()
-    index = build_params_copy.pop("index")
-    seq.target_index(index, channel="ch0")
-    seq.phase_shift_index(phi, index)
-    built_seq = seq.build(**build_params_copy)
-    assert built_seq._last("ch0").targets == {expected_target}
-    assert built_seq.current_phase_ref(expected_target, "digital") == phi
-
-
-@pytest.mark.parametrize(
     index_function_params, index_function_mappable_register_values
 )
 def test_non_parametrized_mappable_register_index_functions_failure(
-    reg, build_params, expected_target
+    reg, build_params, index, expected_target
 ):
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
@@ -788,10 +804,10 @@ def test_non_parametrized_mappable_register_index_functions_failure(
         match="Sequence.target_index cannot be called in"
         " non parametrized sequences",
     ):
-        seq.target_index(1, channel="ch0")
+        seq.target_index(index, channel="ch0")
     with pytest.raises(
         RuntimeError,
         match="Sequence.phase_shift_index cannot be called in"
         " non parametrized sequences",
     ):
-        seq.phase_shift_index(phi, 1)
+        seq.phase_shift_index(phi, index)
