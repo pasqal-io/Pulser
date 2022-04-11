@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+from typing import Any
 from unittest.mock import patch
 
 import numpy as np
@@ -707,7 +708,7 @@ def test_mappable_register():
         seq_.build(qubits={"q2": 20, "q0": 10})
 
 
-index_function_non_mappable_register_values = [
+index_function_non_mappable_register_values: Any = [
     (Register(dict(b=[10, 10], c=[5, 5], a=[0, 0])), dict(), 0, "b"),
     (
         TriangularLatticeLayout(100, 5).define_register(
