@@ -850,26 +850,25 @@ class Sequence:
         qubits: Union[int, Iterable[int], Parametrized],
         channel: Union[str, Parametrized],
     ) -> None:
-        """Changes the target qubit of a 'Local' channel.
+        """Acts as ``target`` using indices instead of Qubit IDs.
 
-        Args:
-            qubits (Union[int, str, Iterable]): The new target for this
-                channel. Must correspond to a qubit index (a number between 0
-                 and the number of qubits, which is determined at build time
-                 when using a MappableRegister) or an iterable
-                of qubit indices, when multi-qubit addressing is possible.
-            channel (str): The channel's name provided when declared. Must be
-                a channel with 'Local' addressing.
+        A qubit index is a number between 0 and the number of qubits.
+        It is then converted to a Qubit ID using the order in which they
+        were declared when instantiating the ``Register``
+        or ``MappableRegister``.
         """
-        if not self.is_parametrized():
-            raise RuntimeError(
-                f"Sequence.{self.target_index.__name__} can't be called in"
-                " non parametrized sequences."
-            )
+        self._check_allow_qubit_index(self.target_index.__name__)
 
         qubits = cast(int, qubits)
         channel = cast(str, channel)
         self._target_index(qubits, channel)
+
+    def _check_allow_qubit_index(self, method_name: str) -> None:
+        if not self.is_parametrized():
+            raise RuntimeError(
+                f"Sequence.{method_name} can't be called in"
+                " non parametrized sequences."
+            )
 
     @_store
     def delay(
@@ -943,6 +942,23 @@ class Sequence:
                 channel.
         """
         self._phase_shift(phi, *targets, basis=basis)
+
+    @_verify_parametrization
+    def phase_shift_index(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[int, Parametrized],
+        basis: str = "digital",
+    ) -> None:
+        """Acts as ``phase_shift`` using indices instead of Qubit IDs.
+
+        A qubit index is a number between 0 and the number of qubits.
+        It is then converted to a Qubit ID using the order in which they
+        were declared when instantiating the ``Register``
+        or ``MappableRegister``.
+        """
+        self._check_allow_qubit_index(self.phase_shift_index.__name__)
+        self._phase_shift_index(phi, *targets, basis=basis)
 
     @_store
     def align(self, *channels: str) -> None:
@@ -1347,11 +1363,8 @@ class Sequence:
             channel, _TimeSlot("delay", ti, tf, last.targets)
         )
 
-    def _phase_shift(
-        self,
-        phi: Union[float, Parametrized],
-        *targets: Union[QubitId, Parametrized],
-        basis: str,
+    def _precheck_phase_shift(
+        self, *targets: Union[QubitId, Parametrized], basis: str
     ) -> None:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
@@ -1361,9 +1374,14 @@ class Sequence:
                     raise ValueError(
                         "All non-variable targets must belong to the register."
                     )
-            return
 
-        elif not set(targets) <= self._qids:
+    def _phase_shift_non_parametrized(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[QubitId, Parametrized],
+        basis: str,
+    ) -> None:
+        if not set(targets) <= self._qids:
             raise ValueError(
                 "All given targets have to be qubit ids declared"
                 " in this sequence's register."
@@ -1377,6 +1395,30 @@ class Sequence:
             last_used = self._last_used[basis][qubit]
             new_phase = self._phase_ref[basis][qubit].last_phase + phi
             self._phase_ref[basis][qubit][last_used] = new_phase
+
+    def _phase_shift(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[QubitId, Parametrized],
+        basis: str,
+    ) -> None:
+        self._precheck_phase_shift(*targets, basis=basis)
+        if not self.is_parametrized():
+            self._phase_shift_non_parametrized(phi, *targets, basis=basis)
+
+    @_store
+    def _phase_shift_index(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[int, Parametrized],
+        basis: str,
+    ) -> None:
+        self._precheck_phase_shift(*targets, basis=basis)
+        if not self.is_parametrized():  # TODO
+            targets = cast(Tuple[int], targets)
+            target_ids = [self.register.qubit_ids[index] for index in targets]
+            # TODO try except
+            self._phase_shift_non_parametrized(phi, *target_ids, basis=basis)
 
     def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)

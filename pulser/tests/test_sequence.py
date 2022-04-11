@@ -707,7 +707,7 @@ def test_mappable_register():
         seq_.build(qubits={"q2": 20, "q0": 10})
 
 
-@pytest.mark.parametrize(
+index_function_parametrizer = (
     "reg, build_params, expected_target",
     [
         (
@@ -730,6 +730,9 @@ def test_mappable_register():
         ),
     ],
 )
+
+
+@pytest.mark.parametrize(*index_function_parametrizer)
 def test_target_index(reg, build_params, expected_target):
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
@@ -743,3 +746,20 @@ def test_target_index(reg, build_params, expected_target):
     seq.target_index(index, channel="ch0")
     built_seq = seq.build(**build_params)
     assert built_seq._last("ch0").targets == {expected_target}
+
+
+@pytest.mark.parametrize(*index_function_parametrizer)
+def test_phase_shift_index(reg, build_params, expected_target):
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch0", "raman_local")
+    phi = np.pi / 4
+    with pytest.raises(
+        RuntimeError,
+        match="Sequence.phase_shift_index can't be called in"
+        " non parametrized sequences",
+    ):
+        seq.phase_shift_index(phi, 1)
+    index = seq.declare_variable("index", dtype=int)
+    seq.phase_shift_index(phi, index)
+    built_seq = seq.build(**build_params)
+    assert built_seq.current_phase_ref(expected_target, "digital") == phi
