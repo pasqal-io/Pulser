@@ -68,12 +68,12 @@ class MappableRegister:
             raise ValueError(
                 "All qubits must be labeled with pre-declared qubit IDs."
             )
-        trap_ordered_qubits = {
+        register_ordered_qubits = {
             id: qubits[id] for id in self._qubit_ids if id in chosen_ids
         }
         return self._layout.define_register(
-            *tuple(trap_ordered_qubits.values()),
-            qubit_ids=tuple(trap_ordered_qubits.keys()),
+            *tuple(register_ordered_qubits.values()),
+            qubit_ids=tuple(register_ordered_qubits.keys()),
         )
 
     def find_indices(
@@ -87,20 +87,23 @@ class MappableRegister:
         Example:
             ``
             mapp_reg = TriangularLatticeLayout(50, 5).make_mappable_register(5)
-            qubit_map = {"q0": 1, "q2": 4, "q4": 2}
+            seq = Sequence(mapp_reg, Chadoq2)
+            qubit_map = {"q0": 1, "q2": 4, "q4": 2, "q1": 3}
             indices = mapp_reg.find_indices(
-                qubit_map,
+                qubit_map.keys(),
                 ["q4", "q2", "q1", "q2"])
+            print(indices) # [3, 2, 1, 2]
             seq.build(qubits=qubit_map, qubit_indices=indices)
             ``
 
         Args:
-            chosen_ids: IDs of the qubits that are chosen to map the
-                MappableRegister
-            id_list: IDs of the qubits to denote
+            chosen_ids (set[QubitId]): IDs of the qubits that are chosen to
+                map the MappableRegister
+            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote
 
         Returns:
-            Indices of the qubits to denote, only valid for the given mapping.
+            list[int]: Indices of the qubits to denote, only valid for the
+                given mapping.
         """
         if not chosen_ids <= set(self._qubit_ids):
             raise ValueError(
