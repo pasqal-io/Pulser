@@ -13,5 +13,25 @@
 # limitations under the License.
 """Classes for classical emulation of a Sequence."""
 
-from pulser.simulation.simconfig import SimConfig
-from pulser.simulation.simulation import Simulation
+import warnings
+
+main_msg = (
+    "All features previously located in the 'pulser.simulation' module have "
+    "been moved to the 'pulser_simulation' package. "
+)
+
+try:
+    import pulser_simulation
+    from pulser_simulation.simconfig import SimConfig
+    from pulser_simulation.simulation import Simulation
+
+    warnings.warn(
+        main_msg + "It is recommended that all imports of/from "
+        "'pulser.simulation' are changed to 'pulser_simulation'.",
+        stacklevel=2,
+    )
+except ImportError:
+    raise ImportError(
+        main_msg + "Please install the 'pulser_simulation' package and import"
+        " all simulation-related objects directly from it. "
+    )

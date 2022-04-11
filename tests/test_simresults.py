@@ -21,9 +21,9 @@ from qutip.piqs import isdiagonal
 
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
-from pulser.simulation import SimConfig, Simulation
-from pulser.simulation.simresults import CoherentResults, NoisyResults
 from pulser.waveforms import BlackmanWaveform
+from pulser_simulation import SimConfig, Simulation
+from pulser_simulation.simresults import CoherentResults, NoisyResults
 
 np.random.seed(123)
 q_dict = {

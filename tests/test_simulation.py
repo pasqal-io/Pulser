@@ -22,8 +22,8 @@ import qutip
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.register.register_layout import RegisterLayout
-from pulser.simulation import SimConfig, Simulation
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
+from pulser_simulation import SimConfig, Simulation
 
 q_dict = {
     "control1": np.array([-4.0, 0.0]),
