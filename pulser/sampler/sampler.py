@@ -10,9 +10,9 @@ from typing import Callable, List, Optional, cast
 
 import numpy as np
 
-import pulser.simulation.noises as noises
 from pulser.channels import Channel
 from pulser.pulse import Pulse
+from pulser.sampler.noise_model import NoiseModel, apply_noises
 from pulser.sampler.samples import QubitSamples
 from pulser.sequence import Sequence, _TimeSlot
 
@@ -20,8 +20,8 @@ from pulser.sequence import Sequence, _TimeSlot
 def sample(
     seq: Sequence,
     modulation: bool = False,
-    common_noises: Optional[list[noises.NoiseModel]] = None,
-    global_noises: Optional[list[noises.NoiseModel]] = None,
+    common_noises: Optional[list[NoiseModel]] = None,
+    global_noises: Optional[list[NoiseModel]] = None,
 ) -> dict:
     """Samples the given Sequence and returns a nested dictionary.
 
@@ -80,7 +80,7 @@ def sample(
         if modulation:
             s = _modulate(ch, s)
 
-        s = noises.apply(s, ch_noises)
+        s = apply_noises(s, ch_noises)
 
         if slm_on:  # Update the samples of masked qubits during SLM on times
             for i, _ in enumerate(s):
