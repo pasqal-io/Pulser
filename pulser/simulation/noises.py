@@ -19,21 +19,13 @@ sampling time.
 """
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Optional
 
 import numpy as np
 
 from pulser.register import Register
+from pulser.sampler.noise_model import NoiseModel
 from pulser.sampler.samples import QubitSamples
-
-NoiseModel = Callable[[QubitSamples], QubitSamples]
-"""A function that apply some noise on a list of QubitSamples.
-
-A NoiseModel corresponds to a source of noises present in a device which is
-relevant when sampling the input pulses. Physical effects contributing to
-modifications of the shined amplitude, detuning and phase felt by qubits of the
-register are susceptible to be implemented by a NoiseModel.
-"""
 
 
 def amplitude(
