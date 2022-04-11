@@ -856,6 +856,8 @@ class Sequence:
         It is then converted to a Qubit ID using the order in which they
         were declared when instantiating the ``Register``
         or ``MappableRegister``.
+
+        Cannot be used on parametrized sequences using a mappable register.
         """
         self._check_allow_qubit_index(self.target_index.__name__)
 
@@ -864,10 +866,10 @@ class Sequence:
         self._target_index(qubits, channel)
 
     def _check_allow_qubit_index(self, method_name: str) -> None:
-        if not self.is_parametrized():
+        if not self.is_parametrized() and self.is_register_mappable():
             raise RuntimeError(
-                f"Sequence.{method_name} can't be called in"
-                " non parametrized sequences."
+                f"Sequence.{method_name} cannot be called in"
+                " non parametrized sequences using a mappable register."
             )
 
     @_store
@@ -956,6 +958,8 @@ class Sequence:
         It is then converted to a Qubit ID using the order in which they
         were declared when instantiating the ``Register``
         or ``MappableRegister``.
+
+        Cannot be used on parametrized sequences using a mappable register.
         """
         self._check_allow_qubit_index(self.phase_shift_index.__name__)
         self._phase_shift_index(phi, *targets, basis=basis)
