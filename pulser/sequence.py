@@ -840,8 +840,6 @@ class Sequence:
             channel (str): The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
         """
-        qubits = cast(QubitId, qubits)
-
         self._target(qubits, channel)
 
     @_verify_parametrization
@@ -857,7 +855,9 @@ class Sequence:
         were declared when instantiating the ``Register``
         or ``MappableRegister``.
 
-        Cannot be used on parametrized sequences using a mappable register.
+        Note:
+            Cannot be used on non-parametrized sequences using a mappable
+            register.
         """
         self._check_allow_qubit_index(self.target_index.__name__)
 
@@ -959,7 +959,9 @@ class Sequence:
         were declared when instantiating the ``Register``
         or ``MappableRegister``.
 
-        Cannot be used on parametrized sequences using a mappable register.
+        Note:
+            Cannot be used on non-parametrized sequences using a mappable
+            register.
         """
         self._check_allow_qubit_index(self.phase_shift_index.__name__)
         self._phase_shift_index(phi, *targets, basis=basis)
@@ -1236,14 +1238,16 @@ class Sequence:
 
     @overload
     def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[int], int], channel: str
+        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
     ) -> Union[Set[int]]:
         pass
 
     @overload
     def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
-    ) -> Union[Set[QubitId], Set[int]]:
+        self,
+        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        channel: str,
+    ) -> Union[Set[QubitId]]:
         pass
 
     def _precheck_target_qubits_set(
@@ -1280,7 +1284,9 @@ class Sequence:
         return qubits_set
 
     def _target(
-        self, qubits: Union[Iterable[QubitId], QubitId], channel: str
+        self,
+        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        channel: str,
     ) -> None:
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
         if not self.is_parametrized():
@@ -1288,7 +1294,7 @@ class Sequence:
 
     @_store
     def _target_index(
-        self, qubits: Union[Iterable[int], int], channel: str
+        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
     ) -> None:
 
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
@@ -1421,7 +1427,7 @@ class Sequence:
         basis: str,
     ) -> None:
         self._precheck_phase_shift(*targets, basis=basis)
-        if not self.is_parametrized():  # TODO
+        if not self.is_parametrized():
             targets = cast(Tuple[int], targets)
             try:
                 target_ids = [
