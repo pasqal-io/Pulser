@@ -848,12 +848,18 @@ class Sequence:
         qubits: Union[int, Iterable[int], Parametrized],
         channel: Union[str, Parametrized],
     ) -> None:
-        """Acts as ``target`` using indices instead of Qubit IDs.
+        """Changes the target qubit of a 'Local' channel.
 
-        A qubit index is a number between 0 and the number of qubits.
-        It is then converted to a Qubit ID using the order in which they
-        were declared when instantiating the ``Register``
-        or ``MappableRegister``.
+        Args:
+            qubits (Union[int, Iterable]): The new target for this
+                channel. Must correspond to a qubit index or an iterable
+                of qubit indices, when multi-qubit addressing is possible.
+                A qubit index is a number between 0 and the number of qubits.
+                It is then converted to a Qubit ID using the order in which
+                they were declared when instantiating the ``Register``
+                or ``MappableRegister``.
+            channel (str): The channel's name provided when declared. Must be
+                a channel with 'Local' addressing.
 
         Note:
             Cannot be used on non-parametrized sequences using a mappable
