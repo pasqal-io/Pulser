@@ -30,7 +30,7 @@ try:
         "'pulser.simulation' are changed to 'pulser_simulation'.",
         stacklevel=2,
     )
-except ImportError:
+except ImportError:  # pragma: no cover
     raise ImportError(
         main_msg + "Please install the 'pulser_simulation' package and import"
         " all simulation-related objects directly from it. "

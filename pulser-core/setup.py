@@ -1,4 +1,4 @@
-# Copyright 2022 Pulser Development Team
+# Copyright 2020 Pulser Development Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from pathlib import PurePath
 
 from setuptools import find_packages, setup
 
-distribution_name = "pulser-simulation"  # The name on PyPI
-package_name = "pulser_simulation"  # The main module name
+distribution_name = "pulser-core"  # The name on PyPI
+package_name = "pulser"  # The main module name
 current_directory = PurePath(__file__).parent
 
 # Reads the version from the VERSION.txt file
@@ -34,21 +33,23 @@ with open(local_version_fpath, "w") as f:
     f.write(f"__version__ = '{__version__}'\n")
 
 setup(
-    name=distribution_name,
+    name="pulser-core",
     version=__version__,
     install_requires=[
-        f"pulser-core=={__version__}",
-        "qutip>=4.6.3",
+        "matplotlib",
+        "numpy>=1.20",
+        "scipy",
     ],
     extras_require={
         ":python_version == '3.7'": [
+            "backports.cached-property",
             "typing-extensions",
         ],
     },
     packages=find_packages(),
     package_data={package_name: ["py.typed"]},
     include_package_data=True,
-    description="An emulator of pulse-level sequences created with Pulser.",
+    description="A pulse-level composer for neutral-atom quantum devices.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",

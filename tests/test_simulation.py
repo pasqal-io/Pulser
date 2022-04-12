@@ -74,6 +74,17 @@ seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
 d += 1
 
 
+def test_bad_import():
+    with pytest.warns(
+        UserWarning,
+        match="'pulser.simulation' are changed to 'pulser_simulation'.",
+    ):
+        import pulser.simulation  # noqa: F401
+
+    assert pulser.simulation.Simulation is Simulation
+    assert pulser.simulation.SimConfig is SimConfig
+
+
 def test_initialization_and_construction_of_hamiltonian():
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
     with pytest.raises(TypeError, match="sequence has to be a valid"):
