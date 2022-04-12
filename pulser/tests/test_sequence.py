@@ -785,9 +785,8 @@ def test_non_parametrized_non_mappable_register_index_functions(
         seq.phase_shift_index(phi, 20)
     seq.target_index(index, channel="ch0")
     seq.phase_shift_index(phi, index)
-    built_seq = seq.build(**build_params)
-    assert built_seq._last("ch0").targets == {expected_target}
-    assert built_seq.current_phase_ref(expected_target, "digital") == phi
+    assert seq._last("ch0").targets == {expected_target}
+    assert seq.current_phase_ref(expected_target, "digital") == phi
 
 
 @pytest.mark.parametrize(
