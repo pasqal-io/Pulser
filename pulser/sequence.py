@@ -958,12 +958,23 @@ class Sequence:
         *targets: Union[int, Parametrized],
         basis: str = "digital",
     ) -> None:
-        """Acts as ``phase_shift`` using indices instead of Qubit IDs.
+        r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
 
-        A qubit index is a number between 0 and the number of qubits.
-        It is then converted to a Qubit ID using the order in which they
-        were declared when instantiating the ``Register``
-        or ``MappableRegister``.
+        This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
+        target qubit's state by an angle :math:`\phi` around the z-axis of the
+        Bloch sphere).
+
+        Args:
+            phi (float): The intended phase shift (in rads).
+            targets (Union[int, str]): The indices of the qubits to apply the
+                phase shift to.
+                A qubit index is a number between 0 and the number of qubits.
+                It is then converted to a Qubit ID using the order in which
+                they were declared when instantiating the ``Register``
+                or ``MappableRegister``.
+            basis (str): The basis (i.e. electronic transition) to associate
+                the phase shift to. Must correspond to the basis of a declared
+                channel.
 
         Note:
             Cannot be used on non-parametrized sequences using a mappable
