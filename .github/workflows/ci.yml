@@ -23,7 +23,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ./pulser-core -e ./pulser-simulation
           pip install -r requirements.txt
       - name: Lint with flake8
         run: flake8
@@ -55,7 +55,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ./pulser-core -e ./pulser-simulation
           pip install -r requirements.txt
       - name: Check import sorting with isort
         run: isort --check-only --diff .
@@ -71,7 +71,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ./pulser-core -e ./pulser-simulation
           pip install -r requirements.txt
       - name: Type check with mypy
         run: mypy
@@ -91,7 +91,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ./pulser-core -e ./pulser-simulation
           pip install -r requirements.txt
       - name: Run the unit tests & generate coverage report
-        run: pytest --cov --cov-fail-under=100 pulser
+        run: pytest --cov --cov-fail-under=100

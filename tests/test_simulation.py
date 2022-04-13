@@ -22,8 +22,8 @@ import qutip
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.register.register_layout import RegisterLayout
-from pulser.simulation import SimConfig, Simulation
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
+from pulser_simulation import SimConfig, Simulation
 
 q_dict = {
     "control1": np.array([-4.0, 0.0]),
@@ -72,6 +72,17 @@ d += 5
 # Add a ConstantWaveform part to testout the drawing procedure
 seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
 d += 1
+
+
+def test_bad_import():
+    with pytest.warns(
+        UserWarning,
+        match="'pulser.simulation' are changed to 'pulser_simulation'.",
+    ):
+        import pulser.simulation  # noqa: F401
+
+    assert pulser.simulation.Simulation is Simulation
+    assert pulser.simulation.SimConfig is SimConfig
 
 
 def test_initialization_and_construction_of_hamiltonian():

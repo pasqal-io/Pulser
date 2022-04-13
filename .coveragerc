@@ -7,6 +7,14 @@ exclude_lines =
     # Don't test pass statements
     pass
 
-omit = pulser/tests/*
+omit =
+    tests/*
+    setup.py
+
 
 show_missing = True
+
+[run]
+source =
+    pulser-core/pulser/
+    pulser-simulation/pulser_simulation/
