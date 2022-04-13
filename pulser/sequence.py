@@ -20,7 +20,7 @@ import json
 import os
 import warnings
 from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable, Mapping
+from collections.abc import Callable, Generator, Iterable, Mapping, Set
 from functools import wraps
 from itertools import chain
 from sys import version_info
@@ -98,38 +98,53 @@ def _screen(func: F) -> F:
     return cast(F, wrapper)
 
 
-def _store(func: F) -> F:
-    """Stores any Sequence building call for deferred execution."""
+def _verify_variable(seq: Sequence, x: Any) -> None:
+    if isinstance(x, Parametrized):
+        # If not already, the sequence becomes parametrized
+        seq._building = False
+        for name, var in x.variables.items():
+            if name not in seq._variables:
+                raise ValueError(f"Unknown variable '{name}'.")
+            elif seq._variables[name] is not var:
+                raise ValueError(
+                    f"{x} has variables that don't come from this "
+                    "Sequence. Use only what's returned by this"
+                    "Sequence's 'declare_variable' method as your"
+                    "variables."
+                )
+    elif isinstance(x, Iterable) and not isinstance(x, str):
+        # Recursively look for parametrized objs inside the arguments
+        for y in x:
+            _verify_variable(seq, y)
+
+
+def _verify_parametrization(func: F) -> F:
+    """Checks and updates the sequence status' consistency with the call.
+
+    - Checks the sequence can still be modified.
+    - Checks if all Parametrized inputs stem from declared variables.
+    """
 
     @wraps(func)
     def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        def verify_variable(x: Any) -> None:
-            if isinstance(x, Parametrized):
-                # If not already, the sequence becomes parametrized
-                self._building = False
-                for name, var in x.variables.items():
-                    if name not in self._variables:
-                        raise ValueError(f"Unknown variable '{name}'.")
-                    elif self._variables[name] is not var:
-                        raise ValueError(
-                            f"{x} has variables that don't come from this "
-                            "Sequence. Use only what's returned by this"
-                            "Sequence's 'declare_variable' method as your"
-                            "variables."
-                        )
-            elif isinstance(x, Iterable) and not isinstance(x, str):
-                # Recursively look for parametrized objs inside the arguments
-                for y in x:
-                    verify_variable(y)
-
         if self._is_measured and self.is_parametrized():
             raise RuntimeError(
                 "The sequence has been measured, no further "
                 "changes are allowed."
             )
-        # Check if all Parametrized inputs stem from declared variables
         for x in chain(args, kwargs.values()):
-            verify_variable(x)
+            _verify_variable(self, x)
+        func(self, *args, **kwargs)
+
+    return cast(F, wrapper)
+
+
+def _store(func: F) -> F:
+    """Checks and stores the call to call it when building the Sequence."""
+
+    @wraps(func)
+    @_verify_parametrization
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
         storage = self._calls if self._building else self._to_build_calls
         func(self, *args, **kwargs)
         storage.append(_Call(func.__name__, args, kwargs))
@@ -827,6 +842,42 @@ class Sequence:
         """
         self._target(qubits, channel)
 
+    @_verify_parametrization
+    def target_index(
+        self,
+        qubits: Union[int, Iterable[int], Parametrized],
+        channel: Union[str, Parametrized],
+    ) -> None:
+        """Changes the target qubit of a 'Local' channel.
+
+        Args:
+            qubits (Union[int, Iterable]): The new target for this
+                channel. Must correspond to a qubit index or an iterable
+                of qubit indices, when multi-qubit addressing is possible.
+                A qubit index is a number between 0 and the number of qubits.
+                It is then converted to a Qubit ID using the order in which
+                they were declared when instantiating the ``Register``
+                or ``MappableRegister``.
+            channel (str): The channel's name provided when declared. Must be
+                a channel with 'Local' addressing.
+
+        Note:
+            Cannot be used on non-parametrized sequences using a mappable
+            register.
+        """
+        self._check_allow_qubit_index(self.target_index.__name__)
+
+        qubits = cast(int, qubits)
+        channel = cast(str, channel)
+        self._target_index(qubits, channel)
+
+    def _check_allow_qubit_index(self, method_name: str) -> None:
+        if not self.is_parametrized() and self.is_register_mappable():
+            raise RuntimeError(
+                f"Sequence.{method_name} cannot be called in"
+                " non parametrized sequences using a mappable register."
+            )
+
     @_store
     def delay(
         self,
@@ -899,6 +950,38 @@ class Sequence:
                 channel.
         """
         self._phase_shift(phi, *targets, basis=basis)
+
+    @_verify_parametrization
+    def phase_shift_index(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[int, Parametrized],
+        basis: str = "digital",
+    ) -> None:
+        r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
+
+        This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
+        target qubit's state by an angle :math:`\phi` around the z-axis of the
+        Bloch sphere).
+
+        Args:
+            phi (float): The intended phase shift (in rads).
+            targets (int): The indices of the qubits to apply the
+                phase shift to.
+                A qubit index is a number between 0 and the number of qubits.
+                It is then converted to a Qubit ID using the order in which
+                they were declared when instantiating the ``Register``
+                or ``MappableRegister``.
+            basis (str): The basis (i.e. electronic transition) to associate
+                the phase shift to. Must correspond to the basis of a declared
+                channel.
+
+        Note:
+            Cannot be used on non-parametrized sequences using a mappable
+            register.
+        """
+        self._check_allow_qubit_index(self.phase_shift_index.__name__)
+        self._phase_shift_index(phi, *targets, basis=basis)
 
     @_store
     def align(self, *channels: str) -> None:
@@ -1170,11 +1253,25 @@ class Sequence:
             fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
-    def _target(
+    @overload
+    def _precheck_target_qubits_set(
+        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
+    ) -> Union[Set[int]]:
+        pass
+
+    @overload
+    def _precheck_target_qubits_set(
         self,
         qubits: Union[Iterable[QubitId], QubitId, Parametrized],
         channel: str,
-    ) -> None:
+    ) -> Union[Set[QubitId]]:
+        pass
+
+    def _precheck_target_qubits_set(
+        self,
+        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        channel: str,
+    ) -> Union[Set[QubitId], Set[int]]:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
         try:
@@ -1200,11 +1297,43 @@ class Sequence:
                     raise ValueError(
                         "All non-variable qubits must belong to the register."
                     )
-            return
 
-        elif not qubits_set.issubset(self._qids):
-            raise ValueError("All given qubits must belong to the register.")
+        return qubits_set
 
+    def _target(
+        self,
+        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        channel: str,
+    ) -> None:
+        qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        if not self.is_parametrized():
+            self._perform_target_non_parametrized(qubits_set, channel)
+
+    @_store
+    def _target_index(
+        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
+    ) -> None:
+
+        qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        if not self.is_parametrized():
+            try:
+                qubit_ids_set = {
+                    self.register.qubit_ids[index] for index in qubits_set
+                }
+            except IndexError:
+                raise IndexError("Indices must exist for the register.")
+            self._perform_target_non_parametrized(qubit_ids_set, channel)
+
+    def _perform_target_non_parametrized(
+        self, qubits_set: Set[QubitId], channel: str
+    ) -> None:
+        for qubit in qubits_set:
+            if qubit not in self._qids:
+                raise ValueError(
+                    f"The qubit ID '{qubit}' does not belong to the register."
+                )
+
+        channel_obj = self._channels[channel]
         basis = channel_obj.basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
         if len(phase_refs) != 1:
@@ -1247,7 +1376,9 @@ class Sequence:
             tf = 0
 
         self._last_target[channel] = tf
-        self._add_to_schedule(channel, _TimeSlot("target", ti, tf, qubits_set))
+        self._add_to_schedule(
+            channel, _TimeSlot("target", ti, tf, set(qubits_set))
+        )
 
     def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
         self._validate_channel(channel)
@@ -1262,11 +1393,8 @@ class Sequence:
             channel, _TimeSlot("delay", ti, tf, last.targets)
         )
 
-    def _phase_shift(
-        self,
-        phi: Union[float, Parametrized],
-        *targets: Union[QubitId, Parametrized],
-        basis: str,
+    def _precheck_phase_shift(
+        self, *targets: Union[QubitId, Parametrized], basis: str
     ) -> None:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
@@ -1276,9 +1404,14 @@ class Sequence:
                     raise ValueError(
                         "All non-variable targets must belong to the register."
                     )
-            return
 
-        elif not set(targets) <= self._qids:
+    def _phase_shift_non_parametrized(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[QubitId, Parametrized],
+        basis: str,
+    ) -> None:
+        if not set(targets) <= self._qids:
             raise ValueError(
                 "All given targets have to be qubit ids declared"
                 " in this sequence's register."
@@ -1292,6 +1425,34 @@ class Sequence:
             last_used = self._last_used[basis][qubit]
             new_phase = self._phase_ref[basis][qubit].last_phase + phi
             self._phase_ref[basis][qubit][last_used] = new_phase
+
+    def _phase_shift(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[QubitId, Parametrized],
+        basis: str,
+    ) -> None:
+        self._precheck_phase_shift(*targets, basis=basis)
+        if not self.is_parametrized():
+            self._phase_shift_non_parametrized(phi, *targets, basis=basis)
+
+    @_store
+    def _phase_shift_index(
+        self,
+        phi: Union[float, Parametrized],
+        *targets: Union[int, Parametrized],
+        basis: str,
+    ) -> None:
+        self._precheck_phase_shift(*targets, basis=basis)
+        if not self.is_parametrized():
+            targets = cast(Tuple[int], targets)
+            try:
+                target_ids = [
+                    self.register.qubit_ids[index] for index in targets
+                ]
+            except IndexError:
+                raise IndexError("Indices must exist for the register.")
+            self._phase_shift_non_parametrized(phi, *target_ids, basis=basis)
 
     def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)

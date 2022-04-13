@@ -22,6 +22,7 @@ from pulser.json.utils import obj_to_dict
 if TYPE_CHECKING:  # pragma: no cover
     from pulser.register.base_register import BaseRegister, QubitId
     from pulser.register.register_layout import RegisterLayout
+from typing import Sequence as abcSequence
 
 
 class MappableRegister:
@@ -67,8 +68,12 @@ class MappableRegister:
             raise ValueError(
                 "All qubits must be labeled with pre-declared qubit IDs."
             )
+        register_ordered_qubits = {
+            id: qubits[id] for id in self._qubit_ids if id in chosen_ids
+        }
         return self._layout.define_register(
-            *tuple(qubits.values()), qubit_ids=chosen_ids
+            *tuple(register_ordered_qubits.values()),
+            qubit_ids=tuple(register_ordered_qubits.keys()),
         )
 
     def find_indices(

@@ -1,3 +1,16 @@
+# Copyright 2022 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Exposes the sample() functions.
 
 It contains many helpers.
@@ -10,9 +23,9 @@ from typing import Callable, List, Optional, cast
 
 import numpy as np
 
-import pulser.simulation.noises as noises
 from pulser.channels import Channel
 from pulser.pulse import Pulse
+from pulser.sampler.noise_model import NoiseModel, apply_noises
 from pulser.sampler.samples import QubitSamples
 from pulser.sequence import Sequence, _TimeSlot
 
@@ -20,8 +33,8 @@ from pulser.sequence import Sequence, _TimeSlot
 def sample(
     seq: Sequence,
     modulation: bool = False,
-    common_noises: Optional[list[noises.NoiseModel]] = None,
-    global_noises: Optional[list[noises.NoiseModel]] = None,
+    common_noises: Optional[list[NoiseModel]] = None,
+    global_noises: Optional[list[NoiseModel]] = None,
 ) -> dict:
     """Samples the given Sequence and returns a nested dictionary.
 
@@ -80,7 +93,7 @@ def sample(
         if modulation:
             s = _modulate(ch, s)
 
-        s = noises.apply(s, ch_noises)
+        s = apply_noises(s, ch_noises)
 
         if slm_on:  # Update the samples of masked qubits during SLM on times
             for i, _ in enumerate(s):

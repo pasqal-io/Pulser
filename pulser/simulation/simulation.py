@@ -122,7 +122,9 @@ class Simulation:
         self._collapse_ops: list[qutip.Qobj] = []
 
         self.sampling_times = self._adapt_to_sampling_rate(
-            np.arange(self._tot_duration, dtype=np.double) / 1000
+            # Include extra time step for final instruction from samples:
+            np.arange(self._tot_duration + 1, dtype=np.double)
+            / 1000
         )
         self.evaluation_times = evaluation_times  # type: ignore
 
@@ -319,13 +321,9 @@ class Simulation:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                self._eval_times_array = np.append(
-                    self.sampling_times, self._tot_duration / 1000
-                )
+                eval_times = np.copy(self.sampling_times)
             elif value == "Minimal":
-                self._eval_times_array = np.array(
-                    [self.sampling_times[0], self._tot_duration / 1000]
-                )
+                eval_times = np.array([])
             else:
                 raise ValueError(
                     "Wrong evaluation time label. It should "
@@ -337,43 +335,36 @@ class Simulation:
                 raise ValueError(
                     "evaluation_times float must be between 0 " "and 1."
                 )
-            extended_times = np.append(
-                self.sampling_times, self._tot_duration / 1000
-            )
             indices = np.linspace(
                 0,
-                len(extended_times) - 1,
-                int(value * len(extended_times)),
+                len(self.sampling_times) - 1,
+                int(value * len(self.sampling_times)),
                 dtype=int,
             )
-            self._eval_times_array = extended_times[indices]
+            # Note: if `value` is very small `eval_times` is an empty list:
+            eval_times = self.sampling_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
-            t_max = np.max(value)
-            t_min = np.min(value)
-            if t_max > self._tot_duration / 1000:
+            if np.max(value, initial=0) > self._tot_duration / 1000:
                 raise ValueError(
                     "Provided evaluation-time list extends "
                     "further than sequence duration."
                 )
-            if t_min < 0:
+            if np.min(value, initial=0) < 0:
                 raise ValueError(
                     "Provided evaluation-time list contains "
                     "negative values."
                 )
-            # Ensure the list of times is sorted
-            eval_times = np.array(np.sort(value))
-            if t_min > 0:
-                eval_times = np.insert(eval_times, 0, 0.0)
-            if t_max < self._tot_duration / 1000:
-                eval_times = np.append(eval_times, self._tot_duration / 1000)
-            self._eval_times_array = eval_times
-            # always include initial and final times
+            eval_times = np.array(value)
         else:
             raise ValueError(
                 "Wrong evaluation time label. It should "
                 "be `Full`, `Minimal`, an array of times or a "
                 + "float between 0 and 1."
             )
+        # Ensure 0 and final time are included:
+        self._eval_times_array = np.union1d(
+            eval_times, [0.0, self._tot_duration / 1000]
+        )
         self._eval_times_instruction = value
 
     def draw(
@@ -430,10 +421,11 @@ class Simulation:
 
         def prepare_dict() -> dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
+            # Also adds extra time step for final instruction
             return {
-                "amp": np.zeros(self._tot_duration),
-                "det": np.zeros(self._tot_duration),
-                "phase": np.zeros(self._tot_duration),
+                "amp": np.zeros(self._tot_duration + 1),
+                "det": np.zeros(self._tot_duration + 1),
+                "phase": np.zeros(self._tot_duration + 1),
             }
 
         def write_samples(
@@ -461,6 +453,7 @@ class Simulation:
                 noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
                     -((r / w0) ** 2)
                 )
+
             samples_dict["amp"][slot.ti : slot.tf] += (
                 _pulse.amplitude.samples * noise_amp
             )
@@ -579,8 +572,8 @@ class Simulation:
         """Adapt list to correspond to sampling rate."""
         indices = np.linspace(
             0,
-            self._tot_duration - 1,
-            int(self._sampling_rate * self._tot_duration),
+            len(full_array) - 1,
+            int(self._sampling_rate * (self._tot_duration + 1)),
             dtype=int,
         )
         return cast(np.ndarray, full_array[indices])
