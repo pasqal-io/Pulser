@@ -384,6 +384,13 @@ def test_find_indices():
     reg = Register(dict(a=(0, 0), c=(5, 0), b=(0, 5)))
     assert reg.find_indices(["c", "b", "a"]) == [1, 2, 0]
 
+    with pytest.raises(
+        ValueError,
+        match="IDs list must be selected among"
+        "the IDs of the register's qubits",
+    ):
+        reg.find_indices(["c", "e", "d"])
+
 
 def assert_eq(left, right):
     assert left == right
