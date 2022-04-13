@@ -697,6 +697,9 @@ def test_mappable_register():
     ):
         seq.build(qubits={"q0": 1, "q1": 10})
 
+    with pytest.warns(UserWarning, match="No declared variables named: a"):
+        seq.build(qubits={"q2": 20, "q0": 10}, a=5)
+
     seq_ = seq.build(qubits={"q2": 20, "q0": 10})
     seq_._last("ryd").targets == {"q2", "q0"}
     assert not seq_.is_register_mappable()
