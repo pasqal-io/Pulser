@@ -15,7 +15,7 @@ and also allows the creation of **analog** quantum simulations, outside of the
 scope of traditional quantum circuit approaches. Whatever the type of experiment
 or paradigm, if it can be done on the device, it can be done with Pulser.
 
-Additionally, the ``pulser_simulation`` extensions provides tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
+Additionally, the ``pulser_simulation`` extension provides tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
 
 For a comprehensive overview of Pulser, check out [Pulser's arXiv preprint](https://arxiv.org/abs/2104.15044).
 

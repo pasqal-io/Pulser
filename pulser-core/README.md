@@ -1,4 +1,4 @@
-# Pulser-Simulation
+# pulser-core
 
 Pulser is a framework for composing, simulating and executing **pulse** sequences for neutral-atom quantum devices.
 
