@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 import pulser
-import pulser.simulation.noises as noises
+import pulser_simulation.noises as noises
 from pulser.devices import MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample

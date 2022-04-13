@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classes for classical emulation of a Sequence."""
+from pathlib import PurePath
 
-from pulser.simulation.simconfig import SimConfig
-from pulser.simulation.simulation import Simulation
+# Sets the version to the same as 'pulser'.
+version_file_path = PurePath(__file__).parent.parent.parent / "VERSION.txt"
+
+with open(version_file_path, "r") as f:
+    __version__ = f.read().strip()

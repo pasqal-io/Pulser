@@ -8,6 +8,14 @@ installed, then use ``pip``: ::
 
   pip install pulser
 
+The standard ``pulser`` distribution will install the core ``pulser`` package
+and the ``pulser_simulation`` extension package, which is required if you want
+to access the :doc:`apidoc/emulation` features.
+
+If you wish to install only the core ``pulser`` features, you can instead run: ::
+
+  pip install pulser-core
+
 
 Latest version
 ---------------
@@ -18,7 +26,7 @@ the ``develop`` branch - which holds the latest (unstable) version of Pulser -
 and install from source by running: ::
 
   git checkout develop
-  pip install -e .
+  pip install -e ./pulser-core -e ./pulser-simulation
 
 Bear in mind that your installation will track the contents of your local
 Pulser repository folder, so if you checkout a different branch (e.g. ``master``),

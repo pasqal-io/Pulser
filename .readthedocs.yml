@@ -15,5 +15,5 @@ python:
    install:
      - requirements: docs/requirements.txt
      - requirements: requirements.txt
-     - method: setuptools
-       path: .
+     - requirements: pulser-core/rtd_requirements.txt
+     - requirements: pulser-simulation/rtd_requirements.txt

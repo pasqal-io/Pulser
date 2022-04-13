@@ -11,28 +11,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from pathlib import PurePath
 
-from setuptools import setup
+from setuptools import find_packages, setup
+
+distribution_name = "pulser-core"  # The name on PyPI
+package_name = "pulser"  # The main module name
+current_directory = PurePath(__file__).parent
 
 # Reads the version from the VERSION.txt file
-with open("VERSION.txt", "r") as f:
+with open(current_directory.parent / "VERSION.txt", "r") as f:
     __version__ = f.read().strip()
 
-if "dev" in __version__:
-    raise RuntimeError(
-        "The 'pulser' distribution can only be installed or packaged for "
-        "stable versions. To install the full development version, run "
-        "`pip install -e ./pulser-core -e ./pulser-simulation` instead."
-    )
+# Stashes the source code for the local version file
+local_version_fpath = current_directory / package_name / "_version.py"
+with open(local_version_fpath, "r") as f:
+    stashed_version_source = f.read()
 
-# Just a meta-package that requires 'pulser-core' and 'pulser-simulation'
+# Overwrites the _version.py for the source distribution (reverted at the end)
+with open(local_version_fpath, "w") as f:
+    f.write(f"__version__ = '{__version__}'\n")
+
 setup(
-    name="pulser",
+    name="pulser-core",
     version=__version__,
     install_requires=[
-        f"pulser-core=={__version__}",
-        f"pulser-simulation=={__version__}",
+        "matplotlib",
+        "numpy>=1.20",
+        "scipy",
     ],
+    extras_require={
+        ":python_version == '3.7'": [
+            "backports.cached-property",
+            "typing-extensions",
+        ],
+    },
+    packages=find_packages(),
+    package_data={package_name: ["py.typed"]},
     include_package_data=True,
     description="A pulse-level composer for neutral-atom quantum devices.",
     long_description=open("README.md").read(),
@@ -47,3 +62,7 @@ setup(
     url="https://github.com/pasqal-io/Pulser",
     zip_safe=False,
 )
+
+# Restores the original source code of _version.py
+with open(local_version_fpath, "w") as f:
+    f.write(stashed_version_source)
