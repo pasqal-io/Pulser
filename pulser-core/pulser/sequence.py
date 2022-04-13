@@ -1075,15 +1075,6 @@ class Sequence:
                 "a concrete register."
             )
 
-        if not self.is_parametrized():
-            if not self.is_register_mappable():
-                warnings.warn(
-                    "Building a non-parametrized sequence simply returns"
-                    " a copy of itself.",
-                    stacklevel=2,
-                )
-            return seq
-
         all_keys, given_keys = self._variables.keys(), vars.keys()
         if given_keys != all_keys:
             invalid_vars = given_keys - all_keys
@@ -1100,6 +1091,15 @@ class Sequence:
                     "Did not receive values for variables: "
                     + ", ".join(missing_vars)
                 )
+
+        if not self.is_parametrized():
+            if not self.is_register_mappable():
+                warnings.warn(
+                    "Building a non-parametrized sequence simply returns"
+                    " a copy of itself.",
+                    stacklevel=2,
+                )
+            return seq
 
         for name, value in vars.items():
             self._variables[name]._assign(value)
