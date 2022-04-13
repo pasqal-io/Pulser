@@ -966,7 +966,7 @@ class Sequence:
 
         Args:
             phi (float): The intended phase shift (in rads).
-            targets (Union[int, str]): The indices of the qubits to apply the
+            targets (int): The indices of the qubits to apply the
                 phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
