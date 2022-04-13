@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
+from typing import Sequence as abcSequence
 
 from pulser.json.utils import obj_to_dict
 
@@ -85,7 +86,7 @@ class MappableRegister:
         with a parameter denoting qubits.
 
         Example:
-            Let ``reg`` be a mappable register with Qubit Ids "a", "b", "c"
+            Let ``reg`` be a mappable register with qubit Ids "a", "b", "c"
             and "d".
 
             >>> qubit_map = dict(b=1, a=2, d=0)
@@ -102,7 +103,7 @@ class MappableRegister:
             and ``phase_shift_index``.
 
             ``qubit_map`` should be provided when building the sequence,
-            to tell how to instanciate the register from the mappable register.
+            to tell how to instantiate the register from the mappable register.
 
         Args:
             chosen_ids (set[QubitId]): IDs of the qubits that are chosen to

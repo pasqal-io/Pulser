@@ -95,7 +95,7 @@ class BaseRegister(ABC):
         with a parameter denoting qubits.
 
         Example:
-            Let ``reg`` be a register with Qubit Ids "a", "b" and "c":
+            Let ``reg`` be a register with qubit Ids "a", "b" and "c":
 
             >>> reg.find_indices(["a", "b", "c", "a"])
 
@@ -103,13 +103,11 @@ class BaseRegister(ABC):
             register.
 
             Then, it is possible to use these indices when building a
-            sequence, typically to instanciate a ``VariableArray``,
+            sequence, typically to instantiate a ``VariableArray``,
             that can be provided as an argument to ``target_index``
             and ``phase_shift_index``.
 
         Args:
-            chosen_ids (set[QubitId]): IDs of the qubits that are chosen to
-                map the MappableRegister
             id_list (typing::Sequence[QubitId]): IDs of the qubits to denote
 
         Returns:
