@@ -88,6 +88,41 @@ class BaseRegister(ABC):
         """The qubit IDs of this register."""
         return self._ids
 
+    def find_indices(self, id_list: abcSequence[QubitId]) -> list[int]:
+        """Computes indices of qubits.
+
+        This can especially be useful when building a Pulser Sequence
+        with a parameter denoting qubits.
+
+        Example:
+            Let ``reg`` be a register with Qubit Ids "a", "b" and "c":
+
+            >>> reg.find_indices(["a", "b", "c", "a"])
+
+            It returns ``[0, 1, 2, 0]``, following the qubit order of the
+            register.
+
+            Then, it is possible to use these indices when building a
+            sequence, typically to instanciate a ``VariableArray``,
+            that can be provided as an argument to ``target_index``
+            and ``phase_shift_index``.
+
+        Args:
+            chosen_ids (set[QubitId]): IDs of the qubits that are chosen to
+                map the MappableRegister
+            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote
+
+        Returns:
+            list[int]: Indices of the qubits to denote, only valid for the
+                given mapping.
+        """
+        if not set(id_list) <= set(self.qubit_ids):
+            raise ValueError(
+                "The IDs list must be selected among"
+                "the IDs of the register's qubits."
+            )
+        return [self.qubit_ids.index(id_) for id_ in id_list]
+
     @classmethod
     def from_coordinates(
         cls: Type[T],

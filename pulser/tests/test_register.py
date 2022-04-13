@@ -380,6 +380,11 @@ def test_to_2D():
     reg.to_2D()
 
 
+def test_find_indices():
+    reg = Register(dict(a=(0, 0), c=(5, 0), b=(0, 5)))
+    assert reg.find_indices(["c", "b", "a"]) == [1, 2, 0]
+
+
 def assert_eq(left, right):
     assert left == right
     assert right == left

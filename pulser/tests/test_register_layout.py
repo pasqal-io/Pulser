@@ -198,7 +198,12 @@ def test_mappable_register_creation():
     ):
         mapp_reg.build_register({"q0": 0, "q5": 2})
 
-    reg = mapp_reg.build_register({"q0": 10, "q1": 49})
+    qubit_map = {"q0": 10, "q1": 49}
+    reg = mapp_reg.build_register(qubit_map)
     assert reg == Register(
         {"q0": tri.traps_dict[10], "q1": tri.traps_dict[49]}
+    )
+    names = ["q1", "q0", "q0"]
+    assert mapp_reg.find_indices(qubit_map.keys(), names) == reg.find_indices(
+        names
     )
