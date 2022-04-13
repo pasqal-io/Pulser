@@ -599,7 +599,7 @@ class Sequence:
         self,
         name: str,
         *,
-        dtype: Union[type[int], type[float], type[str]] = float,
+        dtype: Union[type[int], type[float]] = float,
     ) -> VariableItem:
         pass
 
@@ -609,7 +609,7 @@ class Sequence:
         name: str,
         *,
         size: int,
-        dtype: Union[type[int], type[float], type[str]] = float,
+        dtype: Union[type[int], type[float]] = float,
     ) -> Variable:
         pass
 
@@ -617,7 +617,7 @@ class Sequence:
         self,
         name: str,
         size: Optional[int] = None,
-        dtype: Union[type[int], type[float], type[str]] = float,
+        dtype: Union[type[int], type[float]] = float,
     ) -> Union[Variable, VariableItem]:
         """Declare a new variable within this Sequence.
 
@@ -634,7 +634,7 @@ class Sequence:
         Keyword Args:
             size (int=1): The number of entries stored in the variable.
             dtype (default=float): The type of the data that will be assigned
-                to the variable. Must be ``float``, ``int`` or ``str``.
+                to the variable. Must be ``float`` or ``int``.
 
         Returns:
             Variable: The declared Variable instance.
@@ -846,7 +846,7 @@ class Sequence:
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
-        channel: Union[str, Parametrized],
+        channel: str,
     ) -> None:
         """Changes the target qubit of a 'Local' channel.
 
@@ -868,7 +868,6 @@ class Sequence:
         self._check_allow_qubit_index(self.target_index.__name__)
 
         qubits = cast(int, qubits)
-        channel = cast(str, channel)
         self._target_index(qubits, channel)
 
     def _check_allow_qubit_index(self, method_name: str) -> None:

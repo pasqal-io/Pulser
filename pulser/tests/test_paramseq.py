@@ -37,14 +37,11 @@ def test_var_declarations():
     assert var.size == 1
     with pytest.raises(ValueError, match="already being used"):
         sb.declare_variable("var", dtype=int, size=10)
-    var2 = sb.declare_variable("var2", 4, str)
-    assert var2.dtype == str
-    assert var2.size == 4
     var3 = sb.declare_variable("var3")
     assert sb.declared_variables["var3"] == var3.var
     assert isinstance(var3, VariableItem)
     with pytest.raises(ValueError, match="'qubits' is a protected name"):
-        sb.declare_variable("qubits", size=10, dtype=str)
+        sb.declare_variable("qubits", size=10, dtype=int)
 
 
 def test_stored_calls():
@@ -58,10 +55,10 @@ def test_stored_calls():
     assert sb._to_build_calls[-1].args == (var, "ch1")
     with pytest.raises(ValueError, match="name of a declared channel"):
         sb.delay(1000, "rydberg_local")
-    x = Variable("x", str)
+    x = Variable("x", int)
     var_ = copy.deepcopy(var)
     with pytest.raises(ValueError, match="Unknown variable 'x'"):
-        sb.target(x, "ch1")
+        sb.target_index(x, "ch1")
     with pytest.raises(ValueError, match="come from this Sequence"):
         sb.target(var_, "ch1")
 
@@ -102,29 +99,29 @@ def test_stored_calls():
     assert call.args == (pls, "ch1")
     assert call.kwargs == {"protocol": "wait-for-all"}
 
-    q_var = sb.declare_variable("q_var", size=5, dtype=str)
+    q_var = sb.declare_variable("q_var", size=5, dtype=int)
     sb.declare_channel("ch2", "rydberg_global")
     assert len(sb._calls) == 3
     assert sb._calls[-1].name == "declare_channel"
     with pytest.raises(ValueError, match="'Local' channels"):
         sb.target(0, "ch2")
     with pytest.raises(ValueError, match="target at most 1 qubits"):
-        sb.target(q_var, "ch1")
+        sb.target_index(q_var, "ch1")
 
     sb2 = Sequence(reg, MockDevice)
     sb2.declare_channel("ch1", "rydberg_local", initial_target={3, 4, 5})
-    q_var2 = sb2.declare_variable("q_var2", size=5, dtype=str)
+    q_var2 = sb2.declare_variable("q_var2", size=5, dtype=int)
     var2 = sb2.declare_variable("var2")
     assert sb2._building
     sb2.target({var2, 7, 9, 10}, "ch1")
     assert not sb2._building
-    sb2.target(q_var2, "ch1")
+    sb2.target_index(q_var2, "ch1")
 
     with pytest.raises(ValueError, match="targets the given 'basis'"):
-        sb.phase_shift(var, *q_var)
+        sb.phase_shift_index(var, *q_var)
 
     with pytest.raises(ValueError, match="non-variable targets must belong"):
-        sb.phase_shift(var, *q_var, "q1", basis="ground-rydberg")
+        sb.phase_shift_index(var, *q_var, "q1", basis="ground-rydberg")
 
     with pytest.raises(ValueError, match="correspond to declared channels"):
         sb.align("ch1", var)
@@ -145,10 +142,10 @@ def test_build():
     reg_ = Register.rectangle(2, 1, prefix="q")
     sb = Sequence(reg_, device)
     var = sb.declare_variable("var")
-    targ_var = sb.declare_variable("targ_var", size=2, dtype=str)
+    targ_var = sb.declare_variable("targ_var", size=2, dtype=int)
     sb.declare_channel("ch1", "rydberg_local")
     sb.declare_channel("ch2", "raman_local", initial_target=targ_var[0])
-    sb.target(targ_var[1], "ch1")
+    sb.target_index(targ_var[1], "ch1")
     wf = BlackmanWaveform(var * 100, np.pi)
     pls = Pulse.ConstantDetuning(wf, var, var)
     sb.add(pls, "ch1")
@@ -159,10 +156,10 @@ def test_build():
     sb.add(pls2, "ch2")
     sb.measure()
     with pytest.warns(UserWarning, match="No declared variables"):
-        sb.build(t=100, var=2, targ_var=["q1", "q0"])
+        sb.build(t=100, var=2, targ_var=reg_.find_indices(["q1", "q0"]))
     with pytest.raises(TypeError, match="Did not receive values for"):
         sb.build(var=2)
-    seq = sb.build(var=2, targ_var=["q1", "q0"])
+    seq = sb.build(var=2, targ_var=reg_.find_indices(["q1", "q0"]))
     assert seq._schedule["ch2"][-1].tf == 500
     assert seq.current_phase_ref("q1") == 2.0
     assert seq.current_phase_ref("q0") == 0.0
