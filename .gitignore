@@ -15,3 +15,5 @@ docs/build/
 dist/
 env*
 pulser.egg-info/
+pulser_simulation.egg-info/
+pulser_core.egg-info/

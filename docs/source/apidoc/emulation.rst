@@ -2,16 +2,19 @@
 Classical Simulation
 *********************
 
+Since version 0.6.0, all simulation classes (previously under the ``pulser.simulation`` module)
+are in the ``pulser-simulation`` extension and should be imported from ``pulser_simulation``.
+
 Simulation
 ----------------------
 
-.. automodule:: pulser.simulation.simulation
+.. automodule:: pulser_simulation.simulation
    :members:
 
 SimConfig
 ----------------------
 
-.. automodule:: pulser.simulation.simconfig
+.. automodule:: pulser_simulation.simconfig
    :members:
 
 Simulation Results
@@ -29,7 +32,7 @@ within them.
 CoherentResults
 ^^^^^^^^^^^^^^^^
 
-.. autoclass:: pulser.simulation.simresults.CoherentResults
+.. autoclass:: pulser_simulation.simresults.CoherentResults
    :members:
    :inherited-members:
 
@@ -37,6 +40,6 @@ CoherentResults
 NoisyResults
 ^^^^^^^^^^^^^^^^
 
-.. autoclass:: pulser.simulation.simresults.NoisyResults
+.. autoclass:: pulser_simulation.simresults.NoisyResults
   :members:
   :inherited-members:

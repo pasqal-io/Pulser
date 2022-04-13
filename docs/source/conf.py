@@ -13,15 +13,15 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../pulser"))
+sys.path.insert(0, os.path.abspath("../../"))
 
-__version__ = ""
-exec(open("../../pulser/_version.py").read())
+with open("../../VERSION.txt", "r") as f:
+    __version__ = f.read().strip()
 
 # -- Project information -----------------------------------------------------
 
 project = "Pulser"
-copyright = "2020, Pulser Development Team"
+copyright = "2022, Pulser Development Team"
 author = "Pulser Development Team"
 
 # The full version, including alpha/beta/rc tags

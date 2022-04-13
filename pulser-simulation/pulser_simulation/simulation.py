@@ -32,8 +32,8 @@ from pulser import Pulse, Sequence
 from pulser._seq_drawer import draw_sequence
 from pulser.register import QubitId
 from pulser.sequence import _TimeSlot
-from pulser.simulation.simconfig import SimConfig
-from pulser.simulation.simresults import (
+from pulser_simulation.simconfig import SimConfig
+from pulser_simulation.simresults import (
     CoherentResults,
     NoisyResults,
     SimulationResults,
