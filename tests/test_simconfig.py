@@ -14,7 +14,7 @@
 
 import pytest
 
-from pulser.simulation import SimConfig
+from pulser_simulation import SimConfig
 
 
 def test_init():

@@ -15,7 +15,7 @@ and also allows the creation of **analog** quantum simulations, outside of the
 scope of traditional quantum circuit approaches. Whatever the type of experiment
 or paradigm, if it can be done on the device, it can be done with Pulser.
 
-Additionally, Pulser features built-in tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
+Additionally, the ``pulser_simulation`` extension provides tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
 
 For a comprehensive overview of Pulser, check out [Pulser's arXiv preprint](https://arxiv.org/abs/2104.15044).
 
@@ -27,11 +27,21 @@ To install the latest release of ``pulser``, have Python 3.7.0 or higher install
 pip install pulser
 ```
 
+The standard ``pulser`` distribution will install the core ``pulser`` package
+and the ``pulser_simulation`` extension package, which is required if you want
+to access the emulation features.
+
+If you wish to install only the core ``pulser`` features, you can instead run:
+
+```bash
+pip install pulser-core
+```
+
 If you wish to **install the development version of Pulser from source** instead, do the following from within this repository after cloning it:
 
 ```bash
 git checkout develop
-pip install -e .
+pip install -e ./pulser-core -e ./pulser-simulation
 ```
 
 Bear in mind that this installation will track the contents of your local
@@ -49,7 +59,7 @@ pip install -r requirements.txt
 Then, you can do the following to run the test suite and report test coverage:
 
 ```bash
-pytest --cov pulser
+pytest --cov
 ```
 
 ## Contributing

@@ -70,7 +70,7 @@ abstract = json.loads(
 
 
 def test_schema():
-    with open("pulser/json/abstract_repr_schema.json") as f:
+    with open("pulser-core/pulser/json/abstract_repr_schema.json") as f:
         schema = json.load(f)
     print(abstract)
     jsonschema.validate(instance=abstract, schema=schema)

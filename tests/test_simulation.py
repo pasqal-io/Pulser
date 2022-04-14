@@ -22,8 +22,8 @@ import qutip
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.register.register_layout import RegisterLayout
-from pulser.simulation import SimConfig, Simulation
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
+from pulser_simulation import SimConfig, Simulation
 
 q_dict = {
     "control1": np.array([-4.0, 0.0]),
@@ -72,6 +72,17 @@ d += 5
 # Add a ConstantWaveform part to testout the drawing procedure
 seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
 d += 1
+
+
+def test_bad_import():
+    with pytest.warns(
+        UserWarning,
+        match="'pulser.simulation' are changed to 'pulser_simulation'.",
+    ):
+        import pulser.simulation  # noqa: F401
+
+    assert pulser.simulation.Simulation is Simulation
+    assert pulser.simulation.SimConfig is SimConfig
 
 
 def test_initialization_and_construction_of_hamiltonian():
@@ -300,7 +311,9 @@ def test_get_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert simple_ham[0, 0] == Chadoq2.interaction_coeff / 10**6 - 2 * detun
+    assert np.isclose(
+        simple_ham[0, 0], Chadoq2.interaction_coeff / 10**6 - 2 * detun
+    )
 
     np.random.seed(123)
     simple_sim_noise = Simulation(
@@ -455,7 +468,7 @@ def test_eval_times():
     assert sim._eval_times_instruction == "Full"
     np.testing.assert_almost_equal(
         sim._eval_times_array,
-        np.append(sim.sampling_times, sim._tot_duration / 1000),
+        sim.sampling_times,
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
@@ -476,6 +489,18 @@ def test_eval_times():
         np.array([0, sim.sampling_times[-3], sim._tot_duration / 1000]),
     )
 
+    sim.evaluation_times = []
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array([0, sim._tot_duration / 1000]),
+    )
+
+    sim.evaluation_times = 0.0001
+    np.testing.assert_almost_equal(
+        sim._eval_times_array,
+        np.array([0, sim._tot_duration / 1000]),
+    )
+
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = [sim.sampling_times[-10], sim.sampling_times[-3]]
     np.testing.assert_almost_equal(
@@ -492,13 +517,12 @@ def test_eval_times():
 
     sim = Simulation(seq, sampling_rate=1.0)
     sim.evaluation_times = 0.4
-    extended_tlist = np.append(sim.sampling_times, sim._tot_duration / 1000)
     np.testing.assert_almost_equal(
-        extended_tlist[
+        sim.sampling_times[
             np.linspace(
                 0,
-                len(extended_tlist) - 1,
-                int(0.4 * len(extended_tlist)),
+                len(sim.sampling_times) - 1,
+                int(0.4 * len(sim.sampling_times)),
                 dtype=int,
             )
         ],
@@ -562,7 +586,7 @@ def test_dephasing():
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 482, "1": 518})
+    assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
@@ -642,7 +666,7 @@ def test_get_xy_hamiltonian():
 
     assert np.isclose(np.linalg.norm(simple_seq.magnetic_field[0:2]), 1)
 
-    simple_sim = Simulation(simple_seq, sampling_rate=0.01)
+    simple_sim = Simulation(simple_seq, sampling_rate=0.03)
     with pytest.raises(
         ValueError, match="less than or equal to the sequence duration"
     ):

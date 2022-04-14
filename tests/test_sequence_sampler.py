@@ -1,3 +1,16 @@
+# Copyright 2022 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from __future__ import annotations
 
 import textwrap
@@ -7,6 +20,7 @@ import numpy as np
 import pytest
 
 import pulser
+import pulser_simulation
 from pulser.channels import Rydberg
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
@@ -21,9 +35,18 @@ from pulser.waveforms import BlackmanWaveform, RampWaveform
 def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     """Check against the legacy sample extraction in the simulation module."""
     got = sample(seq)
-    want = pulser.Simulation(seq).samples
+    want = pulser_simulation.Simulation(seq).samples.copy()
 
-    assert_nested_dict_equality(got, want)
+    def truncate_samples(samples_dict):
+        for key, value in samples_dict.items():
+            if isinstance(value, dict):
+                if value:  # Dictionary is not empty
+                    samples_dict[key] = truncate_samples(value)
+            else:
+                samples_dict[key] = value[:-1]
+        return samples_dict
+
+    assert_nested_dict_equality(got, truncate_samples(want))
 
 
 def assert_nested_dict_equality(got, want: dict) -> None:
@@ -139,9 +162,9 @@ def test_SLM_samples(seq_with_SLM):
             }
         },
     }
-    want["Local"]["ground-rydberg"]["batman"]["amp"][200:401] = a_samples
+    want["Local"]["ground-rydberg"]["batman"]["amp"][200:400] = a_samples
     want["Local"]["ground-rydberg"]["superman"]["amp"][0:200] = a_samples
-    want["Local"]["ground-rydberg"]["superman"]["amp"][200:401] = a_samples
+    want["Local"]["ground-rydberg"]["superman"]["amp"][200:400] = a_samples
 
     got = sample(seq_with_SLM)
     assert_nested_dict_equality(got, want)
