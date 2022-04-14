@@ -31,7 +31,7 @@ seq = Sequence(reg, Chadoq2)
 seq.declare_channel("digital", "raman_local", initial_target="control")
 seq.declare_channel("rydberg", "rydberg_local", initial_target="control")
 
-target_atom = seq.declare_variable("target_atom", dtype=str)
+target_atom = seq.declare_variable("target_atom", dtype=int)
 duration = seq.declare_variable("duration", dtype=int)
 amps = seq.declare_variable("amps", dtype=float, size=2)
 
@@ -40,7 +40,7 @@ half_pi_wf = BlackmanWaveform(200, np.pi / 2)
 ry = Pulse.ConstantDetuning(amplitude=half_pi_wf, detuning=0, phase=-np.pi / 2)
 
 seq.add(ry, "digital")
-seq.target(target_atom, "digital")
+seq.target_index(target_atom, "digital")
 
 pi_2_wf = BlackmanWaveform(duration, amps[0] / 2)
 pi_pulse = Pulse.ConstantDetuning(CompositeWaveform(pi_2_wf, pi_2_wf), 0, 0)
@@ -62,7 +62,7 @@ seq.measure("digital")
 
 abstract = json.loads(
     seq.abstract_repr(
-        target_atom="target",
+        target_atom=1,
         amps=[np.pi, 2 * np.pi],
         duration=200,
     )
@@ -89,16 +89,16 @@ def test_values():
         ]
     )
     assert abstract["device"] == "Chadoq2"
-    assert abstract["register"] == {
-        "control": {"x": -2.0, "y": 0.0},
-        "target": {"x": 2.0, "y": 0.0},
-    }
+    assert abstract["register"] == [
+        {"name": "control", "x": -2.0, "y": 0.0},
+        {"name": "target", "x": 2.0, "y": 0.0},
+    ]
     assert abstract["channels"] == {
         "digital": "raman_local",
         "rydberg": "rydberg_local",
     }
     assert abstract["variables"] == {
-        "target_atom": {"type": "atom_name", "value": ["target"]},
+        "target_atom": {"type": "int", "value": [1]},
         "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
         "duration": {"type": "int", "value": [200]},
     }
@@ -106,7 +106,7 @@ def test_values():
     assert abstract["operations"][0] == {
         "op": "target",
         "channel": "digital",
-        "target": "control",
+        "target": 0,
     }
 
     assert abstract["operations"][2] == {

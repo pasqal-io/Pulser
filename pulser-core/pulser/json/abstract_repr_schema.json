@@ -5,6 +5,10 @@
     "Atom": {
       "additionalProperties": false,
       "properties": {
+        "name": {
+          "description": "Name of the atom.",
+          "type": "string"
+        },
         "x": {
           "description": "x-position in µm",
           "type": "number"
@@ -15,13 +19,17 @@
         }
       },
       "required": [
+        "name",
         "x",
         "y"
       ],
       "type": "object"
     },
-    "AtomName": {
-      "description": "Name of declared atom.",
+    "Basis": {
+      "enum": [
+        "ground-rydberg",
+        "digital"
+      ],
       "type": "string"
     },
     "BlackmanMaxWaveform": {
@@ -167,7 +175,7 @@
     },
     "ExprBinary": {
       "additionalProperties": false,
-      "description": "Simple binary expression involving variables and constants.\n\nArithmetic operations are only supported on numeric values. Trying to perform an arithmetic operation on a non-numeric value will result in an runtime error. I.e. performing an \"add\" operation on atom_name array leads to an error.\n\nThe array access behaviour depends on expression:\n- index:   - the lhs array is indexed using rhs indices, resulting in an array of the same length as rhs.   - out of bounds indexing is a runtime error   - NOTE: Pulser only supports variable references on lhs of index expression.           This limitation might be lifted in the future.\n- everything else:   - the expression is applied element-wise   - operating on arrays of different lengths is a runtime error",
+      "description": "Simple binary expression involving variables and constants.\n\nThe array access behaviour depends on expression:\n- index:   - the lhs array is indexed using rhs indices, resulting in an array of the same length as rhs.   - out of bounds indexing is a runtime error   - NOTE: Pulser only supports variable references on lhs of index expression.           This limitation might be lifted in the future.\n- everything else:   - the expression is applied element-wise   - operating on arrays of different lengths is a runtime error",
       "properties": {
         "expression": {
           "description": "Expresion operation",
@@ -250,30 +258,6 @@
         "rydberg_global"
       ],
       "type": "string"
-    },
-    "IndexExpression": {
-      "additionalProperties": false,
-      "properties": {
-        "expression": {
-          "const": "index",
-          "description": "Expresion operation",
-          "type": "string"
-        },
-        "lhs": {
-          "$ref": "#/definitions/ExprArgument",
-          "description": "Left-hand side of an operation"
-        },
-        "rhs": {
-          "$ref": "#/definitions/ExprArgument",
-          "description": "Right-hand side of an operation"
-        }
-      },
-      "required": [
-        "expression",
-        "lhs",
-        "rhs"
-      ],
-      "type": "object"
     },
     "InterpolatedWaveform": {
       "additionalProperties": false,
@@ -362,13 +346,6 @@
       ],
       "type": "object"
     },
-    "Measurement": {
-      "enum": [
-        "ground-rydberg",
-        "digital"
-      ],
-      "type": "string"
-    },
     "OpAlign": {
       "additionalProperties": false,
       "description": "Aligns multiple channels in time.\n\nIntroduces delays that align the provided channels with the one that finished the latest, such that the next action added to any of them will start right after the latest channel has finished.",
@@ -419,12 +396,8 @@
       "description": "Adds a separate phase shift to atoms. If possible, OpPulse phase and post_phase_shift are preferred.",
       "properties": {
         "basis": {
-          "description": "Phase shift basis",
-          "enum": [
-            "ground-rydberg",
-            "digital"
-          ],
-          "type": "string"
+          "$ref": "#/definitions/Basis",
+          "description": "Phase shift basis"
         },
         "op": {
           "const": "phase_shift",
@@ -435,9 +408,9 @@
           "description": "The intended phase shift (in rads)."
         },
         "targets": {
-          "description": "Target atoms",
+          "description": "Target atom indices",
           "items": {
-            "$ref": "#/definitions/ParametrizedAtom"
+            "$ref": "#/definitions/ParametrizedNum"
           },
           "type": "array"
         }
@@ -512,8 +485,8 @@
           "type": "string"
         },
         "target": {
-          "$ref": "#/definitions/ParametrizedAtom",
-          "description": "New target atom"
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "New target atom index"
         }
       },
       "required": [
@@ -543,17 +516,6 @@
       ],
       "description": "Sequence operation. All operations are performed in specified order."
     },
-    "ParametrizedAtom": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/AtomName"
-        },
-        {
-          "$ref": "#/definitions/IndexExpression"
-        }
-      ],
-      "description": "Atom name that can be parametrized. Must reference declared atom in a register Right now, the only valid expression on atom_name array is indexing."
-    },
     "ParametrizedNum": {
       "anyOf": [
         {
@@ -563,7 +525,7 @@
           "$ref": "#/definitions/Expression"
         }
       ],
-      "description": "Numeric value that can be parametrized"
+      "description": "Numeric scalar value that can be parametrized"
     },
     "ParametrizedNumArray": {
       "anyOf": [
@@ -604,7 +566,7 @@
         "measurement": {
           "anyOf": [
             {
-              "$ref": "#/definitions/Measurement"
+              "$ref": "#/definitions/Basis"
             },
             {
               "type": "null"
@@ -624,11 +586,11 @@
           "type": "array"
         },
         "register": {
-          "additionalProperties": {
+          "description": "A 2D quantum register containing a set of atoms.",
+          "items": {
             "$ref": "#/definitions/Atom"
           },
-          "description": "A 2D quantum register containing a set of atoms.",
-          "type": "object"
+          "type": "array"
         },
         "variables": {
           "additionalProperties": {
@@ -684,44 +646,8 @@
       "type": "object"
     },
     "Variable": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/VariableNum"
-        },
-        {
-          "$ref": "#/definitions/VariableAtom"
-        }
-      ],
-      "description": "Variable representing a typed value assigned during sequence build. variables can be used in expressions and parametrized values."
-    },
-    "VariableAtom": {
       "additionalProperties": false,
-      "properties": {
-        "type": {
-          "const": "atom_name",
-          "description": "Variable type",
-          "type": "string"
-        },
-        "value": {
-          "description": "Default variable value. The default array length determins the variable array size.",
-          "items": {
-            "$ref": "#/definitions/AtomName"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "type",
-        "value"
-      ],
-      "type": "object"
-    },
-    "VariableName": {
-      "description": "Name of declared variable.",
-      "type": "string"
-    },
-    "VariableNum": {
-      "additionalProperties": false,
+      "description": "Variable representing a typed value assigned during sequence build. variables can be used in expressions and parametrized values.",
       "properties": {
         "type": {
           "description": "Variable type",
@@ -744,6 +670,10 @@
         "value"
       ],
       "type": "object"
+    },
+    "VariableName": {
+      "description": "Name of declared variable.",
+      "type": "string"
     },
     "VariableRef": {
       "additionalProperties": false,

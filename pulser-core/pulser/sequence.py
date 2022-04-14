@@ -24,16 +24,9 @@ from collections.abc import Callable, Generator, Iterable, Mapping, Set
 from functools import wraps
 from itertools import chain
 from sys import version_info
-from typing import (
-    Any,
-    NamedTuple,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, NamedTuple, Optional
+from typing import Sequence as abcSequence
+from typing import Tuple, TypeVar, Union, cast, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1146,53 +1139,6 @@ class Sequence:
             ``serialize``
         """
 
-        def str_var_finder(
-            target_type: str, *potential_vars: Any, convert_int: bool = False
-        ) -> None:
-            """Finds the 'str' type vars and changes them 'target_type'."""
-
-            def str_type_specifier(var_name: str) -> None:
-                """Specifies the type of a 'str' var, when possible."""
-                stored_type = res["variables"][var_name]["type"]
-                if stored_type == target_type:
-                    # Already defined as a channel variable
-                    pass
-                elif stored_type == "str":
-                    # It hadn't been defined yet
-                    res["variables"][var_name]["type"] = target_type
-                elif stored_type == "int" and convert_int:
-                    res["variables"][var_name]["type"] = target_type
-                    # Need to convert the default values to str
-                    res["variables"][var_name]["value"][:] = map(
-                        str, res["variables"][var_name]["value"]
-                    )
-                    warnings.warn(
-                        f"Variable '{var_name}' was converted to type 'str' "
-                        "due to being used as stand-in for a qubit ID, which "
-                        "are all converted to 'str' upon serialization to the "
-                        "abstract representation.",
-                        stacklevel=4,
-                    )
-                else:
-                    AbstractReprError(
-                        f"Variable '{var_name}' is being used as both"
-                        f" a '{target_type}' and a '{stored_type}' type "
-                        "variable. The abstract representation requires "
-                        "that different variables are used for these purposes."
-                    )
-
-            for pot_var in potential_vars:
-                if isinstance(pot_var, Parametrized):
-                    if isinstance(pot_var, Variable):
-                        str_type_specifier(pot_var.name)
-                    elif isinstance(pot_var, VariableItem):
-                        str_type_specifier(pot_var.var.name)
-                    else:
-                        AbstractReprError(
-                            "Expressions are not supported as a stand-in for a"
-                            f"'{target_type}' variable."
-                        )
-
         res: dict[str, Any] = {
             "version": "1",
             "name": seq_name,
@@ -1213,10 +1159,19 @@ class Sequence:
 
         for var in self._variables.values():
             value = var._validate_value(defaults[var.name])
-            # String vars are stored with type='str' at this stage
             res["variables"][var.name] = dict(
                 type=var.dtype.__name__, value=value.tolist()
             )
+
+        def convert_targets(
+            target_ids: Union[QubitId, abcSequence[QubitId]]
+        ) -> Union[int, list[int]]:
+            target_array = np.array(target_ids)
+            og_dim = target_array.ndim
+            if og_dim == 0:
+                target_array = target_array[np.newaxis]
+            indices = self.register.find_indices(target_array.tolist())
+            return indices[0] if og_dim == 0 else indices
 
         operations = res["operations"]
         for call in chain(self._calls, self._to_build_calls):
@@ -1237,14 +1192,23 @@ class Sequence:
                         {
                             "op": "target",
                             "channel": ch_name,
-                            "target": initial_target,
+                            "target": convert_targets(initial_target),
                         }
                     )
-            elif call.name == "target":
-                target, ch_name = call.args
-                str_var_finder("atom_name", target, convert_int=True)
+            elif "target" in call.name:
+                target_arg, ch_name = call.args
+                if call.name == "target":
+                    target = convert_targets(target_arg)
+                elif call.name == "_target_index":
+                    target = target_arg
+                else:
+                    raise AbstractReprError(f"Unknown call '{call.name}'.")
                 operations.append(
-                    {"op": "target", "channel": ch_name, "target": target}
+                    {
+                        "op": "target",
+                        "channel": ch_name,
+                        "target": target,
+                    }
                 )
             elif call.name == "align":
                 operations.append({"op": "align", "channels": list(call.args)})
@@ -1270,16 +1234,23 @@ class Sequence:
                 }
                 op_dict.update(pulse._to_abstract_repr())
                 operations.append(op_dict)
-            elif call.name == "phase_shift":
+            elif "phase_shift" in call.name:
                 try:
                     basis = call.kwargs["basis"]
                 except KeyError:
                     basis = "digital"
+                targets = call.args[1:]
+                if call.name == "phase_shift":
+                    targets = convert_targets(targets)
+                elif call.name == "_phase_shift_index":
+                    pass
+                else:
+                    raise AbstractReprError(f"Unknown call '{call.name}'.")
                 operations.append(
                     {
                         "op": "phase_shift",
                         "phi": call.args[0],
-                        "targets": call.args[1:],
+                        "targets": targets,
                         "basis": basis,
                     }
                 )
