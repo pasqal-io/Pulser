@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import collections.abc  # To use collections.abc.Sequence
 import dataclasses
-from collections.abc import Iterable
 from typing import Any, Iterator, Optional, Union, cast
 
 import numpy as np
