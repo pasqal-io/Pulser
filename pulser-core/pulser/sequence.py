@@ -648,11 +648,10 @@ class Sequence:
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
-        if name == "qubits":
-            # Necessary because 'qubits' is a keyword arg in self.build()
+        if name in ("qubits", "seq_name"):
             raise ValueError(
-                "'qubits' is a protected name. Please choose a different name "
-                "for the variable."
+                f"'{name}' is a protected name. Please choose a different name"
+                " for the variable."
             )
 
         if name in self._variables:
@@ -1128,10 +1127,14 @@ class Sequence:
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
-    def abstract_repr(self, **defaults: Any) -> str:
+    def abstract_repr(
+        self, seq_name: str = "pulser-exported", **defaults: Any
+    ) -> str:
         """Serializes the Sequence into an abstract JSON object.
 
         Keyword Args:
+            seq_name (str): A name for the sequence. If not defined, defaults
+                to "pulser-exported".
             defaults: The default values for all the variables declared in this
                 Sequence instance, indexed by the name given upon declaration.
                 Check ``Sequence.declared_variables`` to see all the variables.
@@ -1192,6 +1195,7 @@ class Sequence:
 
         res: dict[str, Any] = {
             "version": "1",
+            "name": seq_name,
             "register": {},
             "channels": {},
             "variables": {},
@@ -1261,6 +1265,19 @@ class Sequence:
                 }
                 op_dict.update(pulse._to_abstract_repr())
                 operations.append(op_dict)
+            elif call.name == "phase_shift":
+                try:
+                    basis = call.kwargs["basis"]
+                except KeyError:
+                    basis = "digital"
+                operations.append(
+                    {
+                        "op": "phase_shift",
+                        "phi": call.args[0],
+                        "targets": call.args[1:],
+                        "basis": basis,
+                    }
+                )
             else:
                 raise AbstractReprError(
                     f"Call name '{call.name}' is not supported."
