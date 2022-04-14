@@ -1248,6 +1248,11 @@ class Sequence:
                 )
             elif call.name == "align":
                 operations.append({"op": "align", "channels": list(call.args)})
+            elif call.name == "delay":
+                time, channel = call.args
+                operations.append(
+                    {"op": "delay", "channel": channel, "time": time}
+                )
             elif call.name == "measure":
                 res["measurement"] = call.args[0]
             elif call.name == "add":

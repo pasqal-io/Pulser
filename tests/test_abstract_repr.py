@@ -57,7 +57,7 @@ seq.target("control", "rydberg")
 seq.add(pi_pulse, "rydberg")
 
 seq.align("digital", "rydberg")
-seq.add(ry, "digital")
+seq.delay(100, "digital")
 seq.measure("digital")
 
 abstract = json.loads(
@@ -72,13 +72,13 @@ abstract = json.loads(
 def test_schema():
     with open("pulser-core/pulser/json/abstract_repr_schema.json") as f:
         schema = json.load(f)
-    print(abstract)
     jsonschema.validate(instance=abstract, schema=schema)
 
 
 def test_values():
     assert set(abstract.keys()) == set(
         [
+            "name",
             "version",
             "device",
             "register",
@@ -171,6 +171,13 @@ def test_values():
         "phase": 0.0,
         "post_phase_shift": 0.0,
     }
+
+    assert abstract["operations"][11] == {
+        "op": "delay",
+        "channel": "digital",
+        "time": 100,
+    }
+
     assert abstract["measurement"] == "digital"
 
 
