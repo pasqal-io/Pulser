@@ -44,14 +44,30 @@ def test_var_declarations():
         sb.declare_variable("qubits", size=10, dtype=int)
 
 
+def test_parametrized_channel_initial_target():
+    sb = Sequence(reg, device)
+    var = sb.declare_variable("var")
+    sb.declare_channel("ch1", "rydberg_local")
+    sb.target_index(var, "ch1")
+    sb.declare_channel("ch0", "raman_local", initial_target=0)
+    assert sb._calls[-1].name == "declare_channel"
+    assert sb._to_build_calls[-1].name == "target"
+    assert sb._to_build_calls[-1].args == (0, "ch0")
+
+
 def test_stored_calls():
     sb = Sequence(reg, device)
     assert sb._calls[-1].name == "__init__"
     var = sb.declare_variable("var")
     assert sb._to_build_calls == []
-    sb.declare_channel("ch1", "rydberg_local", initial_target=var)
+    with pytest.raises(
+        TypeError, match="initial_target cannot be parametrized"
+    ):
+        sb.declare_channel("ch1", "rydberg_local", initial_target=var)
+    sb.declare_channel("ch1", "rydberg_local")
+    sb.target_index(var, "ch1")
     assert sb._calls[-1].name == "declare_channel"
-    assert sb._to_build_calls[-1].name == "target"
+    assert sb._to_build_calls[-1].name == "_target_index"
     assert sb._to_build_calls[-1].args == (var, "ch1")
     with pytest.raises(ValueError, match="name of a declared channel"):
         sb.delay(1000, "rydberg_local")
@@ -70,7 +86,6 @@ def test_stored_calls():
         match="Using parametrized objects or variables to refer to channels",
     ):
         sb.target("q0", var)
-
     sb.delay(var, "ch1")
     call = sb._to_build_calls[1]
     assert call.name == "delay"
@@ -120,8 +135,23 @@ def test_stored_calls():
     with pytest.raises(ValueError, match="targets the given 'basis'"):
         sb.phase_shift_index(var, *q_var)
 
-    with pytest.raises(ValueError, match="non-variable targets must belong"):
+    with pytest.raises(
+        ValueError,
+        match="All non-variable targets must" " belong to the register.",
+    ):
+        sb.phase_shift(var, *q_var, "wacky_id", basis="ground-rydberg")
+    with pytest.raises(
+        ValueError,
+        match="All non-variable targets must be indices valid for the"
+        " register, between 0 and 11. Wrong index: 'q1'.",
+    ):
         sb.phase_shift_index(var, *q_var, "q1", basis="ground-rydberg")
+    with pytest.raises(
+        ValueError,
+        match="All non-variable targets must be indices valid for the"
+        " register, between 0 and 11. Wrong index: 'q1'.",
+    ):
+        sb.target_index("q1", channel="ch1")
 
     with pytest.raises(ValueError, match="correspond to declared channels"):
         sb.align("ch1", var)

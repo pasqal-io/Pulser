@@ -751,10 +751,10 @@ index_function_params = "reg, build_params, index, expected_target"
 def test_parametrized_index_functions(
     reg, build_params, index, expected_target
 ):
+    phi = np.pi / 4
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
-    phi = np.pi / 4
     index_var = seq.declare_variable("index", dtype=int)
     seq.target_index(index_var, channel="ch0")
     seq.phase_shift_index(phi, index_var)
@@ -766,6 +766,30 @@ def test_parametrized_index_functions(
         IndexError, match="Indices must exist for the register"
     ):
         seq.build(**build_params, index=20)
+
+
+@pytest.mark.parametrize(
+    index_function_params,
+    [
+        *index_function_non_mappable_register_values,
+        *index_function_mappable_register_values,
+    ],
+)
+def test_non_parametrized_index_functions_in_parametrized_context(
+    reg, build_params, index, expected_target
+):
+    phi = np.pi / 4
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch0", "raman_local")
+    phi_var = seq.declare_variable("phi_var", dtype=int)
+
+    seq.phase_shift_index(phi_var, 0)
+    seq.target_index(index, channel="ch0")
+    seq.phase_shift_index(phi, index)
+
+    built_seq = seq.build(**build_params, phi_var=0)
+    assert built_seq._last("ch0").targets == {expected_target}
+    assert built_seq.current_phase_ref(expected_target, "digital") == phi
 
 
 @pytest.mark.parametrize(
