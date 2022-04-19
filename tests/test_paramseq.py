@@ -137,7 +137,7 @@ def test_stored_calls():
 
     with pytest.raises(
         ValueError,
-        match="All non-variable targets must" " belong to the register.",
+        match="All non-variable targets must belong to the register.",
     ):
         sb.phase_shift(var, *q_var, "wacky_id", basis="ground-rydberg")
     with pytest.raises(

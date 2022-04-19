@@ -838,3 +838,24 @@ def test_non_parametrized_mappable_register_index_functions_failure(
         " non parametrized sequences",
     ):
         seq.phase_shift_index(phi, index)
+
+
+def test_multiple_index_targets():
+    test_device = Device(
+        name="test_device",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=50,
+        min_atom_distance=4,
+        _channels=(
+            (
+                "raman_local",
+                Raman.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=2),
+            ),
+        ),
+    )
+    seq = Sequence(reg, test_device)
+    seq.declare_channel("ch0", "raman_local")
+    seq.target_index([1, 2], channel="ch0")
+    assert seq._last("ch0").targets == {"q1", "q2"}
