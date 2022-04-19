@@ -855,7 +855,18 @@ def test_multiple_index_targets():
             ),
         ),
     )
+
     seq = Sequence(reg, test_device)
+    var_array = seq.declare_variable("var_array", size=2, dtype=int)
     seq.declare_channel("ch0", "raman_local")
-    seq.target_index([1, 2], channel="ch0")
-    assert seq._last("ch0").targets == {"q1", "q2"}
+
+    seq.target_index([0, 1], channel="ch0")
+    assert seq._last("ch0").targets == {"q0", "q1"}
+
+    seq.target_index(var_array, channel="ch0")
+    built_seq = seq.build(var_array=[1, 2])
+    assert built_seq._last("ch0").targets == {"q1", "q2"}
+
+    seq.target_index(var_array + 1, channel="ch0")
+    built_seq = seq.build(var_array=[1, 2])
+    assert built_seq._last("ch0").targets == {"q2", "q3"}
