@@ -1338,12 +1338,6 @@ class Sequence:
     def _perform_target_non_parametrized(
         self, qubits_set: Set[QubitId], channel: str
     ) -> None:
-        for qubit in qubits_set:
-            if qubit not in self._qids:
-                raise ValueError(
-                    f"The qubit ID '{qubit}' does not belong to the register."
-                )
-
         channel_obj = self._channels[channel]
         basis = channel_obj.basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
