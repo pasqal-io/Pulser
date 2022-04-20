@@ -145,9 +145,10 @@ def test_target():
 
     with pytest.raises(ValueError, match="name of a declared channel"):
         seq.target("q0", "ch2")
-    with pytest.raises(ValueError, match="does not belong"):
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.target(0, "ch0")
-        seq.target("0", "ch1")
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
+        seq.target("0", "ch0")
     with pytest.raises(ValueError, match="Can only choose target of 'Local'"):
         seq.target("q3", "ch1")
     with pytest.raises(ValueError, match="can target at most 1 qubits"):
@@ -254,7 +255,7 @@ def test_phase():
     assert seq.current_phase_ref("q0", "digital") == 2 * np.pi - 1
     assert seq.current_phase_ref("q1", "digital") == 2 * np.pi - 1
 
-    with pytest.raises(ValueError, match="targets have to be qubit ids"):
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.phase_shift(np.pi, "q1", "q4", "q100")
 
     seq.declare_channel("ch1", "rydberg_global")
@@ -751,10 +752,10 @@ index_function_params = "reg, build_params, index, expected_target"
 def test_parametrized_index_functions(
     reg, build_params, index, expected_target
 ):
+    phi = np.pi / 4
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
-    phi = np.pi / 4
     index_var = seq.declare_variable("index", dtype=int)
     seq.target_index(index_var, channel="ch0")
     seq.phase_shift_index(phi, index_var)
@@ -766,6 +767,30 @@ def test_parametrized_index_functions(
         IndexError, match="Indices must exist for the register"
     ):
         seq.build(**build_params, index=20)
+
+
+@pytest.mark.parametrize(
+    index_function_params,
+    [
+        *index_function_non_mappable_register_values,
+        *index_function_mappable_register_values,
+    ],
+)
+def test_non_parametrized_index_functions_in_parametrized_context(
+    reg, build_params, index, expected_target
+):
+    phi = np.pi / 4
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch0", "raman_local")
+    phi_var = seq.declare_variable("phi_var", dtype=int)
+
+    seq.phase_shift_index(phi_var, 0)
+    seq.target_index(index, channel="ch0")
+    seq.phase_shift_index(phi, index)
+
+    built_seq = seq.build(**build_params, phi_var=0)
+    assert built_seq._last("ch0").targets == {expected_target}
+    assert built_seq.current_phase_ref(expected_target, "digital") == phi
 
 
 @pytest.mark.parametrize(
@@ -814,3 +839,35 @@ def test_non_parametrized_mappable_register_index_functions_failure(
         " non parametrized sequences",
     ):
         seq.phase_shift_index(phi, index)
+
+
+def test_multiple_index_targets():
+    test_device = Device(
+        name="test_device",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=50,
+        min_atom_distance=4,
+        _channels=(
+            (
+                "raman_local",
+                Raman.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=2),
+            ),
+        ),
+    )
+
+    seq = Sequence(reg, test_device)
+    var_array = seq.declare_variable("var_array", size=2, dtype=int)
+    seq.declare_channel("ch0", "raman_local")
+
+    seq.target_index([0, 1], channel="ch0")
+    assert seq._last("ch0").targets == {"q0", "q1"}
+
+    seq.target_index(var_array, channel="ch0")
+    built_seq = seq.build(var_array=[1, 2])
+    assert built_seq._last("ch0").targets == {"q1", "q2"}
+
+    seq.target_index(var_array + 1, channel="ch0")
+    built_seq = seq.build(var_array=[1, 2])
+    assert built_seq._last("ch0").targets == {"q2", "q3"}

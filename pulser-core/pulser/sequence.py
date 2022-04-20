@@ -498,9 +498,7 @@ class Sequence:
         self,
         name: str,
         channel_id: str,
-        initial_target: Optional[
-            Union[QubitId, Iterable[QubitId], Parametrized]
-        ] = None,
+        initial_target: Optional[Union[QubitId, Iterable[QubitId]]] = None,
     ) -> None:
         """Declares a new channel to the Sequence.
 
@@ -547,6 +545,17 @@ class Sequence:
             else:
                 raise ValueError(f"Channel {channel_id} is not available.")
 
+        if initial_target is not None:
+            try:
+                cond = any(
+                    isinstance(t, Parametrized)
+                    for t in cast(Iterable, initial_target)
+                )
+            except TypeError:
+                cond = isinstance(initial_target, Parametrized)
+            if cond:
+                raise TypeError("The initial_target cannot be parametrized")
+
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
             self.set_magnetic_field()
@@ -564,16 +573,6 @@ class Sequence:
         if ch.addressing == "Global":
             self._add_to_schedule(name, _TimeSlot("target", -1, 0, self._qids))
         elif initial_target is not None:
-            try:
-                cond = any(
-                    isinstance(t, Parametrized)
-                    for t in cast(Iterable, initial_target)
-                )
-            except TypeError:
-                cond = isinstance(initial_target, Parametrized)
-            if cond:
-                self._building = False
-
             if self.is_parametrized():
                 # Do not store "initial_target" in a _call when parametrized
                 # It is stored as a _to_build_call when target is called
@@ -599,7 +598,7 @@ class Sequence:
         self,
         name: str,
         *,
-        dtype: Union[type[int], type[float], type[str]] = float,
+        dtype: Union[type[int], type[float]] = float,
     ) -> VariableItem:
         pass
 
@@ -609,7 +608,7 @@ class Sequence:
         name: str,
         *,
         size: int,
-        dtype: Union[type[int], type[float], type[str]] = float,
+        dtype: Union[type[int], type[float]] = float,
     ) -> Variable:
         pass
 
@@ -617,7 +616,7 @@ class Sequence:
         self,
         name: str,
         size: Optional[int] = None,
-        dtype: Union[type[int], type[float], type[str]] = float,
+        dtype: Union[type[int], type[float]] = float,
     ) -> Union[Variable, VariableItem]:
         """Declare a new variable within this Sequence.
 
@@ -634,7 +633,7 @@ class Sequence:
         Keyword Args:
             size (int=1): The number of entries stored in the variable.
             dtype (default=float): The type of the data that will be assigned
-                to the variable. Must be ``float``, ``int`` or ``str``.
+                to the variable. Must be ``float`` or ``int``.
 
         Returns:
             Variable: The declared Variable instance.
@@ -828,7 +827,7 @@ class Sequence:
     @_store
     def target(
         self,
-        qubits: Union[QubitId, Iterable[QubitId], Parametrized],
+        qubits: Union[QubitId, Iterable[QubitId]],
         channel: str,
     ) -> None:
         """Changes the target qubit of a 'Local' channel.
@@ -846,13 +845,13 @@ class Sequence:
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
-        channel: Union[str, Parametrized],
+        channel: str,
     ) -> None:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (Union[int, Iterable]): The new target for this
-                channel. Must correspond to a qubit index or an iterable
+            qubits (Union[int, Iterable, Parametrized]): The new target for
+                this channel. Must correspond to a qubit index or an iterable
                 of qubit indices, when multi-qubit addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -868,7 +867,6 @@ class Sequence:
         self._check_allow_qubit_index(self.target_index.__name__)
 
         qubits = cast(int, qubits)
-        channel = cast(str, channel)
         self._target_index(qubits, channel)
 
     def _check_allow_qubit_index(self, method_name: str) -> None:
@@ -887,7 +885,8 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration (int): Time to delay (in multiples of 4 ns).
+            duration (Union[int, Parametrized]): Time to delay (in multiples
+                of 4 ns).
             channel (str): The channel's name provided when declared.
         """
         self._delay(duration, channel)
@@ -932,7 +931,7 @@ class Sequence:
     def phase_shift(
         self,
         phi: Union[float, Parametrized],
-        *targets: Union[QubitId, Parametrized],
+        *targets: QubitId,
         basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
@@ -942,7 +941,8 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi (float): The intended phase shift (in rads).
+            phi (Union[float, Parametrized]): The intended phase shift (in
+                rads).
             targets (Union[int, str]): The ids of the qubits to apply the phase
                 shift to.
             basis (str): The basis (i.e. electronic transition) to associate
@@ -965,9 +965,10 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi (float): The intended phase shift (in rads).
-            targets (int): The indices of the qubits to apply the
-                phase shift to.
+            phi (Union[float, Parametrized]): The intended phase shift (in
+                rads).
+            targets (Union[int, Parametrized]): The indices of the qubits to
+                apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
                 they were declared when instantiating the ``Register``
@@ -1262,7 +1263,7 @@ class Sequence:
     @overload
     def _precheck_target_qubits_set(
         self,
-        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        qubits: Union[Iterable[QubitId], QubitId],
         channel: str,
     ) -> Union[Set[QubitId]]:
         pass
@@ -1291,23 +1292,31 @@ class Sequence:
                 "qubits at a time."
             )
 
-        if self.is_parametrized():
-            for q in qubits_set:
-                if q not in self._qids and not isinstance(q, Parametrized):
-                    raise ValueError(
-                        "All non-variable qubits must belong to the register."
-                    )
-
         return qubits_set
 
     def _target(
         self,
-        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        qubits: Union[Iterable[QubitId], QubitId],
         channel: str,
     ) -> None:
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        self._check_ids(*qubits_set)
+
         if not self.is_parametrized():
             self._perform_target_non_parametrized(qubits_set, channel)
+
+    def _check_indices(
+        self, indices: Iterable[Union[int, Parametrized]]
+    ) -> None:
+        nb_of_indices = len(self._register.qubit_ids)
+        allowed_indices = range(nb_of_indices)
+        for i in indices:
+            if i not in allowed_indices and not isinstance(i, Parametrized):
+                raise ValueError(
+                    f"All non-variable targets must be indices valid "
+                    f"for the register, between 0 and "
+                    f"{nb_of_indices - 1}. Wrong index: {i!r}."
+                )
 
     @_store
     def _target_index(
@@ -1315,7 +1324,9 @@ class Sequence:
     ) -> None:
 
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
-        if not self.is_parametrized():
+        if self.is_parametrized():
+            self._check_indices(qubits_set)
+        else:
             try:
                 qubit_ids_set = {
                     self.register.qubit_ids[index] for index in qubits_set
@@ -1327,12 +1338,6 @@ class Sequence:
     def _perform_target_non_parametrized(
         self, qubits_set: Set[QubitId], channel: str
     ) -> None:
-        for qubit in qubits_set:
-            if qubit not in self._qids:
-                raise ValueError(
-                    f"The qubit ID '{qubit}' does not belong to the register."
-                )
-
         channel_obj = self._channels[channel]
         basis = channel_obj.basis
         phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
@@ -1393,31 +1398,24 @@ class Sequence:
             channel, _TimeSlot("delay", ti, tf, last.targets)
         )
 
-    def _precheck_phase_shift(
-        self, *targets: Union[QubitId, Parametrized], basis: str
-    ) -> None:
+    def _check_basis(self, basis: str) -> None:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
-        if self.is_parametrized():
-            for t in targets:
-                if t not in self._qids and not isinstance(t, Parametrized):
-                    raise ValueError(
-                        "All non-variable targets must belong to the register."
-                    )
+
+    def _check_ids(self, *ids: Union[QubitId, Parametrized]) -> None:
+        if not set(ids) <= self._qids:
+            raise ValueError(
+                "All given ids have to be qubit ids declared"
+                " in this sequence's register."
+            )
 
     def _phase_shift_non_parametrized(
         self,
         phi: Union[float, Parametrized],
-        *targets: Union[QubitId, Parametrized],
+        *targets: QubitId,
         basis: str,
     ) -> None:
-        if not set(targets) <= self._qids:
-            raise ValueError(
-                "All given targets have to be qubit ids declared"
-                " in this sequence's register."
-            )
         phi = cast(float, phi)
-        targets = cast(Tuple[QubitId], targets)
         if phi % (2 * np.pi) == 0:
             return
 
@@ -1429,10 +1427,12 @@ class Sequence:
     def _phase_shift(
         self,
         phi: Union[float, Parametrized],
-        *targets: Union[QubitId, Parametrized],
+        *targets: QubitId,
         basis: str,
     ) -> None:
-        self._precheck_phase_shift(*targets, basis=basis)
+        self._check_basis(basis)
+        self._check_ids(*targets)
+
         if not self.is_parametrized():
             self._phase_shift_non_parametrized(phi, *targets, basis=basis)
 
@@ -1443,8 +1443,10 @@ class Sequence:
         *targets: Union[int, Parametrized],
         basis: str,
     ) -> None:
-        self._precheck_phase_shift(*targets, basis=basis)
-        if not self.is_parametrized():
+        self._check_basis(basis)
+        if self.is_parametrized():
+            self._check_indices(targets)
+        else:
             targets = cast(Tuple[int], targets)
             try:
                 target_ids = [

@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import collections.abc  # To use collections.abc.Sequence
 import dataclasses
-from collections.abc import Iterable
 from typing import Any, Iterator, Optional, Union, cast
 
 import numpy as np
@@ -34,19 +33,19 @@ class Variable(Parametrized, OpSupport):
 
     Args:
         name (str): Unique name for the variable.
-        dtype (type): Type of the variable's content. Supports `float`, `int`
-            and `str`.
+        dtype (type): Type of the variable's content. Supports `float` and
+            `int`.
         size (int=1): The number of values stored. Defaults to a single value.
     """
 
     name: str
-    dtype: Union[type[float], type[int], type[str]]
+    dtype: Union[type[float], type[int]]
     size: int = 1
 
     def __post_init__(self) -> None:
         if not isinstance(self.name, str):
             raise TypeError("Variable's 'name' has to be of type 'str'.")
-        if self.dtype not in [int, float, str]:
+        if self.dtype not in [int, float]:
             raise TypeError(f"Invalid data type '{self.dtype}' for Variable.")
         if not isinstance(self.size, int):
             raise TypeError("Given variable 'size' is not of type 'int'.")
@@ -66,18 +65,7 @@ class Variable(Parametrized, OpSupport):
         object.__setattr__(self, "value", None)  # TODO rename _value?
         object.__setattr__(self, "_count", self._count + 1)
 
-    def _assign(self, value: Union[ArrayLike, str, float, int]) -> None:
-        if self.dtype == str:
-            if not (
-                isinstance(value, str)
-                if self.size == 1
-                else all(isinstance(s, str) for s in cast(Iterable, value))
-            ):
-                raise TypeError(
-                    f"Provided values for variable '{self.name}' "
-                    "must be of type 'str'."
-                )
-
+    def _assign(self, value: Union[ArrayLike, float, int]) -> None:
         val = np.array(value, dtype=self.dtype, ndmin=1)
         if val.size != self.size:
             raise ValueError(
@@ -129,7 +117,7 @@ class VariableItem(Parametrized, OpSupport):
         """All the variables involved with this object."""
         return self.var.variables
 
-    def build(self) -> Union[ArrayLike, str, float, int]:
+    def build(self) -> Union[ArrayLike, float, int]:
         """Return the variable's item(s) values."""
         return cast(collections.abc.Sequence, self.var.build())[self.key]
 
