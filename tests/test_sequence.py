@@ -145,9 +145,10 @@ def test_target():
 
     with pytest.raises(ValueError, match="name of a declared channel"):
         seq.target("q0", "ch2")
-    with pytest.raises(ValueError, match="does not belong"):
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.target(0, "ch0")
-        seq.target("0", "ch1")
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
+        seq.target("0", "ch0")
     with pytest.raises(ValueError, match="Can only choose target of 'Local'"):
         seq.target("q3", "ch1")
     with pytest.raises(ValueError, match="can target at most 1 qubits"):
@@ -254,7 +255,7 @@ def test_phase():
     assert seq.current_phase_ref("q0", "digital") == 2 * np.pi - 1
     assert seq.current_phase_ref("q1", "digital") == 2 * np.pi - 1
 
-    with pytest.raises(ValueError, match="targets have to be qubit ids"):
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
         seq.phase_shift(np.pi, "q1", "q4", "q100")
 
     seq.declare_channel("ch1", "rydberg_global")

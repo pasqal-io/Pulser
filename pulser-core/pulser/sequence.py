@@ -1300,15 +1300,9 @@ class Sequence:
         channel: str,
     ) -> None:
         qubits_set = self._precheck_target_qubits_set(qubits, channel)
+        self._check_ids(*qubits_set)
 
-        if self.is_parametrized():
-            for q in qubits_set:
-                if q not in self._qids and not isinstance(q, Parametrized):
-                    raise ValueError(
-                        f"All non-variable qubits must belong to the register."
-                        f" Wrong id: {q!r}"
-                    )
-        else:
+        if not self.is_parametrized():
             self._perform_target_non_parametrized(qubits_set, channel)
 
     def _check_indices(
@@ -1414,19 +1408,20 @@ class Sequence:
         if basis not in self._phase_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
 
+    def _check_ids(self, *ids: Union[QubitId, Parametrized]) -> None:
+        if not set(ids) <= self._qids:
+            raise ValueError(
+                "All given ids have to be qubit ids declared"
+                " in this sequence's register."
+            )
+
     def _phase_shift_non_parametrized(
         self,
         phi: Union[float, Parametrized],
-        *targets: Union[QubitId, Parametrized],
+        *targets: QubitId,
         basis: str,
     ) -> None:
-        if not set(targets) <= self._qids:
-            raise ValueError(
-                "All given targets have to be qubit ids declared"
-                " in this sequence's register."
-            )
         phi = cast(float, phi)
-        targets = cast(Tuple[QubitId], targets)
         if phi % (2 * np.pi) == 0:
             return
 
@@ -1442,14 +1437,9 @@ class Sequence:
         basis: str,
     ) -> None:
         self._check_basis(basis)
+        self._check_ids(*targets)
 
-        if self.is_parametrized():
-            for t in targets:
-                if t not in self._qids and not isinstance(t, Parametrized):
-                    raise ValueError(
-                        "All non-variable targets must belong to the register."
-                    )
-        else:
+        if not self.is_parametrized():
             self._phase_shift_non_parametrized(phi, *targets, basis=basis)
 
     @_store

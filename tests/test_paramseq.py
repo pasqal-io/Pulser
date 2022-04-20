@@ -78,7 +78,7 @@ def test_stored_calls():
     with pytest.raises(ValueError, match="come from this Sequence"):
         sb.target(var_, "ch1")
 
-    with pytest.raises(ValueError, match="non-variable qubits must belong"):
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
         sb.target("q20", "ch1")
 
     with pytest.raises(
@@ -128,18 +128,21 @@ def test_stored_calls():
     q_var2 = sb2.declare_variable("q_var2", size=5, dtype=int)
     var2 = sb2.declare_variable("var2")
     assert sb2._building
-    sb2.target({var2, 7, 9, 10}, "ch1")
-    assert not sb2._building
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
+        sb2.target({var2, 7, 9, 10}, "ch1")
     sb2.target_index(q_var2, "ch1")
+    assert not sb2._building
 
     with pytest.raises(ValueError, match="targets the given 'basis'"):
         sb.phase_shift_index(var, *q_var)
 
     with pytest.raises(
         ValueError,
-        match="All non-variable targets must belong to the register.",
+        match="ids have to be qubit ids",
     ):
-        sb.phase_shift(var, *q_var, "wacky_id", basis="ground-rydberg")
+        sb.phase_shift(var, "wacky_id", basis="ground-rydberg")
+    with pytest.raises(ValueError, match="ids have to be qubit ids"):
+        sb2.phase_shift(np.pi, var2, basis="ground-rydberg")
     with pytest.raises(
         ValueError,
         match="All non-variable targets must be indices valid for the"
