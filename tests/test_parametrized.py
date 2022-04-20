@@ -26,7 +26,6 @@ from pulser.waveforms import BlackmanWaveform, CompositeWaveform
 a = Variable("a", float)
 b = Variable("b", int, size=2)
 b._assign([-1.5, 1.5])
-c = Variable("c", str)
 d = Variable("d", float, size=1)
 d._assign([0.5])
 t = Variable("t", int)
@@ -43,7 +42,7 @@ def test_var():
     with pytest.raises(TypeError, match="'size' is not of type 'int'"):
         Variable("x", dtype=float, size=(2, 2))
     with pytest.raises(ValueError, match="size 1 or larger"):
-        Variable("x", dtype=str, size=0)
+        Variable("x", dtype=int, size=0)
     x = Variable("x", dtype=float)
     assert x.value is None
     assert x._count == 0
@@ -52,7 +51,6 @@ def test_var():
 
     assert a.variables == {"a": a}
     assert b.size == 2
-    assert str(c) == "c"
 
     with pytest.raises(ValueError, match="to variable of size 2"):
         b._assign([1, 4, 5])
@@ -64,12 +62,9 @@ def test_var():
     with pytest.raises(ValueError, match="No value"):
         a.build()
 
-    with pytest.raises(TypeError, match="must be of type 'str'"):
-        c._assign(3.14)
-
-    d = Variable("d", str, size=2)
-    d._assign(["o", "k"])
-    assert np.all(d.build() == np.array(["o", "k"]))
+    d = Variable("d", int, size=2)
+    d._assign([1, 2])
+    assert np.all(d.build() == np.array([1, 2]))
 
     with pytest.raises(TypeError, match="Invalid key type"):
         b[[0, 1]]
@@ -87,7 +82,7 @@ def test_varitem():
     assert str(b1) == "b[1]"
     assert str(b01) == "b[100::-1]"
     assert str(d0) == "d[0]"
-    assert b1.build() == 1  # TODO should be 1.5
+    assert b1.build() == 1
     assert np.all(b01.build() == np.array([1, -1]))
     assert d0.build() == 0.5
     with pytest.raises(FrozenInstanceError):
