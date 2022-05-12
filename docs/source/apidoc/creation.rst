@@ -39,6 +39,10 @@ register can be defined at build time.
 .. autoclass:: pulser.register.register_layout.RegisterLayout
   :members:
 
+.. autoclass:: pulser.register.mappable_reg.MappableRegister
+  :members:
+
+
 
 Special cases
 """"""""""""""""""
