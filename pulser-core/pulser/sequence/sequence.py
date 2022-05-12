@@ -19,28 +19,15 @@ import copy
 import json
 import os
 import warnings
-from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable, Mapping, Set
-from functools import wraps
-from itertools import chain
+from collections.abc import Iterable, Mapping, Set
 from sys import version_info
-from typing import (
-    Any,
-    NamedTuple,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, Optional, Tuple, Union, cast, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
-from pulser.sequence._seq_drawer import draw_sequence
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
@@ -49,8 +36,16 @@ from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
-from pulser.register.base_register import BaseRegister
+from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
+from pulser.sequence._containers import _Call, _TimeSlot
+from pulser.sequence._decorators import (
+    _screen,
+    _store,
+    _verify_parametrization,
+)
+from pulser.sequence._phase_tracker import _PhaseTracker
+from pulser.sequence._seq_drawer import draw_sequence
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
@@ -65,91 +60,7 @@ else:  # pragma: no cover
         )
 
 
-QubitId = Union[int, str]
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
-F = TypeVar("F", bound=Callable)
-
-
-class _TimeSlot(NamedTuple):
-    """Auxiliary class to store the information in the schedule."""
-
-    type: Union[Pulse, str]
-    ti: int
-    tf: int
-    targets: set[QubitId]
-
-
-# Encodes a sequence building calls
-_Call = namedtuple("_Call", ["name", "args", "kwargs"])
-
-
-def _screen(func: F) -> F:
-    """Blocks the call to a function if the Sequence is parametrized."""
-
-    @wraps(func)
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        if self.is_parametrized():
-            raise RuntimeError(
-                f"Sequence.{func.__name__} can't be called in"
-                " parametrized sequences."
-            )
-        return func(self, *args, **kwargs)
-
-    return cast(F, wrapper)
-
-
-def _verify_variable(seq: Sequence, x: Any) -> None:
-    if isinstance(x, Parametrized):
-        # If not already, the sequence becomes parametrized
-        seq._building = False
-        for name, var in x.variables.items():
-            if name not in seq._variables:
-                raise ValueError(f"Unknown variable '{name}'.")
-            elif seq._variables[name] is not var:
-                raise ValueError(
-                    f"{x} has variables that don't come from this "
-                    "Sequence. Use only what's returned by this"
-                    "Sequence's 'declare_variable' method as your"
-                    "variables."
-                )
-    elif isinstance(x, Iterable) and not isinstance(x, str):
-        # Recursively look for parametrized objs inside the arguments
-        for y in x:
-            _verify_variable(seq, y)
-
-
-def _verify_parametrization(func: F) -> F:
-    """Checks and updates the sequence status' consistency with the call.
-
-    - Checks the sequence can still be modified.
-    - Checks if all Parametrized inputs stem from declared variables.
-    """
-
-    @wraps(func)
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        if self._is_measured and self.is_parametrized():
-            raise RuntimeError(
-                "The sequence has been measured, no further "
-                "changes are allowed."
-            )
-        for x in chain(args, kwargs.values()):
-            _verify_variable(self, x)
-        func(self, *args, **kwargs)
-
-    return cast(F, wrapper)
-
-
-def _store(func: F) -> F:
-    """Checks and stores the call to call it when building the Sequence."""
-
-    @wraps(func)
-    @_verify_parametrization
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        storage = self._calls if self._building else self._to_build_calls
-        func(self, *args, **kwargs)
-        storage.append(_Call(func.__name__, args, kwargs))
-
-    return cast(F, wrapper)
 
 
 class Sequence:
@@ -1581,50 +1492,3 @@ class Sequence:
         seq._register = reg
         seq._qids = qids
         seq._calls[0] = _Call("__init__", (seq._register, seq._device), {})
-
-
-class _PhaseTracker:
-    """Tracks a phase reference over time."""
-
-    def __init__(self, initial_phase: float):
-        self._times: list[int] = [0]
-        self._phases: list[float] = [self._format(initial_phase)]
-
-    @property
-    def last_time(self) -> int:
-        return self._times[-1]
-
-    @property
-    def last_phase(self) -> float:
-        return self._phases[-1]
-
-    def changes(
-        self,
-        ti: Union[float, int],
-        tf: Union[float, int],
-        time_scale: float = 1.0,
-    ) -> Generator[tuple[float, float], None, None]:
-        """Changes in phases within ]ti, tf]."""
-        start, end = np.searchsorted(
-            self._times, (ti * time_scale, tf * time_scale), side="right"
-        )
-        for i in range(start, end):
-            change = self._phases[i] - self._phases[i - 1]
-            yield (self._times[i] / time_scale, change)
-
-    def _format(self, phi: float) -> float:
-        return phi % (2 * np.pi)
-
-    def __setitem__(self, t: int, phi: float) -> None:
-        phase = self._format(phi)
-        if t in self._times:
-            ind = self._times.index(t)
-            self._phases[ind] = phase
-        else:
-            ind = int(np.searchsorted(self._times, t, side="right"))
-            self._times.insert(ind, t)
-            self._phases.insert(ind, phase)
-
-    def __getitem__(self, t: int) -> float:
-        ind = int(np.searchsorted(self._times, t, side="right")) - 1
-        return self._phases[ind]

@@ -29,8 +29,8 @@ import qutip
 from numpy.typing import ArrayLike
 
 from pulser import Pulse, Sequence
-from pulser.sequence._seq_drawer import draw_sequence
 from pulser.register import QubitId
+from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence.sequence import _TimeSlot
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
