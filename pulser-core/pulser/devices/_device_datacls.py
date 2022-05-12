@@ -154,9 +154,9 @@ class Device:
             )
         self._validate_coords(register.qubits, kind="atoms")
 
-        if register._layout_info is not None:
+        if register.layout is not None:
             try:
-                self.validate_layout(register._layout_info.layout)
+                self.validate_layout(register.layout)
             except (ValueError, TypeError):
                 raise ValueError(
                     "The 'register' is associated with an incompatible "

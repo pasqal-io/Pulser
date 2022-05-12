@@ -212,7 +212,7 @@ class Sequence:
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
-            device.validate_layout(register._layout)
+            device.validate_layout(register.layout)
         else:
             device.validate_register(register)
 
