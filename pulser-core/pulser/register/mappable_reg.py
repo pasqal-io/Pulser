@@ -51,6 +51,11 @@ class MappableRegister:
         """The qubit IDs of this mappable register."""
         return self._qubit_ids
 
+    @property
+    def layout(self) -> RegisterLayout:
+        """The layout used to define the register."""
+        return self._layout
+
     def build_register(self, qubits: Mapping[QubitId, int]) -> BaseRegister:
         """Builds an actual register.
 

@@ -88,6 +88,11 @@ class BaseRegister(ABC):
         """The qubit IDs of this register."""
         return self._ids
 
+    @property
+    def layout(self) -> Optional[RegisterLayout]:
+        """The layout used to define the register."""
+        return self._layout_info.layout if self._layout_info else None
+
     def find_indices(self, id_list: abcSequence[QubitId]) -> list[int]:
         """Computes indices of qubits.
 
