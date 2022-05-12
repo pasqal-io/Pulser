@@ -27,7 +27,7 @@ from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.noise_model import NoiseModel, apply_noises
 from pulser.sampler.samples import QubitSamples
-from pulser.sequence import Sequence, _TimeSlot
+from pulser.sequence.sequence import Sequence, _TimeSlot
 
 
 def sample(

@@ -24,7 +24,7 @@ from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.register.special_layouts import TriangularLatticeLayout
-from pulser.sequence import _TimeSlot
+from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,

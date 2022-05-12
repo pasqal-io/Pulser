@@ -40,7 +40,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
-from pulser._seq_drawer import draw_sequence
+from pulser.sequence._seq_drawer import draw_sequence
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device

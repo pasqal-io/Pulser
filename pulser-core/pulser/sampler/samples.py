@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pulser.sequence import QubitId
+from pulser.register.base_register import QubitId
 
 
 @dataclass
