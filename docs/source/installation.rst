@@ -1,6 +1,11 @@
 Installation
 ==============
 
+**Note**: Pulser v0.6 introduced a split of the ``pulser`` package that prevents
+it from being correctly upgraded. If you have an older version of ``pulser`` installed
+and wish to upgrade, make sure to uninstall it first by running ``pip uninstall pulser``
+before proceeding to any of the steps below.
+
 Stable version
 -----------------
 To install the latest release of ``pulser``, have Python 3.7.0 or higher

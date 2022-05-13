@@ -33,7 +33,6 @@ setup(
         f"pulser-core=={__version__}",
         f"pulser-simulation=={__version__}",
     ],
-    include_package_data=True,
     description="A pulse-level composer for neutral-atom quantum devices.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
