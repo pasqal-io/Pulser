@@ -108,12 +108,12 @@ class BaseRegister(ABC):
             register.
 
             Then, it is possible to use these indices when building a
-            sequence, typically to instantiate a ``VariableArray``,
+            sequence, typically by assigning them to an array of variables
             that can be provided as an argument to ``target_index``
             and ``phase_shift_index``.
 
         Args:
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote
+            id_list (typing::Sequence[QubitId]): IDs of the qubits to find.
 
         Returns:
             list[int]: Indices of the qubits to denote, only valid for the

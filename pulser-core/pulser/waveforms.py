@@ -348,7 +348,7 @@ class CompositeWaveform(Waveform):
             raise ValueError(
                 "Needs at least two waveforms to form a " "CompositeWaveform."
             )
-        waveforms = cast(Tuple[Waveform], waveforms)
+        waveforms = cast(Tuple[Waveform, ...], waveforms)
         for wf in waveforms:
             self._validate(wf)
 

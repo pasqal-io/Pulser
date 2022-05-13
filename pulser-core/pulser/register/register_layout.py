@@ -118,7 +118,7 @@ class RegisterLayout(RegDrawer):
         Args:
             *coordinates (ArrayLike): The coordinates to return the trap IDs.
 
-        Returns
+        Returns:
             list[int]: The list of trap IDs corresponding to the coordinates.
         """
         traps = []

@@ -17,7 +17,7 @@ or paradigm, if it can be done on the device, it can be done with Pulser.
 
 Additionally, the ``pulser_simulation`` extension provides tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
 
-For a comprehensive overview of Pulser, check out [Pulser's arXiv preprint](https://arxiv.org/abs/2104.15044).
+For a comprehensive overview of Pulser, check out [Pulser's white paper](https://quantum-journal.org/papers/q-2022-01-24-629/).
 
 ## Installation
 
