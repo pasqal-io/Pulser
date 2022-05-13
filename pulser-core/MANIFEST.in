@@ -1,0 +1,3 @@
+include README.md
+include LICENSE
+include pulser/devices/interaction_coefficients/C6_coeffs.json

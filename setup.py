@@ -12,29 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
-__version__ = ""
-exec(open("pulser/_version.py").read())
+# Reads the version from the VERSION.txt file
+with open("VERSION.txt", "r") as f:
+    __version__ = f.read().strip()
 
+if "dev" in __version__:
+    raise RuntimeError(
+        "The 'pulser' distribution can only be installed or packaged for "
+        "stable versions. To install the full development version, run "
+        "`pip install -e ./pulser-core -e ./pulser-simulation` instead."
+    )
+
+# Just a meta-package that requires 'pulser-core' and 'pulser-simulation'
 setup(
     name="pulser",
     version=__version__,
     install_requires=[
-        "matplotlib",
-        "numpy>=1.20",
-        "scipy",
-        "qutip>=4.6.3",
+        f"pulser-core=={__version__}",
+        f"pulser-simulation=={__version__}",
     ],
-    extras_require={
-        ":python_version == '3.7'": [
-            "backports.cached-property",
-            "typing-extensions",
-        ],
-    },
-    packages=find_packages(),
-    package_data={"pulser": ["py.typed"]},
-    include_package_data=True,
     description="A pulse-level composer for neutral-atom quantum devices.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
