@@ -18,13 +18,14 @@ from __future__ import annotations
 import functools
 import itertools
 from dataclasses import dataclass, field
-from typing import Any, Union, cast
+from typing import Any, cast, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.channels import Channel
-from pulser.json.utils import abstract_repr, obj_to_dict
+from pulser.json.abstract_repr.serializer import abstract_repr
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import ConstantWaveform, Waveform

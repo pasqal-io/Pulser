@@ -24,12 +24,13 @@ from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
+from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.signatures import (
     BINARY_OPERATORS,
     SIGNATURES,
     UNARY_OPERATORS,
 )
-from pulser.json.utils import abstract_repr, obj_to_dict
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 
 if TYPE_CHECKING:
