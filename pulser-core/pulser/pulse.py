@@ -18,7 +18,7 @@ from __future__ import annotations
 import functools
 import itertools
 from dataclasses import dataclass, field
-from typing import Any, cast, Union
+from typing import Any, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np

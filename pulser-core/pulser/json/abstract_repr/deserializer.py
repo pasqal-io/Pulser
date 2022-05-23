@@ -1,12 +1,29 @@
+# Copyright 2022 Pulser Development Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Deserializer from JSON in the abstract representation."""
+from __future__ import annotations
+
 import json
-from typing import Dict
+from typing import TYPE_CHECKING, cast
 
 import jsonschema
 
+import pulser
 import pulser.devices as devices
+from pulser.json.exceptions import AbstractReprError
 from pulser.pulse import Pulse
 from pulser.register.register import Register
-from pulser.sequence import Sequence
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
@@ -18,6 +35,9 @@ from pulser.waveforms import (
     Waveform,
 )
 
+if TYPE_CHECKING:
+    from pulser.sequence import Sequence
+
 with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
     schema = json.load(f)
 
@@ -25,8 +45,7 @@ with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 
-def _deserialize_abstract_waveform(obj: Dict) -> Waveform:
-
+def _deserialize_abstract_waveform(obj: dict) -> Waveform:
     if obj["kind"] == "constant":
         return ConstantWaveform(obj["duration"], obj["value"])
     if obj["kind"] == "ramp":
@@ -51,8 +70,10 @@ def _deserialize_abstract_waveform(obj: Dict) -> Waveform:
     if obj["kind"] == "custom":
         return CustomWaveform(obj["samples"])
 
+    raise AbstractReprError("The object does not encode a known waveform.")
 
-def _deserialize_abstract_operation(seq, op: Dict):
+
+def _deserialize_abstract_operation(seq: Sequence, op: dict) -> None:
     if op["op"] == "target":
         seq.target_index(
             qubits=op["target"],
@@ -109,7 +130,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     qubits = obj["register"]
     reg = Register({q["name"]: (q["x"], q["y"]) for q in qubits})
 
-    seq = Sequence(reg, device)
+    seq = pulser.Sequence(reg, device)
 
     # Channels
     for name, channel_id in obj["channels"].items():
@@ -119,7 +140,9 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     vars = {}
     for name, desc in obj["variables"].items():
         v = seq.declare_variable(
-            name, len(desc["value"]), VARIABLE_TYPE_MAP[desc["type"]]
+            cast(str, name),
+            size=len(desc["value"]),
+            dtype=VARIABLE_TYPE_MAP[desc["type"]],
         )
         vars[name] = v
 

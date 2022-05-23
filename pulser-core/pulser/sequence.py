@@ -44,6 +44,10 @@ from pulser._seq_drawer import draw_sequence
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_abstract_sequence,
+)
+from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
@@ -1141,11 +1145,6 @@ class Sequence:
         See Also:
             ``serialize``
         """
-
-        from pulser.json.abstract_repr.serializer import (
-            serialize_abstract_sequence,
-        )
-
         return serialize_abstract_sequence(self, seq_name, **defaults)
 
     @staticmethod
@@ -1176,7 +1175,7 @@ class Sequence:
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
     @staticmethod
-    def from_abstract_repr(obj_str: str):
+    def from_abstract_repr(obj_str: str) -> Sequence:
         """Deserialize a sequence from an abstract JSON object.
 
         Args:
@@ -1186,10 +1185,6 @@ class Sequence:
         Returns:
             Sequence: The Pulser sequence.
         """
-        from pulser.json.abstract_repr.deserializer import (
-            deserialize_abstract_sequence,
-        )
-
         return deserialize_abstract_sequence(obj_str)
 
     @_screen

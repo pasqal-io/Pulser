@@ -1,4 +1,4 @@
-# Copyright 2020 Pulser Development Team
+# Copyright 2022 Pulser Development Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Utility functions for JSON serializations."""
-
+"""Utility functions for JSON serialization to the abstract representation."""
 from __future__ import annotations
 
 import json
 from itertools import chain
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from typing import Sequence as abcSequence
 from typing import Union, cast
 
@@ -26,6 +25,9 @@ import numpy as np
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.signatures import SIGNATURES
 from pulser.register.base_register import QubitId
+
+if TYPE_CHECKING:
+    from pulser.sequence import Sequence
 
 
 class AbstractReprEncoder(json.JSONEncoder):
@@ -77,7 +79,7 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
 
 
 def serialize_abstract_sequence(
-    seq, seq_name: str = "pulser-exported", **defaults: Any
+    seq: Sequence, seq_name: str = "pulser-exported", **defaults: Any
 ) -> str:
     """Serializes the Sequence into an abstract JSON object.
 
@@ -91,7 +93,6 @@ def serialize_abstract_sequence(
     Returns:
         str: The sequence encoded as an abstract JSON object.
     """
-
     res: dict[str, Any] = {
         "version": "1",
         "name": seq_name,

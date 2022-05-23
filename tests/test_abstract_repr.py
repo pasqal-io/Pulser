@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import json
-from typing import Dict, List
+from typing import Any
 
 import jsonschema
 import numpy as np
@@ -215,9 +217,9 @@ def test_exceptions():
 
 
 def _get_serialized_seq(
-    operations: List[Dict] = None,
-    variables: Dict[str, Dict] = None,
-):
+    operations: list[dict] = None,
+    variables: dict[str, dict] = None,
+) -> dict[str, Any]:
     return {
         "version": "1",
         "name": "John Doe",
@@ -234,8 +236,17 @@ def _get_serialized_seq(
     }
 
 
+# Needed to replace lambdas in the pytest.mark.parametrize calls (due to mypy)
+def _get_op(op: dict) -> Any:
+    return op["op"]
+
+
+def _get_kind(op: dict) -> Any:
+    return op["kind"]
+
+
 class TestDeserializarion:
-    def test_deserialize_device_and_channels(self):
+    def test_deserialize_device_and_channels(self) -> None:
         s = _get_serialized_seq()
 
         seq = Sequence.from_abstract_repr(json.dumps(s))
@@ -311,7 +322,7 @@ class TestDeserializarion:
                 },
             },
         ],
-        ids=lambda op: op["op"],
+        ids=_get_op,
     )
     def test_deserialize_non_parametrized_op(self, op):
         s = _get_serialized_seq(operations=[op])
@@ -376,7 +387,7 @@ class TestDeserializarion:
             },
             {"kind": "custom", "samples": [i / 10 for i in range(0, 20)]},
         ],
-        ids=lambda op: op["kind"],
+        ids=_get_kind,
     )
     def test_deserialize_non_parametrized_waveform(self, wf_obj):
         s = _get_serialized_seq(
