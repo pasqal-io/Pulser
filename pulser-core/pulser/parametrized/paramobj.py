@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, Union, cast
 import numpy as np
 
 from pulser.json.abstract_repr.serializer import abstract_repr
-from pulser.json.signatures import (
+from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     SIGNATURES,
     UNARY_OPERATORS,

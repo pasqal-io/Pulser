@@ -22,8 +22,8 @@ from typing import Union, cast
 
 import numpy as np
 
+from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.exceptions import AbstractReprError
-from pulser.json.signatures import SIGNATURES
 from pulser.register.base_register import QubitId
 
 if TYPE_CHECKING:
