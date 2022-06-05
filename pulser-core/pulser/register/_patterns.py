@@ -20,8 +20,8 @@ def square_rect(rows: int, columns: int) -> np.ndarray:
     """A square lattice pattern in a rectangular shape.
 
     Args:
-        rows(int): Number of rows.
-        columns(int): Number of columns.
+        rows: Number of rows.
+        columns: Number of columns.
 
     Returns:
         np.ndarray: The coordinates of the points in the pattern.
@@ -36,8 +36,8 @@ def triangular_rect(rows: int, columns: int) -> np.ndarray:
     """A triangular lattice pattern in a rectangular shape.
 
     Args:
-        rows(int): Number of rows.
-        columns(int): Number of columns.
+        rows: Number of rows.
+        columns: Number of columns.
 
     Returns:
         np.ndarray: The coordinates of the points in the pattern.
@@ -52,7 +52,7 @@ def triangular_hex(n_points: int) -> np.ndarray:
     """A triangular lattice pattern in an hexagonal shape.
 
     Args:
-        n_points(int): The number of points in the pattern.
+        n_points: The number of points in the pattern.
 
 
     Returns:

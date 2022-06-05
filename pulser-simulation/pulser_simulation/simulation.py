@@ -49,13 +49,13 @@ class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
 
     Args:
-        sequence (Sequence): An instance of a Pulser Sequence that we
+        sequence: An instance of a Pulser Sequence that we
             want to simulate.
-        sampling_rate (float): The fraction of samples that we wish to
+        sampling_rate: The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
             value between 0.05 and 1.0.
-        config (SimConfig): Configuration to be used for this simulation.
-        evaluation_times (Union[str, ArrayLike, float]): Choose between:
+        config: Configuration to be used for this simulation.
+        evaluation_times: Choose between:
 
             - "Full": The times are set to be the ones used to define the
               Hamiltonian to the solver.
@@ -150,7 +150,7 @@ class Simulation:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
-            cfg (SimConfig): New configuration.
+            cfg: New configuration.
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
@@ -210,7 +210,7 @@ class Simulation:
         former noise parameters.
 
         Args:
-            config (SimConfig): SimConfig to retrieve parameters from.
+            config: SimConfig to retrieve parameters from.
         """
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
@@ -264,7 +264,7 @@ class Simulation:
         """The initial state of the simulation.
 
         Args:
-            state (Union[str, ArrayLike, qutip.Qobj]): The initial state.
+            state: The initial state.
                 Choose between:
 
                 - "all-ground" for all atoms in ground state
@@ -301,7 +301,7 @@ class Simulation:
         """The times at which the results of this simulation are returned.
 
         Args:
-            value (Union[str, ArrayLike, float]): Choose between:
+            value: Choose between:
 
                 - "Full": The times are set to be the ones used to define the
                   Hamiltonian to the solver.
@@ -378,16 +378,16 @@ class Simulation:
         """Draws the input sequence and the one used by the solver.
 
         Keyword Args:
-            draw_phase_area (bool): Whether phase and area values need
+            draw_phase_area: Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
-            draw_interp_pts (bool): When the sequence has pulses with waveforms
+            draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective waveforms (defaults to False).
-            draw_phase_shifts (bool): Whether phase shift and reference
+            draw_phase_shifts: Whether phase shift and reference
                 information should be added to the plot, defaults to False.
-            fig_name(str, default=None): The name on which to save the figure.
+            fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
-            kwargs_savefig(dict, default={}): Keywords arguments for
+            kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
 
@@ -529,7 +529,7 @@ class Simulation:
         and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
 
         Args:
-            operations (list): List of tuples `(operator, qubits)`.
+            operations: List of tuples `(operator, qubits)`.
                 `operator` can be a ``qutip.Quobj`` or a string key for
                 ``self.op_matrix``. `qubits` is the list on which operator
                 will be applied. The qubits can be passed as their
@@ -642,7 +642,7 @@ class Simulation:
         and refreshes potential noise parameters by drawing new at random.
 
         Args:
-            update(bool=True): Whether to update the noise parameters.
+            update: Whether to update the noise parameters.
         """
         if update:
             self._update_noise()
@@ -826,7 +826,7 @@ class Simulation:
         """Get the Hamiltonian created from the sequence at a fixed time.
 
         Args:
-            time (float): The specific time at which we want to extract the
+            time: The specific time at which we want to extract the
                 Hamiltonian (in ns).
 
         Returns:
@@ -859,9 +859,9 @@ class Simulation:
         Otherwise will return CoherentResults.
 
         Keyword Args:
-            progress_bar (bool or None): If True, the progress bar of QuTiP's
+            progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
-            options (qutip.solver.Options): If specified, will override
+            options: If specified, will override
                 SimConfig solver_options. If no `max_step` value is provided,
                 an automatic one is calculated from the `Sequence`'s schedule
                 (half of the shortest duration among pulses and delays).

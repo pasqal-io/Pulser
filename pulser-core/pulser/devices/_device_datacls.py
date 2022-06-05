@@ -100,7 +100,7 @@ class Device:
         """Changes the Rydberg level used in the Device.
 
         Args:
-            ryd_lvl(int): the Rydberg level to use (between 50 and 100).
+            ryd_lvl: the Rydberg level to use (between 50 and 100).
 
         Note:
             Modifications to the `rydberg_level` attribute only affect the
@@ -117,7 +117,7 @@ class Device:
         """Calculates the Rydberg blockade radius for a given Rabi frequency.
 
         Args:
-            rabi_frequency(float): The Rabi frequency, in rad/µs.
+            rabi_frequency: The Rabi frequency, in rad/µs.
 
         Returns:
             float: The rydberg blockade radius, in μm.
@@ -128,7 +128,7 @@ class Device:
         """The maximum Rabi frequency value to enforce a given blockade radius.
 
         Args:
-            blockade_radius(float): The Rydberg blockade radius, in µm.
+            blockade_radius: The Rydberg blockade radius, in µm.
 
         Returns:
             float: The maximum rabi frequency value, in rad/µs.
@@ -139,7 +139,7 @@ class Device:
         """Checks if 'register' is compatible with this device.
 
         Args:
-            register(BaseRegister): The Register to validate.
+            register: The Register to validate.
         """
         if not isinstance(register, BaseRegister):
             raise TypeError(
@@ -167,7 +167,7 @@ class Device:
         """Checks if a register layout is compatible with this device.
 
         Args:
-            layout(RegisterLayout): The RegisterLayout to validate.
+            layout: The RegisterLayout to validate.
         """
         if not isinstance(layout, RegisterLayout):
             raise TypeError("'layout' must be a RegisterLayout instance.")
@@ -184,8 +184,8 @@ class Device:
         """Checks if a pulse can be executed on a specific device channel.
 
         Args:
-            pulse (Pulse): The pulse to validate.
-            channel_id (str): The channel ID used to index the chosen channel
+            pulse: The pulse to validate.
+            channel_id: The channel ID used to index the chosen channel
                 on this device.
         """
         ch = self.channels[channel_id]

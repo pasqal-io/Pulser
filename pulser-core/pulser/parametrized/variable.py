@@ -32,10 +32,10 @@ class Variable(Parametrized, OpSupport):
     """A variable for parametrized sequence building.
 
     Args:
-        name (str): Unique name for the variable.
-        dtype (type): Type of the variable's content. Supports `float` and
+        name: Unique name for the variable.
+        dtype: Type of the variable's content. Supports `float` and
             `int`.
-        size (int=1): The number of values stored. Defaults to a single value.
+        size: The number of values stored. Defaults to a single value.
     """
 
     name: str

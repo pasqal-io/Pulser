@@ -41,12 +41,12 @@ def sample(
     It is intended to be used like the json.dumps() function.
 
     Args:
-        seq (Sequence): A pulser.Sequence instance.
-        modulation (bool): Flag to account for the modulation of AOM/EOM
+        seq: A pulser.Sequence instance.
+        modulation: Flag to account for the modulation of AOM/EOM
             before sampling.
-        common_noises (Optional[list[LocalNoise]]): A list of the noise sources
+        common_noises: A list of the noise sources
             for all channels.
-        global_noises (Optional[list[LocalNoise]]): A list of the noise sources
+        global_noises: A list of the noise sources
             for global channels.
 
     Returns:
@@ -253,7 +253,7 @@ def _group_between_retargets(
     [[A, B], [C, D, E], [F]]
 
     Args:
-        ts (list[_TimeSlot]): A list of TimeSlot from a Sequence schedule.
+        ts: A list of TimeSlot from a Sequence schedule.
 
     Returns:
         A list of list of _TimeSlot. _TimeSlot instances are successive and

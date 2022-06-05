@@ -27,9 +27,9 @@ class SquareLatticeLayout(RegisterLayout):
     """A RegisterLayout with a square lattice pattern in a rectangular shape.
 
     Args:
-        rows (int): The number of rows of traps.
-        columns (int): The number of columns of traps.
-        spacing (int): The distance between neighbouring traps (in µm).
+        rows: The number of rows of traps.
+        columns: The number of columns of traps.
+        spacing: The distance between neighbouring traps (in µm).
     """
 
     def __init__(self, rows: int, columns: int, spacing: int):
@@ -45,8 +45,8 @@ class SquareLatticeLayout(RegisterLayout):
         """Defines a register with a square shape.
 
         Args:
-            side (int): The length of the square's side, in number of atoms.
-            prefix (str): The prefix for the qubit ids. Each qubit ID starts
+            side: The length of the square's side, in number of atoms.
+            prefix: The prefix for the qubit ids. Each qubit ID starts
                 with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
@@ -64,9 +64,9 @@ class SquareLatticeLayout(RegisterLayout):
         """Defines a register with a rectangular shape.
 
         Args:
-            rows (int): The number of rows in the register.
-            columns (int): The number of columns in the register.
-            prefix (str): The prefix for the qubit ids. Each qubit ID starts
+            rows: The number of rows in the register.
+            columns: The number of columns in the register.
+            prefix: The prefix for the qubit ids. Each qubit ID starts
                 with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
@@ -104,8 +104,8 @@ class TriangularLatticeLayout(RegisterLayout):
     """A RegisterLayout with a triangular lattice pattern in an hexagonal shape.
 
     Args:
-        n_traps (int): The number of traps in the layout.
-        spacing (int): The distance between neighbouring traps (in µm).
+        n_traps: The number of traps in the layout.
+        spacing: The distance between neighbouring traps (in µm).
     """
 
     def __init__(self, n_traps: int, spacing: int):
@@ -117,8 +117,8 @@ class TriangularLatticeLayout(RegisterLayout):
         """Defines a register with an hexagonal shape.
 
         Args:
-            n_atoms (int): The number of atoms in the register.
-            prefix (str): The prefix for the qubit ids. Each qubit ID starts
+            n_atoms: The number of atoms in the register.
+            prefix: The prefix for the qubit ids. Each qubit ID starts
                 with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
@@ -143,9 +143,9 @@ class TriangularLatticeLayout(RegisterLayout):
         """Defines a register with a rectangular shape.
 
         Args:
-            rows (int): The number of rows in the register.
-            atoms_per_row (int): The number of atoms in each row.
-            prefix (str): The prefix for the qubit ids. Each qubit ID starts
+            rows: The number of rows in the register.
+            atoms_per_row: The number of atoms in each row.
+            prefix: The prefix for the qubit ids. Each qubit ID starts
                 with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 

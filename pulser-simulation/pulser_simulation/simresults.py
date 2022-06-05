@@ -42,10 +42,10 @@ class SimulationResults(ABC):
         """Initializes a new SimulationResults instance.
 
         Args:
-            size (int): The number of atoms in the register.
-            basis_name (str): The basis indicating the addressed atoms after
+            size: The number of atoms in the register.
+            basis_name: The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            sim_times (array): Array of times (µs) when simulation results are
+            sim_times: Array of times (µs) when simulation results are
                 returned.
         """
         self._dim = 3 if basis_name == "all" else 2
@@ -88,7 +88,7 @@ class SimulationResults(ABC):
         """Returns the expectation values of operators in obs_list.
 
         Args:
-            obs_list (list[Union[qutip.Qobj, ArrayLike]]): Input observable
+            obs_list: Input observable
                 list. ArrayLike objects will be converted to qutip.Qobj.
 
         Returns:
@@ -135,9 +135,9 @@ class SimulationResults(ABC):
         """Returns the result of multiple measurements at time t.
 
         Args:
-            t (float): Time at which the state is sampled.
-            n_samples (int): Number of samples to return.
-            t_tol (float): Tolerance for the difference between t and
+            t: Time at which the state is sampled.
+            n_samples: Number of samples to return.
+            t_tol: Tolerance for the difference between t and
                 closest time.
 
         Returns:
@@ -157,7 +157,7 @@ class SimulationResults(ABC):
         """Returns the result of multiple measurements of the final state.
 
         Args:
-            N_samples (int): Number of samples to return.
+            N_samples: Number of samples to return.
 
         Returns:
             Counter: Sample distribution of bitstrings corresponding to
@@ -169,9 +169,9 @@ class SimulationResults(ABC):
         """Plots the expectation value of a given operator op.
 
         Args:
-            op (qutip.Qobj): Operator whose expectation value is wanted.
-            fmt (str): Curve plot format.
-            label (str): Curve label.
+            op: Operator whose expectation value is wanted.
+            fmt: Curve plot format.
+            label: Curve label.
         """
         plt.plot(self._sim_times, self.expect([op])[0], fmt, label=label)
         plt.xlabel("Time (µs)")
@@ -181,8 +181,8 @@ class SimulationResults(ABC):
         """Returns closest index corresponding to time t_float.
 
         Args:
-            t_float (float): Time value (in µs).
-            tol (float): Tolerance for the difference between t_float and
+            t_float: Time value (in µs).
+            tol: Tolerance for the difference between t_float and
                 closest time.
         """
         try:
@@ -201,7 +201,7 @@ class SimulationResults(ABC):
         probability of obtaining each possible state, after measurement.
 
         Args:
-            t_index (int): The index in the list of states/results to turn
+            t_index: The index in the list of states/results to turn
                 into the pseudo-density matrix.
 
         Returns:
@@ -261,18 +261,18 @@ class NoisyResults(SimulationResults):
             distribution of bitstrings, not atomic states
 
         Args:
-            run_output (list[Counter]): Each Counter contains the
+            run_output: Each Counter contains the
                 probability distribution of a multi-qubits state,
                 represented as a bitstring. There is one Counter for each time
                 the simulation was asked to return a result.
-            size (int): The number of atoms in the register.
-            basis_name (str): Basis indicating the addressed atoms after
+            size: The number of atoms in the register.
+            basis_name: Basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
                 makes no sense after projection on bitstrings). Defaults to
                 'digital' if given value 'all'.
-            sim_times (np.ndarray): Times at which Simulation object returned
+            sim_times: Times at which Simulation object returned
                 the results.
-            n_measures (int): Number of measurements needed to compute this
+            n_measures: Number of measurements needed to compute this
                 result when doing the simulation.
         """
         basis_name_ = "digital" if basis_name == "all" else basis_name
@@ -299,8 +299,8 @@ class NoisyResults(SimulationResults):
             way of computing expectation values of observables.
 
         Args:
-            t (float): Time (µs) at which to return the state.
-            t_tol (float): Tolerance for the difference between t and
+            t: Time (µs) at which to return the state.
+            t_tol: Tolerance for the difference between t and
                 closest time.
 
         Returns:
@@ -341,10 +341,10 @@ class NoisyResults(SimulationResults):
             The observable must be diagonal.
 
         Args:
-            op (qutip.Qobj): Operator whose expectation value is wanted.
-            fmt (str): Curve plot format.
-            label (str): y-Axis label.
-            error_bars (bool): Choose to display error bars.
+            op: Operator whose expectation value is wanted.
+            fmt: Curve plot format.
+            label: y-Axis label.
+            error_bars: Choose to display error bars.
         """
 
         def get_error_bars() -> Tuple[ArrayLike, ArrayLike]:
@@ -385,17 +385,17 @@ class CoherentResults(SimulationResults):
         """Initializes a new CoherentResults instance.
 
         Args:
-            run_output (list of qutip.Qobj): List of `qutip.Qobj` corresponding
+            run_output: List of `qutip.Qobj` corresponding
                 to the states at each time step after the evolution has been
                 simulated.
-            size (int): The number of atoms in the register.
-            basis_name (str): The basis indicating the addressed atoms after
+            size: The number of atoms in the register.
+            basis_name: The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            sim_times (list): Times at which Simulation object returned the
+            sim_times: Times at which Simulation object returned the
                 results.
-            meas_basis (str): The basis in which a sampling measurement
+            meas_basis: The basis in which a sampling measurement
                 is desired.
-            meas_errors (Optional[Mapping[str, float]]): If measurement errors
+            meas_errors: If measurement errors
                 are involved, give them in a dictionary with "epsilon" and
                 "epsilon_prime".
         """
@@ -438,19 +438,19 @@ class CoherentResults(SimulationResults):
         """Get the state at time t of the simulation.
 
         Args:
-            t (float): Time (µs) at which to return the state.
-            reduce_to_basis (str, default=None): Reduces the full state vector
+            t: Time (µs) at which to return the state.
+            reduce_to_basis: Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible. Doesn't
                 apply to XY mode.
-            ignore_global_phase (bool, default=True): If True, changes the
+            ignore_global_phase: If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
-            tol (float, default=1e-6): Maximum allowed population of each
+            tol: Maximum allowed population of each
                 eliminated state.
-            normalize (bool, default=True): Whether to normalize the reduced
+            normalize: Whether to normalize the reduced
                 state.
-            t_tol (float): Tolerance for the difference between t and
+            t_tol: Tolerance for the difference between t and
                 closest time.
 
         Returns:
@@ -506,16 +506,16 @@ class CoherentResults(SimulationResults):
         """Returns the final state of the Simulation.
 
         Args:
-            reduce_to_basis (str, default=None): Reduces the full state vector
+            reduce_to_basis: Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible. Doesn't
                 apply to XY mode.
-            ignore_global_phase (bool, default=True): If True, changes the
+            ignore_global_phase: If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
-            tol (float, default=1e-6): Maximum allowed population of each
+            tol: Maximum allowed population of each
                 eliminated state.
-            normalize (bool, default=True): Whether to normalize the reduced
+            normalize: Whether to normalize the reduced
                 state.
 
         Returns:
@@ -609,9 +609,9 @@ class CoherentResults(SimulationResults):
         """Returns the result of multiple measurements at time t.
 
         Args:
-            t (float): Time at which the state is sampled.
-            n_samples (int): Number of samples to return.
-            t_tol (float): Tolerance for the difference between t and
+            t: Time at which the state is sampled.
+            n_samples: Number of samples to return.
+            t_tol: Tolerance for the difference between t and
                 closest time.
 
         Returns:

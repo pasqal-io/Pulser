@@ -64,7 +64,7 @@ class Waveform(ABC):
         """Initializes a waveform with a given duration.
 
         Args:
-            duration (int): The waveforms duration (in ns).
+            duration: The waveforms duration (in ns).
         """
         duration = cast(int, duration)
         try:
@@ -152,7 +152,7 @@ class Waveform(ABC):
         """Returns a new waveform with modified duration.
 
         Args:
-            new_duration(int): The duration of the new waveform.
+            new_duration: The duration of the new waveform.
         """
         raise NotImplementedError(
             f"{self.__class__.__name__} does not support"
@@ -165,7 +165,7 @@ class Waveform(ABC):
         This duration is adjusted according to the minimal buffer times.
 
         Args:
-            channel (Channel): The channel modulating the waveform.
+            channel: The channel modulating the waveform.
 
         Returns:
             numpy.ndarray: The array of samples after modulation.
@@ -181,7 +181,7 @@ class Waveform(ABC):
         """The minimal buffers needed around a modulated waveform.
 
         Args:
-            channel (Channel): The channel modulating the waveform.
+            channel: The channel modulating the waveform.
 
         Returns:
             tuple[int, int]: The minimum buffer times at the start and end of
@@ -202,7 +202,7 @@ class Waveform(ABC):
         ``Waveform.modulated_samples()`` to get the output already truncated.
 
         Args:
-            channel (Channel): The channel modulating the waveform.
+            channel: The channel modulating the waveform.
 
         Returns:
             numpy.ndarray: The array of samples after modulation.
@@ -339,7 +339,7 @@ class CompositeWaveform(Waveform):
     """A waveform combining multiple smaller waveforms.
 
     Args:
-        waveforms(Waveform): Two or more waveforms to combine.
+        waveforms: Two or more waveforms to combine.
     """
 
     def __init__(self, *waveforms: Union[Parametrized, Waveform]):
@@ -405,7 +405,7 @@ class CustomWaveform(Waveform):
     """A custom waveform.
 
     Args:
-        samples (array_like): The modulation values at each time step
+        samples: The modulation values at each time step
             (in rad/µs). The number of samples dictates the duration, in ns.
     """
 
@@ -447,8 +447,8 @@ class ConstantWaveform(Waveform):
     """A waveform of constant value.
 
     Args:
-        duration (int): The waveform duration (in ns).
-        value (float): The modulation value (in rad/µs).
+        duration: The waveform duration (in ns).
+        value: The modulation value (in rad/µs).
     """
 
     def __init__(
@@ -479,7 +479,7 @@ class ConstantWaveform(Waveform):
         """Returns a new waveform with modified duration.
 
         Args:
-            new_duration(int): The duration of the new waveform.
+            new_duration: The duration of the new waveform.
 
         Returns:
             ConstantWaveform: The new waveform with the given duration.
@@ -506,9 +506,9 @@ class RampWaveform(Waveform):
     """A linear ramp waveform.
 
     Args:
-        duration (int): The waveform duration (in ns).
-        start (float): The initial value (in rad/µs).
-        stop (float): The final value (in rad/µs).
+        duration: The waveform duration (in ns).
+        start: The initial value (in rad/µs).
+        stop: The final value (in rad/µs).
     """
 
     def __init__(
@@ -547,7 +547,7 @@ class RampWaveform(Waveform):
         """Returns a new waveform with modified duration.
 
         Args:
-            new_duration(int): The duration of the new waveform.
+            new_duration: The duration of the new waveform.
 
         Returns:
             RampWaveform: The new waveform with the given duration.
@@ -575,8 +575,8 @@ class BlackmanWaveform(Waveform):
     """A Blackman window of a specified duration and area.
 
     Args:
-        duration (int): The waveform duration (in ns).
-        area (float): The integral of the waveform. Can be negative, in which
+        duration: The waveform duration (in ns).
+        area: The integral of the waveform. Can be negative, in which
             case it takes the positive waveform and changes the sign of all its
             values.
     """
@@ -617,11 +617,11 @@ class BlackmanWaveform(Waveform):
         not surpassed, but approached as closely as possible.
 
         Args:
-            max_val (float): The maximum value threshold (in rad/µs). If
+            max_val: The maximum value threshold (in rad/µs). If
                 negative, it is taken as the lower bound i.e. the minimum
                 value that can be reached. The sign of `max_val` must match the
                 sign of `area`.
-            area (float): The area under the waveform.
+            area: The area under the waveform.
         """
         max_val = cast(float, max_val)
         area = cast(float, area)
@@ -677,7 +677,7 @@ class BlackmanWaveform(Waveform):
         """Returns a new waveform with modified duration.
 
         Args:
-            new_duration(int): The duration of the new waveform.
+            new_duration: The duration of the new waveform.
 
         Returns:
             BlackmanWaveform: The new waveform with the same area but a new
@@ -702,13 +702,13 @@ class InterpolatedWaveform(Waveform):
     """Creates a waveform from interpolation of a set of data points.
 
     Args:
-        duration (int): The waveform duration (in ns).
-        values (ArrayLike): Values of the interpolation points (in rad/µs).
-        times (Optional[ArrayLike]): Fractions of the total duration (between 0
+        duration: The waveform duration (in ns).
+        values: Values of the interpolation points (in rad/µs).
+        times: Fractions of the total duration (between 0
             and 1), indicating where to place each value on the time axis. If
             not given, the values are spread evenly throughout the full
             duration of the waveform.
-        interpolator (str = "PchipInterpolator"): The SciPy interpolation class
+        interpolator: The SciPy interpolation class
             to use. Supports "PchipInterpolator" and "interp1d".
         **interpolator_kwargs: Extra parameters to give to the chosen
             interpolator class.
@@ -806,7 +806,7 @@ class InterpolatedWaveform(Waveform):
         """Returns a new waveform with modified duration.
 
         Args:
-            new_duration(int): The duration of the new waveform.
+            new_duration: The duration of the new waveform.
 
         Returns:
             InterpolatedWaveform: The new waveform with the same coordinates
@@ -861,11 +861,11 @@ class KaiserWaveform(Waveform):
     https://numpy.org/doc/stable/reference/generated/numpy.kaiser.html
 
     Args:
-        duration (int): The waveform duration (in ns).
-        area (float): The integral of the waveform. Can be negative,
+        duration: The waveform duration (in ns).
+        area: The integral of the waveform. Can be negative,
             in which case it takes the positive waveform and changes the sign
             of all its values.
-        beta (Optional[float]): The beta parameter of the Kaiser window.
+        beta: The beta parameter of the Kaiser window.
             The default value is 14.
     """
 
@@ -923,12 +923,12 @@ class KaiserWaveform(Waveform):
         not surpassed, but approached as closely as possible.
 
         Args:
-            max_val (float): The maximum value threshold (in rad/µs). If
+            max_val: The maximum value threshold (in rad/µs). If
                 negative, it is taken as the lower bound i.e. the minimum
                 value that can be reached. The sign of `max_val` must match the
                 sign of `area`.
-            area (float): The area under the waveform.
-            beta (Optional[float]): The beta parameter of the Kaiser window.
+            area: The area under the waveform.
+            beta: The beta parameter of the Kaiser window.
                 The default value is 14.
         """
         max_val = cast(float, max_val)
@@ -1015,7 +1015,7 @@ class KaiserWaveform(Waveform):
         """Returns a new waveform with modified duration.
 
         Args:
-            new_duration(int): The duration of the new waveform.
+            new_duration: The duration of the new waveform.
 
         Returns:
             KaiserWaveform: The new waveform with the same area and beta

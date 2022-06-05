@@ -56,7 +56,7 @@ class RegisterLayout(RegDrawer):
     the traps are then numbered starting from 0.
 
     Args:
-        trap_coordinates(ArrayLike): The trap coordinates defining the layout.
+        trap_coordinates: The trap coordinates defining the layout.
     """
 
     trap_coordinates: ArrayLike
@@ -116,7 +116,7 @@ class RegisterLayout(RegDrawer):
         """Finds the trap ID for a given set of trap coordinates.
 
         Args:
-            *coordinates (ArrayLike): The coordinates to return the trap IDs.
+            *coordinates: The coordinates to return the trap IDs.
 
         Returns:
             list[int]: The list of trap IDs corresponding to the coordinates.
@@ -141,8 +141,8 @@ class RegisterLayout(RegDrawer):
         """Defines a register from selected traps.
 
         Args:
-            *trap_ids (int): The trap IDs selected to form the Register.
-            qubit_ids (Optional[abcSequence[QubitId]] = None): A sequence of
+            *trap_ids: The trap IDs selected to form the Register.
+            qubit_ids: A sequence of
                 unique qubit IDs to associated to the selected traps. Must be
                 of the same length as the selected traps.
 
@@ -196,15 +196,15 @@ class RegisterLayout(RegDrawer):
         """Draws the entire register layout.
 
         Keyword Args:
-            blockade_radius(float, default=None): The distance (in μm) between
+            blockade_radius: The distance (in μm) between
                 atoms below which the Rydberg blockade effect occurs.
-            draw_half_radius(bool, default=False): Whether or not to draw
+            draw_half_radius: Whether or not to draw
                 half the blockade radius surrounding each trap. If `True`,
                 requires `blockade_radius` to be defined.
-            draw_graph(bool, default=True): Whether or not to draw the
+            draw_graph: Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
-            projection(bool, default=True): If the layout is in 3D, draws it
+            projection: If the layout is in 3D, draws it
                 as projections on different planes.
 
         Note:
@@ -263,9 +263,9 @@ class RegisterLayout(RegDrawer):
         as many qubits as you need for your largest register.
 
         Args:
-            n_qubits(int): The number of qubits to reserve in the mappable
+            n_qubits: The number of qubits to reserve in the mappable
                 register.
-            prefix (str): The prefix for the qubit ids. Each qubit ID starts
+            prefix: The prefix for the qubit ids. Each qubit ID starts
                 with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 

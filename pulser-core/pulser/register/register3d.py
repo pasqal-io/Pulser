@@ -31,7 +31,7 @@ class Register3D(BaseRegister, RegDrawer):
     """A 3D quantum register containing a set of qubits.
 
     Args:
-        qubits (dict): Dictionary with the qubit names as keys and their
+        qubits: Dictionary with the qubit names as keys and their
             position coordinates (in μm) as values
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
@@ -53,11 +53,11 @@ class Register3D(BaseRegister, RegDrawer):
         """Initializes the register with the qubits in a cubic array.
 
         Args:
-            side (int): Side of the cube in number of qubits.
+            side: Side of the cube in number of qubits.
 
         Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            spacing: The distance between neighbouring qubits in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
@@ -85,13 +85,13 @@ class Register3D(BaseRegister, RegDrawer):
         """Initializes the register with the qubits in a cuboid array.
 
         Args:
-            rows (int): Number of rows.
-            columns (int): Number of columns.
-            layers (int): Number of layers.
+            rows: Number of rows.
+            columns: Number of columns.
+            layers: Number of layers.
 
         Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            spacing: The distance between neighbouring qubits in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
@@ -145,7 +145,7 @@ class Register3D(BaseRegister, RegDrawer):
         """Converts a Register3D into a Register (if possible).
 
         Args:
-            tol_width (float): The allowed transverse width of
+            tol_width: The allowed transverse width of
             the register to be projected.
 
         Returns:
@@ -189,21 +189,21 @@ class Register3D(BaseRegister, RegDrawer):
         """Draws the entire register.
 
         Keyword Args:
-            with_labels(bool, default=True): If True, writes the qubit ID's
+            with_labels: If True, writes the qubit ID's
                 next to each qubit.
-            blockade_radius(float, default=None): The distance (in μm) between
+            blockade_radius: The distance (in μm) between
                 atoms below the Rydberg blockade effect occurs.
-            draw_half_radius(bool, default=False): Whether or not to draw the
+            draw_half_radius: Whether or not to draw the
                 half the blockade radius surrounding each atoms. If `True`,
                 requires `blockade_radius` to be defined.
-            draw_graph(bool, default=True): Whether or not to draw the
+            draw_graph: Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
-            projection(bool, default=False): Whether to draw a 2D projection
+            projection: Whether to draw a 2D projection
                 instead of a perspective view.
-            fig_name(str, default=None): The name on which to save the figure.
+            fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
-            kwargs_savefig(dict, default={}): Keywords arguments for
+            kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
 

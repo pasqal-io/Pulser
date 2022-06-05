@@ -113,7 +113,7 @@ class BaseRegister(ABC):
             and ``phase_shift_index``.
 
         Args:
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to find.
+            id_list: IDs of the qubits to find.
 
         Returns:
             list[int]: Indices of the qubits to denote, only valid for the
@@ -137,7 +137,7 @@ class BaseRegister(ABC):
         """Creates the register from an array of coordinates.
 
         Args:
-            coords (ndarray): The coordinates of each qubit to include in the
+            coords: The coordinates of each qubit to include in the
                 register.
 
         Keyword args:
