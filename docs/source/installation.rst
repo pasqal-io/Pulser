@@ -6,8 +6,6 @@ it from being correctly upgraded. If you have an older version of ``pulser`` ins
 and wish to upgrade, make sure to uninstall it first by running ``pip uninstall pulser``
 before proceeding to any of the steps below.
 
-Stable version
------------------
 To install the latest release of ``pulser``, have Python 3.7.0 or higher
 installed, then use ``pip``: ::
 
@@ -22,8 +20,8 @@ If you wish to install only the core ``pulser`` features, you can instead run: :
   pip install pulser-core
 
 
-Latest version
----------------
+Development version
+--------------------
 For the latest version of Pulser, you can install Pulser from source by
 cloning the `Pulser Github repository <https://github.com/pasqal-io/Pulser>`_,
 and entering your freshly created ``Pulser`` directory. There, you'll checkout
@@ -37,7 +35,7 @@ Bear in mind that your installation will track the contents of your local
 Pulser repository folder, so if you checkout a different branch (e.g. ``master``),
 your installation will change accordingly.
 
-If you want to install the development requirements, stay inside the same ``Pulser`` 
+If you want to install the development requirements, stay inside the same ``Pulser``
 directory and follow up by running: ::
 
   pip install -r requirements.txt
