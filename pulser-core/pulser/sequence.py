@@ -1260,17 +1260,6 @@ class Sequence:
                     f"Call name '{call.name}' is not supported."
                 )
 
-        undefined_str_vars = [
-            var_name
-            for var_name, var_dict in res["variables"].items()
-            if var_dict["type"] == "str"
-        ]
-        if undefined_str_vars:
-            raise AbstractReprError(
-                "All 'str' type variables must be used to refer to a qubit. "
-                f"Condition not respected for: {undefined_str_vars}"
-            )
-
         return json.dumps(res, cls=AbstractReprEncoder)
 
     @staticmethod
