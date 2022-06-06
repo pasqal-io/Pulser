@@ -37,6 +37,7 @@ Bear in mind that your installation will track the contents of your local
 Pulser repository folder, so if you checkout a different branch (e.g. ``master``),
 your installation will change accordingly.
 
-If you want to install the development requirements, follow up by running: ::
+If you want to install the development requirements, stay inside the same ``Pulser`` 
+directory and follow up by running: ::
 
   pip install -r requirements.txt
