@@ -343,7 +343,7 @@ class Sequence:
     ) -> int:
         """Returns the current duration of a channel or the whole sequence.
 
-        Keyword Args:
+        Args:
             channel: A specific channel to return the duration
                 of. If left as None, it will return the duration of the whole
                 sequence.
@@ -424,7 +424,7 @@ class Sequence:
             defined through the declaration of a Microwave channel, calling
             this function will enable the "XY Mode".
 
-        Keyword Args:
+        Args:
             bx: The magnetic field in the x direction (in Gauss).
             by: The magnetic field in the y direction (in Gauss).
             bz: The magnetic field in the z direction (in Gauss).
@@ -630,7 +630,7 @@ class Sequence:
             name: The name for the variable. Must be unique within a
                 Sequence.
 
-        Keyword Args:
+        Args:
             size: The number of entries stored in the
                 variable. If defined, returns an array of variables with the
                 given size. If left as ``None``, returns a single variable.
@@ -1038,7 +1038,7 @@ class Sequence:
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
-        Keyword Args:
+        Args:
             qubits: A mapping between qubit
                 IDs and trap IDs used to define the register. Must only be
                 provided when the sequence is initialized with a
@@ -1181,7 +1181,7 @@ class Sequence:
     ) -> None:
         """Draws the sequence in its current state.
 
-        Keyword Args:
+        Args:
             mode: The curves to draw. 'input'
                 draws only the programmed curves, 'output' the excepted curves
                 after modulation. 'input+output' will draw both curves except

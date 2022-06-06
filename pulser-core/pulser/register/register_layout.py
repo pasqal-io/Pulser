@@ -195,7 +195,7 @@ class RegisterLayout(RegDrawer):
     ) -> None:
         """Draws the entire register layout.
 
-        Keyword Args:
+        Args:
             blockade_radius: The distance (in μm) between
                 atoms below which the Rydberg blockade effect occurs.
             draw_half_radius: Whether or not to draw

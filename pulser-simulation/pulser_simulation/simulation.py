@@ -377,7 +377,7 @@ class Simulation:
     ) -> None:
         """Draws the input sequence and the one used by the solver.
 
-        Keyword Args:
+        Args:
             draw_phase_area: Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
             draw_interp_pts: When the sequence has pulses with waveforms
@@ -858,7 +858,7 @@ class Simulation:
         Will return NoisyResults if the noise in the SimConfig requires it.
         Otherwise will return CoherentResults.
 
-        Keyword Args:
+        Args:
             progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
             options: If specified, will override

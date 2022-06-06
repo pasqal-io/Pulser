@@ -54,8 +54,6 @@ class Register3D(BaseRegister, RegDrawer):
 
         Args:
             side: Side of the cube in number of qubits.
-
-        Keyword args:
             spacing: The distance between neighbouring qubits in μm.
             prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
@@ -88,8 +86,6 @@ class Register3D(BaseRegister, RegDrawer):
             rows: Number of rows.
             columns: Number of columns.
             layers: Number of layers.
-
-        Keyword args:
             spacing: The distance between neighbouring qubits in μm.
             prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
@@ -188,7 +184,7 @@ class Register3D(BaseRegister, RegDrawer):
     ) -> None:
         """Draws the entire register.
 
-        Keyword Args:
+        Args:
             with_labels: If True, writes the qubit ID's
                 next to each qubit.
             blockade_radius: The distance (in μm) between

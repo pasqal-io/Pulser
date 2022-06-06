@@ -55,8 +55,6 @@ class Register(BaseRegister, RegDrawer):
 
         Args:
             side: Side of the square in number of qubits.
-
-        Keyword args:
             spacing: The distance between neighbouring qubits in μm.
             prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
@@ -87,8 +85,6 @@ class Register(BaseRegister, RegDrawer):
         Args:
             rows: Number of rows.
             columns: Number of columns.
-
-        Keyword args:
             spacing: The distance between neighbouring qubits in μm.
             prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
@@ -139,8 +135,6 @@ class Register(BaseRegister, RegDrawer):
         Args:
             rows: Number of rows.
             atoms_per_row: Number of atoms per row.
-
-        Keyword args:
             spacing: The distance between neighbouring qubits in μm.
             prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
@@ -183,8 +177,6 @@ class Register(BaseRegister, RegDrawer):
 
         Args:
             layers: Number of layers around a central atom.
-
-        Keyword args:
             spacing: The distance between neighbouring qubits in μm.
             prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
@@ -230,8 +222,6 @@ class Register(BaseRegister, RegDrawer):
         Args:
             n_qubits: Number of qubits.
             device: The device whose constraints must be obeyed.
-
-        Keyword args:
             spacing: The distance between neighbouring qubits in μm.
                 If omitted, the minimal distance for the device is used.
             prefix: The prefix for the qubit ids. If defined, each qubit
@@ -306,7 +296,7 @@ class Register(BaseRegister, RegDrawer):
     ) -> None:
         """Draws the entire register.
 
-        Keyword Args:
+        Args:
             with_labels: If True, writes the qubit ID's
                 next to each qubit.
             blockade_radius: The distance (in μm) between

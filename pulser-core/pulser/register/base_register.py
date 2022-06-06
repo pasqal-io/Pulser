@@ -140,7 +140,7 @@ class BaseRegister(ABC):
             coords: The coordinates of each qubit to include in the
                 register.
 
-        Keyword args:
+        Args:
             center(defaut=True): Whether or not to center the entire array
                 around the origin.
             prefix (str): The prefix for the qubit ids. If defined, each qubit
