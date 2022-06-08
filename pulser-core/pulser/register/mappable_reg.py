@@ -51,6 +51,11 @@ class MappableRegister:
         """The qubit IDs of this mappable register."""
         return self._qubit_ids
 
+    @property
+    def layout(self) -> RegisterLayout:
+        """The layout used to define the register."""
+        return self._layout
+
     def build_register(self, qubits: Mapping[QubitId, int]) -> BaseRegister:
         """Builds an actual register.
 
@@ -97,7 +102,7 @@ class MappableRegister:
             mappable register, but keeping only the chosen ones.
 
             Then, it is possible to use these indices when building a
-            sequence, typically to instanciate a ``VariableArray``,
+            sequence, typically to instanciate an array of variables
             that can be provided as an argument to ``target_index``
             and ``phase_shift_index``.
 
@@ -107,11 +112,11 @@ class MappableRegister:
         Args:
             chosen_ids (set[QubitId]): IDs of the qubits that are chosen to
                 map the MappableRegister
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote
+            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote.
 
         Returns:
             list[int]: Indices of the qubits to denote, only valid for the
-                given mapping.
+            given mapping.
         """
         if not chosen_ids <= set(self._qubit_ids):
             raise ValueError(

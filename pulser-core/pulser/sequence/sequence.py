@@ -123,7 +123,7 @@ class Sequence:
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
-            device.validate_layout(register._layout)
+            device.validate_layout(register.layout)
         else:
             device.validate_register(register)
 
@@ -542,7 +542,9 @@ class Sequence:
                 Sequence.
 
         Keyword Args:
-            size (int=1): The number of entries stored in the variable.
+            size (Optional[int]=None): The number of entries stored in the
+                variable. If defined, returns an array of variables with the
+                given size. If left as ``None``, returns a single variable.
             dtype (default=float): The type of the data that will be assigned
                 to the variable. Must be ``float`` or ``int``.
 

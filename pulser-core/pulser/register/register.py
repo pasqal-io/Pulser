@@ -285,7 +285,7 @@ class Register(BaseRegister, RegDrawer):
         Args:
             degrees (float): The angle of rotation in degrees.
         """
-        if self._layout_info is not None:
+        if self.layout is not None:
             raise TypeError(
                 "A register defined from a RegisterLayout cannot be rotated."
             )

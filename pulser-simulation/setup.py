@@ -11,21 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from pathlib import PurePath
+import os
+from pathlib import Path
 
 from setuptools import find_packages, setup
 
 distribution_name = "pulser-simulation"  # The name on PyPI
 package_name = "pulser_simulation"  # The main module name
-current_directory = PurePath(__file__).parent
+current_directory = Path(__file__).parent
 
 # Reads the version from the VERSION.txt file
 with open(current_directory.parent / "VERSION.txt", "r") as f:
     __version__ = f.read().strip()
 
+# Changes to the directory where setup.py is
+os.chdir(current_directory)
+
 # Stashes the source code for the local version file
-local_version_fpath = current_directory / package_name / "_version.py"
+local_version_fpath = Path(package_name) / "_version.py"
 with open(local_version_fpath, "r") as f:
     stashed_version_source = f.read()
 
