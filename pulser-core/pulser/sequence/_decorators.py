@@ -29,7 +29,7 @@ if TYPE_CHECKING:  # pragma: no cover
 F = TypeVar("F", bound=Callable)
 
 
-def _screen(func: F) -> F:
+def screen(func: F) -> F:
     """Blocks the call to a function if the Sequence is parametrized."""
 
     @wraps(func)
@@ -44,7 +44,8 @@ def _screen(func: F) -> F:
     return cast(F, wrapper)
 
 
-def _verify_variable(seq: Sequence, x: Any) -> None:
+def verify_variable(seq: Sequence, x: Any) -> None:
+    """Checks if a variable has been declared in a sequence."""
     if isinstance(x, Parametrized):
         # If not already, the sequence becomes parametrized
         seq._building = False
@@ -61,10 +62,10 @@ def _verify_variable(seq: Sequence, x: Any) -> None:
     elif isinstance(x, Iterable) and not isinstance(x, str):
         # Recursively look for parametrized objs inside the arguments
         for y in x:
-            _verify_variable(seq, y)
+            verify_variable(seq, y)
 
 
-def _verify_parametrization(func: F) -> F:
+def verify_parametrization(func: F) -> F:
     """Checks and updates the sequence status' consistency with the call.
 
     - Checks the sequence can still be modified.
@@ -79,17 +80,17 @@ def _verify_parametrization(func: F) -> F:
                 "changes are allowed."
             )
         for x in chain(args, kwargs.values()):
-            _verify_variable(self, x)
+            verify_variable(self, x)
         func(self, *args, **kwargs)
 
     return cast(F, wrapper)
 
 
-def _store(func: F) -> F:
+def store(func: F) -> F:
     """Checks and stores the call to call it when building the Sequence."""
 
     @wraps(func)
-    @_verify_parametrization
+    @verify_parametrization
     def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
         storage = self._calls if self._building else self._to_build_calls
         func(self, *args, **kwargs)

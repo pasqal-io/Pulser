@@ -39,11 +39,7 @@ from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.sequence._containers import _Call, _TimeSlot
-from pulser.sequence._decorators import (
-    _screen,
-    _store,
-    _verify_parametrization,
-)
+import pulser.sequence._decorators as seq_decorators
 from pulser.sequence._phase_tracker import _PhaseTracker
 from pulser.sequence._seq_drawer import draw_sequence
 
@@ -248,7 +244,7 @@ class Sequence:
         """
         return isinstance(self._register, MappableRegister)
 
-    @_screen
+    @seq_decorators.screen
     def get_duration(
         self, channel: Optional[str] = None, include_fall_time: bool = False
     ) -> int:
@@ -294,7 +290,7 @@ class Sequence:
 
         return max(last_ts.values())
 
-    @_screen
+    @seq_decorators.screen
     def current_phase_ref(
         self, qubit: QubitId, basis: str = "digital"
     ) -> float:
@@ -363,7 +359,7 @@ class Sequence:
         # No parametrization -> Always stored as a regular call
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
-    @_store
+    @seq_decorators.store
     def config_slm_mask(self, qubits: Iterable[QubitId]) -> None:
         """Setup an SLM mask by specifying the qubits it targets.
 
@@ -573,7 +569,7 @@ class Sequence:
             self._variables[name] = var
             return var
 
-    @_store
+    @seq_decorators.store
     def add(
         self,
         pulse: Union[Pulse, Parametrized],
@@ -737,7 +733,7 @@ class Sequence:
             except IndexError:
                 self._slm_mask_time = [ti, tf]
 
-    @_store
+    @seq_decorators.store
     def target(
         self,
         qubits: Union[QubitId, Iterable[QubitId]],
@@ -754,7 +750,7 @@ class Sequence:
         """
         self._target(qubits, channel)
 
-    @_verify_parametrization
+    @seq_decorators.verify_parametrization
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -789,7 +785,7 @@ class Sequence:
                 " non parametrized sequences using a mappable register."
             )
 
-    @_store
+    @seq_decorators.store
     def delay(
         self,
         duration: Union[int, Parametrized],
@@ -804,7 +800,7 @@ class Sequence:
         """
         self._delay(duration, channel)
 
-    @_store
+    @seq_decorators.store
     def measure(self, basis: str = "ground-rydberg") -> None:
         """Measures in a valid basis.
 
@@ -840,7 +836,7 @@ class Sequence:
         else:
             self._measurement = basis
 
-    @_store
+    @seq_decorators.store
     def phase_shift(
         self,
         phi: Union[float, Parametrized],
@@ -864,7 +860,7 @@ class Sequence:
         """
         self._phase_shift(phi, *targets, basis=basis)
 
-    @_verify_parametrization
+    @seq_decorators.verify_parametrization
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
@@ -897,7 +893,7 @@ class Sequence:
         self._check_allow_qubit_index(self.phase_shift_index.__name__)
         self._phase_shift_index(phi, *targets, basis=basis)
 
-    @_store
+    @seq_decorators.store
     def align(self, *channels: str) -> None:
         """Aligns multiple channels in time.
 
@@ -1079,7 +1075,7 @@ class Sequence:
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
-    @_screen
+    @seq_decorators.screen
     def draw(
         self,
         mode: str = "input+output",
@@ -1231,7 +1227,7 @@ class Sequence:
                     f"{nb_of_indices - 1}. Wrong index: {i!r}."
                 )
 
-    @_store
+    @seq_decorators.store
     def _target_index(
         self, qubits: Union[Iterable[int], int, Parametrized], channel: str
     ) -> None:
@@ -1349,7 +1345,7 @@ class Sequence:
         if not self.is_parametrized():
             self._phase_shift_non_parametrized(phi, *targets, basis=basis)
 
-    @_store
+    @seq_decorators.store
     def _phase_shift_index(
         self,
         phi: Union[float, Parametrized],
