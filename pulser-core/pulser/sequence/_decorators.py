@@ -97,3 +97,18 @@ def store(func: F) -> F:
         storage.append(_Call(func.__name__, args, kwargs))
 
     return cast(F, wrapper)
+
+
+def allow_qubit_index(func: F) -> F:
+    """Checks if using qubit indices is allowed."""
+
+    @wraps(func)
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
+        if not self.is_parametrized() and self.is_register_mappable():
+            raise RuntimeError(
+                f"Sequence.{func.__name__} cannot be called in"
+                " non-parametrized sequences using a mappable register."
+            )
+        func(self, *args, **kwargs)
+
+    return cast(F, wrapper)

@@ -814,13 +814,13 @@ def test_non_parametrized_mappable_register_index_functions_failure(
     with pytest.raises(
         RuntimeError,
         match="Sequence.target_index cannot be called in"
-        " non parametrized sequences",
+        " non-parametrized sequences",
     ):
         seq.target_index(index, channel="ch0")
     with pytest.raises(
         RuntimeError,
         match="Sequence.phase_shift_index cannot be called in"
-        " non parametrized sequences",
+        " non-parametrized sequences",
     ):
         seq.phase_shift_index(phi, index)
 

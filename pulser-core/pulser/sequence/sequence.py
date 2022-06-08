@@ -751,6 +751,7 @@ class Sequence:
         self._target(qubits, channel)
 
     @seq_decorators.verify_parametrization
+    @seq_decorators.allow_qubit_index
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -773,17 +774,8 @@ class Sequence:
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        self._check_allow_qubit_index(self.target_index.__name__)
-
         qubits = cast(int, qubits)
         self._target_index(qubits, channel)
-
-    def _check_allow_qubit_index(self, method_name: str) -> None:
-        if not self.is_parametrized() and self.is_register_mappable():
-            raise RuntimeError(
-                f"Sequence.{method_name} cannot be called in"
-                " non parametrized sequences using a mappable register."
-            )
 
     @seq_decorators.store
     def delay(
@@ -861,6 +853,7 @@ class Sequence:
         self._phase_shift(phi, *targets, basis=basis)
 
     @seq_decorators.verify_parametrization
+    @seq_decorators.allow_qubit_index
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
@@ -890,7 +883,6 @@ class Sequence:
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        self._check_allow_qubit_index(self.phase_shift_index.__name__)
         self._phase_shift_index(phi, *targets, basis=basis)
 
     @seq_decorators.store
