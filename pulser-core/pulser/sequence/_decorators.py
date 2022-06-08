@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Custom decorators used by the Sequence class."""
+from __future__ import annotations
+
 from collections.abc import Callable, Iterable
 from functools import wraps
 from itertools import chain

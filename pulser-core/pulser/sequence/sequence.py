@@ -1434,14 +1434,6 @@ class Sequence:
             )
         self._schedule[channel].append(timeslot)
 
-    def _min_pulse_duration(self) -> float:
-        duration_list = []
-        for ch_schedule in self._schedule.values():
-            for slot in ch_schedule:
-                if isinstance(slot.type, Pulse):
-                    duration_list.append(slot.tf - slot.ti)
-        return min(duration_list)
-
     def _last(self, channel: str) -> _TimeSlot:
         """Shortcut to last element in the channel's schedule."""
         try:
