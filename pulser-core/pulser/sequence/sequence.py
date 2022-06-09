@@ -28,6 +28,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
+import pulser.sequence._decorators as seq_decorators
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
@@ -39,7 +40,6 @@ from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.sequence._containers import _Call, _TimeSlot
-import pulser.sequence._decorators as seq_decorators
 from pulser.sequence._phase_tracker import _PhaseTracker
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
