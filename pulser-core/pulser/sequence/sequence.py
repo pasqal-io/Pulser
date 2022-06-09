@@ -42,6 +42,7 @@ from pulser.sequence._containers import _Call, _TimeSlot
 import pulser.sequence._decorators as seq_decorators
 from pulser.sequence._phase_tracker import _PhaseTracker
 from pulser.sequence._seq_drawer import draw_sequence
+from pulser.sequence._seq_str import seq_to_str
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
@@ -1249,53 +1250,7 @@ class Sequence:
         return d
 
     def __str__(self) -> str:
-        full = ""
-        pulse_line = "t: {}->{} | {} | Targets: {}\n"
-        target_line = "t: {}->{} | Target: {} | Phase Reference: {}\n"
-        delay_line = "t: {}->{} | Delay \n"
-        # phase_line = "t: {} | Phase shift of: {:.3f} | Targets: {}\n"
-        for ch, seq in self._schedule.items():
-            basis = self._channels[ch].basis
-            full += f"Channel: {ch}\n"
-            first_slot = True
-            for ts in seq:
-                if ts.type == "delay":
-                    full += delay_line.format(ts.ti, ts.tf)
-                    continue
-
-                tgts = list(ts.targets)
-                tgt_txt = ", ".join([str(t) for t in tgts])
-                if isinstance(ts.type, Pulse):
-                    full += pulse_line.format(ts.ti, ts.tf, ts.type, tgt_txt)
-                elif ts.type == "target":
-                    phase = self._phase_ref[basis][tgts[0]][ts.tf]
-                    if first_slot:
-                        full += (
-                            f"t: 0 | Initial targets: {tgt_txt} | "
-                            + f"Phase Reference: {phase} \n"
-                        )
-                        first_slot = False
-                    else:
-                        full += target_line.format(
-                            ts.ti, ts.tf, tgt_txt, phase
-                        )
-            full += "\n"
-
-        if hasattr(self, "_measurement"):
-            full += f"Measured in basis: {self._measurement}"
-
-        if self.is_parametrized():
-            prelude = "Prelude\n-------\n" + full
-            lines = ["Stored calls\n------------"]
-            for i, c in enumerate(self._to_build_calls, 1):
-                args = [str(a) for a in c.args]
-                kwargs = [
-                    f"{key}={str(value)}" for key, value in c.kwargs.items()
-                ]
-                lines.append(f"{i}. {c.name}({', '.join(args+kwargs)})")
-            full = prelude + "\n\n".join(lines)
-
-        return full
+        return seq_to_str(self)
 
     def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
         if hasattr(self, "_measurement"):
