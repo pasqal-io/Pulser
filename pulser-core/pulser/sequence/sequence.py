@@ -701,7 +701,7 @@ class Sequence:
         """
         self._target(qubits, channel)
 
-    @seq_decorators.verify_parametrization
+    @seq_decorators.store
     @seq_decorators.allow_qubit_index
     def target_index(
         self,
@@ -726,7 +726,7 @@ class Sequence:
             register.
         """
         qubits = cast(int, qubits)
-        self._target_index(qubits, channel)
+        self._target(qubits, channel, _index=True)
 
     @seq_decorators.store
     def delay(
@@ -803,7 +803,7 @@ class Sequence:
         """
         self._phase_shift(phi, *targets, basis=basis)
 
-    @seq_decorators.verify_parametrization
+    @seq_decorators.store
     @seq_decorators.allow_qubit_index
     def phase_shift_index(
         self,
@@ -834,7 +834,7 @@ class Sequence:
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        self._phase_shift_index(phi, *targets, basis=basis)
+        self._phase_shift(phi, *targets, basis=basis, _index=True)
 
     @seq_decorators.store
     def align(self, *channels: str) -> None:
@@ -1102,25 +1102,12 @@ class Sequence:
             fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
-    @overload
-    def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
-    ) -> Union[Set[int]]:
-        pass
-
-    @overload
-    def _precheck_target_qubits_set(
-        self,
-        qubits: Union[Iterable[QubitId], QubitId],
-        channel: str,
-    ) -> Union[Set[QubitId]]:
-        pass
-
-    def _precheck_target_qubits_set(
+    def _target(
         self,
         qubits: Union[Iterable[QubitId], QubitId, Parametrized],
         channel: str,
-    ) -> Union[Set[QubitId], Set[int]]:
+        _index: bool = False,
+    ) -> None:
         self._validate_channel(channel)
         channel_obj = self._channels[channel]
         try:
@@ -1139,49 +1126,41 @@ class Sequence:
                 f"This channel can target at most {channel_obj.max_targets} "
                 "qubits at a time."
             )
-
-        return qubits_set
-
-    def _target(
-        self,
-        qubits: Union[Iterable[QubitId], QubitId],
-        channel: str,
-    ) -> None:
-        qubits_set = self._precheck_target_qubits_set(qubits, channel)
-        self._check_ids(*qubits_set)
+        qubit_ids_set = self._check_qubits_give_ids(*qubits_set, _index=_index)
 
         if not self.is_parametrized():
-            self._perform_target_non_parametrized(qubits_set, channel)
-
-    def _check_indices(
-        self, indices: Iterable[Union[int, Parametrized]]
-    ) -> None:
-        nb_of_indices = len(self._register.qubit_ids)
-        allowed_indices = range(nb_of_indices)
-        for i in indices:
-            if i not in allowed_indices and not isinstance(i, Parametrized):
-                raise ValueError(
-                    f"All non-variable targets must be indices valid "
-                    f"for the register, between 0 and "
-                    f"{nb_of_indices - 1}. Wrong index: {i!r}."
-                )
-
-    @seq_decorators.store
-    def _target_index(
-        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
-    ) -> None:
-
-        qubits_set = self._precheck_target_qubits_set(qubits, channel)
-        if self.is_parametrized():
-            self._check_indices(qubits_set)
-        else:
-            try:
-                qubit_ids_set = {
-                    self.register.qubit_ids[index] for index in qubits_set
-                }
-            except IndexError:
-                raise IndexError("Indices must exist for the register.")
             self._perform_target_non_parametrized(qubit_ids_set, channel)
+
+    def _check_qubits_give_ids(
+        self, *qubits: Union[QubitId, Parametrized], _index: bool = False
+    ) -> set[QubitId]:
+        if _index:
+            if self.is_parametrized():
+                nb_of_indices = len(self._register.qubit_ids)
+                allowed_indices = range(nb_of_indices)
+                for i in qubits:
+                    if i not in allowed_indices and not isinstance(
+                        i, Parametrized
+                    ):
+                        raise ValueError(
+                            f"All non-variable targets must be indices valid "
+                            f"for the register, between 0 and "
+                            f"{nb_of_indices - 1}. Wrong index: {i!r}."
+                        )
+                return set()
+            else:
+                qubits = cast(Tuple[int, ...], qubits)
+                try:
+                    return {self.register.qubit_ids[index] for index in qubits}
+                except IndexError:
+                    raise IndexError("Indices must exist for the register.")
+        ids = set(cast(Tuple[QubitId, ...], qubits))
+        if not ids <= self._qids:
+            raise ValueError(
+                "All given ids have to be qubit ids declared"
+                " in this sequence's register."
+            )
+        return ids
 
     def _perform_target_non_parametrized(
         self, qubits_set: Set[QubitId], channel: str
@@ -1240,63 +1219,26 @@ class Sequence:
             channel, _TimeSlot("delay", ti, tf, last.targets)
         )
 
-    def _check_basis(self, basis: str) -> None:
-        if basis not in self._phase_ref:
-            raise ValueError("No declared channel targets the given 'basis'.")
-
-    def _check_ids(self, *ids: Union[QubitId, Parametrized]) -> None:
-        if not set(ids) <= self._qids:
-            raise ValueError(
-                "All given ids have to be qubit ids declared"
-                " in this sequence's register."
-            )
-
-    def _phase_shift_non_parametrized(
-        self,
-        phi: Union[float, Parametrized],
-        *targets: QubitId,
-        basis: str,
-    ) -> None:
-        phi = cast(float, phi)
-        if phi % (2 * np.pi) == 0:
-            return
-
-        for qubit in targets:
-            last_used = self._last_used[basis][qubit]
-            new_phase = self._phase_ref[basis][qubit].last_phase + phi
-            self._phase_ref[basis][qubit][last_used] = new_phase
-
     def _phase_shift(
         self,
         phi: Union[float, Parametrized],
-        *targets: QubitId,
+        *targets: Union[QubitId, Parametrized],
         basis: str,
+        _index: bool = False,
     ) -> None:
-        self._check_basis(basis)
-        self._check_ids(*targets)
+        if basis not in self._phase_ref:
+            raise ValueError("No declared channel targets the given 'basis'.")
+        target_ids = self._check_qubits_give_ids(*targets, _index=_index)
 
         if not self.is_parametrized():
-            self._phase_shift_non_parametrized(phi, *targets, basis=basis)
+            phi = cast(float, phi)
+            if phi % (2 * np.pi) == 0:
+                return
 
-    @seq_decorators.store
-    def _phase_shift_index(
-        self,
-        phi: Union[float, Parametrized],
-        *targets: Union[int, Parametrized],
-        basis: str,
-    ) -> None:
-        self._check_basis(basis)
-        if self.is_parametrized():
-            self._check_indices(targets)
-        else:
-            targets = cast(Tuple[int], targets)
-            try:
-                target_ids = [
-                    self.register.qubit_ids[index] for index in targets
-                ]
-            except IndexError:
-                raise IndexError("Indices must exist for the register.")
-            self._phase_shift_non_parametrized(phi, *target_ids, basis=basis)
+            for qubit in target_ids:
+                last_used = self._last_used[basis][qubit]
+                new_phase = self._phase_ref[basis][qubit].last_phase + phi
+                self._phase_ref[basis][qubit][last_used] = new_phase
 
     def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
