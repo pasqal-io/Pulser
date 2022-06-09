@@ -112,3 +112,14 @@ def allow_qubit_index(func: F) -> F:
         func(self, *args, **kwargs)
 
     return cast(F, wrapper)
+
+
+def mark_non_empty(func: F) -> F:
+    """Marks the sequence as non-empty."""
+
+    @wraps(func)
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
+        func(self, *args, **kwargs)
+        self._empty_sequence = False
+
+    return cast(F, wrapper)

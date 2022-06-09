@@ -312,7 +312,6 @@ def test_sequence():
     seq.declare_channel("ch2", "rydberg_global")
     assert seq.get_duration("ch0") == 0
     assert seq.get_duration("ch2") == 0
-    seq.phase_shift(np.pi, "q0", basis="ground-rydberg")
 
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.figure.Figure.savefig"):
@@ -340,6 +339,7 @@ def test_sequence():
         seq.add(
             Pulse.ConstantPulse(500, 2 * np.pi, -2 * np.pi * 100, 0), "ch0"
         )
+    seq.phase_shift(np.pi, "q0", basis="ground-rydberg")
     with pytest.raises(ValueError, match="qubits with different phase ref"):
         seq.add(pulse2, "ch2")
     with pytest.raises(ValueError, match="Invalid protocol"):

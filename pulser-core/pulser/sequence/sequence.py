@@ -339,20 +339,20 @@ class Sequence:
         if not self._in_xy:
             if self._channels:
                 raise ValueError(
-                    "The magnetic field can only be set in 'XY " "Mode'."
+                    "The magnetic field can only be set in 'XY Mode'."
                 )
             # No channels declared yet
             self._in_xy = True
         elif not self._empty_sequence:
             # Not all channels are empty
             raise ValueError(
-                "The magnetic field can only be set on an empty " "sequence."
+                "The magnetic field can only be set on an empty sequence."
             )
 
         mag_vector = (bx, by, bz)
         if np.linalg.norm(mag_vector) == 0.0:
             raise ValueError(
-                "The magnetic field must have a magnitude greater" " than 0."
+                "The magnetic field must have a magnitude greater than 0."
             )
         self._mag_field = mag_vector
 
@@ -570,6 +570,7 @@ class Sequence:
             return var
 
     @seq_decorators.store
+    @seq_decorators.mark_non_empty
     def add(
         self,
         pulse: Union[Pulse, Parametrized],
@@ -607,36 +608,11 @@ class Sequence:
 
         if self.is_parametrized():
             if not isinstance(pulse, Parametrized):
-                self._validate_pulse(pulse, channel)
-            # Sequence is marked as non-empty on the first added pulse
-            if self._empty_sequence:
-                self._empty_sequence = False
+                self._validate_and_adjust_pulse(pulse, channel)
             return
 
-        if not isinstance(pulse, Pulse):
-            raise TypeError(
-                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
-            )
-
+        pulse = cast(Pulse, pulse)
         channel_obj = self._channels[channel]
-        _duration = channel_obj.validate_duration(pulse.duration)
-        if _duration != pulse.duration:
-            try:
-                pulse = Pulse(
-                    pulse.amplitude.change_duration(_duration),
-                    pulse.detuning.change_duration(_duration),
-                    pulse.phase,
-                    pulse.post_phase_shift,
-                )
-            except NotImplementedError:
-                raise TypeError(
-                    "Failed to automatically adjust one of the pulse's "
-                    "waveforms to the channel duration constraints. Choose a "
-                    "duration that is a multiple of "
-                    f"{channel_obj.clock_period} ns."
-                )
-
-        self._validate_pulse(pulse, channel)
         last = self._last(channel)
         t0 = last.tf  # Preliminary ti
         basis = channel_obj.basis
@@ -650,59 +626,37 @@ class Sequence:
         else:
             phase_ref = ph_refs.pop()
 
-        if phase_ref != 0:
-            # Has to recreate the original pulse with a new phase
-            pulse = Pulse(
-                pulse.amplitude,
-                pulse.detuning,
-                pulse.phase + phase_ref,
-                post_phase_shift=pulse.post_phase_shift,
-            )
+        pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
 
         phase_barriers = [
             self._phase_ref[basis][q].last_time for q in last.targets
         ]
         current_max_t = max(t0, *phase_barriers)
-        if protocol != "no-delay":
-            for ch, seq in self._schedule.items():
-                if ch == channel:
-                    continue
-                this_chobj = self._channels[ch]
-                for op in self._schedule[ch][::-1]:
-                    if not isinstance(op.type, Pulse):
-                        if op.tf + 2 * this_chobj.rise_time <= current_max_t:
-                            # No pulse behind 'op' needing a delay
-                            break
-                    elif (
-                        op.tf + op.type.fall_time(this_chobj) <= current_max_t
-                    ):
+        phase_jump_buffer = 0
+        for ch, seq in self._schedule.items():
+            if protocol == "no-delay" and ch != channel:
+                continue
+            this_chobj = self._channels[ch]
+            for op in self._schedule[ch][::-1]:
+                if not isinstance(op.type, Pulse):
+                    if op.tf + 2 * this_chobj.rise_time <= current_max_t:
+                        # No pulse behind 'op' needing a delay
                         break
-                    elif (
-                        op.targets & last.targets or protocol == "wait-for-all"
-                    ):
-                        current_max_t = op.tf + op.type.fall_time(this_chobj)
-                        break
+                elif ch == channel:
+                    if op.type.phase != pulse.phase:
+                        phase_jump_buffer = this_chobj.phase_jump_time - (
+                            t0 - op.tf
+                        )
+                    break
+                elif op.tf + op.type.fall_time(this_chobj) <= current_max_t:
+                    break
+                elif op.targets & last.targets or protocol == "wait-for-all":
+                    current_max_t = op.tf + op.type.fall_time(this_chobj)
+                    break
 
-        delay_duration = current_max_t - t0
-        # Find last pulse and compare phase
-        for op in self._schedule[channel][::-1]:
-            if isinstance(op.type, Pulse):
-                if op.type.phase != pulse.phase:
-                    delay_duration = max(
-                        delay_duration,
-                        # Considers that the last pulse might not be at t0
-                        channel_obj.phase_jump_time - (t0 - op.tf),
-                    )
-                break
-
+        delay_duration = max(current_max_t - t0, phase_jump_buffer)
         if delay_duration > 0:
-            # Delay must not be shorter than the min duration of this channel
-            # and a multiple of the clock period (forced by validate_duration)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                delay_duration = channel_obj.validate_duration(
-                    max(delay_duration, channel_obj.min_duration)
-                )
+            delay_duration = self._adjust_duration(delay_duration, channel_obj)
             self._delay(delay_duration, channel)
 
         ti = t0 + delay_duration
@@ -712,17 +666,14 @@ class Sequence:
 
         true_finish = tf + pulse.fall_time(channel_obj)
         for qubit in last.targets:
-            if self._last_used[basis][qubit] < true_finish:
-                self._last_used[basis][qubit] = true_finish
+            self._last_used[basis][qubit] = max(
+                true_finish, self._last_used[basis][qubit]
+            )
 
         if pulse.post_phase_shift:
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
             )
-
-        # Sequence is marked as non-empty on the first added pulse
-        if self._empty_sequence:
-            self._empty_sequence = False
 
         # If the added pulse starts earlier than all previously added pulses,
         # update SLM mask initial and final time
@@ -921,13 +872,9 @@ class Sequence:
         for id in channels:
             delta = tf - last_ts[id]
             if delta > 0:
-                channel_obj = self._channels[id]
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    delta = channel_obj.validate_duration(
-                        max(delta, channel_obj.min_duration)
-                    )
-                self._delay(delta, id)
+                self._delay(
+                    self._adjust_duration(delta, self._channels[id]), id
+                )
 
     def build(
         self,
@@ -1253,12 +1200,10 @@ class Sequence:
                 channel, include_fall_time=True
             ) - self.get_duration(channel)
             if fall_time > 0:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    self.delay(
-                        max(fall_time, channel_obj.min_duration),
-                        channel,
-                    )
+                self.delay(
+                    self._adjust_duration(fall_time, channel_obj),
+                    channel,
+                )
 
             last = self._last(channel)
             if last.targets == qubits_set:
@@ -1270,11 +1215,7 @@ class Sequence:
             if channel_obj.fixed_retarget_t:
                 delta = max(delta, channel_obj.fixed_retarget_t)
             if delta != 0:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    delta = channel_obj.validate_duration(
-                        max(delta, channel_obj.min_duration)
-                    )
+                delta = self._adjust_duration(delta, channel_obj)
             tf = ti + delta
 
         except ValueError:
@@ -1438,8 +1379,37 @@ class Sequence:
         if channel not in self._channels:
             raise ValueError("Use the name of a declared channel.")
 
-    def _validate_pulse(self, pulse: Pulse, channel: str) -> None:
+    def _validate_and_adjust_pulse(
+        self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
+    ) -> Pulse:
         self._device.validate_pulse(pulse, self._taken_channels[channel])
+        channel_obj = self._channels[channel]
+        _duration = channel_obj.validate_duration(pulse.duration)
+        new_phase = pulse.phase + (phase_ref if phase_ref else 0)
+        if _duration != pulse.duration:
+            try:
+                new_amp = pulse.amplitude.change_duration(_duration)
+                new_det = pulse.detuning.change_duration(_duration)
+            except NotImplementedError:
+                raise TypeError(
+                    "Failed to automatically adjust one of the pulse's "
+                    "waveforms to the channel duration constraints. Choose a "
+                    "duration that is a multiple of "
+                    f"{channel_obj.clock_period} ns."
+                )
+        else:
+            new_amp = pulse.amplitude
+            new_det = pulse.detuning
+
+        return Pulse(new_amp, new_det, new_phase, pulse.post_phase_shift)
+
+    def _adjust_duration(self, duration: int, channel_obj: Channel) -> int:
+        """Adjust a duration for a given channel."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return channel_obj.validate_duration(
+                max(duration, channel_obj.min_duration)
+            )
 
     def _reset_parametrized(self) -> None:
         """Resets all attributes related to parametrization."""
