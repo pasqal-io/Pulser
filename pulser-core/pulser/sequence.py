@@ -176,10 +176,9 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register: The atom register on
-            which to apply the pulses. If given as a MappableRegister
-            instance, the traps corrresponding to each qubit ID must be given
-            when building the sequence.
+        register: The atom register on which to apply the pulses. If given as
+            a MappableRegister instance, the traps corrresponding to each
+            qubit ID must be given when building the sequence.
         device: A valid device in which to execute the Sequence (import
             it from ``pulser.devices``).
 
@@ -344,9 +343,8 @@ class Sequence:
         """Returns the current duration of a channel or the whole sequence.
 
         Args:
-            channel: A specific channel to return the duration
-                of. If left as None, it will return the duration of the whole
-                sequence.
+            channel: A specific channel to return the duration of. If left as
+                None, it will return the duration of the whole sequence.
             include_fall_time: Whether to include in the duration the
                 extra time needed by the last pulse to finish, if there is
                 modulation.
@@ -390,8 +388,7 @@ class Sequence:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
-            qubit: The id of the qubit whose phase shift is
-                desired.
+            qubit: The id of the qubit whose phase shift is desired.
             basis: The basis (i.e. electronic transition) the phase
                 reference is associated with. Must correspond to the basis of a
                 declared channel.
@@ -457,8 +454,8 @@ class Sequence:
         """Setup an SLM mask by specifying the qubits it targets.
 
         Args:
-            qubits: Iterable of qubit ID's to mask during
-                the first global pulse of the sequence.
+            qubits: Iterable of qubit ID's to mask during the first global
+                pulse of the sequence.
         """
         try:
             targets = set(qubits)
@@ -519,10 +516,10 @@ class Sequence:
                 Consult ``Sequence.available_channels`` to see which channel
                 ID's are still available and the associated channel's
                 description.
-            initial_target: For 'Local'
-                addressing channels only. Declares the initial target of the
-                channel. If left as None, the initial target will have to be
-                set manually as the first addition to this channel.
+            initial_target: For 'Local' addressing channels only. Declares the
+                initial target of the channel. If left as None, the initial
+                target will have to be set manually as the first addition
+                to this channel.
         """
         if name in self._channels:
             raise ValueError("The given name is already in use.")
@@ -835,9 +832,9 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits: The new target for this
-                channel. Must correspond to a qubit ID in device or an iterable
-                of qubit IDs, when multi-qubit addressing is possible.
+            qubits: The new target for this channel. Must correspond to a
+                qubit ID in device or an iterable of qubit IDs, when
+                multi-qubit addressing is possible.
             channel: The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
         """
@@ -852,9 +849,9 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits: The new target for
-                this channel. Must correspond to a qubit index or an iterable
-                of qubit indices, when multi-qubit addressing is possible.
+            qubits: The new target for this channel. Must correspond to a
+                qubit index or an iterable of qubit indices, when multi-qubit
+                addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
                 they were declared when instantiating the ``Register``
@@ -887,8 +884,7 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration: Time to delay (in multiples
-                of 4 ns).
+            duration: Time to delay (in multiples of 4 ns).
             channel: The channel's name provided when declared.
         """
         self._delay(duration, channel)
@@ -943,10 +939,8 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in
-                rads).
-            targets: The ids of the qubits to apply the phase
-                shift to.
+            phi: The intended phase shift (in rads).
+            targets: The ids of the qubits to apply the phase shift to.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
@@ -967,10 +961,8 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in
-                rads).
-            targets: The indices of the qubits to
-                apply the phase shift to.
+            phi: The intended phase shift (in rads).
+            targets: The indices of the qubits to apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
                 they were declared when instantiating the ``Register``
@@ -1039,10 +1031,9 @@ class Sequence:
         """Builds a sequence from the programmed instructions.
 
         Args:
-            qubits: A mapping between qubit
-                IDs and trap IDs used to define the register. Must only be
-                provided when the sequence is initialized with a
-                MappableRegister.
+            qubits: A mapping between qubit IDs and trap IDs used to define
+                the register. Must only be provided when the sequence is
+                initialized with a MappableRegister.
             vars: The values for all the variables declared in this Sequence
                 instance, indexed by the name given upon declaration. Check
                 ``Sequence.declared_variables`` to see all the variables.
