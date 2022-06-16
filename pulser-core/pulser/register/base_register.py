@@ -141,13 +141,13 @@ class BaseRegister(ABC):
                 register.
 
         Args:
-            center(defaut=True): Whether or not to center the entire array
-                around the origin.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            center: Whether or not to center the entire array around the
+                origin.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
-            labels (ArrayLike): The list of qubit ids. If defined, each qubit
-                id will be set to the corresponding value.
+            labels: The list of qubit ids. If defined, each qubit id will be
+                set to the corresponding value.
 
         Returns:
             A register with qubits placed on the given coordinates.

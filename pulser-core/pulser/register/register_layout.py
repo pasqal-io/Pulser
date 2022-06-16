@@ -116,7 +116,7 @@ class RegisterLayout(RegDrawer):
         """Finds the trap ID for a given set of trap coordinates.
 
         Args:
-            *coordinates: The coordinates to return the trap IDs.
+            coordinates: The coordinates to return the trap IDs.
 
         Returns:
             The list of trap IDs corresponding to the coordinates.
@@ -141,7 +141,7 @@ class RegisterLayout(RegDrawer):
         """Defines a register from selected traps.
 
         Args:
-            *trap_ids: The trap IDs selected to form the Register.
+            trap_ids: The trap IDs selected to form the Register.
             qubit_ids: A sequence of
                 unique qubit IDs to associated to the selected traps. Must be
                 of the same length as the selected traps.
