@@ -60,7 +60,7 @@ class Register3D(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register3D : A 3D register with qubits placed in a cubic array.
+            A 3D register with qubits placed in a cubic array.
         """
         # Check side
         if side < 1:
@@ -92,7 +92,7 @@ class Register3D(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
         Returns:
-            Register3D : A 3D register with qubits placed in a cuboid array.
+            A 3D register with qubits placed in a cuboid array.
         """
         # Check rows
         if rows < 1:
@@ -145,8 +145,8 @@ class Register3D(BaseRegister, RegDrawer):
             the register to be projected.
 
         Returns:
-            Register: Returns a 2D register with the coordinates of the atoms
-                in a plane, if they are coplanar.
+            Returns a 2D register with the coordinates of the atoms
+            in a plane, if they are coplanar.
 
         Raises:
             ValueError: If the atoms are not coplanar.

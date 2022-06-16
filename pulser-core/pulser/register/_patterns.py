@@ -24,7 +24,7 @@ def square_rect(rows: int, columns: int) -> np.ndarray:
         columns: Number of columns.
 
     Returns:
-        np.ndarray: The coordinates of the points in the pattern.
+        The coordinates of the points in the pattern.
     """
     points = np.mgrid[:columns, :rows].transpose().reshape(-1, 2)
     # Centering
@@ -40,7 +40,7 @@ def triangular_rect(rows: int, columns: int) -> np.ndarray:
         columns: Number of columns.
 
     Returns:
-        np.ndarray: The coordinates of the points in the pattern.
+        The coordinates of the points in the pattern.
     """
     points = square_rect(rows, columns)
     points[:, 0] += 0.5 * np.mod(points[:, 1], 2)
@@ -56,7 +56,7 @@ def triangular_hex(n_points: int) -> np.ndarray:
 
 
     Returns:
-        np.ndarray: The coordinates of the points in the pattern.
+        The coordinates of the points in the pattern.
     """
     # y coordinates of the top vertex of a triangle
     crest_y = np.sqrt(3) / 2.0

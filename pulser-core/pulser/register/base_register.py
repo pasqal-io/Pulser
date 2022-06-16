@@ -116,8 +116,8 @@ class BaseRegister(ABC):
             id_list: IDs of the qubits to find.
 
         Returns:
-            list[int]: Indices of the qubits to denote, only valid for the
-                given mapping.
+            Indices of the qubits to denote, only valid for the
+            given mapping.
         """
         if not set(id_list) <= set(self.qubit_ids):
             raise ValueError(
@@ -150,7 +150,7 @@ class BaseRegister(ABC):
                 id will be set to the corresponding value.
 
         Returns:
-            Register: A register with qubits placed on the given coordinates.
+            A register with qubits placed on the given coordinates.
         """
         if center:
             coords = coords - np.mean(coords, axis=0)  # Centers the array

@@ -120,7 +120,7 @@ class Device:
             rabi_frequency: The Rabi frequency, in rad/µs.
 
         Returns:
-            float: The rydberg blockade radius, in μm.
+            The rydberg blockade radius, in μm.
         """
         return (self.interaction_coeff / rabi_frequency) ** (1 / 6)
 
@@ -131,7 +131,7 @@ class Device:
             blockade_radius: The Rydberg blockade radius, in µm.
 
         Returns:
-            float: The maximum rabi frequency value, in rad/µs.
+            The maximum rabi frequency value, in rad/µs.
         """
         return self.interaction_coeff / blockade_radius**6
 

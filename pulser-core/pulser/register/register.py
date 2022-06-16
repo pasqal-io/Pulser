@@ -61,7 +61,7 @@ class Register(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed in a square array.
+            A register with qubits placed in a square array.
         """
         # Check side
         if side < 1:
@@ -91,7 +91,7 @@ class Register(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
         Returns:
-            Register: A register with qubits placed in a rectangular array.
+            A register with qubits placed in a rectangular array.
         """
         # Check rows
         if rows < 1:
@@ -141,7 +141,7 @@ class Register(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed in a triangular lattice.
+            A register with qubits placed in a triangular lattice.
         """
         # Check rows
         if rows < 1:
@@ -183,7 +183,7 @@ class Register(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed in a hexagonal layout.
+            A register with qubits placed in a hexagonal layout.
         """
         # Check layers
         if layers < 1:
@@ -229,7 +229,7 @@ class Register(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed for maximum connectivity.
+            A register with qubits placed for maximum connectivity.
         """
         # Check device
         if not isinstance(device, pulser.devices._device_datacls.Device):

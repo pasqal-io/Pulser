@@ -36,7 +36,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
         seq: The input sequence of operations on a device.
 
     Returns:
-        dict: The data to plot.
+        The data to plot.
     """
     # The minimum time axis length is 100 ns
     total_duration = max(seq.get_duration(), 100)

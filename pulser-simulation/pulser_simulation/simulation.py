@@ -536,7 +536,7 @@ class Simulation:
                 index or their label in the register.
 
         Returns:
-            qutip.Qobj: The final operator.
+            The final operator.
         """
         op_list = [self.op_matrix["I"] for j in range(self._size)]
 
@@ -830,7 +830,7 @@ class Simulation:
                 Hamiltonian (in ns).
 
         Returns:
-            qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
+            A new Qobj for the Hamiltonian with coefficients
             extracted from the effective sequence (determined by
             `self.sampling_rate`) at the specified time.
         """

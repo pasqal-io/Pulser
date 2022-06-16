@@ -115,7 +115,7 @@ class MappableRegister:
             id_list: IDs of the qubits to denote.
 
         Returns:
-            list[int]: Indices of the qubits to denote, only valid for the
+            Indices of the qubits to denote, only valid for the
             given mapping.
         """
         if not chosen_ids <= set(self._qubit_ids):

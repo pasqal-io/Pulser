@@ -51,7 +51,7 @@ class SquareLatticeLayout(RegisterLayout):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: The register instance created from this layout.
+            The register instance created from this layout.
         """
         return self.rectangular_register(side, side, prefix=prefix)
 
@@ -71,7 +71,7 @@ class SquareLatticeLayout(RegisterLayout):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: The register instance created from this layout.
+            The register instance created from this layout.
         """
         if rows * columns > self.max_atom_num:
             raise ValueError(
@@ -123,7 +123,7 @@ class TriangularLatticeLayout(RegisterLayout):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: The register instance created from this layout.
+            The register instance created from this layout.
         """
         if n_atoms > self.max_atom_num:
             raise ValueError(
@@ -150,7 +150,7 @@ class TriangularLatticeLayout(RegisterLayout):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: The register instance created from this layout.
+            The register instance created from this layout.
         """
         if rows * atoms_per_row > self.max_atom_num:
             raise ValueError(

@@ -153,7 +153,7 @@ class Channel:
             duration: The duration to validate.
 
         Returns:
-            int: The duration, potentially adapted to the channels specs.
+            The duration, potentially adapted to the channels specs.
         """
         try:
             _duration = int(duration)
@@ -194,7 +194,7 @@ class Channel:
                 constant (i.e. there is no ramp from zero on the ends).
 
         Returns:
-            np.ndarray: The modulated output signal.
+            The modulated output signal.
         """
         if not self.mod_bandwidth:
             warnings.warn(
@@ -237,7 +237,7 @@ class Channel:
                 the input and modulated samples at the end points.
 
         Returns:
-            tuple[int, int]: The minimum buffer times at the start and end of
+            The minimum buffer times at the start and end of
             the samples, in ns.
         """
         if not self.mod_bandwidth:

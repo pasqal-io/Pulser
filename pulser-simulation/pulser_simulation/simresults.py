@@ -92,8 +92,7 @@ class SimulationResults(ABC):
                 list. ArrayLike objects will be converted to qutip.Qobj.
 
         Returns:
-            list[Union[float, complex, ArrayLike]]: Expectation values of
-            obs_list.
+            Expectation values of obs_list.
         """
         if not isinstance(obs_list, (list, np.ndarray)):
             raise TypeError("`obs_list` must be a list of operators.")
@@ -141,7 +140,7 @@ class SimulationResults(ABC):
                 closest time.
 
         Returns:
-            Counter: Sample distribution of bitstrings corresponding to
+            Sample distribution of bitstrings corresponding to
             measured quantum states at time t.
         """
         t_index = self._get_index_from_time(t, t_tol)
@@ -160,7 +159,7 @@ class SimulationResults(ABC):
             N_samples: Number of samples to return.
 
         Returns:
-            Counter: Sample distribution of bitstrings corresponding to
+            Sample distribution of bitstrings corresponding to
             measured quantum states at the end of the simulation.
         """
         return self.sample_state(self._sim_times[-1], N_samples)
@@ -205,7 +204,7 @@ class SimulationResults(ABC):
                 into the pseudo-density matrix.
 
         Returns:
-            qutip.Qobj: The pseudo-density matrix as a Qobj.
+            The pseudo-density matrix as a Qobj.
         """
 
         def _proj_from_bitstring(bitstring: str) -> qutip.Qobj:
@@ -304,8 +303,7 @@ class NoisyResults(SimulationResults):
                 closest time.
 
         Returns:
-            qutip.Qobj: States probability distribution as a diagonal
-            density matrix.
+            States probability distribution as a diagonal density matrix.
         """
         t_index = self._get_index_from_time(t, t_tol)
         return self._calc_pseudo_density(t_index)
@@ -318,7 +316,7 @@ class NoisyResults(SimulationResults):
             way of computing expectation values of observables.
 
         Returns:
-            qutip.Qobj: States probability distribution as a density matrix.
+            States probability distribution as a density matrix.
         """
         return self.get_state(self._sim_times[-1])
 
@@ -454,7 +452,7 @@ class CoherentResults(SimulationResults):
                 closest time.
 
         Returns:
-            qutip.Qobj: The resulting state at time t.
+            The resulting state at time t.
 
         Raises:
             TypeError: If trying to reduce to a basis that would eliminate
@@ -522,8 +520,8 @@ class CoherentResults(SimulationResults):
             qutip.Qobj: The resulting final state.
 
         Raises:
-            TypeError: If trying to reduce to a basis that would eliminate
-                states with significant occupation probabilites.
+            If trying to reduce to a basis that would eliminate states with
+            significant occupation probabilites.
         """
         return self.get_state(
             self._sim_times[-1],
@@ -615,8 +613,8 @@ class CoherentResults(SimulationResults):
                 closest time.
 
         Returns:
-            Counter: Sample distribution of bitstrings corresponding to
-            measured quantum states at time t.
+            Sample distribution of bitstrings corresponding to measured
+            quantum states at time t.
         """
         sampled_state = super().sample_state(t, n_samples, t_tol)
         if self._meas_errors is None:

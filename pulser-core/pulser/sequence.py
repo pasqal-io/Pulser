@@ -320,7 +320,7 @@ class Sequence:
         are given a value (when ``Sequence.build()`` is called).
 
         Returns:
-            bool: Whether the sequence is parametrized.
+            Whether the sequence is parametrized.
         """
         return not self._building
 
@@ -332,7 +332,7 @@ class Sequence:
         `Sequence.build()` call.
 
         Returns:
-            bool: Whether the register is a MappableRegister.
+            Whether the register is a MappableRegister.
         """
         return isinstance(self._register, MappableRegister)
 
@@ -350,7 +350,7 @@ class Sequence:
                 modulation.
 
         Returns:
-            int: The duration of the channel or sequence, in ns.
+            The duration of the channel or sequence, in ns.
         """
         if channel is None:
             channels = tuple(self._channels.keys())
@@ -394,7 +394,7 @@ class Sequence:
                 declared channel.
 
         Returns:
-            float: Current phase reference of 'qubit' in 'basis'.
+            Current phase reference of 'qubit' in 'basis'.
         """
         if qubit not in self._qids:
             raise ValueError(
@@ -635,7 +635,7 @@ class Sequence:
                 to the variable. Must be ``float`` or ``int``.
 
         Returns:
-            Variable: The declared Variable instance.
+            The declared Variable instance.
 
         Note:
             To avoid confusion, it is recommended to store the returned
@@ -1039,7 +1039,7 @@ class Sequence:
                 ``Sequence.declared_variables`` to see all the variables.
 
         Returns:
-            Sequence: The Sequence built with the given variable values.
+            The Sequence built with the given variable values.
 
         Example:
             ::
@@ -1124,7 +1124,7 @@ class Sequence:
                 ``cls``.
 
         Returns:
-            str: The sequence encoded in a JSON formatted string.
+            The sequence encoded in a JSON formatted string.
 
         See Also:
             ``json.dumps``: Built-in function for serialization to a JSON
@@ -1146,7 +1146,7 @@ class Sequence:
                 ``cls`` and ``object_hook``.
 
         Returns:
-            Sequence: The deserialized Sequence object.
+            The deserialized Sequence object.
 
         See Also:
             ``json.loads``: Built-in function for deserialization from a JSON

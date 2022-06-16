@@ -119,7 +119,7 @@ class RegisterLayout(RegDrawer):
             *coordinates: The coordinates to return the trap IDs.
 
         Returns:
-            list[int]: The list of trap IDs corresponding to the coordinates.
+            The list of trap IDs corresponding to the coordinates.
         """
         traps = []
         rounded_coords = np.round(
@@ -147,7 +147,7 @@ class RegisterLayout(RegDrawer):
                 of the same length as the selected traps.
 
         Returns:
-            BaseRegister: The respective register instance.
+            The respective register instance.
         """
         trap_ids_set = set(trap_ids)
 
@@ -270,7 +270,7 @@ class RegisterLayout(RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            MappableRegister: A substitute for a regular register that can be
+            A substitute for a regular register that can be
             used to initialize a Sequence.
         """
         qubit_ids = [f"{prefix}{i}" for i in range(n_qubits)]

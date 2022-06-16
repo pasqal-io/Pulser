@@ -105,7 +105,7 @@ class Waveform(ABC):
         """The value at each time step that describes the waveform.
 
         Returns:
-            np.ndarray: A numpy array with a value for each time step.
+            A numpy array with a value for each time step.
         """
         return self._samples.copy()
 
@@ -168,7 +168,7 @@ class Waveform(ABC):
             channel: The channel modulating the waveform.
 
         Returns:
-            numpy.ndarray: The array of samples after modulation.
+            The array of samples after modulation.
         """
         start, end = self.modulation_buffers(channel)
         mod_samples = self._modulated_samples(channel)
@@ -184,7 +184,7 @@ class Waveform(ABC):
             channel: The channel modulating the waveform.
 
         Returns:
-            tuple[int, int]: The minimum buffer times at the start and end of
+            The minimum buffer times at the start and end of
             the samples, in ns.
         """
         if not channel.mod_bandwidth:
@@ -205,7 +205,7 @@ class Waveform(ABC):
             channel: The channel modulating the waveform.
 
         Returns:
-            numpy.ndarray: The array of samples after modulation.
+            The array of samples after modulation.
         """
         return channel.modulate(self._samples)
 
@@ -367,7 +367,7 @@ class CompositeWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            numpy.ndarray: A numpy array with a value for each time step.
+            A numpy array with a value for each time step.
         """
         return cast(
             np.ndarray, np.concatenate([wf.samples for wf in self._waveforms])
@@ -425,7 +425,7 @@ class CustomWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            numpy.ndarray: A numpy array with a value for each time step.
+            A numpy array with a value for each time step.
         """
         # self._samples is already cached when initialized in __init__
         pass
@@ -471,7 +471,7 @@ class ConstantWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            numpy.ndarray: A numpy array with a value for each time step.
+            A numpy array with a value for each time step.
         """
         return np.full(self.duration, self._value)
 
@@ -482,7 +482,7 @@ class ConstantWaveform(Waveform):
             new_duration: The duration of the new waveform.
 
         Returns:
-            ConstantWaveform: The new waveform with the given duration.
+            The new waveform with the given duration.
         """
         return ConstantWaveform(new_duration, self._value)
 
@@ -534,7 +534,7 @@ class RampWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            numpy.ndarray: A numpy array with a value for each time step.
+            A numpy array with a value for each time step.
         """
         return np.linspace(self._start, self._stop, num=self._duration)
 
@@ -550,7 +550,7 @@ class RampWaveform(Waveform):
             new_duration: The duration of the new waveform.
 
         Returns:
-            RampWaveform: The new waveform with the given duration.
+            The new waveform with the given duration.
         """
         return RampWaveform(new_duration, self._start, self._stop)
 
@@ -669,7 +669,7 @@ class BlackmanWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            numpy.ndarray: A numpy array with a value for each time step.
+            A numpy array with a value for each time step.
         """
         return cast(np.ndarray, self._norm_samples * self._scaling)
 
@@ -680,7 +680,7 @@ class BlackmanWaveform(Waveform):
             new_duration: The duration of the new waveform.
 
         Returns:
-            BlackmanWaveform: The new waveform with the same area but a new
+            The new waveform with the same area but a new
             duration.
         """
         return BlackmanWaveform(new_duration, self._area)
@@ -809,7 +809,7 @@ class InterpolatedWaveform(Waveform):
             new_duration: The duration of the new waveform.
 
         Returns:
-            InterpolatedWaveform: The new waveform with the same coordinates
+            The new waveform with the same coordinates
             for interpolation but a new duration.
         """
         return InterpolatedWaveform(new_duration, self._values, **self._kwargs)
@@ -1007,7 +1007,7 @@ class KaiserWaveform(Waveform):
         """The value at each time step that describes the waveform.
 
         Returns:
-            numpy.ndarray: A numpy array with a value for each time step.
+            A numpy array with a value for each time step.
         """
         return cast(np.ndarray, self._norm_samples * self._scaling)
 
@@ -1018,8 +1018,8 @@ class KaiserWaveform(Waveform):
             new_duration: The duration of the new waveform.
 
         Returns:
-            KaiserWaveform: The new waveform with the same area and beta
-            but a new duration.
+            The new waveform with the same area and beta but a new
+            duration.
         """
         return KaiserWaveform(new_duration, self._area, self._beta)
 
