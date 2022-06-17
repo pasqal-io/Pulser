@@ -32,7 +32,7 @@ class Register(BaseRegister, RegDrawer):
     """A 2D quantum register containing a set of qubits.
 
     Args:
-        qubits (dict): Dictionary with the qubit names as keys and their
+        qubits: Dictionary with the qubit names as keys and their
             position coordinates (in μm) as values
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
@@ -54,16 +54,14 @@ class Register(BaseRegister, RegDrawer):
         """Initializes the register with the qubits in a square array.
 
         Args:
-            side (int): Side of the square in number of qubits.
-
-        Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            side: Side of the square in number of qubits.
+            spacing: The distance between neighbouring qubits in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed in a square array.
+            A register with qubits placed in a square array.
         """
         # Check side
         if side < 1:
@@ -85,17 +83,15 @@ class Register(BaseRegister, RegDrawer):
         """Initializes the register with the qubits in a rectangular array.
 
         Args:
-            rows (int): Number of rows.
-            columns (int): Number of columns.
-
-        Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            rows: Number of rows.
+            columns: Number of columns.
+            spacing: The distance between neighbouring qubits in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
         Returns:
-            Register: A register with qubits placed in a rectangular array.
+            A register with qubits placed in a rectangular array.
         """
         # Check rows
         if rows < 1:
@@ -137,17 +133,15 @@ class Register(BaseRegister, RegDrawer):
         triangles are pointing up and down.
 
         Args:
-            rows (int): Number of rows.
-            atoms_per_row (int): Number of atoms per row.
-
-        Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            rows: Number of rows.
+            atoms_per_row: Number of atoms per row.
+            spacing: The distance between neighbouring qubits in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed in a triangular lattice.
+            A register with qubits placed in a triangular lattice.
         """
         # Check rows
         if rows < 1:
@@ -182,16 +176,14 @@ class Register(BaseRegister, RegDrawer):
         """Initializes the register with the qubits in a hexagonal layout.
 
         Args:
-            layers (int): Number of layers around a central atom.
-
-        Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            layers: Number of layers around a central atom.
+            spacing: The distance between neighbouring qubits in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed in a hexagonal layout.
+            A register with qubits placed in a hexagonal layout.
         """
         # Check layers
         if layers < 1:
@@ -228,18 +220,16 @@ class Register(BaseRegister, RegDrawer):
         symmetries are enforced as often as possible.
 
         Args:
-            n_qubits (int): Number of qubits.
-            device (Device): The device whose constraints must be obeyed.
-
-        Keyword args:
-            spacing(float): The distance between neighbouring qubits in μm.
+            n_qubits: Number of qubits.
+            device: The device whose constraints must be obeyed.
+            spacing: The distance between neighbouring qubits in μm.
                 If omitted, the minimal distance for the device is used.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
 
         Returns:
-            Register: A register with qubits placed for maximum connectivity.
+            A register with qubits placed for maximum connectivity.
         """
         # Check device
         if not isinstance(device, pulser.devices._device_datacls.Device):
@@ -283,7 +273,7 @@ class Register(BaseRegister, RegDrawer):
         """Rotates the array around the origin by the given angle.
 
         Args:
-            degrees (float): The angle of rotation in degrees.
+            degrees: The angle of rotation in degrees.
         """
         if self.layout is not None:
             raise TypeError(
@@ -306,20 +296,20 @@ class Register(BaseRegister, RegDrawer):
     ) -> None:
         """Draws the entire register.
 
-        Keyword Args:
-            with_labels(bool, default=True): If True, writes the qubit ID's
+        Args:
+            with_labels: If True, writes the qubit ID's
                 next to each qubit.
-            blockade_radius(float, default=None): The distance (in μm) between
+            blockade_radius: The distance (in μm) between
                 atoms below the Rydberg blockade effect occurs.
-            draw_half_radius(bool, default=False): Whether or not to draw the
+            draw_half_radius: Whether or not to draw the
                 half the blockade radius surrounding each atoms. If `True`,
                 requires `blockade_radius` to be defined.
-            draw_graph(bool, default=True): Whether or not to draw the
+            draw_graph: Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
-            fig_name(str, default=None): The name on which to save the figure.
+            fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
-            kwargs_savefig(dict, default={}): Keywords arguments for
+            kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
 

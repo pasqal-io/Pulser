@@ -33,10 +33,10 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
-        seq (pulser.Sequence): The input sequence of operations on a device.
+        seq: The input sequence of operations on a device.
 
     Returns:
-        dict: The data to plot.
+        The data to plot.
     """
     # The minimum time axis length is 100 ns
     total_duration = max(seq.get_duration(), 100)
@@ -117,23 +117,23 @@ def draw_sequence(
     """Draws the entire sequence.
 
     Args:
-        seq (pulser.Sequence): The input sequence of operations on a device.
-        sampling_rate (float): Sampling rate of the effective pulse used by
+        seq: The input sequence of operations on a device.
+        sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
-        draw_phase_area (bool): Whether phase and area values need to be shown
+        draw_phase_area: Whether phase and area values need to be shown
             as text on the plot, defaults to False.
-        draw_interp_pts (bool): When the sequence has pulses with waveforms of
+        draw_interp_pts: When the sequence has pulses with waveforms of
             type InterpolatedWaveform, draws the points of interpolation on
             top of the respective waveforms (defaults to True).
-        draw_phase_shifts (bool): Whether phase shift and reference information
+        draw_phase_shifts: Whether phase shift and reference information
             should be added to the plot, defaults to False.
-        draw_register (bool): Whether to draw the register before the pulse
+        draw_register: Whether to draw the register before the pulse
             sequence, with a visual indication (square halo) around the qubits
             masked by the SLM, defaults to False.
-        draw_input(bool): Draws the programmed pulses on the channels, defaults
+        draw_input: Draws the programmed pulses on the channels, defaults
             to True.
-        draw_modulation(bool): Draws the expected channel output, defaults to
+        draw_modulation: Draws the expected channel output, defaults to
             False. If the channel does not have a defined 'mod_bandwidth', this
             is skipped unless 'draw_input=False'.
     """

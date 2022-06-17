@@ -49,7 +49,7 @@ class SimConfig:
         cannot be changed later on.
 
     Args:
-        noise (Union[str, tuple[str]]): Types of noises to be used in the
+        noise: Types of noises to be used in the
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
@@ -60,18 +60,18 @@ class SimConfig:
             - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
               **epsilon_prime**.
 
-        eta (float): Probability of each atom to be badly prepared.
-        epsilon (float): Probability of false positives.
-        epsilon_prime(float): Probability of false negatives.
-        runs (int): Number of runs needed : each run draws a new random
+        eta: Probability of each atom to be badly prepared.
+        epsilon: Probability of false positives.
+        epsilon_prime: Probability of false negatives.
+        runs: Number of runs needed : each run draws a new random
             noise.
-        samples_per_run (int): Number of samples per noisy run.
+        samples_per_run: Number of samples per noisy run.
             Useful for cutting down on computing time, but unrealistic.
-        temperature (float): Temperature, set in µK, of the Rydberg array.
+        temperature: Temperature, set in µK, of the Rydberg array.
             Also sets the standard deviation of the speed of the atoms.
-        laser_waist (float): Waist of the gaussian laser, set in µm,
+        laser_waist: Waist of the gaussian laser, set in µm,
             in global pulses.
-        solver_options (qutip.Options): Options for the qutip solver.
+        solver_options: Options for the qutip solver.
     """
 
     noise: Union[NOISE_TYPES, tuple[NOISE_TYPES, ...]] = ()
