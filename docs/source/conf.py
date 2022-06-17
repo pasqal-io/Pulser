@@ -42,9 +42,6 @@ extensions = [
     "sphinx_autodoc_typehints",
 ]
 
-# Show the defaults for the keyword args.
-typehints_default = "comma"
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
@@ -77,3 +74,6 @@ html_static_path = ["_static"]
 html_css_files = [
     "css/max_width.css",
 ]
+
+# Show the defaults for the keyword args.
+typehints_defaults = "comma"
