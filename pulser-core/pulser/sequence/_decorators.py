@@ -99,7 +99,7 @@ def store(func: F) -> F:
     return cast(F, wrapper)
 
 
-def allow_qubit_index(func: F) -> F:
+def check_allow_qubit_index(func: F) -> F:
     """Checks if using qubit indices is allowed."""
 
     @wraps(func)

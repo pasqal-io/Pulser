@@ -703,7 +703,7 @@ class Sequence:
         self._target(qubits, channel)
 
     @seq_decorators.store
-    @seq_decorators.allow_qubit_index
+    @seq_decorators.check_allow_qubit_index
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -726,7 +726,6 @@ class Sequence:
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        qubits = cast(int, qubits)
         self._target(qubits, channel, _index=True)
 
     @seq_decorators.store
@@ -805,7 +804,7 @@ class Sequence:
         self._phase_shift(phi, *targets, basis=basis)
 
     @seq_decorators.store
-    @seq_decorators.allow_qubit_index
+    @seq_decorators.check_allow_qubit_index
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
