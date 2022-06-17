@@ -53,8 +53,8 @@ def apply_noises(
     the last element is applied first.
 
     Args:
-        samples (list[QubitSamples]): A list of QubitSamples.
-        noises (list[NoiseModel]): A list of NoiseModel.
+        samples: A list of QubitSamples.
+        noises: A list of NoiseModel.
 
     Return:
         A list of QubitSamples on which each element of noises has been

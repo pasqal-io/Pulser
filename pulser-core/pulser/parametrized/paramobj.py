@@ -133,7 +133,7 @@ class ParamObj(Parametrized, OpSupport):
     When called, a ParamObj instance returns `cls(*args, **kwargs)`.
 
     Args:
-        cls (callable): The object to call. Usually it's a class that's
+        cls: The object to call. Usually it's a class that's
             instantiated when called.
         args: The args for calling `cls`.
         kwargs: The kwargs for calling `cls`.

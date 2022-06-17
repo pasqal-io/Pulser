@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
+    "sphinx_autodoc_typehints",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -56,7 +57,7 @@ source_suffix = [".rst", ".md"]
 autosummary_generate = True
 autodoc_member_order = "bysource"
 autodoc_typehints = "none"
-
+typehints_defaults = "comma"
 
 # -- Options for HTML output -------------------------------------------------
 
