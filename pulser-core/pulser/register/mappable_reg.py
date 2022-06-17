@@ -66,7 +66,7 @@ class MappableRegister:
                 simply be left out of the final register.
 
         Returns:
-            BaseRegister: The resulting register.
+            The resulting register.
         """
         chosen_ids = tuple(qubits.keys())
         if not set(chosen_ids) <= set(self._qubit_ids):

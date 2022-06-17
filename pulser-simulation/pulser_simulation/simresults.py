@@ -517,7 +517,7 @@ class CoherentResults(SimulationResults):
                 state.
 
         Returns:
-            qutip.Qobj: The resulting final state.
+            The resulting final state.
 
         Raises:
             If trying to reduce to a basis that would eliminate states with
