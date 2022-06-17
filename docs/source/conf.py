@@ -57,7 +57,7 @@ source_suffix = [".rst", ".md"]
 autosummary_generate = True
 autodoc_member_order = "bysource"
 autodoc_typehints = "none"
-
+typehints_defaults = "comma"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -74,6 +74,3 @@ html_static_path = ["_static"]
 html_css_files = [
     "css/max_width.css",
 ]
-
-# Show the defaults for the keyword args.
-typehints_defaults = "comma"
