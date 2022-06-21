@@ -28,6 +28,7 @@ import numpy as np
 import qutip
 from numpy.typing import ArrayLike
 
+import pulser.sampler as sampler
 from pulser import Pulse, Sequence
 from pulser._seq_drawer import draw_sequence
 from pulser.register import QubitId
@@ -408,6 +409,7 @@ class Simulation:
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         self.samples: dict[str, dict[str, dict]]
+
         if self._interaction == "ising":
             self.samples = {
                 addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
@@ -418,6 +420,19 @@ class Simulation:
 
         if not hasattr(self, "operators"):
             self.operators = deepcopy(self.samples)
+
+        # Use the sampler if specified.
+        # It _should_ do the same as the rest of the current function below.
+        # Noises or slm are ignored for now.
+        # BUG: for the very first check, the final state state is not the same
+        # when simulating with the sampler: it outputs a 3-level state!
+        if self.config.use_sampler:
+            print("Using the sampler")
+            self.sampled_samples = sampler.sample(self._seq)
+            self.samples = sampler.sample(self._seq)
+            return
+
+        print("Using legacy sampling")
 
         def prepare_dict() -> dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
