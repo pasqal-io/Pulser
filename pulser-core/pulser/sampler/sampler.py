@@ -107,6 +107,16 @@ def sample(
     # format the samples in the simulation dict form
     d = _write_dict(seq, samples, addrs)
 
+    # Replace empty defaultdict with empty dicts.
+    # NOTE(lvignoli): this is the format required by the simulation module. We
+    # keep the above code for flexibility in the construction of QubitSamples
+    # and for other samples formats.
+    return _default_to_regular(d)
+
+
+def _default_to_regular(d: dict | defaultdict) -> dict:
+    if isinstance(d, defaultdict):
+        d = {k: _default_to_regular(v) for k, v in d.items()}
     return d
 
 
