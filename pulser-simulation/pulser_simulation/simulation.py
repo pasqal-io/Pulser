@@ -613,6 +613,23 @@ class Simulation:
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
+
+        def no_samples(d: dict) -> bool:
+            """Checks for "zero" samples dictionnaries.
+
+            Is true if the amplitude, detuning and phase samples are all zeros,
+            or if d is None or empty.
+            """
+            return (
+                d is None
+                or d == {}
+                or (
+                    all(d["amp"] == 0)
+                    and all(d["det"] == 0)
+                    and all(d["phase"] == 0)
+                )
+            )
+
         if self._interaction == "XY":
             self.basis_name = "XY"
             self.dim = 2
@@ -620,18 +637,16 @@ class Simulation:
             projectors = ["uu", "du", "ud", "dd"]
         else:
             # No samples => Empty dict entry => False
-            if (
-                not self.samples["Global"]["digital"]
-                and not self.samples["Local"]["digital"]
+            if no_samples(self.samples["Global"]["digital"]) and no_samples(
+                self.samples["Local"]["digital"]
             ):
                 self.basis_name = "ground-rydberg"
                 self.dim = 2
                 basis = ["r", "g"]
                 projectors = ["gr", "rr", "gg"]
-            elif (
-                not self.samples["Global"]["ground-rydberg"]
-                and not self.samples["Local"]["ground-rydberg"]
-            ):
+            elif no_samples(
+                self.samples["Global"]["ground-rydberg"]
+            ) and no_samples(self.samples["Local"]["ground-rydberg"]):
                 self.basis_name = "digital"
                 self.dim = 2
                 basis = ["g", "h"]
