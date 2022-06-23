@@ -39,9 +39,13 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.sequence._containers import _Call, _TimeSlot, _ChannelSchedule
+from pulser.sequence._containers import (
+    _Call,
+    _TimeSlot,
+    _ChannelSchedule,
+    _QubitRef,
+)
 
-from pulser.sequence._phase_tracker import _PhaseTracker
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
 
@@ -130,12 +134,10 @@ class Sequence:
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
         self._schedule: dict[str, _ChannelSchedule] = {}
-        # The phase reference of each basis
-        self._phase_ref: dict[str, dict[QubitId, _PhaseTracker]] = {}
+        self._basis_ref: dict[str, dict[QubitId, _QubitRef]] = {}
         # IDs of all qubits in device
         self._qids: set[QubitId] = set(self._register.qubit_ids)
         # Last time each qubit was used, by basis
-        self._last_used: dict[str, dict[QubitId, int]] = {}
         self._variables: dict[str, Variable] = {}
         self._to_build_calls: list[_Call] = []
         self._building: bool = True
@@ -156,6 +158,22 @@ class Sequence:
     def _taken_channels(self):
         """Stores the names and dict ids of declared channels."""
         return {name: cs.channel_id for name, cs in self._schedule.items()}
+
+    @property
+    def _phase_ref(self):
+        """The phase reference of each basis."""
+        return {
+            basis: {q: qref.phase for q, qref in d.items()}
+            for basis, d in self._basis_ref.items()
+        }
+
+    @property
+    def _last_used(self):
+        """Last time each qubit was used, by basis."""
+        return {
+            basis: {q: qref.last_used for q, qref in d.items()}
+            for basis, d in self._basis_ref.items()
+        }
 
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
@@ -180,7 +198,7 @@ class Sequence:
     @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
-        return dict(self._channels)
+        return {name: cs.channel_obj for name, cs in self._schedule.items()}
 
     @property
     def declared_variables(self) -> dict[str, Variable]:
@@ -193,7 +211,7 @@ class Sequence:
         # Show all channels if none are declared, otherwise filter depending
         # on whether the sequence is working on XY mode
         # If already in XY mode, filter right away
-        if not self._channels and not self._in_xy:
+        if not self._schedule and not self._in_xy:
             return dict(self._device.channels)
         else:
             # MockDevice channels can be declared multiple times
@@ -201,7 +219,7 @@ class Sequence:
                 id: ch
                 for id, ch in self._device.channels.items()
                 if (
-                    id not in self._taken_channels.values()
+                    id not in [cs.channel_id for cs in self._schedule.values()]
                     or self._device == MockDevice
                 )
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
@@ -266,7 +284,7 @@ class Sequence:
             The duration of the channel or sequence, in ns.
         """
         if channel is None:
-            channels = tuple(self._channels.keys())
+            channels = tuple(self._schedule.keys())
             if not channels:
                 return 0
         else:
@@ -299,10 +317,10 @@ class Sequence:
                 "this sequence's register."
             )
 
-        if basis not in self._phase_ref:
+        if basis not in self._basis_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
 
-        return self._phase_ref[basis][qubit].last_phase
+        return self._basis_ref[basis][qubit].phase.last_phase
 
     def set_magnetic_field(
         self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0
@@ -324,7 +342,7 @@ class Sequence:
             bz: The magnetic field in the z direction (in Gauss).
         """
         if not self._in_xy:
-            if self._channels:
+            if self._schedule:
                 raise ValueError(
                     "The magnetic field can only be set in 'XY Mode'."
                 )
@@ -418,7 +436,7 @@ class Sequence:
                 target will have to be set manually as the first addition
                 to this channel.
         """
-        if name in self._channels:
+        if name in self._schedule:
             raise ValueError("The given name is already in use.")
 
         if channel_id not in self._device.channels:
@@ -454,13 +472,10 @@ class Sequence:
             self._in_xy = True
             self.set_magnetic_field()
 
-        self._schedule[name] = _ChannelSchedule(name, channel_id, self._device)
+        self._schedule[name] = _ChannelSchedule(channel_id, self._device)
 
-        if ch.basis not in self._phase_ref:
-            self._phase_ref[ch.basis] = {
-                q: _PhaseTracker(0) for q in self._qids
-            }
-            self._last_used[ch.basis] = {q: 0 for q in self._qids}
+        if ch.basis not in self._basis_ref:
+            self._basis_ref[ch.basis] = {q: _QubitRef() for q in self._qids}
 
         if ch.addressing == "Global":
             self._add_to_schedule(name, _TimeSlot("target", -1, 0, self._qids))
@@ -597,12 +612,14 @@ class Sequence:
             return
 
         pulse = cast(Pulse, pulse)
-        channel_obj = self._channels[channel]
+        channel_obj = self._schedule[channel].channel_obj
         last = self._last(channel)
         t0 = last.tf  # Preliminary ti
         basis = channel_obj.basis
 
-        ph_refs = {self._phase_ref[basis][q].last_phase for q in last.targets}
+        ph_refs = {
+            self._basis_ref[basis][q].phase.last_phase for q in last.targets
+        }
         if len(ph_refs) != 1:
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
@@ -614,14 +631,14 @@ class Sequence:
         pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
 
         phase_barriers = [
-            self._phase_ref[basis][q].last_time for q in last.targets
+            self._basis_ref[basis][q].phase.last_time for q in last.targets
         ]
         current_max_t = max(t0, *phase_barriers)
         phase_jump_buffer = 0
         for ch, ch_schedule in self._schedule.items():
             if protocol == "no-delay" and ch != channel:
                 continue
-            this_chobj = self._channels[ch]
+            this_chobj = self._schedule[ch].channel_obj
             for op in ch_schedule[::-1]:
                 if not isinstance(op.type, Pulse):
                     if op.tf + 2 * this_chobj.rise_time <= current_max_t:
@@ -651,9 +668,7 @@ class Sequence:
 
         true_finish = tf + pulse.fall_time(channel_obj)
         for qubit in last.targets:
-            self._last_used[basis][qubit] = max(
-                true_finish, self._last_used[basis][qubit]
-            )
+            self._basis_ref[basis][qubit].update_last_used(true_finish)
 
         if pulse.post_phase_shift:
             self._phase_shift(
@@ -829,9 +844,9 @@ class Sequence:
         """
         ch_set = set(channels)
         # channels have to be a subset of the declared channels
-        if not ch_set <= set(self._channels):
+        if not ch_set <= set(self._schedule):
             raise ValueError(
-                "All channel names must correspond to declared" " channels."
+                "All channel names must correspond to declared channels."
             )
         if len(channels) != len(ch_set):
             raise ValueError("The same channel was provided more than once.")
@@ -852,7 +867,10 @@ class Sequence:
             delta = tf - last_ts[id]
             if delta > 0:
                 self._delay(
-                    self._adjust_duration(delta, self._channels[id]), id
+                    self._adjust_duration(
+                        delta, self._schedule[id].channel_obj
+                    ),
+                    id,
                 )
 
     def build(
@@ -1087,7 +1105,7 @@ class Sequence:
         _index: bool = False,
     ) -> None:
         self._validate_channel(channel)
-        channel_obj = self._channels[channel]
+        channel_obj = self._schedule[channel].channel_obj
         try:
             qubits_set = (
                 set(cast(Iterable, qubits))
@@ -1143,9 +1161,11 @@ class Sequence:
     def _perform_target_non_parametrized(
         self, qubits_set: Set[QubitId], channel: str
     ) -> None:
-        channel_obj = self._channels[channel]
+        channel_obj = self._schedule[channel].channel_obj
         basis = channel_obj.basis
-        phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
+        phase_refs = {
+            self._basis_ref[basis][q].phase.last_phase for q in qubits_set
+        }
         if len(phase_refs) != 1:
             raise ValueError(
                 "Cannot target multiple qubits with different "
@@ -1192,7 +1212,9 @@ class Sequence:
         duration = cast(int, duration)
         last = self._last(channel)
         ti = last.tf
-        tf = ti + self._channels[channel].validate_duration(duration)
+        tf = ti + self._schedule[channel].channel_obj.validate_duration(
+            duration
+        )
         self._add_to_schedule(
             channel, _TimeSlot("delay", ti, tf, last.targets)
         )
@@ -1204,7 +1226,7 @@ class Sequence:
         basis: str,
         _index: bool = False,
     ) -> None:
-        if basis not in self._phase_ref:
+        if basis not in self._basis_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
         target_ids = self._check_qubits_give_ids(*targets, _index=_index)
 
@@ -1214,9 +1236,7 @@ class Sequence:
                 return
 
             for qubit in target_ids:
-                last_used = self._last_used[basis][qubit]
-                new_phase = self._phase_ref[basis][qubit].last_phase + phi
-                self._phase_ref[basis][qubit][last_used] = new_phase
+                self._basis_ref[basis][qubit].increment_phase(phi)
 
     def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
@@ -1250,14 +1270,14 @@ class Sequence:
                 "Using parametrized objects or variables to refer to channels "
                 "is not supported."
             )
-        if channel not in self._channels:
+        if channel not in self._schedule:
             raise ValueError("Use the name of a declared channel.")
 
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
-        self._device.validate_pulse(pulse, self._taken_channels[channel])
-        channel_obj = self._channels[channel]
+        self._device.validate_pulse(pulse, self._schedule[channel].channel_id)
+        channel_obj = self._schedule[channel].channel_obj
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:
@@ -1298,9 +1318,9 @@ class Sequence:
         self._device.validate_register(reg)
         qids = set(reg.qubit_ids)
         used_qubits = set()
-        for ch, ch_obj in self._channels.items():
+        for ch, ch_schedule in self._schedule.items():
             # Correct the targets of global channels
-            if ch_obj.addressing == "Global":
+            if ch_schedule.channel_obj.addressing == "Global":
                 for i, slot in enumerate(self._schedule[ch]):
                     stored_values = slot._asdict()
                     stored_values["targets"] = qids

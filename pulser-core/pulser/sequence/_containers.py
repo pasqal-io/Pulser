@@ -21,6 +21,7 @@ from typing import NamedTuple, Union
 from pulser.devices._device_datacls import Device
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
+from pulser.sequence._phase_tracker import _PhaseTracker
 
 
 class _TimeSlot(NamedTuple):
@@ -38,7 +39,6 @@ _Call = namedtuple("_Call", ["name", "args", "kwargs"])
 
 @dataclass
 class _ChannelSchedule:
-    name: str
     channel_id: str
     device: Device
 
@@ -79,3 +79,15 @@ class _ChannelSchedule:
 
     def __len__(self) -> int:
         return len(self.slots)
+
+
+class _QubitRef:
+    def __init__(self):
+        self.phase = _PhaseTracker(0)
+        self.last_used = 0
+
+    def increment_phase(self, phi: float) -> None:
+        self.phase[self.last_used] = self.phase.last_phase + phi
+
+    def update_last_used(self, new_t: int) -> None:
+        self.last_used = max(self.last_used, new_t)
