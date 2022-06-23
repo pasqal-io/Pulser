@@ -372,7 +372,7 @@ def test_sequence():
     seq.phase_shift(np.pi / 2, "q1")
     seq.target("q1", "ch0")
     assert seq._last_used["digital"]["q1"] == 0
-    assert seq._last_target["ch0"] == 1000
+    assert seq._schedule["ch0"].last_target() == 1000
     assert seq._last("ch0").ti == 1000
     assert seq.get_duration("ch0") == 1000
     seq.add(pulse1, "ch0")

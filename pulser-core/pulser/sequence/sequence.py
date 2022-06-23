@@ -39,7 +39,8 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.sequence._containers import _Call, _TimeSlot
+from pulser.sequence._containers import _Call, _TimeSlot, _ChannelSchedule
+
 from pulser.sequence._phase_tracker import _PhaseTracker
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
@@ -128,18 +129,13 @@ class Sequence:
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
-        self._channels: dict[str, Channel] = {}
-        self._schedule: dict[str, list[_TimeSlot]] = {}
-        # The phase reference of each channel
+        self._schedule: dict[str, _ChannelSchedule] = {}
+        # The phase reference of each basis
         self._phase_ref: dict[str, dict[QubitId, _PhaseTracker]] = {}
-        # Stores the names and dict ids of declared channels
-        self._taken_channels: dict[str, str] = {}
         # IDs of all qubits in device
         self._qids: set[QubitId] = set(self._register.qubit_ids)
         # Last time each qubit was used, by basis
         self._last_used: dict[str, dict[QubitId, int]] = {}
-        # Last time a target happened, by channel
-        self._last_target: dict[str, int] = {}
         self._variables: dict[str, Variable] = {}
         self._to_build_calls: list[_Call] = []
         self._building: bool = True
@@ -151,6 +147,15 @@ class Sequence:
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
+
+    @property
+    def _channels(self):
+        return {name: cs.channel_obj for name, cs in self._schedule.items()}
+
+    @property
+    def _taken_channels(self):
+        """Stores the names and dict ids of declared channels."""
+        return {name: cs.channel_id for name, cs in self._schedule.items()}
 
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
@@ -267,27 +272,11 @@ class Sequence:
         else:
             self._validate_channel(channel)
             channels = (channel,)
-        last_ts = {}
-        for id in channels:
-            this_chobj = self._channels[id]
-            temp_tf = 0
-            for i, op in enumerate(self._schedule[id][::-1]):
-                if i == 0:
-                    # Start with the last slot found
-                    temp_tf = op.tf
-                    if not include_fall_time:
-                        break
-                if isinstance(op.type, Pulse):
-                    temp_tf = max(
-                        temp_tf, op.tf + op.type.fall_time(this_chobj)
-                    )
-                    break
-                elif temp_tf - op.tf >= 2 * this_chobj.rise_time:
-                    # No pulse behind 'op' with a long enough fall time
-                    break
-            last_ts[id] = temp_tf
 
-        return max(last_ts.values())
+        return max(
+            self._schedule[id].get_duration(include_fall_time)
+            for id in channels
+        )
 
     @seq_decorators.screen
     def current_phase_ref(
@@ -368,10 +357,10 @@ class Sequence:
         try:
             targets = set(qubits)
         except TypeError:
-            raise TypeError("The SLM targets must be castable to set")
+            raise TypeError("The SLM targets must be castable to set.")
 
         if not targets.issubset(self._qids):
-            raise ValueError("SLM mask targets must exist in the register")
+            raise ValueError("SLM mask targets must exist in the register.")
 
         if self.is_parametrized():
             return
@@ -383,11 +372,11 @@ class Sequence:
         self._slm_mask_targets = targets
 
         # Find tentative initial and final time of SLM mask if possible
-        for channel in self._channels:
-            if not self._channels[channel].addressing == "Global":
+        for ch_schedule in self._schedule.values():
+            if not ch_schedule.channel_obj.addressing == "Global":
                 continue
             # Cycle on slots in schedule until the first pulse is found
-            for slot in self._schedule[channel]:
+            for slot in ch_schedule:
                 if not isinstance(slot.type, Pulse):
                     continue
                 ti = slot.ti
@@ -464,10 +453,8 @@ class Sequence:
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
             self.set_magnetic_field()
-        self._channels[name] = ch
-        self._taken_channels[name] = channel_id
-        self._schedule[name] = []
-        self._last_target[name] = 0
+
+        self._schedule[name] = _ChannelSchedule(name, channel_id, self._device)
 
         if ch.basis not in self._phase_ref:
             self._phase_ref[ch.basis] = {
@@ -631,11 +618,11 @@ class Sequence:
         ]
         current_max_t = max(t0, *phase_barriers)
         phase_jump_buffer = 0
-        for ch, seq in self._schedule.items():
+        for ch, ch_schedule in self._schedule.items():
             if protocol == "no-delay" and ch != channel:
                 continue
             this_chobj = self._channels[ch]
-            for op in self._schedule[ch][::-1]:
+            for op in ch_schedule[::-1]:
                 if not isinstance(op.type, Pulse):
                     if op.tf + 2 * this_chobj.rise_time <= current_max_t:
                         # No pulse behind 'op' needing a delay
@@ -1180,7 +1167,7 @@ class Sequence:
                 return
             ti = last.tf
             retarget = cast(int, channel_obj.min_retarget_interval)
-            elapsed = ti - self._last_target[channel]
+            elapsed = ti - self._schedule[channel].last_target()
             delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
             if channel_obj.fixed_retarget_t:
                 delta = max(delta, channel_obj.fixed_retarget_t)
@@ -1192,7 +1179,7 @@ class Sequence:
             ti = -1
             tf = 0
 
-        self._last_target[channel] = tf
+        # self._last_target[channel] = tf
         self._add_to_schedule(
             channel, _TimeSlot("target", ti, tf, set(qubits_set))
         )
@@ -1248,7 +1235,7 @@ class Sequence:
                 "The sequence has already been measured. "
                 "Nothing more can be added."
             )
-        self._schedule[channel].append(timeslot)
+        self._schedule[channel].slots.append(timeslot)
 
     def _last(self, channel: str) -> _TimeSlot:
         """Shortcut to last element in the channel's schedule."""
@@ -1317,7 +1304,7 @@ class Sequence:
                 for i, slot in enumerate(self._schedule[ch]):
                     stored_values = slot._asdict()
                     stored_values["targets"] = qids
-                    seq._schedule[ch][i] = _TimeSlot(**stored_values)
+                    seq._schedule[ch].slots[i] = _TimeSlot(**stored_values)
             else:
                 # Make sure all explicit targets are in the register
                 for slot in self._schedule[ch]:

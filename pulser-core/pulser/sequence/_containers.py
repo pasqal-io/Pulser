@@ -15,8 +15,10 @@
 from __future__ import annotations
 
 from collections import namedtuple
+from dataclasses import dataclass
 from typing import NamedTuple, Union
 
+from pulser.devices._device_datacls import Device
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 
@@ -32,3 +34,48 @@ class _TimeSlot(NamedTuple):
 
 # Encodes a sequence building calls
 _Call = namedtuple("_Call", ["name", "args", "kwargs"])
+
+
+@dataclass
+class _ChannelSchedule:
+    name: str
+    channel_id: str
+    device: Device
+
+    def __post_init__(self):
+        self.slots: list[_TimeSlot] = []
+
+    @property
+    def channel_obj(self):
+        return self.device.channels[self.channel_id]
+
+    def last_target(self) -> int:
+        """Last time a target happened on the channel."""
+        for slot in self.slots[::-1]:
+            if slot.type == "target":
+                return slot.tf
+        return 0
+
+    def get_duration(self, include_fall_time: bool = False) -> int:
+        temp_tf = 0
+        for i, op in enumerate(self.slots[::-1]):
+            if i == 0:
+                # Start with the last slot found
+                temp_tf = op.tf
+                if not include_fall_time:
+                    break
+            if isinstance(op.type, Pulse):
+                temp_tf = max(
+                    temp_tf, op.tf + op.type.fall_time(self.channel_obj)
+                )
+                break
+            elif temp_tf - op.tf >= 2 * self.channel_obj.rise_time:
+                # No pulse behind 'op' with a long enough fall time
+                break
+        return temp_tf
+
+    def __getitem__(self, key: Union[int, slice]) -> _TimeSlot:
+        return self.slots[key]
+
+    def __len__(self) -> int:
+        return len(self.slots)
