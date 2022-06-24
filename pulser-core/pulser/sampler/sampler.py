@@ -33,6 +33,7 @@ from pulser.sequence import Sequence, _TimeSlot
 def sample(
     seq: Sequence,
     modulation: bool = False,
+    additional_final_sample: bool = False,
     common_noises: Optional[list[NoiseModel]] = None,
     global_noises: Optional[list[NoiseModel]] = None,
 ) -> dict:
@@ -101,6 +102,14 @@ def sample(
                     ti, tf = seq._slm_mask_time[0], seq._slm_mask_time[1]
                     s[i].amp[ti:tf] = 0.0
                     # apply only on amp since it's just a shutter
+
+        # Add final 0 samples to comply with the current format of the
+        # simulation module.
+        if additional_final_sample:
+            for sample in s:
+                sample.amp = np.append(sample.amp, 0.0)
+                sample.det = np.append(sample.det, 0.0)
+                sample.phase = np.append(sample.phase, 0.0)
 
         samples[ch_name] = s
 
