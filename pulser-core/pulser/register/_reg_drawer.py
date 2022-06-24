@@ -155,7 +155,7 @@ class RegDrawer:
             if len(bonds) > 0:
                 lines = bonds[:, :, (ix, iy)]
             else:
-                lines = []
+                lines = np.array([])
             lc = mc.LineCollection(lines, linewidths=0.6, colors="grey")
             ax.add_collection(lc)
 
