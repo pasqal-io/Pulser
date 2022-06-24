@@ -141,21 +141,14 @@ class Sequence:
         self._empty_sequence: bool = True
         # SLM mask targets and on/off times
         self._slm_mask_targets: set[QubitId] = set()
-        self._slm_mask_time: list[int] = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
 
     # TODO: Depecrate these properties
-
     @property
     def _channels(self) -> dict[str, Channel]:
         return {name: cs.channel_obj for name, cs in self._schedule.items()}
-
-    @property
-    def _taken_channels(self) -> dict[str, str]:
-        """Stores the names and dict ids of declared channels."""
-        return {name: cs.channel_id for name, cs in self._schedule.items()}
 
     @property
     def _phase_ref(self) -> dict[str, dict[QubitId, _PhaseTracker]]:
@@ -166,12 +159,13 @@ class Sequence:
         }
 
     @property
-    def _last_used(self) -> dict[str, dict[QubitId, int]]:
-        """Last time each qubit was used, by basis."""
-        return {
-            basis: {q: qref.last_used for q, qref in d.items()}
-            for basis, d in self._basis_ref.items()
-        }
+    def _slm_mask_time(self) -> list[int]:
+        """The initial and final time when the SLM mask is on."""
+        return (
+            []
+            if not self._slm_mask_targets
+            else self._schedule.find_slm_mask_times()
+        )
 
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
@@ -384,8 +378,6 @@ class Sequence:
 
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
-
-        self._slm_mask_time = self._schedule.find_slm_mask_times()
 
     @seq_decorators.block_if_measured
     def declare_channel(
@@ -618,12 +610,7 @@ class Sequence:
 
         self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
 
-        # TODO: Get rid of this block
-        new_last = self._last(channel)
-        ti = new_last.ti
-        tf = new_last.tf
-
-        true_finish = tf + pulse.fall_time(channel_obj)
+        true_finish = self._last(channel).tf + pulse.fall_time(channel_obj)
         for qubit in last.targets:
             self._basis_ref[basis][qubit].update_last_used(true_finish)
 
@@ -631,15 +618,6 @@ class Sequence:
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
             )
-
-        # If the added pulse starts earlier than all previously added pulses,
-        # update SLM mask initial and final time
-        if self._slm_mask_targets:
-            try:
-                if self._slm_mask_time[0] > ti:
-                    self._slm_mask_time = [ti, tf]
-            except IndexError:
-                self._slm_mask_time = [ti, tf]
 
     @seq_decorators.store
     def target(
@@ -823,7 +801,7 @@ class Sequence:
             delta = tf - last_ts[id]
             if delta > 0:
                 self._delay(
-                    self._adjust_duration(delta, id),
+                    self._schedule[id].adjust_duration(delta),
                     id,
                 )
 
@@ -1201,11 +1179,6 @@ class Sequence:
             new_det = pulse.detuning
 
         return Pulse(new_amp, new_det, new_phase, pulse.post_phase_shift)
-
-    def _adjust_duration(self, duration: int, channel: str) -> int:
-        """Adjust a duration for a given channel."""
-        # TODO: Maybe get rid of this
-        return self._schedule[channel].adjust_duration(duration)
 
     def _reset_parametrized(self) -> None:
         """Resets all attributes related to parametrization."""

@@ -70,16 +70,16 @@ def test_channel_declaration():
 
     seq2 = Sequence(reg, MockDevice)
     available_channels = set(seq2.available_channels)
-    seq2.declare_channel("ch0", "raman_local", initial_target="q1")
-    seq2.declare_channel("ch1", "rydberg_global")
-    seq2.declare_channel("ch2", "rydberg_global")
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
-    assert seq2._taken_channels == {
+    channel_map = {
         "ch0": "raman_local",
         "ch1": "rydberg_global",
         "ch2": "rydberg_global",
     }
-    assert seq2._taken_channels.keys() == seq2._channels.keys()
+    for channel, channel_id in channel_map.items():
+        seq2.declare_channel(channel, channel_id)
+    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    for channel in seq2.declared_channels:
+        assert seq2._schedule[channel].channel_id == channel_map[channel]
     with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
         seq2.declare_channel("ch3", "mw_global")
 
@@ -400,7 +400,7 @@ def test_sequence():
     assert seq.current_phase_ref("q0", "digital") == 0
     seq.phase_shift(np.pi / 2, "q1")
     seq.target("q1", "ch0")
-    assert seq._last_used["digital"]["q1"] == 0
+    assert seq._basis_ref["digital"]["q1"].last_used == 0
     assert seq._schedule["ch0"].last_target() == 1000
     assert seq._last("ch0").ti == 1000
     assert seq.get_duration("ch0") == 1000
