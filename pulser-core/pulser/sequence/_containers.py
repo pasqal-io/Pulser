@@ -14,10 +14,11 @@
 """Special containers used by the Sequence class."""
 from __future__ import annotations
 
-from collections import namedtuple
-from dataclasses import dataclass
-from typing import NamedTuple, Union, Optional, cast
 import warnings
+from collections import namedtuple
+from collections.abc import Iterator
+from dataclasses import dataclass
+from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
 
@@ -45,7 +46,7 @@ class _ChannelSchedule:
     channel_id: str
     channel_obj: Channel
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.slots: list[_TimeSlot] = []
 
     def last_target(self) -> int:
@@ -81,7 +82,17 @@ class _ChannelSchedule:
                 max(duration, self.channel_obj.min_duration)
             )
 
-    def __getitem__(self, key: Union[int, slice]) -> _TimeSlot:
+    @overload
+    def __getitem__(self, key: int) -> _TimeSlot:
+        ...
+
+    @overload
+    def __getitem__(self, key: slice) -> list[_TimeSlot]:
+        ...
+
+    def __getitem__(
+        self, key: Union[int, slice]
+    ) -> Union[_TimeSlot, list[_TimeSlot]]:
         if key == -1 and not self.slots:
             raise ValueError("The chosen channel has no target.")
         return self.slots[key]
@@ -89,8 +100,12 @@ class _ChannelSchedule:
     def __len__(self) -> int:
         return len(self.slots)
 
+    def __iter__(self) -> Iterator[_TimeSlot]:
+        for slot in self.slots:
+            yield slot
 
-class _Schedule(dict):
+
+class _Schedule(Dict[str, _ChannelSchedule]):
     def get_duration(
         self, channel: Optional[str] = None, include_fall_time: bool = False
     ) -> int:
@@ -103,7 +118,7 @@ class _Schedule(dict):
 
         return max(self[id].get_duration(include_fall_time) for id in channels)
 
-    def find_slm_mask_times(self, existing_mask_time: list = []):
+    def find_slm_mask_times(self, existing_mask_time: list = []) -> list[int]:
         # Find tentative initial and final time of SLM mask if possible
         mask_time = []
         for ch_schedule in self.values():
@@ -206,7 +221,7 @@ class _Schedule(dict):
 
 
 class _QubitRef:
-    def __init__(self):
+    def __init__(self) -> None:
         self.phase = _PhaseTracker(0)
         self.last_used = 0
 

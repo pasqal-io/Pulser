@@ -41,12 +41,12 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.sequence._containers import (
     _Call,
-    _TimeSlot,
     _ChannelSchedule,
-    _Schedule,
     _QubitRef,
+    _Schedule,
+    _TimeSlot,
 )
-
+from pulser.sequence._phase_tracker import _PhaseTracker
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
 
@@ -134,7 +134,7 @@ class Sequence:
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
-        self._schedule: dict[str, _ChannelSchedule] = _Schedule()
+        self._schedule: _Schedule = _Schedule()
         self._basis_ref: dict[str, dict[QubitId, _QubitRef]] = {}
         # IDs of all qubits in device
         self._qids: set[QubitId] = set(self._register.qubit_ids)
@@ -154,16 +154,16 @@ class Sequence:
     # TODO: Depecrate these properties
 
     @property
-    def _channels(self):
+    def _channels(self) -> dict[str, Channel]:
         return {name: cs.channel_obj for name, cs in self._schedule.items()}
 
     @property
-    def _taken_channels(self):
+    def _taken_channels(self) -> dict[str, str]:
         """Stores the names and dict ids of declared channels."""
         return {name: cs.channel_id for name, cs in self._schedule.items()}
 
     @property
-    def _phase_ref(self):
+    def _phase_ref(self) -> dict[str, dict[QubitId, _PhaseTracker]]:
         """The phase reference of each basis."""
         return {
             basis: {q: qref.phase for q, qref in d.items()}
@@ -171,7 +171,7 @@ class Sequence:
         }
 
     @property
-    def _last_used(self):
+    def _last_used(self) -> dict[str, dict[QubitId, int]]:
         """Last time each qubit was used, by basis."""
         return {
             basis: {q: qref.last_used for q, qref in d.items()}
@@ -1135,7 +1135,7 @@ class Sequence:
         self._validate_channel(channel)
         if self.is_parametrized():
             return
-        self._schedule.add_delay(int(duration), channel)
+        self._schedule.add_delay(cast(int, duration), channel)
 
     def _phase_shift(
         self,

@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import itertools
 from collections import defaultdict
-from typing import Callable, List, Optional, cast
+from collections.abc import Callable
+from typing import List, Optional, cast
 
 import numpy as np
 
@@ -27,7 +28,7 @@ from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.noise_model import NoiseModel, apply_noises
 from pulser.sampler.samples import QubitSamples
-from pulser.sequence.sequence import Sequence, _TimeSlot
+from pulser.sequence.sequence import Sequence, _ChannelSchedule, _TimeSlot
 
 
 def sample(
@@ -214,7 +215,9 @@ def _sample_slots(N: int, *slots: _TimeSlot) -> list[QubitSamples]:
     return qs
 
 
-TimeSlotExtractionStrategy = Callable[[List[_TimeSlot]], List[List[_TimeSlot]]]
+TimeSlotExtractionStrategy = Callable[
+    [_ChannelSchedule], List[List[_TimeSlot]]
+]
 """Extraction strategy of _TimeSlot's of a Channel.
 
 It's an alias for functions that returns a list of lists of _TimeSlots.
@@ -228,13 +231,13 @@ NOTE:
 """
 
 
-def _regular(ts: list[_TimeSlot]) -> list[list[_TimeSlot]]:
+def _regular(ts: _ChannelSchedule) -> list[list[_TimeSlot]]:
     """No grouping performed, return only the pulses."""
     return [[x] for x in ts if isinstance(x.type, Pulse)]
 
 
 def _group_between_retargets(
-    ts: list[_TimeSlot],
+    ts: _ChannelSchedule,
 ) -> list[list[_TimeSlot]]:
     """Filter and group _TimeSlots together.
 
