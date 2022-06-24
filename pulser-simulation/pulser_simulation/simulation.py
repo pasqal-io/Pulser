@@ -424,15 +424,11 @@ class Simulation:
         # Use the sampler if specified.
         # It _should_ do the same as the rest of the current function below.
         # Noises or slm are ignored for now.
-        # BUG: for the very first check, the final state state is not the same
-        # when simulating with the sampler: it outputs a 3-level state!
         if self.config.use_sampler:
-            print("Using the sampler")
-            self.sampled_samples = sampler.sample(self._seq)
-            self.samples = sampler.sample(self._seq)
+            self.samples = sampler.sample(
+                self._seq, additional_final_sample=True
+            )
             return
-
-        print("Using legacy sampling")
 
         def prepare_dict() -> dict[str, np.ndarray]:
             # Duration includes retargeting, delays, etc.
