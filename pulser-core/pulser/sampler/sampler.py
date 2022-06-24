@@ -19,8 +19,7 @@ from __future__ import annotations
 
 import itertools
 from collections import defaultdict
-from collections.abc import Callable
-from typing import List, Optional, cast
+from typing import Callable, List, Optional, cast
 
 import numpy as np
 

@@ -51,10 +51,12 @@ class _ChannelSchedule:
 
     def last_target(self) -> int:
         """Last time a target happened on the channel."""
+        t = 0
         for slot in self.slots[::-1]:
             if slot.type == "target":
-                return slot.tf
-        return 0
+                t = slot.tf
+                break
+        return t
 
     def get_duration(self, include_fall_time: bool = False) -> int:
         temp_tf = 0
@@ -84,11 +86,11 @@ class _ChannelSchedule:
 
     @overload
     def __getitem__(self, key: int) -> _TimeSlot:
-        ...
+        pass
 
     @overload
     def __getitem__(self, key: slice) -> list[_TimeSlot]:
-        ...
+        pass
 
     def __getitem__(
         self, key: Union[int, slice]
@@ -96,9 +98,6 @@ class _ChannelSchedule:
         if key == -1 and not self.slots:
             raise ValueError("The chosen channel has no target.")
         return self.slots[key]
-
-    def __len__(self) -> int:
-        return len(self.slots)
 
     def __iter__(self) -> Iterator[_TimeSlot]:
         for slot in self.slots:
@@ -118,9 +117,9 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         return max(self[id].get_duration(include_fall_time) for id in channels)
 
-    def find_slm_mask_times(self, existing_mask_time: list = []) -> list[int]:
+    def find_slm_mask_times(self) -> list[int]:
         # Find tentative initial and final time of SLM mask if possible
-        mask_time = []
+        mask_time: list[int] = []
         for ch_schedule in self.values():
             if not ch_schedule.channel_obj.addressing == "Global":
                 continue
@@ -130,8 +129,8 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     continue
                 ti = slot.ti
                 tf = slot.tf
-                if existing_mask_time:
-                    if ti < existing_mask_time[0]:
+                if mask_time:
+                    if ti < mask_time[0]:
                         mask_time = [ti, tf]
                 else:
                     mask_time = [ti, tf]

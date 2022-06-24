@@ -390,9 +390,7 @@ class Sequence:
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
 
-        self._slm_mask_time = self._schedule.find_slm_mask_times(
-            self._slm_mask_time
-        )
+        self._slm_mask_time = self._schedule.find_slm_mask_times()
 
     @seq_decorators.block_if_measured
     def declare_channel(
