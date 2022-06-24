@@ -155,7 +155,7 @@ def test_opsupport():
     np.testing.assert_almost_equal(y.build(), b.build())
     y_ = y + 0.4  # y_ = [-0.6, 1.4]
     y = np.round(y_, 1)
-    np.testing.assert_array_equal(y.build(), y_.build())
+    np.testing.assert_array_equal(y.build(), np.round(y_.build(), 1))
     np.testing.assert_array_equal(round(y_).build(), np.round(y_).build())
     np.testing.assert_array_equal(round(y_, 1).build(), y.build())
 
