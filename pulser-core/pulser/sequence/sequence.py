@@ -39,14 +39,9 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.sequence._containers import (
-    _Call,
-    _ChannelSchedule,
-    _QubitRef,
-    _Schedule,
-    _TimeSlot,
-)
-from pulser.sequence._phase_tracker import _PhaseTracker
+from pulser.sequence._basis_ref import _PhaseTracker, _QubitRef
+from pulser.sequence._call import _Call
+from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
 

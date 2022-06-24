@@ -20,11 +20,10 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from pulser.parametrized import Parametrized
-from pulser.sequence._containers import _Call
+from pulser.sequence._call import _Call
 
 if TYPE_CHECKING:  # pragma: no cover
     from pulser.sequence.sequence import Sequence
-
 
 F = TypeVar("F", bound=Callable)
 

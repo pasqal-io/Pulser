@@ -19,6 +19,18 @@ from typing import Generator, Union
 import numpy as np
 
 
+class _QubitRef:
+    def __init__(self) -> None:
+        self.phase = _PhaseTracker(0)
+        self.last_used = 0
+
+    def increment_phase(self, phi: float) -> None:
+        self.phase[self.last_used] = self.phase.last_phase + phi
+
+    def update_last_used(self, new_t: int) -> None:
+        self.last_used = max(self.last_used, new_t)
+
+
 class _PhaseTracker:
     """Tracks a phase reference over time."""
 

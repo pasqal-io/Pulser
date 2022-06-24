@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import warnings
-from collections import namedtuple
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Dict, NamedTuple, Optional, Union, cast, overload
@@ -25,7 +24,6 @@ import numpy as np
 from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
-from pulser.sequence._phase_tracker import _PhaseTracker
 
 
 class _TimeSlot(NamedTuple):
@@ -35,10 +33,6 @@ class _TimeSlot(NamedTuple):
     ti: int
     tf: int
     targets: set[QubitId]
-
-
-# Encodes a sequence building calls
-_Call = namedtuple("_Call", ["name", "args", "kwargs"])
 
 
 @dataclass
@@ -217,15 +211,3 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         self[channel].slots.append(
             _TimeSlot("target", ti, tf, set(qubits_set))
         )
-
-
-class _QubitRef:
-    def __init__(self) -> None:
-        self.phase = _PhaseTracker(0)
-        self.last_used = 0
-
-    def increment_phase(self, phi: float) -> None:
-        self.phase[self.last_used] = self.phase.last_phase + phi
-
-    def update_last_used(self, new_t: int) -> None:
-        self.last_used = max(self.last_used, new_t)
