@@ -267,6 +267,14 @@ class Sequence:
         """
         return isinstance(self._register, MappableRegister)
 
+    def is_measured(self) -> bool:
+        """States whether the sequence has been measured."""
+        return (
+            self._is_measured
+            if self.is_parametrized()
+            else hasattr(self, "_measurement")
+        )
+
     @seq_decorators.screen
     def get_duration(
         self, channel: Optional[str] = None, include_fall_time: bool = False
@@ -406,6 +414,7 @@ class Sequence:
                     self._slm_mask_time = [ti, tf]
                 break
 
+    @seq_decorators.block_if_measured
     def declare_channel(
         self,
         name: str,
@@ -571,6 +580,7 @@ class Sequence:
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
+    @seq_decorators.block_if_measured
     def add(
         self,
         pulse: Union[Pulse, Parametrized],
@@ -742,6 +752,7 @@ class Sequence:
         self._delay(duration, channel)
 
     @seq_decorators.store
+    @seq_decorators.block_if_measured
     def measure(self, basis: str = "ground-rydberg") -> None:
         """Measures in a valid basis.
 
@@ -768,9 +779,6 @@ class Sequence:
                 "selected device and operation mode. The "
                 "available options are: " + ", ".join(list(available))
             )
-
-        if hasattr(self, "_measurement"):
-            raise RuntimeError("The sequence has already been measured.")
 
         if self.is_parametrized():
             self._is_measured = True
@@ -831,6 +839,7 @@ class Sequence:
         self._phase_shift(phi, *targets, basis=basis, _index=True)
 
     @seq_decorators.store
+    @seq_decorators.block_if_measured
     def align(self, *channels: str) -> None:
         """Aligns multiple channels in time.
 
@@ -1098,6 +1107,7 @@ class Sequence:
             fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
+    @seq_decorators.block_if_measured
     def _target(
         self,
         qubits: Union[Iterable[QubitId], QubitId, Parametrized],
@@ -1204,6 +1214,7 @@ class Sequence:
             channel, _TimeSlot("target", ti, tf, set(qubits_set))
         )
 
+    @seq_decorators.block_if_measured
     def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
         self._validate_channel(channel)
         if self.is_parametrized():
@@ -1250,11 +1261,6 @@ class Sequence:
         return seq_to_str(self)
 
     def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
-        if hasattr(self, "_measurement"):
-            raise RuntimeError(
-                "The sequence has already been measured. "
-                "Nothing more can be added."
-            )
         self._schedule[channel].slots.append(timeslot)
 
     def _last(self, channel: str) -> _TimeSlot:

@@ -272,9 +272,10 @@ def test_measure():
     with pytest.raises(ValueError, match="not supported"):
         seq.measure(basis="XY")
     seq.measure()
-    with pytest.raises(RuntimeError, match="already been measured"):
-        seq.measure(basis="digital")
-    with pytest.raises(RuntimeError, match="Nothing more can be added."):
+    with pytest.raises(
+        RuntimeError,
+        match="sequence has been measured, no further changes are allowed.",
+    ):
         seq.add(pulse, "ch0")
 
     seq = Sequence(reg, MockDevice)
@@ -283,6 +284,34 @@ def test_measure():
     with pytest.raises(ValueError, match="not supported"):
         seq.measure(basis="digital")
     seq.measure(basis="XY")
+
+
+@pytest.mark.parametrize(
+    "call, args",
+    [
+        ("declare_channel", ("ch1", "rydberg_global")),
+        ("add", (Pulse.ConstantPulse(1000, 1, 0, 0), "ch0")),
+        ("target", ("q1", "ch0")),
+        ("target_index", (2, "ch0")),
+        ("delay", (1000, "ch0")),
+        ("align", ("ch0", "ch01")),
+        ("measure", tuple()),
+    ],
+)
+def test_block_if_measured(call, args):
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
+    # For the align command
+    seq.declare_channel("ch01", "rydberg_local", initial_target="q0")
+    # Check there's nothing wrong with the call
+    if call != "measure":
+        getattr(seq, call)(*args)
+    seq.measure(basis="ground-rydberg")
+    with pytest.raises(
+        RuntimeError,
+        match="sequence has been measured, no further changes are allowed.",
+    ):
+        getattr(seq, call)(*args)
 
 
 def test_str():

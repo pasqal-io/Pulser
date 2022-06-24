@@ -74,11 +74,6 @@ def verify_parametrization(func: F) -> F:
 
     @wraps(func)
     def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        if self._is_measured and self.is_parametrized():
-            raise RuntimeError(
-                "The sequence has been measured, no further "
-                "changes are allowed."
-            )
         for x in chain(args, kwargs.values()):
             verify_variable(self, x)
         func(self, *args, **kwargs)
@@ -121,5 +116,20 @@ def mark_non_empty(func: F) -> F:
     def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
         func(self, *args, **kwargs)
         self._empty_sequence = False
+
+    return cast(F, wrapper)
+
+
+def block_if_measured(func: F) -> F:
+    """Blocks the call if the sequence has been measured."""
+
+    @wraps(func)
+    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
+        if self.is_measured():
+            raise RuntimeError(
+                "The sequence has been measured, no further "
+                "changes are allowed."
+            )
+        func(self, *args, **kwargs)
 
     return cast(F, wrapper)
