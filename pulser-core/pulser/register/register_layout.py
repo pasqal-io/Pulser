@@ -123,7 +123,7 @@ class RegisterLayout(RegDrawer):
         """
         traps = []
         rounded_coords = np.round(
-            cast(ArrayLike, coordinates), decimals=COORD_PRECISION
+            np.array(coordinates), decimals=COORD_PRECISION
         )
         for coord, rounded in zip(coordinates, rounded_coords):
             key = tuple(rounded)
