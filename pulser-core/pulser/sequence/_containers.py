@@ -16,9 +16,12 @@ from __future__ import annotations
 
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import NamedTuple, Union
+from typing import NamedTuple, Union, Optional, cast
+import warnings
 
-from pulser.devices._device_datacls import Device
+import numpy as np
+
+from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.sequence._phase_tracker import _PhaseTracker
@@ -40,14 +43,10 @@ _Call = namedtuple("_Call", ["name", "args", "kwargs"])
 @dataclass
 class _ChannelSchedule:
     channel_id: str
-    device: Device
+    channel_obj: Channel
 
     def __post_init__(self):
         self.slots: list[_TimeSlot] = []
-
-    @property
-    def channel_obj(self):
-        return self.device.channels[self.channel_id]
 
     def last_target(self) -> int:
         """Last time a target happened on the channel."""
@@ -74,11 +73,136 @@ class _ChannelSchedule:
                 break
         return temp_tf
 
+    def adjust_duration(self, duration: int) -> int:
+        """Adjust a duration for this channel."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return self.channel_obj.validate_duration(
+                max(duration, self.channel_obj.min_duration)
+            )
+
     def __getitem__(self, key: Union[int, slice]) -> _TimeSlot:
+        if key == -1 and not self.slots:
+            raise ValueError("The chosen channel has no target.")
         return self.slots[key]
 
     def __len__(self) -> int:
         return len(self.slots)
+
+
+class _Schedule(dict):
+    def get_duration(
+        self, channel: Optional[str] = None, include_fall_time: bool = False
+    ) -> int:
+        if channel is None:
+            channels = tuple(self.keys())
+            if not channels:
+                return 0
+        else:
+            channels = (channel,)
+
+        return max(self[id].get_duration(include_fall_time) for id in channels)
+
+    def find_slm_mask_times(self, existing_mask_time: list = []):
+        # Find tentative initial and final time of SLM mask if possible
+        mask_time = []
+        for ch_schedule in self.values():
+            if not ch_schedule.channel_obj.addressing == "Global":
+                continue
+            # Cycle on slots in schedule until the first pulse is found
+            for slot in ch_schedule:
+                if not isinstance(slot.type, Pulse):
+                    continue
+                ti = slot.ti
+                tf = slot.tf
+                if existing_mask_time:
+                    if ti < existing_mask_time[0]:
+                        mask_time = [ti, tf]
+                else:
+                    mask_time = [ti, tf]
+                break
+        return mask_time
+
+    def add_pulse(
+        self,
+        pulse: Pulse,
+        channel: str,
+        phase_barrier_ts: list[int],
+        protocol: str,
+    ) -> None:
+        pass
+        last = self[channel][-1]
+        t0 = last.tf
+        current_max_t = max(t0, *phase_barrier_ts)
+        phase_jump_buffer = 0
+        for ch, ch_schedule in self.items():
+            if protocol == "no-delay" and ch != channel:
+                continue
+            this_chobj = self[ch].channel_obj
+            for op in ch_schedule[::-1]:
+                if not isinstance(op.type, Pulse):
+                    if op.tf + 2 * this_chobj.rise_time <= current_max_t:
+                        # No pulse behind 'op' needing a delay
+                        break
+                elif ch == channel:
+                    if op.type.phase != pulse.phase:
+                        phase_jump_buffer = this_chobj.phase_jump_time - (
+                            t0 - op.tf
+                        )
+                    break
+                elif op.tf + op.type.fall_time(this_chobj) <= current_max_t:
+                    break
+                elif op.targets & last.targets or protocol == "wait-for-all":
+                    current_max_t = op.tf + op.type.fall_time(this_chobj)
+                    break
+
+        delay_duration = max(current_max_t - t0, phase_jump_buffer)
+        if delay_duration > 0:
+            delay_duration = self[channel].adjust_duration(delay_duration)
+            self.add_delay(delay_duration, channel)
+
+        ti = t0 + delay_duration
+        tf = ti + pulse.duration
+        self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
+
+    def add_delay(self, duration: int, channel: str) -> None:
+        last = self[channel][-1]
+        ti = last.tf
+        tf = ti + self[channel].channel_obj.validate_duration(duration)
+        self[channel].slots.append(_TimeSlot("delay", ti, tf, last.targets))
+
+    def add_target(self, qubits_set: set[QubitId], channel: str) -> None:
+        channel_obj = self[channel].channel_obj
+        if self[channel].slots:
+            fall_time = (
+                self[channel].get_duration(include_fall_time=True)
+                - self[channel].get_duration()
+            )
+            if fall_time > 0:
+                self.add_delay(
+                    self[channel].adjust_duration(fall_time), channel
+                )
+
+            last = self[channel][-1]
+            if last.targets == qubits_set:
+                return
+            ti = last.tf
+            retarget = cast(int, channel_obj.min_retarget_interval)
+            elapsed = ti - self[channel].last_target()
+            delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
+            if channel_obj.fixed_retarget_t:
+                delta = max(delta, channel_obj.fixed_retarget_t)
+            if delta != 0:
+                delta = self[channel].adjust_duration(delta)
+            tf = ti + delta
+
+        else:
+            ti = -1
+            tf = 0
+
+        self[channel].slots.append(
+            _TimeSlot("target", ti, tf, set(qubits_set))
+        )
 
 
 class _QubitRef:

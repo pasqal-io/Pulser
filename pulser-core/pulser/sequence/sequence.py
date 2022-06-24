@@ -19,7 +19,7 @@ import copy
 import json
 import os
 import warnings
-from collections.abc import Iterable, Mapping, Set
+from collections.abc import Iterable, Mapping
 from sys import version_info
 from typing import Any, Optional, Tuple, Union, cast, overload
 
@@ -43,6 +43,7 @@ from pulser.sequence._containers import (
     _Call,
     _TimeSlot,
     _ChannelSchedule,
+    _Schedule,
     _QubitRef,
 )
 
@@ -133,7 +134,7 @@ class Sequence:
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
-        self._schedule: dict[str, _ChannelSchedule] = {}
+        self._schedule: dict[str, _ChannelSchedule] = _Schedule()
         self._basis_ref: dict[str, dict[QubitId, _QubitRef]] = {}
         # IDs of all qubits in device
         self._qids: set[QubitId] = set(self._register.qubit_ids)
@@ -149,6 +150,8 @@ class Sequence:
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
+
+    # TODO: Depecrate these properties
 
     @property
     def _channels(self):
@@ -215,13 +218,11 @@ class Sequence:
             return dict(self._device.channels)
         else:
             # MockDevice channels can be declared multiple times
+            occupied_ch_ids = [cs.channel_id for cs in self._schedule.values()]
             return {
                 id: ch
                 for id, ch in self._device.channels.items()
-                if (
-                    id not in [cs.channel_id for cs in self._schedule.values()]
-                    or self._device == MockDevice
-                )
+                if (id not in occupied_ch_ids or self._device == MockDevice)
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
@@ -291,18 +292,10 @@ class Sequence:
         Returns:
             The duration of the channel or sequence, in ns.
         """
-        if channel is None:
-            channels = tuple(self._schedule.keys())
-            if not channels:
-                return 0
-        else:
+        if channel is not None:
             self._validate_channel(channel)
-            channels = (channel,)
 
-        return max(
-            self._schedule[id].get_duration(include_fall_time)
-            for id in channels
-        )
+        return self._schedule.get_duration(channel, include_fall_time)
 
     @seq_decorators.screen
     def current_phase_ref(
@@ -397,22 +390,9 @@ class Sequence:
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
 
-        # Find tentative initial and final time of SLM mask if possible
-        for ch_schedule in self._schedule.values():
-            if not ch_schedule.channel_obj.addressing == "Global":
-                continue
-            # Cycle on slots in schedule until the first pulse is found
-            for slot in ch_schedule:
-                if not isinstance(slot.type, Pulse):
-                    continue
-                ti = slot.ti
-                tf = slot.tf
-                if self._slm_mask_time:
-                    if ti < self._slm_mask_time[0]:
-                        self._slm_mask_time = [ti, tf]
-                else:
-                    self._slm_mask_time = [ti, tf]
-                break
+        self._slm_mask_time = self._schedule.find_slm_mask_times(
+            self._slm_mask_time
+        )
 
     @seq_decorators.block_if_measured
     def declare_channel(
@@ -481,7 +461,7 @@ class Sequence:
             self._in_xy = True
             self.set_magnetic_field()
 
-        self._schedule[name] = _ChannelSchedule(channel_id, self._device)
+        self._schedule[name] = _ChannelSchedule(channel_id, ch)
 
         if ch.basis not in self._basis_ref:
             self._basis_ref[ch.basis] = {q: _QubitRef() for q in self._qids}
@@ -624,7 +604,6 @@ class Sequence:
         pulse = cast(Pulse, pulse)
         channel_obj = self._schedule[channel].channel_obj
         last = self._last(channel)
-        t0 = last.tf  # Preliminary ti
         basis = channel_obj.basis
 
         ph_refs = {
@@ -643,38 +622,13 @@ class Sequence:
         phase_barriers = [
             self._basis_ref[basis][q].phase.last_time for q in last.targets
         ]
-        current_max_t = max(t0, *phase_barriers)
-        phase_jump_buffer = 0
-        for ch, ch_schedule in self._schedule.items():
-            if protocol == "no-delay" and ch != channel:
-                continue
-            this_chobj = self._schedule[ch].channel_obj
-            for op in ch_schedule[::-1]:
-                if not isinstance(op.type, Pulse):
-                    if op.tf + 2 * this_chobj.rise_time <= current_max_t:
-                        # No pulse behind 'op' needing a delay
-                        break
-                elif ch == channel:
-                    if op.type.phase != pulse.phase:
-                        phase_jump_buffer = this_chobj.phase_jump_time - (
-                            t0 - op.tf
-                        )
-                    break
-                elif op.tf + op.type.fall_time(this_chobj) <= current_max_t:
-                    break
-                elif op.targets & last.targets or protocol == "wait-for-all":
-                    current_max_t = op.tf + op.type.fall_time(this_chobj)
-                    break
 
-        delay_duration = max(current_max_t - t0, phase_jump_buffer)
-        if delay_duration > 0:
-            delay_duration = self._adjust_duration(delay_duration, channel_obj)
-            self._delay(delay_duration, channel)
+        self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
 
-        ti = t0 + delay_duration
-        tf = ti + pulse.duration
-
-        self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
+        # TODO: Get rid of this block
+        new_last = self._last(channel)
+        ti = new_last.ti
+        tf = new_last.tf
 
         true_finish = tf + pulse.fall_time(channel_obj)
         for qubit in last.targets:
@@ -876,9 +830,7 @@ class Sequence:
             delta = tf - last_ts[id]
             if delta > 0:
                 self._delay(
-                    self._adjust_duration(
-                        delta, self._schedule[id].channel_obj
-                    ),
+                    self._adjust_duration(delta, id),
                     id,
                 )
 
@@ -1135,7 +1087,17 @@ class Sequence:
         qubit_ids_set = self._check_qubits_give_ids(*qubits_set, _index=_index)
 
         if not self.is_parametrized():
-            self._perform_target_non_parametrized(qubit_ids_set, channel)
+            basis = channel_obj.basis
+            phase_refs = {
+                self._basis_ref[basis][q].phase.last_phase
+                for q in qubit_ids_set
+            }
+            if len(phase_refs) != 1:
+                raise ValueError(
+                    "Cannot target multiple qubits with different "
+                    "phase references for the same basis."
+                )
+            self._schedule.add_target(qubit_ids_set, channel)
 
     def _check_qubits_give_ids(
         self, *qubits: Union[QubitId, Parametrized], _index: bool = False
@@ -1168,67 +1130,12 @@ class Sequence:
             )
         return ids
 
-    def _perform_target_non_parametrized(
-        self, qubits_set: Set[QubitId], channel: str
-    ) -> None:
-        channel_obj = self._schedule[channel].channel_obj
-        basis = channel_obj.basis
-        phase_refs = {
-            self._basis_ref[basis][q].phase.last_phase for q in qubits_set
-        }
-        if len(phase_refs) != 1:
-            raise ValueError(
-                "Cannot target multiple qubits with different "
-                "phase references for the same basis."
-            )
-
-        try:
-            fall_time = self.get_duration(
-                channel, include_fall_time=True
-            ) - self.get_duration(channel)
-            if fall_time > 0:
-                self.delay(
-                    self._adjust_duration(fall_time, channel_obj),
-                    channel,
-                )
-
-            last = self._last(channel)
-            if last.targets == qubits_set:
-                return
-            ti = last.tf
-            retarget = cast(int, channel_obj.min_retarget_interval)
-            elapsed = ti - self._schedule[channel].last_target()
-            delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
-            if channel_obj.fixed_retarget_t:
-                delta = max(delta, channel_obj.fixed_retarget_t)
-            if delta != 0:
-                delta = self._adjust_duration(delta, channel_obj)
-            tf = ti + delta
-
-        except ValueError:
-            ti = -1
-            tf = 0
-
-        # self._last_target[channel] = tf
-        self._add_to_schedule(
-            channel, _TimeSlot("target", ti, tf, set(qubits_set))
-        )
-
     @seq_decorators.block_if_measured
     def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
         self._validate_channel(channel)
         if self.is_parametrized():
             return
-
-        duration = cast(int, duration)
-        last = self._last(channel)
-        ti = last.tf
-        tf = ti + self._schedule[channel].channel_obj.validate_duration(
-            duration
-        )
-        self._add_to_schedule(
-            channel, _TimeSlot("delay", ti, tf, last.targets)
-        )
+        self._schedule.add_delay(int(duration), channel)
 
     def _phase_shift(
         self,
@@ -1261,14 +1168,13 @@ class Sequence:
         return seq_to_str(self)
 
     def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
+        # Maybe get rid of this
         self._schedule[channel].slots.append(timeslot)
 
     def _last(self, channel: str) -> _TimeSlot:
         """Shortcut to last element in the channel's schedule."""
-        try:
-            return self._schedule[channel][-1]
-        except IndexError:
-            raise ValueError("The chosen channel has no target.")
+        # TODO: Maybe get rid of this
+        return self._schedule[channel][-1]
 
     def _validate_channel(self, channel: str) -> None:
         if isinstance(channel, Parametrized):
@@ -1303,13 +1209,10 @@ class Sequence:
 
         return Pulse(new_amp, new_det, new_phase, pulse.post_phase_shift)
 
-    def _adjust_duration(self, duration: int, channel_obj: Channel) -> int:
+    def _adjust_duration(self, duration: int, channel: str) -> int:
         """Adjust a duration for a given channel."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return channel_obj.validate_duration(
-                max(duration, channel_obj.min_duration)
-            )
+        # TODO: Maybe get rid of this
+        return self._schedule[channel].adjust_duration(duration)
 
     def _reset_parametrized(self) -> None:
         """Resets all attributes related to parametrization."""
