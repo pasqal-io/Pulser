@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Special containers used by the Sequence class."""
+"""Special containers to store the schedule of operations in the Sequence."""
 from __future__ import annotations
 
 import warnings

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Class for tracking the phase over time in a Sequence."""
+"""Class for tracking the phase and usage of a qubit over time."""
 from __future__ import annotations
 
 from typing import Generator, Union
