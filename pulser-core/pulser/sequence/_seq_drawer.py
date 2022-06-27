@@ -148,7 +148,7 @@ def draw_sequence(
         else:
             return rf"{value:.2g}$\pi$"
 
-    n_channels = len(seq._channels)
+    n_channels = len(seq.declared_channels)
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
     data = gather_data(seq)
@@ -215,7 +215,7 @@ def draw_sequence(
     )
 
     ch_axes = {}
-    for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
+    for i, (ch, gs_) in enumerate(zip(seq.declared_channels, gs)):
         ax = fig.add_subplot(gs_)
         ax.spines["top"].set_color("none")
         ax.spines["bottom"].set_color("none")
@@ -265,7 +265,7 @@ def draw_sequence(
     # Make sure the time axis of all channels are aligned
     final_t = total_duration / time_scale
     if draw_modulation:
-        for ch, ch_obj in seq._channels.items():
+        for ch, ch_obj in seq.declared_channels.items():
             final_t = max(
                 final_t,
                 (seq.get_duration(ch) + 2 * ch_obj.rise_time) / time_scale,
@@ -274,7 +274,7 @@ def draw_sequence(
     t_max = final_t * 1.05
 
     for ch, (a, b) in ch_axes.items():
-        ch_obj = seq._channels[ch]
+        ch_obj = seq.declared_channels[ch]
         basis = ch_obj.basis
         times = np.array(data[ch]["time"])
         t = times / time_scale
@@ -407,7 +407,7 @@ def draw_sequence(
             if coords == "initial":
                 x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
-                if seq._channels[ch].addressing == "Global":
+                if seq.declared_channels[ch].addressing == "Global":
                     a.text(
                         x,
                         amp_top * 0.98,

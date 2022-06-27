@@ -215,7 +215,7 @@ def test_delay_min_duration():
     seq.add(pulse0, "ch0")
     seq.target("q1", "ch1")
     seq.add(pulse1, "ch1")
-    min_duration = seq._channels["ch1"].min_duration
+    min_duration = seq.declared_channels["ch1"].min_duration
     assert seq._schedule["ch1"][3] == _TimeSlot(
         "delay", 220, 220 + min_duration, {"q1"}
     )

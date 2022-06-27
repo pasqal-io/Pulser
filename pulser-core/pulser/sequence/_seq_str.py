@@ -30,7 +30,7 @@ def seq_to_str(sequence: Sequence) -> str:
     delay_line = "t: {}->{} | Delay \n"
     # phase_line = "t: {} | Phase shift of: {:.3f} | Targets: {}\n"
     for ch, seq in sequence._schedule.items():
-        basis = sequence._channels[ch].basis
+        basis = sequence.declared_channels[ch].basis
         full += f"Channel: {ch}\n"
         first_slot = True
         for ts in seq:

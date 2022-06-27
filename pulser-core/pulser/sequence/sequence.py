@@ -145,14 +145,10 @@ class Sequence:
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
 
-    # TODO: Depecrate these properties
-    @property
-    def _channels(self) -> dict[str, Channel]:
-        return {name: cs.channel_obj for name, cs in self._schedule.items()}
-
     @property
     def _phase_ref(self) -> dict[str, dict[QubitId, _PhaseTracker]]:
         """The phase reference of each basis."""
+        # TODO: Deprecate
         return {
             basis: {q: qref.phase for q, qref in d.items()}
             for basis, d in self._basis_ref.items()
