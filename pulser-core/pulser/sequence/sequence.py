@@ -39,7 +39,7 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.sequence._basis_ref import _PhaseTracker, _QubitRef
+from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import draw_sequence
@@ -144,15 +144,6 @@ class Sequence:
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
-
-    @property
-    def _phase_ref(self) -> dict[str, dict[QubitId, _PhaseTracker]]:
-        """The phase reference of each basis."""
-        # TODO: Deprecate
-        return {
-            basis: {q: qref.phase for q, qref in d.items()}
-            for basis, d in self._basis_ref.items()
-        }
 
     @property
     def _slm_mask_time(self) -> list[int]:
@@ -1140,7 +1131,6 @@ class Sequence:
 
     def _last(self, channel: str) -> _TimeSlot:
         """Shortcut to last element in the channel's schedule."""
-        # TODO: Maybe get rid of this
         return self._schedule[channel][-1]
 
     def _validate_channel(self, channel: str) -> None:

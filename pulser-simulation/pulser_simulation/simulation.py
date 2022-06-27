@@ -89,7 +89,10 @@ class Simulation:
             )
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
-        if all(sequence._schedule[x][-1].tf == 0 for x in sequence.declared_channels):
+        if all(
+            sequence._schedule[x][-1].tf == 0
+            for x in sequence.declared_channels
+        ):
             raise ValueError(
                 "No instructions given for the channels in the sequence."
             )

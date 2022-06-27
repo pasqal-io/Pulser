@@ -427,7 +427,7 @@ def draw_sequence(
                         ha="left",
                         bbox=q_box,
                     )
-                    phase = seq._phase_ref[basis][targets[0]][0]
+                    phase = seq._basis_ref[basis][targets[0]].phase[0]
                     if phase and draw_phase_shifts:
                         msg = r"$\phi=$" + phase_str(phase)
                         a.text(
@@ -444,7 +444,9 @@ def draw_sequence(
                 target_regions.append(
                     [tf + 1 / time_scale, targets]
                 )  # New one
-                phase = seq._phase_ref[basis][targets[0]][tf * time_scale + 1]
+                phase = seq._basis_ref[basis][targets[0]].phase[
+                    tf * time_scale + 1
+                ]
                 a.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
                 b.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
                 a.text(
@@ -478,7 +480,7 @@ def draw_sequence(
             end = cast(float, end)
             # All targets have the same ref, so we pick
             q = targets_[0]
-            ref = seq._phase_ref[basis][q]
+            ref = seq._basis_ref[basis][q].phase
             if end != total_duration - 1 or "measurement" not in data[ch]:
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
