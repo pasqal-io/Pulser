@@ -21,6 +21,8 @@ class SerializationError(Exception):
 
 
 class AbstractReprError(Exception):
-    """Exception raised when serializing to the abstract representation."""
+    """Exception raised when serializing to or deserializing from
+    the abstract representation.
+    """
 
     pass

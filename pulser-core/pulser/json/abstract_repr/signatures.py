@@ -13,8 +13,11 @@
 # limitations under the License.
 from __future__ import annotations
 
+import operator
 from dataclasses import dataclass, field
 from typing import Optional
+
+import numpy as np
 
 
 @dataclass
@@ -69,18 +72,27 @@ SIGNATURES: dict[str, PulserSignature] = {
     "round_": PulserSignature(pos=("lhs",), extra=dict(expression="round")),
 }
 
-BINARY_OPERATORS = ("add", "sub", "mul", "truediv", "pow", "mod")
 
-UNARY_OPERATORS = (
-    "neg",
-    "abs",
-    "ceil",
-    "floor",
-    "sqrt",
-    "exp",
-    "log2",
-    "log",
-    "sin",
-    "cos",
-    "tan",
-)
+BINARY_OPERATORS = {
+    "add": operator.add,
+    "sub": operator.sub,
+    "mul": operator.mul,
+    "truediv": operator.truediv,
+    "pow": operator.pow,
+    "mod": operator.mod,
+    "index": lambda lhs, rhs: lhs[rhs],
+}
+
+UNARY_OPERATORS = {
+    "neg": operator.neg,
+    "abs": operator.abs,
+    "ceil": np.ceil,
+    "floor": np.floor,
+    "sqrt": np.sqrt,
+    "exp": np.exp,
+    "log2": np.log2,
+    "log": np.log,
+    "sin": np.sin,
+    "cos": np.cos,
+    "tan": np.tan,
+}

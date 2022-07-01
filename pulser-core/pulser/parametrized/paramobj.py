@@ -316,3 +316,13 @@ class ParamObj(Parametrized, OpSupport):
         else:
             name = self.cls.__name__
         return f"{name}({', '.join(args+kwargs)})"
+
+    def __eq__(self, other: ParamObj):
+        return (
+            type(self) == type(other)
+            and self.args == other.args
+            and self.kwargs == other.kwargs
+        )
+
+    def __hash__(self) -> int:
+        return id(self)

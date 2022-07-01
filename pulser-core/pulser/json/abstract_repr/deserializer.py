@@ -15,13 +15,18 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Dict, Union, cast
 
 import jsonschema
 
 import pulser
 import pulser.devices as devices
+from pulser.json.abstract_repr.signatures import (
+    BINARY_OPERATORS,
+    UNARY_OPERATORS,
+)
 from pulser.json.exceptions import AbstractReprError
+from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
 from pulser.register.register import Register
 from pulser.waveforms import (
@@ -45,58 +50,139 @@ with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 
-def _deserialize_abstract_waveform(obj: dict) -> Waveform:
+def _deserialize_parameter(
+    param: Dict, vars: Dict
+) -> Union[int, float, Variable, ParamObj]:
+    """Deserialize a parameterized object.
+
+    A parameter can be either a litteral, a variable or an expression.
+    In the first case, return the litteral. Otherwise, return a reference
+    to the variable, or build an expression referencing variables.
+
+    Args:
+        param (Dict): The JSON parametrized object to deserialize
+        vars (Dict): The references to the sequence variables
+
+    Returns: A litteral (int | float), a ``Variable``, or a ``ParamObj``.
+    """
+
+    if not isinstance(param, dict):
+        # This is a litteral
+        return param
+
+    if "variable" in param:
+        # This is a reference to a variable.
+        if param["variable"] not in vars:
+            raise AbstractReprError(
+                f"Variable {param['variable']} used in operations "
+                "but not found in declared variables"
+            )
+        return vars[param["variable"]]
+
+    if "expression" not in param:
+        # Can't deserialize param if it is a dict without a
+        # `variable` or an `expression` key
+        raise AbstractReprError(
+            f"Parameter {param} is neither a litteral nor "
+            "a variable or an expression"
+        )
+
+    # This is a unary or a binary expression
+    expression = (
+        param["expression"] if param["expression"] != "div" else "truediv"
+    )
+
+    if expression in UNARY_OPERATORS:
+        return UNARY_OPERATORS[expression](
+            _deserialize_parameter(param["lhs"], vars)
+        )
+    elif expression in BINARY_OPERATORS:
+        return BINARY_OPERATORS[expression](
+            _deserialize_parameter(param["lhs"], vars),
+            _deserialize_parameter(param["rhs"], vars),
+        )
+    else:
+        raise AbstractReprError(f"Expression {param[expression]} invalid")
+
+
+def _deserialize_waveform(obj: Dict, vars: Dict) -> Waveform:
+
     if obj["kind"] == "constant":
-        return ConstantWaveform(obj["duration"], obj["value"])
+        return ConstantWaveform(
+            duration=_deserialize_parameter(obj["duration"], vars),
+            value=_deserialize_parameter(obj["value"], vars),
+        )
     if obj["kind"] == "ramp":
-        return RampWaveform(obj["duration"], obj["start"], obj["stop"])
+        return RampWaveform(
+            duration=_deserialize_parameter(obj["duration"], vars),
+            start=_deserialize_parameter(obj["start"], vars),
+            stop=_deserialize_parameter(obj["stop"], vars),
+        )
     if obj["kind"] == "blackman":
-        return BlackmanWaveform(obj["duration"], obj["area"])
+        return BlackmanWaveform(
+            duration=_deserialize_parameter(obj["duration"], vars),
+            area=_deserialize_parameter(obj["area"], vars),
+        )
     if obj["kind"] == "blackman_max":
-        return BlackmanWaveform.from_max_val(obj["max_val"], obj["area"])
+        return BlackmanWaveform.from_max_val(
+            max_val=_deserialize_parameter(obj["max_val"], vars),
+            area=_deserialize_parameter(obj["area"], vars),
+        )
     if obj["kind"] == "interpolated":
         return InterpolatedWaveform(
-            obj["duration"], obj["values"], obj["times"]
+            duration=_deserialize_parameter(obj["duration"], vars),
+            values=_deserialize_parameter(obj["values"], vars),
+            times=_deserialize_parameter(obj["times"], vars),
         )
     if obj["kind"] == "kaiser":
-        return KaiserWaveform(obj["duration"], obj["area"], obj["beta"])
+        return KaiserWaveform(
+            duration=_deserialize_parameter(obj["duration"], vars),
+            area=_deserialize_parameter(obj["area"], vars),
+            beta=_deserialize_parameter(obj["beta"], vars),
+        )
     if obj["kind"] == "kaiser_max":
         return KaiserWaveform.from_max_val(
-            obj["max_val"], obj["area"], obj["beta"]
+            max_val=_deserialize_parameter(obj["max_val"], vars),
+            area=_deserialize_parameter(obj["area"], vars),
+            beta=_deserialize_parameter(obj["beta"], vars),
         )
     if obj["kind"] == "composite":
-        wfs = [_deserialize_abstract_waveform(wf) for wf in obj["waveforms"]]
+        wfs = [_deserialize_waveform(wf, vars) for wf in obj["waveforms"]]
         return CompositeWaveform(*wfs)
     if obj["kind"] == "custom":
-        return CustomWaveform(obj["samples"])
+        return CustomWaveform(
+            samples=_deserialize_parameter(obj["samples"], vars)
+        )
 
     raise AbstractReprError("The object does not encode a known waveform.")
 
 
-def _deserialize_abstract_operation(seq: Sequence, op: dict) -> None:
+def _deserialize_operation(seq: Sequence, op: Dict, vars: Dict):
     if op["op"] == "target":
         seq.target_index(
-            qubits=op["target"],
+            qubits=_deserialize_parameter(op["target"], vars),
             channel=op["channel"],
         )
     elif op["op"] == "align":
         seq.align(*op["channels"])
     elif op["op"] == "delay":
         seq.delay(
-            duration=op["time"],
+            duration=_deserialize_parameter(op["time"], vars),
             channel=op["channel"],
         )
     elif op["op"] == "phase_shift":
         seq.phase_shift_index(
-            op["phi"],
-            *op["targets"],
+            _deserialize_parameter(op["phi"], vars),
+            *[_deserialize_parameter(t, vars) for t in op["targets"]],
         )
     elif op["op"] == "pulse":
         pulse = Pulse(
-            amplitude=_deserialize_abstract_waveform(op["amplitude"]),
-            detuning=_deserialize_abstract_waveform(op["detuning"]),
-            phase=op["phase"],
-            post_phase_shift=op["post_phase_shift"],
+            amplitude=_deserialize_waveform(op["amplitude"], vars),
+            detuning=_deserialize_waveform(op["detuning"], vars),
+            phase=_deserialize_parameter(op["phase"], vars),
+            post_phase_shift=_deserialize_parameter(
+                op["post_phase_shift"], vars
+            ),
         )
         seq.add(
             pulse=pulse,
@@ -115,8 +201,6 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     Returns:
         Sequence: The Pulser sequence.
     """
-    pass
-
     obj = json.loads(obj_str)
 
     # Validate the format of the data against the JSON schema.
@@ -148,7 +232,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
 
     # Operations
     for op in obj["operations"]:
-        _deserialize_abstract_operation(seq, op)
+        _deserialize_operation(seq, op, vars)
 
     # Measurement
     if obj["measurement"] is not None:
