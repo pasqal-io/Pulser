@@ -513,6 +513,8 @@ class Simulation:
             if self._seq._slm_mask_targets and self._seq._slm_mask_time:
                 tf = self._seq._slm_mask_time[1]
                 for qubit in self._seq._slm_mask_targets:
+                    if qubit not in self.samples["Local"][basis]:
+                        continue
                     for x in ("amp", "det", "phase"):
                         self.samples["Local"][basis][qubit][x][0:tf] = 0
 
