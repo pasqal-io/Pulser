@@ -29,8 +29,15 @@ from pulser.pulse import Pulse
 from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 
 # Color scheme
-COLORS = ["darkgreen", "indigo"]
-ALT_COLORS = ["darkred", "gold"]
+COLORS = ["darkgreen", "indigo", "darkorange"]
+ALT_COLORS = ["darkred", "gold", "darkblue"]
+
+SIZE_PER_WIDTH = {1: 3, 2: 4, 3: 5}
+LABELS = [
+    r"$\Omega$ (rad/µs)",
+    r"$\delta$ (rad/µs)",
+    r"$\varphi$ / 2π",
+]
 
 
 def gather_data(seq: pulser.sequence.Sequence) -> dict:
@@ -49,6 +56,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
         time = [-1]  # To not break the "time[-1]" later on
         amp = []
         detuning = []
+        phase = []
         # List of interpolation points
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
         target: dict[Union[str, tuple[int, int]], Any] = {}
@@ -59,6 +67,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                 time += [0]
                 amp += [0.0]
                 detuning += [0.0]
+                phase += [0.0]
                 continue
             if slot.type in ["delay", "target"]:
                 time += [
@@ -67,6 +76,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                 ]
                 amp += [0.0, 0.0]
                 detuning += [0.0, 0.0]
+                phase += [phase[-1]] * 2
                 if slot.type == "target":
                     target[(slot.ti, slot.tf - 1)] = slot.targets
                 continue
@@ -75,12 +85,14 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                 pulse.detuning, ConstantWaveform
             ):
                 time += [slot.ti, slot.tf - 1]
-                amp += [float(pulse.amplitude._value)] * 2
-                detuning += [float(pulse.detuning._value)] * 2
+                amp += [float(pulse.amplitude[0])] * 2
+                detuning += [float(pulse.detuning[0])] * 2
+                phase += [float(pulse.phase) / (2 * np.pi)] * 2
             else:
                 time += list(range(slot.ti, slot.tf))
                 amp += pulse.amplitude.samples.tolist()
                 detuning += pulse.detuning.samples.tolist()
+                phase += [float(pulse.phase) / (2 * np.pi)] * pulse.duration
                 for wf_type in ["amplitude", "detuning"]:
                     wf = getattr(pulse, wf_type)
                     if isinstance(wf, InterpolatedWaveform):
@@ -92,12 +104,14 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
             time += [time[-1] + 1, total_duration - 1]
             amp += [0, 0]
             detuning += [0, 0]
+            phase += [phase[-1] if len(phase) else 0] * 2
         # Store everything
         time.pop(0)  # Removes the -1 in the beginning
         data[ch] = {
             "time": time,
             "amp": amp,
             "detuning": detuning,
+            "phase": phase,
             "target": target,
         }
         if hasattr(seq, "_measurement"):
@@ -117,6 +131,7 @@ def draw_sequence(
     draw_register: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
+    draw_phase_curve: bool = True,
 ) -> tuple[Figure, Figure]:
     """Draws the entire sequence.
 
@@ -158,11 +173,16 @@ def draw_sequence(
     data = gather_data(seq)
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
-    axes_per_ch = {}
+    curves_per_ch = {}
     for ch in seq._schedule:
-        axes_per_ch[ch] = 1
+        curves_per_ch[ch] = [True, False, False]
         if np.nonzero(data[ch]["detuning"])[0].size > 0:
-            axes_per_ch[ch] += 1
+            curves_per_ch[ch][1] = True
+        if draw_phase_curve and np.nonzero(data[ch]["phase"])[0].size > 0:
+            curves_per_ch[ch][2] = True
+    axes_per_ch = {
+        ch: sum(curves_on) for ch, curves_on in curves_per_ch.items()
+    }
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
@@ -213,8 +233,7 @@ def draw_sequence(
             )
             ax_reg.set_title("Masked register", pad=10)
 
-    size_per_width = {1: 3, 2: 4.5, 3: 6}
-    ratios = [size_per_width[n_axes] for n_axes in axes_per_ch.values()]
+    ratios = [SIZE_PER_WIDTH[n_axes] for n_axes in axes_per_ch.values()]
     fig = plt.figure(
         constrained_layout=False,
         figsize=(20, sum(ratios)),
@@ -283,7 +302,7 @@ def draw_sequence(
         basis = ch_obj.basis
         times = np.array(data[ch]["time"])
         t = times / time_scale
-        ys = [data[ch][qty] for qty in ("amp", "detuning")]
+        ys = [data[ch][qty] for qty in ("amp", "detuning", "phase")]
         if sampling_rate:
             cubic_splines = []
             yseff = []
@@ -323,14 +342,18 @@ def draw_sequence(
             det_min, det_max, det_range = -1, 1, 2
         det_top = det_max + det_range * 0.15
         det_bottom = det_min - det_range * 0.05
-        for ax, ylim in zip(
-            axes, [(amp_bottom, amp_top), (det_bottom, det_top)]
-        ):
+        ax_lims = [(amp_bottom, amp_top), (det_bottom, det_top), (-0.05, 1.05)]
+        ax_lims = [
+            lim for i, lim in enumerate(ax_lims) if curves_per_ch[ch][i]
+        ]
+        for ax, ylim in zip(axes, ax_lims):
             ax.set_xlim(t_min, t_max)
             ax.set_ylim(*ylim)
 
-        labels = [r"$\Omega$ (rad/µs)", r"$\delta$ (rad/µs)"]
-        for i, ax in enumerate(axes):
+        selected_inds = [
+            i for i, curve_on in enumerate(curves_per_ch[ch]) if curve_on
+        ]
+        for i, ax in zip(selected_inds, axes):
             if draw_input:
                 ax.plot(t, ys[i], color=COLORS[i], linewidth=0.8)
             if sampling_rate:
@@ -355,7 +378,7 @@ def draw_sequence(
                     alpha=0.3,
                 )
             special_kwargs = dict(labelpad=10) if i == 0 else {}
-            ax.set_ylabel(labels[i], fontsize=14, **special_kwargs)
+            ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
@@ -525,6 +548,7 @@ def draw_sequence(
                 bbox=slm_box,
             )
 
+        hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
         if "measurement" in data[ch]:
             msg = f"Basis: {data[ch]['measurement']}"
             if len(axes) == 1:
@@ -532,11 +556,16 @@ def draw_sequence(
                 mid_point = (amp_top + amp_bottom) / 2
                 fontsize = 12
             else:
-                mid_ax = axes[1]
+                mid_ax = axes[-1]
                 mid_point = (
-                    det_top if len(axes) == 2 else (det_top + det_bottom) / 2
+                    ax_lims[-1][1]
+                    if len(axes) == 2
+                    else ax_lims[-1][0] + sum(ax_lims[-1]) * 1.5
                 )
                 fontsize = 14
+
+            for ax in axes:
+                ax.axvspan(final_t, t_max, color="midnightblue", alpha=1)
 
             mid_ax.text(
                 final_t * 1.025,
@@ -548,14 +577,12 @@ def draw_sequence(
                 color="white",
                 rotation=90,
             )
-            for ax in axes:
-                ax.axvspan(final_t, t_max, color="midnightblue", alpha=1)
-                ax.axhline(
-                    0, xmax=0.95, linestyle="-", linewidth=0.5, color="grey"
-                )
-        else:
-            for ax in axes:
-                ax.axhline(0, linestyle="-", linewidth=0.5, color="grey")
+            hline_kwargs["xmax"] = 0.95
+
+        for i, ax in enumerate(axes):
+            if i == 1 and curves_per_ch[ch][1]:
+                ax.axhline(ax_lims[1][0], **hline_kwargs)
+            ax.axhline(0, **hline_kwargs)
 
         if "interp_pts" in data[ch] and draw_interp_pts:
             all_points = data[ch]["interp_pts"]
