@@ -857,6 +857,26 @@ def test_mask_two_pulses():
                 assert ham_masked == ham_three
 
 
+def test_mask_local_channel():
+    seq_ = Sequence(Register.square(2, prefix="q"), MockDevice)
+    seq_.declare_channel("rydberg_global", "rydberg_global")
+    pulse = Pulse.ConstantPulse(1000, 10, 0, 0)
+    seq_.config_slm_mask(["q0", "q3"])
+    seq_.add(pulse, "rydberg_global")
+
+    seq_.declare_channel("raman_local", "raman_local", initial_target="q0")
+    pulse2 = Pulse.ConstantPulse(1000, 10, -5, np.pi)
+    seq_.add(pulse2, "raman_local", protocol="no-delay")
+
+    assert seq_._slm_mask_time == [0, 1000]
+    assert seq_._slm_mask_targets == {"q0", "q3"}
+
+    sim = Simulation(seq_)
+    for qty in ("amp", "det", "phase"):
+        assert np.all(sim.samples["Local"]["digital"]["q0"][qty] == 0.0)
+    assert "q3" not in sim.samples["Local"]["digital"]
+
+
 def test_effective_size_intersection():
     simple_reg = Register.square(2, prefix="atom")
     rise = Pulse.ConstantPulse(1500, 0, 0, 0)
