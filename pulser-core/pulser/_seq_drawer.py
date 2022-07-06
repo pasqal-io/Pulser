@@ -332,7 +332,7 @@ def draw_sequence(
                     ch_obj.modulate(input, keep_ends=i > 0)[:end_index]
                 )
             # Prolong the input samples
-            t = np.concatenate((t, [t[-1] + 1 / time_scale, final_t]))
+            t = np.append(t, (t[-1] + 1 / time_scale, final_t))
             ys[0] += [0.0, 0.0]
             ys[1] += [0.0, 0.0]
             ys[2] += [ys[2][-1]] * 2
