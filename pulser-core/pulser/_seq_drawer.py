@@ -352,7 +352,7 @@ def draw_sequence(
         ax_lims = [
             (amp_bottom, amp_top),
             (det_bottom, det_top),
-            (min(0.0, *ref_ys[2]) / (2 * np.pi), 1.1),
+            (min(0.0, *ref_ys[2]), max(1.1, *ref_ys[2])),
         ]
         ax_lims = [
             lim for i, lim in enumerate(ax_lims) if curves_per_ch[ch][i]
@@ -596,11 +596,9 @@ def draw_sequence(
 
         if "interp_pts" in data[ch] and draw_interp_pts:
             all_points = data[ch]["interp_pts"]
-            if "amplitude" in all_points:
-                pts = np.array(all_points["amplitude"])
-                axes[0].scatter(pts[:, 0], pts[:, 1], color=COLORS[0])
-            if "detuning" in all_points:
-                pts = np.array(all_points["detuning"])
-                axes[1].scatter(pts[:, 0], pts[:, 1], color=COLORS[1])
+            for i, qty in enumerate(("amplitude", "detuning")):
+                if qty in all_points and curves_per_ch[ch][i]:
+                    pts = np.array(all_points[qty])
+                    axes[i].scatter(pts[:, 0], pts[:, 1], color=COLORS[i])
 
     return (fig_reg if draw_register else None, fig)
