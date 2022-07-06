@@ -29,8 +29,7 @@ from pulser.pulse import Pulse
 from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
 
 # Color scheme
-COLORS = ["darkgreen", "indigo", "darkorange"]
-ALT_COLORS = ["darkred", "gold", "darkblue"]
+COLORS = ["darkgreen", "indigo", "#c75000"]
 
 SIZE_PER_WIDTH = {1: 3, 2: 4, 3: 5}
 LABELS = [
@@ -333,18 +332,23 @@ def draw_sequence(
                     ch_obj.modulate(input, keep_ends=i > 0)[:end_index]
                 )
 
-        max_amp = np.max(ys[0])
+        ref_ys = yseff if sampling_rate else ys
+        max_amp = np.max(ref_ys[0])
         max_amp = 1 if max_amp == 0 else max_amp
         amp_top = max_amp * 1.2
-        amp_bottom = -0.2
-        det_max = np.max(ys[1])
-        det_min = np.min(ys[1])
+        amp_bottom = min(0.0, *ref_ys[0])
+        det_max = np.max(ref_ys[1])
+        det_min = np.min(ref_ys[1])
         det_range = det_max - det_min
         if det_range == 0:
             det_min, det_max, det_range = -1, 1, 2
         det_top = det_max + det_range * 0.15
         det_bottom = det_min - det_range * 0.05
-        ax_lims = [(amp_bottom, amp_top), (det_bottom, det_top), (-0.05, 1.1)]
+        ax_lims = [
+            (amp_bottom, amp_top),
+            (det_bottom, det_top),
+            (min(0.0, *ref_ys[2]) / (2 * np.pi), 1.1),
+        ]
         ax_lims = [
             lim for i, lim in enumerate(ax_lims) if curves_per_ch[ch][i]
         ]
@@ -359,25 +363,23 @@ def draw_sequence(
             if draw_input:
                 ax.plot(t, ys[i], color=COLORS[i], linewidth=0.8)
             if sampling_rate:
-                special_kwargs = dict(ls="-") if i > 0 else {}
                 ax.plot(
                     teff,
                     yseff[i],
                     color=COLORS[i],
                     linewidth=0.8,
-                    **special_kwargs,
                 )
                 ax.fill_between(teff, 0, yseff[i], color=COLORS[i], alpha=0.3)
             elif draw_input:
                 ax.fill_between(t, 0, ys[i], color=COLORS[i], alpha=0.3)
             if draw_output:
-                ax.plot(ys_mod[i], color=ALT_COLORS[i], linewidth=0.8)
                 ax.fill_between(
                     np.arange(ys_mod[i].size),
                     0,
                     ys_mod[i],
-                    color=ALT_COLORS[i],
+                    color=COLORS[i],
                     alpha=0.3,
+                    hatch="////",
                 )
             special_kwargs = dict(labelpad=10) if i == 0 else {}
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
@@ -582,9 +584,10 @@ def draw_sequence(
             hline_kwargs["xmax"] = 0.95
 
         for i, ax in enumerate(axes):
-            if i == 2 and curves_per_ch[ch][1]:
-                ax.axhline(ax_lims[-1][1], **hline_kwargs)
-            ax.axhline(0, **hline_kwargs)
+            if i > 0:
+                ax.axhline(ax_lims[i][1], **hline_kwargs)
+            if ax_lims[i][0] < 0:
+                ax.axhline(0, **hline_kwargs)
 
         if "interp_pts" in data[ch] and draw_interp_pts:
             all_points = data[ch]["interp_pts"]
