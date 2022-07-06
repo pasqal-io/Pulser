@@ -331,6 +331,11 @@ def draw_sequence(
                 ys_mod.append(
                     ch_obj.modulate(input, keep_ends=i > 0)[:end_index]
                 )
+            # Prolong the input samples
+            t = np.concatenate((t, [t[-1] + 1 / time_scale, final_t]))
+            ys[0] += [0.0, 0.0]
+            ys[1] += [0.0, 0.0]
+            ys[2] += [ys[2][-1]] * 2
 
         ref_ys = yseff if sampling_rate else ys
         max_amp = np.max(ref_ys[0])
