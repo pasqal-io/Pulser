@@ -131,7 +131,7 @@ def draw_sequence(
     draw_register: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
-    draw_phase_curve: bool = True,
+    draw_phase_curve: bool = False,
 ) -> tuple[Figure, Figure]:
     """Draws the entire sequence.
 
@@ -155,6 +155,8 @@ def draw_sequence(
         draw_modulation: Draws the expected channel output, defaults to
             False. If the channel does not have a defined 'mod_bandwidth', this
             is skipped unless 'draw_input=False'.
+        draw_phase_curve: Draws the changes in phase in its own curve (ignored
+            if the phase doesn't change throughout the channel).
     """
 
     def phase_str(phi: float) -> str:
@@ -342,7 +344,7 @@ def draw_sequence(
             det_min, det_max, det_range = -1, 1, 2
         det_top = det_max + det_range * 0.15
         det_bottom = det_min - det_range * 0.05
-        ax_lims = [(amp_bottom, amp_top), (det_bottom, det_top), (-0.05, 1.05)]
+        ax_lims = [(amp_bottom, amp_top), (det_bottom, det_top), (-0.05, 1.1)]
         ax_lims = [
             lim for i, lim in enumerate(ax_lims) if curves_per_ch[ch][i]
         ]
@@ -580,8 +582,8 @@ def draw_sequence(
             hline_kwargs["xmax"] = 0.95
 
         for i, ax in enumerate(axes):
-            if i == 1 and curves_per_ch[ch][1]:
-                ax.axhline(ax_lims[1][0], **hline_kwargs)
+            if i == 2 and curves_per_ch[ch][1]:
+                ax.axhline(ax_lims[-1][1], **hline_kwargs)
             ax.axhline(0, **hline_kwargs)
 
         if "interp_pts" in data[ch] and draw_interp_pts:

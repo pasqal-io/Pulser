@@ -1167,6 +1167,7 @@ class Sequence:
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
+        draw_phase_curve: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
     ) -> None:
@@ -1191,6 +1192,8 @@ class Sequence:
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False. Can't be set to
                 True if the sequence is defined with a mappable register.
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
             fig_name: The name on which to save the
                 figure. If `draw_register` is True, both pulses and register
                 will be saved as figures, with a suffix ``_pulses`` and
@@ -1238,6 +1241,7 @@ class Sequence:
             draw_register=draw_register,
             draw_input="input" in mode,
             draw_modulation="output" in mode,
+            draw_phase_curve=draw_phase_curve,
         )
         if fig_name is not None and draw_register:
             name, ext = os.path.splitext(fig_name)
