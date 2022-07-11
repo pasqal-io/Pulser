@@ -27,6 +27,10 @@ with open(current_directory.parent / "VERSION.txt", "r") as f:
 # Changes to the directory where setup.py is
 os.chdir(current_directory)
 
+with open("requirements.txt") as f:
+    requirements = f.read().splitlines()
+requirements.append(f"pulser-core=={__version__}")
+
 # Stashes the source code for the local version file
 local_version_fpath = Path(package_name) / "_version.py"
 with open(local_version_fpath, "r") as f:
@@ -39,15 +43,7 @@ with open(local_version_fpath, "w") as f:
 setup(
     name=distribution_name,
     version=__version__,
-    install_requires=[
-        f"pulser-core=={__version__}",
-        "qutip>=4.6.3",
-    ],
-    extras_require={
-        ":python_version == '3.7'": [
-            "typing-extensions",
-        ],
-    },
+    install_requires=requirements,
     packages=find_packages(),
     package_data={package_name: ["py.typed"]},
     include_package_data=True,
