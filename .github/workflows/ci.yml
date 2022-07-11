@@ -14,7 +14,7 @@ jobs:
   style:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Pulser
+      - name: Check out Pulser
         uses: actions/checkout@v3
       - name: Pulser setup
         uses: ./.github/workflows/pulser-setup
@@ -24,47 +24,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: Install black
-        run: |
-          python -m pip install --upgrade pip
-          pip install black 'black[jupyter]'
+        uses: actions/checkout@v3
+      - name: Pulser setup
+        uses: ./.github/workflows/pulser-setup
       - name: Check formatting with black
         run: black --check --diff .
   isort:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ./pulser-core -e ./pulser-simulation
-          pip install -r dev_requirements.txt
+        uses: actions/checkout@v3
+      - name: Pulser setup
+        uses: ./.github/workflows/pulser-setup
       - name: Check import sorting with isort
         run: isort --check-only --diff .
   typing:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ./pulser-core -e ./pulser-simulation
-          pip install -r dev_requirements.txt
+        uses: actions/checkout@v3
+      - name: Pulser setup
+        uses: ./.github/workflows/pulser-setup
       - name: Type check with mypy
         run: mypy
   test:
@@ -75,15 +55,10 @@ jobs:
         python-version: [3.7, 3.8, 3.9, "3.10"]
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/checkout@v3
+      - name: Pulser setup
+        uses: ./.github/workflows/pulser-setup
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ./pulser-core -e ./pulser-simulation
-          pip install -r dev_requirements.txt
       - name: Run the unit tests & generate coverage report
         run: pytest --cov --cov-fail-under=100
