@@ -180,11 +180,10 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register(Union[BaseRegister, MappableRegister]): The atom register on
-            which to apply the pulses. If given as a MappableRegister
-            instance, the traps corrresponding to each qubit ID must be given
-            when building the sequence.
-        device(Device): A valid device in which to execute the Sequence (import
+        register: The atom register on which to apply the pulses. If given as
+            a MappableRegister instance, the traps corrresponding to each
+            qubit ID must be given when building the sequence.
+        device: A valid device in which to execute the Sequence (import
             it from ``pulser.devices``).
 
     Note:
@@ -216,7 +215,7 @@ class Sequence:
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
-            device.validate_layout(register._layout)
+            device.validate_layout(register.layout)
         else:
             device.validate_register(register)
 
@@ -325,7 +324,7 @@ class Sequence:
         are given a value (when ``Sequence.build()`` is called).
 
         Returns:
-            bool: Whether the sequence is parametrized.
+            Whether the sequence is parametrized.
         """
         return not self._building
 
@@ -337,7 +336,7 @@ class Sequence:
         `Sequence.build()` call.
 
         Returns:
-            bool: Whether the register is a MappableRegister.
+            Whether the register is a MappableRegister.
         """
         return isinstance(self._register, MappableRegister)
 
@@ -347,16 +346,15 @@ class Sequence:
     ) -> int:
         """Returns the current duration of a channel or the whole sequence.
 
-        Keyword Args:
-            channel (Optional[str]): A specific channel to return the duration
-                of. If left as None, it will return the duration of the whole
-                sequence.
-            include_fall_time (bool): Whether to include in the duration the
+        Args:
+            channel: A specific channel to return the duration of. If left as
+                None, it will return the duration of the whole sequence.
+            include_fall_time: Whether to include in the duration the
                 extra time needed by the last pulse to finish, if there is
                 modulation.
 
         Returns:
-            int: The duration of the channel or sequence, in ns.
+            The duration of the channel or sequence, in ns.
         """
         if channel is None:
             channels = tuple(self._channels.keys())
@@ -394,14 +392,13 @@ class Sequence:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
-            qubit (Union[int, str]): The id of the qubit whose phase shift is
-                desired.
-            basis (str): The basis (i.e. electronic transition) the phase
+            qubit: The id of the qubit whose phase shift is desired.
+            basis: The basis (i.e. electronic transition) the phase
                 reference is associated with. Must correspond to the basis of a
                 declared channel.
 
         Returns:
-            float: Current phase reference of 'qubit' in 'basis'.
+            Current phase reference of 'qubit' in 'basis'.
         """
         if qubit not in self._qids:
             raise ValueError(
@@ -428,10 +425,10 @@ class Sequence:
             defined through the declaration of a Microwave channel, calling
             this function will enable the "XY Mode".
 
-        Keyword Args:
-            bx (float): The magnetic field in the x direction (in Gauss).
-            by (float): The magnetic field in the y direction (in Gauss).
-            bz (float): The magnetic field in the z direction (in Gauss).
+        Args:
+            bx: The magnetic field in the x direction (in Gauss).
+            by: The magnetic field in the y direction (in Gauss).
+            bz: The magnetic field in the z direction (in Gauss).
         """
         if not self._in_xy:
             if self._channels:
@@ -461,8 +458,8 @@ class Sequence:
         """Setup an SLM mask by specifying the qubits it targets.
 
         Args:
-            qubits (Iterable[QubitId]): Iterable of qubit ID's to mask during
-                the first global pulse of the sequence.
+            qubits: Iterable of qubit ID's to mask during the first global
+                pulse of the sequence.
         """
         try:
             targets = set(qubits)
@@ -518,15 +515,15 @@ class Sequence:
             ``MockDevice`` channels can be repeatedly declared if needed.
 
         Args:
-            name (str): Unique name for the channel in the sequence.
-            channel_id (str): How the channel is identified in the device.
+            name: Unique name for the channel in the sequence.
+            channel_id: How the channel is identified in the device.
                 Consult ``Sequence.available_channels`` to see which channel
                 ID's are still available and the associated channel's
                 description.
-            initial_target (Optional[Union[int, str, Iterable]]): For 'Local'
-                addressing channels only. Declares the initial target of the
-                channel. If left as None, the initial target will have to be
-                set manually as the first addition to this channel.
+            initial_target: For 'Local' addressing channels only. Declares the
+                initial target of the channel. If left as None, the initial
+                target will have to be set manually as the first addition
+                to this channel.
         """
         if name in self._channels:
             raise ValueError("The given name is already in use.")
@@ -631,16 +628,18 @@ class Sequence:
         are dependent on the involved variables.
 
         Args:
-            name (str): The name for the variable. Must be unique within a
+            name: The name for the variable. Must be unique within a
                 Sequence.
 
-        Keyword Args:
-            size (int=1): The number of entries stored in the variable.
-            dtype (default=float): The type of the data that will be assigned
+        Args:
+            size: The number of entries stored in the variable. If defined,
+                returns an array of variables with the given size. If left
+                as ``None``, returns a single variable.
+            dtype: The type of the data that will be assigned
                 to the variable. Must be ``float`` or ``int``.
 
         Returns:
-            Variable: The declared Variable instance.
+            The declared Variable instance.
 
         Note:
             To avoid confusion, it is recommended to store the returned
@@ -673,9 +672,9 @@ class Sequence:
         """Adds a pulse to a channel.
 
         Args:
-            pulse (pulser.Pulse): The pulse object to add to the channel.
-            channel (str): The channel's name provided when declared.
-            protocol (str, default='min-delay'): Stipulates how to deal with
+            pulse: The pulse object to add to the channel.
+            channel: The channel's name provided when declared.
+            protocol: Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
                 of having multiple channels act on the same target
                 simultaneously.
@@ -836,10 +835,10 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (Union[int, str, Iterable]): The new target for this
-                channel. Must correspond to a qubit ID in device or an iterable
-                of qubit IDs, when multi-qubit addressing is possible.
-            channel (str): The channel's name provided when declared. Must be
+            qubits: The new target for this channel. Must correspond to a
+                qubit ID in device or an iterable of qubit IDs, when
+                multi-qubit addressing is possible.
+            channel: The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
         """
         self._target(qubits, channel)
@@ -853,14 +852,14 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (Union[int, Iterable, Parametrized]): The new target for
-                this channel. Must correspond to a qubit index or an iterable
-                of qubit indices, when multi-qubit addressing is possible.
+            qubits: The new target for this channel. Must correspond to a
+                qubit index or an iterable of qubit indices, when multi-qubit
+                addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
                 they were declared when instantiating the ``Register``
                 or ``MappableRegister``.
-            channel (str): The channel's name provided when declared. Must be
+            channel: The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
 
         Note:
@@ -888,9 +887,8 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration (Union[int, Parametrized]): Time to delay (in multiples
-                of 4 ns).
-            channel (str): The channel's name provided when declared.
+            duration: Time to delay (in multiples of 4 ns).
+            channel: The channel's name provided when declared.
         """
         self._delay(duration, channel)
 
@@ -906,7 +904,7 @@ class Sequence:
             possible to measure in the 'XY' basis outside of XY mode.
 
         Args:
-            basis (str): Valid basis for measurement (consult the
+            basis: Valid basis for measurement (consult the
                 ``supported_bases`` attribute of the selected device for
                 the available options).
         """
@@ -944,11 +942,9 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi (Union[float, Parametrized]): The intended phase shift (in
-                rads).
-            targets (Union[int, str]): The ids of the qubits to apply the phase
-                shift to.
-            basis (str): The basis (i.e. electronic transition) to associate
+            phi: The intended phase shift (in rads).
+            targets: The ids of the qubits to apply the phase shift to.
+            basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
@@ -968,15 +964,13 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi (Union[float, Parametrized]): The intended phase shift (in
-                rads).
-            targets (Union[int, Parametrized]): The indices of the qubits to
-                apply the phase shift to.
+            phi: The intended phase shift (in rads).
+            targets: The indices of the qubits to apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
                 they were declared when instantiating the ``Register``
                 or ``MappableRegister``.
-            basis (str): The basis (i.e. electronic transition) to associate
+            basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
 
@@ -996,7 +990,7 @@ class Sequence:
         will start right after the latest channel has finished.
 
         Args:
-            channels (str): The names of the channels to align, as given upon
+            channels: The names of the channels to align, as given upon
                 declaration.
         """
         ch_set = set(channels)
@@ -1039,17 +1033,16 @@ class Sequence:
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
-        Keyword Args:
-            qubits (Optional[Mapping[QubitId, int]]): A mapping between qubit
-                IDs and trap IDs used to define the register. Must only be
-                provided when the sequence is initialized with a
-                MappableRegister.
+        Args:
+            qubits: A mapping between qubit IDs and trap IDs used to define
+                the register. Must only be provided when the sequence is
+                initialized with a MappableRegister.
             vars: The values for all the variables declared in this Sequence
                 instance, indexed by the name given upon declaration. Check
                 ``Sequence.declared_variables`` to see all the variables.
 
         Returns:
-            Sequence: The Sequence built with the given variable values.
+            The Sequence built with the given variable values.
 
         Example:
             ::
@@ -1119,7 +1112,7 @@ class Sequence:
                 ``cls``.
 
         Returns:
-            str: The sequence encoded in a JSON formatted string.
+            The sequence encoded in a JSON formatted string.
 
         See Also:
             ``json.dumps``: Built-in function for serialization to a JSON
@@ -1152,7 +1145,7 @@ class Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
-            obj (str): The JSON formatted string to deserialize, coming from
+            obj: The JSON formatted string to deserialize, coming from
                 the serialization of a ``Sequence`` through
                 ``Sequence.serialize()``.
 
@@ -1161,7 +1154,7 @@ class Sequence:
                 ``cls`` and ``object_hook``.
 
         Returns:
-            Sequence: The deserialized Sequence object.
+            The deserialized Sequence object.
 
         See Also:
             ``json.loads``: Built-in function for deserialization from a JSON
@@ -1200,32 +1193,32 @@ class Sequence:
     ) -> None:
         """Draws the sequence in its current state.
 
-        Keyword Args:
-            mode (str, default="input+output"): The curves to draw. 'input'
+        Args:
+            mode: The curves to draw. 'input'
                 draws only the programmed curves, 'output' the excepted curves
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
-            draw_phase_area (bool): Whether phase and area values need to be
+            draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
                 'output' mode.
-            draw_interp_pts (bool): When the sequence has pulses with waveforms
+            draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective input waveforms (defaults to True).
                 Doesn't work in 'output' mode.
-            draw_phase_shifts (bool): Whether phase shift and reference
+            draw_phase_shifts: Whether phase shift and reference
                 information should be added to the plot, defaults to False.
-            draw_register (bool): Whether to draw the register before the pulse
+            draw_register: Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False. Can't be set to
                 True if the sequence is defined with a mappable register.
-            fig_name(str, default=None): The name on which to save the
+            fig_name: The name on which to save the
                 figure. If `draw_register` is True, both pulses and register
                 will be saved as figures, with a suffix ``_pulses`` and
                 ``_register`` in the file name. If `draw_register` is False,
                 only the pulses are saved, with no suffix. If `fig_name` is
                 None, no figure is saved.
-            kwargs_savefig(dict, default={}): Keywords arguments for
+            kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
 

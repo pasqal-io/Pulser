@@ -17,9 +17,11 @@ or paradigm, if it can be done on the device, it can be done with Pulser.
 
 Additionally, the ``pulser_simulation`` extension provides tools for classical simulation (using [QuTiP][qutip] libraries) to aid in the development and testing of new pulse sequences.
 
-For a comprehensive overview of Pulser, check out [Pulser's arXiv preprint](https://arxiv.org/abs/2104.15044).
+For a comprehensive overview of Pulser, check out [Pulser's white paper](https://quantum-journal.org/papers/q-2022-01-24-629/).
 
 ## Installation
+
+**Note**: *Pulser v0.6 introduced a split of the ``pulser`` package that prevents it from being correctly upgraded. If you have an older version of ``pulser`` installed and wish to upgrade, make sure to uninstall it first by running ``pip uninstall pulser``.*
 
 To install the latest release of ``pulser``, have Python 3.7.0 or higher installed, then use ``pip``:
 
