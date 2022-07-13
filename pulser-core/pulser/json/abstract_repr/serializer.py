@@ -84,7 +84,7 @@ def serialize_abstract_sequence(
     """Serializes the Sequence into an abstract JSON object.
 
     Keyword Args:
-        seq_name (str): A name for the sequence. If not defined, defaults
+        seq_name: A name for the sequence. If not defined, defaults
             to "pulser-exported".
         defaults: The default values for all the variables declared in this
             Sequence instance, indexed by the name given upon declaration.

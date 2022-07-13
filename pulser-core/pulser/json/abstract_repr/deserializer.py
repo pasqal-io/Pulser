@@ -85,7 +85,6 @@ def _deserialize_parameter(
     Returns:
         A literal (int | float), a ``Variable``, or a ``ParamObj``.
     """
-
     if not isinstance(param, dict):
         # This is a literal
         return param
@@ -221,7 +220,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     """Deserialize a sequence from an abstract JSON object.
 
     Args:
-        obj_str (str): the JSON string representing the sequence encoded
+        obj_str: the JSON string representing the sequence encoded
             in the abstract JSON format.
 
     Returns:

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Defines the signatures of objects for the abstract representation."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -26,6 +27,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class PulserSignature:
+    """The signature of a Pulser object."""
+
     pos: tuple[str, ...] = field(default_factory=tuple)
     var_pos: Optional[str] = None
     keyword: tuple[str, ...] = field(default_factory=tuple)
