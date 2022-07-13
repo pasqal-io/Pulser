@@ -531,7 +531,7 @@ class TestDeserializarion:
                 },
             },
         ],
-        ids=lambda op: op["op"],
+        ids=_get_op,
     )
     def test_deserialize_parametrized_op(self, op):
         s = _get_serialized_seq(
@@ -824,6 +824,6 @@ class TestDeserializarion:
         if expression == "div":
             assert param == seq_var1 / rhs
         if expression == "pow":
-            assert param == seq_var1**rhs
+            assert param == seq_var1 ** rhs
         if expression == "mod":
             assert param == seq_var1 % rhs

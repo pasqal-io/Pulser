@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Dict, Union, cast
+from typing import TYPE_CHECKING, Union, cast, Any, overload
 
 import jsonschema
 
@@ -46,28 +46,48 @@ if TYPE_CHECKING:
 with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
     schema = json.load(f)
 
-
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
+
+ExpReturnType = Union[int, float, ParamObj]
+
+
+@overload
+def _deserialize_parameter(param: int, vars: dict[str, Variable]) -> int:
+    pass
+
+
+@overload
+def _deserialize_parameter(param: float, vars: dict[str, Variable]) -> float:
+    pass
+
+
+@overload
+def _deserialize_parameter(
+    param: dict[str, str], vars: dict[str, Variable]
+) -> Variable:
+    pass
 
 
 def _deserialize_parameter(
-    param: Dict, vars: Dict
-) -> Union[int, float, Variable, ParamObj]:
+    param: Union[int, float, dict[str, Any]],
+    vars: dict[str, Variable],
+) -> Union[ExpReturnType, Variable]:
     """Deserialize a parameterized object.
 
-    A parameter can be either a litteral, a variable or an expression.
-    In the first case, return the litteral. Otherwise, return a reference
+    A parameter can be either a literal, a variable or an expression.
+    In the first case, return the literal. Otherwise, return a reference
     to the variable, or build an expression referencing variables.
 
     Args:
-        param (Dict): The JSON parametrized object to deserialize
-        vars (Dict): The references to the sequence variables
+        param: The JSON parametrized object to deserialize
+        vars: The references to the sequence variables
 
-    Returns: A litteral (int | float), a ``Variable``, or a ``ParamObj``.
+    Returns:
+        A literal (int | float), a ``Variable``, or a ``ParamObj``.
     """
 
     if not isinstance(param, dict):
-        # This is a litteral
+        # This is a literal
         return param
 
     if "variable" in param:
@@ -83,8 +103,8 @@ def _deserialize_parameter(
         # Can't deserialize param if it is a dict without a
         # `variable` or an `expression` key
         raise AbstractReprError(
-            f"Parameter {param} is neither a litteral nor "
-            "a variable or an expression"
+            f"Parameter {param} is neither a literal nor "
+            "a variable or an expression."
         )
 
     # This is a unary or a binary expression
@@ -93,19 +113,25 @@ def _deserialize_parameter(
     )
 
     if expression in UNARY_OPERATORS:
-        return UNARY_OPERATORS[expression](
-            _deserialize_parameter(param["lhs"], vars)
+        return cast(
+            ExpReturnType,
+            UNARY_OPERATORS[expression](
+                _deserialize_parameter(param["lhs"], vars)
+            ),
         )
     elif expression in BINARY_OPERATORS:
-        return BINARY_OPERATORS[expression](
-            _deserialize_parameter(param["lhs"], vars),
-            _deserialize_parameter(param["rhs"], vars),
+        return cast(
+            ExpReturnType,
+            BINARY_OPERATORS[expression](
+                _deserialize_parameter(param["lhs"], vars),
+                _deserialize_parameter(param["rhs"], vars),
+            ),
         )
     else:
         raise AbstractReprError(f"Expression {param[expression]} invalid")
 
 
-def _deserialize_waveform(obj: Dict, vars: Dict) -> Waveform:
+def _deserialize_waveform(obj: dict, vars: dict) -> Waveform:
 
     if obj["kind"] == "constant":
         return ConstantWaveform(
@@ -157,7 +183,7 @@ def _deserialize_waveform(obj: Dict, vars: Dict) -> Waveform:
     raise AbstractReprError("The object does not encode a known waveform.")
 
 
-def _deserialize_operation(seq: Sequence, op: Dict, vars: Dict):
+def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
     if op["op"] == "target":
         seq.target_index(
             qubits=_deserialize_parameter(op["target"], vars),

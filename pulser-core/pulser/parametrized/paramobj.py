@@ -54,7 +54,7 @@ class OpSupport:
         return ParamObj(np.floor, self)
 
     def __round__(self, n: int = 0) -> ParamObj:
-        return cast(ParamObj, (self * 10**n).rint() / 10**n)
+        return cast(ParamObj, (self * 10 ** n).rint() / 10 ** n)
 
     def rint(self) -> ParamObj:
         """Rounds the value to the nearest int."""
@@ -317,12 +317,10 @@ class ParamObj(Parametrized, OpSupport):
             name = self.cls.__name__
         return f"{name}({', '.join(args+kwargs)})"
 
-    def __eq__(self, other: ParamObj):
-        return (
-            type(self) == type(other)
-            and self.args == other.args
-            and self.kwargs == other.kwargs
-        )
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, ParamObj):
+            return False
+        return self.args == other.args and self.kwargs == other.kwargs
 
     def __hash__(self) -> int:
         return id(self)

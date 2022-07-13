@@ -13,11 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 
+from collections.abc import Callable
 import operator
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from pulser.parametrized.variable import Variable, VariableItem
 
 
 @dataclass
@@ -73,17 +77,21 @@ SIGNATURES: dict[str, PulserSignature] = {
 }
 
 
-BINARY_OPERATORS = {
+def _index_var(lhs: Variable, rhs: int) -> VariableItem:
+    return lhs[rhs]
+
+
+BINARY_OPERATORS: dict[str, Callable] = {
     "add": operator.add,
     "sub": operator.sub,
     "mul": operator.mul,
     "truediv": operator.truediv,
     "pow": operator.pow,
     "mod": operator.mod,
-    "index": lambda lhs, rhs: lhs[rhs],
+    "index": _index_var,
 }
 
-UNARY_OPERATORS = {
+UNARY_OPERATORS: dict[str, Callable] = {
     "neg": operator.neg,
     "abs": operator.abs,
     "ceil": np.ceil,
