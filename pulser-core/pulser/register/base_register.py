@@ -88,6 +88,11 @@ class BaseRegister(ABC):
         """The qubit IDs of this register."""
         return self._ids
 
+    @property
+    def layout(self) -> Optional[RegisterLayout]:
+        """The layout used to define the register."""
+        return self._layout_info.layout if self._layout_info else None
+
     def find_indices(self, id_list: abcSequence[QubitId]) -> list[int]:
         """Computes indices of qubits.
 
@@ -103,16 +108,16 @@ class BaseRegister(ABC):
             register.
 
             Then, it is possible to use these indices when building a
-            sequence, typically to instantiate a ``VariableArray``,
+            sequence, typically by assigning them to an array of variables
             that can be provided as an argument to ``target_index``
             and ``phase_shift_index``.
 
         Args:
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote
+            id_list: IDs of the qubits to find.
 
         Returns:
-            list[int]: Indices of the qubits to denote, only valid for the
-                given mapping.
+            Indices of the qubits to denote, only valid for the
+            given mapping.
         """
         if not set(id_list) <= set(self.qubit_ids):
             raise ValueError(
@@ -132,20 +137,20 @@ class BaseRegister(ABC):
         """Creates the register from an array of coordinates.
 
         Args:
-            coords (ndarray): The coordinates of each qubit to include in the
+            coords: The coordinates of each qubit to include in the
                 register.
 
-        Keyword args:
-            center(defaut=True): Whether or not to center the entire array
-                around the origin.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+        Args:
+            center: Whether or not to center the entire array around the
+                origin.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
-            labels (ArrayLike): The list of qubit ids. If defined, each qubit
-                id will be set to the corresponding value.
+            labels: The list of qubit ids. If defined, each qubit id will be
+                set to the corresponding value.
 
         Returns:
-            Register: A register with qubits placed on the given coordinates.
+            A register with qubits placed on the given coordinates.
         """
         if center:
             coords = coords - np.mean(coords, axis=0)  # Centers the array

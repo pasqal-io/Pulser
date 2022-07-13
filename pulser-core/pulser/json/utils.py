@@ -46,7 +46,7 @@ def obj_to_dict(
             creation.
 
     Returns:
-        dict: The dictionary encoding the object.
+        The dictionary encoding the object.
     """
     d = {
         "_build": _build,

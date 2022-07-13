@@ -8,6 +8,8 @@ and simulation.
 
 **Online documentation**: `<https://pulser.readthedocs.io>`_
 
+**White paper**: `Quantum 6, 629 (2022) <https://quantum-journal.org/papers/q-2022-01-24-629/>`_
+
 **Source code repository** (go `here <https://pulser.readthedocs.io/en/latest/>`_
 for the latest docs): `<https://github.com/pasqal-io/Pulser>`_
 

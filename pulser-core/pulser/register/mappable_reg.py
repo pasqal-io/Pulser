@@ -29,9 +29,9 @@ class MappableRegister:
     """A register with the traps of each qubit still to be defined.
 
     Args:
-        register_layout (RegisterLayout): The register layout on which this
+        register_layout: The register layout on which this
             register will be defined.
-        qubit_ids (QubitId): The Ids for the qubits to pre-declare on this
+        qubit_ids: The Ids for the qubits to pre-declare on this
             register.
     """
 
@@ -51,17 +51,22 @@ class MappableRegister:
         """The qubit IDs of this mappable register."""
         return self._qubit_ids
 
+    @property
+    def layout(self) -> RegisterLayout:
+        """The layout used to define the register."""
+        return self._layout
+
     def build_register(self, qubits: Mapping[QubitId, int]) -> BaseRegister:
         """Builds an actual register.
 
         Args:
-            qubits (Mapping[QubitId, int]): A map between the qubit IDs to use
+            qubits: A map between the qubit IDs to use
                 and the layout traps where the qubits will be placed. Qubit IDs
                 declared in the MappableRegister but not defined here will
                 simply be left out of the final register.
 
         Returns:
-            BaseRegister: The resulting register.
+            The resulting register.
         """
         chosen_ids = tuple(qubits.keys())
         if not set(chosen_ids) <= set(self._qubit_ids):
@@ -97,7 +102,7 @@ class MappableRegister:
             mappable register, but keeping only the chosen ones.
 
             Then, it is possible to use these indices when building a
-            sequence, typically to instanciate a ``VariableArray``,
+            sequence, typically to instanciate an array of variables
             that can be provided as an argument to ``target_index``
             and ``phase_shift_index``.
 
@@ -105,13 +110,13 @@ class MappableRegister:
             to tell how to instantiate the register from the mappable register.
 
         Args:
-            chosen_ids (set[QubitId]): IDs of the qubits that are chosen to
+            chosen_ids: IDs of the qubits that are chosen to
                 map the MappableRegister
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote
+            id_list: IDs of the qubits to denote.
 
         Returns:
-            list[int]: Indices of the qubits to denote, only valid for the
-                given mapping.
+            Indices of the qubits to denote, only valid for the
+            given mapping.
         """
         if not chosen_ids <= set(self._qubit_ids):
             raise ValueError(

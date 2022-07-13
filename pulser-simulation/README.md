@@ -1,6 +1,6 @@
 # pulser-simulation
 
-Pulser is a framework for composing, simulating and executing **pulse** sequences for neutral-atom quantum devices.
+[Pulser](https://pypi.org/project/pulser/) is a framework for composing, simulating and executing **pulse** sequences for neutral-atom quantum devices.
 
 This is the `pulser-simulation` extension, which provides the functionalities needed to emulate `pulser` sequences.
 
