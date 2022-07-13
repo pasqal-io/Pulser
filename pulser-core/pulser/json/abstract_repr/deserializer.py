@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Union, cast, Any, overload
+from typing import TYPE_CHECKING, Any, Union, cast, overload
 
 import jsonschema
 

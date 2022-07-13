@@ -824,6 +824,6 @@ class TestDeserializarion:
         if expression == "div":
             assert param == seq_var1 / rhs
         if expression == "pow":
-            assert param == seq_var1 ** rhs
+            assert param == seq_var1**rhs
         if expression == "mod":
             assert param == seq_var1 % rhs

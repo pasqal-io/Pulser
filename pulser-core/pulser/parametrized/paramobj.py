@@ -54,7 +54,7 @@ class OpSupport:
         return ParamObj(np.floor, self)
 
     def __round__(self, n: int = 0) -> ParamObj:
-        return cast(ParamObj, (self * 10 ** n).rint() / 10 ** n)
+        return cast(ParamObj, (self * 10**n).rint() / 10**n)
 
     def rint(self) -> ParamObj:
         """Rounds the value to the nearest int."""

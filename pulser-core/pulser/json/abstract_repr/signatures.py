@@ -14,10 +14,10 @@
 """Defines the signatures of objects for the abstract representation."""
 from __future__ import annotations
 
-from collections.abc import Callable
 import operator
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 
