@@ -205,7 +205,7 @@ def test_exceptions():
     ):
         abstract_repr("FakeWaveform", 100, 1)
 
-    with pytest.raises(ValueError, match="Not enough positional arguments"):
+    with pytest.raises(ValueError, match="Not enough arguments"):
         abstract_repr("ConstantWaveform", 1000)
 
     with pytest.raises(ValueError, match="Too many positional arguments"):
@@ -505,7 +505,7 @@ class TestDeserializarion:
         "op",
         [
             {"op": "target", "target": var1, "channel": "digital"},
-            {"op": "delay", "time": var1, "channel": "global"},
+            {"op": "delay", "time": var2, "channel": "global"},
             {
                 "op": "phase_shift",
                 "phi": var1,
@@ -657,7 +657,7 @@ class TestDeserializarion:
                 "var2": {"type": "int", "value": [2]},
                 "var3": {"type": "int", "value": [5]},
                 "var_values": {"type": "int", "value": [1, 1.5, 1.7, 1.3]},
-                "var_times": {"type": "int", "value": [0, 0.4, 0.8, 0.9]},
+                "var_times": {"type": "float", "value": [0, 0.4, 0.8, 0.9]},
             },
         )
 
@@ -759,12 +759,12 @@ class TestDeserializarion:
                     "amplitude": {
                         "kind": "constant",
                         "duration": 1000,
-                        "value": json_param,
+                        "value": 2,
                     },
                     "detuning": {
                         "kind": "constant",
                         "duration": 1000,
-                        "value": 42,
+                        "value": json_param,
                     },
                 }
             ],
@@ -784,7 +784,7 @@ class TestDeserializarion:
 
         c = seq._to_build_calls[0]
         pulse: Pulse = c.kwargs["pulse"]
-        wf = pulse.kwargs["amplitude"]
+        wf = pulse.kwargs["detuning"]
         param = wf.kwargs["value"]
 
         expression = json_param["expression"]

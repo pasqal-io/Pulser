@@ -27,7 +27,7 @@ from pulser.json.exceptions import AbstractReprError
 from pulser.register.base_register import QubitId
 
 if TYPE_CHECKING:
-    from pulser.sequence import Sequence
+    from pulser.sequence import Sequence, _Call
 
 
 class AbstractReprEncoder(json.JSONEncoder):
@@ -51,11 +51,14 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
         signature = SIGNATURES[name]
     except KeyError:
         raise ValueError(f"No signature found for '{name}'.")
+    arg_as_kwarg: tuple[str, ...] = tuple()
     if len(args) < len(signature.pos):
-        raise ValueError(
-            f"Not enough positional arguments given for '{name}' (expected "
-            f"{len(signature.pos)}, got {len(args)})."
-        )
+        arg_as_kwarg = signature.pos[len(args) :]
+        if signature.var_pos or not set(arg_as_kwarg) <= set(kwargs):
+            raise ValueError(
+                f"Not enough arguments given for '{name}' (expected "
+                f"{len(signature.pos)}, got {len(args)})."
+            )
     res: dict[str, Any] = {}
     res.update(signature.extra)  # Starts with extra info ({} if undefined)
     res.update(
@@ -69,7 +72,7 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
             f"{len(signature.pos)}, got {len(args)})."
         )
     for kw in kwargs:
-        if kw in signature.keyword:
+        if kw in signature.keyword or kw in arg_as_kwarg:
             res[kw] = kwargs[kw]
         else:
             raise ValueError(
@@ -125,66 +128,69 @@ def serialize_abstract_sequence(
         indices = seq.register.find_indices(target_array.tolist())
         return indices[0] if og_dim == 0 else indices
 
+    def get_all_args(
+        pos_args_signature: tuple[str, ...], call: _Call
+    ) -> dict[str, Any]:
+        return {**dict(zip(pos_args_signature, call.args)), **call.kwargs}
+
     operations = res["operations"]
     for call in chain(seq._calls, seq._to_build_calls):
         if call.name == "__init__":
-            register, device = call.args
-            res["device"] = device.name
-            res["register"] = register
+            data = get_all_args(("register", "device"), call)
+            res["device"] = data["device"].name
+            res["register"] = data["register"]
         elif call.name == "declare_channel":
-            ch_name, ch_kind = call.args[:2]
-            res["channels"][ch_name] = ch_kind
-            initial_target = None
-            if len(call.args) == 3:
-                initial_target = call.args[2]
-            elif "initial_target" in call.kwargs:
-                initial_target = call.kwargs["initial_target"]
-            if initial_target is not None:
+            data = get_all_args(
+                ("channel", "channel_id", "initial_target"), call
+            )
+            res["channels"][data["channel"]] = data["channel_id"]
+            if "initial_target" in data and data["initial_target"] is not None:
                 operations.append(
                     {
                         "op": "target",
-                        "channel": ch_name,
-                        "target": convert_targets(initial_target),
+                        "channel": data["channel"],
+                        "target": convert_targets(data["initial_target"]),
                     }
                 )
         elif "target" in call.name:
-            target_arg, ch_name = call.args
+            data = get_all_args(("qubits", "channel"), call)
             if call.name == "target":
-                target = convert_targets(target_arg)
+                target = convert_targets(data["qubits"])
             elif call.name == "_target_index":
-                target = target_arg
+                target = data["qubits"]
             else:
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
             operations.append(
                 {
                     "op": "target",
-                    "channel": ch_name,
+                    "channel": data["channel"],
                     "target": target,
                 }
             )
         elif call.name == "align":
             operations.append({"op": "align", "channels": list(call.args)})
         elif call.name == "delay":
-            time, channel = call.args
+            data = get_all_args(("duration", "channel"), call)
             operations.append(
-                {"op": "delay", "channel": channel, "time": time}
+                {
+                    "op": "delay",
+                    "channel": data["channel"],
+                    "time": data["duration"],
+                }
             )
         elif call.name == "measure":
-            res["measurement"] = call.args[0]
+            data = get_all_args(("basis",), call)
+            res["measurement"] = data["basis"]
         elif call.name == "add":
-            pulse, ch_name = call.args[:2]
-            if len(call.args) > 2:
-                protocol = call.args[2]
-            elif "protocol" in call.kwargs:
-                protocol = call.kwargs["protocol"]
-            else:
-                protocol = "min-delay"
+            data = get_all_args(("pulse", "channel", "protocol"), call)
             op_dict = {
                 "op": "pulse",
-                "channel": ch_name,
-                "protocol": protocol,
+                "channel": data["channel"],
+                "protocol": "min-delay"
+                if "protocol" not in data
+                else data["protocol"],
             }
-            op_dict.update(pulse._to_abstract_repr())
+            op_dict.update(data["pulse"]._to_abstract_repr())
             operations.append(op_dict)
         elif "phase_shift" in call.name:
             try:
