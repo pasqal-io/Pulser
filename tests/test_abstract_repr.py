@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 
 import jsonschema
@@ -37,6 +38,11 @@ from pulser.waveforms import (
     RampWaveform,
     Waveform,
 )
+
+SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
+    "kaiser_max": (KaiserWaveform.from_max_val, ("max_val", "area", "beta")),
+    "blackman_max": (BlackmanWaveform.from_max_val, ("max_val", "area")),
+}
 
 # from tutorials/advanced_features/Serialization.ipynb
 qubits = {"control": (-2, 0), "target": (2, 0)}
@@ -228,15 +234,39 @@ def _get_serialized_seq(
         "name": "John Doe",
         "device": "Chadoq2",
         "register": [
-            {"name": "q0", "x": 0, "y": 2},
-            {"name": "q42", "x": -2, "y": 9},
-            {"name": "q666", "x": 12, "y": 0},
+            {"name": "q0", "x": 0.0, "y": 2.0},
+            {"name": "q42", "x": -2.0, "y": 9.0},
+            {"name": "q666", "x": 12.0, "y": 0.0},
         ],
         "channels": {"digital": "raman_local", "global": "rydberg_global"},
         "operations": operations or [],
         "variables": variables or {},
         "measurement": None,
     }
+
+
+def _check_roundtrip(serialized_seq: dict[str, Any]):
+    s = serialized_seq.copy()
+    # Replaces the special wfs when they are not parametrized
+    for op in s["operations"]:
+        if op["op"] == "pulse":
+            for wf in ("amplitude", "detuning"):
+                if op[wf]["kind"] in SPECIAL_WFS:
+                    wf_cls, wf_args = SPECIAL_WFS[op[wf]["kind"]]
+                    for val in op[wf].values():
+                        if isinstance(val, dict):
+                            # Parametrized
+                            break
+                    else:
+                        reconstructed_wf = wf_cls(
+                            *(op[wf][qty] for qty in wf_args)
+                        )
+                        op[wf] = reconstructed_wf._to_abstract_repr()
+
+    seq = Sequence.from_abstract_repr(json.dumps(s))
+    defaults = {name: var["value"] for name, var in s["variables"].items()}
+    rs = seq.to_abstract_repr(seq_name=serialized_seq["name"], **defaults)
+    assert s == json.loads(rs)
 
 
 # Needed to replace lambdas in the pytest.mark.parametrize calls (due to mypy)
@@ -255,7 +285,7 @@ def _get_expression(op: dict) -> Any:
 class TestDeserializarion:
     def test_deserialize_device_and_channels(self) -> None:
         s = _get_serialized_seq()
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # Check device name
@@ -268,7 +298,7 @@ class TestDeserializarion:
 
     def test_deserialize_register(self):
         s = _get_serialized_seq()
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # Check register
@@ -285,7 +315,7 @@ class TestDeserializarion:
                 "zou": {"type": "float", "value": [3.14]},
             }
         )
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # Check variables
@@ -333,7 +363,7 @@ class TestDeserializarion:
     )
     def test_deserialize_non_parametrized_op(self, op):
         s = _get_serialized_seq(operations=[op])
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
@@ -410,7 +440,7 @@ class TestDeserializarion:
                 }
             ]
         )
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
@@ -477,6 +507,7 @@ class TestDeserializarion:
 
     def test_deserialize_measurement(self):
         s = _get_serialized_seq()
+        _check_roundtrip(s)
         s["measurement"] = "ground-rydberg"
 
         seq = Sequence.from_abstract_repr(json.dumps(s))
@@ -541,7 +572,7 @@ class TestDeserializarion:
                 "var2": {"type": "int", "value": [42]},
             },
         )
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
@@ -656,11 +687,11 @@ class TestDeserializarion:
                 "var1": {"type": "int", "value": [1000]},
                 "var2": {"type": "int", "value": [2]},
                 "var3": {"type": "int", "value": [5]},
-                "var_values": {"type": "int", "value": [1, 1.5, 1.7, 1.3]},
+                "var_values": {"type": "float", "value": [1, 1.5, 1.7, 1.3]},
                 "var_times": {"type": "float", "value": [0, 0.4, 0.8, 0.9]},
             },
         )
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
         seq_var1 = seq._variables["var1"]
@@ -759,7 +790,7 @@ class TestDeserializarion:
                     "amplitude": {
                         "kind": "constant",
                         "duration": 1000,
-                        "value": 2,
+                        "value": 2.0,
                     },
                     "detuning": {
                         "kind": "constant",
@@ -769,10 +800,10 @@ class TestDeserializarion:
                 }
             ],
             variables={
-                "var1": {"type": "int", "value": [1.5]},
+                "var1": {"type": "float", "value": [1.5]},
             },
         )
-
+        _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
         seq_var1 = seq._variables["var1"]
 
@@ -783,7 +814,7 @@ class TestDeserializarion:
         assert len(seq._to_build_calls) == 1
 
         c = seq._to_build_calls[0]
-        pulse: Pulse = c.kwargs["pulse"]
+        pulse: ParamObj = c.kwargs["pulse"]
         wf = pulse.kwargs["detuning"]
         param = wf.kwargs["value"]
 
