@@ -40,96 +40,97 @@ if TYPE_CHECKING:
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
+    # # TODO: Make operator methods' args pos-only when python 3.7 is dropped
     # Unary operators
-    def __neg__(self, /) -> ParamObj:
+    def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
 
-    def __abs__(self, /) -> ParamObj:
+    def __abs__(self) -> ParamObj:
         return ParamObj(operator.abs, self)
 
-    def __ceil__(self, /) -> ParamObj:
+    def __ceil__(self) -> ParamObj:
         return ParamObj(np.ceil, self)
 
-    def __floor__(self, /) -> ParamObj:
+    def __floor__(self) -> ParamObj:
         return ParamObj(np.floor, self)
 
     def __round__(self, n: int = 0) -> ParamObj:
         return cast(ParamObj, (self * 10**n).rint() / 10**n)
 
-    def rint(self, /) -> ParamObj:
+    def rint(self) -> ParamObj:
         """Rounds the value to the nearest int."""
         # Defined because np.round looks for 'rint'
         return ParamObj(np.round, self)
 
-    def sqrt(self, /) -> ParamObj:
+    def sqrt(self) -> ParamObj:
         """Calculates the square root of the object."""
         return ParamObj(np.sqrt, self)
 
-    def exp(self, /) -> ParamObj:
+    def exp(self) -> ParamObj:
         """Calculates the exponential of the object."""
         return ParamObj(np.exp, self)
 
-    def log2(self, /) -> ParamObj:
+    def log2(self) -> ParamObj:
         """Calculates the base-2 logarithm of the object."""
         return ParamObj(np.log2, self)
 
-    def log(self, /) -> ParamObj:
+    def log(self) -> ParamObj:
         """Calculates the natural logarithm of the object."""
         return ParamObj(np.log, self)
 
-    def sin(self, /) -> ParamObj:
+    def sin(self) -> ParamObj:
         """Calculates the trigonometric sine of the object."""
         return ParamObj(np.sin, self)
 
-    def cos(self, /) -> ParamObj:
+    def cos(self) -> ParamObj:
         """Calculates the trigonometric cosine of the object."""
         return ParamObj(np.cos, self)
 
-    def tan(self, /) -> ParamObj:
+    def tan(self) -> ParamObj:
         """Calculates the trigonometric tangent of the object."""
         return ParamObj(np.tan, self)
 
     # Binary operators
-    def __add__(self, other: Union[int, float], /) -> ParamObj:
+    def __add__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.add, self, other)
 
-    def __radd__(self, other: Union[int, float], /) -> ParamObj:
+    def __radd__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.add, other, self)
 
-    def __sub__(self, other: Union[int, float], /) -> ParamObj:
+    def __sub__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.sub, self, other)
 
-    def __rsub__(self, other: Union[int, float], /) -> ParamObj:
+    def __rsub__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.sub, other, self)
 
-    def __mul__(self, other: Union[int, float], /) -> ParamObj:
+    def __mul__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.mul, self, other)
 
-    def __rmul__(self, other: Union[int, float], /) -> ParamObj:
+    def __rmul__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.mul, other, self)
 
-    def __truediv__(self, other: Union[int, float], /) -> ParamObj:
+    def __truediv__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.truediv, self, other)
 
-    def __rtruediv__(self, other: Union[int, float], /) -> ParamObj:
+    def __rtruediv__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.truediv, other, self)
 
-    def __floordiv__(self, other: Union[int, float], /) -> ParamObj:
+    def __floordiv__(self, other: Union[int, float]) -> ParamObj:
         return (self / other).__floor__()
 
-    def __rfloordiv__(self, other: Union[int, float], /) -> ParamObj:
+    def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
         return (other / self).__floor__()
 
-    def __pow__(self, other: Union[int, float], /) -> ParamObj:
+    def __pow__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.pow, self, other)
 
-    def __rpow__(self, other: Union[int, float], /) -> ParamObj:
+    def __rpow__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.pow, other, self)
 
-    def __mod__(self, other: Union[int, float], /) -> ParamObj:
+    def __mod__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.mod, self, other)
 
-    def __rmod__(self, other: Union[int, float], /) -> ParamObj:
+    def __rmod__(self, other: Union[int, float]) -> ParamObj:
         return ParamObj(operator.mod, other, self)
 
 
