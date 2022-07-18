@@ -189,7 +189,7 @@ def draw_sequence(
         else:
             return rf"{value:.2g}$\pi$"
 
-    n_channels = len(seq._channels)
+    n_channels = len(seq.declared_channels)
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
     data = gather_data(seq)
@@ -260,7 +260,7 @@ def draw_sequence(
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075, height_ratios=ratios)
 
     ch_axes = {}
-    for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
+    for i, (ch, gs_) in enumerate(zip(seq.declared_channels, gs)):
         ax = fig.add_subplot(gs_)
         for side in ("top", "bottom", "left", "right"):
             ax.spines[side].set_color("none")
@@ -308,7 +308,7 @@ def draw_sequence(
     # Make sure the time axis of all channels are aligned
     final_t = total_duration / time_scale
     if draw_modulation:
-        for ch, ch_obj in seq._channels.items():
+        for ch, ch_obj in seq.declared_channels.items():
             final_t = max(
                 final_t,
                 (seq.get_duration(ch) + 2 * ch_obj.rise_time) / time_scale,
@@ -317,7 +317,7 @@ def draw_sequence(
     t_max = final_t * 1.05
 
     for ch, axes in ch_axes.items():
-        ch_obj = seq._channels[ch]
+        ch_obj = seq.declared_channels[ch]
         ch_data = data[ch]
         basis = ch_obj.basis
         times = np.array(ch_data.time)
@@ -465,7 +465,7 @@ def draw_sequence(
             if coords == "initial":
                 x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
-                if seq._channels[ch].addressing == "Global":
+                if seq.declared_channels[ch].addressing == "Global":
                     axes[0].text(
                         x,
                         amp_top * 0.98,
@@ -485,7 +485,7 @@ def draw_sequence(
                         ha="left",
                         bbox=q_box,
                     )
-                    phase = seq._phase_ref[basis][targets[0]][0]
+                    phase = seq._basis_ref[basis][targets[0]].phase[0]
                     if phase and draw_phase_shifts:
                         msg = r"$\phi=$" + phase_str(phase)
                         axes[0].text(
@@ -502,7 +502,9 @@ def draw_sequence(
                 target_regions.append(
                     [tf + 1 / time_scale, targets]
                 )  # New one
-                phase = seq._phase_ref[basis][targets[0]][tf * time_scale + 1]
+                phase = seq._basis_ref[basis][targets[0]].phase[
+                    tf * time_scale + 1
+                ]
                 for ax in axes:
                     ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
                 axes[0].text(
@@ -536,7 +538,7 @@ def draw_sequence(
             end = cast(float, end)
             # All targets have the same ref, so we pick
             q = targets_[0]
-            ref = seq._phase_ref[basis][q]
+            ref = seq._basis_ref[basis][q].phase
             if end != total_duration - 1 or ch_data.measurement is not None:
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):

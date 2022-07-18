@@ -29,9 +29,9 @@ import qutip
 from numpy.typing import ArrayLike
 
 from pulser import Pulse, Sequence
-from pulser._seq_drawer import draw_sequence
 from pulser.register import QubitId
-from pulser.sequence import _TimeSlot
+from pulser.sequence._seq_drawer import draw_sequence
+from pulser.sequence.sequence import _TimeSlot
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
     CoherentResults,
@@ -89,7 +89,10 @@ class Simulation:
             )
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
-        if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
+        if all(
+            sequence._schedule[x][-1].tf == 0
+            for x in sequence.declared_channels
+        ):
             raise ValueError(
                 "No instructions given for the channels in the sequence."
             )
@@ -875,7 +878,13 @@ class Simulation:
         if "max_step" in options.keys():
             solv_ops = qutip.Options(**options)
         else:
-            auto_max_step = 0.5 * (self._seq._min_pulse_duration() / 1000)
+            min_pulse_duration = min(
+                slot.tf - slot.ti
+                for ch_schedule in self._seq._schedule.values()
+                for slot in ch_schedule
+                if isinstance(slot.type, Pulse)
+            )
+            auto_max_step = 0.5 * (min_pulse_duration / 1000)
             solv_ops = qutip.Options(max_step=auto_max_step, **options)
 
         meas_errors: Optional[Mapping[str, float]] = None
