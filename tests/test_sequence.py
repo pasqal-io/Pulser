@@ -78,8 +78,10 @@ def test_channel_declaration():
     for channel, channel_id in channel_map.items():
         seq2.declare_channel(channel, channel_id)
     assert set(seq2.available_channels) == (available_channels - {"mw_global"})
-    for channel in seq2.declared_channels:
-        assert seq2._schedule[channel].channel_id == channel_map[channel]
+    assert set(
+        seq2._schedule[channel].channel_id
+        for channel in seq2.declared_channels
+    ) == set(channel_map.values())
     with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
         seq2.declare_channel("ch3", "mw_global")
 

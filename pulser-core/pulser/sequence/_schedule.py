@@ -115,7 +115,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         # Find tentative initial and final time of SLM mask if possible
         mask_time: list[int] = []
         for ch_schedule in self.values():
-            if not ch_schedule.channel_obj.addressing == "Global":
+            if ch_schedule.channel_obj.addressing != "Global":
                 continue
             # Cycle on slots in schedule until the first pulse is found
             for slot in ch_schedule:
