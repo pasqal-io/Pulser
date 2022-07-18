@@ -372,6 +372,7 @@ class Simulation:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = False,
         draw_phase_shifts: bool = False,
+        draw_phase_curve: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
     ) -> None:
@@ -385,6 +386,8 @@ class Simulation:
                 on top of the respective waveforms (defaults to False).
             draw_phase_shifts: Whether phase shift and reference
                 information should be added to the plot, defaults to False.
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
             fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig: Keywords arguments for
@@ -400,6 +403,7 @@ class Simulation:
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
+            draw_phase_curve=draw_phase_curve,
         )
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)

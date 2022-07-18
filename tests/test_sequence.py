@@ -410,6 +410,9 @@ def test_sequence():
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_area=True)
 
+    with patch("matplotlib.pyplot.show"):
+        seq.draw(draw_phase_curve=True)
+
     s = seq.serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence.deserialize(s)
@@ -556,6 +559,7 @@ def test_draw_register():
     seq3d.declare_channel("ch_xy", "mw_global")
     seq3d.add(pulse, "ch_xy")
     seq3d.config_slm_mask([6, 15])
+    seq3d.measure(basis="XY")
     with patch("matplotlib.pyplot.show"):
         seq3d.draw(draw_register=True)
 
