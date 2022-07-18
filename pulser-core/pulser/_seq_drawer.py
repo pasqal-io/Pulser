@@ -537,7 +537,7 @@ def draw_sequence(
             # All targets have the same ref, so we pick
             q = targets_[0]
             ref = seq._phase_ref[basis][q]
-            if end != total_duration - 1 or not ch_data.measurement:
+            if end != total_duration - 1 or ch_data.measurement is not None:
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
                 conf = dict(linestyle="--", linewidth=1.5, color="black")
@@ -572,7 +572,7 @@ def draw_sequence(
             )
 
         hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
-        if ch_data.measurement:
+        if ch_data.measurement is not None:
             msg = f"Basis: {ch_data.measurement}"
             if len(axes) == 1:
                 mid_ax = axes[0]
@@ -608,7 +608,7 @@ def draw_sequence(
             if ax_lims[i][0] < 0:
                 ax.axhline(0, **hline_kwargs)
 
-        if ch_data.interp_pts and draw_interp_pts:
+        if draw_interp_pts:
             for qty in ("amplitude", "detuning"):
                 if qty in ch_data.interp_pts and ch_data.curves_on[qty]:
                     ind = CURVES_ORDER.index(qty)
