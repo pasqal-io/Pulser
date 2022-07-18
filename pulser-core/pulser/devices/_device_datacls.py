@@ -188,6 +188,11 @@ class Device:
             channel_id: The channel ID used to index the chosen channel
                 on this device.
         """
+        if not isinstance(pulse, Pulse):
+            raise TypeError(
+                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
+            )
+
         ch = self.channels[channel_id]
         if np.any(pulse.amplitude.samples > ch.max_amp):
             raise ValueError(

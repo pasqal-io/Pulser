@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass, field
 from itertools import combinations
 from typing import Any, Optional, Union, cast
 
@@ -27,6 +28,43 @@ import pulser
 from pulser import Register, Register3D
 from pulser.pulse import Pulse
 from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
+
+# Color scheme
+COLORS = ["darkgreen", "indigo", "#c75000"]
+
+CURVES_ORDER = ("amplitude", "detuning", "phase")
+
+SIZE_PER_WIDTH = {1: 3, 2: 4, 3: 5}
+LABELS = [
+    r"$\Omega$ (rad/µs)",
+    r"$\delta$ (rad/µs)",
+    r"$\varphi$ / 2π",
+]
+
+
+@dataclass
+class ChannelDrawContent:
+    """The contents for drawingflake a single channel."""
+
+    time: list[int]
+    amplitude: list[float]
+    detuning: list[float]
+    phase: list[float]
+    target: dict[Union[str, tuple[int, int]], Any]
+    measurement: Optional[str] = None
+    interp_pts: dict[str, list[list[float]]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.curves_on = {"amplitude": True, "detuning": False, "phase": False}
+
+    @property
+    def n_axes_on(self) -> int:
+        """The number of axes to draw for this channel."""
+        return sum(self.curves_on.values())
+
+    def curves_on_indices(self) -> list[int]:
+        """The indices of the curves to draw."""
+        return [i for i, qty in enumerate(CURVES_ORDER) if self.curves_on[qty]]
 
 
 def gather_data(seq: pulser.sequence.Sequence) -> dict:
@@ -45,16 +83,17 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
         time = [-1]  # To not break the "time[-1]" later on
         amp = []
         detuning = []
+        phase = []
         # List of interpolation points
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
         target: dict[Union[str, tuple[int, int]], Any] = {}
-        # phase_shift = {}
         for slot in sch:
             if slot.ti == -1:
                 target["initial"] = slot.targets
                 time += [0]
                 amp += [0.0]
                 detuning += [0.0]
+                phase += [0.0]
                 continue
             if slot.type in ["delay", "target"]:
                 time += [
@@ -63,6 +102,7 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                 ]
                 amp += [0.0, 0.0]
                 detuning += [0.0, 0.0]
+                phase += [phase[-1]] * 2
                 if slot.type == "target":
                     target[(slot.ti, slot.tf - 1)] = slot.targets
                 continue
@@ -71,12 +111,14 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
                 pulse.detuning, ConstantWaveform
             ):
                 time += [slot.ti, slot.tf - 1]
-                amp += [float(pulse.amplitude._value)] * 2
-                detuning += [float(pulse.detuning._value)] * 2
+                amp += [float(pulse.amplitude[0])] * 2
+                detuning += [float(pulse.detuning[0])] * 2
+                phase += [float(pulse.phase) / (2 * np.pi)] * 2
             else:
                 time += list(range(slot.ti, slot.tf))
                 amp += pulse.amplitude.samples.tolist()
                 detuning += pulse.detuning.samples.tolist()
+                phase += [float(pulse.phase) / (2 * np.pi)] * pulse.duration
                 for wf_type in ["amplitude", "detuning"]:
                     wf = getattr(pulse, wf_type)
                     if isinstance(wf, InterpolatedWaveform):
@@ -88,18 +130,14 @@ def gather_data(seq: pulser.sequence.Sequence) -> dict:
             time += [time[-1] + 1, total_duration - 1]
             amp += [0, 0]
             detuning += [0, 0]
+            phase += [phase[-1] if len(phase) else 0] * 2
         # Store everything
         time.pop(0)  # Removes the -1 in the beginning
-        data[ch] = {
-            "time": time,
-            "amp": amp,
-            "detuning": detuning,
-            "target": target,
-        }
+        data[ch] = ChannelDrawContent(time, amp, detuning, phase, target)
         if hasattr(seq, "_measurement"):
-            data[ch]["measurement"] = seq._measurement
+            data[ch].measurement = seq._measurement
         if interp_pts:
-            data[ch]["interp_pts"] = interp_pts
+            data[ch].interp_pts = dict(interp_pts)
     data["total_duration"] = total_duration
     return data
 
@@ -113,6 +151,7 @@ def draw_sequence(
     draw_register: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
+    draw_phase_curve: bool = False,
 ) -> tuple[Figure, Figure]:
     """Draws the entire sequence.
 
@@ -136,6 +175,8 @@ def draw_sequence(
         draw_modulation: Draws the expected channel output, defaults to
             False. If the channel does not have a defined 'mod_bandwidth', this
             is skipped unless 'draw_input=False'.
+        draw_phase_curve: Draws the changes in phase in its own curve (ignored
+            if the phase doesn't change throughout the channel).
     """
 
     def phase_str(phi: float) -> str:
@@ -148,12 +189,17 @@ def draw_sequence(
         else:
             return rf"{value:.2g}$\pi$"
 
-    n_channels = len(seq._channels)
+    n_channels = len(seq.declared_channels)
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
     data = gather_data(seq)
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
+    for ch in seq._schedule:
+        if np.nonzero(data[ch].detuning)[0].size > 0:
+            data[ch].curves_on["detuning"] = True
+        if draw_phase_curve and np.nonzero(data[ch].phase)[0].size > 0:
+            data[ch].curves_on["phase"] = True
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
@@ -204,39 +250,36 @@ def draw_sequence(
             )
             ax_reg.set_title("Masked register", pad=10)
 
+    ratios = [
+        SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in seq.declared_channels
+    ]
     fig = plt.figure(
         constrained_layout=False,
-        figsize=(20, 4.5 * n_channels),
+        figsize=(20, sum(ratios)),
     )
-    gs = fig.add_gridspec(
-        n_channels,
-        1,
-        hspace=0.075,
-    )
+    gs = fig.add_gridspec(n_channels, 1, hspace=0.075, height_ratios=ratios)
 
     ch_axes = {}
-    for i, (ch, gs_) in enumerate(zip(seq._channels, gs)):
+    for i, (ch, gs_) in enumerate(zip(seq.declared_channels, gs)):
         ax = fig.add_subplot(gs_)
-        ax.spines["top"].set_color("none")
-        ax.spines["bottom"].set_color("none")
-        ax.spines["left"].set_color("none")
-        ax.spines["right"].set_color("none")
+        for side in ("top", "bottom", "left", "right"):
+            ax.spines[side].set_color("none")
         ax.tick_params(
             labelcolor="w", top=False, bottom=False, left=False, right=False
         )
         ax.set_ylabel(ch, labelpad=40, fontsize=18)
-        subgs = gs_.subgridspec(2, 1, hspace=0.0)
-        ax1 = fig.add_subplot(subgs[0, :])
-        ax2 = fig.add_subplot(subgs[1, :])
-        ch_axes[ch] = (ax1, ax2)
+        subgs = gs_.subgridspec(data[ch].n_axes_on, 1, hspace=0.0)
+        ch_axes[ch] = [
+            fig.add_subplot(subgs[i, :]) for i in range(data[ch].n_axes_on)
+        ]
         for j, ax in enumerate(ch_axes[ch]):
             ax.axvline(0, linestyle="--", linewidth=0.5, color="grey")
-            if j == 0:
-                ax.spines["bottom"].set_visible(False)
-            else:
+            if j > 0:
                 ax.spines["top"].set_visible(False)
+            if j < len(ch_axes[ch]) - 1:
+                ax.spines["bottom"].set_visible(False)
 
-            if i < n_channels - 1 or j == 0:
+            if i < n_channels - 1 or j < len(ch_axes[ch]) - 1:
                 ax.tick_params(
                     axis="x",
                     which="both",
@@ -265,7 +308,7 @@ def draw_sequence(
     # Make sure the time axis of all channels are aligned
     final_t = total_duration / time_scale
     if draw_modulation:
-        for ch, ch_obj in seq._channels.items():
+        for ch, ch_obj in seq.declared_channels.items():
             final_t = max(
                 final_t,
                 (seq.get_duration(ch) + 2 * ch_obj.rise_time) / time_scale,
@@ -273,77 +316,92 @@ def draw_sequence(
     t_min = -final_t * 0.03
     t_max = final_t * 1.05
 
-    for ch, (a, b) in ch_axes.items():
-        ch_obj = seq._channels[ch]
+    for ch, axes in ch_axes.items():
+        ch_obj = seq.declared_channels[ch]
+        ch_data = data[ch]
         basis = ch_obj.basis
-        times = np.array(data[ch]["time"])
+        times = np.array(ch_data.time)
         t = times / time_scale
-        ya = data[ch]["amp"]
-        yb = data[ch]["detuning"]
+        ys = [getattr(ch_data, qty) for qty in CURVES_ORDER]
         if sampling_rate:
+            cubic_splines = []
+            yseff = []
             t2 = 1
-            ya2 = []
-            yb2 = []
+            t2s = []
             for t_solv in solver_time:
                 # Find the interval [t[t2],t[t2+1]] containing t_solv
                 while t_solv > t[t2]:
                     t2 += 1
-                ya2.append(ya[t2])
-                yb2.append(yb[t2])
-            cs_amp = CubicSpline(solver_time, ya2)
-            cs_detuning = CubicSpline(solver_time, yb2)
-            yaeff = cs_amp(teff)
-            ybeff = cs_detuning(teff)
+                t2s.append(t2)
+            for i, y_ in enumerate(ys):
+                y2 = [y_[t_] for t_ in t2s]
+                cubic_splines.append(CubicSpline(solver_time, y2))
+                yseff.append(cubic_splines[i](teff))
 
         draw_output = draw_modulation and (
             ch_obj.mod_bandwidth or not draw_input
         )
         if draw_output:
+            ys_mod = []
             t_diffs = np.diff(times)
-            input_a = np.repeat(ya[1:], t_diffs)
-            input_b = np.repeat(yb[1:], t_diffs)
             end_index = int(final_t * time_scale)
-            ya_mod = ch_obj.modulate(input_a)[:end_index]
-            yb_mod = ch_obj.modulate(input_b, keep_ends=True)[:end_index]
+            for i, y_ in enumerate(ys):
+                input = np.repeat(y_[1:], t_diffs)
+                ys_mod.append(
+                    ch_obj.modulate(input, keep_ends=i > 0)[:end_index]
+                )
+            # Prolong the input samples
+            t = np.append(t, (t[-1] + 1 / time_scale, final_t))
+            ys[0] += [0.0, 0.0]
+            ys[1] += [0.0, 0.0]
+            ys[2] += [ys[2][-1]] * 2
 
-        a.set_xlim(t_min, t_max)
-        b.set_xlim(t_min, t_max)
-
-        max_amp = np.max(ya)
+        ref_ys = yseff if sampling_rate else ys
+        max_amp = np.max(ref_ys[0])
         max_amp = 1 if max_amp == 0 else max_amp
         amp_top = max_amp * 1.2
-        a.set_ylim(-0.02, amp_top)
-        det_max = np.max(yb)
-        det_min = np.min(yb)
+        amp_bottom = min(0.0, *ref_ys[0])
+        det_max = np.max(ref_ys[1])
+        det_min = np.min(ref_ys[1])
         det_range = det_max - det_min
         if det_range == 0:
             det_min, det_max, det_range = -1, 1, 2
         det_top = det_max + det_range * 0.15
         det_bottom = det_min - det_range * 0.05
-        b.set_ylim(det_bottom, det_top)
+        ax_lims = [
+            (amp_bottom, amp_top),
+            (det_bottom, det_top),
+            (min(0.0, *ref_ys[2]), max(1.1, *ref_ys[2])),
+        ]
+        ax_lims = [ax_lims[i] for i in ch_data.curves_on_indices()]
+        for ax, ylim in zip(axes, ax_lims):
+            ax.set_xlim(t_min, t_max)
+            ax.set_ylim(*ylim)
 
-        if draw_input:
-            a.plot(t, ya, color="darkgreen", linewidth=0.8)
-            b.plot(t, yb, color="indigo", linewidth=0.8)
-        if sampling_rate:
-            a.plot(teff, yaeff, color="darkgreen", linewidth=0.8)
-            b.plot(teff, ybeff, color="indigo", linewidth=0.8, ls="-")
-            a.fill_between(teff, 0, yaeff, color="darkgreen", alpha=0.3)
-            b.fill_between(teff, 0, ybeff, color="indigo", alpha=0.3)
-        elif draw_input:
-            a.fill_between(t, 0, ya, color="darkgreen", alpha=0.3)
-            b.fill_between(t, 0, yb, color="indigo", alpha=0.3)
-        if draw_output:
-            a.plot(ya_mod, color="darkred", linewidth=0.8)
-            b.plot(yb_mod, color="gold", linewidth=0.8)
-            a.fill_between(
-                np.arange(ya_mod.size), 0, ya_mod, color="darkred", alpha=0.3
-            )
-            b.fill_between(
-                np.arange(yb_mod.size), 0, yb_mod, color="gold", alpha=0.3
-            )
-        a.set_ylabel(r"$\Omega$ (rad/µs)", fontsize=14, labelpad=10)
-        b.set_ylabel(r"$\delta$ (rad/µs)", fontsize=14)
+        for i, ax in zip(ch_data.curves_on_indices(), axes):
+            if draw_input:
+                ax.plot(t, ys[i], color=COLORS[i], linewidth=0.8)
+            if sampling_rate:
+                ax.plot(
+                    teff,
+                    yseff[i],
+                    color=COLORS[i],
+                    linewidth=0.8,
+                )
+                ax.fill_between(teff, 0, yseff[i], color=COLORS[i], alpha=0.3)
+            elif draw_input:
+                ax.fill_between(t, 0, ys[i], color=COLORS[i], alpha=0.3)
+            if draw_output:
+                ax.fill_between(
+                    np.arange(ys_mod[i].size),
+                    0,
+                    ys_mod[i],
+                    color=COLORS[i],
+                    alpha=0.3,
+                    hatch="////",
+                )
+            special_kwargs = dict(labelpad=10) if i == 0 else {}
+            ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
@@ -358,7 +416,7 @@ def draw_sequence(
                     if sampling_rate:
                         area_val = (
                             np.sum(
-                                cs_amp(
+                                cubic_splines[0](
                                     np.arange(seq_.ti, seq_.tf) / time_scale
                                 )
                             )
@@ -388,7 +446,7 @@ def draw_sequence(
                     else:
                         phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
                         txt = "\n".join([phase_fmt, area_fmt])
-                    a.text(
+                    axes[0].text(
                         x_plot,
                         y_plot,
                         txt,
@@ -399,16 +457,16 @@ def draw_sequence(
                     )
 
         target_regions = []  # [[start1, [targets1], end1],...]
-        for coords in data[ch]["target"]:
-            targets = list(data[ch]["target"][coords])
+        for coords in ch_data.target:
+            targets = list(ch_data.target[coords])
             tgt_strs = [str(q) for q in targets]
             tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
             tgt_str = "\n".join(tgt_strs)
             if coords == "initial":
                 x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
-                if seq._channels[ch].addressing == "Global":
-                    a.text(
+                if seq.declared_channels[ch].addressing == "Global":
+                    axes[0].text(
                         x,
                         amp_top * 0.98,
                         "GLOBAL",
@@ -419,7 +477,7 @@ def draw_sequence(
                         bbox=q_box,
                     )
                 else:
-                    a.text(
+                    axes[0].text(
                         x,
                         tgt_txt_y,
                         tgt_str,
@@ -427,10 +485,10 @@ def draw_sequence(
                         ha="left",
                         bbox=q_box,
                     )
-                    phase = seq._phase_ref[basis][targets[0]][0]
+                    phase = seq._basis_ref[basis][targets[0]].phase[0]
                     if phase and draw_phase_shifts:
                         msg = r"$\phi=$" + phase_str(phase)
-                        a.text(
+                        axes[0].text(
                             0,
                             max_amp * 1.1,
                             msg,
@@ -444,10 +502,12 @@ def draw_sequence(
                 target_regions.append(
                     [tf + 1 / time_scale, targets]
                 )  # New one
-                phase = seq._phase_ref[basis][targets[0]][tf * time_scale + 1]
-                a.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
-                b.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
-                a.text(
+                phase = seq._basis_ref[basis][targets[0]].phase[
+                    tf * time_scale + 1
+                ]
+                for ax in axes:
+                    ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
+                axes[0].text(
                     tf + final_t * 5e-3,
                     tgt_txt_y,
                     tgt_str,
@@ -459,7 +519,7 @@ def draw_sequence(
                     msg = r"$\phi=$" + phase_str(phase)
                     wrd_len = len(max(tgt_strs, key=len))
                     x = tf + final_t * 0.01 * (wrd_len + 1)
-                    a.text(
+                    axes[0].text(
                         x,
                         max_amp * 1.1,
                         msg,
@@ -478,15 +538,15 @@ def draw_sequence(
             end = cast(float, end)
             # All targets have the same ref, so we pick
             q = targets_[0]
-            ref = seq._phase_ref[basis][q]
-            if end != total_duration - 1 or "measurement" not in data[ch]:
+            ref = seq._basis_ref[basis][q].phase
+            if end != total_duration - 1 or ch_data.measurement is not None:
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
                 conf = dict(linestyle="--", linewidth=1.5, color="black")
-                a.axvline(t_, **conf)
-                b.axvline(t_, **conf)
+                for ax in axes:
+                    ax.axvline(t_, **conf)
                 msg = "\u27F2 " + phase_str(delta)
-                a.text(
+                axes[0].text(
                     t_ - final_t * 8e-3,
                     max_amp * 1.1,
                     msg,
@@ -498,13 +558,13 @@ def draw_sequence(
         # Draw the SLM mask
         if seq._slm_mask_targets and seq._slm_mask_time:
             tf_m = seq._slm_mask_time[1]
-            a.axvspan(0, tf_m, color="black", alpha=0.1, zorder=-100)
-            b.axvspan(0, tf_m, color="black", alpha=0.1, zorder=-100)
+            for ax in axes:
+                ax.axvspan(0, tf_m, color="black", alpha=0.1, zorder=-100)
             tgt_strs = [str(q) for q in seq._slm_mask_targets]
             tgt_txt_x = final_t * 0.005
-            tgt_txt_y = b.get_ylim()[0]
+            tgt_txt_y = axes[-1].get_ylim()[0]
             tgt_str = "\n".join(tgt_strs)
-            b.text(
+            axes[-1].text(
                 tgt_txt_x,
                 tgt_txt_y,
                 tgt_str,
@@ -513,33 +573,48 @@ def draw_sequence(
                 bbox=slm_box,
             )
 
-        if "measurement" in data[ch]:
-            msg = f"Basis: {data[ch]['measurement']}"
-            b.text(
+        hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
+        if ch_data.measurement is not None:
+            msg = f"Basis: {ch_data.measurement}"
+            if len(axes) == 1:
+                mid_ax = axes[0]
+                mid_point = (amp_top + amp_bottom) / 2
+                fontsize = 12
+            else:
+                mid_ax = axes[-1]
+                mid_point = (
+                    ax_lims[-1][1]
+                    if len(axes) == 2
+                    else ax_lims[-1][0] + sum(ax_lims[-1]) * 1.5
+                )
+                fontsize = 14
+
+            for ax in axes:
+                ax.axvspan(final_t, t_max, color="midnightblue", alpha=1)
+
+            mid_ax.text(
                 final_t * 1.025,
-                det_top,
+                mid_point,
                 msg,
                 ha="center",
                 va="center",
-                fontsize=14,
+                fontsize=fontsize,
                 color="white",
                 rotation=90,
             )
-            a.axvspan(final_t, t_max, color="midnightblue", alpha=1)
-            b.axvspan(final_t, t_max, color="midnightblue", alpha=1)
-            a.axhline(0, xmax=0.95, linestyle="-", linewidth=0.5, color="grey")
-            b.axhline(0, xmax=0.95, linestyle=":", linewidth=0.5, color="grey")
-        else:
-            a.axhline(0, linestyle="-", linewidth=0.5, color="grey")
-            b.axhline(0, linestyle=":", linewidth=0.5, color="grey")
+            hline_kwargs["xmax"] = 0.95
 
-        if "interp_pts" in data[ch] and draw_interp_pts:
-            all_points = data[ch]["interp_pts"]
-            if "amplitude" in all_points:
-                pts = np.array(all_points["amplitude"])
-                a.scatter(pts[:, 0], pts[:, 1], color="darkgreen")
-            if "detuning" in all_points:
-                pts = np.array(all_points["detuning"])
-                b.scatter(pts[:, 0], pts[:, 1], color="indigo")
+        for i, ax in enumerate(axes):
+            if i > 0:
+                ax.axhline(ax_lims[i][1], **hline_kwargs)
+            if ax_lims[i][0] < 0:
+                ax.axhline(0, **hline_kwargs)
+
+        if draw_interp_pts:
+            for qty in ("amplitude", "detuning"):
+                if qty in ch_data.interp_pts and ch_data.curves_on[qty]:
+                    ind = CURVES_ORDER.index(qty)
+                    pts = np.array(ch_data.interp_pts[qty])
+                    axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
 
     return (fig_reg if draw_register else None, fig)

@@ -76,7 +76,7 @@ SUPPORTED_MODULES = {
         "InterpolatedWaveform",
         "KaiserWaveform",
     ),
-    "pulser.sequence": ("Sequence",),
+    "pulser.sequence.sequence": ("Sequence",),
     "pulser.parametrized.variable": ("Variable",),
     "pulser.parametrized.paramobj": ("ParamObj",),
 }
