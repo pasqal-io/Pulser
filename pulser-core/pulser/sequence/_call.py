@@ -11,27 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Defines samples dataclasses."""
-from __future__ import annotations
+"""Encodes a sequence building call."""
 
-from dataclasses import dataclass
+from collections import namedtuple
 
-import numpy as np
-
-from pulser.register.base_register import QubitId
-
-
-@dataclass
-class QubitSamples:
-    """Gathers samples concerning a single qubit."""
-
-    amp: np.ndarray
-    det: np.ndarray
-    phase: np.ndarray
-    qubit: QubitId
-
-    def __post_init__(self) -> None:
-        if not len(self.amp) == len(self.det) == len(self.phase):
-            raise ValueError(
-                "ndarrays amp, det and phase must have the same length."
-            )
+_Call = namedtuple("_Call", ["name", "args", "kwargs"])

@@ -67,7 +67,7 @@ def test_stored_calls():
     sb.declare_channel("ch1", "rydberg_local")
     sb.target_index(var, "ch1")
     assert sb._calls[-1].name == "declare_channel"
-    assert sb._to_build_calls[-1].name == "_target_index"
+    assert sb._to_build_calls[-1].name == "target_index"
     assert sb._to_build_calls[-1].args == (var, "ch1")
     with pytest.raises(ValueError, match="name of a declared channel"):
         sb.delay(1000, "rydberg_local")
