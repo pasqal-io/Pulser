@@ -374,8 +374,9 @@ class TestDeserializarion:
 
         c = seq._calls[offset]
         if op["op"] == "target":
-            assert c.name == "_target_index"
-            assert c.args == (op["target"], op["channel"])
+            assert c.name == "target_index"
+            assert c.kwargs["qubits"] == op["target"]
+            assert c.kwargs["channel"] == op["channel"]
         elif op["op"] == "align":
             assert c.name == "align"
             assert c.args == tuple(op["channels"])
@@ -384,7 +385,7 @@ class TestDeserializarion:
             assert c.kwargs["duration"] == op["time"]
             assert c.kwargs["channel"] == op["channel"]
         elif op["op"] == "phase_shift":
-            assert c.name == "_phase_shift_index"
+            assert c.name == "phase_shift_index"
             assert c.args == tuple([op["phi"], *op["targets"]])
         elif op["op"] == "pulse":
             assert c.name == "add"
@@ -583,15 +584,15 @@ class TestDeserializarion:
 
         c = seq._to_build_calls[0]
         if op["op"] == "target":
-            assert c.name == "_target_index"
-            assert isinstance(c.args[0], VariableItem)
-            assert c.args[1] == op["channel"]
+            assert c.name == "target_index"
+            assert isinstance(c.kwargs["qubits"], VariableItem)
+            assert c.kwargs["channel"] == op["channel"]
         elif op["op"] == "delay":
             assert c.name == "delay"
             assert c.kwargs["channel"] == op["channel"]
             assert isinstance(c.kwargs["duration"], VariableItem)
         elif op["op"] == "phase_shift":
-            assert c.name == "_phase_shift_index"
+            assert c.name == "phase_shift_index"
             # phi is variable
             assert isinstance(c.args[0], VariableItem)
             # qubit 1 is fixed

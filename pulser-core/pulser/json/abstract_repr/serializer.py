@@ -27,7 +27,8 @@ from pulser.json.exceptions import AbstractReprError
 from pulser.register.base_register import QubitId
 
 if TYPE_CHECKING:
-    from pulser.sequence import Sequence, _Call
+    from pulser.sequence import Sequence
+    from pulser.sequence._call import _Call
 
 
 class AbstractReprEncoder(json.JSONEncoder):
@@ -156,7 +157,7 @@ def serialize_abstract_sequence(
             data = get_all_args(("qubits", "channel"), call)
             if call.name == "target":
                 target = convert_targets(data["qubits"])
-            elif call.name == "_target_index":
+            elif call.name == "target_index":
                 target = data["qubits"]
             else:
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
@@ -200,7 +201,7 @@ def serialize_abstract_sequence(
             targets = call.args[1:]
             if call.name == "phase_shift":
                 targets = convert_targets(targets)
-            elif call.name == "_phase_shift_index":
+            elif call.name == "phase_shift_index":
                 pass
             else:
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
