@@ -45,12 +45,10 @@ class _ChannelSchedule:
 
     def last_target(self) -> int:
         """Last time a target happened on the channel."""
-        t = 0
         for slot in self.slots[::-1]:
             if slot.type == "target":
-                t = slot.tf
-                break
-        return t
+                return slot.tf
+        return 0  # pragma: no cover
 
     def get_duration(self, include_fall_time: bool = False) -> int:
         temp_tf = 0
