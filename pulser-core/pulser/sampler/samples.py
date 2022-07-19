@@ -94,22 +94,15 @@ class ChannelSamples:
             assert t1.tf <= t2.ti  # no overlaps on a given channel
 
 
+@dataclass
 class SequenceSamples:
     """Gather samples of a sequence with useful info."""
 
-    def __init__(
-        self,
-        channels: list[str],
-        duration: int,
-        addrs: dict[str, str],
-        bases: dict[str, str],
-        samples: dict[str, ChannelSamples],
-    ) -> None:
-        self.channel_samples: dict[str, ChannelSamples] = samples
-        self._addrs: dict[str, str] = addrs
-        self._bases: dict[str, str] = bases
-        self._duration: int = duration
-        self.channels = channels
+    channels: list[str]
+    channel_samples: dict[str, ChannelSamples]
+    _addrs: dict[str, str]
+    _bases: dict[str, str]
+    _duration: int
 
     def to_nested_dict(self) -> dict:
         """Format in the nested dictionary form.

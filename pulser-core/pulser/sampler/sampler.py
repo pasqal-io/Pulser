@@ -26,10 +26,10 @@ def sample(seq: Sequence) -> samples.SequenceSamples:
     bases = {chname: ch.basis for chname, ch in seq.declared_channels.items()}
     return samples.SequenceSamples(
         list(seq.declared_channels.keys()),
-        seq.get_duration(),
+        seq_samples,
         addrs,
         bases,
-        seq_samples,
+        seq.get_duration(),
     )
 
 
