@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast, overload
 
 import jsonschema
@@ -43,7 +44,7 @@ from pulser.waveforms import (
 if TYPE_CHECKING:  # pragma: no cover
     from pulser.sequence import Sequence
 
-with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
+with open(Path(__file__).parent / "schema.json") as f:
     schema = json.load(f)
 
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
