@@ -1,6 +1,7 @@
 import numpy as np
-import pulser.sampler.samples as sampler
 import pytest
+
+from pulser.sampler import sampler
 
 
 def test_post_init() -> None:

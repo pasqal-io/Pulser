@@ -11,7 +11,7 @@ import numpy as np
 
 from pulser.pulse import Pulse
 from pulser.register import QubitId
-from pulser.sequence import Sequence
+from pulser import Sequence
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
@@ -73,7 +73,7 @@ class SequenceSamples:
             ch_name: self.channel[ch_name].basis for ch_name in self.channel
         }
         self._addrs = {
-            ch_name: seq._channels[ch_name].addressing
+            ch_name: seq.declared_channels[ch_name].addressing
             for ch_name in self.channel
         }
         self.channel_samples = {
