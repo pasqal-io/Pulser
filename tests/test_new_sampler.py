@@ -1,4 +1,3 @@
-from random import sample
 import numpy as np
 import pulser.sampler.new_sampler as sampler
 import pytest
