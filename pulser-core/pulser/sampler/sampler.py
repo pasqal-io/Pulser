@@ -20,6 +20,10 @@ def sample(seq: Sequence) -> samples.SequenceSamples:
         chname: _sample_channel(chname, seq)
         for chname in seq.declared_channels
     }
+    seq_samples = {
+        chname: ch_schedule.get_samples()
+        for chname, ch_schedule in seq._schedule.items()
+    }
     addrs = {
         chname: ch.addressing for chname, ch in seq.declared_channels.items()
     }
