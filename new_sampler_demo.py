@@ -1,7 +1,7 @@
 import pulser
 from pulser.devices import MockDevice
 from pulser.pulse import Pulse
-from pulser.sampler.new_sampler import SequenceSamples
+from pulser.sampler.sampler import SequenceSamples
 from pulser.waveforms import RampWaveform
 
 reg = pulser.Register.rectangle(1, 2, prefix="q")

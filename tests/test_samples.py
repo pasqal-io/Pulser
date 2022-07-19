@@ -1,5 +1,5 @@
 import numpy as np
-import pulser.sampler.new_sampler as sampler
+import pulser.sampler.samples as sampler
 import pytest
 
 
