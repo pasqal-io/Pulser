@@ -24,6 +24,7 @@ import numpy as np
 from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
+from .. import samples
 
 
 class _TimeSlot(NamedTuple):
@@ -75,6 +76,23 @@ class _ChannelSchedule:
             return self.channel_obj.validate_duration(
                 max(duration, self.channel_obj.min_duration)
             )
+
+    def get_samples(self) -> samples.ChannelSamples:
+        """Returns the samples of the channel."""
+        N = self.get_duration()
+        # Keep only pulse slots
+        channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
+        amp, det, phase = np.zeros(N), np.zeros(N), np.zeros(N)
+        slots: list[samples._TimeSlot] = []
+
+        for s in channel_slots:
+            pulse = cast(Pulse, s.type)
+            amp[s.ti : s.tf] += pulse.amplitude.samples
+            det[s.ti : s.tf] += pulse.detuning.samples
+            phase[s.ti : s.tf] += pulse.phase
+            slots.append(samples._TimeSlot(s.ti, s.tf, s.targets))
+
+        return samples.ChannelSamples(amp, det, phase, slots)
 
     @overload
     def __getitem__(self, key: int) -> _TimeSlot:
