@@ -24,6 +24,7 @@ import numpy as np
 from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
+
 from .. import samples
 
 
