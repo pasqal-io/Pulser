@@ -283,10 +283,6 @@ def _get_expression(op: dict) -> Any:
     return op["expression"]
 
 
-def _get_param(param: Any, *args) -> Any:
-    return str(param)
-
-
 class TestDeserialization:
     def test_deserialize_device_and_channels(self) -> None:
         s = _get_serialized_seq()
@@ -886,7 +882,7 @@ class TestDeserialization:
                 True,
             ),
         ],
-        ids=_get_param,
+        ids=["bad_var", "bad_param", "bad_exp"],
     )
     def test_param_exceptions(self, param, msg, patch_jsonschema):
         s = _get_serialized_seq(
