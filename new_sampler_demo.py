@@ -1,7 +1,7 @@
 import pulser
 from pulser.devices import MockDevice
 from pulser.pulse import Pulse
-from pulser.sampler.sampler import SequenceSamples
+from pulser.sampler import sample
 from pulser.waveforms import RampWaveform
 
 reg = pulser.Register.rectangle(1, 2, prefix="q")
@@ -18,6 +18,6 @@ seq.delay(25, "aux")
 seq.add(Pulse.ConstantDetuning(RampWaveform(35, 0, 5), -4, 1), "aux")
 seq.add(Pulse.ConstantPulse(57, 17, -5, 0), "main")
 
-samples = SequenceSamples(seq)
+samples = sample(seq)
 print(samples)
 seq.draw()
