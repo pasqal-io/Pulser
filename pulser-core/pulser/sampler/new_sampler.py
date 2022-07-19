@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import itertools
+import typing
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import cast
@@ -11,10 +12,15 @@ import numpy as np
 from pulser.pulse import Pulse
 from pulser.sequence import QubitId, Sequence
 
-
 """Literal constants for addressing."""
 _GLOBAL = "Global"
 _LOCAL = "Local"
+
+
+def _pairwise(iterable: typing.Iterable) -> typing.Iterable:
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
 def _prepare_dict(N: int, in_xy: bool = False) -> dict:
@@ -142,7 +148,7 @@ class ChannelSamples:
 
         for t in self.slots:
             assert t.ti < t.tf  # well ordered slots
-        for t1, t2 in itertools.pairwise(self.slots):
+        for t1, t2 in _pairwise(self.slots):
             assert t1.tf <= t2.ti  # no overlaps on a given channel
 
 
