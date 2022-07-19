@@ -10,7 +10,8 @@ from typing import cast
 import numpy as np
 
 from pulser.pulse import Pulse
-from pulser.sequence import QubitId, Sequence
+from pulser.register import QubitId
+from pulser.sequence import Sequence
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
