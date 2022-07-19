@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from typing import Any
+from unittest.mock import patch
 
 import jsonschema
 import numpy as np
@@ -282,7 +283,11 @@ def _get_expression(op: dict) -> Any:
     return op["expression"]
 
 
-class TestDeserializarion:
+def _get_param(param: Any, *args) -> Any:
+    return str(param)
+
+
+class TestDeserialization:
     def test_deserialize_device_and_channels(self) -> None:
         s = _get_serialized_seq()
         _check_roundtrip(s)
@@ -759,21 +764,21 @@ class TestDeserializarion:
         "json_param",
         [
             {"expression": "neg", "lhs": {"variable": "var1"}},
-            {"expression": "abs", "lhs": {"variable": "var1"}},
+            {"expression": "abs", "lhs": var1},
             {"expression": "ceil", "lhs": {"variable": "var1"}},
-            {"expression": "floor", "lhs": {"variable": "var1"}},
-            {"expression": "sqrt", "lhs": {"variable": "var1"}},
-            {"expression": "exp", "lhs": {"variable": "var1"}},
-            {"expression": "log", "lhs": {"variable": "var1"}},
+            {"expression": "floor", "lhs": var1},
+            {"expression": "sqrt", "lhs": var1},
+            {"expression": "exp", "lhs": var1},
+            {"expression": "log", "lhs": var1},
             {"expression": "log2", "lhs": {"variable": "var1"}},
             {"expression": "sin", "lhs": {"variable": "var1"}},
-            {"expression": "cos", "lhs": {"variable": "var1"}},
+            {"expression": "cos", "lhs": var1},
             {"expression": "tan", "lhs": {"variable": "var1"}},
             {"expression": "index", "lhs": {"variable": "var1"}, "rhs": 0},
-            {"expression": "add", "lhs": {"variable": "var1"}, "rhs": 0.5},
+            {"expression": "add", "lhs": var1, "rhs": 0.5},
             {"expression": "sub", "lhs": {"variable": "var1"}, "rhs": 0.5},
             {"expression": "mul", "lhs": {"variable": "var1"}, "rhs": 0.5},
-            {"expression": "div", "lhs": {"variable": "var1"}, "rhs": 0.5},
+            {"expression": "div", "lhs": var1, "rhs": 0.5},
             {"expression": "pow", "lhs": {"variable": "var1"}, "rhs": 0.5},
             {"expression": "mod", "lhs": {"variable": "var1"}, "rhs": 2},
         ],
@@ -825,37 +830,114 @@ class TestDeserializarion:
         if expression == "neg":
             assert param == -seq_var1
         if expression == "abs":
-            assert param == abs(seq_var1)
+            assert param == abs(seq_var1[0])
         if expression == "ceil":
             assert param == np.ceil(seq_var1)
         if expression == "floor":
-            assert param == np.floor(seq_var1)
+            assert param == np.floor(seq_var1[0])
         if expression == "sqrt":
-            assert param == np.sqrt(seq_var1)
+            assert param == np.sqrt(seq_var1[0])
         if expression == "exp":
-            assert param == np.exp(seq_var1)
+            assert param == np.exp(seq_var1[0])
         if expression == "log":
-            assert param == np.log(seq_var1)
+            assert param == np.log(seq_var1[0])
         if expression == "log2":
             assert param == np.log2(seq_var1)
         if expression == "sin":
             assert param == np.sin(seq_var1)
         if expression == "cos":
-            assert param == np.cos(seq_var1)
+            assert param == np.cos(seq_var1[0])
         if expression == "tan":
             assert param == np.tan(seq_var1)
 
         if expression == "index":
             assert param == seq_var1[rhs]
         if expression == "add":
-            assert param == seq_var1 + rhs
+            assert param == seq_var1[0] + rhs
         if expression == "sub":
             assert param == seq_var1 - rhs
         if expression == "mul":
             assert param == seq_var1 * rhs
         if expression == "div":
-            assert param == seq_var1 / rhs
+            assert param == seq_var1[0] / rhs
         if expression == "pow":
             assert param == seq_var1**rhs
         if expression == "mod":
             assert param == seq_var1 % rhs
+
+    @pytest.mark.parametrize(
+        "param,msg,patch_jsonschema",
+        [
+            (
+                var1,
+                "Variable 'var1' used in operations but not found in declared "
+                "variables.",
+                False,
+            ),
+            (
+                {"abs": 1},
+                f"Parameter '{dict(abs=1)}' is neither a literal nor a "
+                "variable or an expression.",
+                True,
+            ),
+            (
+                {"expression": "floordiv", "lhs": 0, "rhs": 0},
+                "Expression 'floordiv' invalid.",
+                True,
+            ),
+        ],
+        ids=_get_param,
+    )
+    def test_param_exceptions(self, param, msg, patch_jsonschema):
+        s = _get_serialized_seq(
+            [
+                {
+                    "op": "delay",
+                    "time": param,
+                    "channel": "global",
+                }
+            ]
+        )
+        extra_params = {}
+        if patch_jsonschema:
+            std_error = jsonschema.exceptions.ValidationError
+            with patch("jsonschema.validate"):
+                with pytest.raises(AbstractReprError, match=msg):
+                    Sequence.from_abstract_repr(json.dumps(s))
+        else:
+            std_error = AbstractReprError
+            extra_params["match"] = msg
+        with pytest.raises(std_error, **extra_params):
+            Sequence.from_abstract_repr(json.dumps(s))
+
+    def test_unknow_waveform(self):
+        s = _get_serialized_seq(
+            [
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": 1,
+                    "post_phase_shift": 2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": 1000,
+                        "value": 2.0,
+                    },
+                    "detuning": {
+                        "kind": "gaussian",
+                        "duration": 1000,
+                        "value": -1,
+                    },
+                }
+            ]
+        )
+        with pytest.raises(jsonschema.exceptions.ValidationError):
+            Sequence.from_abstract_repr(json.dumps(s))
+
+        with pytest.raises(
+            AbstractReprError,
+            match="The object does not encode a known waveform.",
+        ):
+            with patch("jsonschema.validate"):
+                Sequence.from_abstract_repr(json.dumps(s))

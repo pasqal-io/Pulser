@@ -40,7 +40,7 @@ from pulser.waveforms import (
     Waveform,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pulser.sequence import Sequence
 
 with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
@@ -93,8 +93,8 @@ def _deserialize_parameter(
         # This is a reference to a variable.
         if param["variable"] not in vars:
             raise AbstractReprError(
-                f"Variable {param['variable']} used in operations "
-                "but not found in declared variables"
+                f"Variable '{param['variable']}' used in operations "
+                "but not found in declared variables."
             )
         return vars[param["variable"]]
 
@@ -102,7 +102,7 @@ def _deserialize_parameter(
         # Can't deserialize param if it is a dict without a
         # `variable` or an `expression` key
         raise AbstractReprError(
-            f"Parameter {param} is neither a literal nor "
+            f"Parameter '{param}' is neither a literal nor "
             "a variable or an expression."
         )
 
@@ -127,7 +127,7 @@ def _deserialize_parameter(
             ),
         )
     else:
-        raise AbstractReprError(f"Expression {param[expression]} invalid")
+        raise AbstractReprError(f"Expression '{param['expression']}' invalid.")
 
 
 def _deserialize_waveform(obj: dict, vars: dict) -> Waveform:
