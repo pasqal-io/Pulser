@@ -8,7 +8,7 @@ import numpy as np
 from pulser import Sequence
 from pulser.pulse import Pulse
 
-from . import samples
+from .. import samples
 
 
 def sample(seq: Sequence) -> samples.SequenceSamples:
