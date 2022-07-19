@@ -24,12 +24,13 @@ from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
-from pulser.json.signatures import (
+from pulser.json.abstract_repr.serializer import abstract_repr
+from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     SIGNATURES,
     UNARY_OPERATORS,
 )
-from pulser.json.utils import abstract_repr, obj_to_dict
+from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
+    # # TODO: Make operator methods' args pos-only when python 3.7 is dropped
     # Unary operators
     def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
@@ -228,7 +230,11 @@ class ParamObj(Parametrized, OpSupport):
                 "Serialization of calls to parametrized objects is not "
                 "supported."
             )
-        elif hasattr(self.args[0], op_name) and inspect.isfunction(self.cls):
+        elif (
+            self.args  # If it is a classmethod the first arg will be the class
+            and hasattr(self.args[0], op_name)
+            and inspect.isfunction(self.cls)
+        ):
             # Check for parametrized methods
             if inspect.isclass(self.args[0]):
                 # classmethod
@@ -306,7 +312,8 @@ class ParamObj(Parametrized, OpSupport):
         if isinstance(self.cls, Parametrized):
             name = str(self.cls)
         elif (
-            hasattr(self.args[0], self.cls.__name__)
+            self.args
+            and hasattr(self.args[0], self.cls.__name__)
             and inspect.isfunction(self.cls)
             and inspect.isclass(self.args[0])
         ):
@@ -315,3 +322,11 @@ class ParamObj(Parametrized, OpSupport):
         else:
             name = self.cls.__name__
         return f"{name}({', '.join(args+kwargs)})"
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, ParamObj):
+            return False
+        return self.args == other.args and self.kwargs == other.kwargs
+
+    def __hash__(self) -> int:
+        return id(self)

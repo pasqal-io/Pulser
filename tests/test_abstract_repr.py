@@ -11,7 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import json
+from collections.abc import Callable
+from typing import Any
+from unittest.mock import patch
 
 import jsonschema
 import numpy as np
@@ -19,9 +24,26 @@ import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
+from pulser.json.abstract_repr.deserializer import VARIABLE_TYPE_MAP
+from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.exceptions import AbstractReprError
-from pulser.json.utils import abstract_repr
-from pulser.waveforms import BlackmanWaveform, CompositeWaveform
+from pulser.parametrized.paramobj import ParamObj
+from pulser.parametrized.variable import VariableItem
+from pulser.waveforms import (
+    BlackmanWaveform,
+    CompositeWaveform,
+    ConstantWaveform,
+    CustomWaveform,
+    InterpolatedWaveform,
+    KaiserWaveform,
+    RampWaveform,
+    Waveform,
+)
+
+SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
+    "kaiser_max": (KaiserWaveform.from_max_val, ("max_val", "area", "beta")),
+    "blackman_max": (BlackmanWaveform.from_max_val, ("max_val", "area")),
+}
 
 # from tutorials/advanced_features/Serialization.ipynb
 qubits = {"control": (-2, 0), "target": (2, 0)}
@@ -61,7 +83,7 @@ seq.delay(100, "digital")
 seq.measure("digital")
 
 abstract = json.loads(
-    seq.abstract_repr(
+    seq.to_abstract_repr(
         target_atom=1,
         amps=[np.pi, 2 * np.pi],
         duration=200,
@@ -70,7 +92,7 @@ abstract = json.loads(
 
 
 def test_schema():
-    with open("pulser-core/pulser/json/abstract_repr_schema.json") as f:
+    with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
         schema = json.load(f)
     jsonschema.validate(instance=abstract, schema=schema)
 
@@ -183,14 +205,14 @@ def test_values():
 
 def test_exceptions():
     with pytest.raises(TypeError, match="not JSON serializable"):
-        Sequence(Register3D.cubic(2), MockDevice).abstract_repr()
+        Sequence(Register3D.cubic(2), MockDevice).to_abstract_repr()
 
     with pytest.raises(
         ValueError, match="No signature found for 'FakeWaveform'"
     ):
         abstract_repr("FakeWaveform", 100, 1)
 
-    with pytest.raises(ValueError, match="Not enough positional arguments"):
+    with pytest.raises(ValueError, match="Not enough arguments"):
         abstract_repr("ConstantWaveform", 1000)
 
     with pytest.raises(ValueError, match="Too many positional arguments"):
@@ -201,3 +223,717 @@ def test_exceptions():
 
     with pytest.raises(AbstractReprError, match="Name collisions encountered"):
         Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
+
+
+def _get_serialized_seq(
+    operations: list[dict] = None,
+    variables: dict[str, dict] = None,
+) -> dict[str, Any]:
+
+    return {
+        "version": "1",
+        "name": "John Doe",
+        "device": "Chadoq2",
+        "register": [
+            {"name": "q0", "x": 0.0, "y": 2.0},
+            {"name": "q42", "x": -2.0, "y": 9.0},
+            {"name": "q666", "x": 12.0, "y": 0.0},
+        ],
+        "channels": {"digital": "raman_local", "global": "rydberg_global"},
+        "operations": operations or [],
+        "variables": variables or {},
+        "measurement": None,
+    }
+
+
+def _check_roundtrip(serialized_seq: dict[str, Any]):
+    s = serialized_seq.copy()
+    # Replaces the special wfs when they are not parametrized
+    for op in s["operations"]:
+        if op["op"] == "pulse":
+            for wf in ("amplitude", "detuning"):
+                if op[wf]["kind"] in SPECIAL_WFS:
+                    wf_cls, wf_args = SPECIAL_WFS[op[wf]["kind"]]
+                    for val in op[wf].values():
+                        if isinstance(val, dict):
+                            # Parametrized
+                            break
+                    else:
+                        reconstructed_wf = wf_cls(
+                            *(op[wf][qty] for qty in wf_args)
+                        )
+                        op[wf] = reconstructed_wf._to_abstract_repr()
+
+    seq = Sequence.from_abstract_repr(json.dumps(s))
+    defaults = {name: var["value"] for name, var in s["variables"].items()}
+    rs = seq.to_abstract_repr(seq_name=serialized_seq["name"], **defaults)
+    assert s == json.loads(rs)
+
+
+# Needed to replace lambdas in the pytest.mark.parametrize calls (due to mypy)
+def _get_op(op: dict) -> Any:
+    return op["op"]
+
+
+def _get_kind(op: dict) -> Any:
+    return op["kind"]
+
+
+def _get_expression(op: dict) -> Any:
+    return op["expression"]
+
+
+class TestDeserialization:
+    def test_deserialize_device_and_channels(self) -> None:
+        s = _get_serialized_seq()
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # Check device name
+        assert seq._device.name == s["device"]
+
+        # Check channels
+        assert len(seq.declared_channels) == len(s["channels"])
+        for name, chan_id in s["channels"].items():
+            seq.declared_channels[name] == chan_id
+
+    def test_deserialize_register(self):
+        s = _get_serialized_seq()
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # Check register
+        assert len(seq.register.qubits) == len(s["register"])
+        for q in s["register"]:
+            assert q["name"] in seq.qubit_info
+            assert seq.qubit_info[q["name"]][0] == q["x"]
+            assert seq.qubit_info[q["name"]][1] == q["y"]
+
+    def test_deserialize_variables(self):
+        s = _get_serialized_seq(
+            variables={
+                "yolo": {"type": "int", "value": [42, 43, 44]},
+                "zou": {"type": "float", "value": [3.14]},
+            }
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # Check variables
+        assert len(seq.declared_variables) == len(s["variables"])
+        for k, v in s["variables"].items():
+            assert k in seq.declared_variables
+            assert seq.declared_variables[k].name == k
+            assert (
+                seq.declared_variables[k].dtype == VARIABLE_TYPE_MAP[v["type"]]
+            )
+            assert seq.declared_variables[k].size == len(v["value"])
+
+    @pytest.mark.parametrize(
+        "op",
+        [
+            {"op": "target", "target": 2, "channel": "digital"},
+            {"op": "delay", "time": 500, "channel": "global"},
+            {"op": "align", "channels": ["digital", "global"]},
+            {
+                "op": "phase_shift",
+                "phi": 42,
+                "targets": [0, 2],
+                "basis": "digital",
+            },
+            {
+                "op": "pulse",
+                "channel": "global",
+                "phase": 1,
+                "post_phase_shift": 2,
+                "protocol": "min-delay",
+                "amplitude": {
+                    "kind": "constant",
+                    "duration": 1000,
+                    "value": 3.14,
+                },
+                "detuning": {
+                    "kind": "ramp",
+                    "duration": 1000,
+                    "start": 1,
+                    "stop": 5,
+                },
+            },
+        ],
+        ids=_get_op,
+    )
+    def test_deserialize_non_parametrized_op(self, op):
+        s = _get_serialized_seq(operations=[op])
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # init + declare channels + 1 operation
+        offset = 1 + len(s["channels"])
+        assert len(seq._calls) == offset + 1
+        # No parametrized call
+        assert len(seq._to_build_calls) == 0
+
+        c = seq._calls[offset]
+        if op["op"] == "target":
+            assert c.name == "target_index"
+            assert c.kwargs["qubits"] == op["target"]
+            assert c.kwargs["channel"] == op["channel"]
+        elif op["op"] == "align":
+            assert c.name == "align"
+            assert c.args == tuple(op["channels"])
+        elif op["op"] == "delay":
+            assert c.name == "delay"
+            assert c.kwargs["duration"] == op["time"]
+            assert c.kwargs["channel"] == op["channel"]
+        elif op["op"] == "phase_shift":
+            assert c.name == "phase_shift_index"
+            assert c.args == tuple([op["phi"], *op["targets"]])
+        elif op["op"] == "pulse":
+            assert c.name == "add"
+            assert c.kwargs["channel"] == op["channel"]
+            assert c.kwargs["protocol"] == op["protocol"]
+            pulse = c.kwargs["pulse"]
+            assert isinstance(pulse, Pulse)
+            assert pulse.phase == op["phase"]
+            assert pulse.post_phase_shift == op["post_phase_shift"]
+            assert isinstance(pulse.amplitude, Waveform)
+            assert isinstance(pulse.detuning, Waveform)
+        else:
+            assert False, f"operation type \"{op['op']}\" is not valid"
+
+    @pytest.mark.parametrize(
+        "wf_obj",
+        [
+            {"kind": "constant", "duration": 1200, "value": 3.14},
+            {"kind": "ramp", "duration": 1200, "start": 1.14, "stop": 3},
+            {"kind": "blackman", "duration": 1200, "area": 2 * 3.14},
+            {"kind": "blackman_max", "max_val": 5, "area": 2 * 3.14},
+            {
+                "kind": "interpolated",
+                "duration": 2000,
+                "values": [1, 1.5, 1.7, 1.3],
+                "times": [0, 0.4, 0.8, 0.9],
+            },
+            {"kind": "kaiser", "duration": 2000, "area": 12, "beta": 1.1},
+            {"kind": "kaiser_max", "max_val": 6, "area": 12, "beta": 1.1},
+            {
+                "kind": "composite",
+                "waveforms": [
+                    {"kind": "constant", "duration": 104, "value": 1},
+                    {"kind": "constant", "duration": 208, "value": 2},
+                    {"kind": "constant", "duration": 312, "value": 3},
+                ],
+            },
+            {"kind": "custom", "samples": [i / 10 for i in range(0, 20)]},
+        ],
+        ids=_get_kind,
+    )
+    def test_deserialize_non_parametrized_waveform(self, wf_obj):
+        s = _get_serialized_seq(
+            operations=[
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": 1,
+                    "post_phase_shift": 2,
+                    "protocol": "min-delay",
+                    "amplitude": wf_obj,
+                    "detuning": wf_obj,
+                }
+            ]
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # init + declare channels + 1 operation
+        offset = 1 + len(s["channels"])
+        assert len(seq._calls) == offset + 1
+        # No parametrized call
+        assert len(seq._to_build_calls) == 0
+
+        c = seq._calls[offset]
+        pulse: Pulse = c.kwargs["pulse"]
+        wf = pulse.amplitude
+
+        if wf_obj["kind"] == "constant":
+            assert isinstance(wf, ConstantWaveform)
+            assert wf.duration == wf_obj["duration"]
+            assert wf._value == wf_obj["value"]
+
+        elif wf_obj["kind"] == "ramp":
+            assert isinstance(wf, RampWaveform)
+            assert wf.duration == wf_obj["duration"]
+            assert wf._start == wf_obj["start"]
+            assert wf._stop == wf_obj["stop"]
+
+        elif wf_obj["kind"] == "blackman":
+            assert isinstance(wf, BlackmanWaveform)
+            assert wf.duration == wf_obj["duration"]
+            assert wf._area == wf_obj["area"]
+
+        elif wf_obj["kind"] == "blackman_max":
+            assert isinstance(wf, BlackmanWaveform)
+            assert wf._area == wf_obj["area"]
+            expected_duration = BlackmanWaveform.from_max_val(
+                wf_obj["max_val"], wf_obj["area"]
+            ).duration
+            assert wf.duration == expected_duration
+
+        elif wf_obj["kind"] == "interpolated":
+            assert isinstance(wf, InterpolatedWaveform)
+            assert np.array_equal(wf._values, wf_obj["values"])
+            assert np.array_equal(wf._times, wf_obj["times"])
+
+        elif wf_obj["kind"] == "kaiser":
+            assert isinstance(wf, KaiserWaveform)
+            assert wf.duration == wf_obj["duration"]
+            assert wf._area == wf_obj["area"]
+            assert wf._beta == wf_obj["beta"]
+
+        elif wf_obj["kind"] == "kaiser_max":
+            assert isinstance(wf, KaiserWaveform)
+            assert wf._area == wf_obj["area"]
+            assert wf._beta == wf_obj["beta"]
+            expected_duration = KaiserWaveform.from_max_val(
+                wf_obj["max_val"], wf_obj["area"], wf_obj["beta"]
+            ).duration
+            assert wf.duration == expected_duration
+
+        elif wf_obj["kind"] == "composite":
+            assert isinstance(wf, CompositeWaveform)
+            assert all(isinstance(w, Waveform) for w in wf._waveforms)
+
+        elif wf_obj["kind"] == "custom":
+            assert isinstance(wf, CustomWaveform)
+            assert np.array_equal(wf._samples, wf_obj["samples"])
+
+    def test_deserialize_measurement(self):
+        s = _get_serialized_seq()
+        _check_roundtrip(s)
+        s["measurement"] = "ground-rydberg"
+
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        assert seq._measurement == s["measurement"]
+
+    var1 = {
+        "expression": "index",
+        "lhs": {"variable": "var1"},
+        "rhs": 0,
+    }
+
+    var2 = {
+        "expression": "index",
+        "lhs": {"variable": "var2"},
+        "rhs": 0,
+    }
+
+    var3 = {
+        "expression": "index",
+        "lhs": {"variable": "var3"},
+        "rhs": 0,
+    }
+
+    @pytest.mark.parametrize(
+        "op",
+        [
+            {"op": "target", "target": var1, "channel": "digital"},
+            {"op": "delay", "time": var2, "channel": "global"},
+            {
+                "op": "phase_shift",
+                "phi": var1,
+                "targets": [2, var1],
+                "basis": "digital",
+            },
+            {
+                "op": "pulse",
+                "channel": "global",
+                "phase": var1,
+                "post_phase_shift": var2,
+                "protocol": "min-delay",
+                "amplitude": {
+                    "kind": "constant",
+                    "duration": var2,
+                    "value": 3.14,
+                },
+                "detuning": {
+                    "kind": "ramp",
+                    "duration": var2,
+                    "start": 1,
+                    "stop": 5,
+                },
+            },
+        ],
+        ids=_get_op,
+    )
+    def test_deserialize_parametrized_op(self, op):
+        s = _get_serialized_seq(
+            operations=[op],
+            variables={
+                "var1": {"type": "int", "value": [0]},
+                "var2": {"type": "int", "value": [42]},
+            },
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # init + declare channels + 1 operation
+        offset = 1 + len(s["channels"])
+        assert len(seq._calls) == offset
+        # No parametrized call
+        assert len(seq._to_build_calls) == 1
+
+        c = seq._to_build_calls[0]
+        if op["op"] == "target":
+            assert c.name == "target_index"
+            assert isinstance(c.kwargs["qubits"], VariableItem)
+            assert c.kwargs["channel"] == op["channel"]
+        elif op["op"] == "delay":
+            assert c.name == "delay"
+            assert c.kwargs["channel"] == op["channel"]
+            assert isinstance(c.kwargs["duration"], VariableItem)
+        elif op["op"] == "phase_shift":
+            assert c.name == "phase_shift_index"
+            # phi is variable
+            assert isinstance(c.args[0], VariableItem)
+            # qubit 1 is fixed
+            assert c.args[1] == 2
+            # qubit 2 is variable
+            assert isinstance(c.args[2], VariableItem)
+        elif op["op"] == "pulse":
+            assert c.name == "add"
+            assert c.kwargs["channel"] == op["channel"]
+            assert c.kwargs["protocol"] == op["protocol"]
+            pulse = c.kwargs["pulse"]
+            assert isinstance(pulse, ParamObj)
+            assert pulse.cls == Pulse
+            assert isinstance(pulse.kwargs["phase"], VariableItem)
+            assert isinstance(pulse.kwargs["post_phase_shift"], VariableItem)
+
+            assert isinstance(pulse.kwargs["amplitude"], ParamObj)
+            assert issubclass(pulse.kwargs["amplitude"].cls, Waveform)
+            assert isinstance(pulse.kwargs["detuning"], ParamObj)
+            assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
+        else:
+            assert False, f"operation type \"{op['op']}\" is not valid"
+
+    @pytest.mark.parametrize(
+        "wf_obj",
+        [
+            {"kind": "constant", "duration": var1, "value": var2},
+            {
+                "kind": "ramp",
+                "duration": var1,
+                "start": var2,
+                "stop": var3,
+            },
+            {"kind": "blackman", "duration": var1, "area": var2},
+            {"kind": "blackman_max", "max_val": var3, "area": var2},
+            {
+                "kind": "interpolated",
+                "duration": var1,
+                "values": {"variable": "var_values"},
+                "times": {"variable": "var_times"},
+            },
+            {
+                "kind": "kaiser",
+                "duration": var1,
+                "area": var3,
+                "beta": var2,
+            },
+            {
+                "kind": "kaiser_max",
+                "max_val": var2,
+                "area": var2,
+                "beta": var2,
+            },
+            {
+                "kind": "composite",
+                "waveforms": [
+                    {
+                        "kind": "constant",
+                        "duration": var1,
+                        "value": var2,
+                    },
+                    {
+                        "kind": "constant",
+                        "duration": var1,
+                        "value": var2,
+                    },
+                    {
+                        "kind": "constant",
+                        "duration": var1,
+                        "value": var2,
+                    },
+                ],
+            },
+        ],
+        ids=_get_kind,
+    )
+    def test_deserialize_parametrized_waveform(self, wf_obj):
+        # var1,2 = duration 1000, 2000
+        # var2,4 = value - 2, 5
+        s = _get_serialized_seq(
+            operations=[
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": 1,
+                    "post_phase_shift": 2,
+                    "protocol": "min-delay",
+                    "amplitude": wf_obj,
+                    "detuning": wf_obj,
+                }
+            ],
+            variables={
+                "var1": {"type": "int", "value": [1000]},
+                "var2": {"type": "int", "value": [2]},
+                "var3": {"type": "int", "value": [5]},
+                "var_values": {"type": "float", "value": [1, 1.5, 1.7, 1.3]},
+                "var_times": {"type": "float", "value": [0, 0.4, 0.8, 0.9]},
+            },
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        seq_var1 = seq._variables["var1"]
+        seq_var2 = seq._variables["var2"]
+        seq_var3 = seq._variables["var3"]
+        seq_var_values = seq._variables["var_values"]
+        seq_var_times = seq._variables["var_times"]
+
+        # init + declare channels + 1 operation
+        offset = 1 + len(s["channels"])
+        assert len(seq._calls) == offset
+        # No parametrized call
+        assert len(seq._to_build_calls) == 1
+
+        c = seq._to_build_calls[0]
+        pulse: Pulse = c.kwargs["pulse"]
+        wf = pulse.kwargs["amplitude"]
+
+        if wf_obj["kind"] == "constant":
+            assert wf.cls == ConstantWaveform
+            assert wf.kwargs["duration"] == seq_var1[0]
+            assert wf.kwargs["value"] == seq_var2[0]
+
+        elif wf_obj["kind"] == "ramp":
+            assert wf.cls == RampWaveform
+            assert wf.kwargs["duration"] == seq_var1[0]
+            assert wf.kwargs["start"] == seq_var2[0]
+            assert wf.kwargs["stop"] == seq_var3[0]
+
+        elif wf_obj["kind"] == "blackman":
+            assert wf.cls == BlackmanWaveform
+            assert wf.kwargs["duration"] == seq_var1[0]
+            assert wf.kwargs["area"] == seq_var2[0]
+
+        elif wf_obj["kind"] == "blackman_max":
+            assert wf.cls == BlackmanWaveform.from_max_val.__wrapped__
+            assert wf.kwargs["area"] == seq_var2[0]
+            assert wf.kwargs["max_val"] == seq_var3[0]
+
+        elif wf_obj["kind"] == "interpolated":
+            assert wf.cls == InterpolatedWaveform
+            assert wf.kwargs["duration"] == seq_var1[0]
+            assert wf.kwargs["values"] == seq_var_values
+            assert wf.kwargs["times"] == seq_var_times
+
+        elif wf_obj["kind"] == "kaiser":
+            assert wf.cls == KaiserWaveform
+            assert wf.kwargs["duration"] == seq_var1[0]
+            assert wf.kwargs["area"] == seq_var3[0]
+            assert wf.kwargs["beta"] == seq_var2[0]
+
+        elif wf_obj["kind"] == "kaiser_max":
+            assert wf.cls == KaiserWaveform.from_max_val.__wrapped__
+            assert wf.kwargs["area"] == seq_var2[0]
+            assert wf.kwargs["beta"] == seq_var2[0]
+            assert wf.kwargs["max_val"] == seq_var2[0]
+
+        elif wf_obj["kind"] == "composite":
+            assert wf.cls == CompositeWaveform
+            assert all(isinstance(w, ParamObj) for w in wf.args)
+            assert all(issubclass(w.cls, Waveform) for w in wf.args)
+
+    @pytest.mark.parametrize(
+        "json_param",
+        [
+            {"expression": "neg", "lhs": {"variable": "var1"}},
+            {"expression": "abs", "lhs": var1},
+            {"expression": "ceil", "lhs": {"variable": "var1"}},
+            {"expression": "floor", "lhs": var1},
+            {"expression": "sqrt", "lhs": var1},
+            {"expression": "exp", "lhs": var1},
+            {"expression": "log", "lhs": var1},
+            {"expression": "log2", "lhs": {"variable": "var1"}},
+            {"expression": "sin", "lhs": {"variable": "var1"}},
+            {"expression": "cos", "lhs": var1},
+            {"expression": "tan", "lhs": {"variable": "var1"}},
+            {"expression": "index", "lhs": {"variable": "var1"}, "rhs": 0},
+            {"expression": "add", "lhs": var1, "rhs": 0.5},
+            {"expression": "sub", "lhs": {"variable": "var1"}, "rhs": 0.5},
+            {"expression": "mul", "lhs": {"variable": "var1"}, "rhs": 0.5},
+            {"expression": "div", "lhs": var1, "rhs": 0.5},
+            {"expression": "pow", "lhs": {"variable": "var1"}, "rhs": 0.5},
+            {"expression": "mod", "lhs": {"variable": "var1"}, "rhs": 2},
+        ],
+        ids=_get_expression,
+    )
+    def test_deserialize_param(self, json_param):
+        s = _get_serialized_seq(
+            operations=[
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": 1,
+                    "post_phase_shift": 2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": 1000,
+                        "value": 2.0,
+                    },
+                    "detuning": {
+                        "kind": "constant",
+                        "duration": 1000,
+                        "value": json_param,
+                    },
+                }
+            ],
+            variables={
+                "var1": {"type": "float", "value": [1.5]},
+            },
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        seq_var1 = seq._variables["var1"]
+
+        # init + declare channels + 1 operation
+        offset = 1 + len(s["channels"])
+        assert len(seq._calls) == offset
+        # No parametrized call
+        assert len(seq._to_build_calls) == 1
+
+        c = seq._to_build_calls[0]
+        pulse: ParamObj = c.kwargs["pulse"]
+        wf = pulse.kwargs["detuning"]
+        param = wf.kwargs["value"]
+
+        expression = json_param["expression"]
+        rhs = json_param.get("rhs")
+
+        if expression == "neg":
+            assert param == -seq_var1
+        if expression == "abs":
+            assert param == abs(seq_var1[0])
+        if expression == "ceil":
+            assert param == np.ceil(seq_var1)
+        if expression == "floor":
+            assert param == np.floor(seq_var1[0])
+        if expression == "sqrt":
+            assert param == np.sqrt(seq_var1[0])
+        if expression == "exp":
+            assert param == np.exp(seq_var1[0])
+        if expression == "log":
+            assert param == np.log(seq_var1[0])
+        if expression == "log2":
+            assert param == np.log2(seq_var1)
+        if expression == "sin":
+            assert param == np.sin(seq_var1)
+        if expression == "cos":
+            assert param == np.cos(seq_var1[0])
+        if expression == "tan":
+            assert param == np.tan(seq_var1)
+
+        if expression == "index":
+            assert param == seq_var1[rhs]
+        if expression == "add":
+            assert param == seq_var1[0] + rhs
+        if expression == "sub":
+            assert param == seq_var1 - rhs
+        if expression == "mul":
+            assert param == seq_var1 * rhs
+        if expression == "div":
+            assert param == seq_var1[0] / rhs
+        if expression == "pow":
+            assert param == seq_var1**rhs
+        if expression == "mod":
+            assert param == seq_var1 % rhs
+
+    @pytest.mark.parametrize(
+        "param,msg,patch_jsonschema",
+        [
+            (
+                var1,
+                "Variable 'var1' used in operations but not found in declared "
+                "variables.",
+                False,
+            ),
+            (
+                {"abs": 1},
+                f"Parameter '{dict(abs=1)}' is neither a literal nor a "
+                "variable or an expression.",
+                True,
+            ),
+            (
+                {"expression": "floordiv", "lhs": 0, "rhs": 0},
+                "Expression 'floordiv' invalid.",
+                True,
+            ),
+        ],
+        ids=["bad_var", "bad_param", "bad_exp"],
+    )
+    def test_param_exceptions(self, param, msg, patch_jsonschema):
+        s = _get_serialized_seq(
+            [
+                {
+                    "op": "delay",
+                    "time": param,
+                    "channel": "global",
+                }
+            ]
+        )
+        extra_params = {}
+        if patch_jsonschema:
+            std_error = jsonschema.exceptions.ValidationError
+            with patch("jsonschema.validate"):
+                with pytest.raises(AbstractReprError, match=msg):
+                    Sequence.from_abstract_repr(json.dumps(s))
+        else:
+            std_error = AbstractReprError
+            extra_params["match"] = msg
+        with pytest.raises(std_error, **extra_params):
+            Sequence.from_abstract_repr(json.dumps(s))
+
+    def test_unknow_waveform(self):
+        s = _get_serialized_seq(
+            [
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": 1,
+                    "post_phase_shift": 2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": 1000,
+                        "value": 2.0,
+                    },
+                    "detuning": {
+                        "kind": "gaussian",
+                        "duration": 1000,
+                        "value": -1,
+                    },
+                }
+            ]
+        )
+        with pytest.raises(jsonschema.exceptions.ValidationError):
+            Sequence.from_abstract_repr(json.dumps(s))
+
+        with pytest.raises(
+            AbstractReprError,
+            match="The object does not encode a known waveform.",
+        ):
+            with patch("jsonschema.validate"):
+                Sequence.from_abstract_repr(json.dumps(s))

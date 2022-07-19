@@ -11,20 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Custom exceptions for serialization errors."""
-
-
-class SerializationError(Exception):
-    """Exception raised when sequence serialization fails."""
-
-    pass
-
-
-class AbstractReprError(Exception):
-    """Exception raised for abstract representation errors.
-
-    Raised when an error occurs during the serialization to or deserialization
-    from the abstract representation.
-    """
-
-    pass
+"""Serialization and deserialization tools for the abstract representation."""

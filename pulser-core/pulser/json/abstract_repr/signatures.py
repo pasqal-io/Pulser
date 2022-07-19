@@ -11,14 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Defines the signatures of objects for the abstract representation."""
 from __future__ import annotations
 
+import operator
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+import numpy as np
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pulser.parametrized.variable import Variable, VariableItem
 
 
 @dataclass
 class PulserSignature:
+    """The signature of a Pulser object."""
+
     pos: tuple[str, ...] = field(default_factory=tuple)
     var_pos: Optional[str] = None
     keyword: tuple[str, ...] = field(default_factory=tuple)
@@ -69,18 +79,31 @@ SIGNATURES: dict[str, PulserSignature] = {
     "round_": PulserSignature(pos=("lhs",), extra=dict(expression="round")),
 }
 
-BINARY_OPERATORS = ("add", "sub", "mul", "truediv", "pow", "mod")
 
-UNARY_OPERATORS = (
-    "neg",
-    "abs",
-    "ceil",
-    "floor",
-    "sqrt",
-    "exp",
-    "log2",
-    "log",
-    "sin",
-    "cos",
-    "tan",
-)
+def _index_var(lhs: Variable, rhs: int) -> VariableItem:
+    return lhs[rhs]
+
+
+BINARY_OPERATORS: dict[str, Callable] = {
+    "add": operator.add,
+    "sub": operator.sub,
+    "mul": operator.mul,
+    "truediv": operator.truediv,
+    "pow": operator.pow,
+    "mod": operator.mod,
+    "index": _index_var,
+}
+
+UNARY_OPERATORS: dict[str, Callable] = {
+    "neg": operator.neg,
+    "abs": operator.abs,
+    "ceil": np.ceil,
+    "floor": np.floor,
+    "sqrt": np.sqrt,
+    "exp": np.exp,
+    "log2": np.log2,
+    "log": np.log,
+    "sin": np.sin,
+    "cos": np.cos,
+    "tan": np.tan,
+}
