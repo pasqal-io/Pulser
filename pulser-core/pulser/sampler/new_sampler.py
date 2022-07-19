@@ -15,6 +15,9 @@ from pulser.sequence import QubitId, Sequence
 """Literal constants for addressing."""
 _GLOBAL = "Global"
 _LOCAL = "Local"
+_AMP = "amp"
+_DET = "det"
+_PHASE = "phase"
 
 
 def _pairwise(iterable: typing.Iterable) -> typing.Iterable:
@@ -31,9 +34,9 @@ def _prepare_dict(N: int, in_xy: bool = False) -> dict:
 
     def new_qty_dict() -> dict:
         return {
-            "amp": np.zeros(N),
-            "det": np.zeros(N),
-            "phase": np.zeros(N),
+            _AMP: np.zeros(N),
+            _DET: np.zeros(N),
+            _PHASE: np.zeros(N),
         }
 
     def new_qdict() -> dict:
@@ -86,15 +89,15 @@ class SequenceSamples:
             addr = self._addrs[chname]
             basis = self._bases[chname]
             if addr == _GLOBAL:
-                d[_GLOBAL][basis]["amp"] += cs.amp
-                d[_GLOBAL][basis]["det"] += cs.det
-                d[_GLOBAL][basis]["phase"] += cs.phase
+                d[_GLOBAL][basis][_AMP] += cs.amp
+                d[_GLOBAL][basis][_DET] += cs.det
+                d[_GLOBAL][basis][_PHASE] += cs.phase
             else:
                 for s in cs.slots:
                     for t in s.targets:
-                        d[_LOCAL][basis][t]["amp"][s.ti : s.tf] += cs.amp
-                        d[_LOCAL][basis][t]["det"][s.ti : s.tf] += cs.det
-                        d[_LOCAL][basis][t]["phase"][s.ti : s.tf] += cs.phase
+                        d[_LOCAL][basis][t][_AMP][s.ti : s.tf] += cs.amp
+                        d[_LOCAL][basis][t][_DET][s.ti : s.tf] += cs.det
+                        d[_LOCAL][basis][t][_PHASE][s.ti : s.tf] += cs.phase
 
         return _default_to_regular(d)
 
