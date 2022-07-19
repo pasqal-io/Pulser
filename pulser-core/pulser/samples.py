@@ -1,3 +1,4 @@
+"""Contains dataclasses for samples and some helper functions."""
 from __future__ import annotations
 
 import itertools
