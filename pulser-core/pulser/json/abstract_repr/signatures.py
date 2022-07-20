@@ -34,6 +34,15 @@ class PulserSignature:
     keyword: tuple[str, ...] = field(default_factory=tuple)
     extra: dict[str, str] = field(default_factory=dict)
 
+    def all_pos_args(self) -> tuple[str, ...]:
+        """All potential positional arguments.
+
+        Includes the keyword args if var_pos is None.
+        """
+        if self.var_pos is not None:
+            return self.pos
+        return (*self.pos, *self.keyword)
+
 
 SIGNATURES: dict[str, PulserSignature] = {
     # Waveforms

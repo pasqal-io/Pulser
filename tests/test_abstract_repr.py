@@ -25,10 +25,15 @@ import pytest
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.abstract_repr.deserializer import VARIABLE_TYPE_MAP
-from pulser.json.abstract_repr.serializer import abstract_repr
+from pulser.json.abstract_repr.serializer import (
+    AbstractReprEncoder,
+    abstract_repr,
+)
 from pulser.json.exceptions import AbstractReprError
+from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import VariableItem
+from pulser.sequence._call import _Call
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
@@ -45,184 +50,317 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
     "blackman_max": (BlackmanWaveform.from_max_val, ("max_val", "area")),
 }
 
-# from tutorials/advanced_features/Serialization.ipynb
-qubits = {"control": (-2, 0), "target": (2, 0)}
-reg = Register(qubits)
 
-seq = Sequence(reg, Chadoq2)
-seq.declare_channel("digital", "raman_local", initial_target="control")
-seq.declare_channel("rydberg", "rydberg_local", initial_target="control")
+class TestSerialization:
+    @pytest.fixture
+    def sequence(self):
+        qubits = {"control": (-2, 0), "target": (2, 0)}
+        reg = Register(qubits)
 
-target_atom = seq.declare_variable("target_atom", dtype=int)
-duration = seq.declare_variable("duration", dtype=int)
-amps = seq.declare_variable("amps", dtype=float, size=2)
+        seq = Sequence(reg, Chadoq2)
+        seq.declare_channel("digital", "raman_local", initial_target="control")
+        seq.declare_channel(
+            "rydberg", "rydberg_local", initial_target="control"
+        )
 
-half_pi_wf = BlackmanWaveform(200, np.pi / 2)
+        target_atom = seq.declare_variable("target_atom", dtype=int)
+        duration = seq.declare_variable("duration", dtype=int)
+        amps = seq.declare_variable("amps", dtype=float, size=2)
 
-ry = Pulse.ConstantDetuning(amplitude=half_pi_wf, detuning=0, phase=-np.pi / 2)
+        half_pi_wf = BlackmanWaveform(200, np.pi / 2)
 
-seq.add(ry, "digital")
-seq.target_index(target_atom, "digital")
+        ry = Pulse.ConstantDetuning(
+            amplitude=half_pi_wf, detuning=0, phase=-np.pi / 2
+        )
 
-pi_2_wf = BlackmanWaveform(duration, amps[0] / 2)
-pi_pulse = Pulse.ConstantDetuning(CompositeWaveform(pi_2_wf, pi_2_wf), 0, 0)
+        seq.add(ry, "digital")
+        seq.target_index(target_atom, "digital")
+        seq.phase_shift_index(-1.0, target_atom)
 
-max_val = Chadoq2.rabi_from_blockade(8)
-two_pi_wf = BlackmanWaveform.from_max_val(max_val, amps[1])
-two_pi_pulse = Pulse.ConstantDetuning(two_pi_wf, 0, 0)
+        pi_2_wf = BlackmanWaveform(duration, amps[0] / 2)
+        pi_pulse = Pulse.ConstantDetuning(
+            CompositeWaveform(pi_2_wf, pi_2_wf), 0, 0
+        )
 
-seq.align("digital", "rydberg")
-seq.add(pi_pulse, "rydberg")
-seq.target("target", "rydberg")
-seq.add(two_pi_pulse, "rydberg")
-seq.target("control", "rydberg")
-seq.add(pi_pulse, "rydberg")
+        max_val = Chadoq2.rabi_from_blockade(8)
+        two_pi_wf = BlackmanWaveform.from_max_val(max_val, amps[1])
+        two_pi_pulse = Pulse.ConstantDetuning(two_pi_wf, 0, 0)
 
-seq.align("digital", "rydberg")
-seq.delay(100, "digital")
-seq.measure("digital")
+        seq.align("digital", "rydberg")
+        seq.add(pi_pulse, "rydberg")
+        seq.phase_shift(1.0, "control", "target", basis="ground-rydberg")
+        seq.target("target", "rydberg")
+        seq.add(two_pi_pulse, "rydberg")
 
-abstract = json.loads(
-    seq.to_abstract_repr(
-        target_atom=1,
-        amps=[np.pi, 2 * np.pi],
-        duration=200,
-    )
-)
+        seq.delay(100, "digital")
+        seq.measure("digital")
+        return seq
 
+    @pytest.fixture
+    def abstract(self, sequence):
+        return json.loads(
+            sequence.to_abstract_repr(
+                target_atom=1,
+                amps=[np.pi, 2 * np.pi],
+                duration=200,
+            )
+        )
 
-def test_schema():
-    with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
-        schema = json.load(f)
-    jsonschema.validate(instance=abstract, schema=schema)
+    def test_schema(self, abstract):
+        with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
+            schema = json.load(f)
+        jsonschema.validate(instance=abstract, schema=schema)
 
-
-def test_values():
-    assert set(abstract.keys()) == set(
-        [
-            "name",
-            "version",
-            "device",
-            "register",
-            "variables",
-            "channels",
-            "operations",
-            "measurement",
+    def test_values(self, abstract):
+        assert set(abstract.keys()) == set(
+            [
+                "name",
+                "version",
+                "device",
+                "register",
+                "variables",
+                "channels",
+                "operations",
+                "measurement",
+            ]
+        )
+        assert abstract["device"] == "Chadoq2"
+        assert abstract["register"] == [
+            {"name": "control", "x": -2.0, "y": 0.0},
+            {"name": "target", "x": 2.0, "y": 0.0},
         ]
-    )
-    assert abstract["device"] == "Chadoq2"
-    assert abstract["register"] == [
-        {"name": "control", "x": -2.0, "y": 0.0},
-        {"name": "target", "x": 2.0, "y": 0.0},
-    ]
-    assert abstract["channels"] == {
-        "digital": "raman_local",
-        "rydberg": "rydberg_local",
-    }
-    assert abstract["variables"] == {
-        "target_atom": {"type": "int", "value": [1]},
-        "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
-        "duration": {"type": "int", "value": [200]},
-    }
-    assert len(abstract["operations"]) == 12
-    assert abstract["operations"][0] == {
-        "op": "target",
-        "channel": "digital",
-        "target": 0,
-    }
+        assert abstract["channels"] == {
+            "digital": "raman_local",
+            "rydberg": "rydberg_local",
+        }
+        assert abstract["variables"] == {
+            "target_atom": {"type": "int", "value": [1]},
+            "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
+            "duration": {"type": "int", "value": [200]},
+        }
+        assert len(abstract["operations"]) == 11
+        assert abstract["operations"][0] == {
+            "op": "target",
+            "channel": "digital",
+            "target": 0,
+        }
 
-    assert abstract["operations"][2] == {
-        "op": "pulse",
-        "channel": "digital",
-        "protocol": "min-delay",
-        "amplitude": {
-            "area": 1.5707963267948966,
-            "duration": 200,
-            "kind": "blackman",
-        },
-        "detuning": {
-            "kind": "constant",
-            "duration": 200,
-            "value": 0.0,
-        },
-        "phase": 4.71238898038469,
-        "post_phase_shift": 0.0,
-    }
+        assert abstract["operations"][2] == {
+            "op": "pulse",
+            "channel": "digital",
+            "protocol": "min-delay",
+            "amplitude": {
+                "area": 1.5707963267948966,
+                "duration": 200,
+                "kind": "blackman",
+            },
+            "detuning": {
+                "kind": "constant",
+                "duration": 200,
+                "value": 0.0,
+            },
+            "phase": 4.71238898038469,
+            "post_phase_shift": 0.0,
+        }
 
-    assert abstract["operations"][3] == {
-        "op": "target",
-        "channel": "digital",
-        "target": {
+        assert abstract["operations"][3] == {
+            "op": "target",
+            "channel": "digital",
+            "target": {
+                "expression": "index",
+                "lhs": {"variable": "target_atom"},
+                "rhs": 0,
+            },
+        }
+
+        assert abstract["operations"][5] == {
+            "op": "align",
+            "channels": ["digital", "rydberg"],
+        }
+
+        duration_ref = {
             "expression": "index",
-            "lhs": {"variable": "target_atom"},
+            "lhs": {"variable": "duration"},
             "rhs": 0,
-        },
-    }
+        }
+        amp0_ref = {
+            "expression": "index",
+            "lhs": {"variable": "amps"},
+            "rhs": 0,
+        }
+        blackman_wf_dict = {
+            "kind": "blackman",
+            "duration": duration_ref,
+            "area": {"expression": "div", "lhs": amp0_ref, "rhs": 2},
+        }
+        composite_wf_dict = {
+            "kind": "composite",
+            "waveforms": [blackman_wf_dict, blackman_wf_dict],
+        }
 
-    assert abstract["operations"][4] == {
-        "op": "align",
-        "channels": ["digital", "rydberg"],
-    }
+        assert abstract["operations"][6] == {
+            "op": "pulse",
+            "channel": "rydberg",
+            "protocol": "min-delay",
+            "amplitude": composite_wf_dict,
+            "detuning": {"kind": "constant", "duration": 0, "value": 0.0},
+            "phase": 0.0,
+            "post_phase_shift": 0.0,
+        }
 
-    duration_ref = {
-        "expression": "index",
-        "lhs": {"variable": "duration"},
-        "rhs": 0,
-    }
-    amp0_ref = {
-        "expression": "index",
-        "lhs": {"variable": "amps"},
-        "rhs": 0,
-    }
-    blackman_wf_dict = {
-        "kind": "blackman",
-        "duration": duration_ref,
-        "area": {"expression": "div", "lhs": amp0_ref, "rhs": 2},
-    }
-    composite_wf_dict = {
-        "kind": "composite",
-        "waveforms": [blackman_wf_dict, blackman_wf_dict],
-    }
+        assert abstract["operations"][10] == {
+            "op": "delay",
+            "channel": "digital",
+            "time": 100,
+        }
 
-    assert abstract["operations"][5] == {
-        "op": "pulse",
-        "channel": "rydberg",
-        "protocol": "min-delay",
-        "amplitude": composite_wf_dict,
-        "detuning": {"kind": "constant", "duration": 0, "value": 0.0},
-        "phase": 0.0,
-        "post_phase_shift": 0.0,
-    }
+        assert abstract["measurement"] == "digital"
 
-    assert abstract["operations"][11] == {
-        "op": "delay",
-        "channel": "digital",
-        "time": 100,
-    }
+    def test_exceptions(self, sequence):
+        with pytest.raises(TypeError, match="not JSON serializable"):
+            Sequence(Register3D.cubic(2), MockDevice).to_abstract_repr()
 
-    assert abstract["measurement"] == "digital"
+        with pytest.raises(
+            ValueError, match="No signature found for 'FakeWaveform'"
+        ):
+            abstract_repr("FakeWaveform", 100, 1)
 
+        with pytest.raises(ValueError, match="Not enough arguments"):
+            abstract_repr("ConstantWaveform", 1000)
 
-def test_exceptions():
-    with pytest.raises(TypeError, match="not JSON serializable"):
-        Sequence(Register3D.cubic(2), MockDevice).to_abstract_repr()
+        with pytest.raises(ValueError, match="Too many positional arguments"):
+            abstract_repr("ConstantWaveform", 1000, 1, 4)
 
-    with pytest.raises(
-        ValueError, match="No signature found for 'FakeWaveform'"
-    ):
-        abstract_repr("FakeWaveform", 100, 1)
+        with pytest.raises(ValueError, match="'foo' is not in the signature"):
+            abstract_repr("ConstantWaveform", 1000, 1, foo=0)
 
-    with pytest.raises(ValueError, match="Not enough arguments"):
-        abstract_repr("ConstantWaveform", 1000)
+        with pytest.raises(
+            AbstractReprError, match="Name collisions encountered"
+        ):
+            Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
 
-    with pytest.raises(ValueError, match="Too many positional arguments"):
-        abstract_repr("ConstantWaveform", 1000, 1, 4)
+        with pytest.raises(
+            AbstractReprError,
+            match="Export of an InterpolatedWaveform is only supported for the"
+            " 'PchipInterpolator'",
+        ):
+            InterpolatedWaveform(
+                1000, [0, 1, 0], interpolator="interp1d"
+            )._to_abstract_repr()
 
-    with pytest.raises(ValueError, match="'foo' is not in the signature"):
-        abstract_repr("ConstantWaveform", 1000, 1, foo=0)
+        with pytest.raises(
+            AbstractReprError, match="without any 'interpolator_kwargs'"
+        ):
+            InterpolatedWaveform(
+                1000, [0, 1, 0], extrapolate=False
+            )._to_abstract_repr()
 
-    with pytest.raises(AbstractReprError, match="Name collisions encountered"):
-        Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
+        with pytest.raises(
+            ValueError,
+            match="The given 'defaults' produce an invalid sequence.",
+        ):
+            sequence.to_abstract_repr(
+                target_atom=1,
+                amps=[-np.pi, 2 * np.pi],
+                duration=200,
+            )
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            _Call("targets", ({"q0", "q1"}, "ch0"), {}),
+            _Call(
+                "phase_shifts", (1.0, "q2", "q3"), dict(basis="ground-rydberg")
+            ),
+            _Call("wait", (100,), {}),
+        ],
+    )
+    def test_unknown_calls(self, call):
+        seq = Sequence(Register.square(2, prefix="q"), Chadoq2)
+        seq.declare_channel("ch0", "rydberg_global")
+        seq._calls.append(call)
+        with pytest.raises(
+            AbstractReprError, match=f"Unknown call '{call.name}'."
+        ):
+            seq.to_abstract_repr()
+
+    @pytest.mark.parametrize(
+        "obj,serialized_obj",
+        [
+            (Register({"q0": (0.0, 0.0)}), [dict(name="q0", x=0.0, y=0.0)]),
+            (np.arange(3), [0, 1, 2]),
+            ({"a"}, ["a"]),
+        ],
+        ids=["register", "np.array", "set"],
+    )
+    def test_abstract_repr_encoder(self, obj, serialized_obj):
+        assert json.dumps(obj, cls=AbstractReprEncoder) == json.dumps(
+            serialized_obj
+        )
+
+    def test_paramobj_serialization(self, sequence):
+        var = sequence._variables["duration"][0]
+        ser_var = {
+            "expression": "index",
+            "lhs": {"variable": "duration"},
+            "rhs": 0,
+        }
+        wf = BlackmanWaveform(1000, 1.0)
+        ser_wf = wf._to_abstract_repr()
+        with pytest.raises(
+            ValueError, match="Serialization of calls to parametrized objects"
+        ):
+            param_obj_call = BlackmanWaveform(var, 1)()
+            json.dumps(param_obj_call, cls=AbstractReprEncoder)
+
+        s = json.dumps(
+            Pulse.ConstantAmplitude(var, wf, 1.0, 1.0), cls=AbstractReprEncoder
+        )
+        assert json.loads(s) == dict(
+            amplitude={"kind": "constant", "duration": 0, "value": ser_var},
+            detuning=ser_wf,
+            phase=1.0,
+            post_phase_shift=1.0,
+        )
+
+        s = json.dumps(
+            Pulse.ConstantDetuning(wf, 0.0, var, post_phase_shift=1.0),
+            cls=AbstractReprEncoder,
+        )
+        assert json.loads(s) == dict(
+            amplitude=ser_wf,
+            detuning={"kind": "constant", "duration": 0, "value": 0.0},
+            phase=ser_var,
+            post_phase_shift=1.0,
+        )
+
+        s = json.dumps(
+            Pulse.ConstantPulse(var, 2.0, 0.0, 1.0, 1.0),
+            cls=AbstractReprEncoder,
+        )
+        assert json.loads(s) == dict(
+            amplitude={"kind": "constant", "duration": ser_var, "value": 2.0},
+            detuning={"kind": "constant", "duration": ser_var, "value": 0.0},
+            phase=1.0,
+            post_phase_shift=1.0,
+        )
+
+        method_call = parametrize(BlackmanWaveform.change_duration)(wf, var)
+        with pytest.raises(
+            NotImplementedError,
+            match="Instance or static method serialization is not supported.",
+        ):
+            method_call._to_abstract_repr()
+
+        with pytest.raises(
+            AbstractReprError, match="No abstract representation for 'Foo'"
+        ):
+
+            class Foo:
+                def __init__(self, bar: str):
+                    pass
+
+            ParamObj(Foo, "bar")._to_abstract_repr()
 
 
 def _get_serialized_seq(

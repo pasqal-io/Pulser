@@ -30,6 +30,7 @@ from pulser.json.abstract_repr.signatures import (
     SIGNATURES,
     UNARY_OPERATORS,
 )
+from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
-    # # TODO: Make operator methods' args pos-only when python 3.7 is dropped
+    # TODO: Make operator methods' args pos-only when python 3.7 is dropped
     # Unary operators
     def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
@@ -238,27 +239,31 @@ class ParamObj(Parametrized, OpSupport):
             # Check for parametrized methods
             if inspect.isclass(self.args[0]):
                 # classmethod
-                name = f"{self.args[0].__name__}.{op_name}"
-                if "post_phase_shift" in self.kwargs:
-                    post_phase_shift = self.kwargs["post_phase_shift"]
-                else:
-                    post_phase_shift = 0.0
-                if name == "Pulse.ConstantAmplitude":
-                    return abstract_repr(
-                        "Pulse",
-                        abstract_repr("ConstantWaveform", 0, self.args[1]),
-                        *self.args[2:],
-                        post_phase_shift=post_phase_shift,
+                cls_name = self.args[0].__name__
+                name = f"{cls_name}.{op_name}"
+                if cls_name == "Pulse":
+                    signature = (
+                        "amplitude",
+                        "detuning",
+                        "phase",
+                        "post_phase_shift",
                     )
-                elif name == "Pulse.ConstantDetuning":
-                    return abstract_repr(
-                        "Pulse",
-                        self.args[1],
-                        abstract_repr("ConstantWaveform", 0, self.args[2]),
-                        self.args[3],
+                    all_args = {
+                        **dict(zip(signature, self.args[1:])),
                         **self.kwargs,
-                        post_phase_shift=post_phase_shift,
+                    }
+                    if "post_phase_shift" not in all_args:
+                        all_args["post_phase_shift"] = 0.0
+                if name == "Pulse.ConstantAmplitude":
+                    all_args["amplitude"] = abstract_repr(
+                        "ConstantWaveform", 0, all_args["amplitude"]
                     )
+                    return abstract_repr("Pulse", **all_args)
+                elif name == "Pulse.ConstantDetuning":
+                    all_args["detuning"] = abstract_repr(
+                        "ConstantWaveform", 0, all_args["detuning"]
+                    )
+                    return abstract_repr("Pulse", **all_args)
                 else:
                     return abstract_repr(name, *self.args[1:], **self.kwargs)
 
@@ -278,7 +283,7 @@ class ParamObj(Parametrized, OpSupport):
                 rhs=self.args[1],
             )
         else:
-            raise NotImplementedError(
+            raise AbstractReprError(
                 f"No abstract representation for '{op_name}'."
             )
 

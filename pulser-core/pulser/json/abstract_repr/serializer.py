@@ -26,7 +26,7 @@ from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.exceptions import AbstractReprError
 from pulser.register.base_register import QubitId
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
 
@@ -63,14 +63,21 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
     res: dict[str, Any] = {}
     res.update(signature.extra)  # Starts with extra info ({} if undefined)
     res.update(
-        {arg_name: arg_val for arg_name, arg_val in zip(signature.pos, args)}
+        {
+            arg_name: arg_val
+            for arg_name, arg_val in zip(signature.all_pos_args(), args)
+        }
+    )
+    # Account for keyword arguments given as pos args
+    max_pos_args = len(signature.pos) + len(
+        set(signature.keyword) - set(kwargs)
     )
     if signature.var_pos:
         res[signature.var_pos] = args[len(signature.pos) :]
-    elif len(args) > len(signature.pos):
+    elif len(args) > max_pos_args:
         raise ValueError(
             f"Too many positional arguments given for '{name}' (expected "
-            f"{len(signature.pos)}, got {len(args)})."
+            f"{max_pos_args}, got {len(args)})."
         )
     for kw in kwargs:
         if kw in signature.keyword or kw in arg_as_kwarg:
@@ -214,8 +221,6 @@ def serialize_abstract_sequence(
                 }
             )
         else:
-            raise AbstractReprError(
-                f"Call name '{call.name}' is not supported."
-            )
+            raise AbstractReprError(f"Unknown call '{call.name}'.")
 
     return json.dumps(res, cls=AbstractReprEncoder)
