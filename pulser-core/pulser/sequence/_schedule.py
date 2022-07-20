@@ -78,9 +78,13 @@ class _ChannelSchedule:
                 max(duration, self.channel_obj.min_duration)
             )
 
-    def get_samples(self) -> samples.ChannelSamples:
-        """Returns the samples of the channel."""
-        N = self.get_duration()
+    def get_samples(self, N: int) -> samples.ChannelSamples:
+        """Returns the samples of the channel.
+
+        Args:
+            N (int): the duration of the parent sequence. Necessary to give the
+            right length to the sample arrays.
+        """
         # Keep only pulse slots
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
         amp, det, phase = np.zeros(N), np.zeros(N), np.zeros(N)

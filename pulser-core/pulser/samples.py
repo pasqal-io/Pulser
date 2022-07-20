@@ -121,9 +121,10 @@ class SequenceSamples:
             else:
                 for s in cs.slots:
                     for t in s.targets:
-                        d[_LOCAL][basis][t][_AMP][s.ti : s.tf] += cs.amp
-                        d[_LOCAL][basis][t][_DET][s.ti : s.tf] += cs.det
-                        d[_LOCAL][basis][t][_PHASE][s.ti : s.tf] += cs.phase
+                        times = slice(s.ti, s.tf)
+                        d[_LOCAL][basis][t][_AMP][times] += cs.amp[times]
+                        d[_LOCAL][basis][t][_DET][times] += cs.det[times]
+                        d[_LOCAL][basis][t][_PHASE][times] += cs.phase[times]
 
         return _default_to_regular(d)
 

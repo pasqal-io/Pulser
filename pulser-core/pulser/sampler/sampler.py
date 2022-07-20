@@ -20,8 +20,10 @@ def sample(seq: Sequence) -> samples.SequenceSamples:
         chname: _sample_channel(chname, seq)
         for chname in seq.declared_channels
     }
+
+    N = seq.get_duration()
     seq_samples = {
-        chname: ch_schedule.get_samples()
+        chname: ch_schedule.get_samples(N)
         for chname, ch_schedule in seq._schedule.items()
     }
     addrs = {
