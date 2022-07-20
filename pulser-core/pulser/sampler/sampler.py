@@ -11,10 +11,12 @@ from pulser.pulse import Pulse
 from .. import samples
 
 
-def sample(seq: Sequence) -> samples.SequenceSamples:
+def sample(seq: Sequence, modulation: bool = False) -> samples.SequenceSamples:
     """Construct samples of a Sequence.
 
     Alternatively, use the SequenceSample constructor.
+
+    KNOWN BUG: Does not support modulation despite having a keyword for it .
     """
     seq_samples = {
         chname: _sample_channel(chname, seq)
