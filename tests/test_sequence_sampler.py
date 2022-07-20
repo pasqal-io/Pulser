@@ -25,7 +25,6 @@ from pulser.channels import Rydberg
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
-
 from pulser.waveforms import BlackmanWaveform, RampWaveform
 
 # Helpers
