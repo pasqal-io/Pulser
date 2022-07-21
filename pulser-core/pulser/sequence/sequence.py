@@ -32,6 +32,10 @@ import pulser.sequence._decorators as seq_decorators
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_abstract_sequence,
+)
+from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
@@ -512,11 +516,10 @@ class Sequence:
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
-        if name == "qubits":
-            # Necessary because 'qubits' is a keyword arg in self.build()
+        if name in ("qubits", "seq_name"):
             raise ValueError(
-                "'qubits' is a protected name. Please choose a different name "
-                "for the variable."
+                f"'{name}' is a protected name. Please choose a different name"
+                " for the variable."
             )
 
         if name in self._variables:
@@ -658,7 +661,7 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration: Time to delay (in multiples of 4 ns).
+            duration: Time to delay (in ns).
             channel: The channel's name provided when declared.
         """
         self._delay(duration, channel)
@@ -839,22 +842,7 @@ class Sequence:
                 "a concrete register."
             )
 
-        all_keys, given_keys = self._variables.keys(), vars.keys()
-        if given_keys != all_keys:
-            invalid_vars = given_keys - all_keys
-            if invalid_vars:
-                warnings.warn(
-                    "No declared variables named: " + ", ".join(invalid_vars),
-                    stacklevel=2,
-                )
-                for k in invalid_vars:
-                    vars.pop(k, None)
-            missing_vars = all_keys - given_keys
-            if missing_vars:
-                raise TypeError(
-                    "Did not receive values for variables: "
-                    + ", ".join(missing_vars)
-                )
+        self._cross_check_vars(vars)
 
         if not self.is_parametrized():
             if not self.is_register_mappable():
@@ -902,6 +890,26 @@ class Sequence:
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
+    def to_abstract_repr(
+        self, seq_name: str = "pulser-exported", **defaults: Any
+    ) -> str:
+        """Serializes the Sequence into an abstract JSON object.
+
+        Keyword Args:
+            seq_name (str): A name for the sequence. If not defined, defaults
+                to "pulser-exported".
+            defaults: The default values for all the variables declared in this
+                Sequence instance, indexed by the name given upon declaration.
+                Check ``Sequence.declared_variables`` to see all the variables.
+
+        Returns:
+            str: The sequence encoded as an abstract JSON object.
+
+        See Also:
+            ``serialize``
+        """
+        return serialize_abstract_sequence(self, seq_name, **defaults)
+
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:
         """Deserializes a JSON formatted string.
@@ -928,6 +936,19 @@ class Sequence:
             )
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> Sequence:
+        """Deserialize a sequence from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the sequence encoded
+                in the abstract JSON format.
+
+        Returns:
+            Sequence: The Pulser sequence.
+        """
+        return deserialize_abstract_sequence(obj_str)
 
     @seq_decorators.screen
     def draw(
@@ -1203,3 +1224,22 @@ class Sequence:
         seq._register = reg
         seq._qids = qids
         seq._calls[0] = _Call("__init__", (seq._register, seq._device), {})
+
+    def _cross_check_vars(self, vars: dict[str, Any]) -> None:
+        """Checks if values are given to all and only declared vars."""
+        all_keys, given_keys = self._variables.keys(), vars.keys()
+        if given_keys != all_keys:
+            invalid_vars = given_keys - all_keys
+            if invalid_vars:
+                warnings.warn(
+                    "No declared variables named: " + ", ".join(invalid_vars),
+                    stacklevel=3,
+                )
+                for k in invalid_vars:
+                    vars.pop(k, None)
+            missing_vars = all_keys - given_keys
+            if missing_vars:
+                raise TypeError(
+                    "Did not receive values for variables: "
+                    + ", ".join(missing_vars)
+                )

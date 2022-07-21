@@ -121,8 +121,8 @@ class BaseRegister(ABC):
         """
         if not set(id_list) <= set(self.qubit_ids):
             raise ValueError(
-                "The IDs list must be selected among"
-                "the IDs of the register's qubits."
+                "The IDs list must be selected among the IDs of the register's"
+                " qubits."
             )
         return [self.qubit_ids.index(id_) for id_ in id_list]
 
