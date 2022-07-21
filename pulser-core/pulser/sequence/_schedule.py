@@ -21,11 +21,10 @@ from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
 
+import pulser.sampler.samples as samples
 from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
-
-from .. import samples
 
 
 class _TimeSlot(NamedTuple):
@@ -78,24 +77,26 @@ class _ChannelSchedule:
                 max(duration, self.channel_obj.min_duration)
             )
 
-    def get_samples(self, N: int) -> samples.ChannelSamples:
-        """Returns the samples of the channel.
-
-        Args:
-            N (int): the duration of the parent sequence. Necessary to give the
-            right length to the sample arrays.
-        """
+    def get_samples(self) -> samples.ChannelSamples:
+        """Returns the samples of the channel."""
         # Keep only pulse slots
+        dt = self.get_duration()
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
-        amp, det, phase = np.zeros(N), np.zeros(N), np.zeros(N)
-        slots: list[samples._TimeSlot] = []
+        amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
+        slots: list[samples._TargetSlot] = []
 
-        for s in channel_slots:
+        for ind, s in enumerate(channel_slots):
             pulse = cast(Pulse, s.type)
             amp[s.ti : s.tf] += pulse.amplitude.samples
             det[s.ti : s.tf] += pulse.detuning.samples
-            phase[s.ti : s.tf] += pulse.phase
-            slots.append(samples._TimeSlot(s.ti, s.tf, s.targets))
+            t_start = (s.ti + channel_slots[ind - 1].tf) // 2 if ind > 0 else 0
+            t_end = (
+                (channel_slots[ind + 1].ti + s.tf) // 2
+                if ind < len(channel_slots) - 1
+                else dt
+            )
+            phase[t_start:t_end] += pulse.phase
+            slots.append(samples._TargetSlot(s.ti, s.tf, s.targets))
 
         return samples.ChannelSamples(amp, det, phase, slots)
 

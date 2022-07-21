@@ -1,14 +1,13 @@
 """Contains dataclasses for samples and some helper functions."""
 from __future__ import annotations
 
-import itertools
-import typing
 from collections import defaultdict
 from dataclasses import dataclass, field
 
 import numpy as np
 
 from pulser.register import QubitId
+from pulser.channels import Channel
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
@@ -46,21 +45,15 @@ def _prepare_dict(N: int, in_xy: bool = False) -> dict:
         }
 
 
-def _pairwise(iterable: typing.Iterable) -> typing.Iterable:
-    a, b = itertools.tee(iterable)
-    next(b, None)
-    return zip(a, b)
-
-
 def _default_to_regular(d: dict | defaultdict) -> dict:
     """Helper function to convert defaultdicts to regular dicts."""
-    if isinstance(d, defaultdict):
+    if isinstance(d, dict):
         d = {k: _default_to_regular(v) for k, v in d.items()}
     return d
 
 
 @dataclass
-class _TimeSlot:
+class _TargetSlot:
     """Auxiliary class to store target information.
 
     Recopy of the sequence._TimeSlot but without the unrelevant `type` field,
@@ -83,16 +76,34 @@ class ChannelSamples:
     amp: np.ndarray
     det: np.ndarray
     phase: np.ndarray
-
-    slots: list[_TimeSlot] = field(default_factory=list)
+    slots: list[_TargetSlot] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
 
         for t in self.slots:
             assert t.ti < t.tf  # well ordered slots
-        for t1, t2 in _pairwise(self.slots):
+        for t1, t2 in zip(self.slots, self.slots[1:]):
             assert t1.tf <= t2.ti  # no overlaps on a given channel
+
+    def extend_duration(self, new_duration: int) -> ChannelSamples:
+        """Extends the duration of the samples.
+
+        Args:
+            new_duration: The new duration for the samples (in ns).
+                Must be greater than or equal to the current duration.
+
+        Returns:
+            The extend channel samples.
+        """
+        extension = new_duration - len(self.amp)
+        if new_duration < len(self.amp):
+            raise ValueError("Can't extend samples to a lower duration.")
+
+        new_amp = np.pad(self.amp, (0, extension))
+        new_detuning = np.pad(self.det, (0, extension))
+        new_phase = np.pad(self.phase, (0, extension), mode="edge")
+        return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
 
 
 @dataclass
@@ -100,20 +111,25 @@ class SequenceSamples:
     """Gather samples of a sequence with useful info."""
 
     channels: list[str]
-    channel_samples: dict[str, ChannelSamples]
-    _addrs: dict[str, str]
-    _bases: dict[str, str]
+    channel_samples: list[ChannelSamples]
+    _ch_objs: dict[str, Channel]
     _duration: int
 
     def to_nested_dict(self) -> dict:
         """Format in the nested dictionary form.
 
-        This is the format expected by `pulser.simulation`.
+        This is the format expected by `pulser_simulation.Simulation()`.
         """
-        d = _prepare_dict(self._duration)
-        for chname, cs in self.channel_samples.items():
-            addr = self._addrs[chname]
-            basis = self._bases[chname]
+        bases = {ch_obj.basis for ch_obj in self._ch_objs.values()}
+        in_xy = False
+        if "XY" in bases:
+            assert bases == {"XY"}
+            in_xy = True
+        d = _prepare_dict(self._duration, in_xy=in_xy)
+        for chname, samples in zip(self.channels, self.channel_samples):
+            cs = samples.extend_duration(self._duration)
+            addr = self._ch_objs[chname].addressing
+            basis = self._ch_objs[chname].basis
             if addr == _GLOBAL:
                 d[_GLOBAL][basis][_AMP] += cs.amp
                 d[_GLOBAL][basis][_DET] += cs.det
@@ -129,10 +145,8 @@ class SequenceSamples:
         return _default_to_regular(d)
 
     def __repr__(self) -> str:
-        s = ""
-        for chname, cs in self.channel_samples.items():
-            s += chname + ":\n"
-            s += cs.__repr__()
-            s += "\n\n"
-        s += "\n"
-        return s
+        blocks = [
+            f"{chname}:\n {cs!r}"
+            for chname, cs in zip(self.channels, self.channel_samples)
+        ]
+        return "\n\n".join(blocks)
