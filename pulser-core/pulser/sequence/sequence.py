@@ -661,7 +661,7 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration: Time to delay (in multiples of 4 ns).
+            duration: Time to delay (in ns).
             channel: The channel's name provided when declared.
         """
         self._delay(duration, channel)

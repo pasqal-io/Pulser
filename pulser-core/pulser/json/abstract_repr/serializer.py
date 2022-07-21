@@ -54,14 +54,21 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
         raise ValueError(f"No signature found for '{name}'.")
     arg_as_kwarg: tuple[str, ...] = tuple()
     if len(args) < len(signature.pos):
+        # If less arguments than those in the signature were given, that might
+        # be because they were provided with a keyword and thus stored as
+        # kwargs instead (unless var_pos is defined)
         arg_as_kwarg = signature.pos[len(args) :]
-        if signature.var_pos or not set(arg_as_kwarg) <= set(kwargs):
+        if signature.var_pos is not None or not set(arg_as_kwarg) <= set(
+            kwargs
+        ):
             raise ValueError(
                 f"Not enough arguments given for '{name}' (expected "
                 f"{len(signature.pos)}, got {len(args)})."
             )
     res: dict[str, Any] = {}
     res.update(signature.extra)  # Starts with extra info ({} if undefined)
+    # With PulseSignature.all_pos_args(), we safeguard against the opposite
+    # case where an expected keyword argument is given as a positional argument
     res.update(
         {
             arg_name: arg_val

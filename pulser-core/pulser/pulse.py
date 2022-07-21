@@ -166,7 +166,7 @@ class Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
         Args:
-            duration: The pulse duration (in multiples of 4 ns).
+            duration: The pulse duration (in ns).
             amplitude: The pulse amplitude value (in rad/µs).
             detuning: The detuning value (in rad/µs).
             phase: The pulse phase (in radians).
