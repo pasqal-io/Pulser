@@ -48,7 +48,13 @@ SUPPORTED_NUMPY = (
     "tan",
 )
 
-SUPPORTS_SUBMODULE = ("Pulse", "BlackmanWaveform", "KaiserWaveform")
+SUPPORTS_SUBMODULE = (
+    "Pulse",
+    "BlackmanWaveform",
+    "KaiserWaveform",
+    "Register",
+    "Register3D",
+)
 
 SUPPORTED_MODULES = {
     "builtins": SUPPORTED_BUILTINS,

@@ -90,6 +90,20 @@ def test_register_from_layout():
     assert new_reg._layout_info.trap_ids == (1, 0)
 
 
+@pytest.mark.parametrize(
+    "reg",
+    [
+        Register(dict(enumerate([(2, 3), (5, 1), (10, 0)]))),
+        Register3D({3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)}),
+    ],
+)
+def test_register_numbered_keys(reg):
+    j = json.dumps(reg, cls=PulserEncoder)
+    decoded_reg = json.loads(j, cls=PulserDecoder)
+    assert reg == decoded_reg
+    assert all([type(i) == int for i in decoded_reg.qubit_ids])
+
+
 def test_mappable_register():
     layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
     mapp_reg = layout.make_mappable_register(2)

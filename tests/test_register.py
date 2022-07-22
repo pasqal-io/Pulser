@@ -405,7 +405,8 @@ def assert_ineq(left, right):
 def test_equality_function():
     reg1 = Register({"c": (1, 2), "d": (8, 4)})
     assert_eq(reg1, reg1)
-    assert_eq(reg1, Register({"d": (8, 4), "c": (1, 2)}))
+    assert_eq(reg1, Register({"c": (1, 2), "d": (8, 4)}))
+    assert_ineq(reg1, Register({"d": (8, 4), "c": (1, 2)}))
     assert_ineq(reg1, Register({"c": (8, 4), "d": (1, 2)}))
     assert_ineq(reg1, Register({"c": (1, 2), "d": (8, 4), "e": (8, 4)}))
     assert_ineq(reg1, 10)
@@ -413,6 +414,8 @@ def test_equality_function():
     reg2 = Register3D({"a": (1, 2, 3), "b": (8, 5, 6)})
     assert_eq(reg2, reg2)
     assert_eq(reg2, Register3D({"a": (1, 2, 3), "b": (8, 5, 6)}))
+    assert_eq(reg2, Register3D({"a": (1, 2, 3), "b": (8, 5, 6)}))
+    assert_ineq(reg2, Register3D({"b": (8, 5, 6), "a": (1, 2, 3)}))
     assert_ineq(reg2, Register3D({"b": (1, 2, 3), "a": (8, 5, 6)}))
     assert_ineq(
         reg2, Register3D({"a": (1, 2, 3), "b": (8, 5, 6), "e": (8, 5, 6)})
