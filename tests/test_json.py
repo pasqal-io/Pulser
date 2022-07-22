@@ -89,8 +89,14 @@ def test_register_from_layout():
     assert new_reg._layout_info.trap_ids == (1, 0)
 
 
-def test_register_numbered_keys():
-    reg = Register(dict(enumerate([(2, 3), (5, 1), (10, 0)])))
+@pytest.mark.parametrize(
+    "reg",
+    [
+        Register(dict(enumerate([(2, 3), (5, 1), (10, 0)]))),
+        Register3D({3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)}),
+    ],
+)
+def test_register_numbered_keys(reg):
     j = json.dumps(reg, cls=PulserEncoder)
     decoded_reg = json.loads(j, cls=PulserDecoder)
     assert reg == decoded_reg
