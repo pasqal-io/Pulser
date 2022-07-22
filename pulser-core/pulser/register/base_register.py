@@ -81,7 +81,6 @@ class BaseRegister(ABC):
             self._validate_layout(layout, trap_ids)
             self._layout_info = _LayoutInfo(layout, trap_ids)
 
-
     @property
     def qubits(self) -> dict[QubitId, np.ndarray]:
         """Dictionary of the qubit names and their position coordinates."""
@@ -137,7 +136,7 @@ class BaseRegister(ABC):
         center: bool = True,
         prefix: Optional[str] = None,
         labels: Optional[abcSequence[QubitId]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> T:
         """Creates the register from an array of coordinates.
 
@@ -208,10 +207,15 @@ class BaseRegister(ABC):
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
         cls_dict = obj_to_dict(
-                None, _build=False, _name=self.__class__.__name__, _module=self.__class__.__module__
-            )
+            None,
+            _build=False,
+            _name=self.__class__.__name__,
+            _module=self.__class__.__module__,
+        )
 
-        kwargs = {} if self._layout_info is None else self._layout_info._asdict()
+        kwargs = (
+            {} if self._layout_info is None else self._layout_info._asdict()
+        )
 
         return obj_to_dict(
             self,
@@ -222,7 +226,7 @@ class BaseRegister(ABC):
             self._ids,
             **kwargs,
             _submodule=self.__class__.__name__,
-            _name="from_coordinates"
+            _name="from_coordinates",
         )
 
     def __eq__(self, other: Any) -> bool:
