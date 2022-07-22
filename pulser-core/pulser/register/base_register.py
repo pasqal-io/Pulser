@@ -206,15 +206,13 @@ class BaseRegister(ABC):
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
-        """
-        Serializes the object.
+        """Serializes the object.
 
         During deserialization, it will be reconstructed using
         'from_coordinates', so that it uses lists instead of a dictionary
         (in JSON, lists elements keep their types, but dictionaries keys do
         not).
         """
-
         cls_dict = obj_to_dict(
             None,
             _build=False,
