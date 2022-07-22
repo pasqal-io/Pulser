@@ -43,6 +43,7 @@ setup(
         "matplotlib",
         "numpy>=1.20",
         "scipy",
+        "jsonschema==4.4.0",
     ],
     extras_require={
         ":python_version == '3.7'": [

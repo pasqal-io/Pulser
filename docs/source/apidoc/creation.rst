@@ -5,7 +5,7 @@ Pulse Sequence Creation
 Sequence
 ----------------------
 
-.. automodule:: pulser.sequence
+.. automodule:: pulser.sequence.sequence
    :members:
 
 Register

@@ -27,7 +27,7 @@ from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.noise_model import NoiseModel, apply_noises
 from pulser.sampler.samples import QubitSamples
-from pulser.sequence import Sequence, _TimeSlot
+from pulser.sequence.sequence import Sequence, _ChannelSchedule, _TimeSlot
 
 
 def sample(
@@ -41,12 +41,12 @@ def sample(
     It is intended to be used like the json.dumps() function.
 
     Args:
-        seq (Sequence): A pulser.Sequence instance.
-        modulation (bool): Flag to account for the modulation of AOM/EOM
+        seq: A pulser.Sequence instance.
+        modulation: Flag to account for the modulation of AOM/EOM
             before sampling.
-        common_noises (Optional[list[LocalNoise]]): A list of the noise sources
+        common_noises: A list of the noise sources
             for all channels.
-        global_noises (Optional[list[LocalNoise]]): A list of the noise sources
+        global_noises: A list of the noise sources
             for global channels.
 
     Returns:
@@ -214,7 +214,9 @@ def _sample_slots(N: int, *slots: _TimeSlot) -> list[QubitSamples]:
     return qs
 
 
-TimeSlotExtractionStrategy = Callable[[List[_TimeSlot]], List[List[_TimeSlot]]]
+TimeSlotExtractionStrategy = Callable[
+    [_ChannelSchedule], List[List[_TimeSlot]]
+]
 """Extraction strategy of _TimeSlot's of a Channel.
 
 It's an alias for functions that returns a list of lists of _TimeSlots.
@@ -228,13 +230,13 @@ NOTE:
 """
 
 
-def _regular(ts: list[_TimeSlot]) -> list[list[_TimeSlot]]:
+def _regular(ts: _ChannelSchedule) -> list[list[_TimeSlot]]:
     """No grouping performed, return only the pulses."""
     return [[x] for x in ts if isinstance(x.type, Pulse)]
 
 
 def _group_between_retargets(
-    ts: list[_TimeSlot],
+    ts: _ChannelSchedule,
 ) -> list[list[_TimeSlot]]:
     """Filter and group _TimeSlots together.
 
@@ -253,7 +255,7 @@ def _group_between_retargets(
     [[A, B], [C, D, E], [F]]
 
     Args:
-        ts (list[_TimeSlot]): A list of TimeSlot from a Sequence schedule.
+        ts: A list of TimeSlot from a Sequence schedule.
 
     Returns:
         A list of list of _TimeSlot. _TimeSlot instances are successive and

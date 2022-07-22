@@ -386,8 +386,8 @@ def test_find_indices():
 
     with pytest.raises(
         ValueError,
-        match="IDs list must be selected among"
-        "the IDs of the register's qubits",
+        match="IDs list must be selected among the IDs of the register's "
+        "qubits",
     ):
         reg.find_indices(["c", "e", "d"])
 

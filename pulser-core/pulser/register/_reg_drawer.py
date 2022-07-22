@@ -155,7 +155,7 @@ class RegDrawer:
             if len(bonds) > 0:
                 lines = bonds[:, :, (ix, iy)]
             else:
-                lines = []
+                lines = np.array([])
             lc = mc.LineCollection(lines, linewidths=0.6, colors="grey")
             ax.add_collection(lc)
 
@@ -361,13 +361,13 @@ class RegDrawer:
         """Checks common in all register drawings.
 
         Args:
-            n_atoms(int): Number of atoms in the register.
-            blockade_radius(float, default=None): The distance (in μm) between
+            n_atoms: Number of atoms in the register.
+            blockade_radius: The distance (in μm) between
                 atoms below the Rydberg blockade effect occurs.
-            draw_half_radius(bool, default=False): Whether or not to draw the
+            draw_half_radius: Whether or not to draw the
                 half the blockade radius surrounding each atoms. If `True`,
                 requires `blockade_radius` to be defined.
-            draw_graph(bool, default=True): Whether or not to draw the
+            draw_graph: Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
         """

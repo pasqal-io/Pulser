@@ -1,0 +1,725 @@
+{
+  "$ref": "#/definitions/PulserSequence",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Atom": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Name of the atom.",
+          "type": "string"
+        },
+        "x": {
+          "description": "x-position in µm",
+          "type": "number"
+        },
+        "y": {
+          "description": "y-position in µm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "Basis": {
+      "enum": [
+        "ground-rydberg",
+        "digital"
+      ],
+      "type": "string"
+    },
+    "BlackmanMaxWaveform": {
+      "additionalProperties": false,
+      "description": "A Blackman window of a specified max value and area.",
+      "properties": {
+        "area": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The integral of the waveform. Can be negative, in which case it takes the positive waveform and changes the sign of all its values."
+        },
+        "kind": {
+          "const": "blackman_max",
+          "type": "string"
+        },
+        "max_val": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The waveform peak value."
+        }
+      },
+      "required": [
+        "kind",
+        "max_val",
+        "area"
+      ],
+      "type": "object"
+    },
+    "BlackmanWaveform": {
+      "additionalProperties": false,
+      "description": "A Blackman window of a specified duration and area.",
+      "properties": {
+        "area": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The integral of the waveform. Can be negative, in which case it takes the positive waveform and changes the sign of all its values."
+        },
+        "duration": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The waveform duration (in ns)."
+        },
+        "kind": {
+          "const": "blackman",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "duration",
+        "area"
+      ],
+      "type": "object"
+    },
+    "ChannelName": {
+      "description": "Name of declared channel.",
+      "type": "string"
+    },
+    "CompositeWaveform": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "composite",
+          "type": "string"
+        },
+        "waveforms": {
+          "description": "List of waveforms to compose one after another, in specified order.",
+          "items": {
+            "$ref": "#/definitions/Waveform"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "waveforms"
+      ],
+      "type": "object"
+    },
+    "ConstantWaveform": {
+      "additionalProperties": false,
+      "description": "A waveform of constant value.",
+      "properties": {
+        "duration": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The waveform duration (in ns)."
+        },
+        "kind": {
+          "const": "constant",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The constant modulation value (in rad/µs)."
+        }
+      },
+      "required": [
+        "kind",
+        "duration",
+        "value"
+      ],
+      "type": "object"
+    },
+    "CustomWaveform": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "custom",
+          "type": "string"
+        },
+        "samples": {
+          "description": "List of waveform value samples, one per timestep.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "samples"
+      ],
+      "type": "object"
+    },
+    "ExprArgument": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        {
+          "$ref": "#/definitions/VariableRef"
+        },
+        {
+          "$ref": "#/definitions/ExprBinary"
+        },
+        {
+          "$ref": "#/definitions/ExprUnary"
+        }
+      ],
+      "description": "Expression argument"
+    },
+    "ExprBinary": {
+      "additionalProperties": false,
+      "description": "Simple binary expression involving variables and constants.\n\nThe array access behaviour depends on expression:\n- index:   - the lhs array is indexed using rhs indices, resulting in an array of the same length as rhs.   - out of bounds indexing is a runtime error   - NOTE: Pulser only supports variable references on lhs of index expression.           This limitation might be lifted in the future.\n- everything else:   - the expression is applied element-wise   - operating on arrays of different lengths is a runtime error",
+      "properties": {
+        "expression": {
+          "description": "Expresion operation",
+          "enum": [
+            "add",
+            "sub",
+            "mul",
+            "div",
+            "mod",
+            "pow",
+            "index"
+          ],
+          "type": "string"
+        },
+        "lhs": {
+          "$ref": "#/definitions/ExprArgument",
+          "description": "Left-hand side of an operation"
+        },
+        "rhs": {
+          "$ref": "#/definitions/ExprArgument",
+          "description": "Right-hand side of an operation"
+        }
+      },
+      "required": [
+        "expression",
+        "lhs",
+        "rhs"
+      ],
+      "type": "object"
+    },
+    "ExprUnary": {
+      "additionalProperties": false,
+      "description": "Simple arithmetic binary expression involving variables and constants.",
+      "properties": {
+        "expression": {
+          "description": "Expresion operation",
+          "enum": [
+            "neg",
+            "abs",
+            "floor",
+            "ceil",
+            "round",
+            "sqrt",
+            "exp",
+            "log2",
+            "log",
+            "sin",
+            "cos",
+            "tan"
+          ],
+          "type": "string"
+        },
+        "lhs": {
+          "$ref": "#/definitions/ExprArgument",
+          "description": "Argument of an unary operation"
+        }
+      },
+      "required": [
+        "expression",
+        "lhs"
+      ],
+      "type": "object"
+    },
+    "Expression": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ExprBinary"
+        },
+        {
+          "$ref": "#/definitions/ExprUnary"
+        }
+      ],
+      "description": "Mathematical expression involving variables and constants.\n\nThe expression is evaluated in the context of any parametrizable field.\n\nIf the context requires an integer value, the float result is rounded at the end. If the expression type differs from expected by the context (e.g. channel_name), it is a runtime error. If an expression result array length differs from expected, a it is a runtime error."
+    },
+    "HardwareChannel": {
+      "description": "Hardware channel name.",
+      "enum": [
+        "raman_local",
+        "rydberg_local",
+        "rydberg_global"
+      ],
+      "type": "string"
+    },
+    "InterpolatedWaveform": {
+      "additionalProperties": false,
+      "description": "Creates a waveform from interpolation of a set of data points. Uses pchip interpolation algorithm.",
+      "properties": {
+        "duration": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The waveform duration (in ns)."
+        },
+        "kind": {
+          "const": "interpolated",
+          "type": "string"
+        },
+        "times": {
+          "$ref": "#/definitions/ParametrizedNumArray",
+          "description": "Fractions of the total duration (between 0 and 1), indicating where to place each value on the time axis. The array size must be the same as `values` array size."
+        },
+        "values": {
+          "$ref": "#/definitions/ParametrizedNumArray",
+          "description": "Values of the interpolation points (in rad/µs)."
+        }
+      },
+      "required": [
+        "kind",
+        "duration",
+        "values",
+        "times"
+      ],
+      "type": "object"
+    },
+    "KaiserMaxWaveform": {
+      "additionalProperties": false,
+      "description": "A Kaiser window of a specified max value, area and beta parameter.",
+      "properties": {
+        "area": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The integral of the waveform. Can be negative, in which case it takes the positive waveform and changes the sign of all its values."
+        },
+        "beta": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The beta parameter of the Kaiser window. A typical value is 14."
+        },
+        "kind": {
+          "const": "kaiser_max",
+          "type": "string"
+        },
+        "max_val": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The waveform peak value."
+        }
+      },
+      "required": [
+        "kind",
+        "max_val",
+        "area",
+        "beta"
+      ],
+      "type": "object"
+    },
+    "KaiserWaveform": {
+      "additionalProperties": false,
+      "description": "A Kaiser window of a specified duration, area and beta parameter.",
+      "properties": {
+        "area": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The integral of the waveform. Can be negative, in which case it takes the positive waveform and changes the sign of all its values."
+        },
+        "beta": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The beta parameter of the Kaiser window. A typical value is 14."
+        },
+        "duration": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The waveform duration (in ns)."
+        },
+        "kind": {
+          "const": "kaiser",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "duration",
+        "area",
+        "beta"
+      ],
+      "type": "object"
+    },
+    "OpAlign": {
+      "additionalProperties": false,
+      "description": "Aligns multiple channels in time.\n\nIntroduces delays that align the provided channels with the one that finished the latest, such that the next action added to any of them will start right after the latest channel has finished.",
+      "properties": {
+        "channels": {
+          "items": {
+            "$ref": "#/definitions/ChannelName"
+          },
+          "type": "array"
+        },
+        "op": {
+          "const": "align",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "channels"
+      ],
+      "type": "object"
+    },
+    "OpDelay": {
+      "additionalProperties": false,
+      "description": "Adds extra fixed delay before starting the pulse.",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "Channel on which to insert a delay"
+        },
+        "op": {
+          "const": "delay",
+          "type": "string"
+        },
+        "time": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "Delay time"
+        }
+      },
+      "required": [
+        "op",
+        "channel",
+        "time"
+      ],
+      "type": "object"
+    },
+    "OpPhaseShift": {
+      "additionalProperties": false,
+      "description": "Adds a separate phase shift to atoms. If possible, OpPulse phase and post_phase_shift are preferred.",
+      "properties": {
+        "basis": {
+          "$ref": "#/definitions/Basis",
+          "description": "Phase shift basis"
+        },
+        "op": {
+          "const": "phase_shift",
+          "type": "string"
+        },
+        "phi": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The intended phase shift (in rads)."
+        },
+        "targets": {
+          "description": "Target atom indices",
+          "items": {
+            "$ref": "#/definitions/ParametrizedNum"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "op",
+        "basis",
+        "targets",
+        "phi"
+      ],
+      "type": "object"
+    },
+    "OpPulse": {
+      "additionalProperties": false,
+      "description": "Pulse is a modulation of a frequency signal in amplitude and/or frequency, with a specific phase, over a given duration.\n\nNote:     We define the ``amplitude`` of a pulse to be its Rabi frequency, `ω`, in rad/µs.     Equivalently, the ``detuning`` is `Δ`, also in rad/µs.",
+      "properties": {
+        "amplitude": {
+          "$ref": "#/definitions/Waveform",
+          "description": "Pulse amplitude waveform (in rad/µs)"
+        },
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "Device channel to use for this pulse."
+        },
+        "detuning": {
+          "$ref": "#/definitions/Waveform",
+          "description": "Shift in frequency from the channel's central frequency over time"
+        },
+        "op": {
+          "const": "pulse",
+          "type": "string"
+        },
+        "phase": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The pulse phase (in radians)"
+        },
+        "post_phase_shift": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "A phase shift (in radians) immediately after the end of the pulse"
+        },
+        "protocol": {
+          "description": "Stipulates how to deal with eventual conflicts with other channels, specifically in terms of having multiple channels act on the same target simultaneously.\n\n- ``'min-delay'``: Before adding the pulse, introduces the   smallest possible delay that avoids all exisiting conflicts.\n\n- ``'no-delay'``: Adds the pulse to the channel, regardless of   existing conflicts.\n\n- ``'wait-for-all'``: Before adding the pulse, adds a delay   that idles the channel until the end of the other channels'   latest pulse.",
+          "enum": [
+            "min-delay",
+            "no-delay",
+            "wait-for-all"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "protocol",
+        "channel",
+        "amplitude",
+        "detuning",
+        "phase",
+        "post_phase_shift"
+      ],
+      "type": "object"
+    },
+    "OpTarget": {
+      "additionalProperties": false,
+      "description": "Adds a waveform to the pulse.",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "Channel to retarget. Must be local"
+        },
+        "op": {
+          "const": "target",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "New target atom index"
+        }
+      },
+      "required": [
+        "op",
+        "channel",
+        "target"
+      ],
+      "type": "object"
+    },
+    "Operation": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/OpAlign"
+        },
+        {
+          "$ref": "#/definitions/OpDelay"
+        },
+        {
+          "$ref": "#/definitions/OpTarget"
+        },
+        {
+          "$ref": "#/definitions/OpPulse"
+        },
+        {
+          "$ref": "#/definitions/OpPhaseShift"
+        }
+      ],
+      "description": "Sequence operation. All operations are performed in specified order."
+    },
+    "ParametrizedNum": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "#/definitions/Expression"
+        }
+      ],
+      "description": "Numeric scalar value that can be parametrized"
+    },
+    "ParametrizedNumArray": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        {
+          "$ref": "#/definitions/Expression"
+        },
+        {
+          "$ref": "#/definitions/VariableRef"
+        }
+      ],
+      "description": "Numeric array value that can be parametrized"
+    },
+    "PulserSequence": {
+      "additionalProperties": false,
+      "description": "Pulser import/export data structure.",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "channels": {
+          "additionalProperties": {
+            "$ref": "#/definitions/HardwareChannel"
+          },
+          "description": "Channels declared in this Sequence.",
+          "type": "object"
+        },
+        "device": {
+          "const": "Chadoq2",
+          "description": "A valid device in which to execute the Sequence",
+          "type": "string"
+        },
+        "measurement": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Basis"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Type of measurement to perform after all pulses are executed"
+        },
+        "name": {
+          "description": "User-assigned sequence name. Can be autogenerated on export if not provided.",
+          "type": "string"
+        },
+        "operations": {
+          "description": "Sequence of pulses, delays and target changes, performed in specified order.",
+          "items": {
+            "$ref": "#/definitions/Operation"
+          },
+          "type": "array"
+        },
+        "register": {
+          "description": "A 2D quantum register containing a set of atoms.",
+          "items": {
+            "$ref": "#/definitions/Atom"
+          },
+          "type": "array"
+        },
+        "variables": {
+          "additionalProperties": {
+            "$ref": "#/definitions/Variable"
+          },
+          "description": "Variables and expressions that can be used in expressions or parametrized values.",
+          "type": "object"
+        },
+        "version": {
+          "const": "1",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "device",
+        "name",
+        "register",
+        "channels",
+        "variables",
+        "operations",
+        "measurement"
+      ],
+      "type": "object"
+    },
+    "RampWaveform": {
+      "additionalProperties": false,
+      "description": "A linear ramp waveform.",
+      "properties": {
+        "duration": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The waveform duration (in ns)."
+        },
+        "kind": {
+          "const": "ramp",
+          "type": "string"
+        },
+        "start": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The initial value (in rad/µs)."
+        },
+        "stop": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The final value (in rad/µs)."
+        }
+      },
+      "required": [
+        "kind",
+        "duration",
+        "start",
+        "stop"
+      ],
+      "type": "object"
+    },
+    "Variable": {
+      "additionalProperties": false,
+      "description": "Variable representing a typed value assigned during sequence build. variables can be used in expressions and parametrized values.",
+      "properties": {
+        "type": {
+          "description": "Variable type",
+          "enum": [
+            "int",
+            "float"
+          ],
+          "type": "string"
+        },
+        "value": {
+          "description": "Default variable value. The default array length determins the variable array size.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "type": "object"
+    },
+    "VariableName": {
+      "description": "Name of declared variable.",
+      "type": "string"
+    },
+    "VariableRef": {
+      "additionalProperties": false,
+      "description": "References a declared variable by name.",
+      "properties": {
+        "variable": {
+          "$ref": "#/definitions/VariableName",
+          "description": "variable name, must reference declared variable"
+        }
+      },
+      "required": [
+        "variable"
+      ],
+      "type": "object"
+    },
+    "Waveform": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/CompositeWaveform"
+        },
+        {
+          "$ref": "#/definitions/CustomWaveform"
+        },
+        {
+          "$ref": "#/definitions/ConstantWaveform"
+        },
+        {
+          "$ref": "#/definitions/RampWaveform"
+        },
+        {
+          "$ref": "#/definitions/BlackmanWaveform"
+        },
+        {
+          "$ref": "#/definitions/BlackmanMaxWaveform"
+        },
+        {
+          "$ref": "#/definitions/InterpolatedWaveform"
+        },
+        {
+          "$ref": "#/definitions/KaiserWaveform"
+        },
+        {
+          "$ref": "#/definitions/KaiserMaxWaveform"
+        }
+      ],
+      "description": "Modulation waveform of any kind"
+    }
+  }
+}

@@ -19,38 +19,35 @@ import copy
 import json
 import os
 import warnings
-from collections import namedtuple
-from collections.abc import Callable, Generator, Iterable, Mapping, Set
-from functools import wraps
-from itertools import chain
+from collections.abc import Iterable, Mapping
 from sys import version_info
-from typing import (
-    Any,
-    NamedTuple,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, Optional, Tuple, Union, cast, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
-from pulser._seq_drawer import draw_sequence
+import pulser.sequence._decorators as seq_decorators
 from pulser.channels import Channel
 from pulser.devices import MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_abstract_sequence,
+)
+from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
-from pulser.register.base_register import BaseRegister
+from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
+from pulser.sequence._basis_ref import _QubitRef
+from pulser.sequence._call import _Call
+from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
+from pulser.sequence._seq_drawer import draw_sequence
+from pulser.sequence._seq_str import seq_to_str
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
@@ -65,91 +62,7 @@ else:  # pragma: no cover
         )
 
 
-QubitId = Union[int, str]
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
-F = TypeVar("F", bound=Callable)
-
-
-class _TimeSlot(NamedTuple):
-    """Auxiliary class to store the information in the schedule."""
-
-    type: Union[Pulse, str]
-    ti: int
-    tf: int
-    targets: set[QubitId]
-
-
-# Encodes a sequence building calls
-_Call = namedtuple("_Call", ["name", "args", "kwargs"])
-
-
-def _screen(func: F) -> F:
-    """Blocks the call to a function if the Sequence is parametrized."""
-
-    @wraps(func)
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        if self.is_parametrized():
-            raise RuntimeError(
-                f"Sequence.{func.__name__} can't be called in"
-                " parametrized sequences."
-            )
-        return func(self, *args, **kwargs)
-
-    return cast(F, wrapper)
-
-
-def _verify_variable(seq: Sequence, x: Any) -> None:
-    if isinstance(x, Parametrized):
-        # If not already, the sequence becomes parametrized
-        seq._building = False
-        for name, var in x.variables.items():
-            if name not in seq._variables:
-                raise ValueError(f"Unknown variable '{name}'.")
-            elif seq._variables[name] is not var:
-                raise ValueError(
-                    f"{x} has variables that don't come from this "
-                    "Sequence. Use only what's returned by this"
-                    "Sequence's 'declare_variable' method as your"
-                    "variables."
-                )
-    elif isinstance(x, Iterable) and not isinstance(x, str):
-        # Recursively look for parametrized objs inside the arguments
-        for y in x:
-            _verify_variable(seq, y)
-
-
-def _verify_parametrization(func: F) -> F:
-    """Checks and updates the sequence status' consistency with the call.
-
-    - Checks the sequence can still be modified.
-    - Checks if all Parametrized inputs stem from declared variables.
-    """
-
-    @wraps(func)
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        if self._is_measured and self.is_parametrized():
-            raise RuntimeError(
-                "The sequence has been measured, no further "
-                "changes are allowed."
-            )
-        for x in chain(args, kwargs.values()):
-            _verify_variable(self, x)
-        func(self, *args, **kwargs)
-
-    return cast(F, wrapper)
-
-
-def _store(func: F) -> F:
-    """Checks and stores the call to call it when building the Sequence."""
-
-    @wraps(func)
-    @_verify_parametrization
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        storage = self._calls if self._building else self._to_build_calls
-        func(self, *args, **kwargs)
-        storage.append(_Call(func.__name__, args, kwargs))
-
-    return cast(F, wrapper)
 
 
 class Sequence:
@@ -176,11 +89,10 @@ class Sequence:
     generated from a single "parametrized" ``Sequence``.
 
     Args:
-        register(Union[BaseRegister, MappableRegister]): The atom register on
-            which to apply the pulses. If given as a MappableRegister
-            instance, the traps corrresponding to each qubit ID must be given
-            when building the sequence.
-        device(Device): A valid device in which to execute the Sequence (import
+        register: The atom register on which to apply the pulses. If given as
+            a MappableRegister instance, the traps corrresponding to each
+            qubit ID must be given when building the sequence.
+        device: A valid device in which to execute the Sequence (import
             it from ``pulser.devices``).
 
     Note:
@@ -221,18 +133,11 @@ class Sequence:
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
-        self._channels: dict[str, Channel] = {}
-        self._schedule: dict[str, list[_TimeSlot]] = {}
-        # The phase reference of each channel
-        self._phase_ref: dict[str, dict[QubitId, _PhaseTracker]] = {}
-        # Stores the names and dict ids of declared channels
-        self._taken_channels: dict[str, str] = {}
+        self._schedule: _Schedule = _Schedule()
+        self._basis_ref: dict[str, dict[QubitId, _QubitRef]] = {}
         # IDs of all qubits in device
         self._qids: set[QubitId] = set(self._register.qubit_ids)
         # Last time each qubit was used, by basis
-        self._last_used: dict[str, dict[QubitId, int]] = {}
-        # Last time a target happened, by channel
-        self._last_target: dict[str, int] = {}
         self._variables: dict[str, Variable] = {}
         self._to_build_calls: list[_Call] = []
         self._building: bool = True
@@ -240,10 +145,18 @@ class Sequence:
         self._empty_sequence: bool = True
         # SLM mask targets and on/off times
         self._slm_mask_targets: set[QubitId] = set()
-        self._slm_mask_time: list[int] = []
 
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
+
+    @property
+    def _slm_mask_time(self) -> list[int]:
+        """The initial and final time when the SLM mask is on."""
+        return (
+            []
+            if not self._slm_mask_targets
+            else self._schedule.find_slm_mask_times()
+        )
 
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
@@ -268,7 +181,7 @@ class Sequence:
     @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
-        return dict(self._channels)
+        return {name: cs.channel_obj for name, cs in self._schedule.items()}
 
     @property
     def declared_variables(self) -> dict[str, Variable]:
@@ -281,17 +194,15 @@ class Sequence:
         # Show all channels if none are declared, otherwise filter depending
         # on whether the sequence is working on XY mode
         # If already in XY mode, filter right away
-        if not self._channels and not self._in_xy:
+        if not self._schedule and not self._in_xy:
             return dict(self._device.channels)
         else:
             # MockDevice channels can be declared multiple times
+            occupied_ch_ids = [cs.channel_id for cs in self._schedule.values()]
             return {
                 id: ch
                 for id, ch in self._device.channels.items()
-                if (
-                    id not in self._taken_channels.values()
-                    or self._device == MockDevice
-                )
+                if (id not in occupied_ch_ids or self._device == MockDevice)
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
@@ -321,7 +232,7 @@ class Sequence:
         are given a value (when ``Sequence.build()`` is called).
 
         Returns:
-            bool: Whether the sequence is parametrized.
+            Whether the sequence is parametrized.
         """
         return not self._building
 
@@ -333,71 +244,53 @@ class Sequence:
         `Sequence.build()` call.
 
         Returns:
-            bool: Whether the register is a MappableRegister.
+            Whether the register is a MappableRegister.
         """
         return isinstance(self._register, MappableRegister)
 
-    @_screen
+    def is_measured(self) -> bool:
+        """States whether the sequence has been measured."""
+        return (
+            self._is_measured
+            if self.is_parametrized()
+            else hasattr(self, "_measurement")
+        )
+
+    @seq_decorators.screen
     def get_duration(
         self, channel: Optional[str] = None, include_fall_time: bool = False
     ) -> int:
         """Returns the current duration of a channel or the whole sequence.
 
-        Keyword Args:
-            channel (Optional[str]): A specific channel to return the duration
-                of. If left as None, it will return the duration of the whole
-                sequence.
-            include_fall_time (bool): Whether to include in the duration the
+        Args:
+            channel: A specific channel to return the duration of. If left as
+                None, it will return the duration of the whole sequence.
+            include_fall_time: Whether to include in the duration the
                 extra time needed by the last pulse to finish, if there is
                 modulation.
 
         Returns:
-            int: The duration of the channel or sequence, in ns.
+            The duration of the channel or sequence, in ns.
         """
-        if channel is None:
-            channels = tuple(self._channels.keys())
-            if not channels:
-                return 0
-        else:
+        if channel is not None:
             self._validate_channel(channel)
-            channels = (channel,)
-        last_ts = {}
-        for id in channels:
-            this_chobj = self._channels[id]
-            temp_tf = 0
-            for i, op in enumerate(self._schedule[id][::-1]):
-                if i == 0:
-                    # Start with the last slot found
-                    temp_tf = op.tf
-                    if not include_fall_time:
-                        break
-                if isinstance(op.type, Pulse):
-                    temp_tf = max(
-                        temp_tf, op.tf + op.type.fall_time(this_chobj)
-                    )
-                    break
-                elif temp_tf - op.tf >= 2 * this_chobj.rise_time:
-                    # No pulse behind 'op' with a long enough fall time
-                    break
-            last_ts[id] = temp_tf
 
-        return max(last_ts.values())
+        return self._schedule.get_duration(channel, include_fall_time)
 
-    @_screen
+    @seq_decorators.screen
     def current_phase_ref(
         self, qubit: QubitId, basis: str = "digital"
     ) -> float:
         """Current phase reference of a specific qubit for a given basis.
 
         Args:
-            qubit (Union[int, str]): The id of the qubit whose phase shift is
-                desired.
-            basis (str): The basis (i.e. electronic transition) the phase
+            qubit: The id of the qubit whose phase shift is desired.
+            basis: The basis (i.e. electronic transition) the phase
                 reference is associated with. Must correspond to the basis of a
                 declared channel.
 
         Returns:
-            float: Current phase reference of 'qubit' in 'basis'.
+            Current phase reference of 'qubit' in 'basis'.
         """
         if qubit not in self._qids:
             raise ValueError(
@@ -405,10 +298,10 @@ class Sequence:
                 "this sequence's register."
             )
 
-        if basis not in self._phase_ref:
+        if basis not in self._basis_ref:
             raise ValueError("No declared channel targets the given 'basis'.")
 
-        return self._phase_ref[basis][qubit].last_phase
+        return self._basis_ref[basis][qubit].phase.last_phase
 
     def set_magnetic_field(
         self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0
@@ -424,49 +317,49 @@ class Sequence:
             defined through the declaration of a Microwave channel, calling
             this function will enable the "XY Mode".
 
-        Keyword Args:
-            bx (float): The magnetic field in the x direction (in Gauss).
-            by (float): The magnetic field in the y direction (in Gauss).
-            bz (float): The magnetic field in the z direction (in Gauss).
+        Args:
+            bx: The magnetic field in the x direction (in Gauss).
+            by: The magnetic field in the y direction (in Gauss).
+            bz: The magnetic field in the z direction (in Gauss).
         """
         if not self._in_xy:
-            if self._channels:
+            if self._schedule:
                 raise ValueError(
-                    "The magnetic field can only be set in 'XY " "Mode'."
+                    "The magnetic field can only be set in 'XY Mode'."
                 )
             # No channels declared yet
             self._in_xy = True
         elif not self._empty_sequence:
             # Not all channels are empty
             raise ValueError(
-                "The magnetic field can only be set on an empty " "sequence."
+                "The magnetic field can only be set on an empty sequence."
             )
 
         mag_vector = (bx, by, bz)
         if np.linalg.norm(mag_vector) == 0.0:
             raise ValueError(
-                "The magnetic field must have a magnitude greater" " than 0."
+                "The magnetic field must have a magnitude greater than 0."
             )
         self._mag_field = mag_vector
 
         # No parametrization -> Always stored as a regular call
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
-    @_store
+    @seq_decorators.store
     def config_slm_mask(self, qubits: Iterable[QubitId]) -> None:
         """Setup an SLM mask by specifying the qubits it targets.
 
         Args:
-            qubits (Iterable[QubitId]): Iterable of qubit ID's to mask during
-                the first global pulse of the sequence.
+            qubits: Iterable of qubit ID's to mask during the first global
+                pulse of the sequence.
         """
         try:
             targets = set(qubits)
         except TypeError:
-            raise TypeError("The SLM targets must be castable to set")
+            raise TypeError("The SLM targets must be castable to set.")
 
         if not targets.issubset(self._qids):
-            raise ValueError("SLM mask targets must exist in the register")
+            raise ValueError("SLM mask targets must exist in the register.")
 
         if self.is_parametrized():
             return
@@ -477,23 +370,7 @@ class Sequence:
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
 
-        # Find tentative initial and final time of SLM mask if possible
-        for channel in self._channels:
-            if not self._channels[channel].addressing == "Global":
-                continue
-            # Cycle on slots in schedule until the first pulse is found
-            for slot in self._schedule[channel]:
-                if not isinstance(slot.type, Pulse):
-                    continue
-                ti = slot.ti
-                tf = slot.tf
-                if self._slm_mask_time:
-                    if ti < self._slm_mask_time[0]:
-                        self._slm_mask_time = [ti, tf]
-                else:
-                    self._slm_mask_time = [ti, tf]
-                break
-
+    @seq_decorators.block_if_measured
     def declare_channel(
         self,
         name: str,
@@ -514,17 +391,17 @@ class Sequence:
             ``MockDevice`` channels can be repeatedly declared if needed.
 
         Args:
-            name (str): Unique name for the channel in the sequence.
-            channel_id (str): How the channel is identified in the device.
+            name: Unique name for the channel in the sequence.
+            channel_id: How the channel is identified in the device.
                 Consult ``Sequence.available_channels`` to see which channel
                 ID's are still available and the associated channel's
                 description.
-            initial_target (Optional[Union[int, str, Iterable]]): For 'Local'
-                addressing channels only. Declares the initial target of the
-                channel. If left as None, the initial target will have to be
-                set manually as the first addition to this channel.
+            initial_target: For 'Local' addressing channels only. Declares the
+                initial target of the channel. If left as None, the initial
+                target will have to be set manually as the first addition
+                to this channel.
         """
-        if name in self._channels:
+        if name in self._schedule:
             raise ValueError("The given name is already in use.")
 
         if channel_id not in self._device.channels:
@@ -559,16 +436,11 @@ class Sequence:
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
             self.set_magnetic_field()
-        self._channels[name] = ch
-        self._taken_channels[name] = channel_id
-        self._schedule[name] = []
-        self._last_target[name] = 0
 
-        if ch.basis not in self._phase_ref:
-            self._phase_ref[ch.basis] = {
-                q: _PhaseTracker(0) for q in self._qids
-            }
-            self._last_used[ch.basis] = {q: 0 for q in self._qids}
+        self._schedule[name] = _ChannelSchedule(channel_id, ch)
+
+        if ch.basis not in self._basis_ref:
+            self._basis_ref[ch.basis] = {q: _QubitRef() for q in self._qids}
 
         if ch.addressing == "Global":
             self._add_to_schedule(name, _TimeSlot("target", -1, 0, self._qids))
@@ -627,28 +499,27 @@ class Sequence:
         are dependent on the involved variables.
 
         Args:
-            name (str): The name for the variable. Must be unique within a
+            name: The name for the variable. Must be unique within a
                 Sequence.
 
-        Keyword Args:
-            size (Optional[int]=None): The number of entries stored in the
-                variable. If defined, returns an array of variables with the
-                given size. If left as ``None``, returns a single variable.
-            dtype (default=float): The type of the data that will be assigned
+        Args:
+            size: The number of entries stored in the variable. If defined,
+                returns an array of variables with the given size. If left
+                as ``None``, returns a single variable.
+            dtype: The type of the data that will be assigned
                 to the variable. Must be ``float`` or ``int``.
 
         Returns:
-            Variable: The declared Variable instance.
+            The declared Variable instance.
 
         Note:
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
-        if name == "qubits":
-            # Necessary because 'qubits' is a keyword arg in self.build()
+        if name in ("qubits", "seq_name"):
             raise ValueError(
-                "'qubits' is a protected name. Please choose a different name "
-                "for the variable."
+                f"'{name}' is a protected name. Please choose a different name"
+                " for the variable."
             )
 
         if name in self._variables:
@@ -662,7 +533,9 @@ class Sequence:
             self._variables[name] = var
             return var
 
-    @_store
+    @seq_decorators.store
+    @seq_decorators.mark_non_empty
+    @seq_decorators.block_if_measured
     def add(
         self,
         pulse: Union[Pulse, Parametrized],
@@ -672,9 +545,9 @@ class Sequence:
         """Adds a pulse to a channel.
 
         Args:
-            pulse (pulser.Pulse): The pulse object to add to the channel.
-            channel (str): The channel's name provided when declared.
-            protocol (str, default='min-delay'): Stipulates how to deal with
+            pulse: The pulse object to add to the channel.
+            channel: The channel's name provided when declared.
+            protocol: Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
                 of having multiple channels act on the same target
                 simultaneously.
@@ -700,41 +573,17 @@ class Sequence:
 
         if self.is_parametrized():
             if not isinstance(pulse, Parametrized):
-                self._validate_pulse(pulse, channel)
-            # Sequence is marked as non-empty on the first added pulse
-            if self._empty_sequence:
-                self._empty_sequence = False
+                self._validate_and_adjust_pulse(pulse, channel)
             return
 
-        if not isinstance(pulse, Pulse):
-            raise TypeError(
-                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
-            )
-
-        channel_obj = self._channels[channel]
-        _duration = channel_obj.validate_duration(pulse.duration)
-        if _duration != pulse.duration:
-            try:
-                pulse = Pulse(
-                    pulse.amplitude.change_duration(_duration),
-                    pulse.detuning.change_duration(_duration),
-                    pulse.phase,
-                    pulse.post_phase_shift,
-                )
-            except NotImplementedError:
-                raise TypeError(
-                    "Failed to automatically adjust one of the pulse's "
-                    "waveforms to the channel duration constraints. Choose a "
-                    "duration that is a multiple of "
-                    f"{channel_obj.clock_period} ns."
-                )
-
-        self._validate_pulse(pulse, channel)
+        pulse = cast(Pulse, pulse)
+        channel_obj = self._schedule[channel].channel_obj
         last = self._last(channel)
-        t0 = last.tf  # Preliminary ti
         basis = channel_obj.basis
 
-        ph_refs = {self._phase_ref[basis][q].last_phase for q in last.targets}
+        ph_refs = {
+            self._basis_ref[basis][q].phase.last_phase for q in last.targets
+        }
         if len(ph_refs) != 1:
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
@@ -743,90 +592,24 @@ class Sequence:
         else:
             phase_ref = ph_refs.pop()
 
-        if phase_ref != 0:
-            # Has to recreate the original pulse with a new phase
-            pulse = Pulse(
-                pulse.amplitude,
-                pulse.detuning,
-                pulse.phase + phase_ref,
-                post_phase_shift=pulse.post_phase_shift,
-            )
+        pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
 
         phase_barriers = [
-            self._phase_ref[basis][q].last_time for q in last.targets
+            self._basis_ref[basis][q].phase.last_time for q in last.targets
         ]
-        current_max_t = max(t0, *phase_barriers)
-        if protocol != "no-delay":
-            for ch, seq in self._schedule.items():
-                if ch == channel:
-                    continue
-                this_chobj = self._channels[ch]
-                for op in self._schedule[ch][::-1]:
-                    if not isinstance(op.type, Pulse):
-                        if op.tf + 2 * this_chobj.rise_time <= current_max_t:
-                            # No pulse behind 'op' needing a delay
-                            break
-                    elif (
-                        op.tf + op.type.fall_time(this_chobj) <= current_max_t
-                    ):
-                        break
-                    elif (
-                        op.targets & last.targets or protocol == "wait-for-all"
-                    ):
-                        current_max_t = op.tf + op.type.fall_time(this_chobj)
-                        break
 
-        delay_duration = current_max_t - t0
-        # Find last pulse and compare phase
-        for op in self._schedule[channel][::-1]:
-            if isinstance(op.type, Pulse):
-                if op.type.phase != pulse.phase:
-                    delay_duration = max(
-                        delay_duration,
-                        # Considers that the last pulse might not be at t0
-                        channel_obj.phase_jump_time - (t0 - op.tf),
-                    )
-                break
+        self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
 
-        if delay_duration > 0:
-            # Delay must not be shorter than the min duration of this channel
-            # and a multiple of the clock period (forced by validate_duration)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                delay_duration = channel_obj.validate_duration(
-                    max(delay_duration, channel_obj.min_duration)
-                )
-            self._delay(delay_duration, channel)
-
-        ti = t0 + delay_duration
-        tf = ti + pulse.duration
-
-        self._add_to_schedule(channel, _TimeSlot(pulse, ti, tf, last.targets))
-
-        true_finish = tf + pulse.fall_time(channel_obj)
+        true_finish = self._last(channel).tf + pulse.fall_time(channel_obj)
         for qubit in last.targets:
-            if self._last_used[basis][qubit] < true_finish:
-                self._last_used[basis][qubit] = true_finish
+            self._basis_ref[basis][qubit].update_last_used(true_finish)
 
         if pulse.post_phase_shift:
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
             )
 
-        # Sequence is marked as non-empty on the first added pulse
-        if self._empty_sequence:
-            self._empty_sequence = False
-
-        # If the added pulse starts earlier than all previously added pulses,
-        # update SLM mask initial and final time
-        if self._slm_mask_targets:
-            try:
-                if self._slm_mask_time[0] > ti:
-                    self._slm_mask_time = [ti, tf]
-            except IndexError:
-                self._slm_mask_time = [ti, tf]
-
-    @_store
+    @seq_decorators.store
     def target(
         self,
         qubits: Union[QubitId, Iterable[QubitId]],
@@ -835,15 +618,16 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (Union[int, str, Iterable]): The new target for this
-                channel. Must correspond to a qubit ID in device or an iterable
-                of qubit IDs, when multi-qubit addressing is possible.
-            channel (str): The channel's name provided when declared. Must be
+            qubits: The new target for this channel. Must correspond to a
+                qubit ID in device or an iterable of qubit IDs, when
+                multi-qubit addressing is possible.
+            channel: The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
         """
         self._target(qubits, channel)
 
-    @_verify_parametrization
+    @seq_decorators.store
+    @seq_decorators.check_allow_qubit_index
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -852,33 +636,23 @@ class Sequence:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
-            qubits (Union[int, Iterable, Parametrized]): The new target for
-                this channel. Must correspond to a qubit index or an iterable
-                of qubit indices, when multi-qubit addressing is possible.
+            qubits: The new target for this channel. Must correspond to a
+                qubit index or an iterable of qubit indices, when multi-qubit
+                addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
                 they were declared when instantiating the ``Register``
                 or ``MappableRegister``.
-            channel (str): The channel's name provided when declared. Must be
+            channel: The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
 
         Note:
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        self._check_allow_qubit_index(self.target_index.__name__)
+        self._target(qubits, channel, _index=True)
 
-        qubits = cast(int, qubits)
-        self._target_index(qubits, channel)
-
-    def _check_allow_qubit_index(self, method_name: str) -> None:
-        if not self.is_parametrized() and self.is_register_mappable():
-            raise RuntimeError(
-                f"Sequence.{method_name} cannot be called in"
-                " non parametrized sequences using a mappable register."
-            )
-
-    @_store
+    @seq_decorators.store
     def delay(
         self,
         duration: Union[int, Parametrized],
@@ -887,13 +661,13 @@ class Sequence:
         """Idles a given channel for a specific duration.
 
         Args:
-            duration (Union[int, Parametrized]): Time to delay (in multiples
-                of 4 ns).
-            channel (str): The channel's name provided when declared.
+            duration: Time to delay (in ns).
+            channel: The channel's name provided when declared.
         """
         self._delay(duration, channel)
 
-    @_store
+    @seq_decorators.store
+    @seq_decorators.block_if_measured
     def measure(self, basis: str = "ground-rydberg") -> None:
         """Measures in a valid basis.
 
@@ -905,7 +679,7 @@ class Sequence:
             possible to measure in the 'XY' basis outside of XY mode.
 
         Args:
-            basis (str): Valid basis for measurement (consult the
+            basis: Valid basis for measurement (consult the
                 ``supported_bases`` attribute of the selected device for
                 the available options).
         """
@@ -921,15 +695,12 @@ class Sequence:
                 "available options are: " + ", ".join(list(available))
             )
 
-        if hasattr(self, "_measurement"):
-            raise RuntimeError("The sequence has already been measured.")
-
         if self.is_parametrized():
             self._is_measured = True
         else:
             self._measurement = basis
 
-    @_store
+    @seq_decorators.store
     def phase_shift(
         self,
         phi: Union[float, Parametrized],
@@ -943,17 +714,16 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi (Union[float, Parametrized]): The intended phase shift (in
-                rads).
-            targets (Union[int, str]): The ids of the qubits to apply the phase
-                shift to.
-            basis (str): The basis (i.e. electronic transition) to associate
+            phi: The intended phase shift (in rads).
+            targets: The ids of the qubits to apply the phase shift to.
+            basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
         """
         self._phase_shift(phi, *targets, basis=basis)
 
-    @_verify_parametrization
+    @seq_decorators.store
+    @seq_decorators.check_allow_qubit_index
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
@@ -967,15 +737,13 @@ class Sequence:
         Bloch sphere).
 
         Args:
-            phi (Union[float, Parametrized]): The intended phase shift (in
-                rads).
-            targets (Union[int, Parametrized]): The indices of the qubits to
-                apply the phase shift to.
+            phi: The intended phase shift (in rads).
+            targets: The indices of the qubits to apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
                 they were declared when instantiating the ``Register``
                 or ``MappableRegister``.
-            basis (str): The basis (i.e. electronic transition) to associate
+            basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
                 channel.
 
@@ -983,10 +751,10 @@ class Sequence:
             Cannot be used on non-parametrized sequences using a mappable
             register.
         """
-        self._check_allow_qubit_index(self.phase_shift_index.__name__)
-        self._phase_shift_index(phi, *targets, basis=basis)
+        self._phase_shift(phi, *targets, basis=basis, _index=True)
 
-    @_store
+    @seq_decorators.store
+    @seq_decorators.block_if_measured
     def align(self, *channels: str) -> None:
         """Aligns multiple channels in time.
 
@@ -995,14 +763,14 @@ class Sequence:
         will start right after the latest channel has finished.
 
         Args:
-            channels (str): The names of the channels to align, as given upon
+            channels: The names of the channels to align, as given upon
                 declaration.
         """
         ch_set = set(channels)
         # channels have to be a subset of the declared channels
-        if not ch_set <= set(self._channels):
+        if not ch_set <= set(self._schedule):
             raise ValueError(
-                "All channel names must correspond to declared" " channels."
+                "All channel names must correspond to declared channels."
             )
         if len(channels) != len(ch_set):
             raise ValueError("The same channel was provided more than once.")
@@ -1022,13 +790,10 @@ class Sequence:
         for id in channels:
             delta = tf - last_ts[id]
             if delta > 0:
-                channel_obj = self._channels[id]
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    delta = channel_obj.validate_duration(
-                        max(delta, channel_obj.min_duration)
-                    )
-                self._delay(delta, id)
+                self._delay(
+                    self._schedule[id].adjust_duration(delta),
+                    id,
+                )
 
     def build(
         self,
@@ -1038,17 +803,16 @@ class Sequence:
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
-        Keyword Args:
-            qubits (Optional[Mapping[QubitId, int]]): A mapping between qubit
-                IDs and trap IDs used to define the register. Must only be
-                provided when the sequence is initialized with a
-                MappableRegister.
+        Args:
+            qubits: A mapping between qubit IDs and trap IDs used to define
+                the register. Must only be provided when the sequence is
+                initialized with a MappableRegister.
             vars: The values for all the variables declared in this Sequence
                 instance, indexed by the name given upon declaration. Check
                 ``Sequence.declared_variables`` to see all the variables.
 
         Returns:
-            Sequence: The Sequence built with the given variable values.
+            The Sequence built with the given variable values.
 
         Example:
             ::
@@ -1078,22 +842,7 @@ class Sequence:
                 "a concrete register."
             )
 
-        all_keys, given_keys = self._variables.keys(), vars.keys()
-        if given_keys != all_keys:
-            invalid_vars = given_keys - all_keys
-            if invalid_vars:
-                warnings.warn(
-                    "No declared variables named: " + ", ".join(invalid_vars),
-                    stacklevel=2,
-                )
-                for k in invalid_vars:
-                    vars.pop(k, None)
-            missing_vars = all_keys - given_keys
-            if missing_vars:
-                raise TypeError(
-                    "Did not receive values for variables: "
-                    + ", ".join(missing_vars)
-                )
+        self._cross_check_vars(vars)
 
         if not self.is_parametrized():
             if not self.is_register_mappable():
@@ -1133,7 +882,7 @@ class Sequence:
                 ``cls``.
 
         Returns:
-            str: The sequence encoded in a JSON formatted string.
+            The sequence encoded in a JSON formatted string.
 
         See Also:
             ``json.dumps``: Built-in function for serialization to a JSON
@@ -1141,12 +890,32 @@ class Sequence:
         """
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
+    def to_abstract_repr(
+        self, seq_name: str = "pulser-exported", **defaults: Any
+    ) -> str:
+        """Serializes the Sequence into an abstract JSON object.
+
+        Keyword Args:
+            seq_name (str): A name for the sequence. If not defined, defaults
+                to "pulser-exported".
+            defaults: The default values for all the variables declared in this
+                Sequence instance, indexed by the name given upon declaration.
+                Check ``Sequence.declared_variables`` to see all the variables.
+
+        Returns:
+            str: The sequence encoded as an abstract JSON object.
+
+        See Also:
+            ``serialize``
+        """
+        return serialize_abstract_sequence(self, seq_name, **defaults)
+
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
-            obj (str): The JSON formatted string to deserialize, coming from
+            obj: The JSON formatted string to deserialize, coming from
                 the serialization of a ``Sequence`` through
                 ``Sequence.serialize()``.
 
@@ -1155,7 +924,7 @@ class Sequence:
                 ``cls`` and ``object_hook``.
 
         Returns:
-            Sequence: The deserialized Sequence object.
+            The deserialized Sequence object.
 
         See Also:
             ``json.loads``: Built-in function for deserialization from a JSON
@@ -1168,7 +937,20 @@ class Sequence:
 
         return cast(Sequence, json.loads(obj, cls=PulserDecoder, **kwargs))
 
-    @_screen
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> Sequence:
+        """Deserialize a sequence from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the sequence encoded
+                in the abstract JSON format.
+
+        Returns:
+            Sequence: The Pulser sequence.
+        """
+        return deserialize_abstract_sequence(obj_str)
+
+    @seq_decorators.screen
     def draw(
         self,
         mode: str = "input+output",
@@ -1176,37 +958,40 @@ class Sequence:
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
+        draw_phase_curve: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
     ) -> None:
         """Draws the sequence in its current state.
 
-        Keyword Args:
-            mode (str, default="input+output"): The curves to draw. 'input'
+        Args:
+            mode: The curves to draw. 'input'
                 draws only the programmed curves, 'output' the excepted curves
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
-            draw_phase_area (bool): Whether phase and area values need to be
+            draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
                 'output' mode.
-            draw_interp_pts (bool): When the sequence has pulses with waveforms
+            draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective input waveforms (defaults to True).
                 Doesn't work in 'output' mode.
-            draw_phase_shifts (bool): Whether phase shift and reference
+            draw_phase_shifts: Whether phase shift and reference
                 information should be added to the plot, defaults to False.
-            draw_register (bool): Whether to draw the register before the pulse
+            draw_register: Whether to draw the register before the pulse
                 sequence, with a visual indication (square halo) around the
                 qubits masked by the SLM, defaults to False. Can't be set to
                 True if the sequence is defined with a mappable register.
-            fig_name(str, default=None): The name on which to save the
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
+            fig_name: The name on which to save the
                 figure. If `draw_register` is True, both pulses and register
                 will be saved as figures, with a suffix ``_pulses`` and
                 ``_register`` in the file name. If `draw_register` is False,
                 only the pulses are saved, with no suffix. If `fig_name` is
                 None, no figure is saved.
-            kwargs_savefig(dict, default={}): Keywords arguments for
+            kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
 
@@ -1247,6 +1032,7 @@ class Sequence:
             draw_register=draw_register,
             draw_input="input" in mode,
             draw_modulation="output" in mode,
+            draw_phase_curve=draw_phase_curve,
         )
         if fig_name is not None and draw_register:
             name, ext = os.path.splitext(fig_name)
@@ -1256,27 +1042,15 @@ class Sequence:
             fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
-    @overload
-    def _precheck_target_qubits_set(
-        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
-    ) -> Union[Set[int]]:
-        pass
-
-    @overload
-    def _precheck_target_qubits_set(
-        self,
-        qubits: Union[Iterable[QubitId], QubitId],
-        channel: str,
-    ) -> Union[Set[QubitId]]:
-        pass
-
-    def _precheck_target_qubits_set(
+    @seq_decorators.block_if_measured
+    def _target(
         self,
         qubits: Union[Iterable[QubitId], QubitId, Parametrized],
         channel: str,
-    ) -> Union[Set[QubitId], Set[int]]:
+        _index: bool = False,
+    ) -> None:
         self._validate_channel(channel)
-        channel_obj = self._channels[channel]
+        channel_obj = self._schedule[channel].channel_obj
         try:
             qubits_set = (
                 set(cast(Iterable, qubits))
@@ -1293,170 +1067,77 @@ class Sequence:
                 f"This channel can target at most {channel_obj.max_targets} "
                 "qubits at a time."
             )
-
-        return qubits_set
-
-    def _target(
-        self,
-        qubits: Union[Iterable[QubitId], QubitId],
-        channel: str,
-    ) -> None:
-        qubits_set = self._precheck_target_qubits_set(qubits, channel)
-        self._check_ids(*qubits_set)
+        qubit_ids_set = self._check_qubits_give_ids(*qubits_set, _index=_index)
 
         if not self.is_parametrized():
-            self._perform_target_non_parametrized(qubits_set, channel)
-
-    def _check_indices(
-        self, indices: Iterable[Union[int, Parametrized]]
-    ) -> None:
-        nb_of_indices = len(self._register.qubit_ids)
-        allowed_indices = range(nb_of_indices)
-        for i in indices:
-            if i not in allowed_indices and not isinstance(i, Parametrized):
+            basis = channel_obj.basis
+            phase_refs = {
+                self._basis_ref[basis][q].phase.last_phase
+                for q in qubit_ids_set
+            }
+            if len(phase_refs) != 1:
                 raise ValueError(
-                    f"All non-variable targets must be indices valid "
-                    f"for the register, between 0 and "
-                    f"{nb_of_indices - 1}. Wrong index: {i!r}."
+                    "Cannot target multiple qubits with different "
+                    "phase references for the same basis."
                 )
+            self._schedule.add_target(qubit_ids_set, channel)
 
-    @_store
-    def _target_index(
-        self, qubits: Union[Iterable[int], int, Parametrized], channel: str
-    ) -> None:
-
-        qubits_set = self._precheck_target_qubits_set(qubits, channel)
-        if self.is_parametrized():
-            self._check_indices(qubits_set)
-        else:
-            try:
-                qubit_ids_set = {
-                    self.register.qubit_ids[index] for index in qubits_set
-                }
-            except IndexError:
-                raise IndexError("Indices must exist for the register.")
-            self._perform_target_non_parametrized(qubit_ids_set, channel)
-
-    def _perform_target_non_parametrized(
-        self, qubits_set: Set[QubitId], channel: str
-    ) -> None:
-        channel_obj = self._channels[channel]
-        basis = channel_obj.basis
-        phase_refs = {self._phase_ref[basis][q].last_phase for q in qubits_set}
-        if len(phase_refs) != 1:
-            raise ValueError(
-                "Cannot target multiple qubits with different "
-                "phase references for the same basis."
-            )
-
-        try:
-            fall_time = self.get_duration(
-                channel, include_fall_time=True
-            ) - self.get_duration(channel)
-            if fall_time > 0:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    self.delay(
-                        max(fall_time, channel_obj.min_duration),
-                        channel,
-                    )
-
-            last = self._last(channel)
-            if last.targets == qubits_set:
-                return
-            ti = last.tf
-            retarget = cast(int, channel_obj.min_retarget_interval)
-            elapsed = ti - self._last_target[channel]
-            delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
-            if channel_obj.fixed_retarget_t:
-                delta = max(delta, channel_obj.fixed_retarget_t)
-            if delta != 0:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    delta = channel_obj.validate_duration(
-                        max(delta, channel_obj.min_duration)
-                    )
-            tf = ti + delta
-
-        except ValueError:
-            ti = -1
-            tf = 0
-
-        self._last_target[channel] = tf
-        self._add_to_schedule(
-            channel, _TimeSlot("target", ti, tf, set(qubits_set))
-        )
-
-    def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
-        self._validate_channel(channel)
-        if self.is_parametrized():
-            return
-
-        duration = cast(int, duration)
-        last = self._last(channel)
-        ti = last.tf
-        tf = ti + self._channels[channel].validate_duration(duration)
-        self._add_to_schedule(
-            channel, _TimeSlot("delay", ti, tf, last.targets)
-        )
-
-    def _check_basis(self, basis: str) -> None:
-        if basis not in self._phase_ref:
-            raise ValueError("No declared channel targets the given 'basis'.")
-
-    def _check_ids(self, *ids: Union[QubitId, Parametrized]) -> None:
-        if not set(ids) <= self._qids:
+    def _check_qubits_give_ids(
+        self, *qubits: Union[QubitId, Parametrized], _index: bool = False
+    ) -> set[QubitId]:
+        if _index:
+            if self.is_parametrized():
+                nb_of_indices = len(self._register.qubit_ids)
+                allowed_indices = range(nb_of_indices)
+                for i in qubits:
+                    if i not in allowed_indices and not isinstance(
+                        i, Parametrized
+                    ):
+                        raise ValueError(
+                            f"All non-variable targets must be indices valid "
+                            f"for the register, between 0 and "
+                            f"{nb_of_indices - 1}. Wrong index: {i!r}."
+                        )
+                return set()
+            else:
+                qubits = cast(Tuple[int, ...], qubits)
+                try:
+                    return {self.register.qubit_ids[index] for index in qubits}
+                except IndexError:
+                    raise IndexError("Indices must exist for the register.")
+        ids = set(cast(Tuple[QubitId, ...], qubits))
+        if not ids <= self._qids:
             raise ValueError(
                 "All given ids have to be qubit ids declared"
                 " in this sequence's register."
             )
+        return ids
 
-    def _phase_shift_non_parametrized(
-        self,
-        phi: Union[float, Parametrized],
-        *targets: QubitId,
-        basis: str,
-    ) -> None:
-        phi = cast(float, phi)
-        if phi % (2 * np.pi) == 0:
+    @seq_decorators.block_if_measured
+    def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
+        self._validate_channel(channel)
+        if self.is_parametrized():
             return
-
-        for qubit in targets:
-            last_used = self._last_used[basis][qubit]
-            new_phase = self._phase_ref[basis][qubit].last_phase + phi
-            self._phase_ref[basis][qubit][last_used] = new_phase
+        self._schedule.add_delay(cast(int, duration), channel)
 
     def _phase_shift(
         self,
         phi: Union[float, Parametrized],
-        *targets: QubitId,
+        *targets: Union[QubitId, Parametrized],
         basis: str,
+        _index: bool = False,
     ) -> None:
-        self._check_basis(basis)
-        self._check_ids(*targets)
+        if basis not in self._basis_ref:
+            raise ValueError("No declared channel targets the given 'basis'.")
+        target_ids = self._check_qubits_give_ids(*targets, _index=_index)
 
         if not self.is_parametrized():
-            self._phase_shift_non_parametrized(phi, *targets, basis=basis)
+            phi = cast(float, phi)
+            if phi % (2 * np.pi) == 0:
+                return
 
-    @_store
-    def _phase_shift_index(
-        self,
-        phi: Union[float, Parametrized],
-        *targets: Union[int, Parametrized],
-        basis: str,
-    ) -> None:
-        self._check_basis(basis)
-        if self.is_parametrized():
-            self._check_indices(targets)
-        else:
-            targets = cast(Tuple[int], targets)
-            try:
-                target_ids = [
-                    self.register.qubit_ids[index] for index in targets
-                ]
-            except IndexError:
-                raise IndexError("Indices must exist for the register.")
-            self._phase_shift_non_parametrized(phi, *target_ids, basis=basis)
+            for qubit in target_ids:
+                self._basis_ref[basis][qubit].increment_phase(phi)
 
     def _to_dict(self) -> dict[str, Any]:
         d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
@@ -1467,76 +1148,15 @@ class Sequence:
         return d
 
     def __str__(self) -> str:
-        full = ""
-        pulse_line = "t: {}->{} | {} | Targets: {}\n"
-        target_line = "t: {}->{} | Target: {} | Phase Reference: {}\n"
-        delay_line = "t: {}->{} | Delay \n"
-        # phase_line = "t: {} | Phase shift of: {:.3f} | Targets: {}\n"
-        for ch, seq in self._schedule.items():
-            basis = self._channels[ch].basis
-            full += f"Channel: {ch}\n"
-            first_slot = True
-            for ts in seq:
-                if ts.type == "delay":
-                    full += delay_line.format(ts.ti, ts.tf)
-                    continue
-
-                tgts = list(ts.targets)
-                tgt_txt = ", ".join([str(t) for t in tgts])
-                if isinstance(ts.type, Pulse):
-                    full += pulse_line.format(ts.ti, ts.tf, ts.type, tgt_txt)
-                elif ts.type == "target":
-                    phase = self._phase_ref[basis][tgts[0]][ts.tf]
-                    if first_slot:
-                        full += (
-                            f"t: 0 | Initial targets: {tgt_txt} | "
-                            + f"Phase Reference: {phase} \n"
-                        )
-                        first_slot = False
-                    else:
-                        full += target_line.format(
-                            ts.ti, ts.tf, tgt_txt, phase
-                        )
-            full += "\n"
-
-        if hasattr(self, "_measurement"):
-            full += f"Measured in basis: {self._measurement}"
-
-        if self.is_parametrized():
-            prelude = "Prelude\n-------\n" + full
-            lines = ["Stored calls\n------------"]
-            for i, c in enumerate(self._to_build_calls, 1):
-                args = [str(a) for a in c.args]
-                kwargs = [
-                    f"{key}={str(value)}" for key, value in c.kwargs.items()
-                ]
-                lines.append(f"{i}. {c.name}({', '.join(args+kwargs)})")
-            full = prelude + "\n\n".join(lines)
-
-        return full
+        return seq_to_str(self)
 
     def _add_to_schedule(self, channel: str, timeslot: _TimeSlot) -> None:
-        if hasattr(self, "_measurement"):
-            raise RuntimeError(
-                "The sequence has already been measured. "
-                "Nothing more can be added."
-            )
-        self._schedule[channel].append(timeslot)
-
-    def _min_pulse_duration(self) -> float:
-        duration_list = []
-        for ch_schedule in self._schedule.values():
-            for slot in ch_schedule:
-                if isinstance(slot.type, Pulse):
-                    duration_list.append(slot.tf - slot.ti)
-        return min(duration_list)
+        # Maybe get rid of this
+        self._schedule[channel].slots.append(timeslot)
 
     def _last(self, channel: str) -> _TimeSlot:
         """Shortcut to last element in the channel's schedule."""
-        try:
-            return self._schedule[channel][-1]
-        except IndexError:
-            raise ValueError("The chosen channel has no target.")
+        return self._schedule[channel][-1]
 
     def _validate_channel(self, channel: str) -> None:
         if isinstance(channel, Parametrized):
@@ -1544,11 +1164,32 @@ class Sequence:
                 "Using parametrized objects or variables to refer to channels "
                 "is not supported."
             )
-        if channel not in self._channels:
+        if channel not in self._schedule:
             raise ValueError("Use the name of a declared channel.")
 
-    def _validate_pulse(self, pulse: Pulse, channel: str) -> None:
-        self._device.validate_pulse(pulse, self._taken_channels[channel])
+    def _validate_and_adjust_pulse(
+        self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
+    ) -> Pulse:
+        self._device.validate_pulse(pulse, self._schedule[channel].channel_id)
+        channel_obj = self._schedule[channel].channel_obj
+        _duration = channel_obj.validate_duration(pulse.duration)
+        new_phase = pulse.phase + (phase_ref if phase_ref else 0)
+        if _duration != pulse.duration:
+            try:
+                new_amp = pulse.amplitude.change_duration(_duration)
+                new_det = pulse.detuning.change_duration(_duration)
+            except NotImplementedError:
+                raise TypeError(
+                    "Failed to automatically adjust one of the pulse's "
+                    "waveforms to the channel duration constraints. Choose a "
+                    "duration that is a multiple of "
+                    f"{channel_obj.clock_period} ns."
+                )
+        else:
+            new_amp = pulse.amplitude
+            new_det = pulse.detuning
+
+        return Pulse(new_amp, new_det, new_phase, pulse.post_phase_shift)
 
     def _reset_parametrized(self) -> None:
         """Resets all attributes related to parametrization."""
@@ -1563,13 +1204,13 @@ class Sequence:
         self._device.validate_register(reg)
         qids = set(reg.qubit_ids)
         used_qubits = set()
-        for ch, ch_obj in self._channels.items():
+        for ch, ch_schedule in self._schedule.items():
             # Correct the targets of global channels
-            if ch_obj.addressing == "Global":
+            if ch_schedule.channel_obj.addressing == "Global":
                 for i, slot in enumerate(self._schedule[ch]):
                     stored_values = slot._asdict()
                     stored_values["targets"] = qids
-                    seq._schedule[ch][i] = _TimeSlot(**stored_values)
+                    seq._schedule[ch].slots[i] = _TimeSlot(**stored_values)
             else:
                 # Make sure all explicit targets are in the register
                 for slot in self._schedule[ch]:
@@ -1584,49 +1225,21 @@ class Sequence:
         seq._qids = qids
         seq._calls[0] = _Call("__init__", (seq._register, seq._device), {})
 
-
-class _PhaseTracker:
-    """Tracks a phase reference over time."""
-
-    def __init__(self, initial_phase: float):
-        self._times: list[int] = [0]
-        self._phases: list[float] = [self._format(initial_phase)]
-
-    @property
-    def last_time(self) -> int:
-        return self._times[-1]
-
-    @property
-    def last_phase(self) -> float:
-        return self._phases[-1]
-
-    def changes(
-        self,
-        ti: Union[float, int],
-        tf: Union[float, int],
-        time_scale: float = 1.0,
-    ) -> Generator[tuple[float, float], None, None]:
-        """Changes in phases within ]ti, tf]."""
-        start, end = np.searchsorted(
-            self._times, (ti * time_scale, tf * time_scale), side="right"
-        )
-        for i in range(start, end):
-            change = self._phases[i] - self._phases[i - 1]
-            yield (self._times[i] / time_scale, change)
-
-    def _format(self, phi: float) -> float:
-        return phi % (2 * np.pi)
-
-    def __setitem__(self, t: int, phi: float) -> None:
-        phase = self._format(phi)
-        if t in self._times:
-            ind = self._times.index(t)
-            self._phases[ind] = phase
-        else:
-            ind = int(np.searchsorted(self._times, t, side="right"))
-            self._times.insert(ind, t)
-            self._phases.insert(ind, phase)
-
-    def __getitem__(self, t: int) -> float:
-        ind = int(np.searchsorted(self._times, t, side="right")) - 1
-        return self._phases[ind]
+    def _cross_check_vars(self, vars: dict[str, Any]) -> None:
+        """Checks if values are given to all and only declared vars."""
+        all_keys, given_keys = self._variables.keys(), vars.keys()
+        if given_keys != all_keys:
+            invalid_vars = given_keys - all_keys
+            if invalid_vars:
+                warnings.warn(
+                    "No declared variables named: " + ", ".join(invalid_vars),
+                    stacklevel=3,
+                )
+                for k in invalid_vars:
+                    vars.pop(k, None)
+            missing_vars = all_keys - given_keys
+            if missing_vars:
+                raise TypeError(
+                    "Did not receive values for variables: "
+                    + ", ".join(missing_vars)
+                )

@@ -11,27 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Defines samples dataclasses."""
-from __future__ import annotations
-
-from dataclasses import dataclass
-
-import numpy as np
-
-from pulser.register.base_register import QubitId
+"""Custom exceptions for serialization errors."""
 
 
-@dataclass
-class QubitSamples:
-    """Gathers samples concerning a single qubit."""
+class SerializationError(Exception):
+    """Exception raised when sequence serialization fails."""
 
-    amp: np.ndarray
-    det: np.ndarray
-    phase: np.ndarray
-    qubit: QubitId
+    pass
 
-    def __post_init__(self) -> None:
-        if not len(self.amp) == len(self.det) == len(self.phase):
-            raise ValueError(
-                "ndarrays amp, det and phase must have the same length."
-            )
+
+class AbstractReprError(Exception):
+    """Exception raised for abstract representation errors.
+
+    Raised when an error occurs during the serialization to or deserialization
+    from the abstract representation.
+    """
+
+    pass

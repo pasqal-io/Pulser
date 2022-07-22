@@ -20,7 +20,8 @@ import pytest
 from pulser import Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
-from pulser.json.supported import SerializationError, validate_serialization
+from pulser.json.exceptions import SerializationError
+from pulser.json.supported import validate_serialization
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (

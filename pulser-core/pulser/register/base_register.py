@@ -116,16 +116,16 @@ class BaseRegister(ABC):
             and ``phase_shift_index``.
 
         Args:
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to find.
+            id_list: IDs of the qubits to find.
 
         Returns:
-            list[int]: Indices of the qubits to denote, only valid for the
-                given mapping.
+            Indices of the qubits to denote, only valid for the
+            given mapping.
         """
         if not set(id_list) <= set(self.qubit_ids):
             raise ValueError(
-                "The IDs list must be selected among"
-                "the IDs of the register's qubits."
+                "The IDs list must be selected among the IDs of the register's"
+                " qubits."
             )
         return [self.qubit_ids.index(id_) for id_ in id_list]
 
@@ -141,20 +141,20 @@ class BaseRegister(ABC):
         """Creates the register from an array of coordinates.
 
         Args:
-            coords (ndarray): The coordinates of each qubit to include in the
+            coords: The coordinates of each qubit to include in the
                 register.
 
-        Keyword args:
-            center(defaut=True): Whether or not to center the entire array
-                around the origin.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+        Args:
+            center: Whether or not to center the entire array around the
+                origin.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
-            labels (ArrayLike): The list of qubit ids. If defined, each qubit
-                id will be set to the corresponding value.
+            labels: The list of qubit ids. If defined, each qubit id will be
+                set to the corresponding value.
 
         Returns:
-            Register: A register with qubits placed on the given coordinates.
+            A register with qubits placed on the given coordinates.
         """
         if center:
             coords = coords - np.mean(coords, axis=0)  # Centers the array
