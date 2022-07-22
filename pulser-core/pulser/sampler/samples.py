@@ -80,6 +80,7 @@ class ChannelSamples:
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
+        self.duration = len(self.amp)
 
         for t in self.slots:
             assert t.ti < t.tf  # well ordered slots
@@ -97,7 +98,7 @@ class ChannelSamples:
             The extend channel samples.
         """
         extension = new_duration - len(self.amp)
-        if new_duration < len(self.amp):
+        if new_duration < self.duration:
             raise ValueError("Can't extend samples to a lower duration.")
 
         new_amp = np.pad(self.amp, (0, extension))
@@ -113,7 +114,10 @@ class SequenceSamples:
     channels: list[str]
     channel_samples: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
-    _duration: int
+
+    @property
+    def duration(self) -> int:
+        return max(samples.duration for samples in self.channel_samples)
 
     def to_nested_dict(self) -> dict:
         """Format in the nested dictionary form.
@@ -125,9 +129,9 @@ class SequenceSamples:
         if "XY" in bases:
             assert bases == {"XY"}
             in_xy = True
-        d = _prepare_dict(self._duration, in_xy=in_xy)
+        d = _prepare_dict(self.duration, in_xy=in_xy)
         for chname, samples in zip(self.channels, self.channel_samples):
-            cs = samples.extend_duration(self._duration)
+            cs = samples.extend_duration(self.duration)
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
             if addr == _GLOBAL:
@@ -146,7 +150,7 @@ class SequenceSamples:
 
     def __repr__(self) -> str:
         blocks = [
-            f"{chname}:\n {cs!r}"
+            f"{chname}:\n{cs!r}"
             for chname, cs in zip(self.channels, self.channel_samples)
         ]
         return "\n\n".join(blocks)

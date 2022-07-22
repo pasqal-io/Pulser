@@ -77,7 +77,7 @@ class _ChannelSchedule:
                 max(duration, self.channel_obj.min_duration)
             )
 
-    def get_samples(self) -> samples.ChannelSamples:
+    def get_samples(self, modulated: bool = False) -> samples.ChannelSamples:
         """Returns the samples of the channel."""
         # Keep only pulse slots
         dt = self.get_duration()
@@ -97,6 +97,11 @@ class _ChannelSchedule:
             )
             phase[t_start:t_end] += pulse.phase
             slots.append(samples._TargetSlot(s.ti, s.tf, s.targets))
+
+        if modulated:
+            amp = self.channel_obj.modulate(amp)
+            det = self.channel_obj.modulate(det, keep_ends=True)
+            phase = self.channel_obj.modulate(phase, keep_ends=True)
 
         return samples.ChannelSamples(amp, det, phase, slots)
 
