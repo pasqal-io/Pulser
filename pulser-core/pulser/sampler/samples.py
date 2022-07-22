@@ -117,6 +117,7 @@ class SequenceSamples:
 
     @property
     def duration(self) -> int:
+        """The maximum duration among the channel samples."""
         return max(samples.duration for samples in self.channel_samples)
 
     def to_nested_dict(self) -> dict:

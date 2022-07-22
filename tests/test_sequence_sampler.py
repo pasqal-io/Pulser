@@ -106,7 +106,6 @@ def test_inXY() -> None:
     assert_same_samples_as_sim(seq)
 
 
-@pytest.mark.xfail(reason="no modulation keyword for `sample()` function")
 def test_modulation(mod_seq: pulser.Sequence) -> None:
     """Test sampling for modulated channels."""
     N = mod_seq.get_duration()
@@ -186,6 +185,41 @@ then write the remaining in the Global dict.
 @pytest.mark.xfail(reason=slm_reason)
 def test_SLM_against_simulation(seq_with_SLM):
     assert_same_samples_as_sim(seq_with_SLM)
+
+
+def test_samples_repr(seq_rydberg):
+    samples = sample(seq_rydberg)
+    assert repr(samples) == "\n\n".join(
+        [
+            f"ch0:\n{samples.channel_samples[0]!r}",
+            f"ch1:\n{samples.channel_samples[1]!r}",
+        ]
+    )
+
+
+def test_extend_duration(seq_rydberg):
+    samples = sample(seq_rydberg)
+    short, long = samples.channel_samples
+    assert short.duration < long.duration
+    assert short.extend_duration(short.duration).duration == short.duration
+    with pytest.raises(
+        ValueError, match="Can't extend samples to a lower duration."
+    ):
+        long.extend_duration(short.duration)
+
+    extended_short = short.extend_duration(long.duration)
+    assert extended_short.duration == long.duration
+    for qty in ("amp", "det", "phase"):
+        new_qty_samples = getattr(extended_short, qty)
+        old_qty_samples = getattr(short, qty)
+        np.testing.assert_array_equal(
+            new_qty_samples[: short.duration], old_qty_samples
+        )
+        np.testing.assert_equal(
+            new_qty_samples[short.duration :],
+            old_qty_samples[-1] if qty == "phase" else 0.0,
+        )
+    assert extended_short.slots == short.slots
 
 
 # Fixtures
