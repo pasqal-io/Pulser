@@ -89,6 +89,14 @@ def test_register_from_layout():
     assert new_reg._layout_info.trap_ids == (1, 0)
 
 
+def test_register_numbered_keys():
+    reg = Register(dict(enumerate([(2, 3), (5, 1), (10, 0)])))
+    j = json.dumps(reg, cls=PulserEncoder)
+    decoded_reg = json.loads(j, cls=PulserDecoder)
+    assert reg == decoded_reg
+    assert all([type(i) == int for i in decoded_reg.qubit_ids])
+
+
 def test_mappable_register():
     layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
     mapp_reg = layout.make_mappable_register(2)
