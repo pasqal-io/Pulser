@@ -106,6 +106,23 @@ class ChannelSamples:
         new_phase = np.pad(self.phase, (0, extension), mode="edge")
         return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
 
+    def modulate(self, channel_obj: Channel) -> ChannelSamples:
+        """Modulates the samples for a given channel.
+
+        Args:
+            channel_obj: The channel object for which to modulate the samples.
+
+        Returns:
+            The modulated channel samples.
+        """
+        if not isinstance(channel_obj, Channel):
+            raise TypeError("'channel_obj' must be a Channel instance.")
+
+        new_amp = channel_obj.modulate(self.amp)
+        new_detuning = channel_obj.modulate(self.det, keep_ends=True)
+        new_phase = channel_obj.modulate(self.phase, keep_ends=True)
+        return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
+
 
 @dataclass
 class SequenceSamples:
