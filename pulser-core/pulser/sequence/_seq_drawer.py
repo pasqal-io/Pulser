@@ -168,7 +168,8 @@ def draw_sequence(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False.
+            as text on the plot, defaults to False. If `draw_phase_curve=True`,
+            phase values are ommited.
         draw_interp_pts: When the sequence has pulses with waveforms of
             type InterpolatedWaveform, draws the points of interpolation on
             top of the respective waveforms (defaults to True).
@@ -367,7 +368,7 @@ def draw_sequence(
 
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
-            draw_phase = any(
+            print_phase = not draw_phase_curve and any(
                 seq_.type.phase != 0
                 for seq_ in seq._schedule[ch]
                 if isinstance(seq_.type, Pulse)
@@ -397,7 +398,7 @@ def draw_sequence(
                         if round(area_val, 2) == 1
                         else rf"A: {area_val:.2g}$\pi$"
                     )
-                    if not draw_phase:
+                    if not print_phase:
                         txt = area_fmt
                     else:
                         phase_fmt = rf"$\phi$: {phase_str(phase_val)}"

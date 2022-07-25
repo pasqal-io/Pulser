@@ -103,7 +103,11 @@ class ChannelSamples:
 
         new_amp = np.pad(self.amp, (0, extension))
         new_detuning = np.pad(self.det, (0, extension))
-        new_phase = np.pad(self.phase, (0, extension), mode="edge")
+        new_phase = np.pad(
+            self.phase,
+            (0, extension),
+            mode="edge" if self.phase.size > 0 else "constant",
+        )
         return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
 
     def modulate(self, channel_obj: Channel) -> ChannelSamples:
@@ -119,7 +123,7 @@ class ChannelSamples:
             raise TypeError("'channel_obj' must be a Channel instance.")
 
         new_amp = channel_obj.modulate(self.amp)
-        new_detuning = channel_obj.modulate(self.det, keep_ends=True)
+        new_detuning = channel_obj.modulate(self.det)
         new_phase = channel_obj.modulate(self.phase, keep_ends=True)
         return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
 
