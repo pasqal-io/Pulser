@@ -7,7 +7,6 @@ isort
 mypy == 0.921
 pytest
 pytest-cov
-jsonschema
 
 # CI
 pre-commit
