@@ -1,2 +1,5 @@
-qutip>=4.6.3
+matplotlib
+numpy >= 1.20
+scipy
+backports.cached-property; python_version == '3.7'
 typing-extensions; python_version == '3.7'
