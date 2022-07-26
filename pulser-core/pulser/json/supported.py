@@ -17,7 +17,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-import pulser
+import pulser.devices as devices
+from pulser.json.exceptions import SerializationError
 
 SUPPORTED_BUILTINS = ("float", "int", "str", "set")
 
@@ -47,7 +48,13 @@ SUPPORTED_NUMPY = (
     "tan",
 )
 
-SUPPORTS_SUBMODULE = ("Pulse", "BlackmanWaveform", "KaiserWaveform")
+SUPPORTS_SUBMODULE = (
+    "Pulse",
+    "BlackmanWaveform",
+    "KaiserWaveform",
+    "Register",
+    "Register3D",
+)
 
 SUPPORTED_MODULES = {
     "builtins": SUPPORTED_BUILTINS,
@@ -63,7 +70,7 @@ SUPPORTED_MODULES = {
     ),
     "pulser.register.mappable_reg": ("MappableRegister",),
     "pulser.devices": tuple(
-        [dev.name for dev in pulser.devices._valid_devices] + ["MockDevice"]
+        [dev.name for dev in devices._valid_devices] + ["MockDevice"]
     ),
     "pulser.pulse": ("Pulse",),
     "pulser.waveforms": (
@@ -79,12 +86,6 @@ SUPPORTED_MODULES = {
     "pulser.parametrized.variable": ("Variable",),
     "pulser.parametrized.paramobj": ("ParamObj",),
 }
-
-
-class SerializationError(Exception):
-    """Exception raised when sequence serialization fails."""
-
-    pass
 
 
 def validate_serialization(obj_dict: Mapping[str, Any]) -> None:
