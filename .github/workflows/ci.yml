@@ -49,7 +49,7 @@ jobs:
       - name: Pulser setup
         uses: ./.github/workflows/pulser-setup
         with:
-          extra-packages: mypy
+          extra-packages: '''mypy\|pytest'''
       - name: Type check with mypy
         run: mypy
   test:
