@@ -138,6 +138,7 @@ class SequenceSamples:
 
     @property
     def channel_samples(self) -> dict[str, ChannelSamples]:
+        """Mapping between the channel name and its samples."""
         return dict(zip(self.channels, self.samples_list))
 
     @property
