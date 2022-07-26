@@ -24,6 +24,13 @@ from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
+from pulser.json.abstract_repr.serializer import abstract_repr
+from pulser.json.abstract_repr.signatures import (
+    BINARY_OPERATORS,
+    SIGNATURES,
+    UNARY_OPERATORS,
+)
+from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 
@@ -34,6 +41,7 @@ if TYPE_CHECKING:
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
+    # TODO: Make operator methods' args pos-only when python 3.7 is dropped
     # Unary operators
     def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
@@ -216,6 +224,69 @@ class ParamObj(Parametrized, OpSupport):
 
         return obj_to_dict(self, cls_dict, *args, **self.kwargs)
 
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        op_name = self.cls.__name__
+        if isinstance(self.cls, Parametrized):
+            raise ValueError(
+                "Serialization of calls to parametrized objects is not "
+                "supported."
+            )
+        elif (
+            self.args  # If it is a classmethod the first arg will be the class
+            and hasattr(self.args[0], op_name)
+            and inspect.isfunction(self.cls)
+        ):
+            # Check for parametrized methods
+            if inspect.isclass(self.args[0]):
+                # classmethod
+                cls_name = self.args[0].__name__
+                name = f"{cls_name}.{op_name}"
+                if cls_name == "Pulse":
+                    signature = (
+                        "amplitude",
+                        "detuning",
+                        "phase",
+                        "post_phase_shift",
+                    )
+                    all_args = {
+                        **dict(zip(signature, self.args[1:])),
+                        **self.kwargs,
+                    }
+                    if "post_phase_shift" not in all_args:
+                        all_args["post_phase_shift"] = 0.0
+                if name == "Pulse.ConstantAmplitude":
+                    all_args["amplitude"] = abstract_repr(
+                        "ConstantWaveform", 0, all_args["amplitude"]
+                    )
+                    return abstract_repr("Pulse", **all_args)
+                elif name == "Pulse.ConstantDetuning":
+                    all_args["detuning"] = abstract_repr(
+                        "ConstantWaveform", 0, all_args["detuning"]
+                    )
+                    return abstract_repr("Pulse", **all_args)
+                else:
+                    return abstract_repr(name, *self.args[1:], **self.kwargs)
+
+            raise NotImplementedError(
+                "Instance or static method serialization is not supported."
+            )
+        elif op_name in SIGNATURES:
+            return abstract_repr(op_name, *self.args, **self.kwargs)
+
+        elif op_name in UNARY_OPERATORS:
+            return dict(expression=op_name, lhs=self.args[0])
+
+        elif op_name in BINARY_OPERATORS:
+            return dict(
+                expression=op_name,
+                lhs=self.args[0],
+                rhs=self.args[1],
+            )
+        else:
+            raise AbstractReprError(
+                f"No abstract representation for '{op_name}'."
+            )
+
     def __call__(self, *args: Any, **kwargs: Any) -> ParamObj:
         """Returns a new ParamObj storing a call to the current ParamObj."""
         obj = ParamObj(self, *args, **kwargs)
@@ -246,7 +317,8 @@ class ParamObj(Parametrized, OpSupport):
         if isinstance(self.cls, Parametrized):
             name = str(self.cls)
         elif (
-            hasattr(self.args[0], self.cls.__name__)
+            self.args
+            and hasattr(self.args[0], self.cls.__name__)
             and inspect.isfunction(self.cls)
             and inspect.isclass(self.args[0])
         ):
@@ -255,3 +327,11 @@ class ParamObj(Parametrized, OpSupport):
         else:
             name = self.cls.__name__
         return f"{name}({', '.join(args+kwargs)})"
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, ParamObj):
+            return False
+        return self.args == other.args and self.kwargs == other.kwargs
+
+    def __hash__(self) -> int:
+        return id(self)

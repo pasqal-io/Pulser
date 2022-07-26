@@ -67,7 +67,7 @@ def test_stored_calls():
     sb.declare_channel("ch1", "rydberg_local")
     sb.target_index(var, "ch1")
     assert sb._calls[-1].name == "declare_channel"
-    assert sb._to_build_calls[-1].name == "_target_index"
+    assert sb._to_build_calls[-1].name == "target_index"
     assert sb._to_build_calls[-1].args == (var, "ch1")
     with pytest.raises(ValueError, match="name of a declared channel"):
         sb.delay(1000, "rydberg_local")
@@ -219,8 +219,8 @@ def test_str():
     sb.add(pls, "ch1")
     s = (
         f"Prelude\n-------\n{str(seq)}Stored calls\n------------\n\n"
-        + "1. add(Pulse.ConstantPulse(mul(var[0], 100), var[0],"
-        + " -1, var[0]), ch1)"
+        + "1. add(Pulse(ConstantWaveform(mul(var[0], 100), var[0]), "
+        + "ConstantWaveform(mul(var[0], 100), -1), var[0], 0.0), ch1)"
     )
     assert s == str(sb)
 
