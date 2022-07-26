@@ -113,12 +113,34 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     blackman = np.clip(np.blackman(N), 0, np.inf)
     input = (np.pi / 2) / (np.sum(blackman) / N) * blackman
 
-    want = chan.modulate(input)
-    got = sample(mod_seq, modulation=True).to_nested_dict()["Global"][
-        "ground-rydberg"
-    ]["amp"]
+    want_amp = chan.modulate(input)
+    mod_samples = sample(mod_seq, modulation=True)
+    got_amp = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["amp"]
+    np.testing.assert_array_equal(got_amp, want_amp)
 
-    np.testing.assert_array_equal(got, want)
+    want_det = chan.modulate(np.ones(N))
+    got_det = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["det"]
+    np.testing.assert_array_equal(got_det, want_det)
+
+    want_phase = np.ones(mod_seq.get_duration(include_fall_time=True))
+    got_phase = mod_samples.to_nested_dict()["Global"]["ground-rydberg"][
+        "phase"
+    ]
+    np.testing.assert_array_equal(got_phase, want_phase)
+
+    input_samples = sample(mod_seq)
+    with pytest.raises(TypeError, match="must be a Channel instance"):
+        input_samples.channel_samples["ch0"].modulate("ch0")  # type: ignore
+
+    input_ch_samples = input_samples.channel_samples["ch0"]
+    output_ch_samples = mod_samples.channel_samples["ch0"]
+
+    for qty in ("amp", "det", "phase"):
+        np.testing.assert_array_equal(
+            getattr(input_ch_samples.modulate(chan), qty),
+            getattr(output_ch_samples, qty),
+        )
+    assert input_ch_samples.modulate(chan).slots == output_ch_samples.slots
 
 
 @pytest.fixture
@@ -191,15 +213,15 @@ def test_samples_repr(seq_rydberg):
     samples = sample(seq_rydberg)
     assert repr(samples) == "\n\n".join(
         [
-            f"ch0:\n{samples.channel_samples[0]!r}",
-            f"ch1:\n{samples.channel_samples[1]!r}",
+            f"ch0:\n{samples.samples_list[0]!r}",
+            f"ch1:\n{samples.samples_list[1]!r}",
         ]
     )
 
 
 def test_extend_duration(seq_rydberg):
     samples = sample(seq_rydberg)
-    short, long = samples.channel_samples
+    short, long = samples.samples_list
     assert short.duration < long.duration
     assert short.extend_duration(short.duration).duration == short.duration
     with pytest.raises(
@@ -288,7 +310,7 @@ def mod_seq(mod_device: Device) -> pulser.Sequence:
     seq = pulser.Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.add(
-        Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi / 2), 0.0, 0.0),
+        Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi / 2), 1.0, 1.0),
         "ch0",
     )
     seq.measure()

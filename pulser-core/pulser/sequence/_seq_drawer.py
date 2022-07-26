@@ -93,7 +93,9 @@ class ChannelDrawContent:
         """The indices of the curves to draw."""
         return [i for i, qty in enumerate(CURVES_ORDER) if self.curves_on[qty]]
 
-    def _give_curves_from_samples(self, samples: ChannelSamples):
+    def _give_curves_from_samples(
+        self, samples: ChannelSamples
+    ) -> list[np.ndarray]:
         return [
             getattr(samples, self._samples_from_curves[qty])
             for qty in CURVES_ORDER

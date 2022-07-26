@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from pulser.register import QubitId
 from pulser.channels import Channel
+from pulser.register import QubitId
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
@@ -133,13 +133,17 @@ class SequenceSamples:
     """Gather samples of a sequence with useful info."""
 
     channels: list[str]
-    channel_samples: list[ChannelSamples]
+    samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
+
+    @property
+    def channel_samples(self) -> dict[str, ChannelSamples]:
+        return dict(zip(self.channels, self.samples_list))
 
     @property
     def duration(self) -> int:
         """The maximum duration among the channel samples."""
-        return max(samples.duration for samples in self.channel_samples)
+        return max(samples.duration for samples in self.samples_list)
 
     def to_nested_dict(self) -> dict:
         """Format in the nested dictionary form.
@@ -152,7 +156,7 @@ class SequenceSamples:
             assert bases == {"XY"}
             in_xy = True
         d = _prepare_dict(self.duration, in_xy=in_xy)
-        for chname, samples in zip(self.channels, self.channel_samples):
+        for chname, samples in zip(self.channels, self.samples_list):
             cs = samples.extend_duration(self.duration)
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
@@ -173,6 +177,6 @@ class SequenceSamples:
     def __repr__(self) -> str:
         blocks = [
             f"{chname}:\n{cs!r}"
-            for chname, cs in zip(self.channels, self.channel_samples)
+            for chname, cs in zip(self.channels, self.samples_list)
         ]
         return "\n\n".join(blocks)
