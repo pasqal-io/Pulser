@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser setup
+      - name: Pulser + flake8 setup
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: flake8
@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser setup
+      - name: Pulser + black setup
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: black
@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser setup
+      - name: Pulser + isort setup
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: isort
@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser setup
+      - name: Pulser + mypy setup
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: '''mypy\|pytest'''
@@ -61,7 +61,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser setup
+      - name: Pulser + pytest setup
         uses: ./.github/workflows/pulser-setup
         with:
           python-version: ${{ matrix.python-version }}
