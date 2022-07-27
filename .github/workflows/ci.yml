@@ -1,4 +1,4 @@
-name: test
+name: build
 
 on:
   pull_request:
@@ -53,11 +53,12 @@ jobs:
       - name: Type check with mypy
         run: mypy
   test:
+    if: github.event_name != 'push'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9, "3.10"]
+        python-version: [3.7, 3.9]
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
