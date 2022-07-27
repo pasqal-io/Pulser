@@ -18,7 +18,6 @@ jobs:
           old_version="$(head -1 VERSION.txt)"
           echo "Old version: $old_version"
           echo "old_version=$old_version" >> $GITHUB_ENV
-
       - name: Check out head branch
         uses: actions/checkout@v3
       - name: Get new version 
