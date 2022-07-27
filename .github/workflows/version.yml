@@ -6,7 +6,7 @@ on:
       - 'VERSION.txt'
 
 jobs:
-  compare-versions:
+  validate-version:
     runs-on: ubuntu-latest
     steps:
       - name: Check out base branch
