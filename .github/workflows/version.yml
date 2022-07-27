@@ -28,3 +28,22 @@ jobs:
           echo "new_version=$new_version" >> $GITHUB_ENV
       - name: Compare versions
         run: dpkg --compare-versions "${{ env.old_version }}" lt "${{ env.new_version }}"
+      - name: Check stable version validity
+        if: github.event.pull_request.base.ref == 'master'
+        run: |
+          pattern=^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)$
+          if [[ ${{ env.new_version }} =~ $pattern ]]; then
+            echo "New version is valid."; exit 0
+          else
+            echo "New version is invalid."; exit 1
+          fi
+      - name: Check development version validity
+        if: github.event.pull_request.base.ref != 'master'
+        run: |
+          pattern=^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.dev$
+          if [[ ${{ env.new_version }} =~ $pattern ]]; then
+            echo "New version is valid."; exit 0
+          else
+            echo "New version is invalid."; exit 1
+          fi
+
