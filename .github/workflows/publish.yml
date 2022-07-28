@@ -3,7 +3,6 @@ name: Upload Release Package to PyPI
 on:
   release:
     types: [released]
-  pull_request:
 
 jobs:
   deploy:
@@ -44,11 +43,11 @@ jobs:
         run: |
           grep -e pytest dev_requirements.txt | sed 's/ //g' | xargs pip install
           pytest
-      # - name: Publish to PyPI
-      #   env:
-      #     TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-      #     TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      #   run: twine upload dist/*
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: twine upload dist/*
 
   check-release:
     needs: deploy
@@ -66,17 +65,11 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      # - name: Install Pulser from PyPI
-      #   shell: bash
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     pip install pulser
-      - name: Install Pulser from TestPyPI
+      - name: Install Pulser from PyPI
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          version="$(head -1 VERSION.txt)"
-          pip install -i https://test.pypi.org/simple/ pulser==$version --extra-index-url https://pypi.org/simple
+          pip install pulser
       - name: Test the installation
         shell: bash
         run: |
