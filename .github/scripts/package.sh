@@ -10,15 +10,8 @@ cd "${repo_dir}"
 # Removing existing files in /dist
 rm -rf dist
 
-if grep -q "dev" VERSION.txt; then
-  echo "Development version"
-  dev=true
-else
-  echo "Stable version"
-  dev=false
-fi
-
 packages=$(cat packages.txt)
+# Build the pulser packages
 for pkg in $packages
 do
   echo "Packaging $pkg"
@@ -26,10 +19,9 @@ do
   rm -r $pkg/build
 done
 
-if [ "$dev" = false ]; then
-  python setup.py -q bdist_wheel -d "dist"
-  rm -r build
-fi
+# Build the pulser metapackage
+python setup.py -q bdist_wheel -d "dist"
+rm -r build
 
 echo "Built wheels:"
 ls dist
