@@ -30,10 +30,15 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.TESTPYPI_PASSWORD }}
         run: twine upload --repository testpypi dist/*
       - name: Install from TestPyPI
+        timeout-minutes: 5
         shell: bash
         run: |
           version="$(head -1 VERSION.txt)"
-          pip install -i https://test.pypi.org/simple/ pulser==$version --extra-index-url https://pypi.org/simple
+          until pip install -i https://test.pypi.org/simple/ pulser==$version --extra-index-url https://pypi.org/simple
+          do
+            echo "Failed to install from TestPyPI, will wait for upload and retry."
+            sleep 30
+          done
       - name: Test the installation
         # Installs pytest from dev_requirements.txt (in case it has a version specifier)
         run: |
