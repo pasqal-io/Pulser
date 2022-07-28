@@ -30,6 +30,7 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.TESTPYPI_PASSWORD }}
         run: twine upload --repository testpypi dist/*
       - name: Install from TestPyPI
+        shell: bash
         run: |
           version="$(head -1 VERSION.txt)"
           pip install -i https://test.pypi.org/simple/ pulser==$version --extra-index-url https://pypi.org/simple
@@ -61,15 +62,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       # - name: Install Pulser from PyPI
+      #   shell: bash
       #   run: |
       #     python -m pip install --upgrade pip
       #     pip install pulser
       - name: Install Pulser from TestPyPI
+        shell: bash
         run: |
           python -m pip install --upgrade pip
           version="$(head -1 VERSION.txt)"
           pip install -i https://test.pypi.org/simple/ pulser==$version --extra-index-url https://pypi.org/simple
       - name: Test the installation
+        shell: bash
         run: |
           version="$(head -1 VERSION.txt)"
           python -c "import pulser; assert pulser.__version__ == '$version'"
