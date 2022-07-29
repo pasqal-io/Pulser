@@ -24,6 +24,7 @@ import numpy as np
 from pulser.channels import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
+from pulser.sampler.samples import ChannelSamples, _TargetSlot
 
 
 class _TimeSlot(NamedTuple):
@@ -75,6 +76,39 @@ class _ChannelSchedule:
             return self.channel_obj.validate_duration(
                 max(duration, self.channel_obj.min_duration)
             )
+
+    def get_samples(self, modulated: bool = False) -> ChannelSamples:
+        """Returns the samples of the channel.
+
+        Args:
+            modulated: Whether to return the modulated samples.
+        """
+        # Keep only pulse slots
+        channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
+        dt = self.get_duration()
+        amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
+        slots: list[_TargetSlot] = []
+
+        for ind, s in enumerate(channel_slots):
+            pulse = cast(Pulse, s.type)
+            amp[s.ti : s.tf] += pulse.amplitude.samples
+            det[s.ti : s.tf] += pulse.detuning.samples
+            ph_jump_t = self.channel_obj.phase_jump_time
+            t_start = max(0, (s.ti - ph_jump_t))
+            t_end = (
+                channel_slots[ind + 1].ti - ph_jump_t
+                if ind < len(channel_slots) - 1
+                else dt
+            )
+            phase[t_start:t_end] += pulse.phase
+            slots.append(_TargetSlot(s.ti, s.tf, s.targets))
+
+        ch_samples = ChannelSamples(amp, det, phase, slots)
+
+        if modulated:
+            ch_samples = ch_samples.modulate(self.channel_obj)
+
+        return ch_samples
 
     @overload
     def __getitem__(self, key: int) -> _TimeSlot:

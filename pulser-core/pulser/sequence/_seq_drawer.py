@@ -26,8 +26,10 @@ from scipy.interpolate import CubicSpline
 
 import pulser
 from pulser import Register, Register3D
+from pulser.channels import Channel
 from pulser.pulse import Pulse
-from pulser.waveforms import ConstantWaveform, InterpolatedWaveform
+from pulser.sampler.samples import ChannelSamples
+from pulser.waveforms import InterpolatedWaveform
 
 # Color scheme
 COLORS = ["darkgreen", "indigo", "#c75000"]
@@ -44,17 +46,19 @@ LABELS = [
 
 @dataclass
 class ChannelDrawContent:
-    """The contents for drawingflake a single channel."""
+    """The contents for drawing a single channel."""
 
-    time: list[int]
-    amplitude: list[float]
-    detuning: list[float]
-    phase: list[float]
+    samples: ChannelSamples
     target: dict[Union[str, tuple[int, int]], Any]
-    measurement: Optional[str] = None
     interp_pts: dict[str, list[list[float]]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        self.samples.phase = self.samples.phase / (2 * np.pi)
+        self._samples_from_curves = {
+            "amplitude": "amp",
+            "detuning": "det",
+            "phase": "phase",
+        }
         self.curves_on = {"amplitude": True, "detuning": False, "phase": False}
 
     @property
@@ -62,82 +66,87 @@ class ChannelDrawContent:
         """The number of axes to draw for this channel."""
         return sum(self.curves_on.values())
 
+    def get_input_curves(self) -> list[np.ndarray]:
+        """The samples for the curves, as programmed."""
+        return self._give_curves_from_samples(self.samples)
+
+    def get_output_curves(self, ch_obj: Channel) -> list[np.ndarray]:
+        """The modulated samples for the curves."""
+        mod_samples = self.samples.modulate(ch_obj)
+        return self._give_curves_from_samples(mod_samples)
+
+    def get_interpolated_curves(
+        self, sampling_rate: float
+    ) -> list[np.ndarray]:
+        """The curves with a fractional sampling rate."""
+        indices = np.linspace(
+            0,
+            self.samples.duration - 1,
+            int(sampling_rate * (self.samples.duration + 1)),
+            dtype=int,
+        )
+        sampled_curves = [curve[indices] for curve in self.get_input_curves()]
+        t = np.arange(self.samples.duration)
+        return [CubicSpline(indices, curve)(t) for curve in sampled_curves]
+
     def curves_on_indices(self) -> list[int]:
         """The indices of the curves to draw."""
         return [i for i, qty in enumerate(CURVES_ORDER) if self.curves_on[qty]]
 
+    def _give_curves_from_samples(
+        self, samples: ChannelSamples
+    ) -> list[np.ndarray]:
+        return [
+            getattr(samples, self._samples_from_curves[qty])
+            for qty in CURVES_ORDER
+        ]
 
-def gather_data(seq: pulser.sequence.Sequence) -> dict:
+
+def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
         seq: The input sequence of operations on a device.
+        gather_output: Whether to gather the modulated output curves.
 
     Returns:
         The data to plot.
     """
     # The minimum time axis length is 100 ns
-    total_duration = max(seq.get_duration(), 100)
+    total_duration = max(
+        seq.get_duration(include_fall_time=gather_output), 100
+    )
     data: dict[str, Any] = {}
     for ch, sch in seq._schedule.items():
-        time = [-1]  # To not break the "time[-1]" later on
-        amp = []
-        detuning = []
-        phase = []
         # List of interpolation points
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
         target: dict[Union[str, tuple[int, int]], Any] = {}
         for slot in sch:
             if slot.ti == -1:
                 target["initial"] = slot.targets
-                time += [0]
-                amp += [0.0]
-                detuning += [0.0]
-                phase += [0.0]
                 continue
-            if slot.type in ["delay", "target"]:
-                time += [
-                    slot.ti,
-                    slot.tf - 1 if slot.tf > slot.ti else slot.ti,
-                ]
-                amp += [0.0, 0.0]
-                detuning += [0.0, 0.0]
-                phase += [phase[-1]] * 2
-                if slot.type == "target":
-                    target[(slot.ti, slot.tf - 1)] = slot.targets
+            if slot.type == "target":
+                target[(slot.ti, slot.tf - 1)] = slot.targets
+                continue
+            if slot.type == "delay":
                 continue
             pulse = cast(Pulse, slot.type)
-            if isinstance(pulse.amplitude, ConstantWaveform) and isinstance(
-                pulse.detuning, ConstantWaveform
-            ):
-                time += [slot.ti, slot.tf - 1]
-                amp += [float(pulse.amplitude[0])] * 2
-                detuning += [float(pulse.detuning[0])] * 2
-                phase += [float(pulse.phase) / (2 * np.pi)] * 2
-            else:
-                time += list(range(slot.ti, slot.tf))
-                amp += pulse.amplitude.samples.tolist()
-                detuning += pulse.detuning.samples.tolist()
-                phase += [float(pulse.phase) / (2 * np.pi)] * pulse.duration
-                for wf_type in ["amplitude", "detuning"]:
-                    wf = getattr(pulse, wf_type)
-                    if isinstance(wf, InterpolatedWaveform):
-                        pts = wf.data_points
-                        pts[:, 0] += slot.ti
-                        interp_pts[wf_type] += pts.tolist()
+            for wf_type in ["amplitude", "detuning"]:
+                wf = getattr(pulse, wf_type)
+                if isinstance(wf, InterpolatedWaveform):
+                    pts = wf.data_points
+                    pts[:, 0] += slot.ti
+                    interp_pts[wf_type] += pts.tolist()
 
-        if time[-1] < total_duration - 1:
-            time += [time[-1] + 1, total_duration - 1]
-            amp += [0, 0]
-            detuning += [0, 0]
-            phase += [phase[-1] if len(phase) else 0] * 2
         # Store everything
-        time.pop(0)  # Removes the -1 in the beginning
-        data[ch] = ChannelDrawContent(time, amp, detuning, phase, target)
-        if hasattr(seq, "_measurement"):
-            data[ch].measurement = seq._measurement
+        samples = sch.get_samples()
+        data[ch] = ChannelDrawContent(
+            samples.extend_duration(total_duration), target
+        )
         if interp_pts:
             data[ch].interp_pts = dict(interp_pts)
+    if hasattr(seq, "_measurement"):
+        data["measurement"] = seq._measurement
     data["total_duration"] = total_duration
     return data
 
@@ -161,7 +170,8 @@ def draw_sequence(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False.
+            as text on the plot, defaults to False. If `draw_phase_curve=True`,
+            phase values are ommited.
         draw_interp_pts: When the sequence has pulses with waveforms of
             type InterpolatedWaveform, draws the points of interpolation on
             top of the respective waveforms (defaults to True).
@@ -192,13 +202,13 @@ def draw_sequence(
     n_channels = len(seq.declared_channels)
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
-    data = gather_data(seq)
+    data = gather_data(seq, gather_output=draw_modulation)
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
     for ch in seq._schedule:
-        if np.nonzero(data[ch].detuning)[0].size > 0:
+        if np.count_nonzero(data[ch].samples.det) > 0:
             data[ch].curves_on["detuning"] = True
-        if draw_phase_curve and np.nonzero(data[ch].phase)[0].size > 0:
+        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
             data[ch].curves_on["phase"] = True
 
     # Boxes for qubit and phase text
@@ -278,7 +288,6 @@ def draw_sequence(
                 ax.spines["top"].set_visible(False)
             if j < len(ch_axes[ch]) - 1:
                 ax.spines["bottom"].set_visible(False)
-
             if i < n_channels - 1 or j < len(ch_axes[ch]) - 1:
                 ax.tick_params(
                     axis="x",
@@ -292,27 +301,9 @@ def draw_sequence(
                 unit = "ns" if time_scale == 1 else r"$\mu s$"
                 ax.set_xlabel(f"t ({unit})", fontsize=12)
 
-    if sampling_rate:
-        indexes = np.linspace(
-            0,
-            total_duration - 1,
-            int(sampling_rate * total_duration),
-            dtype=int,
-        )
-        times = np.arange(total_duration, dtype=np.double) / time_scale
-        solver_time = times[indexes]
-        delta_t = np.diff(solver_time)[0]
-        # Compare pulse with an interpolated pulse with 100 times more samples
-        teff = np.arange(0, max(solver_time), delta_t / 100)
-
-    # Make sure the time axis of all channels are aligned
-    final_t = total_duration / time_scale
-    if draw_modulation:
-        for ch, ch_obj in seq.declared_channels.items():
-            final_t = max(
-                final_t,
-                (seq.get_duration(ch) + 2 * ch_obj.rise_time) / time_scale,
-            )
+    # The time axis of all channels is the same
+    t = np.arange(total_duration) / time_scale
+    final_t = t[-1]
     t_min = -final_t * 0.03
     t_max = final_t * 1.05
 
@@ -320,41 +311,15 @@ def draw_sequence(
         ch_obj = seq.declared_channels[ch]
         ch_data = data[ch]
         basis = ch_obj.basis
-        times = np.array(ch_data.time)
-        t = times / time_scale
-        ys = [getattr(ch_data, qty) for qty in CURVES_ORDER]
+        ys = ch_data.get_input_curves()
         if sampling_rate:
-            cubic_splines = []
-            yseff = []
-            t2 = 1
-            t2s = []
-            for t_solv in solver_time:
-                # Find the interval [t[t2],t[t2+1]] containing t_solv
-                while t_solv > t[t2]:
-                    t2 += 1
-                t2s.append(t2)
-            for i, y_ in enumerate(ys):
-                y2 = [y_[t_] for t_ in t2s]
-                cubic_splines.append(CubicSpline(solver_time, y2))
-                yseff.append(cubic_splines[i](teff))
+            yseff = ch_data.get_interpolated_curves(sampling_rate)
 
         draw_output = draw_modulation and (
             ch_obj.mod_bandwidth or not draw_input
         )
         if draw_output:
-            ys_mod = []
-            t_diffs = np.diff(times)
-            end_index = int(final_t * time_scale)
-            for i, y_ in enumerate(ys):
-                input = np.repeat(y_[1:], t_diffs)
-                ys_mod.append(
-                    ch_obj.modulate(input, keep_ends=i > 0)[:end_index]
-                )
-            # Prolong the input samples
-            t = np.append(t, (t[-1] + 1 / time_scale, final_t))
-            ys[0] += [0.0, 0.0]
-            ys[1] += [0.0, 0.0]
-            ys[2] += [ys[2][-1]] * 2
+            ys_mod = ch_data.get_output_curves(ch_obj)
 
         ref_ys = yseff if sampling_rate else ys
         max_amp = np.max(ref_ys[0])
@@ -383,19 +348,19 @@ def draw_sequence(
                 ax.plot(t, ys[i], color=COLORS[i], linewidth=0.8)
             if sampling_rate:
                 ax.plot(
-                    teff,
+                    t,
                     yseff[i],
                     color=COLORS[i],
                     linewidth=0.8,
                 )
-                ax.fill_between(teff, 0, yseff[i], color=COLORS[i], alpha=0.3)
+                ax.fill_between(t, 0, yseff[i], color=COLORS[i], alpha=0.3)
             elif draw_input:
                 ax.fill_between(t, 0, ys[i], color=COLORS[i], alpha=0.3)
             if draw_output:
                 ax.fill_between(
-                    np.arange(ys_mod[i].size),
+                    t,
                     0,
-                    ys_mod[i],
+                    ys_mod[i][:total_duration],
                     color=COLORS[i],
                     alpha=0.3,
                     hatch="////",
@@ -405,7 +370,7 @@ def draw_sequence(
 
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
-            draw_phase = any(
+            print_phase = not draw_phase_curve and any(
                 seq_.type.phase != 0
                 for seq_ in seq._schedule[ch]
                 if isinstance(seq_.type, Pulse)
@@ -415,13 +380,7 @@ def draw_sequence(
                 if isinstance(seq_.type, Pulse):
                     if sampling_rate:
                         area_val = (
-                            np.sum(
-                                cubic_splines[0](
-                                    np.arange(seq_.ti, seq_.tf) / time_scale
-                                )
-                            )
-                            * 1e-3
-                            / np.pi
+                            np.sum(yseff[0][seq_.ti : seq_.tf]) * 1e-3 / np.pi
                         )
                     else:
                         area_val = seq_.type.amplitude.integral / np.pi
@@ -441,7 +400,7 @@ def draw_sequence(
                         if round(area_val, 2) == 1
                         else rf"A: {area_val:.2g}$\pi$"
                     )
-                    if not draw_phase:
+                    if not print_phase:
                         txt = area_fmt
                     else:
                         phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
@@ -539,7 +498,7 @@ def draw_sequence(
             # All targets have the same ref, so we pick
             q = targets_[0]
             ref = seq._basis_ref[basis][q].phase
-            if end != total_duration - 1 or ch_data.measurement is not None:
+            if end != total_duration - 1 or "measurement" in data:
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
                 conf = dict(linestyle="--", linewidth=1.5, color="black")
@@ -574,8 +533,8 @@ def draw_sequence(
             )
 
         hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
-        if ch_data.measurement is not None:
-            msg = f"Basis: {ch_data.measurement}"
+        if "measurement" in data:
+            msg = f"Basis: {data['measurement']}"
             if len(axes) == 1:
                 mid_ax = axes[0]
                 mid_point = (amp_top + amp_bottom) / 2
