@@ -84,8 +84,8 @@ class _ChannelSchedule:
             modulated: Whether to return the modulated samples.
         """
         # Keep only pulse slots
-        dt = self.get_duration()
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
+        dt = self.get_duration()
         amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
         slots: list[_TargetSlot] = []
 

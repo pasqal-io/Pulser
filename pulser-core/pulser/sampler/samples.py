@@ -90,6 +90,9 @@ class ChannelSamples:
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
 
+        Pads the amplitude and detuning samples with zeros and the phase with
+        its last value (or zero if empty).
+
         Args:
             new_duration: The new duration for the samples (in ns).
                 Must be greater than or equal to the current duration.
@@ -113,15 +116,16 @@ class ChannelSamples:
     def modulate(self, channel_obj: Channel) -> ChannelSamples:
         """Modulates the samples for a given channel.
 
+        It assumes that the phase starts at its initial value and is kept at
+        its final value.The same could potentially be done for the detuning,
+        but it's not as safe of an assumption so it's not done for now.
+
         Args:
             channel_obj: The channel object for which to modulate the samples.
 
         Returns:
             The modulated channel samples.
         """
-        if not isinstance(channel_obj, Channel):
-            raise TypeError("'channel_obj' must be a Channel instance.")
-
         new_amp = channel_obj.modulate(self.amp)
         new_detuning = channel_obj.modulate(self.det)
         new_phase = channel_obj.modulate(self.phase, keep_ends=True)
@@ -142,7 +146,7 @@ class SequenceSamples:
         return dict(zip(self.channels, self.samples_list))
 
     @property
-    def duration(self) -> int:
+    def max_duration(self) -> int:
         """The maximum duration among the channel samples."""
         return max(samples.duration for samples in self.samples_list)
 
@@ -156,9 +160,9 @@ class SequenceSamples:
         if "XY" in bases:
             assert bases == {"XY"}
             in_xy = True
-        d = _prepare_dict(self.duration, in_xy=in_xy)
+        d = _prepare_dict(self.max_duration, in_xy=in_xy)
         for chname, samples in zip(self.channels, self.samples_list):
-            cs = samples.extend_duration(self.duration)
+            cs = samples.extend_duration(self.max_duration)
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
             if addr == _GLOBAL:

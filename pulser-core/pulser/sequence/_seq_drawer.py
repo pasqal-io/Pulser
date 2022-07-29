@@ -206,9 +206,9 @@ def draw_sequence(
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
     for ch in seq._schedule:
-        if np.nonzero(data[ch].samples.det)[0].size > 0:
+        if np.count_nonzero(data[ch].samples.det) > 0:
             data[ch].curves_on["detuning"] = True
-        if draw_phase_curve and np.nonzero(data[ch].samples.phase)[0].size > 0:
+        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
             data[ch].curves_on["phase"] = True
 
     # Boxes for qubit and phase text

@@ -129,9 +129,6 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     np.testing.assert_array_equal(got_phase, want_phase)
 
     input_samples = sample(mod_seq)
-    with pytest.raises(TypeError, match="must be a Channel instance"):
-        input_samples.channel_samples["ch0"].modulate("ch0")  # type: ignore
-
     input_ch_samples = input_samples.channel_samples["ch0"]
     output_ch_samples = mod_samples.channel_samples["ch0"]
 
