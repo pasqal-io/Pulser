@@ -39,7 +39,7 @@ jobs:
       - name: Check development version validity
         if: github.event.pull_request.base.ref != 'master'
         run: |
-          pattern=^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.dev$
+          pattern=^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)dev\(0\|[1-9]\d*\)$
           if [[ ${{ env.new_version }} =~ $pattern ]]; then
             echo "New version is valid."; exit 0
           else
