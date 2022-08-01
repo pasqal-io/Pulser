@@ -1,7 +1,7 @@
 """Defines the main function for sequence sampling."""
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from pulser.sampler.samples import SequenceSamples, _SlmMask
 

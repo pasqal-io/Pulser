@@ -90,8 +90,6 @@ class SimConfig:
     doppler_sigma: float = field(
         init=False, default=KEFF * np.sqrt(KB * 50.0e-6 / MASS)
     )
-    use_sampler: bool = False
-    modulation: bool = False
 
     def __post_init__(self) -> None:
         self._process_temperature()

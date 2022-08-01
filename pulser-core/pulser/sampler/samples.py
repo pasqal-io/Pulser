@@ -179,10 +179,14 @@ class SequenceSamples:
             if not ch_samples.is_empty()
         }
 
-    def to_nested_dict(self) -> dict:
+    def to_nested_dict(self, all_local: bool = False) -> dict:
         """Format in the nested dictionary form.
 
         This is the format expected by `pulser_simulation.Simulation()`.
+
+        Args:
+            all_local: Forces all samples to be distributed by their
+                individual targets, even when applied by a global channel.
         """
         bases = {ch_obj.basis for ch_obj in self._ch_objs.values()}
         in_xy = False
@@ -194,7 +198,7 @@ class SequenceSamples:
             cs = samples.extend_duration(self.max_duration)
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
-            if addr == _GLOBAL:
+            if addr == _GLOBAL and not all_local:
                 start_t = self._slm_mask.end
                 d[_GLOBAL][basis][_AMP][start_t:] += cs.amp[start_t:]
                 d[_GLOBAL][basis][_DET][start_t:] += cs.det[start_t:]

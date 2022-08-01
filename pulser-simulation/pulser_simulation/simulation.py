@@ -17,9 +17,8 @@ from __future__ import annotations
 
 import itertools
 import warnings
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Mapping
-from copy import deepcopy
 from dataclasses import asdict
 from typing import Any, Optional, Union, cast
 
@@ -29,10 +28,10 @@ import qutip
 from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
+from pulser.sampler.samples import _TargetSlot
 from pulser import Pulse, Sequence
 from pulser.register import QubitId
 from pulser.sequence._seq_drawer import draw_sequence
-from pulser.sequence.sequence import _TimeSlot
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
     CoherentResults,
@@ -68,6 +67,8 @@ class Simulation:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
+        with_modulation: Whether to simulated the sequence with the programmed
+            input or the expected output.
     """
 
     def __init__(
@@ -76,6 +77,7 @@ class Simulation:
         sampling_rate: float = 1.0,
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
+        with_modulation: bool = False,
     ) -> None:
         """Instantiates a Simulation object."""
         if not isinstance(sequence, Sequence):
@@ -102,6 +104,17 @@ class Simulation:
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
         self._tot_duration = self._seq.get_duration()
+        self._modulated = bool(with_modulation)
+        if self._modulated and sequence._slm_mask_targets:
+            raise NotImplementedError(
+                "Simulation of sequences combining an SLM mask and output "
+                "modulation is not supported."
+            )
+        self.samples_obj = sampler.sample(
+            self._seq,
+            modulation=self._modulated,
+            extended_duration=self._tot_duration + 1,
+        )
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -134,6 +147,10 @@ class Simulation:
 
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
+        # Stores the qutip operators used in building the Hamiltonian
+        self.operators = {
+            addr: defaultdict(dict) for addr in ["Global", "Local"]
+        }
         # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
         if hasattr(self._seq, "_measurement"):
@@ -415,129 +432,49 @@ class Simulation:
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
-        self.samples: dict[str, dict[str, dict]]
+        local_noises = True
+        if set(self.config.noise).issubset({"dephasing", "SPAM"}):
+            local_noises = "SPAM" in self.config.noise and self.config.eta > 0
+        self.samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
-        if self._interaction == "ising":
-            self.samples = {
-                addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
-                for addr in ["Global", "Local"]
-            }
-        else:
-            self.samples = {addr: {"XY": {}} for addr in ["Global", "Local"]}
-
-        if not hasattr(self, "operators"):
-            self.operators = deepcopy(self.samples)
-
-        # Use the sampler if specified.
-        # It _should_ do the same as the rest of the current function below.
-        # Noises or slm are ignored for now.
-        if self.config.use_sampler:
-            self.samples_obj = sampler.sample(
-                self._seq,
-                modulation=self._modulated,
-                extended_duration=self._tot_duration + 1,
-            )
-            self.samples = self.samples_obj.to_nested_dict()
-            return
-
-        def prepare_dict() -> dict[str, np.ndarray]:
-            # Duration includes retargeting, delays, etc.
-            # Also adds extra time step for final instruction
-            return {
-                "amp": np.zeros(self._tot_duration + 1),
-                "det": np.zeros(self._tot_duration + 1),
-                "phase": np.zeros(self._tot_duration + 1),
-            }
-
-        def write_samples(
-            slot: _TimeSlot,
-            samples_dict: Mapping[str, np.ndarray],
+        def add_noise(
+            slot: _TargetSlot,
+            samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
-            *qid: Union[int, str],
         ) -> None:
             """Builds hamiltonian coefficients.
 
             Taking into account, if necessary, noise effects, which are local
             and depend on the qubit's id qid.
             """
-            _pulse = cast(Pulse, slot.type)
-            noise_det = 0.0
-            noise_amp = 1.0
-            if "doppler" in self.config.noise:
-                noise_det += self._doppler_detune[qid[0]]
-            # Gaussian beam loss in amplitude for global pulses only
-            # Noise is drawn at random for each pulse
-            if "amplitude" in self.config.noise and is_global_pulse:
-                position = self._qdict[qid[0]]
-                r = np.linalg.norm(position)
-                w0 = self.config.laser_waist
-                noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
-                    -((r / w0) ** 2)
-                )
+            for qid in slot.targets:
+                if "doppler" in self.config.noise:
+                    noise_det = self._doppler_detune[qid]
+                    samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
+                # Gaussian beam loss in amplitude for global pulses only
+                # Noise is drawn at random for each pulse
+                if "amplitude" in self.config.noise and is_global_pulse:
+                    position = self._qdict[qid]
+                    r = np.linalg.norm(position)
+                    w0 = self.config.laser_waist
+                    noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
+                        -((r / w0) ** 2)
+                    )
+                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= noise_amp
 
-            samples_dict["amp"][slot.ti : slot.tf] += (
-                _pulse.amplitude.samples * noise_amp
-            )
-            samples_dict["det"][slot.ti : slot.tf] += (
-                _pulse.detuning.samples + noise_det
-            )
-            samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
-
-        for channel in self._seq.declared_channels:
-            addr = self._seq.declared_channels[channel].addressing
-            basis = self._seq.declared_channels[channel].basis
-
-            # Case of coherent global simulations
-            if addr == "Global" and (
-                set(self.config.noise).issubset({"dephasing"})
-            ):
-                slm_on = bool(self._seq._slm_mask_targets)
-                for slot in self._seq._schedule[channel]:
-                    if isinstance(slot.type, Pulse):
-                        # If SLM is on during slot, populate local samples
-                        if slm_on and self._seq._slm_mask_time[1] > slot.ti:
-                            samples_dict = self.samples["Local"][basis]
-                            for qubit in slot.targets:
-                                if qubit not in samples_dict:
-                                    samples_dict[qubit] = prepare_dict()
-                                write_samples(
-                                    slot, samples_dict[qubit], True, qubit
-                                )
-                            self.samples["Local"][basis] = samples_dict
-                        # Otherwise, populate corresponding global
-                        else:
-                            slm_on = False
-                            samples_dict = self.samples["Global"][basis]
-                            if not samples_dict:
-                                samples_dict = prepare_dict()
-                            write_samples(slot, samples_dict, True)
-                            self.samples["Global"][basis] = samples_dict
-
-            # Any noise : global becomes local for each qubit in the reg
-            # Since coefficients are modified locally by all noises
-            else:
-                is_global = addr == "Global"
+        if local_noises:
+            for ch, ch_samples in self.samples_obj.channel_samples.items():
+                addr = self._seq.declared_channels[ch].addressing
+                basis = self._seq.declared_channels[ch].basis
                 samples_dict = self.samples["Local"][basis]
-                for slot in self._seq._schedule[channel]:
-                    if isinstance(slot.type, Pulse):
-                        for qubit in slot.targets:
-                            if qubit not in samples_dict:
-                                samples_dict[qubit] = prepare_dict()
-                            # We don't write samples for badly prep qubits
-                            if not self._bad_atoms[qubit]:
-                                write_samples(
-                                    slot, samples_dict[qubit], is_global, qubit
-                                )
-                self.samples["Local"][basis] = samples_dict
-
-            # Apply SLM mask if it was defined
-            if self._seq._slm_mask_targets and self._seq._slm_mask_time:
-                tf = self._seq._slm_mask_time[1]
-                for qubit in self._seq._slm_mask_targets:
-                    if qubit not in self.samples["Local"][basis]:
-                        continue
-                    for x in ("amp", "det", "phase"):
-                        self.samples["Local"][basis][qubit][x][0:tf] = 0
+                for slot in ch_samples.slots:
+                    add_noise(slot, samples_dict, addr == "Global")
+            # Delete samples for badly prepared atoms
+            for basis in self.samples["Local"]:
+                for qid in self.samples["Local"][basis]:
+                    if self._bad_atoms[qid]:
+                        for qty in ("amp", "det", "phase"):
+                            self.samples["Local"][basis][qid][qty] = 0.0
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
@@ -622,39 +559,19 @@ class Simulation:
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
 
-        def no_samples(d: dict) -> bool:
-            """Checks for "zero" samples dictionnaries.
-
-            Is true if the amplitude, detuning and phase samples are all zeros,
-            or if d is None or empty.
-            """
-            return (
-                d is None
-                or d == {}
-                or (
-                    all(d["amp"] == 0)
-                    and all(d["det"] == 0)
-                    and all(d["phase"] == 0)
-                )
-            )
-
         if self._interaction == "XY":
             self.basis_name = "XY"
             self.dim = 2
             basis = ["u", "d"]
             projectors = ["uu", "du", "ud", "dd"]
         else:
-            # No samples => Empty dict entry => False
-            if no_samples(self.samples["Global"]["digital"]) and no_samples(
-                self.samples["Local"]["digital"]
-            ):
+            used_bases = self.samples_obj.used_bases()
+            if "digital" not in used_bases:
                 self.basis_name = "ground-rydberg"
                 self.dim = 2
                 basis = ["r", "g"]
                 projectors = ["gr", "rr", "gg"]
-            elif no_samples(
-                self.samples["Global"]["ground-rydberg"]
-            ) and no_samples(self.samples["Local"]["ground-rydberg"]):
+            elif "ground-rydberg" not in used_bases:
                 self.basis_name = "digital"
                 self.dim = 2
                 basis = ["g", "h"]
