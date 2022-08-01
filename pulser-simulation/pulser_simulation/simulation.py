@@ -432,9 +432,12 @@ class Simulation:
         # It _should_ do the same as the rest of the current function below.
         # Noises or slm are ignored for now.
         if self.config.use_sampler:
-            self.samples = sampler.sample(
-                self._seq, additional_final_sample=True
+            self.samples_obj = sampler.sample(
+                self._seq,
+                modulation=self._modulated,
+                extended_duration=self._tot_duration + 1,
             )
+            self.samples = self.samples_obj.to_nested_dict()
             return
 
         def prepare_dict() -> dict[str, np.ndarray]:

@@ -70,6 +70,14 @@ class _TargetSlot:
 
 
 @dataclass
+class _SlmMask:
+    """Auxiliary class to store the SLM mask configuration."""
+
+    targets: set[str] = field(default_factory=set)
+    end: int = 0
+
+
+@dataclass
 class ChannelSamples:
     """Gathers samples of a channel."""
 
@@ -103,6 +111,8 @@ class ChannelSamples:
         extension = new_duration - len(self.amp)
         if new_duration < self.duration:
             raise ValueError("Can't extend samples to a lower duration.")
+        if not extension:
+            return self
 
         new_amp = np.pad(self.amp, (0, extension))
         new_detuning = np.pad(self.det, (0, extension))
@@ -112,6 +122,14 @@ class ChannelSamples:
             mode="edge" if self.phase.size > 0 else "constant",
         )
         return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
+
+    def is_empty(self) -> bool:
+        """Whether the channel is effectively empty.
+
+        We consider the channel to be empty if all amplitude and detuning
+        samples are zero.
+        """
+        return np.count_nonzero(self.amp) + np.count_nonzero(self.det) == 0
 
     def modulate(self, channel_obj: Channel) -> ChannelSamples:
         """Modulates the samples for a given channel.
@@ -139,6 +157,7 @@ class SequenceSamples:
     channels: list[str]
     samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
+    _slm_mask: _SlmMask = field(default_factory=_SlmMask)
 
     @property
     def channel_samples(self) -> dict[str, ChannelSamples]:
@@ -149,6 +168,16 @@ class SequenceSamples:
     def max_duration(self) -> int:
         """The maximum duration among the channel samples."""
         return max(samples.duration for samples in self.samples_list)
+
+    def used_bases(self) -> set[str]:
+        """The bases with non-zero pulses."""
+        return {
+            ch_obj.basis
+            for ch_obj, ch_samples in zip(
+                self._ch_objs.values(), self.samples_list
+            )
+            if not ch_samples.is_empty()
+        }
 
     def to_nested_dict(self) -> dict:
         """Format in the nested dictionary form.
@@ -166,13 +195,25 @@ class SequenceSamples:
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
             if addr == _GLOBAL:
-                d[_GLOBAL][basis][_AMP] += cs.amp
-                d[_GLOBAL][basis][_DET] += cs.det
-                d[_GLOBAL][basis][_PHASE] += cs.phase
+                start_t = self._slm_mask.end
+                d[_GLOBAL][basis][_AMP][start_t:] += cs.amp[start_t:]
+                d[_GLOBAL][basis][_DET][start_t:] += cs.det[start_t:]
+                d[_GLOBAL][basis][_PHASE][start_t:] += cs.phase[start_t:]
+                if start_t == 0:
+                    # Prevents lines below from running unnecessarily
+                    continue
+                unmasked_targets = cs.slots[0].targets - self._slm_mask.targets
+                for t in unmasked_targets:
+                    d[_LOCAL][basis][t][_AMP][:start_t] += cs.amp[:start_t]
+                    d[_LOCAL][basis][t][_DET][:start_t] += cs.det[:start_t]
+                    d[_LOCAL][basis][t][_PHASE][:start_t] += cs.phase[:start_t]
             else:
                 for s in cs.slots:
                     for t in s.targets:
-                        times = slice(s.ti, s.tf)
+                        ti = s.ti
+                        if t in self._slm_mask.targets:
+                            ti = max(ti, self._slm_mask.end)
+                        times = slice(ti, s.tf)
                         d[_LOCAL][basis][t][_AMP][times] += cs.amp[times]
                         d[_LOCAL][basis][t][_DET][times] += cs.det[times]
                         d[_LOCAL][basis][t][_PHASE][times] += cs.phase[times]

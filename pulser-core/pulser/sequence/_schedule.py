@@ -101,7 +101,8 @@ class _ChannelSchedule:
                 else dt
             )
             phase[t_start:t_end] += pulse.phase
-            slots.append(_TargetSlot(s.ti, s.tf, s.targets))
+            tf = s.tf + (pulse.fall_time(self.channel_obj) if modulated else 0)
+            slots.append(_TargetSlot(s.ti, tf, s.targets))
 
         ch_samples = ChannelSamples(amp, det, phase, slots)
 
