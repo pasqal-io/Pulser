@@ -25,8 +25,6 @@ from pulser.channels import Rydberg
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
-from pulser.sampler.sampler import _write_dict
-from pulser.sampler.samples import QubitSamples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
 
 # Helpers
@@ -34,7 +32,7 @@ from pulser.waveforms import BlackmanWaveform, RampWaveform
 
 def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     """Check against the legacy sample extraction in the simulation module."""
-    got = sample(seq)
+    got = sample(seq).to_nested_dict()
     want = pulser_simulation.Simulation(seq).samples.copy()
 
     def truncate_samples(samples_dict):
@@ -49,7 +47,7 @@ def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     assert_nested_dict_equality(got, truncate_samples(want))
 
 
-def assert_nested_dict_equality(got, want: dict) -> None:
+def assert_nested_dict_equality(got: dict, want: dict) -> None:
     for basis in want["Global"]:
         for qty in want["Global"][basis]:
             np.testing.assert_array_equal(
@@ -80,7 +78,7 @@ def test_one_pulse_sampling():
     seq.add(Pulse(amp_wf, det_wf, phase), "ch0")
     seq.measure()
 
-    got = sample(seq)["Global"]["ground-rydberg"]
+    got = sample(seq).to_nested_dict()["Global"]["ground-rydberg"]
     want = (amp_wf.samples, det_wf.samples, np.ones(N) * phase)
     for i, key in enumerate(["amp", "det", "phase"]):
         np.testing.assert_array_equal(got[key], want[i])
@@ -115,10 +113,31 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     blackman = np.clip(np.blackman(N), 0, np.inf)
     input = (np.pi / 2) / (np.sum(blackman) / N) * blackman
 
-    want = chan.modulate(input)
-    got = sample(mod_seq, modulation=True)["Global"]["ground-rydberg"]["amp"]
+    want_amp = chan.modulate(input)
+    mod_samples = sample(mod_seq, modulation=True)
+    got_amp = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["amp"]
+    np.testing.assert_array_equal(got_amp, want_amp)
 
-    np.testing.assert_array_equal(got, want)
+    want_det = chan.modulate(np.ones(N))
+    got_det = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["det"]
+    np.testing.assert_array_equal(got_det, want_det)
+
+    want_phase = np.ones(mod_seq.get_duration(include_fall_time=True))
+    got_phase = mod_samples.to_nested_dict()["Global"]["ground-rydberg"][
+        "phase"
+    ]
+    np.testing.assert_array_equal(got_phase, want_phase)
+
+    input_samples = sample(mod_seq)
+    input_ch_samples = input_samples.channel_samples["ch0"]
+    output_ch_samples = mod_samples.channel_samples["ch0"]
+
+    for qty in ("amp", "det", "phase"):
+        np.testing.assert_array_equal(
+            getattr(input_ch_samples.modulate(chan), qty),
+            getattr(output_ch_samples, qty),
+        )
+    assert input_ch_samples.modulate(chan).slots == output_ch_samples.slots
 
 
 @pytest.fixture
@@ -146,6 +165,7 @@ def seq_with_SLM() -> pulser.Sequence:
     return seq
 
 
+@pytest.mark.xfail(reason="SLM not handled by `sample()` for now")
 def test_SLM_samples(seq_with_SLM):
     pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0)
     a_samples = pulse.amplitude.samples
@@ -166,7 +186,7 @@ def test_SLM_samples(seq_with_SLM):
     want["Local"]["ground-rydberg"]["superman"]["amp"][0:200] = a_samples
     want["Local"]["ground-rydberg"]["superman"]["amp"][200:400] = a_samples
 
-    got = sample(seq_with_SLM)
+    got = sample(seq_with_SLM).to_nested_dict()
     assert_nested_dict_equality(got, want)
 
 
@@ -186,30 +206,39 @@ def test_SLM_against_simulation(seq_with_SLM):
     assert_same_samples_as_sim(seq_with_SLM)
 
 
-def test_corner_cases():
-    """Test corner cases of helper functions."""
-    with pytest.raises(
-        ValueError,
-        match="ndarrays amp, det and phase must have the same length.",
-    ):
-        _ = QubitSamples(
-            amp=np.array([1.0]),
-            det=np.array([1.0]),
-            phase=np.array([1.0, 1.0]),
-            qubit="q0",
-        )
+def test_samples_repr(seq_rydberg):
+    samples = sample(seq_rydberg)
+    assert repr(samples) == "\n\n".join(
+        [
+            f"ch0:\n{samples.samples_list[0]!r}",
+            f"ch1:\n{samples.samples_list[1]!r}",
+        ]
+    )
 
-    reg = pulser.Register.square(1, prefix="q")
-    seq = pulser.Sequence(reg, MockDevice)
-    N, M = 10, 11
-    samples_dict = {
-        "a": [QubitSamples(np.zeros(N), np.zeros(N), np.zeros(N), "q0")],
-        "b": [QubitSamples(np.zeros(M), np.zeros(M), np.zeros(M), "q0")],
-    }
+
+def test_extend_duration(seq_rydberg):
+    samples = sample(seq_rydberg)
+    short, long = samples.samples_list
+    assert short.duration < long.duration
+    assert short.extend_duration(short.duration).duration == short.duration
     with pytest.raises(
-        ValueError, match="All the samples do not share the same duration."
+        ValueError, match="Can't extend samples to a lower duration."
     ):
-        _write_dict(seq, samples_dict, {})
+        long.extend_duration(short.duration)
+
+    extended_short = short.extend_duration(long.duration)
+    assert extended_short.duration == long.duration
+    for qty in ("amp", "det", "phase"):
+        new_qty_samples = getattr(extended_short, qty)
+        old_qty_samples = getattr(short, qty)
+        np.testing.assert_array_equal(
+            new_qty_samples[: short.duration], old_qty_samples
+        )
+        np.testing.assert_equal(
+            new_qty_samples[short.duration :],
+            old_qty_samples[-1] if qty == "phase" else 0.0,
+        )
+    assert extended_short.slots == short.slots
 
 
 # Fixtures
@@ -278,7 +307,7 @@ def mod_seq(mod_device: Device) -> pulser.Sequence:
     seq = pulser.Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.add(
-        Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi / 2), 0.0, 0.0),
+        Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi / 2), 1.0, 1.0),
         "ch0",
     )
     seq.measure()

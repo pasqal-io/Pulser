@@ -30,9 +30,9 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Pulse, Sequence
-from pulser._seq_drawer import draw_sequence
 from pulser.register import QubitId
-from pulser.sequence import _TimeSlot
+from pulser.sequence._seq_drawer import draw_sequence
+from pulser.sequence.sequence import _TimeSlot
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
     CoherentResults,
@@ -90,7 +90,10 @@ class Simulation:
             )
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
-        if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
+        if all(
+            sequence._schedule[x][-1].tf == 0
+            for x in sequence.declared_channels
+        ):
             raise ValueError(
                 "No instructions given for the channels in the sequence."
             )
@@ -373,6 +376,7 @@ class Simulation:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = False,
         draw_phase_shifts: bool = False,
+        draw_phase_curve: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
     ) -> None:
@@ -386,6 +390,8 @@ class Simulation:
                 on top of the respective waveforms (defaults to False).
             draw_phase_shifts: Whether phase shift and reference
                 information should be added to the plot, defaults to False.
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
             fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig: Keywords arguments for
@@ -401,6 +407,7 @@ class Simulation:
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
+            draw_phase_curve=draw_phase_curve,
         )
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)
@@ -524,6 +531,8 @@ class Simulation:
             if self._seq._slm_mask_targets and self._seq._slm_mask_time:
                 tf = self._seq._slm_mask_time[1]
                 for qubit in self._seq._slm_mask_targets:
+                    if qubit not in self.samples["Local"][basis]:
+                        continue
                     for x in ("amp", "det", "phase"):
                         self.samples["Local"][basis][qubit][x][0:tf] = 0
 
@@ -895,7 +904,13 @@ class Simulation:
         if "max_step" in options.keys():
             solv_ops = qutip.Options(**options)
         else:
-            auto_max_step = 0.5 * (self._seq._min_pulse_duration() / 1000)
+            min_pulse_duration = min(
+                slot.tf - slot.ti
+                for ch_schedule in self._seq._schedule.values()
+                for slot in ch_schedule
+                if isinstance(slot.type, Pulse)
+            )
+            auto_max_step = 0.5 * (min_pulse_duration / 1000)
             solv_ops = qutip.Options(max_step=auto_max_step, **options)
 
         meas_errors: Optional[Mapping[str, float]] = None

@@ -66,15 +66,20 @@ class Variable(Parametrized, OpSupport):
         object.__setattr__(self, "_count", self._count + 1)
 
     def _assign(self, value: Union[ArrayLike, float, int]) -> None:
+        val = self._validate_value(value)
+        object.__setattr__(self, "value", val)
+        object.__setattr__(self, "_count", self._count + 1)
+
+    def _validate_value(
+        self, value: Union[ArrayLike, float, int]
+    ) -> np.ndarray:
         val = np.array(value, dtype=self.dtype, ndmin=1)
         if val.size != self.size:
             raise ValueError(
                 f"Can't assign array of size {val.size} to "
                 + f"variable of size {self.size}."
             )
-
-        object.__setattr__(self, "value", val)
-        object.__setattr__(self, "_count", self._count + 1)
+        return val
 
     def build(self) -> ArrayLike:
         """Returns the variable's current value."""
@@ -87,6 +92,9 @@ class Variable(Parametrized, OpSupport):
         d = obj_to_dict(self, _build=False)
         d.update(dataclasses.asdict(self))
         return d
+
+    def _to_abstract_repr(self) -> dict[str, str]:
+        return {"variable": self.name}
 
     def __str__(self) -> str:
         return self.name
@@ -125,6 +133,10 @@ class VariableItem(Parametrized, OpSupport):
         return obj_to_dict(
             self, self.var, self.key, _module="operator", _name="getitem"
         )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        indices = list(range(self.var.size))[self.key]
+        return {"expression": "index", "lhs": self.var, "rhs": indices}
 
     def __str__(self) -> str:
         if isinstance(self.key, slice):
