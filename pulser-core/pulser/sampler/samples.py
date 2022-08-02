@@ -73,7 +73,7 @@ class _TargetSlot:
 class _SlmMask:
     """Auxiliary class to store the SLM mask configuration."""
 
-    targets: set[str] = field(default_factory=set)
+    targets: set[QubitId] = field(default_factory=set)
     end: int = 0
 
 

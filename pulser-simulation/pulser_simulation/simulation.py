@@ -148,7 +148,7 @@ class Simulation:
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
         # Stores the qutip operators used in building the Hamiltonian
-        self.operators = {
+        self.operators: dict[str, defaultdict[str, dict]] = {
             addr: defaultdict(dict) for addr in ["Global", "Local"]
         }
         # Sets the config as well as builds the hamiltonian
