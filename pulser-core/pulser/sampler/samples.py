@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
 
@@ -131,7 +132,9 @@ class ChannelSamples:
         """
         return np.count_nonzero(self.amp) + np.count_nonzero(self.det) == 0
 
-    def modulate(self, channel_obj: Channel) -> ChannelSamples:
+    def modulate(
+        self, channel_obj: Channel, max_duration: Optional[int] = None
+    ) -> ChannelSamples:
         """Modulates the samples for a given channel.
 
         It assumes that the phase starts at its initial value and is kept at
@@ -140,13 +143,17 @@ class ChannelSamples:
 
         Args:
             channel_obj: The channel object for which to modulate the samples.
+            max_duration: The maximum duration of the modulation samples. If
+                defined, truncates them to have a duration less than or equal
+                to the given value.
 
         Returns:
             The modulated channel samples.
         """
-        new_amp = channel_obj.modulate(self.amp)
-        new_detuning = channel_obj.modulate(self.det)
-        new_phase = channel_obj.modulate(self.phase, keep_ends=True)
+        times = slice(0, max_duration)
+        new_amp = channel_obj.modulate(self.amp)[times]
+        new_detuning = channel_obj.modulate(self.det)[times]
+        new_phase = channel_obj.modulate(self.phase, keep_ends=True)[times]
         return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
 
 

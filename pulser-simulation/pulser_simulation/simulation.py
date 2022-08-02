@@ -28,9 +28,9 @@ import qutip
 from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
-from pulser.sampler.samples import _TargetSlot
 from pulser import Pulse, Sequence
 from pulser.register import QubitId
+from pulser.sampler.samples import _TargetSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
@@ -103,13 +103,15 @@ class Simulation:
         self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
-        self._tot_duration = self._seq.get_duration()
         self._modulated = bool(with_modulation)
         if self._modulated and sequence._slm_mask_targets:
             raise NotImplementedError(
                 "Simulation of sequences combining an SLM mask and output "
                 "modulation is not supported."
             )
+        self._tot_duration = self._seq.get_duration(
+            include_fall_time=self._modulated
+        )
         self.samples_obj = sampler.sample(
             self._seq,
             modulation=self._modulated,
@@ -421,6 +423,8 @@ class Simulation:
         draw_sequence(
             self._seq,
             self._sampling_rate,
+            draw_input=not self._modulated,
+            draw_modulation=self._modulated,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
@@ -558,7 +562,6 @@ class Simulation:
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
-
         if self._interaction == "XY":
             self.basis_name = "XY"
             self.dim = 2

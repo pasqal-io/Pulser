@@ -101,13 +101,25 @@ class _ChannelSchedule:
                 else dt
             )
             phase[t_start:t_end] += pulse.phase
-            tf = s.tf + (pulse.fall_time(self.channel_obj) if modulated else 0)
+            tf = s.tf
+            if modulated:
+                # Account for as much fall time as possible
+                fall_time = pulse.fall_time(self.channel_obj)
+                tf += (
+                    min(fall_time, channel_slots[ind + 1].ti - s.tf)
+                    if ind < len(channel_slots) - 1
+                    else fall_time
+                )
+
             slots.append(_TargetSlot(s.ti, tf, s.targets))
 
         ch_samples = ChannelSamples(amp, det, phase, slots)
 
         if modulated:
-            ch_samples = ch_samples.modulate(self.channel_obj)
+            ch_samples = ch_samples.modulate(
+                self.channel_obj,
+                max_duration=self.get_duration(include_fall_time=True),
+            )
 
         return ch_samples
 
