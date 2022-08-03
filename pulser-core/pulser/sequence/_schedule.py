@@ -94,7 +94,7 @@ class _ChannelSchedule:
             amp[s.ti : s.tf] += pulse.amplitude.samples
             det[s.ti : s.tf] += pulse.detuning.samples
             ph_jump_t = self.channel_obj.phase_jump_time
-            t_start = max(0, (s.ti - ph_jump_t))
+            t_start = s.ti - ph_jump_t if ind > 0 else 0
             t_end = (
                 channel_slots[ind + 1].ti - ph_jump_t
                 if ind < len(channel_slots) - 1

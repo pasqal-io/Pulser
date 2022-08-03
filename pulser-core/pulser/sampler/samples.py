@@ -109,8 +109,8 @@ class ChannelSamples:
         Returns:
             The extend channel samples.
         """
-        extension = new_duration - len(self.amp)
-        if new_duration < self.duration:
+        extension = new_duration - self.duration
+        if extension < 0:
             raise ValueError("Can't extend samples to a lower duration.")
         if not extension:
             return self

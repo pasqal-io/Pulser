@@ -406,7 +406,8 @@ class Simulation:
                 to be shown as text on the plot, defaults to False.
             draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
-                on top of the respective waveforms (defaults to False).
+                on top of the respective waveforms (defaults to False). Can't
+                be used if the sequence is modulated.
             draw_phase_shifts: Whether phase shift and reference
                 information should be added to the plot, defaults to False.
             draw_phase_curve: Draws the changes in phase in its own curve
@@ -420,6 +421,11 @@ class Simulation:
         See Also:
             Sequence.draw(): Draws the sequence in its current state.
         """
+        if draw_interp_pts and self._modulated:
+            raise ValueError(
+                "Can't draw the interpolation points when the sequence is "
+                "modulated; `draw_interp_pts` must be `False`."
+            )
         draw_sequence(
             self._seq,
             self._sampling_rate,
