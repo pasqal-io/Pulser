@@ -439,7 +439,7 @@ class Simulation:
         local_noises = True
         if set(self.config.noise).issubset({"dephasing", "SPAM"}):
             local_noises = "SPAM" in self.config.noise and self.config.eta > 0
-        self.samples = self.samples_obj.to_nested_dict(all_local=local_noises)
+        samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
         def add_noise(
             slot: _TargetSlot,
@@ -451,6 +451,9 @@ class Simulation:
             Taking into account, if necessary, noise effects, which are local
             and depend on the qubit's id qid.
             """
+            noise_amp_base = max(
+                0, np.random.normal(1.0, self.config.amp_sigma)
+            )
             for qid in slot.targets:
                 if "doppler" in self.config.noise:
                     noise_det = self._doppler_detune[qid]
@@ -461,24 +464,23 @@ class Simulation:
                     position = self._qdict[qid]
                     r = np.linalg.norm(position)
                     w0 = self.config.laser_waist
-                    noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
-                        -((r / w0) ** 2)
-                    )
+                    noise_amp = noise_amp_base * np.exp(-((r / w0) ** 2))
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= noise_amp
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
                 addr = self._seq.declared_channels[ch].addressing
                 basis = self._seq.declared_channels[ch].basis
-                samples_dict = self.samples["Local"][basis]
+                samples_dict = samples["Local"][basis]
                 for slot in ch_samples.slots:
                     add_noise(slot, samples_dict, addr == "Global")
             # Delete samples for badly prepared atoms
-            for basis in self.samples["Local"]:
-                for qid in self.samples["Local"][basis]:
+            for basis in samples["Local"]:
+                for qid in samples["Local"][basis]:
                     if self._bad_atoms[qid]:
                         for qty in ("amp", "det", "phase"):
-                            self.samples["Local"][basis][qid][qty] = 0.0
+                            samples["Local"][basis][qid][qty] = 0.0
+        self.samples = samples
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
