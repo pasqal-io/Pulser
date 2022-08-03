@@ -25,53 +25,53 @@ from pulser.register.register_layout import RegisterLayout
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import SimConfig, Simulation
 
-q_dict = {
-    "control1": np.array([-4.0, 0.0]),
-    "target": np.array([0.0, 4.0]),
-    "control2": np.array([4.0, 0.0]),
-}
-reg = Register(q_dict)
 
-duration = 1000
-pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
-twopi = Pulse.ConstantDetuning(BlackmanWaveform(duration, 2 * np.pi), 0.0, 0)
-pi_Y = Pulse.ConstantDetuning(
-    BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
-)
+@pytest.fixture
+def reg():
+    q_dict = {
+        "control1": np.array([-4.0, 0.0]),
+        "target": np.array([0.0, 4.0]),
+        "control2": np.array([4.0, 0.0]),
+    }
+    return Register(q_dict)
 
-seq = Sequence(reg, Chadoq2)
 
-# Declare Channels
-seq.declare_channel("ryd", "rydberg_local", "control1")
-seq.declare_channel("raman", "raman_local", "control1")
+@pytest.fixture
+def seq(reg):
+    duration = 1000
+    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+    twopi = Pulse.ConstantDetuning(
+        BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
+    )
+    pi_Y = Pulse.ConstantDetuning(
+        BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
+    )
+    seq = Sequence(reg, Chadoq2)
+    # Declare Channels
+    seq.declare_channel("ryd", "rydberg_local", "control1")
+    seq.declare_channel("raman", "raman_local", "control1")
 
-d = 0  # Pulse Duration
+    # Prepare state 'hhh':
+    seq.add(pi_Y, "raman")
+    seq.target("target", "raman")
+    seq.add(pi_Y, "raman")
+    seq.target("control2", "raman")
+    seq.add(pi_Y, "raman")
 
-# Prepare state 'hhh':
-seq.add(pi_Y, "raman")
-seq.target("target", "raman")
-seq.add(pi_Y, "raman")
-seq.target("control2", "raman")
-seq.add(pi_Y, "raman")
-d += 3
+    # Write CCZ sequence:
+    seq.add(pi, "ryd", protocol="wait-for-all")
+    seq.target("control2", "ryd")
+    seq.add(pi, "ryd")
+    seq.target("target", "ryd")
+    seq.add(twopi, "ryd")
+    seq.target("control2", "ryd")
+    seq.add(pi, "ryd")
+    seq.target("control1", "ryd")
+    seq.add(pi, "ryd")
 
-prep_state = qutip.tensor([qutip.basis(3, 2) for _ in range(3)])
-
-# Write CCZ sequence:
-seq.add(pi, "ryd", protocol="wait-for-all")
-seq.target("control2", "ryd")
-seq.add(pi, "ryd")
-seq.target("target", "ryd")
-seq.add(twopi, "ryd")
-seq.target("control2", "ryd")
-seq.add(pi, "ryd")
-seq.target("control1", "ryd")
-seq.add(pi, "ryd")
-d += 5
-
-# Add a ConstantWaveform part to testout the drawing procedure
-seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
-d += 1
+    # Add a ConstantWaveform part to testout the drawing procedure
+    seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
+    return seq
 
 
 def test_bad_import():
@@ -85,7 +85,7 @@ def test_bad_import():
     assert pulser.simulation.SimConfig is SimConfig
 
 
-def test_initialization_and_construction_of_hamiltonian():
+def test_initialization_and_construction_of_hamiltonian(seq):
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
     with pytest.raises(TypeError, match="sequence has to be a valid"):
         Simulation(fake_sequence)
@@ -93,7 +93,7 @@ def test_initialization_and_construction_of_hamiltonian():
     assert sim._seq == seq
     assert sim._qdict == seq.qubit_info
     assert sim._size == len(seq.qubit_info)
-    assert sim._tot_duration == duration * d
+    assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
 
     with pytest.raises(ValueError, match="too small, less than"):
@@ -131,7 +131,7 @@ def test_initialization_and_construction_of_hamiltonian():
         Simulation(seq_)
 
 
-def test_extraction_of_sequences():
+def test_extraction_of_sequences(seq):
     sim = Simulation(seq)
     for channel in seq.declared_channels:
         addr = seq.declared_channels[channel].addressing
@@ -172,7 +172,7 @@ def test_extraction_of_sequences():
                         ).all()
 
 
-def test_building_basis_and_projection_operators():
+def test_building_basis_and_projection_operators(seq, reg):
     # All three levels:
     sim = Simulation(seq, sampling_rate=0.01)
     assert sim.basis_name == "all"
@@ -211,7 +211,8 @@ def test_building_basis_and_projection_operators():
     # Global ground-rydberg
     seq2 = Sequence(reg, Chadoq2)
     seq2.declare_channel("global", "rydberg_global")
-    seq2.add(pi, "global")
+    pi_pls = Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0.0, 0)
+    seq2.add(pi_pls, "global")
     sim2 = Simulation(seq2, sampling_rate=0.01)
     assert sim2.basis_name == "ground-rydberg"
     assert sim2.dim == 2
@@ -228,7 +229,7 @@ def test_building_basis_and_projection_operators():
     # Digital
     seq2b = Sequence(reg, Chadoq2)
     seq2b.declare_channel("local", "raman_local", "target")
-    seq2b.add(pi, "local")
+    seq2b.add(pi_pls, "local")
     sim2b = Simulation(seq2b, sampling_rate=0.01)
     assert sim2b.basis_name == "digital"
     assert sim2b.dim == 2
@@ -245,7 +246,7 @@ def test_building_basis_and_projection_operators():
     # Local ground-rydberg
     seq2c = Sequence(reg, Chadoq2)
     seq2c.declare_channel("local_ryd", "rydberg_local", "target")
-    seq2c.add(pi, "local_ryd")
+    seq2c.add(pi_pls, "local_ryd")
     sim2c = Simulation(seq2c, sampling_rate=0.01)
     assert sim2c.basis_name == "ground-rydberg"
     assert sim2c.dim == 2
@@ -262,7 +263,7 @@ def test_building_basis_and_projection_operators():
     # Global XY
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("global", "mw_global")
-    seq2.add(pi, "global")
+    seq2.add(pi_pls, "global")
     sim2 = Simulation(seq2, sampling_rate=0.01)
     assert sim2.basis_name == "XY"
     assert sim2.dim == 2
@@ -281,7 +282,7 @@ def test_building_basis_and_projection_operators():
     )
 
 
-def test_empty_sequences():
+def test_empty_sequences(reg):
     seq = Sequence(reg, MockDevice)
     with pytest.raises(ValueError, match="no declared channels"):
         Simulation(seq)
@@ -383,7 +384,7 @@ def test_add_max_step_and_delays():
     assert np.isclose(occ_auto[-1], 0.5, 1e-4)
 
 
-def test_run():
+def test_run(seq):
     sim = Simulation(seq, sampling_rate=0.01)
     sim.set_config(SimConfig("SPAM", eta=0.0))
     with patch("matplotlib.pyplot.show"):
@@ -434,7 +435,7 @@ def test_run():
         sim.run()
 
 
-def test_eval_times():
+def test_eval_times(seq):
     with pytest.raises(
         ValueError, match="evaluation_times float must be between 0 " "and 1."
     ):
@@ -561,18 +562,26 @@ def test_config():
     )
 
 
-def test_noise():
+def test_noise(seq):
     sim2 = Simulation(
-        seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.4)
+        seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
     )
     sim2.run()
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="dephasing"))
     assert sim2.config.spam_dict == {
-        "eta": 0.4,
+        "eta": 0.9,
         "epsilon": 0.01,
         "epsilon_prime": 0.05,
     }
+    assert sim2.samples["Global"] == {}
+    assert any(sim2._bad_atoms.values())
+    for basis in ("ground-rydberg", "digital"):
+        for t in sim2._bad_atoms:
+            if not sim2._bad_atoms[t]:
+                continue
+            for qty in ("amp", "det", "phase"):
+                assert np.all(sim2.samples["Local"][basis][t][qty] == 0.0)
 
 
 def test_dephasing():
@@ -626,7 +635,7 @@ def test_add_config():
     assert sim.config.laser_waist == 172.0
 
 
-def test_cuncurrent_pulses():
+def test_concurrent_pulses():
     reg = Register({"q0": (0, 0)})
     seq = Sequence(reg, Chadoq2)
 
@@ -920,3 +929,84 @@ def test_effective_size_disjoint():
         assert sim.get_hamiltonian(0) == 0 * sim.build_operator(
             [("I", "global")]
         )
+
+
+def test_simulation_with_modulation(mod_device, reg):
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.config_slm_mask({"control1"})
+    pulse1 = Pulse.ConstantPulse(120, 1, 0, 2.0)
+    seq.add(pulse1, "ch0")
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Simulation of sequences combining an SLM mask and output "
+        "modulation is not supported.",
+    ):
+        Simulation(seq, with_modulation=True)
+
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch1", "raman_local", initial_target="target")
+    seq.add(pulse1, "ch1")
+    seq.target("control1", "ch1")
+    seq.add(pulse1, "ch1")
+    seq.add(pulse1, "ch0")
+    ch1_obj = seq.declared_channels["ch1"]
+    pulse1_mod_samples = ch1_obj.modulate(pulse1.amplitude.samples)
+    mod_dt = pulse1.duration + pulse1.fall_time(ch1_obj)
+    assert pulse1_mod_samples.size == mod_dt
+
+    sim_config = SimConfig(("amplitude", "doppler"))
+    sim = Simulation(seq, with_modulation=True, config=sim_config)
+
+    assert sim.samples["Global"] == {}  # All samples stored in local
+    raman_samples = sim.samples["Local"]["digital"]
+    # Local pulses
+    for qid, time_slice in [
+        ("target", slice(0, mod_dt)),
+        ("control1", slice(mod_dt, 2 * mod_dt)),
+    ]:
+        np.testing.assert_allclose(
+            raman_samples[qid]["amp"][time_slice], pulse1_mod_samples
+        )
+        np.testing.assert_equal(
+            raman_samples[qid]["det"][time_slice], sim._doppler_detune[qid]
+        )
+        np.testing.assert_equal(
+            raman_samples[qid]["phase"][time_slice], pulse1.phase
+        )
+
+    def pos_factor(qid):
+        r = np.linalg.norm(reg.qubits[qid])
+        w0 = sim_config.laser_waist
+        return np.exp(-((r / w0) ** 2))
+
+    # Global pulse
+    time_slice = slice(2 * mod_dt, 3 * mod_dt)
+    rydberg_samples = sim.samples["Local"]["ground-rydberg"]
+    noise_amp_base = rydberg_samples["target"]["amp"][time_slice] / (
+        pulse1_mod_samples * pos_factor("target")
+    )
+    for qid in reg.qubit_ids:
+        np.testing.assert_allclose(
+            rydberg_samples[qid]["amp"][time_slice],
+            pulse1_mod_samples * noise_amp_base * pos_factor(qid),
+        )
+        np.testing.assert_equal(
+            rydberg_samples[qid]["det"][time_slice], sim._doppler_detune[qid]
+        )
+        np.testing.assert_equal(
+            rydberg_samples[qid]["phase"][time_slice], pulse1.phase
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Can't draw the interpolation points when the sequence "
+        "is modulated",
+    ):
+        sim.draw(draw_interp_pts=True)
+
+    # Drawing with modulation
+    with patch("matplotlib.pyplot.show"):
+        sim.draw()
