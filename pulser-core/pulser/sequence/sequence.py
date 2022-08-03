@@ -707,7 +707,7 @@ class Sequence:
         *targets: QubitId,
         basis: str = "digital",
     ) -> None:
-        r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
+        r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
 
         This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
         target qubit's state by an angle :math:`\phi` around the z-axis of the
@@ -730,7 +730,7 @@ class Sequence:
         *targets: Union[int, Parametrized],
         basis: str = "digital",
     ) -> None:
-        r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
+        r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
 
         This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
         target qubit's state by an angle :math:`\phi` around the z-axis of the

@@ -214,7 +214,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float = None,
         prefix: str = None,
     ) -> Register:
-        """Initializes the register with maximum connectivity for a given device.
+        """Initializes the register with maximum connectivity for a device.
 
         In order to maximize connectivity, the basic pattern is the triangle.
         Atoms are first arranged as layers of hexagons around a central atom.
