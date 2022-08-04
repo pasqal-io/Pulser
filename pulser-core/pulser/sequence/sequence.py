@@ -707,7 +707,7 @@ class Sequence:
         *targets: QubitId,
         basis: str = "digital",
     ) -> None:
-        r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
+        r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
 
         This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
         target qubit's state by an angle :math:`\phi` around the z-axis of the
@@ -730,7 +730,7 @@ class Sequence:
         *targets: Union[int, Parametrized],
         basis: str = "digital",
     ) -> None:
-        r"""Shifts the phase of a qubit's reference by 'phi', for a given basis.
+        r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
 
         This is equivalent to an :math:`R_z(\phi)` gate (i.e. a rotation of the
         target qubit's state by an angle :math:`\phi` around the z-axis of the
@@ -972,7 +972,8 @@ class Sequence:
                 case only the input is drawn.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
-                'output' mode.
+                'output' mode. If `draw_phase_curve=True`, phase values are
+                ommited.
             draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective input waveforms (defaults to True).

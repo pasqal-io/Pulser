@@ -101,7 +101,7 @@ class SquareLatticeLayout(RegisterLayout):
 
 
 class TriangularLatticeLayout(RegisterLayout):
-    """A RegisterLayout with a triangular lattice pattern in an hexagonal shape.
+    """A RegisterLayout with a triangular lattice pattern in a hexagonal shape.
 
     Args:
         n_traps: The number of traps in the layout.
