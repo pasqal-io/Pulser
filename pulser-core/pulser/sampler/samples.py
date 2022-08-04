@@ -112,8 +112,6 @@ class ChannelSamples:
         extension = new_duration - self.duration
         if extension < 0:
             raise ValueError("Can't extend samples to a lower duration.")
-        if not extension:
-            return self
 
         new_amp = np.pad(self.amp, (0, extension))
         new_detuning = np.pad(self.det, (0, extension))
@@ -202,7 +200,11 @@ class SequenceSamples:
             in_xy = True
         d = _prepare_dict(self.max_duration, in_xy=in_xy)
         for chname, samples in zip(self.channels, self.samples_list):
-            cs = samples.extend_duration(self.max_duration)
+            cs = (
+                samples.extend_duration(self.max_duration)
+                if samples.duration != self.max_duration
+                else samples
+            )
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
             if addr == _GLOBAL and not all_local:

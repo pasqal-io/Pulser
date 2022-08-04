@@ -103,7 +103,8 @@ class _ChannelSchedule:
             phase[t_start:t_end] += pulse.phase
             tf = s.tf
             if modulated:
-                # Account for as much fall time as possible
+                # Account for the extended duration of the pulses
+                # after modulation, which is at most fall_time
                 fall_time = pulse.fall_time(self.channel_obj)
                 tf += (
                     min(fall_time, channel_slots[ind + 1].ti - s.tf)

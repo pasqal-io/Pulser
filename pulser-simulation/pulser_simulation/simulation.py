@@ -103,7 +103,7 @@ class Simulation:
         self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
-        self._modulated = bool(with_modulation)
+        self._modulated = with_modulation
         if self._modulated and sequence._slm_mask_targets:
             raise NotImplementedError(
                 "Simulation of sequences combining an SLM mask and output "
@@ -115,6 +115,8 @@ class Simulation:
         self.samples_obj = sampler.sample(
             self._seq,
             modulation=self._modulated,
+            # The samples are extended by 1 to improve the ODE
+            # solver convergence
             extended_duration=self._tot_duration + 1,
         )
 
