@@ -12,12 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module sampler enables the sampling of pulser sequences.
+"""The sampler module enables the sampling of pulser sequences.
 
-Samples of a sequence are needed for plotting and simulation.
-
-  Typical usage:
-
-  sampler.sample(sequence)
+The samples of a sequence are organized in channels and are used for
+plotting and simulation.
 """
 from pulser.sampler.sampler import sample

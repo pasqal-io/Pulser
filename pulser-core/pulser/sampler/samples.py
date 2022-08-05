@@ -1,4 +1,4 @@
-"""Contains dataclasses for samples and some helper functions."""
+"""Dataclasses for storing and processing the samples."""
 from __future__ import annotations
 
 from collections import defaultdict
@@ -107,7 +107,7 @@ class ChannelSamples:
                 Must be greater than or equal to the current duration.
 
         Returns:
-            The extend channel samples.
+            The extended channel samples.
         """
         extension = new_duration - self.duration
         if extension < 0:
@@ -125,7 +125,7 @@ class ChannelSamples:
     def is_empty(self) -> bool:
         """Whether the channel is effectively empty.
 
-        We consider the channel to be empty if all amplitude and detuning
+        The channel is considered empty if all amplitude and detuning
         samples are zero.
         """
         return np.count_nonzero(self.amp) + np.count_nonzero(self.det) == 0
@@ -136,7 +136,7 @@ class ChannelSamples:
         """Modulates the samples for a given channel.
 
         It assumes that the phase starts at its initial value and is kept at
-        its final value.The same could potentially be done for the detuning,
+        its final value. The same could potentially be done for the detuning,
         but it's not as safe of an assumption so it's not done for now.
 
         Args:
@@ -157,7 +157,7 @@ class ChannelSamples:
 
 @dataclass
 class SequenceSamples:
-    """Gather samples of a sequence with useful info."""
+    """Gather samples for each channel in a sequence."""
 
     channels: list[str]
     samples_list: list[ChannelSamples]
@@ -192,6 +192,11 @@ class SequenceSamples:
         Args:
             all_local: Forces all samples to be distributed by their
                 individual targets, even when applied by a global channel.
+
+        Returns:
+            A nested dictionary splitting the samples according to their
+            addressing ('Global' or 'Local'), the targeted basis
+            and, in the 'Local' case, the targeted qubit.
         """
         bases = {ch_obj.basis for ch_obj in self._ch_objs.values()}
         in_xy = False
