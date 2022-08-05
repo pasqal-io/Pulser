@@ -17,7 +17,7 @@ installed, then use ``pip``: ::
 
 The standard ``pulser`` distribution will install the core ``pulser`` package
 and the ``pulser_simulation`` extension package, which is required if you want
-to access the :doc:`apidoc/emulation` features.
+to access the :doc:`apidoc/simulation` features.
 
 If you wish to install only the core ``pulser`` features, you can instead run: ::
 

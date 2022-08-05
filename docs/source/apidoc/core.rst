@@ -1,5 +1,5 @@
 ************************
-Pulse Sequence Creation
+Core Features
 ************************
 
 Sequence
@@ -99,3 +99,13 @@ Channels
 .. automodule:: pulser.channels
    :members:
    :show-inheritance:
+
+
+Sampler
+------------------
+.. automodule:: pulser.sampler.sampler
+   :members:
+
+.. automodule:: pulser.sampler.samples
+   :members:
+
