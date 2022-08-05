@@ -94,19 +94,33 @@ class _ChannelSchedule:
             amp[s.ti : s.tf] += pulse.amplitude.samples
             det[s.ti : s.tf] += pulse.detuning.samples
             ph_jump_t = self.channel_obj.phase_jump_time
-            t_start = max(0, (s.ti - ph_jump_t))
+            t_start = s.ti - ph_jump_t if ind > 0 else 0
             t_end = (
                 channel_slots[ind + 1].ti - ph_jump_t
                 if ind < len(channel_slots) - 1
                 else dt
             )
             phase[t_start:t_end] += pulse.phase
-            slots.append(_TargetSlot(s.ti, s.tf, s.targets))
+            tf = s.tf
+            if modulated:
+                # Account for the extended duration of the pulses
+                # after modulation, which is at most fall_time
+                fall_time = pulse.fall_time(self.channel_obj)
+                tf += (
+                    min(fall_time, channel_slots[ind + 1].ti - s.tf)
+                    if ind < len(channel_slots) - 1
+                    else fall_time
+                )
+
+            slots.append(_TargetSlot(s.ti, tf, s.targets))
 
         ch_samples = ChannelSamples(amp, det, phase, slots)
 
         if modulated:
-            ch_samples = ch_samples.modulate(self.channel_obj)
+            ch_samples = ch_samples.modulate(
+                self.channel_obj,
+                max_duration=self.get_duration(include_fall_time=True),
+            )
 
         return ch_samples
 

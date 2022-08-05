@@ -75,19 +75,20 @@ class ChannelDrawContent:
         mod_samples = self.samples.modulate(ch_obj)
         return self._give_curves_from_samples(mod_samples)
 
-    def get_interpolated_curves(
-        self, sampling_rate: float
+    def interpolate_curves(
+        self, curves: list[np.ndarray], sampling_rate: float
     ) -> list[np.ndarray]:
         """The curves with a fractional sampling rate."""
         indices = np.linspace(
             0,
-            self.samples.duration - 1,
-            int(sampling_rate * (self.samples.duration + 1)),
+            self.samples.duration,
+            num=int(sampling_rate * self.samples.duration),
+            endpoint=False,
             dtype=int,
         )
-        sampled_curves = [curve[indices] for curve in self.get_input_curves()]
+        sampled_curves = [curve[indices] for curve in curves]
         t = np.arange(self.samples.duration)
-        return [CubicSpline(indices, curve)(t) for curve in sampled_curves]
+        return [CubicSpline(indices, sc)(t) for sc in sampled_curves]
 
     def curves_on_indices(self) -> list[int]:
         """The indices of the curves to draw."""
@@ -312,15 +313,15 @@ def draw_sequence(
         ch_data = data[ch]
         basis = ch_obj.basis
         ys = ch_data.get_input_curves()
-        if sampling_rate:
-            yseff = ch_data.get_interpolated_curves(sampling_rate)
-
         draw_output = draw_modulation and (
             ch_obj.mod_bandwidth or not draw_input
         )
         if draw_output:
             ys_mod = ch_data.get_output_curves(ch_obj)
 
+        if sampling_rate:
+            curves = ys_mod if draw_output else ys
+            yseff = ch_data.interpolate_curves(curves, sampling_rate)
         ref_ys = yseff if sampling_rate else ys
         max_amp = np.max(ref_ys[0])
         max_amp = 1 if max_amp == 0 else max_amp
@@ -357,14 +358,22 @@ def draw_sequence(
             elif draw_input:
                 ax.fill_between(t, 0, ys[i], color=COLORS[i], alpha=0.3)
             if draw_output:
-                ax.fill_between(
-                    t,
-                    0,
-                    ys_mod[i][:total_duration],
-                    color=COLORS[i],
-                    alpha=0.3,
-                    hatch="////",
-                )
+                if not sampling_rate:
+                    ax.fill_between(
+                        t,
+                        0,
+                        ys_mod[i][:total_duration],
+                        color=COLORS[i],
+                        alpha=0.3,
+                        hatch="////",
+                    )
+                else:
+                    ax.plot(
+                        t,
+                        ys_mod[i][:total_duration],
+                        color=COLORS[i],
+                        linestyle="dotted",
+                    )
             special_kwargs = dict(labelpad=10) if i == 0 else {}
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
