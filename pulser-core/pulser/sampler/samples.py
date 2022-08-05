@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
 
@@ -70,6 +71,14 @@ class _TargetSlot:
 
 
 @dataclass
+class _SlmMask:
+    """Auxiliary class to store the SLM mask configuration."""
+
+    targets: set[QubitId] = field(default_factory=set)
+    end: int = 0
+
+
+@dataclass
 class ChannelSamples:
     """Gathers samples of a channel."""
 
@@ -100,8 +109,8 @@ class ChannelSamples:
         Returns:
             The extend channel samples.
         """
-        extension = new_duration - len(self.amp)
-        if new_duration < self.duration:
+        extension = new_duration - self.duration
+        if extension < 0:
             raise ValueError("Can't extend samples to a lower duration.")
 
         new_amp = np.pad(self.amp, (0, extension))
@@ -113,7 +122,17 @@ class ChannelSamples:
         )
         return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
 
-    def modulate(self, channel_obj: Channel) -> ChannelSamples:
+    def is_empty(self) -> bool:
+        """Whether the channel is effectively empty.
+
+        We consider the channel to be empty if all amplitude and detuning
+        samples are zero.
+        """
+        return np.count_nonzero(self.amp) + np.count_nonzero(self.det) == 0
+
+    def modulate(
+        self, channel_obj: Channel, max_duration: Optional[int] = None
+    ) -> ChannelSamples:
         """Modulates the samples for a given channel.
 
         It assumes that the phase starts at its initial value and is kept at
@@ -122,13 +141,17 @@ class ChannelSamples:
 
         Args:
             channel_obj: The channel object for which to modulate the samples.
+            max_duration: The maximum duration of the modulation samples. If
+                defined, truncates them to have a duration less than or equal
+                to the given value.
 
         Returns:
             The modulated channel samples.
         """
-        new_amp = channel_obj.modulate(self.amp)
-        new_detuning = channel_obj.modulate(self.det)
-        new_phase = channel_obj.modulate(self.phase, keep_ends=True)
+        times = slice(0, max_duration)
+        new_amp = channel_obj.modulate(self.amp)[times]
+        new_detuning = channel_obj.modulate(self.det)[times]
+        new_phase = channel_obj.modulate(self.phase, keep_ends=True)[times]
         return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
 
 
@@ -139,6 +162,7 @@ class SequenceSamples:
     channels: list[str]
     samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
+    _slm_mask: _SlmMask = field(default_factory=_SlmMask)
 
     @property
     def channel_samples(self) -> dict[str, ChannelSamples]:
@@ -150,10 +174,24 @@ class SequenceSamples:
         """The maximum duration among the channel samples."""
         return max(samples.duration for samples in self.samples_list)
 
-    def to_nested_dict(self) -> dict:
+    def used_bases(self) -> set[str]:
+        """The bases with non-zero pulses."""
+        return {
+            ch_obj.basis
+            for ch_obj, ch_samples in zip(
+                self._ch_objs.values(), self.samples_list
+            )
+            if not ch_samples.is_empty()
+        }
+
+    def to_nested_dict(self, all_local: bool = False) -> dict:
         """Format in the nested dictionary form.
 
         This is the format expected by `pulser_simulation.Simulation()`.
+
+        Args:
+            all_local: Forces all samples to be distributed by their
+                individual targets, even when applied by a global channel.
         """
         bases = {ch_obj.basis for ch_obj in self._ch_objs.values()}
         in_xy = False
@@ -162,17 +200,33 @@ class SequenceSamples:
             in_xy = True
         d = _prepare_dict(self.max_duration, in_xy=in_xy)
         for chname, samples in zip(self.channels, self.samples_list):
-            cs = samples.extend_duration(self.max_duration)
+            cs = (
+                samples.extend_duration(self.max_duration)
+                if samples.duration != self.max_duration
+                else samples
+            )
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
-            if addr == _GLOBAL:
-                d[_GLOBAL][basis][_AMP] += cs.amp
-                d[_GLOBAL][basis][_DET] += cs.det
-                d[_GLOBAL][basis][_PHASE] += cs.phase
+            if addr == _GLOBAL and not all_local:
+                start_t = self._slm_mask.end
+                d[_GLOBAL][basis][_AMP][start_t:] += cs.amp[start_t:]
+                d[_GLOBAL][basis][_DET][start_t:] += cs.det[start_t:]
+                d[_GLOBAL][basis][_PHASE][start_t:] += cs.phase[start_t:]
+                if start_t == 0:
+                    # Prevents lines below from running unnecessarily
+                    continue
+                unmasked_targets = cs.slots[0].targets - self._slm_mask.targets
+                for t in unmasked_targets:
+                    d[_LOCAL][basis][t][_AMP][:start_t] += cs.amp[:start_t]
+                    d[_LOCAL][basis][t][_DET][:start_t] += cs.det[:start_t]
+                    d[_LOCAL][basis][t][_PHASE][:start_t] += cs.phase[:start_t]
             else:
                 for s in cs.slots:
                     for t in s.targets:
-                        times = slice(s.ti, s.tf)
+                        ti = s.ti
+                        if t in self._slm_mask.targets:
+                            ti = max(ti, self._slm_mask.end)
+                        times = slice(ti, s.tf)
                         d[_LOCAL][basis][t][_AMP][times] += cs.amp[times]
                         d[_LOCAL][basis][t][_DET][times] += cs.det[times]
                         d[_LOCAL][basis][t][_PHASE][times] += cs.phase[times]

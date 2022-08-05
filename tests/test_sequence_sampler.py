@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import textwrap
 from copy import deepcopy
 
 import numpy as np
@@ -21,7 +20,6 @@ import pytest
 
 import pulser
 import pulser_simulation
-from pulser.channels import Rydberg
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
@@ -137,7 +135,48 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
             getattr(input_ch_samples.modulate(chan), qty),
             getattr(output_ch_samples, qty),
         )
-    assert input_ch_samples.modulate(chan).slots == output_ch_samples.slots
+
+
+def test_modulation_local(mod_device):
+    seq = pulser.Sequence(pulser.Register.square(2), mod_device)
+    seq.declare_channel("ch0", "rydberg_local", initial_target=0)
+    ch_obj = seq.declared_channels["ch0"]
+    pulse1 = Pulse.ConstantPulse(500, 1, -1, 0)
+    pulse2 = Pulse.ConstantPulse(200, 2.5, 0, 0)
+    partial_fall = pulse1.fall_time(ch_obj) // 3
+    seq.add(pulse1, "ch0")
+    seq.delay(partial_fall, "ch0")
+    seq.add(pulse2, "ch0")
+    seq.target(1, "ch0")
+    seq.add(pulse1, "ch0")
+
+    input_samples = sample(seq)
+    output_samples = sample(seq, modulation=True)
+    assert input_samples.max_duration == seq.get_duration()
+    assert output_samples.max_duration == seq.get_duration(
+        include_fall_time=True
+    )
+
+    # Check that the target slots account for fall time
+    in_ch_samples = input_samples.channel_samples["ch0"]
+    out_ch_samples = output_samples.channel_samples["ch0"]
+    expected_slots = deepcopy(in_ch_samples.slots)
+    # The first slot should extend to the second
+    expected_slots[0].tf += partial_fall
+    assert expected_slots[0].tf == expected_slots[1].ti
+    # The next slots should fully account for fall time
+    expected_slots[1].tf += pulse2.fall_time(ch_obj)
+    expected_slots[2].tf += pulse1.fall_time(ch_obj)
+
+    assert out_ch_samples.slots == expected_slots
+
+    # Check that the samples are fully extracted to the nested dict
+    samples_dict = output_samples.to_nested_dict()
+    for qty in ("amp", "det", "phase"):
+        combined = sum(
+            samples_dict["Local"]["ground-rydberg"][t][qty] for t in range(2)
+        )
+        np.testing.assert_array_equal(getattr(out_ch_samples, qty), combined)
 
 
 @pytest.fixture
@@ -165,7 +204,6 @@ def seq_with_SLM() -> pulser.Sequence:
     return seq
 
 
-@pytest.mark.xfail(reason="SLM not handled by `sample()` for now")
 def test_SLM_samples(seq_with_SLM):
     pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0)
     a_samples = pulse.amplitude.samples
@@ -174,34 +212,20 @@ def test_SLM_samples(seq_with_SLM):
         return np.zeros(seq_with_SLM.get_duration())
 
     want: dict = {
-        "Global": {},
+        "Global": {"ground-rydberg": {"amp": z(), "det": z(), "phase": z()}},
         "Local": {
             "ground-rydberg": {
-                "batman": {"amp": z(), "det": z(), "phase": z()},
                 "superman": {"amp": z(), "det": z(), "phase": z()},
             }
         },
     }
-    want["Local"]["ground-rydberg"]["batman"]["amp"][200:400] = a_samples
+    want["Global"]["ground-rydberg"]["amp"][200:400] = a_samples
     want["Local"]["ground-rydberg"]["superman"]["amp"][0:200] = a_samples
-    want["Local"]["ground-rydberg"]["superman"]["amp"][200:400] = a_samples
 
     got = sample(seq_with_SLM).to_nested_dict()
     assert_nested_dict_equality(got, want)
 
 
-slm_reason = textwrap.dedent(
-    """
-If the SLM is on, Global channels decay to local ones in the
-sampler, such that the Global key in the output dict is empty and
-all the samples are written in the Local dict. On the contrary, the
-simulation module use the Local dict only for the first pulse, and
-then write the remaining in the Global dict.
-"""
-)
-
-
-@pytest.mark.xfail(reason=slm_reason)
 def test_SLM_against_simulation(seq_with_SLM):
     assert_same_samples_as_sim(seq_with_SLM)
 
@@ -312,41 +336,3 @@ def mod_seq(mod_device: Device) -> pulser.Sequence:
     )
     seq.measure()
     return seq
-
-
-@pytest.fixture
-def mod_device() -> Device:
-    return Device(
-        name="ModDevice",
-        dimensions=3,
-        rydberg_level=70,
-        max_atom_num=2000,
-        max_radial_distance=1000,
-        min_atom_distance=1,
-        _channels=(
-            (
-                "rydberg_global",
-                Rydberg(
-                    "Global",
-                    1000,
-                    200,
-                    clock_period=1,
-                    min_duration=1,
-                    mod_bandwidth=4.0,  # MHz
-                ),
-            ),
-            (
-                "rydberg_local",
-                Rydberg(
-                    "Local",
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    max_targets=2,
-                    phase_jump_time=0,
-                    fixed_retarget_t=0,
-                    min_retarget_interval=220,
-                    mod_bandwidth=4.0,
-                ),
-            ),
-        ),
-    )
