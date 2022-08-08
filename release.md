@@ -12,7 +12,7 @@ During this phase, only two type of releases are envisioned:
 - A scheduled release, where the MINOR is bumped and the PATCH is reset (`0.{x}.{y} -> 0.{x+1}.0`)
 - A hotfix, where the PATCH is bumped (`0.{x}.{y} -> 0.{x}.{y+1}`)
 
-Only releases are tracked and tagged in the `master` branch, while development is done in the `develop` branch. To signal this, the version in the `develop` branch should always be one MINOR ahead of `master` and follow the `MAJOR.{MINOR+1}devPATCH` format (e.g. if the latest release tagged in `master` was `0.4.3`, then the version in `develop` should be `0.5dev3`). Through this format, we mark which release is under development and how many patches have occured since its development started (which tells us how many times we brought in changes done directly in `master` through an hotfix).
+Only releases are tracked and tagged in the `master` branch, while development is done in the `develop` branch. To signal this, the version in the `develop` branch should always be one MINOR ahead of `master` and follow the `MAJOR.{MINOR+1}dev{PATCH}` format (e.g. if the latest release tagged in `master` was `0.4.3`, then the version in `develop` should be `0.5dev3`). Through this format, we mark which release is under development and how many patches have occured since its development started (which tells us how many times we brought in changes done directly in `master` through an hotfix).
 
 The version number is centralized in the `VERSION.txt` file and is shared between all the Pulser packages.
 
@@ -25,7 +25,7 @@ In the release branch, no other features can be added. Changes to the documentat
 
 Crucially, the release branch must feature a commit changing the development version in `VERSION.txt` to the desired version of the release. For a minor release, this should be of the form `{x}.{y}dev{z} -> {x}.{y}.0`. 
 
-Finally, open a PR from the `release/v{x}.{y}.{z}` branch to `master`, have someone review and accept the changes introduced in the `release` branch (all the changes done in `develop` will be there as well, but those have already been reviewed) and merge the branch to `master` **without squashing the commits**.
+Finally, open a PR from the `release/v{x}.{y}.{z}` branch to `master`, have someone review and accept the changes introduced in the release branch (all the changes done in `develop` will be there as well, but those have already been reviewed) and merge the branch to `master` **without squashing the commits**. To keep the `master` branch's history clean and informative, replace Github's default merge commit message with `Release v{x}.{y}.{z}`. Optionally, you can also include a summary of the most important changes introduced in the release.
 
 
 ## Preparing a hotfix
@@ -70,4 +70,4 @@ However, in the unlikely scenario that the deployment failed, it is more likely 
 
 Finally, you must open a PR from `master` to `develop` to merge the changes that occured in `master`. In this PR, you must also bump the version you just released, `{x}.{y}.{z}`, to the new development version, `{x}.{y+1}dev{z}` (e.g. `0.8.3 -> 0.9dev3`).
 
-Once the PR is accepted, merge it **without squashing** and that's it, you're done!
+Once the PR is accepted, merge it **without squashing** (again, replacing the merge commit message with something more informative) and that's it, you're done!
