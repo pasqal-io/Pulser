@@ -42,4 +42,4 @@ your installation will change accordingly.
 If you want to install the development requirements, stay inside the same ``Pulser``
 directory and follow up by running: ::
 
-  pip install -r requirements.txt
+  pip install -r dev_requirements.txt

@@ -25,14 +25,14 @@ if "dev" in __version__:
         "`pip install -e ./pulser-core -e ./pulser-simulation` instead."
     )
 
+with open("packages.txt", "r") as f:
+    requirements = [f"{pkg.strip()}=={__version__}" for pkg in f.readlines()]
+
 # Just a meta-package that requires 'pulser-core' and 'pulser-simulation'
 setup(
     name="pulser",
     version=__version__,
-    install_requires=[
-        f"pulser-core=={__version__}",
-        f"pulser-simulation=={__version__}",
-    ],
+    install_requires=requirements,
     description="A pulse-level composer for neutral-atom quantum devices.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

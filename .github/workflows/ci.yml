@@ -12,83 +12,59 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/checkout@v3
+      - name: Pulser + flake8 install
+        uses: ./.github/workflows/pulser-setup
         with:
-          python-version: 3.8
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ./pulser-core -e ./pulser-simulation
-          pip install -r requirements.txt
+          extra-packages: flake8
       - name: Lint with flake8
         run: flake8
   black:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/checkout@v3
+      - name: Pulser + black install
+        uses: ./.github/workflows/pulser-setup
         with:
-          python-version: 3.8
-      - name: Install black
-        run: |
-          python -m pip install --upgrade pip
-          pip install black
-          pip install 'black[jupyter]'
+          extra-packages: black
       - name: Check formatting with black
         run: black --check --diff .
   isort:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/checkout@v3
+      - name: Pulser + isort install
+        uses: ./.github/workflows/pulser-setup
         with:
-          python-version: 3.8
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ./pulser-core -e ./pulser-simulation
-          pip install -r requirements.txt
+          extra-packages: isort
       - name: Check import sorting with isort
         run: isort --check-only --diff .
   typing:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/checkout@v3
+      - name: Pulser + mypy install
+        uses: ./.github/workflows/pulser-setup
         with:
-          python-version: 3.8
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ./pulser-core -e ./pulser-simulation
-          pip install -r requirements.txt
+          extra-packages: '''mypy\|pytest'''
       - name: Type check with mypy
         run: mypy
   test:
-    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9, "3.10"]
+        python-version: ['3.7', '3.9']
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/checkout@v3
+      - name: Pulser + pytest install
+        uses: ./.github/workflows/pulser-setup
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ./pulser-core -e ./pulser-simulation
-          pip install -r requirements.txt
+          extra-packages: pytest
       - name: Run the unit tests & generate coverage report
         run: pytest --cov --cov-fail-under=100

@@ -27,6 +27,9 @@ with open(current_directory.parent / "VERSION.txt", "r") as f:
 # Changes to the directory where setup.py is
 os.chdir(current_directory)
 
+with open("requirements.txt") as f:
+    requirements = f.read().splitlines()
+
 # Stashes the source code for the local version file
 local_version_fpath = Path(package_name) / "_version.py"
 with open(local_version_fpath, "r") as f:
@@ -39,18 +42,7 @@ with open(local_version_fpath, "w") as f:
 setup(
     name=distribution_name,
     version=__version__,
-    install_requires=[
-        "matplotlib",
-        "numpy>=1.20",
-        "scipy",
-        "jsonschema==4.4.0",
-    ],
-    extras_require={
-        ":python_version == '3.7'": [
-            "backports.cached-property",
-            "typing-extensions",
-        ],
-    },
+    install_requires=requirements,
     packages=find_packages(),
     package_data={package_name: ["py.typed"]},
     include_package_data=True,
