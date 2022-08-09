@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser + flake8 setup
+      - name: Pulser + flake8 install
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: flake8
@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser + black setup
+      - name: Pulser + black install
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: black
@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser + isort setup
+      - name: Pulser + isort install
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: isort
@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser + mypy setup
+      - name: Pulser + mypy install
         uses: ./.github/workflows/pulser-setup
         with:
           extra-packages: '''mypy\|pytest'''
@@ -54,15 +54,14 @@ jobs:
         run: mypy
   test:
     if: github.event_name != 'push'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.7, 3.9]
+        python-version: ['3.7', '3.9']
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
-      - name: Pulser + pytest setup
+      - name: Pulser + pytest install
         uses: ./.github/workflows/pulser-setup
         with:
           python-version: ${{ matrix.python-version }}
