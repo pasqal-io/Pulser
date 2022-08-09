@@ -70,7 +70,7 @@ Here are the steps you should follow to make your contribution:
 We enforce some continuous integration standards in order to maintain the quality of Pulser's code. Make sure you follow them, otherwise your pull requests will be blocked until you fix them. To check if your changes pass all CI tests before you make the PR, you'll need additional packages, which you can install by running
 
 ```shell
-pip install -r requirements.txt
+pip install -r dev_requirements.txt
 ```
 
 - **Tests**: We use [`pytest`](https://docs.pytest.org/en/latest/) to run unit tests on our code. If your changes break existing tests, you'll have to update these tests accordingly. Additionally, we aim for 100% coverage over our code. Try to cover all the new lines of code with simple tests, which should be placed in the `Pulser/pulser/tests` folder. To run all tests and check coverage, run:
