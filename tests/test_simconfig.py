@@ -36,3 +36,7 @@ def test_init():
         SimConfig(temperature=-1.0)
     with pytest.raises(ValueError, match="SPAM parameter"):
         SimConfig(eta=-1.0)
+    with pytest.raises(
+        ValueError, match="The standard deviation in amplitude"
+    ):
+        SimConfig(amp_sigma=-0.001)

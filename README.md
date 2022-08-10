@@ -55,7 +55,7 @@ your installation will change accordingly.
 To run the tutorials or the test suite locally, after installation first run the following to install the development requirements:
 
 ```bash
-pip install -r requirements.txt
+pip install -r dev_requirements.txt
 ```
 
 Then, you can do the following to run the test suite and report test coverage:

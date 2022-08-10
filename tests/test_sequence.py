@@ -24,7 +24,7 @@ from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.register.special_layouts import TriangularLatticeLayout
-from pulser.sequence import _TimeSlot
+from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
@@ -70,16 +70,18 @@ def test_channel_declaration():
 
     seq2 = Sequence(reg, MockDevice)
     available_channels = set(seq2.available_channels)
-    seq2.declare_channel("ch0", "raman_local", initial_target="q1")
-    seq2.declare_channel("ch1", "rydberg_global")
-    seq2.declare_channel("ch2", "rydberg_global")
-    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
-    assert seq2._taken_channels == {
+    channel_map = {
         "ch0": "raman_local",
         "ch1": "rydberg_global",
         "ch2": "rydberg_global",
     }
-    assert seq2._taken_channels.keys() == seq2._channels.keys()
+    for channel, channel_id in channel_map.items():
+        seq2.declare_channel(channel, channel_id)
+    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert set(
+        seq2._schedule[channel].channel_id
+        for channel in seq2.declared_channels
+    ) == set(channel_map.values())
     with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
         seq2.declare_channel("ch3", "mw_global")
 
@@ -215,26 +217,10 @@ def test_delay_min_duration():
     seq.add(pulse0, "ch0")
     seq.target("q1", "ch1")
     seq.add(pulse1, "ch1")
-    min_duration = seq._channels["ch1"].min_duration
+    min_duration = seq.declared_channels["ch1"].min_duration
     assert seq._schedule["ch1"][3] == _TimeSlot(
         "delay", 220, 220 + min_duration, {"q1"}
     )
-
-
-def test_min_pulse_duration():
-    seq = Sequence(reg, device)
-    seq.declare_channel("ch0", "rydberg_global")
-    seq.declare_channel("ch1", "rydberg_local")
-    seq.target("q0", "ch1")
-    pulse0 = Pulse.ConstantPulse(60, 1, 1, 0)
-    pulse1 = Pulse.ConstantPulse(80, 1, 1, 0)
-    seq.add(pulse1, "ch1")
-    assert seq._min_pulse_duration() == 80
-    seq.add(pulse0, "ch0")
-    seq.delay(52, "ch0")
-    seq.target("q1", "ch1")
-    seq.add(pulse1, "ch1")
-    assert seq._min_pulse_duration() == 60
 
 
 def test_phase():
@@ -288,9 +274,10 @@ def test_measure():
     with pytest.raises(ValueError, match="not supported"):
         seq.measure(basis="XY")
     seq.measure()
-    with pytest.raises(RuntimeError, match="already been measured"):
-        seq.measure(basis="digital")
-    with pytest.raises(RuntimeError, match="Nothing more can be added."):
+    with pytest.raises(
+        RuntimeError,
+        match="sequence has been measured, no further changes are allowed.",
+    ):
         seq.add(pulse, "ch0")
 
     seq = Sequence(reg, MockDevice)
@@ -299,6 +286,34 @@ def test_measure():
     with pytest.raises(ValueError, match="not supported"):
         seq.measure(basis="digital")
     seq.measure(basis="XY")
+
+
+@pytest.mark.parametrize(
+    "call, args",
+    [
+        ("declare_channel", ("ch1", "rydberg_global")),
+        ("add", (Pulse.ConstantPulse(1000, 1, 0, 0), "ch0")),
+        ("target", ("q1", "ch0")),
+        ("target_index", (2, "ch0")),
+        ("delay", (1000, "ch0")),
+        ("align", ("ch0", "ch01")),
+        ("measure", tuple()),
+    ],
+)
+def test_block_if_measured(call, args):
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
+    # For the align command
+    seq.declare_channel("ch01", "rydberg_local", initial_target="q0")
+    # Check there's nothing wrong with the call
+    if call != "measure":
+        getattr(seq, call)(*args)
+    seq.measure(basis="ground-rydberg")
+    with pytest.raises(
+        RuntimeError,
+        match="sequence has been measured, no further changes are allowed.",
+    ):
+        getattr(seq, call)(*args)
 
 
 def test_str():
@@ -328,7 +343,6 @@ def test_sequence():
     seq.declare_channel("ch2", "rydberg_global")
     assert seq.get_duration("ch0") == 0
     assert seq.get_duration("ch2") == 0
-    seq.phase_shift(np.pi, "q0", basis="ground-rydberg")
 
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.figure.Figure.savefig"):
@@ -356,6 +370,7 @@ def test_sequence():
         seq.add(
             Pulse.ConstantPulse(500, 2 * np.pi, -2 * np.pi * 100, 0), "ch0"
         )
+    seq.phase_shift(np.pi, "q0", basis="ground-rydberg")
     with pytest.raises(ValueError, match="qubits with different phase ref"):
         seq.add(pulse2, "ch2")
     with pytest.raises(ValueError, match="Invalid protocol"):
@@ -387,8 +402,8 @@ def test_sequence():
     assert seq.current_phase_ref("q0", "digital") == 0
     seq.phase_shift(np.pi / 2, "q1")
     seq.target("q1", "ch0")
-    assert seq._last_used["digital"]["q1"] == 0
-    assert seq._last_target["ch0"] == 1000
+    assert seq._basis_ref["digital"]["q1"].last_used == 0
+    assert seq._schedule["ch0"].last_target() == 1000
     assert seq._last("ch0").ti == 1000
     assert seq.get_duration("ch0") == 1000
     seq.add(pulse1, "ch0")
@@ -409,6 +424,9 @@ def test_sequence():
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_area=True)
+
+    with patch("matplotlib.pyplot.show"):
+        seq.draw(draw_phase_curve=True)
 
     s = seq.serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
@@ -556,6 +574,7 @@ def test_draw_register():
     seq3d.declare_channel("ch_xy", "mw_global")
     seq3d.add(pulse, "ch_xy")
     seq3d.config_slm_mask([6, 15])
+    seq3d.measure(basis="XY")
     with patch("matplotlib.pyplot.show"):
         seq3d.draw(draw_register=True)
 
@@ -830,13 +849,13 @@ def test_non_parametrized_mappable_register_index_functions_failure(
     with pytest.raises(
         RuntimeError,
         match="Sequence.target_index cannot be called in"
-        " non parametrized sequences",
+        " non-parametrized sequences",
     ):
         seq.target_index(index, channel="ch0")
     with pytest.raises(
         RuntimeError,
         match="Sequence.phase_shift_index cannot be called in"
-        " non parametrized sequences",
+        " non-parametrized sequences",
     ):
         seq.phase_shift_index(phi, index)
 

@@ -67,6 +67,9 @@ class BaseRegister(ABC):
         self._coords = [np.array(v, dtype=float) for v in qubits.values()]
         self._dim = self._coords[0].size
         self._layout_info: Optional[_LayoutInfo] = None
+        self._init_kwargs(**kwargs)
+
+    def _init_kwargs(self, **kwargs: Any) -> None:
         if kwargs:
             if kwargs.keys() != {"layout", "trap_ids"}:
                 raise ValueError(
@@ -113,16 +116,16 @@ class BaseRegister(ABC):
             and ``phase_shift_index``.
 
         Args:
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to find.
+            id_list: IDs of the qubits to find.
 
         Returns:
-            list[int]: Indices of the qubits to denote, only valid for the
-                given mapping.
+            Indices of the qubits to denote, only valid for the
+            given mapping.
         """
         if not set(id_list) <= set(self.qubit_ids):
             raise ValueError(
-                "The IDs list must be selected among"
-                "the IDs of the register's qubits."
+                "The IDs list must be selected among the IDs of the register's"
+                " qubits."
             )
         return [self.qubit_ids.index(id_) for id_ in id_list]
 
@@ -133,24 +136,25 @@ class BaseRegister(ABC):
         center: bool = True,
         prefix: Optional[str] = None,
         labels: Optional[abcSequence[QubitId]] = None,
+        **kwargs: Any,
     ) -> T:
         """Creates the register from an array of coordinates.
 
         Args:
-            coords (ndarray): The coordinates of each qubit to include in the
+            coords: The coordinates of each qubit to include in the
                 register.
 
-        Keyword args:
-            center(defaut=True): Whether or not to center the entire array
-                around the origin.
-            prefix (str): The prefix for the qubit ids. If defined, each qubit
+        Args:
+            center: Whether or not to center the entire array around the
+                origin.
+            prefix: The prefix for the qubit ids. If defined, each qubit
                 id starts with the prefix, followed by an int from 0 to N-1
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...).
-            labels (ArrayLike): The list of qubit ids. If defined, each qubit
-                id will be set to the corresponding value.
+            labels: The list of qubit ids. If defined, each qubit id will be
+                set to the corresponding value.
 
         Returns:
-            Register: A register with qubits placed on the given coordinates.
+            A register with qubits placed on the given coordinates.
         """
         if center:
             coords = coords - np.mean(coords, axis=0)  # Centers the array
@@ -172,7 +176,7 @@ class BaseRegister(ABC):
             qubits = dict(zip(cast(Iterable, labels), coords))
         else:
             qubits = dict(cast(Iterable, enumerate(coords)))
-        return cls(qubits)
+        return cls(qubits, **kwargs)
 
     def _validate_layout(
         self, register_layout: RegisterLayout, trap_ids: tuple[int, ...]
@@ -202,16 +206,41 @@ class BaseRegister(ABC):
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
-        qs = dict(zip(self._ids, map(np.ndarray.tolist, self._coords)))
-        if self._layout_info is not None:
-            return obj_to_dict(self, qs, **(self._layout_info._asdict()))
-        return obj_to_dict(self, qs)
+        """Serializes the object.
+
+        During deserialization, it will be reconstructed using
+        'from_coordinates', so that it uses lists instead of a dictionary
+        (in JSON, lists elements keep their types, but dictionaries keys do
+        not).
+        """
+        cls_dict = obj_to_dict(
+            None,
+            _build=False,
+            _name=self.__class__.__name__,
+            _module=self.__class__.__module__,
+        )
+
+        kwargs = (
+            {} if self._layout_info is None else self._layout_info._asdict()
+        )
+
+        return obj_to_dict(
+            self,
+            cls_dict,
+            [np.ndarray.tolist(qubit_coords) for qubit_coords in self._coords],
+            False,
+            None,
+            self._ids,
+            **kwargs,
+            _submodule=self.__class__.__name__,
+            _name="from_coordinates",
+        )
 
     def __eq__(self, other: Any) -> bool:
         if type(other) is not type(self):
             return False
 
-        return set(self._ids) == set(other._ids) and all(
+        return list(self._ids) == list(other._ids) and all(
             (
                 np.allclose(  # Accounts for rounding errors
                     self._coords[i],

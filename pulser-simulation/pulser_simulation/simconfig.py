@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from sys import version_info
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import qutip
@@ -49,7 +49,7 @@ class SimConfig:
         cannot be changed later on.
 
     Args:
-        noise (Union[str, tuple[str]]): Types of noises to be used in the
+        noise: Types of noises to be used in the
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
@@ -60,18 +60,20 @@ class SimConfig:
             - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
               **epsilon_prime**.
 
-        eta (float): Probability of each atom to be badly prepared.
-        epsilon (float): Probability of false positives.
-        epsilon_prime(float): Probability of false negatives.
-        runs (int): Number of runs needed : each run draws a new random
+        eta: Probability of each atom to be badly prepared.
+        epsilon: Probability of false positives.
+        epsilon_prime: Probability of false negatives.
+        runs: Number of runs needed : each run draws a new random
             noise.
-        samples_per_run (int): Number of samples per noisy run.
+        samples_per_run: Number of samples per noisy run.
             Useful for cutting down on computing time, but unrealistic.
-        temperature (float): Temperature, set in µK, of the Rydberg array.
+        temperature: Temperature, set in µK, of the Rydberg array.
             Also sets the standard deviation of the speed of the atoms.
-        laser_waist (float): Waist of the gaussian laser, set in µm,
-            in global pulses.
-        solver_options (qutip.Options): Options for the qutip solver.
+        laser_waist: Waist of the gaussian laser, set in µm, in global
+            pulses.
+        amp_sigma: Dictates the fluctuations in amplitude as a standard
+            deviation of a normal distribution centered in 1.
+        solver_options: Options for the qutip solver.
     """
 
     noise: Union[NOISE_TYPES, tuple[NOISE_TYPES, ...]] = ()
@@ -79,11 +81,12 @@ class SimConfig:
     samples_per_run: int = 5
     temperature: float = 50.0
     laser_waist: float = 175.0
+    amp_sigma: float = 5e-2
     eta: float = 0.005
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
-    solver_options: qutip.Options = None
+    solver_options: Optional[qutip.Options] = None
     spam_dict: dict[str, float] = field(
         init=False, default_factory=dict, repr=False
     )
@@ -92,6 +95,12 @@ class SimConfig:
     )
 
     def __post_init__(self) -> None:
+        if not 0.0 <= self.amp_sigma < 1.0:
+            raise ValueError(
+                "The standard deviation in amplitude (amp_sigma="
+                f"{self.amp_sigma}) must be greater than or equal"
+                " to 0. and smaller than 1."
+            )
         self._process_temperature()
         self._change_attribute(
             "spam_dict",
@@ -118,6 +127,7 @@ class SimConfig:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
         if "doppler" in self.noise:
             lines.append(f"Temperature:           {self.temperature*1.e6}µK")
+            lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "amplitude" in self.noise:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
         if "dephasing" in self.noise:

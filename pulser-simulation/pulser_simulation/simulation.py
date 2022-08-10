@@ -17,9 +17,8 @@ from __future__ import annotations
 
 import itertools
 import warnings
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Mapping
-from copy import deepcopy
 from dataclasses import asdict
 from typing import Any, Optional, Union, cast
 
@@ -28,10 +27,11 @@ import numpy as np
 import qutip
 from numpy.typing import ArrayLike
 
+import pulser.sampler as sampler
 from pulser import Pulse, Sequence
-from pulser._seq_drawer import draw_sequence
 from pulser.register import QubitId
-from pulser.sequence import _TimeSlot
+from pulser.sampler.samples import _TargetSlot
+from pulser.sequence._seq_drawer import draw_sequence
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
     CoherentResults,
@@ -49,13 +49,13 @@ class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
 
     Args:
-        sequence (Sequence): An instance of a Pulser Sequence that we
+        sequence: An instance of a Pulser Sequence that we
             want to simulate.
-        sampling_rate (float): The fraction of samples that we wish to
+        sampling_rate: The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
             value between 0.05 and 1.0.
-        config (SimConfig): Configuration to be used for this simulation.
-        evaluation_times (Union[str, ArrayLike, float]): Choose between:
+        config: Configuration to be used for this simulation.
+        evaluation_times: Choose between:
 
             - "Full": The times are set to be the ones used to define the
               Hamiltonian to the solver.
@@ -67,6 +67,8 @@ class Simulation:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
+        with_modulation: Whether to simulated the sequence with the programmed
+            input or the expected output.
     """
 
     def __init__(
@@ -75,6 +77,7 @@ class Simulation:
         sampling_rate: float = 1.0,
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
+        with_modulation: bool = False,
     ) -> None:
         """Instantiates a Simulation object."""
         if not isinstance(sequence, Sequence):
@@ -89,7 +92,10 @@ class Simulation:
             )
         if not sequence._schedule:
             raise ValueError("The provided sequence has no declared channels.")
-        if all(sequence._schedule[x][-1].tf == 0 for x in sequence._channels):
+        if all(
+            sequence._schedule[x][-1].tf == 0
+            for x in sequence.declared_channels
+        ):
             raise ValueError(
                 "No instructions given for the channels in the sequence."
             )
@@ -97,7 +103,22 @@ class Simulation:
         self._interaction = "XY" if self._seq._in_xy else "ising"
         self._qdict = self._seq.qubit_info
         self._size = len(self._qdict)
-        self._tot_duration = self._seq.get_duration()
+        self._modulated = with_modulation
+        if self._modulated and sequence._slm_mask_targets:
+            raise NotImplementedError(
+                "Simulation of sequences combining an SLM mask and output "
+                "modulation is not supported."
+            )
+        self._tot_duration = self._seq.get_duration(
+            include_fall_time=self._modulated
+        )
+        self.samples_obj = sampler.sample(
+            self._seq,
+            modulation=self._modulated,
+            # The samples are extended by 1 to improve the ODE
+            # solver convergence
+            extended_duration=self._tot_duration + 1,
+        )
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -130,6 +151,10 @@ class Simulation:
 
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
+        # Stores the qutip operators used in building the Hamiltonian
+        self.operators: dict[str, defaultdict[str, dict]] = {
+            addr: defaultdict(dict) for addr in ["Global", "Local"]
+        }
         # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
         if hasattr(self._seq, "_measurement"):
@@ -150,7 +175,7 @@ class Simulation:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
-            cfg (SimConfig): New configuration.
+            cfg: New configuration.
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
@@ -210,7 +235,7 @@ class Simulation:
         former noise parameters.
 
         Args:
-            config (SimConfig): SimConfig to retrieve parameters from.
+            config: SimConfig to retrieve parameters from.
         """
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
@@ -264,7 +289,7 @@ class Simulation:
         """The initial state of the simulation.
 
         Args:
-            state (Union[str, ArrayLike, qutip.Qobj]): The initial state.
+            state: The initial state.
                 Choose between:
 
                 - "all-ground" for all atoms in ground state
@@ -301,7 +326,7 @@ class Simulation:
         """The times at which the results of this simulation are returned.
 
         Args:
-            value (Union[str, ArrayLike, float]): Choose between:
+            value: Choose between:
 
                 - "Full": The times are set to be the ones used to define the
                   Hamiltonian to the solver.
@@ -372,34 +397,46 @@ class Simulation:
         draw_phase_area: bool = False,
         draw_interp_pts: bool = False,
         draw_phase_shifts: bool = False,
+        draw_phase_curve: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
     ) -> None:
         """Draws the input sequence and the one used by the solver.
 
-        Keyword Args:
-            draw_phase_area (bool): Whether phase and area values need
+        Args:
+            draw_phase_area: Whether phase and area values need
                 to be shown as text on the plot, defaults to False.
-            draw_interp_pts (bool): When the sequence has pulses with waveforms
+            draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
-                on top of the respective waveforms (defaults to False).
-            draw_phase_shifts (bool): Whether phase shift and reference
+                on top of the respective waveforms (defaults to False). Can't
+                be used if the sequence is modulated.
+            draw_phase_shifts: Whether phase shift and reference
                 information should be added to the plot, defaults to False.
-            fig_name(str, default=None): The name on which to save the figure.
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
+            fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
-            kwargs_savefig(dict, default={}): Keywords arguments for
+            kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
 
         See Also:
             Sequence.draw(): Draws the sequence in its current state.
         """
+        if draw_interp_pts and self._modulated:
+            raise ValueError(
+                "Can't draw the interpolation points when the sequence is "
+                "modulated; `draw_interp_pts` must be `False`."
+            )
         draw_sequence(
             self._seq,
             self._sampling_rate,
+            draw_input=not self._modulated,
+            draw_modulation=self._modulated,
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
+            draw_phase_curve=draw_phase_curve,
         )
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)
@@ -407,114 +444,51 @@ class Simulation:
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
-        self.samples: dict[str, dict[str, dict]]
-        if self._interaction == "ising":
-            self.samples = {
-                addr: {basis: {} for basis in ["ground-rydberg", "digital"]}
-                for addr in ["Global", "Local"]
-            }
-        else:
-            self.samples = {addr: {"XY": {}} for addr in ["Global", "Local"]}
+        local_noises = True
+        if set(self.config.noise).issubset({"dephasing", "SPAM"}):
+            local_noises = "SPAM" in self.config.noise and self.config.eta > 0
+        samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
-        if not hasattr(self, "operators"):
-            self.operators = deepcopy(self.samples)
-
-        def prepare_dict() -> dict[str, np.ndarray]:
-            # Duration includes retargeting, delays, etc.
-            # Also adds extra time step for final instruction
-            return {
-                "amp": np.zeros(self._tot_duration + 1),
-                "det": np.zeros(self._tot_duration + 1),
-                "phase": np.zeros(self._tot_duration + 1),
-            }
-
-        def write_samples(
-            slot: _TimeSlot,
-            samples_dict: Mapping[str, np.ndarray],
+        def add_noise(
+            slot: _TargetSlot,
+            samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
-            *qid: Union[int, str],
         ) -> None:
             """Builds hamiltonian coefficients.
 
             Taking into account, if necessary, noise effects, which are local
             and depend on the qubit's id qid.
             """
-            _pulse = cast(Pulse, slot.type)
-            noise_det = 0.0
-            noise_amp = 1.0
-            if "doppler" in self.config.noise:
-                noise_det += self._doppler_detune[qid[0]]
-            # Gaussian beam loss in amplitude for global pulses only
-            # Noise is drawn at random for each pulse
-            if "amplitude" in self.config.noise and is_global_pulse:
-                position = self._qdict[qid[0]]
-                r = np.linalg.norm(position)
-                w0 = self.config.laser_waist
-                noise_amp = np.random.normal(1.0, 1.0e-3) * np.exp(
-                    -((r / w0) ** 2)
-                )
-
-            samples_dict["amp"][slot.ti : slot.tf] += (
-                _pulse.amplitude.samples * noise_amp
+            noise_amp_base = max(
+                0, np.random.normal(1.0, self.config.amp_sigma)
             )
-            samples_dict["det"][slot.ti : slot.tf] += (
-                _pulse.detuning.samples + noise_det
-            )
-            samples_dict["phase"][slot.ti : slot.tf] += _pulse.phase
+            for qid in slot.targets:
+                if "doppler" in self.config.noise:
+                    noise_det = self._doppler_detune[qid]
+                    samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
+                # Gaussian beam loss in amplitude for global pulses only
+                # Noise is drawn at random for each pulse
+                if "amplitude" in self.config.noise and is_global_pulse:
+                    position = self._qdict[qid]
+                    r = np.linalg.norm(position)
+                    w0 = self.config.laser_waist
+                    noise_amp = noise_amp_base * np.exp(-((r / w0) ** 2))
+                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= noise_amp
 
-        for channel in self._seq.declared_channels:
-            addr = self._seq.declared_channels[channel].addressing
-            basis = self._seq.declared_channels[channel].basis
-
-            # Case of coherent global simulations
-            if addr == "Global" and (
-                set(self.config.noise).issubset({"dephasing"})
-            ):
-                slm_on = bool(self._seq._slm_mask_targets)
-                for slot in self._seq._schedule[channel]:
-                    if isinstance(slot.type, Pulse):
-                        # If SLM is on during slot, populate local samples
-                        if slm_on and self._seq._slm_mask_time[1] > slot.ti:
-                            samples_dict = self.samples["Local"][basis]
-                            for qubit in slot.targets:
-                                if qubit not in samples_dict:
-                                    samples_dict[qubit] = prepare_dict()
-                                write_samples(
-                                    slot, samples_dict[qubit], True, qubit
-                                )
-                            self.samples["Local"][basis] = samples_dict
-                        # Otherwise, populate corresponding global
-                        else:
-                            slm_on = False
-                            samples_dict = self.samples["Global"][basis]
-                            if not samples_dict:
-                                samples_dict = prepare_dict()
-                            write_samples(slot, samples_dict, True)
-                            self.samples["Global"][basis] = samples_dict
-
-            # Any noise : global becomes local for each qubit in the reg
-            # Since coefficients are modified locally by all noises
-            else:
-                is_global = addr == "Global"
-                samples_dict = self.samples["Local"][basis]
-                for slot in self._seq._schedule[channel]:
-                    if isinstance(slot.type, Pulse):
-                        for qubit in slot.targets:
-                            if qubit not in samples_dict:
-                                samples_dict[qubit] = prepare_dict()
-                            # We don't write samples for badly prep qubits
-                            if not self._bad_atoms[qubit]:
-                                write_samples(
-                                    slot, samples_dict[qubit], is_global, qubit
-                                )
-                self.samples["Local"][basis] = samples_dict
-
-            # Apply SLM mask if it was defined
-            if self._seq._slm_mask_targets and self._seq._slm_mask_time:
-                tf = self._seq._slm_mask_time[1]
-                for qubit in self._seq._slm_mask_targets:
-                    for x in ("amp", "det", "phase"):
-                        self.samples["Local"][basis][qubit][x][0:tf] = 0
+        if local_noises:
+            for ch, ch_samples in self.samples_obj.channel_samples.items():
+                addr = self._seq.declared_channels[ch].addressing
+                basis = self._seq.declared_channels[ch].basis
+                samples_dict = samples["Local"][basis]
+                for slot in ch_samples.slots:
+                    add_noise(slot, samples_dict, addr == "Global")
+            # Delete samples for badly prepared atoms
+            for basis in samples["Local"]:
+                for qid in samples["Local"][basis]:
+                    if self._bad_atoms[qid]:
+                        for qty in ("amp", "det", "phase"):
+                            samples["Local"][basis][qid][qty] = 0.0
+        self.samples = samples
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
@@ -529,14 +503,14 @@ class Simulation:
         and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
 
         Args:
-            operations (list): List of tuples `(operator, qubits)`.
+            operations: List of tuples `(operator, qubits)`.
                 `operator` can be a ``qutip.Quobj`` or a string key for
                 ``self.op_matrix``. `qubits` is the list on which operator
                 will be applied. The qubits can be passed as their
                 index or their label in the register.
 
         Returns:
-            qutip.Qobj: The final operator.
+            The final operator.
         """
         op_list = [self.op_matrix["I"] for j in range(self._size)]
 
@@ -604,19 +578,13 @@ class Simulation:
             basis = ["u", "d"]
             projectors = ["uu", "du", "ud", "dd"]
         else:
-            # No samples => Empty dict entry => False
-            if (
-                not self.samples["Global"]["digital"]
-                and not self.samples["Local"]["digital"]
-            ):
+            used_bases = self.samples_obj.used_bases()
+            if "digital" not in used_bases:
                 self.basis_name = "ground-rydberg"
                 self.dim = 2
                 basis = ["r", "g"]
                 projectors = ["gr", "rr", "gg"]
-            elif (
-                not self.samples["Global"]["ground-rydberg"]
-                and not self.samples["Local"]["ground-rydberg"]
-            ):
+            elif "ground-rydberg" not in used_bases:
                 self.basis_name = "digital"
                 self.dim = 2
                 basis = ["g", "h"]
@@ -642,7 +610,7 @@ class Simulation:
         and refreshes potential noise parameters by drawing new at random.
 
         Args:
-            update(bool=True): Whether to update the noise parameters.
+            update: Whether to update the noise parameters.
         """
         if update:
             self._update_noise()
@@ -826,11 +794,11 @@ class Simulation:
         """Get the Hamiltonian created from the sequence at a fixed time.
 
         Args:
-            time (float): The specific time at which we want to extract the
+            time: The specific time at which we want to extract the
                 Hamiltonian (in ns).
 
         Returns:
-            qutip.Qobj: A new Qobj for the Hamiltonian with coefficients
+            A new Qobj for the Hamiltonian with coefficients
             extracted from the effective sequence (determined by
             `self.sampling_rate`) at the specified time.
         """
@@ -858,10 +826,10 @@ class Simulation:
         Will return NoisyResults if the noise in the SimConfig requires it.
         Otherwise will return CoherentResults.
 
-        Keyword Args:
-            progress_bar (bool or None): If True, the progress bar of QuTiP's
+        Args:
+            progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
-            options (qutip.solver.Options): If specified, will override
+            options: If specified, will override
                 SimConfig solver_options. If no `max_step` value is provided,
                 an automatic one is calculated from the `Sequence`'s schedule
                 (half of the shortest duration among pulses and delays).
@@ -869,7 +837,13 @@ class Simulation:
         if "max_step" in options.keys():
             solv_ops = qutip.Options(**options)
         else:
-            auto_max_step = 0.5 * (self._seq._min_pulse_duration() / 1000)
+            min_pulse_duration = min(
+                slot.tf - slot.ti
+                for ch_schedule in self._seq._schedule.values()
+                for slot in ch_schedule
+                if isinstance(slot.type, Pulse)
+            )
+            auto_max_step = 0.5 * (min_pulse_duration / 1000)
             solv_ops = qutip.Options(max_step=auto_max_step, **options)
 
         meas_errors: Optional[Mapping[str, float]] = None

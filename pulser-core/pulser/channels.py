@@ -103,15 +103,15 @@ class Channel:
         """Initializes the channel with local addressing.
 
         Args:
-            max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
+            max_abs_detuning: Maximum possible detuning (in rad/µs), in
                 absolute value.
-            max_amp(float): Maximum pulse amplitude (in rad/µs).
-            phase_jump_time (int): Time taken to change the phase between
+            max_amp: Maximum pulse amplitude (in rad/µs).
+            phase_jump_time: Time taken to change the phase between
                 consecutive pulses (in ns).
             min_retarget_interval (int): Minimum time required between two
                 target instructions (in ns).
-            fixed_retarget_t (int): Time taken to change the target (in ns).
-            max_targets (int): Maximum number of atoms the channel can target
+            fixed_retarget_t: Time taken to change the target (in ns).
+            max_targets: Maximum number of atoms the channel can target
                 simultaneously.
         """
         return cls(
@@ -136,10 +136,10 @@ class Channel:
         """Initializes the channel with global addressing.
 
         Args:
-            max_abs_detuning (float): Maximum possible detuning (in rad/µs), in
+            max_abs_detuning: Maximum possible detuning (in rad/µs), in
                 absolute value.
-            max_amp(float): Maximum pulse amplitude (in rad/µs).
-            phase_jump_time (int): Time taken to change the phase between
+            max_amp: Maximum pulse amplitude (in rad/µs).
+            phase_jump_time: Time taken to change the phase between
                 consecutive pulses (in ns).
         """
         return cls(
@@ -150,10 +150,10 @@ class Channel:
         """Validates and adapts the duration of an instruction on this channel.
 
         Args:
-            duration (int): The duration to validate.
+            duration: The duration to validate.
 
         Returns:
-            int: The duration, potentially adapted to the channels specs.
+            The duration, potentially adapted to the channels specs.
         """
         try:
             _duration = int(duration)
@@ -189,12 +189,12 @@ class Channel:
         """Modulates the input according to the channel's modulation bandwidth.
 
         Args:
-            input_samples (np.ndarray): The samples to modulate.
-            keep_ends (bool): Assume the end values of the samples were kept
+            input_samples: The samples to modulate.
+            keep_ends: Assume the end values of the samples were kept
                 constant (i.e. there is no ramp from zero on the ends).
 
         Returns:
-            np.ndarray: The modulated output signal.
+            The modulated output signal.
         """
         if not self.mod_bandwidth:
             warnings.warn(
@@ -230,14 +230,14 @@ class Channel:
         """Calculates the minimal buffers needed around a modulated waveform.
 
         Args:
-            input_samples (ArrayLike): The input samples.
-            mod_samples (ArrayLike): The modulated samples. Must be of size
+            input_samples: The input samples.
+            mod_samples: The modulated samples. Must be of size
                 ``len(input_samples) + 2 * self.rise_time``.
-            max_allowed_diff (float): The maximum allowed difference between
+            max_allowed_diff: The maximum allowed difference between
                 the input and modulated samples at the end points.
 
         Returns:
-            tuple[int, int]: The minimum buffer times at the start and end of
+            The minimum buffer times at the start and end of
             the samples, in ns.
         """
         if not self.mod_bandwidth:

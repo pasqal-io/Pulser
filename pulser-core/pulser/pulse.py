@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.channels import Channel
+from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
@@ -49,10 +50,10 @@ class Pulse:
         :math:`\delta`, also in rad/µs.
 
     Args:
-        amplitude (Waveform): The pulse amplitude waveform.
-        detuning (Waveform): The pulse detuning waveform.
-        phase (float): The pulse phase (in radians).
-        post_phase_shift (float, default=0.): Optionally lets you add a phase
+        amplitude: The pulse amplitude waveform.
+        detuning: The pulse detuning waveform.
+        phase: The pulse phase (in radians).
+        post_phase_shift: Optionally lets you add a phase
             shift(in rads) immediately after the end of the pulse. This allows
             for enconding of arbitrary single-qubit gates into a single pulse
             (see ``Sequence.phase_shift()`` for more information).
@@ -119,10 +120,10 @@ class Pulse:
         """Creates a Pulse with an amplitude waveform and a constant detuning.
 
         Args:
-            amplitude (Waveform): The pulse amplitude waveform.
-            detuning (float): The detuning value (in rad/µs).
-            phase (float): The pulse phase (in radians).
-            post_phase_shift (float, default=0.): Optionally lets you add a
+            amplitude: The pulse amplitude waveform.
+            detuning: The detuning value (in rad/µs).
+            phase: The pulse phase (in radians).
+            post_phase_shift: Optionally lets you add a
                 phase shift (in rads) immediately after the end of the pulse.
         """
         detuning_wf = ConstantWaveform(
@@ -142,10 +143,10 @@ class Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
 
         Args:
-            amplitude (float): The pulse amplitude value (in rad/µs).
-            detuning (Waveform): The pulse detuning waveform.
-            phase (float): The pulse phase (in radians).
-            post_phase_shift (float, default=0.): Optionally lets you add a
+            amplitude: The pulse amplitude value (in rad/µs).
+            detuning: The pulse detuning waveform.
+            phase: The pulse phase (in radians).
+            post_phase_shift: Optionally lets you add a
                 phase shift (in rads) immediately after the end of the pulse.
         """
         amplitude_wf = ConstantWaveform(
@@ -154,7 +155,6 @@ class Pulse:
         return cls(amplitude_wf, detuning, phase, post_phase_shift)
 
     @classmethod
-    @parametrize
     def ConstantPulse(
         cls,
         duration: Union[int, Parametrized],
@@ -166,11 +166,11 @@ class Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
         Args:
-            duration (int): The pulse duration (in multiples of 4 ns).
-            amplitude (float): The pulse amplitude value (in rad/µs).
-            detuning (float): The detuning value (in rad/µs).
-            phase (float): The pulse phase (in radians).
-            post_phase_shift (float, default=0.): Optionally lets you add a
+            duration: The pulse duration (in ns).
+            amplitude: The pulse amplitude value (in rad/µs).
+            detuning: The detuning value (in rad/µs).
+            phase: The pulse phase (in radians).
+            post_phase_shift: Optionally lets you add a
                 phase shift (in rads) immediately after the end of the pulse.
         """
         amplitude_wf = ConstantWaveform(duration, amplitude)
@@ -200,6 +200,15 @@ class Pulse:
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
             self,
+            self.amplitude,
+            self.detuning,
+            self.phase,
+            post_phase_shift=self.post_phase_shift,
+        )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return abstract_repr(
+            "Pulse",
             self.amplitude,
             self.detuning,
             self.phase,

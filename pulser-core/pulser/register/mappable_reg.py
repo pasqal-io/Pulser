@@ -29,9 +29,9 @@ class MappableRegister:
     """A register with the traps of each qubit still to be defined.
 
     Args:
-        register_layout (RegisterLayout): The register layout on which this
+        register_layout: The register layout on which this
             register will be defined.
-        qubit_ids (QubitId): The Ids for the qubits to pre-declare on this
+        qubit_ids: The Ids for the qubits to pre-declare on this
             register.
     """
 
@@ -60,13 +60,13 @@ class MappableRegister:
         """Builds an actual register.
 
         Args:
-            qubits (Mapping[QubitId, int]): A map between the qubit IDs to use
+            qubits: A map between the qubit IDs to use
                 and the layout traps where the qubits will be placed. Qubit IDs
                 declared in the MappableRegister but not defined here will
                 simply be left out of the final register.
 
         Returns:
-            BaseRegister: The resulting register.
+            The resulting register.
         """
         chosen_ids = tuple(qubits.keys())
         if not set(chosen_ids) <= set(self._qubit_ids):
@@ -110,12 +110,12 @@ class MappableRegister:
             to tell how to instantiate the register from the mappable register.
 
         Args:
-            chosen_ids (set[QubitId]): IDs of the qubits that are chosen to
+            chosen_ids: IDs of the qubits that are chosen to
                 map the MappableRegister
-            id_list (typing::Sequence[QubitId]): IDs of the qubits to denote.
+            id_list: IDs of the qubits to denote.
 
         Returns:
-            list[int]: Indices of the qubits to denote, only valid for the
+            Indices of the qubits to denote, only valid for the
             given mapping.
         """
         if not chosen_ids <= set(self._qubit_ids):
