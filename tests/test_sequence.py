@@ -151,10 +151,18 @@ def test_switch_device():
         max_radial_distance=60,
         min_atom_distance=5,
         _channels=(
-                ("raman_global", Raman.Global(2 * np.pi * 20, 2 * np.pi * 10)),
-                ("raman_local",
-                    Raman.Local(2*np.pi*20, 2*np.pi*10, clock_period=1,
-                                phase_jump_time=500))))
+            ("raman_global", Raman.Global(2 * np.pi * 20, 2 * np.pi * 10)),
+            (
+                "raman_local",
+                Raman.Local(
+                    2 * np.pi * 20,
+                    2 * np.pi * 10,
+                    clock_period=1,
+                    phase_jump_time=500,
+                ),
+            ),
+        ),
+    )
 
     test_device2 = Device(
         name="test_device1",
@@ -164,94 +172,99 @@ def test_switch_device():
         max_radial_distance=60,
         min_atom_distance=5,
         _channels=(
-                ("rmn_local",
-                    Raman.Local(2*np.pi*20, 2*np.pi*10, clock_period=2,
-                                phase_jump_time=500)),
+            (
+                "rmn_local",
+                Raman.Local(
+                    2 * np.pi * 20,
+                    2 * np.pi * 10,
+                    clock_period=2,
+                    phase_jump_time=500,
+                ),
             ),
-        )
+        ),
+    )
 
-    reg = Register.square(3, 5, prefix='q')
+    reg = Register.square(3, 5, prefix="q")
 
     # Device checkout
     seq = Sequence(reg, Chadoq2)
     with pytest.raises(
-                        ValueError,
-                        match="You can't switch with the same device."):
+        ValueError, match="You can't switch with the same device."
+    ):
         seq.switch_device(Chadoq2)
     # Channel basis
     seq = Sequence(reg, Chadoq2)
-    seq.declare_channel('digital', 'raman_local', 'q1')
+    seq.declare_channel("digital", "raman_local", "q1")
 
-    with pytest.raises(
-                        TypeError,
-                        match="Channel issue."):
+    with pytest.raises(TypeError, match="Channel issue."):
         seq.switch_device(IroiseMVP)
 
     # Channel addressing
     seq = Sequence(reg, test_device1)
-    seq.declare_channel('ising', 'raman_global')
+    seq.declare_channel("ising", "raman_global")
 
-    with pytest.raises(
-                        TypeError
-                        , match="Channel issue."):
+    with pytest.raises(TypeError, match="Channel issue."):
         seq.switch_device(test_device2)
     new_seq = seq.switch_device(MockDevice)
-    assert (new_seq.declared_channels['ising'].basis == "digital")
-    assert (new_seq.declared_channels['ising'].addressing == "Global")
+    assert new_seq.declared_channels["ising"].basis == "digital"
+    assert new_seq.declared_channels["ising"].addressing == "Global"
 
     # Strict-Jump_phase_time & CLock-period
 
     # Jump_phase_time
     seq = Sequence(reg, Chadoq2)
-    seq.declare_channel('ising', 'rydberg_global')
+    seq.declare_channel("ising", "rydberg_global")
 
-    with pytest.raises(
-                        ValueError,
-                        match="Wrong phase_jump_time."):
+    with pytest.raises(ValueError, match="Wrong phase_jump_time."):
         seq.switch_device(IroiseMVP, True)
 
     # Clock_period
     seq = Sequence(reg, test_device1)
-    seq.declare_channel('ising', 'raman_local')
+    seq.declare_channel("ising", "raman_local")
 
-    with pytest.raises(
-                        ValueError,
-                        match="Wrong clock_period"):
+    with pytest.raises(ValueError, match="Wrong clock_period"):
         seq.switch_device(test_device2, True)
     # Jump_phase_time & CLock-period
 
     seq = Sequence(reg, Chadoq2)
-    seq.declare_channel('ising', 'raman_local')
+    seq.declare_channel("ising", "raman_local")
     with pytest.raises(
-                        ValueError,
-                        match="Wrong phase_jump_time & clock_period."):
+        ValueError, match="Wrong phase_jump_time & clock_period."
+    ):
         seq.switch_device(test_device2, True)
 
     # Test target
     seq = Sequence(reg, Chadoq2)
-    seq.declare_channel('digital', 'raman_local', 'q1')
-    seq.target('q7', 'digital')
+    seq.declare_channel("digital", "raman_local", "q1")
+    seq.target("q7", "digital")
 
-    assert seq.switch_device(test_device1)._calls[-1].name == 'target'
-    assert seq.switch_device(test_device1)._calls[-1].args[0] == 'q7'
-    assert seq.switch_device(test_device1)._calls[-1].args[1] == 'digital'
+    assert seq.switch_device(test_device1)._calls[-1].name == "target"
+    assert seq.switch_device(test_device1)._calls[-1].args[0] == "q7"
+    assert seq.switch_device(test_device1)._calls[-1].args[1] == "digital"
 
     # Test delay, align, pulse
     seq = Sequence(reg, Chadoq2)
     pi_pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi), 0, 0)
-    seq.declare_channel('digital', 'raman_local')
-    seq.declare_channel('rydberg', 'rydberg_local', initial_target='q7')
-    seq.align('rydberg', 'digital')
-    seq.add(pi_pulse, 'rydberg')
-    seq.delay(200, 'rydberg')
-    assert (seq.switch_device(MockDevice)._calls[4].args[0] ==
-            Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi), 0, 0))
-    assert (seq.switch_device(MockDevice)._calls[3].name == 'align' and
-            seq.switch_device(MockDevice)._calls[3].args ==
-            ('rydberg', 'digital'))
-    assert (seq.switch_device(MockDevice)._calls[5].name == 'delay'
-            and seq.switch_device(MockDevice)._calls[5].args ==
-            (200, 'rydberg'))
+    seq.declare_channel("digital", "raman_local")
+    seq.declare_channel("rydberg", "rydberg_local", initial_target="q7")
+    seq.align("rydberg", "digital")
+    seq.add(pi_pulse, "rydberg")
+    seq.delay(200, "rydberg")
+    assert seq.switch_device(MockDevice)._calls[4].args[
+        0
+    ] == Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi), 0, 0)
+    assert seq.switch_device(MockDevice)._calls[
+        3
+    ].name == "align" and seq.switch_device(MockDevice)._calls[3].args == (
+        "rydberg",
+        "digital",
+    )
+    assert seq.switch_device(MockDevice)._calls[
+        5
+    ].name == "delay" and seq.switch_device(MockDevice)._calls[5].args == (
+        200,
+        "rydberg",
+    )
 
 
 def test_target():
