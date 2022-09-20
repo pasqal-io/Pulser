@@ -370,6 +370,68 @@ class Sequence:
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
 
+    def switch_device(
+        self, new_device: Device, strict: bool = False
+    ) -> Sequence:
+        """Switch the device of a sequence.
+
+        Args:
+            new_device: The name of the device
+                to which you want to switch with.
+            strict: Indicates whether the switch constraints are strong or not.
+        """
+        # Check if the device is new or not
+
+        if self._device == new_device:
+            raise ValueError("You can't switch with the same device.")
+        # Initialize the new sequence
+        new_seq = Sequence(self.register , new_device)
+
+        # Recall the calls
+        calls = self._calls
+        called = True
+        for i in range(1 , len(calls)):
+            if calls[i].name == "declare_channel":
+                seq_channel = self._schedule[calls[i].args[0]]
+                for ch in new_device._channels:
+                    # Find the corresponding channel on the new device
+                    # We verify the channel class then
+                    # check wether it's Global or local
+                    if (seq_channel.channel_obj.basis == ch[1].basis and
+                        seq_channel.channel_obj.addressing ==
+                            ch[1].addressing):
+                        if strict:
+                            ch_obj = seq_channel.channel_obj
+                            phase_jump_time_check = (
+                                                    ch_obj.phase_jump_time
+                                                    != ch[1].phase_jump_time)
+                            clock_period_check = (
+                                                ch_obj.clock_period
+                                                != ch[1].clock_period)
+                            if phase_jump_time_check and clock_period_check:
+                                raise ValueError(
+                                    "Wrong phase_jump_time & clock_period.")
+                            elif (phase_jump_time_check and
+                                    not clock_period_check):
+                                raise ValueError("Wrong phase_jump_time.")
+                            elif (not phase_jump_time_check and
+                                    clock_period_check):
+                                raise ValueError("Wrong clock_period")
+
+                        sw_channel_args = list(calls[i].args)
+                        # Switch the old id with the correct id
+                        sw_channel_args[1] = ch[0]
+                        getattr(new_seq, "declare_channel")(
+                                *sw_channel_args, **calls[i].kwargs)
+                        called = False
+                        break
+                if called:
+                    raise TypeError("Channel issue.")
+            else:
+                getattr(new_seq, calls[i].name)(*calls[i].args,
+                                                **calls[i].kwargs)
+        return new_seq
+
     @seq_decorators.block_if_measured
     def declare_channel(
         self,
@@ -553,14 +615,14 @@ class Sequence:
                 simultaneously.
 
                 - ``'min-delay'``: Before adding the pulse, introduces the
-                  smallest possible delay that avoids all exisiting conflicts.
+                smallest possible delay that avoids all exisiting conflicts.
 
                 - ``'no-delay'``: Adds the pulse to the channel, regardless of
-                  existing conflicts.
+                existing conflicts.
 
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
-                  that idles the channel until the end of the other channels'
-                  latest pulse.
+                that idles the channel until the end of the other channels'
+                latest pulse.
         """
         self._validate_channel(channel)
 
