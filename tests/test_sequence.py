@@ -199,18 +199,27 @@ def test_switch_device():
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("digital", "raman_local", "q1")
 
-    with pytest.raises(TypeError, match="Channel issue."):
+    with pytest.raises(TypeError, match="No basis match."):
         seq.switch_device(IroiseMVP)
 
     # Channel addressing
     seq = Sequence(reg, test_device1)
     seq.declare_channel("ising", "raman_global")
 
-    with pytest.raises(TypeError, match="Channel issue."):
+    with pytest.raises(TypeError, match="No addressing match."):
         seq.switch_device(test_device2)
     new_seq = seq.switch_device(MockDevice)
     assert new_seq.declared_channels["ising"].basis == "digital"
     assert new_seq.declared_channels["ising"].addressing == "Global"
+
+    # Channel addressing and basis issue
+    seq = Sequence(reg, test_device2)
+    seq.declare_channel("ising", "rmn_local")
+
+    with pytest.raises(TypeError, match="No basis and addressing match."):
+        seq.switch_device(IroiseMVP)
+    # Multiple channel classes with different specs
+    
 
     # Strict-Jump_phase_time & CLock-period
 
