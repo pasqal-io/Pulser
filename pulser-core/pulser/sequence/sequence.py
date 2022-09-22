@@ -371,73 +371,73 @@ class Sequence:
         self._slm_mask_targets = targets
 
     def switch_device(
-        self, new_device: Device, strict: bool = False
+        self, new_device: Device, strong: bool = False
     ) -> Sequence:
         """Switch the device of a sequence.
 
         Args:
-            new_device: The name of the device
-                to which you want to switch with.
-            strict: Indicates whether the switch constraints are strong or not.
+            new_device: The target device instance
+            strong: Indicates whether the switch constraints are strong or not.
         """
         # Check if the device is new or not
 
         if self._device == new_device:
-            raise ValueError("You can't switch with the same device.")
+            print("Watchout, you're switching with the same device")
+            return self
+        if self._device == MockDevice:
+            raise ValueError("Switches from MockDevice are not allowed.")
         # Initialize the new sequence
         new_seq = Sequence(self.register, new_device)
 
         # Recall the calls
-        calls = self._calls
         called = True
-        for i in range(1, len(calls)):
-            if calls[i].name == "declare_channel":
-                seq_channel = self._schedule[calls[i].args[0]]
-                for ch in new_device._channels:
+        for call in self._calls[1:]:
+            if call.name == "declare_channel":
+                _, od_ch_obj = self._schedule[call.args[0]]
+                for nd_ch_id, nd_ch_obj in new_seq.available_channels.items(): 
                     # Find the corresponding channel on the new device
                     # We verify the channel class then
-                    # check wether it's Global or local
+                    # check whether it's Global or local
                     if (
-                        seq_channel.channel_obj.basis == ch[1].basis
-                        and seq_channel.channel_obj.addressing
-                        == ch[1].addressing
+                        od_ch_obj.basis == nd_ch_obj.basis
+                        and od_ch_obj.addressing
+                        == nd_ch_obj.addressing
                     ):
-                        if strict:
-                            ch_obj = seq_channel.channel_obj
+                        if strong:
                             phase_jump_time_check = (
-                                ch_obj.phase_jump_time != ch[1].phase_jump_time
+                                od_ch_obj.phase_jump_time != nd_ch_obj.phase_jump_time
                             )
                             clock_period_check = (
-                                ch_obj.clock_period != ch[1].clock_period
+                                od_ch_obj.clock_period != nd_ch_obj.clock_period
                             )
                             if phase_jump_time_check and clock_period_check:
                                 raise ValueError(
-                                    "Wrong phase_jump_time & clock_period."
+                                    "No phase_jump_time & clock_period matching."
                                 )
                             elif (
                                 phase_jump_time_check
                                 and not clock_period_check
                             ):
-                                raise ValueError("Wrong phase_jump_time.")
+                                raise ValueError("No phase_jump_times matching.")
                             elif (
                                 not phase_jump_time_check
                                 and clock_period_check
                             ):
-                                raise ValueError("Wrong clock_period")
+                                raise ValueError("No clock_periods not matching.")
 
-                        sw_channel_args = list(calls[i].args)
+                        sw_channel_args = list(call.args)
                         # Switch the old id with the correct id
-                        sw_channel_args[1] = ch[0]
+                        sw_channel_args[1] = nd_ch_id
                         getattr(new_seq, "declare_channel")(
-                            *sw_channel_args, **calls[i].kwargs
+                            *sw_channel_args, **call.kwargs
                         )
                         called = False
                         break
                 if called:
                     raise TypeError("Channel issue.")
             else:
-                getattr(new_seq, calls[i].name)(
-                    *calls[i].args, **calls[i].kwargs
+                getattr(new_seq, call.name)(
+                    *call.args, **call.kwargs
                 )
         return new_seq
 
@@ -624,14 +624,14 @@ class Sequence:
                 simultaneously.
 
                 - ``'min-delay'``: Before adding the pulse, introduces the
-                smallest possible delay that avoids all exisiting conflicts.
+                 smallest possible delay that avoids all exisiting conflicts.
 
                 - ``'no-delay'``: Adds the pulse to the channel, regardless of
-                existing conflicts.
+                 existing conflicts.
 
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
-                that idles the channel until the end of the other channels'
-                latest pulse.
+                 that idles the channel until the end of the other channels'
+                 latest pulse.
         """
         self._validate_channel(channel)
 

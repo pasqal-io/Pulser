@@ -188,10 +188,13 @@ def test_switch_device():
 
     # Device checkout
     seq = Sequence(reg, Chadoq2)
-    with pytest.raises(
-        ValueError, match="You can't switch with the same device."
-    ):
+    assert seq == seq.switch_device(Chadoq2)
+
+    seq = Sequence(reg,MockDevice)
+
+    with pytest.raises(ValueError,match="Switches from MockDevice are not allowed."):
         seq.switch_device(Chadoq2)
+
     # Channel basis
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("digital", "raman_local", "q1")
@@ -215,21 +218,21 @@ def test_switch_device():
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ising", "rydberg_global")
 
-    with pytest.raises(ValueError, match="Wrong phase_jump_time."):
+    with pytest.raises(ValueError, match="No phase_jump_times matching."):
         seq.switch_device(IroiseMVP, True)
 
     # Clock_period
     seq = Sequence(reg, test_device1)
     seq.declare_channel("ising", "raman_local")
 
-    with pytest.raises(ValueError, match="Wrong clock_period"):
+    with pytest.raises(ValueError, match="No clock_periods not matching."):
         seq.switch_device(test_device2, True)
     # Jump_phase_time & CLock-period
 
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ising", "raman_local")
     with pytest.raises(
-        ValueError, match="Wrong phase_jump_time & clock_period."
+        ValueError, match="No phase_jump_time & clock_period matching."
     ):
         seq.switch_device(test_device2, True)
 
