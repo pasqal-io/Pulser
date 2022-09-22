@@ -396,7 +396,7 @@ class Sequence:
                 for ch in new_device._channels:
                     # Find the corresponding channel on the new device
                     # We verify the channel class then
-                    # check wether it's Global or local
+                    # check whether it's Global or Local
                     if (
                         seq_channel.channel_obj.basis == ch[1].basis
                         and seq_channel.channel_obj.addressing
