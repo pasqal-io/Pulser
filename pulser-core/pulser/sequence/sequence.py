@@ -394,7 +394,7 @@ class Sequence:
         for call in self._calls[1:]:
             if call.name == "declare_channel":
                 _, od_ch_obj = self._schedule[call.args[0]]
-                for nd_ch_id, nd_ch_obj in new_seq.available_channels.items(): 
+                for [nd_ch_id, nd_ch_obj] in new_seq.available_channels.items(): 
                     # Find the corresponding channel on the new device
                     # We verify the channel class then
                     # check whether it's Global or local
