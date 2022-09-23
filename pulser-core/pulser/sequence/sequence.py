@@ -371,13 +371,13 @@ class Sequence:
         self._slm_mask_targets = targets
 
     def switch_device(
-        self, new_device: Device, strong: bool = False
+        self, new_device: Device, strict: bool = False
     ) -> Sequence:
         """Switch the device of a sequence.
 
         Args:
             new_device: The target device instance
-            strong: Indicates whether the switch constraints are strong or not.
+            strict: Add matching requirements making the switch more convenient.
         """
         # Check if the device is new or not
 
@@ -391,7 +391,7 @@ class Sequence:
 
         # Recall the calls
         called = False
-        strong_error_message = None
+        strict_error_message = None
         ch_type_er_mess = None
         for call in self._calls[1:]:
             if call.name == "declare_channel":
@@ -405,7 +405,7 @@ class Sequence:
                         od_ch_obj.addressing == nd_ch_obj.addressing
                     )
                     if basis_match and addressing_match:
-                        if strong:
+                        if strict:
                             phase_jump_time_check = (
                                 od_ch_obj.phase_jump_time
                                 != nd_ch_obj.phase_jump_time
@@ -415,13 +415,13 @@ class Sequence:
                                 != nd_ch_obj.clock_period
                             )
                             if phase_jump_time_check or clock_period_check:
-                                strong_error_message = (
+                                strict_error_message = (
                                     "No phase_jump_time & clock_period match."
                                 )
                             else:
-                                strong_error_message = None
+                                strict_error_message = None
 
-                        if strong_error_message is None:
+                        if strict_error_message is None:
                             sw_channel_args = list(call.args)
                             # Switch the old id with the correct id
                             sw_channel_args[1] = nd_ch_id
@@ -438,8 +438,8 @@ class Sequence:
                         ch_type_er_mess = "No basis and addressing match."
 
                 if not called:
-                    if strong_error_message is not None:
-                        raise ValueError(strong_error_message)
+                    if strict_error_message is not None:
+                        raise ValueError(strict_error_message)
                     else:
                         raise TypeError(ch_type_er_mess)
             else:
