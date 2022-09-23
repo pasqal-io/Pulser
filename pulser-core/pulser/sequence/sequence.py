@@ -48,7 +48,7 @@ from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
-
+from warnings import warn
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
 else:  # pragma: no cover
@@ -382,7 +382,7 @@ class Sequence:
         # Check if the device is new or not
 
         if self._device == new_device:
-            print("Watchout, you're switching with the same device")
+            warn("Watchout, you're switching with the same device",stacklevel=2)
             return self
         if self._device == MockDevice:
             raise ValueError("Switches from MockDevice are not allowed.")
