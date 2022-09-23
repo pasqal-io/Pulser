@@ -18,3 +18,4 @@ show_missing = True
 source =
     pulser-core/pulser/
     pulser-simulation/pulser_simulation/
+    pulser-pasqal/pulser_pasqal/
