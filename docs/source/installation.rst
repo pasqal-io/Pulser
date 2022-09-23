@@ -33,7 +33,7 @@ the ``develop`` branch - which holds the development (unstable) version of Pulse
 and install from source by running: ::
 
   git checkout develop
-  pip install -e ./pulser-core -e ./pulser-simulation
+  make dev-install
 
 Bear in mind that your installation will track the contents of your local
 Pulser repository folder, so if you checkout a different branch (e.g. ``master``),
