@@ -14,7 +14,6 @@
 """The Sequence class, where a pulse sequence is defined."""
 
 from __future__ import annotations
-from audioop import add
 
 import copy
 import json
@@ -391,63 +390,60 @@ class Sequence:
         new_seq = Sequence(self.register, new_device)
 
         # Recall the calls
-        called = True
+        called = False
         strong_error_message = None
         ch_type_er_mess = None
         for call in self._calls[1:]:
             if call.name == "declare_channel":
                 od_ch_obj = self._schedule[call.args[0]].channel_obj
-                for nd_ch_id, nd_ch_obj in new_seq.available_channels.items(): 
+                for nd_ch_id, nd_ch_obj in new_seq.available_channels.items():
                     # Find the corresponding channel on the new device
                     # We verify the channel class then
                     # check whether it's Global or local
                     basis_match = od_ch_obj.basis == nd_ch_obj.basis
-                    addressing_match = od_ch_obj.addressing == nd_ch_obj.addressing
+                    addressing_match = (
+                        od_ch_obj.addressing == nd_ch_obj.addressing
+                    )
                     if basis_match and addressing_match:
                         if strong:
                             phase_jump_time_check = (
-                                od_ch_obj.phase_jump_time != nd_ch_obj.phase_jump_time
+                                od_ch_obj.phase_jump_time
+                                != nd_ch_obj.phase_jump_time
                             )
                             clock_period_check = (
-                                od_ch_obj.clock_period != nd_ch_obj.clock_period
+                                od_ch_obj.clock_period
+                                != nd_ch_obj.clock_period
                             )
-                            if phase_jump_time_check and clock_period_check:
-                                strong_error_message = "No phase_jump_time & clock_period match."
-                            elif (
-                                phase_jump_time_check
-                                and not clock_period_check
-                            ):
-                                strong_error_message = "No phase_jump_times match."
-                            elif (
-                                not phase_jump_time_check
-                                and clock_period_check
-                            ):
-                                strong_error_message = "No clock_periods not match."
+                            if phase_jump_time_check or clock_period_check:
+                                strong_error_message = (
+                                    "No phase_jump_time & clock_period match."
+                                )
                             else:
                                 strong_error_message = None
-                        if strong_error_message == None:
+
+                        if strong_error_message is None:
                             sw_channel_args = list(call.args)
                             # Switch the old id with the correct id
                             sw_channel_args[1] = nd_ch_id
                             getattr(new_seq, "declare_channel")(
                                 *sw_channel_args, **call.kwargs
                             )
-                            called = False
+                            called = True
                             break
-                        else:
-                            raise ValueError(strong_error_message)
                     elif basis_match and not addressing_match:
                         ch_type_er_mess = "No addressing match."
                     elif not basis_match and addressing_match:
                         ch_type_er_mess = "No basis match."
-                    elif not basis_match and not addressing_match:
+                    else:
                         ch_type_er_mess = "No basis and addressing match."
-                if called:
-                    raise TypeError(ch_type_er_mess)   
+
+                if not called:
+                    if strong_error_message is not None:
+                        raise ValueError(strong_error_message)
+                    else:
+                        raise TypeError(ch_type_er_mess)
             else:
-                getattr(new_seq, call.name)(
-                    *call.args, **call.kwargs
-                )
+                getattr(new_seq, call.name)(*call.args, **call.kwargs)
         return new_seq
 
     @seq_decorators.block_if_measured
