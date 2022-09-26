@@ -43,7 +43,7 @@ If you wish to **install the development version of Pulser from source** instead
 
 ```bash
 git checkout develop
-pip install -e ./pulser-core -e ./pulser-simulation
+make dev-install
 ```
 
 Bear in mind that this installation will track the contents of your local
