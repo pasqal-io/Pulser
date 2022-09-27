@@ -376,75 +376,84 @@ class Sequence:
         """Switch the device of a sequence.
 
         Args:
-            new_device: The target device instance
-            strict: Add matching requirements making
-            the switch more convenient.
+            new_device: The target device instance.
+            strict: Enforce a strict match between devices and channels to
+                guarantee the pulse sequence is left unchanged.
         """
         # Check if the device is new or not
 
         if self._device == new_device:
             warnings.warn(
-                "Watchout, you're switching with the same device", stacklevel=2
+                "Switching a sequence to the same device" +
+                " returns the sequence unchanged.",
+                stacklevel=2
             )
             return self
-        if self._device == MockDevice:
-            raise ValueError("Switches from MockDevice are not allowed.")
+        if new_device == MockDevice:
+            raise NotImplementedError(
+                "Switching the device of a sequence" +
+                " to 'MockDevice' is not supported."
+            )
         # Initialize the new sequence
         new_seq = Sequence(self.register, new_device)
 
-        # Recall the calls
-        called = False
+        # Channel Matching
+
+        matched = False
         strict_error_message = None
         ch_type_er_mess = None
+        channel_matching = {}
+        for channel_name, channel_obj in self.declared_channels.items():
+            od_ch_obj = channel_obj
+            for nd_ch_id, nd_ch_obj in new_seq.available_channels.items():
+                # Find the corresponding channel on the new device
+                # We verify the channel class then
+                # check whether the addressing Global or local
+                basis_match = od_ch_obj.basis == nd_ch_obj.basis
+                addressing_match = (
+                    od_ch_obj.addressing == nd_ch_obj.addressing
+                )
+                if basis_match and addressing_match:
+                    if strict:
+                        phase_jump_time_check = (
+                            od_ch_obj.phase_jump_time
+                            != nd_ch_obj.phase_jump_time
+                        )
+                        clock_period_check = (
+                            od_ch_obj.clock_period %
+                            nd_ch_obj.clock_period == 0
+                        )
+                        if phase_jump_time_check or clock_period_check:
+                            matched = False
+                            strict_error_message = (
+                                "No channel with phase_jump_time" +
+                                " & clock_period match."
+                            )
+                        else:
+                            channel_matching[channel_name] = nd_ch_id
+                            matched = True
+                            break
+                else:
+                    matched = False
+                    ch_type_er_mess = (
+                        "No channel with both basis and addressing match."
+                    )
+
+            if not matched:
+                if strict_error_message is not None:
+                    raise ValueError(strict_error_message)
+                else:
+                    raise TypeError(ch_type_er_mess)
+
         for call in self._calls[1:]:
             if call.name == "declare_channel":
-                od_ch_obj = self._schedule[call.args[0]].channel_obj
-                for nd_ch_id, nd_ch_obj in new_seq.available_channels.items():
-                    # Find the corresponding channel on the new device
-                    # We verify the channel class then
-                    # check whether it's Global or local
-                    basis_match = od_ch_obj.basis == nd_ch_obj.basis
-                    addressing_match = (
-                        od_ch_obj.addressing == nd_ch_obj.addressing
-                    )
-                    if basis_match and addressing_match:
-                        if strict:
-                            phase_jump_time_check = (
-                                od_ch_obj.phase_jump_time
-                                != nd_ch_obj.phase_jump_time
-                            )
-                            clock_period_check = (
-                                od_ch_obj.clock_period
-                                != nd_ch_obj.clock_period
-                            )
-                            if phase_jump_time_check or clock_period_check:
-                                strict_error_message = (
-                                    "No phase_jump_time & clock_period match."
-                                )
-                            else:
-                                strict_error_message = None
+                sw_channel_args = list(call.args)
+                # Switch the old id with the correct id
+                sw_channel_args[1] = channel_matching[sw_channel_args[0]]
 
-                        if strict_error_message is None:
-                            sw_channel_args = list(call.args)
-                            # Switch the old id with the correct id
-                            sw_channel_args[1] = nd_ch_id
-                            getattr(new_seq, "declare_channel")(
-                                *sw_channel_args, **call.kwargs
-                            )
-                            called = True
-                            break
-                    elif basis_match and not addressing_match:
-                        ch_type_er_mess = "No addressing match."
-                    elif not basis_match and addressing_match:
-                        ch_type_er_mess = "No basis match."
-                    else:
-                        ch_type_er_mess = "No basis and addressing match."
-
-                if not called:
-                    if strict_error_message is not None:
-                        raise ValueError(strict_error_message)
-                    else:
-                        raise TypeError(ch_type_er_mess)
+                getattr(new_seq, "declare_channel")(
+                    *sw_channel_args, **call.kwargs
+                )
             else:
                 getattr(new_seq, call.name)(*call.args, **call.kwargs)
         return new_seq
@@ -638,8 +647,8 @@ class Sequence:
                  existing conflicts.
 
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
-                 that idles the channel until the end of the other channels'
-                 latest pulse.
+                that idles the channel until the end of the other channels'
+                latest pulse.
         """
         self._validate_channel(channel)
 

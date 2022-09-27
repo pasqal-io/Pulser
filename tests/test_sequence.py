@@ -177,7 +177,7 @@ def test_switch_device():
                 Raman.Local(
                     2 * np.pi * 20,
                     2 * np.pi * 10,
-                    clock_period=2,
+                    clock_period=3,
                     phase_jump_time=500,
                 ),
             ),
@@ -228,25 +228,33 @@ def test_switch_device():
     seq = Sequence(reg, Chadoq2)
     assert seq == seq.switch_device(Chadoq2)
 
-    seq = Sequence(reg, MockDevice)
+    seq = Sequence(reg, Chadoq2)
 
     with pytest.raises(
-        ValueError, match="Switches from MockDevice are not allowed."
+        NotImplementedError,
+        match="Switching the device of a sequence" +
+        " to 'MockDevice' is not supported."
     ):
-        seq.switch_device(Chadoq2)
+        seq.switch_device(MockDevice)
 
     # Channel basis
     seq = Sequence(reg, test_device1)
     seq.declare_channel("digital", "raman_global", "q1")
 
-    with pytest.raises(TypeError, match="No basis match."):
+    with pytest.raises(
+        TypeError,
+        match="No channel with both basis and addressing match."
+    ):
         seq.switch_device(IroiseMVP)
 
     # Channel addressing
     seq = Sequence(reg, test_device1)
     seq.declare_channel("ising", "raman_global")
 
-    with pytest.raises(TypeError, match="No addressing match."):
+    with pytest.raises(
+        TypeError,
+        match="No channel with both basis and addressing match."
+    ):
         seq.switch_device(test_device2)
     new_seq = seq.switch_device(MockDevice)
     assert new_seq.declared_channels["ising"].basis == "digital"
@@ -256,7 +264,10 @@ def test_switch_device():
     seq = Sequence(reg, test_device2)
     seq.declare_channel("ising", "rmn_local")
 
-    with pytest.raises(TypeError, match="No basis and addressing match."):
+    with pytest.raises(
+        TypeError,
+        match="No channel with both basis and addressing match."
+    ):
         seq.switch_device(IroiseMVP)
 
     # Strict-Jump_phase_time & CLock-period
@@ -266,7 +277,8 @@ def test_switch_device():
     seq.declare_channel("ising", "rydberg_global")
 
     with pytest.raises(
-        ValueError, match="No phase_jump_time & clock_period match."
+        ValueError,
+        match="No channel with phase_jump_time & clock_period match."
     ):
         seq.switch_device(IroiseMVP, True)
 
@@ -275,7 +287,8 @@ def test_switch_device():
     seq.declare_channel("ising", "raman_local")
 
     with pytest.raises(
-        ValueError, match="No phase_jump_time & clock_period match."
+        ValueError,
+        match="No channel with phase_jump_time & clock_period match."
     ):
         seq.switch_device(test_device2, True)
     # Jump_phase_time & CLock-period
@@ -283,7 +296,8 @@ def test_switch_device():
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ising", "raman_local")
     with pytest.raises(
-        ValueError, match="No phase_jump_time & clock_period match."
+        ValueError,
+        match="No channel with phase_jump_time & clock_period match."
     ):
         seq.switch_device(test_device2, True)
 
@@ -294,7 +308,8 @@ def test_switch_device():
     seq.declare_channel("digital", "raman_local")
 
     with pytest.raises(
-        ValueError, match="No phase_jump_time & clock_period match."
+        ValueError,
+        match="No channel with phase_jump_time & clock_period match."
     ):
         seq.switch_device(test_device3, True)
 
