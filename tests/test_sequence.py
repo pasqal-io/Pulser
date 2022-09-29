@@ -219,6 +219,14 @@ def test_switch_device():
                     phase_jump_time=500,
                 ),
             ),
+            (
+                "rydberg_global",
+                Rydberg.Global(
+                    max_abs_detuning=2 * np.pi * 4,
+                    max_amp=2 * np.pi * 3,
+                    phase_jump_time=500,
+                ),
+            ),
         ),
     )
 
@@ -229,11 +237,10 @@ def test_switch_device():
     assert seq == seq.switch_device(Chadoq2)
 
     seq = Sequence(reg, Chadoq2)
-
     with pytest.raises(
         NotImplementedError,
-        match="Switching the device of a sequence" +
-        " to 'MockDevice' is not supported."
+        match="Switching the device of a sequence"
+        + " to 'MockDevice' is not supported.",
     ):
         seq.switch_device(MockDevice)
 
@@ -242,8 +249,7 @@ def test_switch_device():
     seq.declare_channel("digital", "raman_global", "q1")
 
     with pytest.raises(
-        TypeError,
-        match="No channel with both basis and addressing match."
+        TypeError, match="No channel with both basis and addressing match."
     ):
         seq.switch_device(IroiseMVP)
 
@@ -252,11 +258,13 @@ def test_switch_device():
     seq.declare_channel("ising", "raman_global")
 
     with pytest.raises(
-        TypeError,
-        match="No channel with both basis and addressing match."
+        TypeError, match="No channel with both basis and addressing match."
     ):
         seq.switch_device(test_device2)
-    new_seq = seq.switch_device(MockDevice)
+
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ising", "raman_global")
+    new_seq = seq.switch_device(test_device1)
     assert new_seq.declared_channels["ising"].basis == "digital"
     assert new_seq.declared_channels["ising"].addressing == "Global"
 
@@ -265,98 +273,65 @@ def test_switch_device():
     seq.declare_channel("ising", "rmn_local")
 
     with pytest.raises(
-        TypeError,
-        match="No channel with both basis and addressing match."
+        TypeError, match="No channel with both basis and addressing match."
     ):
         seq.switch_device(IroiseMVP)
 
     # Strict-Jump_phase_time & CLock-period
-
-    # Jump_phase_time
-    seq = Sequence(reg, Chadoq2)
+    # Jump_phase_time: with post_phase_time
+    R_interatomic = Chadoq2.rydberg_blockade_radius(2 * np.pi)
+    reg = Register.square(3, R_interatomic, prefix="q")
+    seq = Sequence(reg, IroiseMVP)
+    rise = Pulse.ConstantDetuning(
+        RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0, True
+    )
+    sweep = Pulse.ConstantAmplitude(
+        2.3 * 2 * np.pi, RampWaveform(400, -4 * np.pi, 4 * np.pi), 1.0, True
+    )
+    fall = Pulse.ConstantDetuning(
+        RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0, True
+    )
     seq.declare_channel("ising", "rydberg_global")
+    seq.add(rise, "ising")
+    seq.add(sweep, "ising")
+    seq.add(fall, "ising")
+
+    assert seq.switch_device(test_device3, True)._device == test_device3
 
     with pytest.raises(
         ValueError,
-        match="No channel with phase_jump_time & clock_period match."
+        match="No channel with phase_jump_time & clock_period match.",
     ):
-        seq.switch_device(IroiseMVP, True)
+        seq.switch_device(Chadoq2, True)
+
+    # Jump_phase_time: with no post_phase_time and same phase
+    rise = Pulse.ConstantDetuning(
+        RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0
+    )
+    sweep = Pulse.ConstantAmplitude(
+        2.3 * 2 * np.pi, RampWaveform(400, -4 * np.pi, 4 * np.pi), 0.0
+    )
+    fall = Pulse.ConstantDetuning(
+        RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0
+    )
+    seq = Sequence(reg, IroiseMVP)
+    seq.declare_channel("ising", "rydberg_global")
+    seq.add(rise, "ising")
+    seq.add(sweep, "ising")
+    seq.add(fall, "ising")
+    assert seq.switch_device(Chadoq2, True)._device == Chadoq2
+
+    # Jump_phase_time: with no post_phase_time and different phase
 
     # Clock_period
-    seq = Sequence(reg, test_device1)
-    seq.declare_channel("ising", "raman_local")
-
-    with pytest.raises(
-        ValueError,
-        match="No channel with phase_jump_time & clock_period match."
-    ):
-        seq.switch_device(test_device2, True)
-    # Jump_phase_time & CLock-period
-
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("ising", "raman_local")
-    with pytest.raises(
-        ValueError,
-        match="No channel with phase_jump_time & clock_period match."
-    ):
-        seq.switch_device(test_device2, True)
-
-    # Multiple channel classes with different specs
-
-    # Strong not satisfied
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("digital", "raman_local")
-
-    with pytest.raises(
-        ValueError,
-        match="No channel with phase_jump_time & clock_period match."
-    ):
-        seq.switch_device(test_device3, True)
-
-    # Strong satisfied with the second channel
-    seq = Sequence(reg, test_device1)
-    seq.declare_channel("digital", "raman_local")
-
-    assert seq.switch_device(test_device3, True)._device == test_device3
-
-    # Strong satisfied with the third channel
     seq = Sequence(reg, test_device2)
-    seq.declare_channel("digital", "rmn_local")
+    seq.declare_channel("ising", "rmn_local")
 
-    assert seq.switch_device(test_device3, True)._device == test_device3
-
-    # Test target
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("digital", "raman_local", "q1")
-    seq.target("q7", "digital")
-
-    assert seq.switch_device(test_device1)._calls[-1].name == "target"
-    assert seq.switch_device(test_device1)._calls[-1].args[0] == "q7"
-    assert seq.switch_device(test_device1)._calls[-1].args[1] == "digital"
-
-    # Test delay, align, pulse
-    seq = Sequence(reg, Chadoq2)
-    pi_pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi), 0, 0)
-    seq.declare_channel("digital", "raman_local")
-    seq.declare_channel("rydberg", "rydberg_local", initial_target="q7")
-    seq.align("rydberg", "digital")
-    seq.add(pi_pulse, "rydberg")
-    seq.delay(200, "rydberg")
-    assert seq.switch_device(MockDevice)._calls[4].args[
-        0
-    ] == Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi), 0, 0)
-    assert seq.switch_device(MockDevice)._calls[
-        3
-    ].name == "align" and seq.switch_device(MockDevice)._calls[3].args == (
-        "rydberg",
-        "digital",
-    )
-    assert seq.switch_device(MockDevice)._calls[
-        5
-    ].name == "delay" and seq.switch_device(MockDevice)._calls[5].args == (
-        200,
-        "rydberg",
-    )
+    with pytest.raises(
+        ValueError,
+        match="No channel with phase_jump_time & clock_period match.",
+    ):
+        seq.switch_device(test_device1, True)
 
 
 def test_target():

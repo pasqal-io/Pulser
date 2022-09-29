@@ -43,6 +43,7 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
+from pulser.sampler import sample
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
@@ -379,20 +380,25 @@ class Sequence:
             new_device: The target device instance.
             strict: Enforce a strict match between devices and channels to
                 guarantee the pulse sequence is left unchanged.
+
+        Return:
+            return the sequence with the new device along
+            with the matching channels of the former
+            device declared in the sequence.
         """
         # Check if the device is new or not
 
         if self._device == new_device:
             warnings.warn(
-                "Switching a sequence to the same device" +
-                " returns the sequence unchanged.",
-                stacklevel=2
+                "Switching a sequence to the same device"
+                + " returns the sequence unchanged.",
+                stacklevel=2,
             )
             return self
         if new_device == MockDevice:
             raise NotImplementedError(
-                "Switching the device of a sequence" +
-                " to 'MockDevice' is not supported."
+                "Switching the device of a sequence"
+                + " to 'MockDevice' is not supported."
             )
         # Initialize the new sequence
         new_seq = Sequence(self.register, new_device)
@@ -403,6 +409,8 @@ class Sequence:
         strict_error_message = None
         ch_type_er_mess = None
         channel_matching = {}
+        sample_seq = sample(self)
+        alert1 = False
         for channel_name, channel_obj in self.declared_channels.items():
             od_ch_obj = channel_obj
             for nd_ch_id, nd_ch_obj in new_seq.available_channels.items():
@@ -410,29 +418,53 @@ class Sequence:
                 # We verify the channel class then
                 # check whether the addressing Global or local
                 basis_match = od_ch_obj.basis == nd_ch_obj.basis
-                addressing_match = (
-                    od_ch_obj.addressing == nd_ch_obj.addressing
-                )
+                addressing_match = od_ch_obj.addressing == nd_ch_obj.addressing
                 if basis_match and addressing_match:
                     if strict:
+                        ch_samples = sample_seq.channel_samples[channel_name]
+                        ch_sample_phase = ch_samples.phase
+                        # Find if there is phase change between pulses or not
+                        phase_jump_time_oracle = True
+                        if ch_sample_phase.size != 0:
+                            phase_jump_time_oracle = bool(np.all(
+                                ch_sample_phase == ch_sample_phase[0]
+                            ))
                         phase_jump_time_check = (
                             od_ch_obj.phase_jump_time
-                            != nd_ch_obj.phase_jump_time
+                            == nd_ch_obj.phase_jump_time
                         )
                         clock_period_check = (
-                            od_ch_obj.clock_period %
-                            nd_ch_obj.clock_period == 0
+                            nd_ch_obj.clock_period % od_ch_obj.clock_period
+                            == 0
                         )
-                        if phase_jump_time_check or clock_period_check:
-                            matched = False
-                            strict_error_message = (
-                                "No channel with phase_jump_time" +
-                                " & clock_period match."
-                            )
+
+                        if not phase_jump_time_oracle:
+                            if phase_jump_time_check and clock_period_check:
+                                channel_matching[channel_name] = nd_ch_id
+                                matched = True
+                                break
+                            else:
+                                matched = False
+                                strict_error_message = (
+                                    "No channel with phase_jump_time"
+                                    + " & clock_period match."
+                                )
                         else:
-                            channel_matching[channel_name] = nd_ch_id
-                            matched = True
-                            break
+                            if clock_period_check:
+                                channel_matching[channel_name] = nd_ch_id
+                                matched = True
+                                alert1 = phase_jump_time_check is False
+                                break
+                            else:
+                                matched = False
+                                strict_error_message = (
+                                    "No channel with phase_jump_time"
+                                    + " & clock_period match."
+                                )
+                    else:
+                        channel_matching[channel_name] = nd_ch_id
+                        matched = True
+                        break
                 else:
                     matched = False
                     ch_type_er_mess = (
@@ -450,12 +482,25 @@ class Sequence:
                 sw_channel_args = list(call.args)
                 # Switch the old id with the correct id
                 sw_channel_args[1] = channel_matching[sw_channel_args[0]]
-
+                if strict and alert1:
+                    warnings.warn(
+                        "The phase_jump_time of the new device"
+                        + " is different, take it in account"
+                        + " for the upcoming pulses.",
+                        stacklevel=2,
+                    )
                 getattr(new_seq, "declare_channel")(
                     *sw_channel_args, **call.kwargs
                 )
             else:
                 getattr(new_seq, call.name)(*call.args, **call.kwargs)
+
+        if new_device.rydberg_level != self._device.rydberg_level:
+            warnings.warn(
+                "The rydberg level of the new device is different"
+                + " take in account in your computations.",
+                stacklevel=2,
+            )
         return new_seq
 
     @seq_decorators.block_if_measured
