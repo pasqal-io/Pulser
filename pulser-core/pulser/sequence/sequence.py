@@ -426,9 +426,9 @@ class Sequence:
                         # Find if there is phase change between pulses or not
                         phase_jump_time_oracle = True
                         if ch_sample_phase.size != 0:
-                            phase_jump_time_oracle = bool(np.all(
-                                ch_sample_phase == ch_sample_phase[0]
-                            ))
+                            phase_jump_time_oracle = bool(
+                                np.all(ch_sample_phase == ch_sample_phase[0])
+                            )
                         phase_jump_time_check = (
                             od_ch_obj.phase_jump_time
                             == nd_ch_obj.phase_jump_time
