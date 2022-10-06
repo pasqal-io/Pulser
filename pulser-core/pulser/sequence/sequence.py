@@ -488,7 +488,7 @@ class Sequence:
                         + " for the upcoming pulses.",
                         stacklevel=2,
                     )
-                getattr(new_seq, "declare_channel")(
+                new_seq.declare_channel(
                     *sw_channel_args, **call.kwargs
                 )
             else:
