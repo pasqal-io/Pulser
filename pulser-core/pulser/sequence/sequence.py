@@ -381,10 +381,9 @@ class Sequence:
             strict: Enforce a strict match between devices and channels to
                 guarantee the pulse sequence is left unchanged.
 
-        Return:
-            return the sequence with the new device along
-            with the matching channels of the former
-            device declared in the sequence.
+        Returns:
+            The sequence on the new device, using the matching channels of
+            the former device declared in the sequence.
         """
         # Check if the device is new or not
 
@@ -410,7 +409,7 @@ class Sequence:
         ch_type_er_mess = None
         channel_matching = {}
         sample_seq = sample(self)
-        alert1 = False
+        alert_phase_jump = False
         for channel_name, channel_obj in self.declared_channels.items():
             od_ch_obj = channel_obj
             for nd_ch_id, nd_ch_obj in new_seq.available_channels.items():
@@ -419,58 +418,56 @@ class Sequence:
                 # check whether the addressing Global or local
                 basis_match = od_ch_obj.basis == nd_ch_obj.basis
                 addressing_match = od_ch_obj.addressing == nd_ch_obj.addressing
-                if basis_match and addressing_match:
-                    if strict:
-                        ch_samples = sample_seq.channel_samples[channel_name]
-                        ch_sample_phase = ch_samples.phase
-                        # Find if there is phase change between pulses or not
-                        phase_jump_time_oracle = True
-                        if ch_sample_phase.size != 0:
-                            phase_jump_time_oracle = bool(
-                                np.all(ch_sample_phase == ch_sample_phase[0])
-                            )
-                        phase_jump_time_check = (
-                            od_ch_obj.phase_jump_time
-                            == nd_ch_obj.phase_jump_time
-                        )
-                        clock_period_check = (
-                            nd_ch_obj.clock_period % od_ch_obj.clock_period
-                            == 0
-                        )
-
-                        if not phase_jump_time_oracle:
-                            if phase_jump_time_check and clock_period_check:
-                                channel_matching[channel_name] = nd_ch_id
-                                matched = True
-                                break
-                            else:
-                                matched = False
-                                strict_error_message = (
-                                    "No channel with phase_jump_time"
-                                    + " & clock_period match."
-                                )
-                        else:
-                            if clock_period_check:
-                                channel_matching[channel_name] = nd_ch_id
-                                matched = True
-                                alert1 = phase_jump_time_check is False
-                                break
-                            else:
-                                matched = False
-                                strict_error_message = (
-                                    "No channel with phase_jump_time"
-                                    + " & clock_period match."
-                                )
-                    else:
-                        channel_matching[channel_name] = nd_ch_id
-                        matched = True
-                        break
-                else:
+                if not(basis_match and addressing_match):
                     matched = False
                     ch_type_er_mess = (
                         "No channel with both basis and addressing match."
                     )
-
+                    continue
+                if not strict:
+                    channel_matching[channel_name] = nd_ch_id
+                    matched = True
+                    break
+                ch_samples = sample_seq.channel_samples[channel_name]
+                ch_sample_phase = ch_samples.phase
+                # Find if there is phase change between pulses or not
+                phase_is_constant = True
+                if ch_sample_phase.size != 0:
+                    phase_is_constant = bool(
+                        np.all(ch_sample_phase == ch_sample_phase[0])
+                    )
+                # Phase_jump_time and cloc_period check
+                phase_jump_time_check = (
+                    od_ch_obj.phase_jump_time
+                    == nd_ch_obj.phase_jump_time
+                )
+                clock_period_check = (
+                    od_ch_obj.clock_period % nd_ch_obj.clock_period
+                    == 0
+                )
+                if phase_is_constant:
+                    if clock_period_check:
+                        channel_matching[channel_name] = nd_ch_id
+                        matched = True
+                        alert_phase_jump = phase_jump_time_check is False
+                        break
+                    else:
+                        matched = False
+                        strict_error_message = (
+                            "No channel with phase_jump_time"
+                            + " & clock_period match."
+                        )
+                    continue
+                if phase_jump_time_check and clock_period_check:
+                    channel_matching[channel_name] = nd_ch_id
+                    matched = True
+                    break
+                else:
+                    matched = False
+                    strict_error_message = (
+                        "No channel with phase_jump_time"
+                        + " & clock_period match."
+                    )
             if not matched:
                 if strict_error_message is not None:
                     raise ValueError(strict_error_message)
@@ -478,27 +475,27 @@ class Sequence:
                     raise TypeError(ch_type_er_mess)
 
         for call in self._calls[1:]:
-            if call.name == "declare_channel":
-                sw_channel_args = list(call.args)
-                # Switch the old id with the correct id
-                sw_channel_args[1] = channel_matching[sw_channel_args[0]]
-                if strict and alert1:
-                    warnings.warn(
-                        "The phase_jump_time of the new device"
-                        + " is different, take it in account"
-                        + " for the upcoming pulses.",
-                        stacklevel=2,
-                    )
-                getattr(new_seq, "declare_channel")(
-                    *sw_channel_args, **call.kwargs
-                )
-            else:
+            if not(call.name == "declare_channel"):
                 getattr(new_seq, call.name)(*call.args, **call.kwargs)
-
+                continue
+            sw_channel_args = list(call.args)
+            # Switch the old id with the correct id
+            sw_channel_args[1] = channel_matching[sw_channel_args[0]]
+            if strict and alert_phase_jump:
+                warnings.warn(
+                    "The phase_jump_time of the new device"
+                    + " is different, take it in account"
+                    + " for the upcoming pulses.",
+                    stacklevel=2,
+                )
+            new_seq.declare_channel(
+                *sw_channel_args, **call.kwargs
+            )
+            
         if new_device.rydberg_level != self._device.rydberg_level:
             warnings.warn(
-                "The rydberg level of the new device is different"
-                + " take in account in your computations.",
+                f"The rydberg level of the new device ({new_device.rydberg_level})"
+                f" is different from the current device's ({self._device.rydberg_level}).",
                 stacklevel=2,
             )
         return new_seq

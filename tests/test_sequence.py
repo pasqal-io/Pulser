@@ -234,13 +234,18 @@ def test_switch_device():
 
     # Device checkout
     seq = Sequence(reg, Chadoq2)
-    assert seq == seq.switch_device(Chadoq2)
+    with pytest.warns(
+        UserWarning,
+        match="Switching a sequence to the same device"
+        + " returns the sequence unchanged."
+    ):
+        seq.switch_device(Chadoq2)
 
     seq = Sequence(reg, Chadoq2)
     with pytest.raises(
         NotImplementedError,
         match="Switching the device of a sequence"
-        + " to 'MockDevice' is not supported.",
+        + " to 'MockDevice' is not supported."
     ):
         seq.switch_device(MockDevice)
 
@@ -264,9 +269,13 @@ def test_switch_device():
 
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("ising", "raman_global")
-    new_seq = seq.switch_device(test_device1)
-    assert new_seq.declared_channels["ising"].basis == "digital"
-    assert new_seq.declared_channels["ising"].addressing == "Global"
+    # with pytest.warns(
+    #     UserWarning,
+    #     match=
+    #     f"The rydberg level of the new device ({test_device1.rydberg_level})"
+    #     f" is different from the current device's ({seq._device.rydberg_level})."
+    # ):
+    #     seq.switch_device(test_device1)
 
     # Channel addressing and basis issue
     seq = Sequence(reg, test_device2)
@@ -283,13 +292,13 @@ def test_switch_device():
     reg = Register.square(3, R_interatomic, prefix="q")
     seq = Sequence(reg, IroiseMVP)
     rise = Pulse.ConstantDetuning(
-        RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0, True
+        RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0, 0.5
     )
     sweep = Pulse.ConstantAmplitude(
-        2.3 * 2 * np.pi, RampWaveform(400, -4 * np.pi, 4 * np.pi), 1.0, True
+        2.3 * 2 * np.pi, RampWaveform(400, -4 * np.pi, 4 * np.pi), 1.0, 0.6
     )
     fall = Pulse.ConstantDetuning(
-        RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0, True
+        RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0, 0.7
     )
     seq.declare_channel("ising", "rydberg_global")
     seq.add(rise, "ising")
@@ -319,19 +328,24 @@ def test_switch_device():
     seq.add(rise, "ising")
     seq.add(sweep, "ising")
     seq.add(fall, "ising")
-    assert seq.switch_device(Chadoq2, True)._device == Chadoq2
 
-    # Jump_phase_time: with no post_phase_time and different phase
+    with pytest.warns(
+        UserWarning,
+        match="The phase_jump_time of the new device"
+        + " is different, take it in account"
+        + " for the upcoming pulses."
+    ):
+        seq.switch_device(Chadoq2, True)
 
-    # Clock_period
-    seq = Sequence(reg, test_device2)
-    seq.declare_channel("ising", "rmn_local")
+    # Clock_period not matching
+    seq = Sequence(reg, test_device1)
+    seq.declare_channel("ising", "raman_local")
 
     with pytest.raises(
         ValueError,
         match="No channel with phase_jump_time & clock_period match.",
     ):
-        seq.switch_device(test_device1, True)
+        seq.switch_device(test_device2, True)
 
 
 def test_target():
