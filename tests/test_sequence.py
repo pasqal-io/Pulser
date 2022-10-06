@@ -279,8 +279,8 @@ def test_switch_device():
 
     # Strict-Jump_phase_time & CLock-period
     # Jump_phase_time: with post_phase_time
-    R_interatomic = Chadoq2.rydberg_blockade_radius(2 * np.pi)
-    reg = Register.square(3, R_interatomic, prefix="q")
+    r_interatomic = Chadoq2.rydberg_blockade_radius(2 * np.pi)
+    reg = Register.square(3, r_interatomic, prefix="q")
     seq = Sequence(reg, IroiseMVP)
     rise = Pulse.ConstantDetuning(
         RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0, True
