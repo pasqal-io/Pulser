@@ -496,8 +496,8 @@ class Sequence:
 
         if new_device.rydberg_level != self._device.rydberg_level:
             warnings.warn(
-                "The rydberg level of the new device is different"
-                + " take in account in your computations.",
+                f"The rydberg level of the new device ({new_device.rydberg_level})"
+                f" is different from the current device's ({self._device.rydberg_level}).",
                 stacklevel=2,
             )
         return new_seq
