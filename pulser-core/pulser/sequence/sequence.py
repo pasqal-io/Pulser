@@ -381,10 +381,9 @@ class Sequence:
             strict: Enforce a strict match between devices and channels to
                 guarantee the pulse sequence is left unchanged.
 
-        Return:
-            return the sequence with the new device along
-            with the matching channels of the former
-            device declared in the sequence.
+        Returns:
+            The sequence on the new device, using the matching channels of 
+            the former device declared in the sequence.
         """
         # Check if the device is new or not
 
