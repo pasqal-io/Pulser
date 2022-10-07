@@ -51,15 +51,14 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 }
 
 
-
 class TestSerialization:
 
-    #@pytest.mark.parametrize("device", [Chadoq2, MockDevice])
+    # @pytest.mark.parametrize("device", [Chadoq2, MockDevice])
     @pytest.fixture(params=[Chadoq2, MockDevice])
     def sequence(self, request):
         qubits = {"control": (-2, 0), "target": (2, 0)}
         reg = Register(qubits)
-        device=request.param
+        device = request.param
         seq = Sequence(reg, device)
         seq.declare_channel("digital", "raman_local", initial_target="control")
         seq.declare_channel(
@@ -127,7 +126,9 @@ class TestSerialization:
                 "measurement",
             ]
         )
-        assert abstract["device"] in [d.name for d in [*devices._valid_devices, *devices._mock_devices]]
+        assert abstract["device"] in [
+            d.name for d in [*devices._valid_devices, *devices._mock_devices]
+        ]
         assert abstract["register"] == [
             {"name": "control", "x": -2.0, "y": 0.0},
             {"name": "target", "x": 2.0, "y": 0.0},
