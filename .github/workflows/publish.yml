@@ -48,6 +48,15 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: twine upload dist/*
+      - name: Confirm deployment
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          until pip download pulser==$version
+          do
+            echo "Failed to download from PyPI, will wait for upload and retry."
+            sleep 30
+          done
 
   check-release:
     needs: deploy
