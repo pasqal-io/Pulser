@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import jsonschema
 import numpy as np
@@ -52,8 +52,6 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 
 
 class TestSerialization:
-
-    # @pytest.mark.parametrize("device", [Chadoq2, MockDevice])
     @pytest.fixture(params=[Chadoq2, MockDevice])
     def sequence(self, request):
         qubits = {"control": (-2, 0), "target": (2, 0)}
