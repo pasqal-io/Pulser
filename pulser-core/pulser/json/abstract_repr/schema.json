@@ -150,6 +150,14 @@
       ],
       "type": "object"
     },
+    "Device": {
+      "enum": [
+        "Chadoq2",
+        "IroiseMVP",
+        "MockDevice"
+      ],
+      "type": "string"
+    },
     "ExprArgument": {
       "anyOf": [
         {
@@ -559,7 +567,11 @@
           "type": "object"
         },
         "device": {
-          "const": "Chadoq2",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Device"
+            }
+          ],
           "description": "A valid device in which to execute the Sequence",
           "type": "string"
         },
@@ -658,7 +670,7 @@
           "type": "string"
         },
         "value": {
-          "description": "Default variable value. The default array length determins the variable array size.",
+          "description": "Default variable value. The default array length determines the variable array size.",
           "items": {
             "type": "number"
           },

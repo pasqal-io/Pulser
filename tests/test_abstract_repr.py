@@ -22,7 +22,7 @@ import jsonschema
 import numpy as np
 import pytest
 
-from pulser import Pulse, Register, Register3D, Sequence
+from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.abstract_repr.deserializer import VARIABLE_TYPE_MAP
 from pulser.json.abstract_repr.serializer import (
@@ -52,12 +52,12 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 
 
 class TestSerialization:
-    @pytest.fixture
-    def sequence(self):
+    @pytest.fixture(params=[Chadoq2, MockDevice])
+    def sequence(self, request):
         qubits = {"control": (-2, 0), "target": (2, 0)}
         reg = Register(qubits)
-
-        seq = Sequence(reg, Chadoq2)
+        device = request.param
+        seq = Sequence(reg, device)
         seq.declare_channel("digital", "raman_local", initial_target="control")
         seq.declare_channel(
             "rydberg", "rydberg_local", initial_target="control"
@@ -124,7 +124,9 @@ class TestSerialization:
                 "measurement",
             ]
         )
-        assert abstract["device"] == "Chadoq2"
+        assert abstract["device"] in [
+            d.name for d in [*devices._valid_devices, *devices._mock_devices]
+        ]
         assert abstract["register"] == [
             {"name": "control", "x": -2.0, "y": 0.0},
             {"name": "target", "x": 2.0, "y": 0.0},
