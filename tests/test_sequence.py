@@ -249,7 +249,7 @@ def test_switch_device():
     ):
         seq.switch_device(MockDevice)
 
-    # Channel basis
+    # Different Channels basis
     seq = Sequence(reg, test_device1)
     seq.declare_channel("digital", "raman_global", "q1")
 
@@ -258,7 +258,7 @@ def test_switch_device():
     ):
         seq.switch_device(IroiseMVP)
 
-    # Channel addressing
+    # Different addressing channels
     seq = Sequence(reg, test_device1)
     seq.declare_channel("ising", "raman_global")
 
@@ -286,8 +286,8 @@ def test_switch_device():
     ):
         seq.switch_device(IroiseMVP)
 
-    # Strict-Jump_phase_time & CLock-period
-    # Jump_phase_time: with post_phase_time
+    # Strict: Jump_phase_time & CLock-period criteria
+    # Jump_phase_time check 1: post_phase_shift not nill
     R_interatomic = Chadoq2.rydberg_blockade_radius(2 * np.pi)
     reg = Register.square(3, R_interatomic, prefix="q")
     seq = Sequence(reg, IroiseMVP)
@@ -313,7 +313,7 @@ def test_switch_device():
     ):
         seq.switch_device(Chadoq2, True)
 
-    # Jump_phase_time: with no post_phase_time and same phase
+    # Jump_phase_time check 2: No post_phase_shift and pulses with same phase
     rise = Pulse.ConstantDetuning(
         RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0
     )
