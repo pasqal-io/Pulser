@@ -686,8 +686,8 @@ class Sequence:
                  existing conflicts.
 
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
-                that idles the channel until the end of the other channels'
-                latest pulse.
+                 that idles the channel until the end of the other channels'
+                 latest pulse.
         """
         self._validate_channel(channel)
 
