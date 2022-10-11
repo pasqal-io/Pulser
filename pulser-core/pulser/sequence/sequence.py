@@ -418,11 +418,10 @@ class Sequence:
                 # check whether the addressing Global or local
                 basis_match = od_ch_obj.basis == nd_ch_obj.basis
                 addressing_match = od_ch_obj.addressing == nd_ch_obj.addressing
-                if not(basis_match and addressing_match):
+                if not (basis_match and addressing_match):
                     matched = False
-                    ch_type_er_mess = (
-                        "No channel with both basis and addressing match."
-                    )
+                    channel_id = self._schedule[channel_name].channel_id
+                    ch_type_er_mess = f"No matching for channel {channel_id}."
                     continue
                 if not strict:
                     channel_matching[channel_name] = nd_ch_id
@@ -438,12 +437,10 @@ class Sequence:
                     )
                 # Phase_jump_time and cloc_period check
                 phase_jump_time_check = (
-                    od_ch_obj.phase_jump_time
-                    == nd_ch_obj.phase_jump_time
+                    od_ch_obj.phase_jump_time == nd_ch_obj.phase_jump_time
                 )
                 clock_period_check = (
-                    od_ch_obj.clock_period % nd_ch_obj.clock_period
-                    == 0
+                    od_ch_obj.clock_period % nd_ch_obj.clock_period == 0
                 )
                 if phase_is_constant:
                     if clock_period_check:
@@ -475,7 +472,7 @@ class Sequence:
                     raise TypeError(ch_type_er_mess)
 
         for call in self._calls[1:]:
-            if not(call.name == "declare_channel"):
+            if not (call.name == "declare_channel"):
                 getattr(new_seq, call.name)(*call.args, **call.kwargs)
                 continue
             sw_channel_args = list(call.args)
@@ -488,14 +485,14 @@ class Sequence:
                     + " for the upcoming pulses.",
                     stacklevel=2,
                 )
-            new_seq.declare_channel(
-                *sw_channel_args, **call.kwargs
-            )
-            
+            new_seq.declare_channel(*sw_channel_args, **call.kwargs)
+
         if new_device.rydberg_level != self._device.rydberg_level:
+            old_ry_lvl = new_device.rydberg_level
+            new_ry_lvl = self._device.rydberg_level
             warnings.warn(
-                f"The rydberg level of the new device ({new_device.rydberg_level})"
-                f" is different from the current device's ({self._device.rydberg_level}).",
+                f"The rydberg level of the new device ({old_ry_lvl})"
+                f" is different from the current device's ({new_ry_lvl}).",
                 stacklevel=2,
             )
         return new_seq

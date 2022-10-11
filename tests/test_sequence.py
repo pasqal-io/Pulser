@@ -187,7 +187,7 @@ def test_switch_device():
     test_device3 = Device(
         name="test_device1",
         dimensions=2,
-        rydberg_level=60,
+        rydberg_level=50,
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
@@ -237,7 +237,7 @@ def test_switch_device():
     with pytest.warns(
         UserWarning,
         match="Switching a sequence to the same device"
-        + " returns the sequence unchanged."
+        + " returns the sequence unchanged.",
     ):
         seq.switch_device(Chadoq2)
 
@@ -245,7 +245,7 @@ def test_switch_device():
     with pytest.raises(
         NotImplementedError,
         match="Switching the device of a sequence"
-        + " to 'MockDevice' is not supported."
+        + " to 'MockDevice' is not supported.",
     ):
         seq.switch_device(MockDevice)
 
@@ -254,7 +254,7 @@ def test_switch_device():
     seq.declare_channel("digital", "raman_global", "q1")
 
     with pytest.raises(
-        TypeError, match="No channel with both basis and addressing match."
+        TypeError, match="No matching for channel raman_global."
     ):
         seq.switch_device(IroiseMVP)
 
@@ -263,27 +263,20 @@ def test_switch_device():
     seq.declare_channel("ising", "raman_global")
 
     with pytest.raises(
-        TypeError, match="No channel with both basis and addressing match."
+        TypeError, match="No matching for channel raman_global."
     ):
         seq.switch_device(test_device2)
 
     seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ising", "raman_global")
-    # with pytest.warns(
-    #     UserWarning,
-    #     match=
-    #     f"The rydberg level of the new device ({test_device1.rydberg_level})"
-    #     f" is different from the current device's ({seq._device.rydberg_level})."
-    # ):
-    #     seq.switch_device(test_device1)
+    seq.declare_channel("ising", "rydberg_global")
+    with pytest.warns(UserWarning):
+        seq.switch_device(IroiseMVP)
 
     # Channel addressing and basis issue
     seq = Sequence(reg, test_device2)
     seq.declare_channel("ising", "rmn_local")
 
-    with pytest.raises(
-        TypeError, match="No channel with both basis and addressing match."
-    ):
+    with pytest.raises(TypeError, match="No matching for channel rmn_local."):
         seq.switch_device(IroiseMVP)
 
     # Strict: Jump_phase_time & CLock-period criteria
@@ -333,7 +326,7 @@ def test_switch_device():
         UserWarning,
         match="The phase_jump_time of the new device"
         + " is different, take it in account"
-        + " for the upcoming pulses."
+        + " for the upcoming pulses.",
     ):
         seq.switch_device(Chadoq2, True)
 
