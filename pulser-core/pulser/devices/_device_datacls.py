@@ -45,6 +45,8 @@ class Device:
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
+        supports_slm_mask: Whether the device supports the SLM mask feature.
+
     """
 
     name: str
@@ -56,6 +58,7 @@ class Device:
     _channels: tuple[tuple[str, Channel], ...]
     # Ising interaction coeff
     interaction_coeff_xy: float = 3700.0
+    supports_slm_mask: bool = False
     pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
         default_factory=tuple
     )

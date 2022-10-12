@@ -24,6 +24,7 @@ Chadoq2 = Device(
     max_atom_num=100,
     max_radial_distance=50,
     min_atom_distance=4,
+    supports_slm_mask=True,
     _channels=(
         ("rydberg_global", Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)),
         ("rydberg_local", Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10)),
