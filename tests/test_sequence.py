@@ -21,7 +21,7 @@ import pytest
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence.sequence import _TimeSlot
@@ -437,6 +437,10 @@ def test_sequence():
 def test_config_slm_mask():
     reg_s = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     seq_s = Sequence(reg_s, device)
+
+    with pytest.raises(ValueError, match="does not have an SLM mask."):
+        seq_ = Sequence(reg_s, IroiseMVP)
+        seq_.config_slm_mask(["q0"])
 
     with pytest.raises(TypeError, match="must be castable to set"):
         seq_s.config_slm_mask(0)

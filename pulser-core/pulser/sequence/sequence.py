@@ -353,6 +353,10 @@ class Sequence:
             qubits: Iterable of qubit ID's to mask during the first global
                 pulse of the sequence.
         """
+        if not self._device.supports_slm_mask:
+            raise ValueError(
+                f"The '{self._device}' device does not have an SLM mask."
+            )
         try:
             targets = set(qubits)
         except TypeError:

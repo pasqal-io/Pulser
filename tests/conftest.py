@@ -28,6 +28,7 @@ def mod_device() -> Device:
         max_atom_num=2000,
         max_radial_distance=1000,
         min_atom_distance=1,
+        supports_slm_mask=True,
         _channels=(
             (
                 "rydberg_global",
