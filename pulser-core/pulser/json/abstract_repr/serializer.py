@@ -26,7 +26,7 @@ from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.exceptions import AbstractReprError
 from pulser.register.base_register import QubitId
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
 
