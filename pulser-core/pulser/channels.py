@@ -18,13 +18,26 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, cast
+from sys import version_info
+from typing import Any, Optional, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.fft import fft, fftfreq, ifft
 
 from pulser.pulse import Pulse
+
+if version_info[:2] >= (3, 8):  # pragma: no cover
+    from typing import Literal, get_args
+else:  # pragma: no cover
+    try:
+        from typing_extensions import Literal, get_args  # type: ignore
+    except ImportError:
+        raise ImportError(
+            "Using pulser with Python version 3.7 requires the"
+            " `typing_extensions` module. Install it by running"
+            " `pip install typing-extensions`."
+        )
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
@@ -33,8 +46,12 @@ warnings.filterwarnings("once", "A duration of")
 # For more info, see https://tinyurl.com/bdeumc8k
 MODBW_TO_TR = 0.48
 
+ADDRESSING = Literal["Global", "Local"]
+CH_TYPES = Literal["Rydberg", "Raman", "Microwave"]
+BASES = Literal["ground-rydberg", "digital", "XY"]
 
-@dataclass(init=True, repr=False, frozen=True)
+
+@dataclass(init=True, repr=False, frozen=True)  # type: ignore[misc]
 class Channel(ABC):
     """Base class of a hardware channel.
 
@@ -64,29 +81,100 @@ class Channel(ABC):
         call ``Rydberg.Global(...)``.
     """
 
-    addressing: str
-    max_abs_detuning: float
-    max_amp: float
+    addressing: ADDRESSING
+    max_abs_detuning: Optional[float]
+    max_amp: Optional[float]
     phase_jump_time: int = 0
     min_retarget_interval: Optional[int] = None
     fixed_retarget_t: Optional[int] = None
     max_targets: Optional[int] = None
     clock_period: int = 4  # ns
     min_duration: int = 16  # ns
-    max_duration: int = 67108864  # ns
+    max_duration: Optional[int] = 1000000  # ns
     mod_bandwidth: Optional[float] = None  # MHz
 
     @property
     @abstractmethod
-    def name(self) -> str:
+    def name(self) -> CH_TYPES:
         """The name of the channel."""
         pass
 
     @property
     @abstractmethod
-    def basis(self) -> str:
+    def basis(self) -> BASES:
         """The addressed basis name."""
         pass
+
+    def __post_init__(self) -> None:
+        """Validates the channel's parameters."""
+        assert (
+            type(self).__name__ == self.name
+        ), "The channel's 'name' must match the name of the class."
+
+        internal_param_value_pairs = [
+            ("name", CH_TYPES),
+            ("basis", BASES),
+            ("addressing", ADDRESSING),
+        ]
+        for param, type_options in internal_param_value_pairs:
+            value = getattr(self, param)
+            options = get_args(type_options)
+            assert (
+                value in options
+            ), f"The channel {param} must be one of {options}, not {value}."
+
+        parameters = [
+            "max_amp",
+            "max_abs_detuning",
+            "phase_jump_time",
+            "clock_period",
+            "min_duration",
+            "max_duration",
+            "mod_bandwidth",
+        ]
+        non_negative = [
+            "max_abs_detuning",
+            "phase_jump_time",
+            "min_retarget_interval",
+            "fixed_retarget_t",
+        ]
+        local_only = [
+            "min_retarget_interval",
+            "fixed_retarget_t",
+            "max_targets",
+        ]
+        optional = [
+            "max_amp",
+            "max_abs_detuning",
+            "max_duration",
+            "mod_bandwidth",
+        ]
+
+        if self.addressing == "Global":
+            for p in local_only:
+                assert (
+                    getattr(self, p) is None
+                ), f"'{p}' must be left as None in a Global channel."
+        else:
+            parameters += local_only
+
+        for param in parameters:
+            value = getattr(self, param)
+            if param in optional:
+                prelude = "When defined, "
+                valid = value is None
+            else:
+                prelude = ""
+                valid = False
+            if param in non_negative:
+                comp = "greater than or equal to zero"
+                valid = valid or value >= 0
+            else:
+                comp = "greater than zero"
+                valid = valid or value > 0
+            msg = prelude + f"'{param}' must be {comp}, not {value}."
+            if not valid:
+                raise ValueError(msg)
 
     @property
     def rise_time(self) -> int:
@@ -100,16 +188,24 @@ class Channel(ABC):
         else:
             return 0
 
+    def is_virtual(self) -> bool:
+        """Whether the channel is virtual (i.e. partially defined)."""
+        return (
+            self.max_abs_detuning is None
+            or self.max_amp is None
+            or self.max_duration is None
+        )
+
     @classmethod
     def Local(
         cls,
-        max_abs_detuning: float,
-        max_amp: float,
+        max_abs_detuning: Optional[float],
+        max_amp: Optional[float],
         phase_jump_time: int = 0,
         min_retarget_interval: int = 220,
         fixed_retarget_t: int = 0,
         max_targets: int = 1,
-        **kwargs: int,
+        **kwargs: Any,
     ) -> Channel:
         """Initializes the channel with local addressing.
 
@@ -124,6 +220,17 @@ class Channel(ABC):
             fixed_retarget_t: Time taken to change the target (in ns).
             max_targets: Maximum number of atoms the channel can target
                 simultaneously.
+
+        Keyword Args:
+            clock_period(int, default=4): The duration of a clock cycle
+                (in ns). The duration of a pulse or delay instruction is
+                enforced to be a multiple of the clock cycle.
+            min_duration(int, default=16): The shortest duration an
+                instruction can take.
+            max_duration(Optional[int], default=10000000): The longest
+                duration an instruction can take.
+            mod_bandwidth(Optional[float], default=None): The modulation
+                bandwidth at -3dB (50% redution), in MHz.
         """
         return cls(
             "Local",
@@ -139,10 +246,10 @@ class Channel(ABC):
     @classmethod
     def Global(
         cls,
-        max_abs_detuning: float,
-        max_amp: float,
+        max_abs_detuning: Optional[float],
+        max_amp: Optional[float],
         phase_jump_time: int = 0,
-        **kwargs: int,
+        **kwargs: Any,
     ) -> Channel:
         """Initializes the channel with global addressing.
 
@@ -152,6 +259,17 @@ class Channel(ABC):
             max_amp: Maximum pulse amplitude (in rad/µs).
             phase_jump_time: Time taken to change the phase between
                 consecutive pulses (in ns).
+
+        Keyword Args:
+            clock_period(int, default=4): The duration of a clock cycle
+                (in ns). The duration of a pulse or delay instruction is
+                enforced to be a multiple of the clock cycle.
+            min_duration(int, default=16): The shortest duration an
+                instruction can take.
+            max_duration(Optional[int], default=10000000): The longest
+                duration an instruction can take.
+            mod_bandwidth(Optional[float], default=None): The modulation
+                bandwidth at -3dB (50% redution), in MHz.
         """
         return cls(
             "Global", max_abs_detuning, max_amp, phase_jump_time, **kwargs
@@ -179,7 +297,7 @@ class Channel(ABC):
                 "duration has to be at least " + f"{self.min_duration} ns."
             )
 
-        if duration > self.max_duration:
+        if self.max_duration is not None and duration > self.max_duration:
             raise ValueError(
                 "duration can be at most " + f"{self.max_duration} ns."
             )
@@ -207,12 +325,14 @@ class Channel(ABC):
                 f"'pulse' must be of type Pulse, not of type {type(pulse)}."
             )
 
-        if np.any(pulse.amplitude.samples > self.max_amp):
+        if self.max_amp is not None and np.any(
+            pulse.amplitude.samples > self.max_amp
+        ):
             raise ValueError(
                 "The pulse's amplitude goes over the maximum "
                 "value allowed for the chosen channel."
             )
-        if np.any(
+        if self.max_abs_detuning is not None and np.any(
             np.round(np.abs(pulse.detuning.samples), decimals=6)
             > self.max_abs_detuning
         ):
@@ -331,12 +451,12 @@ class Raman(Channel):
     """
 
     @property
-    def name(self) -> str:
+    def name(self) -> CH_TYPES:
         """The name of the channel."""
         return "Raman"
 
     @property
-    def basis(self) -> str:
+    def basis(self) -> BASES:
         """The addressed basis name."""
         return "digital"
 
@@ -350,12 +470,12 @@ class Rydberg(Channel):
     """
 
     @property
-    def name(self) -> str:
+    def name(self) -> CH_TYPES:
         """The name of the channel."""
         return "Rydberg"
 
     @property
-    def basis(self) -> str:
+    def basis(self) -> BASES:
         """The addressed basis name."""
         return "ground-rydberg"
 
@@ -369,11 +489,11 @@ class Microwave(Channel):
     """
 
     @property
-    def name(self) -> str:
+    def name(self) -> CH_TYPES:
         """The name of the channel."""
         return "Microwave"
 
     @property
-    def basis(self) -> str:
+    def basis(self) -> BASES:
         """The addressed basis name."""
         return "XY"
