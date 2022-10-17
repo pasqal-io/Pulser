@@ -16,8 +16,9 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import ClassVar, Optional, cast
+from typing import Optional, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -34,15 +35,13 @@ MODBW_TO_TR = 0.48
 
 
 @dataclass(init=True, repr=False, frozen=True)
-class Channel:
+class Channel(ABC):
     """Base class of a hardware channel.
 
     Not to be initialized itself, but rather through a child class and the
     ``Local`` or ``Global`` classmethods.
 
     Args:
-        name: The name of channel.
-        basis: The addressed basis name.
         addressing: "Local" or "Global".
         max_abs_detuning: Maximum possible detuning (in rad/µs), in absolute
             value.
@@ -65,8 +64,6 @@ class Channel:
         call ``Rydberg.Global(...)``.
     """
 
-    name: ClassVar[str]
-    basis: ClassVar[str]
     addressing: str
     max_abs_detuning: float
     max_amp: float
@@ -78,6 +75,18 @@ class Channel:
     min_duration: int = 16  # ns
     max_duration: int = 67108864  # ns
     mod_bandwidth: Optional[float] = None  # MHz
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """The name of the channel."""
+        pass
+
+    @property
+    @abstractmethod
+    def basis(self) -> str:
+        """The addressed basis name."""
+        pass
 
     @property
     def rise_time(self) -> int:
@@ -321,8 +330,15 @@ class Raman(Channel):
     which the 'digital' basis is encoded. See base class.
     """
 
-    name: ClassVar[str] = "Raman"
-    basis: ClassVar[str] = "digital"
+    @property
+    def name(self) -> str:
+        """The name of the channel."""
+        return "Raman"
+
+    @property
+    def basis(self) -> str:
+        """The addressed basis name."""
+        return "digital"
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -333,8 +349,15 @@ class Rydberg(Channel):
     thus enconding the 'ground-rydberg' basis. See base class.
     """
 
-    name: ClassVar[str] = "Rydberg"
-    basis: ClassVar[str] = "ground-rydberg"
+    @property
+    def name(self) -> str:
+        """The name of the channel."""
+        return "Rydberg"
+
+    @property
+    def basis(self) -> str:
+        """The addressed basis name."""
+        return "ground-rydberg"
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -345,5 +368,12 @@ class Microwave(Channel):
     the 'XY' basis. See base class.
     """
 
-    name: ClassVar[str] = "Microwave"
-    basis: ClassVar[str] = "XY"
+    @property
+    def name(self) -> str:
+        """The name of the channel."""
+        return "Microwave"
+
+    @property
+    def basis(self) -> str:
+        """The addressed basis name."""
+        return "XY"
