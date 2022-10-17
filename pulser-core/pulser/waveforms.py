@@ -23,7 +23,7 @@ import warnings
 from abc import ABC, abstractmethod
 from sys import version_info
 from types import FunctionType
-from typing import Any, Optional, Tuple, Union, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
