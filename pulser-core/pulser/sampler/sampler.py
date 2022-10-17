@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 from pulser.sampler.samples import SequenceSamples, _SlmMask
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser import Sequence
 
 

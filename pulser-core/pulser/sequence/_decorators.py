@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from pulser.parametrized import Parametrized
 from pulser.sequence._call import _Call
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser.sequence.sequence import Sequence
 
 F = TypeVar("F", bound=Callable)
