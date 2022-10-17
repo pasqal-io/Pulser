@@ -23,6 +23,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.fft import fft, fftfreq, ifft
 
+from pulser.pulse import Pulse
+
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
 
@@ -182,6 +184,33 @@ class Channel:
                 stacklevel=4,
             )
         return _duration
+
+    def validate_pulse(self, pulse: Pulse) -> None:
+        """Checks if a pulse can be executed this channel.
+
+        Args:
+            pulse: The pulse to validate.
+            channel_id: The channel ID used to index the chosen channel
+                on this device.
+        """
+        if not isinstance(pulse, Pulse):
+            raise TypeError(
+                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
+            )
+
+        if np.any(pulse.amplitude.samples > self.max_amp):
+            raise ValueError(
+                "The pulse's amplitude goes over the maximum "
+                "value allowed for the chosen channel."
+            )
+        if np.any(
+            np.round(np.abs(pulse.detuning.samples), decimals=6)
+            > self.max_abs_detuning
+        ):
+            raise ValueError(
+                "The pulse's detuning values go out of the range "
+                "allowed for the chosen channel."
+            )
 
     def modulate(
         self, input_samples: np.ndarray, keep_ends: bool = False

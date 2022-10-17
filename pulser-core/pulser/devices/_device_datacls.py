@@ -183,34 +183,6 @@ class Device:
 
         self._validate_coords(layout.traps_dict, kind="traps")
 
-    def validate_pulse(self, pulse: Pulse, channel_id: str) -> None:
-        """Checks if a pulse can be executed on a specific device channel.
-
-        Args:
-            pulse: The pulse to validate.
-            channel_id: The channel ID used to index the chosen channel
-                on this device.
-        """
-        if not isinstance(pulse, Pulse):
-            raise TypeError(
-                f"'pulse' must be of type Pulse, not of type {type(pulse)}."
-            )
-
-        ch = self.channels[channel_id]
-        if np.any(pulse.amplitude.samples > ch.max_amp):
-            raise ValueError(
-                "The pulse's amplitude goes over the maximum "
-                "value allowed for the chosen channel."
-            )
-        if np.any(
-            np.round(np.abs(pulse.detuning.samples), decimals=6)
-            > ch.max_abs_detuning
-        ):
-            raise ValueError(
-                "The pulse's detuning values go out of the range "
-                "allowed for the chosen channel."
-            )
-
     def _specs(self, for_docs: bool = False) -> str:
         lines = [
             "\nRegister requirements:",

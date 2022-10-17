@@ -23,7 +23,7 @@ import warnings
 from abc import ABC, abstractmethod
 from sys import version_info
 from types import FunctionType
-from typing import Any, Optional, Tuple, Union, cast
+from typing import Any, Optional, Tuple, Union, cast, TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,12 +31,14 @@ import scipy.interpolate as interpolate
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
-from pulser.channels import Channel
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
+
+if TYPE_CHECKING:
+    from pulser.channels import Channel
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from functools import cached_property
