@@ -64,6 +64,10 @@ class Device:
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
+        if any(ch_obj.is_virtual() for _, ch_obj in self._channels):
+            raise ValueError(
+                "A 'Device' instance cannot contain virtual channels."
+            )
         object.__setattr__(self, "__doc__", self._specs(for_docs=True))
         for layout in self.pre_calibrated_layouts:
             self.validate_layout(layout)
