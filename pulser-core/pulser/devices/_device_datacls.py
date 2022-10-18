@@ -23,7 +23,6 @@ from scipy.spatial.distance import pdist, squareform
 from pulser.channels import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.utils import obj_to_dict
-from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 
