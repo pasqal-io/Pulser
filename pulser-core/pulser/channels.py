@@ -163,6 +163,10 @@ class Channel(ABC):
             if param in optional:
                 prelude = "When defined, "
                 valid = value is None
+            elif value is None:
+                raise TypeError(
+                    f"'{param}' can't be None in a 'Local' channel."
+                )
             else:
                 prelude = ""
                 valid = False
@@ -175,6 +179,16 @@ class Channel(ABC):
             msg = prelude + f"'{param}' must be {comp}, not {value}."
             if not valid:
                 raise ValueError(msg)
+
+        if (
+            self.max_duration is not None
+            and self.max_duration < self.min_duration
+        ):
+            raise ValueError(
+                f"When defined, 'max_duration'({self.max_duration}) must be"
+                " greater than or equal to 'min_duration'"
+                f"({self.min_duration})."
+            )
 
     @property
     def rise_time(self) -> int:
