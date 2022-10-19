@@ -27,8 +27,14 @@ Chadoq2 = Device(
     supports_slm_mask=True,
     _channels=(
         ("rydberg_global", Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)),
-        ("rydberg_local", Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10)),
-        ("raman_local", Raman.Local(2 * np.pi * 20, 2 * np.pi * 10)),
+        (
+            "rydberg_local",
+            Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=1),
+        ),
+        (
+            "raman_local",
+            Raman.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=1),
+        ),
     ),
 )
 

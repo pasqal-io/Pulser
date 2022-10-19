@@ -596,6 +596,7 @@ def test_hardware_constraints():
         2 * np.pi * 10,
         phase_jump_time=120,  # ns
         fixed_retarget_t=200,  # ns
+        max_targets=1,
         mod_bandwidth=7,  # MHz
     )
 

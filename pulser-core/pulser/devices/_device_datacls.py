@@ -64,10 +64,14 @@ class Device:
 
     def __post_init__(self) -> None:
         # Hack to override the docstring of an instance
-        if any(ch_obj.is_virtual() for _, ch_obj in self._channels):
-            raise ValueError(
-                "A 'Device' instance cannot contain virtual channels."
-            )
+        for ch_id, ch_obj in self._channels:
+            if ch_obj.is_virtual():
+                _sep = "', '"
+                raise ValueError(
+                    "A 'Device' instance cannot contain virtual channels."
+                    f" For channel '{ch_id}', please define: "
+                    f"'{_sep.join(ch_obj._undefined_fields())}'"
+                )
         object.__setattr__(self, "__doc__", self._specs(for_docs=True))
         for layout in self.pre_calibrated_layouts:
             self.validate_layout(layout)

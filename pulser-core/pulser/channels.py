@@ -149,6 +149,7 @@ class Channel(ABC):
             "max_abs_detuning",
             "max_duration",
             "mod_bandwidth",
+            "max_targets",
         ]
 
         if self.addressing == "Global":
@@ -206,11 +207,17 @@ class Channel(ABC):
 
     def is_virtual(self) -> bool:
         """Whether the channel is virtual (i.e. partially defined)."""
-        return (
-            self.max_abs_detuning is None
-            or self.max_amp is None
-            or self.max_duration is None
-        )
+        return bool(self._undefined_fields())
+
+    def _undefined_fields(self) -> list[str]:
+        optional = [
+            "max_amp",
+            "max_abs_detuning",
+            "max_duration",
+        ]
+        if self.addressing == "Local":
+            optional.append("max_targets")
+        return [field for field in optional if getattr(self, field) is None]
 
     @classmethod
     def Local(
@@ -220,7 +227,7 @@ class Channel(ABC):
         phase_jump_time: int = 0,
         min_retarget_interval: int = 220,
         fixed_retarget_t: int = 0,
-        max_targets: int = 1,
+        max_targets: Optional[int] = None,
         **kwargs: Any,
     ) -> Channel:
         """Initializes the channel with local addressing.
@@ -453,7 +460,7 @@ class Channel(ABC):
                 f", Minimum retarget time: {self.min_retarget_interval} ns, "
                 f"Fixed retarget time: {self.fixed_retarget_t} ns"
             )
-            if cast(int, self.max_targets) > 1:
+            if self.max_targets is not None:
                 config += f", Max targets: {self.max_targets}"
         config += (
             f", Clock period: {self.clock_period} ns"

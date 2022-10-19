@@ -80,7 +80,6 @@ def test_bad_durations():
     [
         "min_retarget_interval",
         "fixed_retarget_t",
-        "max_targets",
     ],
 )
 def test_bad_none_fields(field):
