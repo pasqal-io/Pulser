@@ -139,20 +139,28 @@ def test_validate_duration():
 
 def test_repr():
     raman = Raman.Local(
-        10, 2, min_retarget_interval=1000, fixed_retarget_t=200, max_targets=4
+        None,
+        2,
+        min_retarget_interval=1000,
+        fixed_retarget_t=200,
+        max_targets=4,
     )
     r1 = (
-        "Raman.Local(Max Absolute Detuning: 10 rad/µs, Max Amplitude: "
+        "Raman.Local(Max Absolute Detuning: None, Max Amplitude: "
         "2 rad/µs, Phase Jump Time: 0 ns, Minimum retarget time: 1000 ns, "
-        "Fixed retarget time: 200 ns, Max targets: 4, Basis: 'digital')"
+        "Fixed retarget time: 200 ns, Max targets: 4, Clock period: 4 ns, "
+        "Minimum pulse duration: 16 ns, Maximum pulse duration: 1000000 ns, "
+        "Basis: 'digital')"
     )
     assert raman.__str__() == r1
 
-    ryd = Rydberg.Global(50, 2.5, phase_jump_time=300, mod_bandwidth=4)
+    ryd = Rydberg.Global(50, None, phase_jump_time=300, mod_bandwidth=4)
     r2 = (
         "Rydberg.Global(Max Absolute Detuning: 50 rad/µs, "
-        "Max Amplitude: 2.5 rad/µs, Phase Jump Time: 300 ns, "
-        "Basis: 'ground-rydberg', Modulation Bandwidth: 4 MHz)"
+        "Max Amplitude: None, Phase Jump Time: 300 ns, "
+        "Clock period: 4 ns, Minimum pulse duration: 16 ns, "
+        "Maximum pulse duration: 1000000 ns, "
+        "Modulation Bandwidth: 4 MHz, Basis: 'ground-rydberg')"
     )
     assert ryd.__str__() == r2
 

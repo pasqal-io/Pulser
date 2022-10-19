@@ -440,8 +440,11 @@ class Channel(ABC):
     def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
-            f"{self.max_abs_detuning} rad/µs, Max Amplitude: {self.max_amp}"
-            f" rad/µs, Phase Jump Time: {self.phase_jump_time} ns"
+            f"{self.max_abs_detuning}"
+            f"{' rad/µs' if self.max_abs_detuning else ''}, "
+            f"Max Amplitude: {self.max_amp}"
+            f"{' rad/µs' if self.max_amp else ''}, "
+            f"Phase Jump Time: {self.phase_jump_time} ns"
         )
         if self.addressing == "Local":
             config += (
@@ -450,10 +453,16 @@ class Channel(ABC):
             )
             if cast(int, self.max_targets) > 1:
                 config += f", Max targets: {self.max_targets}"
-        config += f", Basis: '{self.basis}'"
+        config += (
+            f", Clock period: {self.clock_period} ns"
+            f", Minimum pulse duration: {self.min_duration} ns"
+        )
+        if self.max_duration is not None:
+            config += f", Maximum pulse duration: {self.max_duration} ns"
         if self.mod_bandwidth:
             config += f", Modulation Bandwidth: {self.mod_bandwidth} MHz"
-        return self.name + config + ")"
+        config += f", Basis: '{self.basis}')"
+        return self.name + config
 
 
 @dataclass(init=True, repr=False, frozen=True)
