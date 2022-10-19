@@ -465,12 +465,12 @@ class Raman(Channel):
     """
 
     @property
-    def name(self) -> CH_TYPES:
+    def name(self) -> Literal["Raman"]:
         """The name of the channel."""
         return "Raman"
 
     @property
-    def basis(self) -> BASES:
+    def basis(self) -> Literal["digital"]:
         """The addressed basis name."""
         return "digital"
 
@@ -484,12 +484,12 @@ class Rydberg(Channel):
     """
 
     @property
-    def name(self) -> CH_TYPES:
+    def name(self) -> Literal["Rydberg"]:
         """The name of the channel."""
         return "Rydberg"
 
     @property
-    def basis(self) -> BASES:
+    def basis(self) -> Literal["ground-rydberg"]:
         """The addressed basis name."""
         return "ground-rydberg"
 
@@ -503,11 +503,11 @@ class Microwave(Channel):
     """
 
     @property
-    def name(self) -> CH_TYPES:
+    def name(self) -> Literal["Microwave"]:
         """The name of the channel."""
         return "Microwave"
 
     @property
-    def basis(self) -> BASES:
+    def basis(self) -> Literal["XY"]:
         """The addressed basis name."""
         return "XY"
