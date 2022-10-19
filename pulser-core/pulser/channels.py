@@ -89,9 +89,9 @@ class Channel(ABC):
     min_retarget_interval: Optional[int] = None
     fixed_retarget_t: Optional[int] = None
     max_targets: Optional[int] = None
-    clock_period: int = 4  # ns
-    min_duration: int = 16  # ns
-    max_duration: Optional[int] = 1000000  # ns
+    clock_period: int = 1  # ns
+    min_duration: int = 1  # ns
+    max_duration: Optional[int] = int(1e8)  # ns
     mod_bandwidth: Optional[float] = None  # MHz
 
     @property
@@ -225,7 +225,7 @@ class Channel(ABC):
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
         phase_jump_time: int = 0,
-        min_retarget_interval: int = 220,
+        min_retarget_interval: int = 0,
         fixed_retarget_t: int = 0,
         max_targets: Optional[int] = None,
         **kwargs: Any,
@@ -238,7 +238,7 @@ class Channel(ABC):
             max_amp: Maximum pulse amplitude (in rad/µs).
             phase_jump_time: Time taken to change the phase between
                 consecutive pulses (in ns).
-            min_retarget_interval (int): Minimum time required between two
+            min_retarget_interval: Minimum time required between two
                 target instructions (in ns).
             fixed_retarget_t: Time taken to change the target (in ns).
             max_targets: Maximum number of atoms the channel can target
@@ -248,7 +248,7 @@ class Channel(ABC):
             clock_period(int, default=4): The duration of a clock cycle
                 (in ns). The duration of a pulse or delay instruction is
                 enforced to be a multiple of the clock cycle.
-            min_duration(int, default=16): The shortest duration an
+            min_duration(int, default=1): The shortest duration an
                 instruction can take.
             max_duration(Optional[int], default=10000000): The longest
                 duration an instruction can take.
@@ -287,7 +287,7 @@ class Channel(ABC):
             clock_period(int, default=4): The duration of a clock cycle
                 (in ns). The duration of a pulse or delay instruction is
                 enforced to be a multiple of the clock cycle.
-            min_duration(int, default=16): The shortest duration an
+            min_duration(int, default=1): The shortest duration an
                 instruction can take.
             max_duration(Optional[int], default=10000000): The longest
                 duration an instruction can take.

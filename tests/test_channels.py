@@ -143,13 +143,15 @@ def test_repr():
         min_retarget_interval=1000,
         fixed_retarget_t=200,
         max_targets=4,
+        min_duration=16,
+        clock_period=4,
+        max_duration=None,
     )
     r1 = (
         "Raman.Local(Max Absolute Detuning: None, Max Amplitude: "
         "2 rad/µs, Phase Jump Time: 0 ns, Minimum retarget time: 1000 ns, "
         "Fixed retarget time: 200 ns, Max targets: 4, Clock period: 4 ns, "
-        "Minimum pulse duration: 16 ns, Maximum pulse duration: 1000000 ns, "
-        "Basis: 'digital')"
+        "Minimum pulse duration: 16 ns, Basis: 'digital')"
     )
     assert raman.__str__() == r1
 
@@ -157,8 +159,8 @@ def test_repr():
     r2 = (
         "Rydberg.Global(Max Absolute Detuning: 50 rad/µs, "
         "Max Amplitude: None, Phase Jump Time: 300 ns, "
-        "Clock period: 4 ns, Minimum pulse duration: 16 ns, "
-        "Maximum pulse duration: 1000000 ns, "
+        "Clock period: 1 ns, Minimum pulse duration: 1 ns, "
+        "Maximum pulse duration: 100000000 ns, "
         "Modulation Bandwidth: 4 MHz, Basis: 'ground-rydberg')"
     )
     assert ryd.__str__() == r2
