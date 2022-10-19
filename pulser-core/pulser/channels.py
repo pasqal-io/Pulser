@@ -47,8 +47,8 @@ warnings.filterwarnings("once", "A duration of")
 MODBW_TO_TR = 0.48
 
 ADDRESSING = Literal["Global", "Local"]
-CH_TYPES = Literal["Rydberg", "Raman", "Microwave"]
-BASES = Literal["ground-rydberg", "digital", "XY"]
+CH_TYPE = Literal["Rydberg", "Raman", "Microwave"]
+BASIS = Literal["ground-rydberg", "digital", "XY"]
 
 
 @dataclass(init=True, repr=False, frozen=True)  # type: ignore[misc]
@@ -74,7 +74,8 @@ class Channel(ABC):
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
-        mod_bandwidth: The modulation bandwidth at -3dB (50% redution), in MHz.
+        mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
+            MHz.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -94,26 +95,26 @@ class Channel(ABC):
     mod_bandwidth: Optional[float] = None  # MHz
 
     @property
-    def name(self) -> CH_TYPES:
+    def name(self) -> CH_TYPE:
         """The name of the channel."""
         _name = type(self).__name__
-        options = get_args(CH_TYPES)
+        options = get_args(CH_TYPE)
         assert (
             _name in options
         ), f"The channel must be one of {options}, not {_name}."
-        return cast(CH_TYPES, _name)
+        return cast(CH_TYPE, _name)
 
     @property
     @abstractmethod
-    def basis(self) -> BASES:
+    def basis(self) -> BASIS:
         """The addressed basis name."""
         pass
 
     def __post_init__(self) -> None:
         """Validates the channel's parameters."""
         internal_param_value_pairs = [
-            ("name", CH_TYPES),
-            ("basis", BASES),
+            ("name", CH_TYPE),
+            ("basis", BASIS),
             ("addressing", ADDRESSING),
         ]
         for param, type_options in internal_param_value_pairs:
@@ -165,7 +166,8 @@ class Channel(ABC):
                 valid = value is None
             elif value is None:
                 raise TypeError(
-                    f"'{param}' can't be None in a 'Local' channel."
+                    f"'{param}' can't be None in a '{self.addressing}' "
+                    "channel."
                 )
             else:
                 prelude = ""
@@ -244,7 +246,7 @@ class Channel(ABC):
             max_duration(Optional[int], default=10000000): The longest
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
-                bandwidth at -3dB (50% redution), in MHz.
+                bandwidth at -3dB (50% reduction), in MHz.
         """
         return cls(
             "Local",
@@ -283,7 +285,7 @@ class Channel(ABC):
             max_duration(Optional[int], default=10000000): The longest
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
-                bandwidth at -3dB (50% redution), in MHz.
+                bandwidth at -3dB (50% reduction), in MHz.
         """
         return cls(
             "Global", max_abs_detuning, max_amp, phase_jump_time, **kwargs
