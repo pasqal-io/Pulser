@@ -94,10 +94,14 @@ class Channel(ABC):
     mod_bandwidth: Optional[float] = None  # MHz
 
     @property
-    @abstractmethod
     def name(self) -> CH_TYPES:
         """The name of the channel."""
-        pass
+        _name = type(self).__name__
+        options = get_args(CH_TYPES)
+        assert (
+            _name in options
+        ), f"The channel must be one of {options}, not {_name}."
+        return cast(CH_TYPES, _name)
 
     @property
     @abstractmethod
@@ -107,10 +111,6 @@ class Channel(ABC):
 
     def __post_init__(self) -> None:
         """Validates the channel's parameters."""
-        assert (
-            type(self).__name__ == self.name
-        ), "The channel's 'name' must match the name of the class."
-
         internal_param_value_pairs = [
             ("name", CH_TYPES),
             ("basis", BASES),
@@ -474,11 +474,6 @@ class Raman(Channel):
     """
 
     @property
-    def name(self) -> Literal["Raman"]:
-        """The name of the channel."""
-        return "Raman"
-
-    @property
     def basis(self) -> Literal["digital"]:
         """The addressed basis name."""
         return "digital"
@@ -493,11 +488,6 @@ class Rydberg(Channel):
     """
 
     @property
-    def name(self) -> Literal["Rydberg"]:
-        """The name of the channel."""
-        return "Rydberg"
-
-    @property
     def basis(self) -> Literal["ground-rydberg"]:
         """The addressed basis name."""
         return "ground-rydberg"
@@ -510,11 +500,6 @@ class Microwave(Channel):
     Channel targeting the transition between two rydberg states, thus encoding
     the 'XY' basis. See base class.
     """
-
-    @property
-    def name(self) -> Literal["Microwave"]:
-        """The name of the channel."""
-        return "Microwave"
 
     @property
     def basis(self) -> Literal["XY"]:
