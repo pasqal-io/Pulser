@@ -92,12 +92,14 @@ def test_bad_none_fields(field):
 @pytest.mark.parametrize("max_amp", [1, None])
 @pytest.mark.parametrize("max_abs_detuning", [0, None])
 @pytest.mark.parametrize("max_duration", [1000, None])
-def test_virtual_channel(max_amp, max_abs_detuning, max_duration):
-    params = (max_amp, max_abs_detuning, max_duration)
-    assert Raman.Global(
+@pytest.mark.parametrize("max_targets", [1, None])
+def test_virtual_channel(max_amp, max_abs_detuning, max_duration, max_targets):
+    params = (max_amp, max_abs_detuning, max_duration, max_targets)
+    assert Raman.Local(
         max_amp=max_amp,
         max_abs_detuning=max_abs_detuning,
         max_duration=max_duration,
+        max_targets=max_targets,
     ).is_virtual() == (None in params)
 
 
