@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 
 import pulser
+from pulser.channels import Rydberg
 from pulser.devices import Chadoq2, Device
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
@@ -181,3 +182,19 @@ def test_calibrated_layouts():
         "TriangularLatticeLayout(100, 6µm)",
         "TriangularLatticeLayout(200, 5µm)",
     }
+
+
+def test_device_with_virtual_channel():
+    with pytest.raises(
+        ValueError,
+        match="A 'Device' instance cannot contain virtual channels.",
+    ):
+        Device(
+            name="TestDevice",
+            dimensions=2,
+            rydberg_level=70,
+            max_atom_num=100,
+            max_radial_distance=50,
+            min_atom_distance=4,
+            _channels=(("rydberg_global", Rydberg.Global(None, 10)),),
+        )

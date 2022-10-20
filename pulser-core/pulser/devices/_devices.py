@@ -26,9 +26,45 @@ Chadoq2 = Device(
     min_atom_distance=4,
     supports_slm_mask=True,
     _channels=(
-        ("rydberg_global", Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)),
-        ("rydberg_local", Rydberg.Local(2 * np.pi * 20, 2 * np.pi * 10)),
-        ("raman_local", Raman.Local(2 * np.pi * 20, 2 * np.pi * 10)),
+        (
+            "rydberg_global",
+            Rydberg.Global(
+                max_abs_detuning=2 * np.pi * 20,
+                max_amp=2 * np.pi * 2.5,
+                phase_jump_time=0,
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+            ),
+        ),
+        (
+            "rydberg_local",
+            Rydberg.Local(
+                max_abs_detuning=2 * np.pi * 20,
+                max_amp=2 * np.pi * 10,
+                phase_jump_time=0,
+                min_retarget_interval=220,
+                fixed_retarget_t=0,
+                max_targets=1,
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+            ),
+        ),
+        (
+            "raman_local",
+            Raman.Local(
+                max_abs_detuning=2 * np.pi * 20,
+                max_amp=2 * np.pi * 10,
+                phase_jump_time=0,
+                min_retarget_interval=220,
+                fixed_retarget_t=0,
+                max_targets=1,
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+            ),
+        ),
     ),
 )
 
@@ -46,6 +82,9 @@ IroiseMVP = Device(
                 max_abs_detuning=2 * np.pi * 4,
                 max_amp=2 * np.pi * 3,
                 phase_jump_time=500,
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
             ),
         ),
     ),

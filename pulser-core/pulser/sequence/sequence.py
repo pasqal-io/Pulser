@@ -1067,7 +1067,10 @@ class Sequence:
 
         if channel_obj.addressing != "Local":
             raise ValueError("Can only choose target of 'Local' channels.")
-        elif len(qubits_set) > cast(int, channel_obj.max_targets):
+        elif (
+            channel_obj.max_targets is not None
+            and len(qubits_set) > channel_obj.max_targets
+        ):
             raise ValueError(
                 f"This channel can target at most {channel_obj.max_targets} "
                 "qubits at a time."
@@ -1175,8 +1178,8 @@ class Sequence:
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
-        self._device.validate_pulse(pulse, self._schedule[channel].channel_id)
         channel_obj = self._schedule[channel].channel_obj
+        channel_obj.validate_pulse(pulse)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:
