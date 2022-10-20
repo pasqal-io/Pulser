@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 import pulser.devices as devices
+from pulser.channels import CH_TYPE, get_args
 from pulser.json.exceptions import SerializationError
 
 SUPPORTED_BUILTINS = ("float", "int", "str", "set")
@@ -72,6 +73,7 @@ SUPPORTED_MODULES = {
     "pulser.devices": tuple(
         [dev.name for dev in devices._valid_devices] + ["MockDevice"]
     ),
+    "pulser.channels": tuple(get_args(CH_TYPE)),
     "pulser.pulse": ("Pulse",),
     "pulser.waveforms": (
         "CompositeWaveform",

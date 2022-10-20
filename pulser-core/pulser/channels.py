@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from sys import version_info
 from typing import Any, Optional, cast
 
@@ -25,6 +25,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.fft import fft, fftfreq, ifft
 
+from pulser.json.utils import obj_to_dict
 from pulser.pulse import Pulse
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
@@ -472,6 +473,9 @@ class Channel(ABC):
             config += f", Modulation Bandwidth: {self.mod_bandwidth} MHz"
         config += f", Basis: '{self.basis}')"
         return self.name + config
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, **asdict(self))
 
 
 @dataclass(init=True, repr=False, frozen=True)
