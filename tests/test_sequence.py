@@ -183,6 +183,11 @@ def test_target():
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "raman_local", initial_target={"q1", "q10"})
+
+    # Test unlimited targets with Local channel when 'max_targets=None'
+    assert seq2.declared_channels["ch0"].max_targets is None
+    seq2.target(set(reg.qubit_ids) - {"q2"}, "ch0")
+
     seq2.phase_shift(1, "q2")
     with pytest.raises(ValueError, match="qubits with different phase"):
         seq2.target({"q3", "q1", "q2"}, "ch0")
