@@ -292,6 +292,9 @@ class BaseDevice(ABC):
             raise ValueError("Rydberg level should be between 50 and 100.")
 
     def _params(self) -> dict[str, Any]:
+        # This is used instead of dataclasses.asdict() because asdict()
+        # is recursive and we have Channel dataclasses in the args that
+        # we don't want to convert to dict
         return dict((f.name, getattr(self, f.name)) for f in fields(self))
 
     def _validate_coords(
