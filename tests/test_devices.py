@@ -46,29 +46,6 @@ def test_init():
     assert Chadoq2.__repr__() == "Chadoq2"
 
 
-def test_mock():
-    dev = pulser.devices.MockDevice
-    assert dev.dimensions == 3
-    assert dev.rydberg_level > 49
-    assert dev.rydberg_level < 101
-    assert dev.max_atom_num > 1000
-    assert dev.min_atom_distance <= 1
-    assert dev.interaction_coeff > 0
-    assert dev.interaction_coeff_xy == 3700
-    names = ["Rydberg", "Raman", "Microwave"]
-    basis = ["ground-rydberg", "digital", "XY"]
-    for ch in dev.channels.values():
-        assert ch.name in names
-        assert ch.basis == basis[names.index(ch.name)]
-        assert ch.addressing in ["Local", "Global"]
-        assert ch.max_abs_detuning >= 1000
-        assert ch.max_amp >= 200
-        if ch.addressing == "Local":
-            assert ch.min_retarget_interval == 0
-            assert ch.max_targets > 1
-            assert ch.max_targets == int(ch.max_targets)
-
-
 def test_change_rydberg_level():
     dev = pulser.devices.MockDevice
     dev.change_rydberg_level(60)
