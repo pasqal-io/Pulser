@@ -210,7 +210,7 @@ class Register(BaseRegister, RegDrawer):
     def max_connectivity(
         cls,
         n_qubits: int,
-        device: pulser.devices._device_datacls.Device,
+        device: pulser.devices._device_datacls.BaseDevice,
         spacing: float = None,
         prefix: str = None,
     ) -> Register:
@@ -234,11 +234,8 @@ class Register(BaseRegister, RegDrawer):
             A register with qubits placed for maximum connectivity.
         """
         # Check device
-        if not isinstance(device, pulser.devices._device_datacls.Device):
-            raise TypeError(
-                "'device' must be of type 'Device'. Import a valid"
-                " device from 'pulser.devices'."
-            )
+        if not isinstance(device, pulser.devices._device_datacls.BaseDevice):
+            raise TypeError("'device' must be of type 'BaseDevice'.")
 
         # Check number of qubits (1 or above)
         if n_qubits < 1:
@@ -248,7 +245,7 @@ class Register(BaseRegister, RegDrawer):
             )
 
         # Check number of qubits (less than the max number of atoms)
-        if n_qubits > device.max_atom_num:
+        if device.max_atom_num is not None and n_qubits > device.max_atom_num:
             raise ValueError(
                 f"The number of qubits (`n_qubits` = {n_qubits})"
                 " must be less than or equal to the maximum"
@@ -256,6 +253,11 @@ class Register(BaseRegister, RegDrawer):
                 f" ({device.max_atom_num})."
             )
 
+        if not device.min_atom_distance > 0.0:
+            raise NotImplementedError(
+                "Maximum connectivity layouts are not well defined for a "
+                f"device with 'min_atom_distance={device.min_atom_distance}'."
+            )
         # Default spacing or check minimal distance
         if spacing is None:
             spacing = device.min_atom_distance

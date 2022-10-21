@@ -20,7 +20,7 @@ import pytest
 
 import pulser
 from pulser.channels import Rydberg
-from pulser.devices import Chadoq2, Device
+from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
@@ -81,6 +81,12 @@ def test_change_rydberg_level():
     ):
         dev.change_rydberg_level(110)
     dev.change_rydberg_level(70)
+
+    with pytest.warns(DeprecationWarning):
+        og_ryd_level = Chadoq2.rydberg_level
+        Chadoq2.change_rydberg_level(60)
+        assert Chadoq2.rydberg_level == 60
+        Chadoq2.change_rydberg_level(og_ryd_level)
 
 
 def test_rydberg_blockade():
@@ -198,3 +204,18 @@ def test_device_with_virtual_channel():
             min_atom_distance=4,
             _channels=(("rydberg_global", Rydberg.Global(None, 10)),),
         )
+
+
+def test_convert_to_virtual():
+    params = dict(
+        name="Test",
+        dimensions=2,
+        rydberg_level=80,
+        min_atom_distance=1,
+        max_atom_num=20,
+        max_radial_distance=40,
+        _channels=(("rydberg_global", Rydberg.Global(0, 10)),),
+    )
+    assert Device(**params).to_virtual() == VirtualDevice(
+        supports_slm_mask=False, reusable_channels=False, **params
+    )

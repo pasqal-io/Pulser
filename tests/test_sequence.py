@@ -37,12 +37,8 @@ device = Chadoq2
 
 
 def test_init():
-    with pytest.raises(TypeError, match="must be of type 'Device'"):
+    with pytest.raises(TypeError, match="must be of type 'BaseDevice'"):
         Sequence(reg, Device)
-
-    fake_device = Device("fake", 2, 70, 100, 100, 1, Chadoq2._channels)
-    with pytest.warns(UserWarning, match="imported from 'pulser.devices'"):
-        Sequence(reg, fake_device)
 
     seq = Sequence(reg, device)
     assert seq.qubit_info == reg.qubits
@@ -615,10 +611,8 @@ def test_hardware_constraints():
             ("raman_local", raman_local),
         ),
     )
-    with pytest.warns(
-        UserWarning, match="should be imported from 'pulser.devices'"
-    ):
-        seq = Sequence(reg, ConstrainedChadoq2)
+
+    seq = Sequence(reg, ConstrainedChadoq2)
     seq.declare_channel("ch0", "rydberg_global")
     seq.declare_channel("ch1", "raman_local", initial_target="q1")
 
