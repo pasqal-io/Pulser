@@ -141,8 +141,6 @@ class BaseDevice(ABC):
 
         # Turns mutable lists into immutable tuples
         object.__setattr__(self, "_channels", to_tuple(self._channels))
-        # Hack to override the docstring of an instance
-        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     @abstractmethod
@@ -163,13 +161,6 @@ class BaseDevice(ABC):
     def interaction_coeff(self) -> float:
         r""":math:`C_6/\hbar` coefficient of chosen Rydberg level."""
         return float(c6_dict[self.rydberg_level])
-
-    def print_specs(self) -> None:
-        """Prints the device specifications."""
-        title = f"{self.name} Specifications"
-        header = ["-" * len(title), title, "-" * len(title)]
-        print("\n".join(header))
-        print(self._specs())
 
     def __repr__(self) -> str:
         return self.name
@@ -240,55 +231,6 @@ class BaseDevice(ABC):
             )
 
         self._validate_coords(layout.traps_dict, kind="traps")
-
-    def _specs(self, for_docs: bool = False) -> str:
-        lines = [
-            "\nRegister requirements:",
-            f" - Dimensions: {self.dimensions}D",
-            rf" - Rydberg level: {self.rydberg_level}",
-            f" - Maximum number of atoms: {self.max_atom_num}",
-            f" - Maximum distance from origin: {self.max_radial_distance} μm",
-            (
-                " - Minimum distance between neighbouring atoms: "
-                f"{self.min_atom_distance} μm"
-            ),
-            "\nChannels:",
-        ]
-
-        ch_lines = []
-        for name, ch in self._channels:
-            if for_docs:
-                ch_lines += [
-                    f" - ID: '{name}'",
-                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
-                    f"\t- Addressing: {ch.addressing}",
-                    (
-                        "\t"
-                        + r"- Maximum :math:`\Omega`:"
-                        + f" {ch.max_amp:.4g} rad/µs"
-                    ),
-                    (
-                        "\t"
-                        + r"- Maximum :math:`|\delta|`:"
-                        + f" {ch.max_abs_detuning:.4g} rad/µs"
-                    ),
-                    f"\t- Phase Jump Time: {ch.phase_jump_time} ns",
-                ]
-                if ch.addressing == "Local":
-                    ch_lines += [
-                        "\t- Minimum time between retargets: "
-                        f"{ch.min_retarget_interval} ns",
-                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
-                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
-                    ]
-                ch_lines += [
-                    f"\t- Clock period: {ch.clock_period} ns",
-                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
-                ]
-            else:
-                ch_lines.append(f" - '{name}': {ch!r}")
-
-        return "\n".join(lines + ch_lines)
 
     def _validate_atom_number(
         self, coords: list[np.ndarray], kind: str
@@ -406,6 +348,7 @@ class Device(BaseDevice):
     )
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         for ch_id, ch_obj in self._channels:
             if ch_obj.is_virtual():
                 _sep = "', '"
@@ -416,7 +359,8 @@ class Device(BaseDevice):
                 )
         for layout in self.pre_calibrated_layouts:
             self.validate_layout(layout)
-        super().__post_init__()
+        # Hack to override the docstring of an instance
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
@@ -458,6 +402,62 @@ class Device(BaseDevice):
         for param in all_params_names - target_params_names:
             del params[param]
         return VirtualDevice(**params)
+
+    def print_specs(self) -> None:
+        """Prints the device specifications."""
+        title = f"{self.name} Specifications"
+        header = ["-" * len(title), title, "-" * len(title)]
+        print("\n".join(header))
+        print(self._specs())
+
+    def _specs(self, for_docs: bool = False) -> str:
+        lines = [
+            "\nRegister requirements:",
+            f" - Dimensions: {self.dimensions}D",
+            rf" - Rydberg level: {self.rydberg_level}",
+            f" - Maximum number of atoms: {self.max_atom_num}",
+            f" - Maximum distance from origin: {self.max_radial_distance} μm",
+            (
+                " - Minimum distance between neighbouring atoms: "
+                f"{self.min_atom_distance} μm"
+            ),
+            "\nChannels:",
+        ]
+
+        ch_lines = []
+        for name, ch in self._channels:
+            if for_docs:
+                ch_lines += [
+                    f" - ID: '{name}'",
+                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
+                    f"\t- Addressing: {ch.addressing}",
+                    (
+                        "\t"
+                        + r"- Maximum :math:`\Omega`:"
+                        + f" {ch.max_amp:.4g} rad/µs"
+                    ),
+                    (
+                        "\t"
+                        + r"- Maximum :math:`|\delta|`:"
+                        + f" {ch.max_abs_detuning:.4g} rad/µs"
+                    ),
+                    f"\t- Phase Jump Time: {ch.phase_jump_time} ns",
+                ]
+                if ch.addressing == "Local":
+                    ch_lines += [
+                        "\t- Minimum time between retargets: "
+                        f"{ch.min_retarget_interval} ns",
+                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
+                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
+                    ]
+                ch_lines += [
+                    f"\t- Clock period: {ch.clock_period} ns",
+                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
+                ]
+            else:
+                ch_lines.append(f" - '{name}': {ch!r}")
+
+        return "\n".join(lines + ch_lines)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
