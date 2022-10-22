@@ -639,6 +639,10 @@ def test_config_slm_mask():
     reg_s = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     seq_s = Sequence(reg_s, device)
 
+    with pytest.raises(ValueError, match="does not have an SLM mask."):
+        seq_ = Sequence(reg_s, IroiseMVP)
+        seq_.config_slm_mask(["q0"])
+
     with pytest.raises(TypeError, match="must be castable to set"):
         seq_s.config_slm_mask(0)
     with pytest.raises(TypeError, match="must be castable to set"):
@@ -785,6 +789,7 @@ def test_hardware_constraints():
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         phase_jump_time=120,  # ns
+        clock_period=4,
         mod_bandwidth=4,  # MHz
     )
 
@@ -792,7 +797,10 @@ def test_hardware_constraints():
         2 * np.pi * 20,
         2 * np.pi * 10,
         phase_jump_time=120,  # ns
+        min_retarget_interval=220,
         fixed_retarget_t=200,  # ns
+        max_targets=1,
+        clock_period=4,
         mod_bandwidth=7,  # MHz
     )
 

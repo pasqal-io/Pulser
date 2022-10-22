@@ -35,7 +35,7 @@ from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized
 
 if TYPE_CHECKING:
-    from pulser.parametrized import Variable  # pragma: no cover
+    from pulser.parametrized import Variable
 
 
 class OpSupport:

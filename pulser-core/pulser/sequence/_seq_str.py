@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from pulser.pulse import Pulse
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser.sequence.sequence import Sequence
 
 

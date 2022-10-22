@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser.parametrized.variable import Variable, VariableItem
 
 

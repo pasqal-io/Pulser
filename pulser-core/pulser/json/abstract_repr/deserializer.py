@@ -41,7 +41,7 @@ from pulser.waveforms import (
     Waveform,
 )
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser.sequence import Sequence
 
 with open(Path(__file__).parent / "schema.json") as f:

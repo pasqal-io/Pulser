@@ -20,7 +20,7 @@ from typing import Sequence as abcSequence
 
 from pulser.json.utils import obj_to_dict
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser.register.base_register import BaseRegister, QubitId
     from pulser.register.register_layout import RegisterLayout
 
