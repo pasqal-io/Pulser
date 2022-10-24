@@ -86,7 +86,7 @@ class BaseDevice(ABC):
             if not isinstance(value, type_):
                 raise TypeError(
                     f"{param} must be of type '{type_.__name__}', "
-                    f"not '{type(value)}'."
+                    f"not '{type(value).__name__}'."
                 )
 
         type_check("name", str)
@@ -112,7 +112,7 @@ class BaseDevice(ABC):
             elif value is None:
                 raise TypeError(
                     f"'{param}' can't be None in a '{type(self).__name__}' "
-                    "device."
+                    "instance."
                 )
             else:
                 prelude = ""
@@ -295,7 +295,7 @@ class BaseDevice(ABC):
         # This is used instead of dataclasses.asdict() because asdict()
         # is recursive and we have Channel dataclasses in the args that
         # we don't want to convert to dict
-        return dict((f.name, getattr(self, f.name)) for f in fields(self))
+        return {f.name: getattr(self, f.name) for f in fields(self)}
 
     def _validate_coords(
         self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
