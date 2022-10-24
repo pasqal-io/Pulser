@@ -475,7 +475,7 @@ class VirtualDevice(BaseDevice):
     A VirtualDevice can only be used for emulation and allows some parameters
     to be left undefined. Furthermore, it optionally allows the same channel
     to be declared multiple times in the same Sequence (when
-    'reusable_channels=True') and allows the Rydberg level to be changed.
+    `reusable_channels=True`) and allows the Rydberg level to be changed.
 
     Attributes:
         name: The name of the device.
