@@ -151,7 +151,13 @@ def test_switch_device():
         max_radial_distance=60,
         min_atom_distance=5,
         _channels=(
-            ("raman_global", Raman.Global(2 * np.pi * 20, 2 * np.pi * 10)),
+            ("raman_global", 
+            Raman.Global(
+                2 * np.pi * 20,
+                2 * np.pi * 10,
+                max_duration=2**26,
+                )
+            ),
             (
                 "raman_local",
                 Raman.Local(
@@ -159,6 +165,7 @@ def test_switch_device():
                     2 * np.pi * 10,
                     clock_period=1,
                     phase_jump_time=500,
+                    max_duration=2**26,
                 ),
             ),
         ),
@@ -179,6 +186,7 @@ def test_switch_device():
                     2 * np.pi * 10,
                     clock_period=3,
                     phase_jump_time=500,
+                    max_duration=2**26,
                 ),
             ),
         ),
@@ -199,6 +207,7 @@ def test_switch_device():
                     2 * np.pi * 10,
                     clock_period=4,
                     phase_jump_time=750,
+                    max_duration=2**26,
                 ),
             ),
             (
@@ -208,6 +217,7 @@ def test_switch_device():
                     2 * np.pi * 10,
                     clock_period=1,
                     phase_jump_time=500,
+                    max_duration=2**26,
                 ),
             ),
             (
@@ -217,6 +227,7 @@ def test_switch_device():
                     2 * np.pi * 10,
                     clock_period=2,
                     phase_jump_time=500,
+                    max_duration=2**26,
                 ),
             ),
             (
@@ -225,6 +236,7 @@ def test_switch_device():
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
                     phase_jump_time=500,
+                    max_duration=2**26,
                 ),
             ),
         ),
