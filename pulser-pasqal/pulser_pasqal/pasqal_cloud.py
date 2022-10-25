@@ -26,24 +26,25 @@ class PasqalCloud:
 
     The cloud connection enables to run sequences on simulators or on real
     QPUs.
+
+    Args:
+        client_id: client_id of the API key you are holding for Pasqal
+            cloud.
+        client_secret: client_secret of the API key you are holding for
+            Pasqal cloud.
+        endpoints: Optionally, Pasqal cloud connection URLs.
+        webhook: Optionally, webhook.
     """
 
     def __init__(
-        self, client_id, client_secret, endpoints: sdk.endpoints.Endpoints
+        self, client_id: str, client_secret: str, endpoints: Optional[sdk.endpoints.Endpoints], webhook: Optional[str] = None
     ):
-        """Initializes a connection to the cloud.
-
-        Args:
-            client_id: client_id of the API key you are holding for Pasqal
-                cloud.
-            client_secret: client_secret of the API key you are holding for
-                Pasqal cloud.
-            endpoints: Optionally, Pasqal cloud connection URLs.
-        """
+        """Initializes a connection to the cloud."""
         self._sdk_connection = sdk.SDK(
             client_id=client_id,
             client_secret=client_secret,
             endpoints=endpoints,
+            webhook=webhook
         )
 
     def create_batch(
