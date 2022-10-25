@@ -36,7 +36,7 @@ def test_pasqal_cloud():
             client_id="abc",
             client_secret="def",
             endpoints=Endpoints(core="core_url", account="account_url"),
-            webhook="xyz"
+            webhook="xyz",
         )
 
         pasqal_cloud = PasqalCloud(**pasqal_cloud_kwargs)

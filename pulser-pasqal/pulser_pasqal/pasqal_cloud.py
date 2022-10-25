@@ -37,14 +37,18 @@ class PasqalCloud:
     """
 
     def __init__(
-        self, client_id: str, client_secret: str, endpoints: Optional[sdk.endpoints.Endpoints], webhook: Optional[str] = None
+        self,
+        client_id: str,
+        client_secret: str,
+        endpoints: Optional[sdk.endpoints.Endpoints],
+        webhook: Optional[str] = None,
     ):
         """Initializes a connection to the cloud."""
         self._sdk_connection = sdk.SDK(
             client_id=client_id,
             client_secret=client_secret,
             endpoints=endpoints,
-            webhook=webhook
+            webhook=webhook,
         )
 
     def create_batch(
