@@ -18,6 +18,7 @@ import sdk
 from numpy.typing import ArrayLike
 
 from pulser import Sequence
+from pulser.devices import Device
 from pulser.register import QubitId
 
 
@@ -77,6 +78,14 @@ class PasqalCloud:
         Returns:
             Batch: The new batch that has been created in the database.
         """
+        if device_type == sdk.DeviceType.QPU and not isinstance(
+            seq.device, Device
+        ):
+            raise TypeError(
+                "To be sent to a real QPU, the device of the sequence "
+                "must be a real device, instance of 'Device'."
+            )
+
         self._sdk_connection.create_batch(
             serialized_sequence=seq.serialize(),
             jobs=jobs,

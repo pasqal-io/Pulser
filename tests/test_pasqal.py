@@ -13,8 +13,12 @@
 # limitations under the License.
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
+
+import pytest
 
 import pulser
 import pulser_pasqal
@@ -30,7 +34,14 @@ def test_version():
     assert pulser_pasqal.__version__ == pulser.__version__
 
 
-def test_pasqal_cloud():
+@dataclasses.dataclass
+class CloudFixture:
+    pasqal_cloud: PasqalCloud
+    mock_cloud_sdk: Any
+
+
+@pytest.fixture
+def fixt():
     with patch("sdk.SDK", autospec=True) as mock_cloud_sdk_class:
         pasqal_cloud_kwargs = dict(
             client_id="abc",
@@ -45,11 +56,67 @@ def test_pasqal_cloud():
 
         mock_cloud_sdk = mock_cloud_sdk_class.return_value
 
-        reg = Register(dict(enumerate([(0, 0), (0, 10)])))
-        device = Chadoq2
-        seq = Sequence(reg, device)
+        yield CloudFixture(
+            pasqal_cloud=pasqal_cloud, mock_cloud_sdk=mock_cloud_sdk
+        )
 
-        create_batch_kwargs = dict(
+
+test_device = Chadoq2
+virtual_device = test_device.to_virtual()
+
+
+@pytest.mark.parametrize(
+    "device_type, device",
+    [
+        [device_type, device]
+        for device_type in DeviceType
+        for device in (test_device, virtual_device)
+        if (device_type, device) != (DeviceType.QPU, virtual_device)
+    ],
+)
+def test_pasqal_cloud(fixt, device_type, device):
+    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    seq = Sequence(reg, device)
+
+    create_batch_kwargs = dict(
+        jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],
+        device_type=device_type,
+        configuration=Configuration(
+            dt=0.1,
+            precision="normal",
+            extra_config=None,
+        ),
+        wait=True,
+    )
+
+    fixt.pasqal_cloud.create_batch(
+        seq,
+        **create_batch_kwargs,
+    )
+
+    fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
+        seq.serialize(),
+        **create_batch_kwargs,
+    )
+
+    get_batch_kwargs = dict(
+        id=10,
+        fetch_results=True,
+    )
+
+    fixt.pasqal_cloud.get_batch(**get_batch_kwargs)
+
+    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(**get_batch_kwargs)
+
+
+def test_virtual_device_on_qpu_error(fixt):
+    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    device = Chadoq2.to_virtual()
+    seq = Sequence(reg, device)
+
+    with pytest.raises(TypeError, match="must be a real device"):
+        fixt.pasqal_cloud.create_batch(
+            seq,
             jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],
             device_type=DeviceType.QPU,
             configuration=Configuration(
@@ -59,22 +126,3 @@ def test_pasqal_cloud():
             ),
             wait=True,
         )
-
-        pasqal_cloud.create_batch(
-            seq,
-            **create_batch_kwargs,
-        )
-
-        mock_cloud_sdk.create_batch.assert_called_once_with(
-            seq.serialize(),
-            **create_batch_kwargs,
-        )
-
-        get_batch_kwargs = dict(
-            id=10,
-            fetch_results=True,
-        )
-
-        pasqal_cloud.get_batch(**get_batch_kwargs)
-
-        mock_cloud_sdk.get_batch.assert_called_once_with(**get_batch_kwargs)
