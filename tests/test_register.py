@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from pulser import Register, Register3D
-from pulser.devices import Chadoq2
+from pulser.devices import Chadoq2, MockDevice
 
 
 def test_creation():
@@ -184,6 +184,13 @@ def test_max_connectivity():
         reg = Register.max_connectivity(
             max_atom_num, device, spacing=spacing - 1.0
         )
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Maximum connectivity layouts are not well defined for a "
+        "device with 'min_atom_distance=0.0'.",
+    ):
+        Register.max_connectivity(1e9, MockDevice)
 
     # Check 1 atom
     reg = Register.max_connectivity(1, device)

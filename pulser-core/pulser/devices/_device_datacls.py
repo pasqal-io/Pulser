@@ -14,8 +14,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field, fields
+from sys import version_info
+from typing import Any, Optional, cast
+from warnings import warn
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -27,10 +30,24 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 from pulser.sampler.samples import SequenceSamples
 
+if version_info[:2] >= (3, 8):  # pragma: no cover
+    from typing import Literal, get_args
+else:  # pragma: no cover
+    try:
+        from typing_extensions import Literal, get_args  # type: ignore
+    except ImportError:
+        raise ImportError(
+            "Using pulser with Python version 3.7 requires the"
+            " `typing_extensions` module. Install it by running"
+            " `pip install typing-extensions`."
+        )
 
-@dataclass(frozen=True, repr=False)
-class Device:
-    r"""Definition of a neutral-atom device.
+DIMENSIONS = Literal[2, 3]
+
+
+@dataclass(frozen=True, repr=False)  # type: ignore[misc]
+class BaseDevice(ABC):
+    r"""Base class of a neutral-atom device.
 
     Attributes:
         name: The name of the device.
@@ -46,36 +63,90 @@ class Device:
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
         supports_slm_mask: Whether the device supports the SLM mask feature.
-
     """
-
     name: str
-    dimensions: int
+    dimensions: DIMENSIONS
     rydberg_level: int
-    max_atom_num: int
-    max_radial_distance: int
-    min_atom_distance: int
     _channels: tuple[tuple[str, Channel], ...]
-    # Ising interaction coeff
+    min_atom_distance: float
+    max_atom_num: Optional[int]
+    max_radial_distance: Optional[int]
     interaction_coeff_xy: float = 3700.0
     supports_slm_mask: bool = False
-    pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
-        default_factory=tuple
-    )
+    reusable_channels: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
-        # Hack to override the docstring of an instance
-        for ch_id, ch_obj in self._channels:
-            if ch_obj.is_virtual():
-                _sep = "', '"
-                raise ValueError(
-                    "A 'Device' instance cannot contain virtual channels."
-                    f" For channel '{ch_id}', please define: "
-                    f"'{_sep.join(ch_obj._undefined_fields())}'"
+        def type_check(
+            param: str, type_: type, value_override: Any = None
+        ) -> None:
+            value = (
+                getattr(self, param)
+                if value_override is None
+                else value_override
+            )
+            if not isinstance(value, type_):
+                raise TypeError(
+                    f"{param} must be of type '{type_.__name__}', "
+                    f"not '{type(value).__name__}'."
                 )
-        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
-        for layout in self.pre_calibrated_layouts:
-            self.validate_layout(layout)
+
+        type_check("name", str)
+        if self.dimensions not in get_args(DIMENSIONS):
+            raise ValueError(
+                f"'dimensions' must be one of {get_args(DIMENSIONS)}, "
+                f"not {self.dimensions}."
+            )
+        self._validate_rydberg_level(self.rydberg_level)
+        for ch_id, ch_obj in self._channels:
+            type_check("All channel IDs", str, value_override=ch_id)
+            type_check("All channels", Channel, value_override=ch_obj)
+
+        for param in (
+            "min_atom_distance",
+            "max_atom_num",
+            "max_radial_distance",
+        ):
+            value = getattr(self, param)
+            if param in self._optional_parameters:
+                prelude = "When defined, "
+                is_none = value is None
+            elif value is None:
+                raise TypeError(
+                    f"'{param}' can't be None in a '{type(self).__name__}' "
+                    "instance."
+                )
+            else:
+                prelude = ""
+                is_none = False
+
+            if param == "min_atom_distance":
+                comp = "greater than or equal to zero"
+                valid = is_none or value >= 0
+            else:
+                if not is_none:
+                    type_check(param, int)
+                comp = "greater than zero"
+                valid = is_none or value > 0
+            msg = prelude + f"'{param}' must be {comp}, not {value}."
+            if not valid:
+                raise ValueError(msg)
+
+        type_check("interaction_coeff_xy", float)
+        type_check("supports_slm_mask", bool)
+        type_check("reusable_channels", bool)
+
+        def to_tuple(obj: tuple | list) -> tuple:
+            if isinstance(obj, (tuple, list)):
+                obj = tuple(to_tuple(el) for el in obj)
+            return obj
+
+        # Turns mutable lists into immutable tuples
+        object.__setattr__(self, "_channels", to_tuple(self._channels))
+
+    @property
+    @abstractmethod
+    def _optional_parameters(self) -> tuple[str, ...]:
+        pass
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -92,37 +163,8 @@ class Device:
         r""":math:`C_6/\hbar` coefficient of chosen Rydberg level."""
         return float(c6_dict[self.rydberg_level])
 
-    @property
-    def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
-        """Register layouts already calibrated on this device."""
-        return {str(layout): layout for layout in self.pre_calibrated_layouts}
-
-    def print_specs(self) -> None:
-        """Prints the device specifications."""
-        title = f"{self.name} Specifications"
-        header = ["-" * len(title), title, "-" * len(title)]
-        print("\n".join(header))
-        print(self._specs())
-
     def __repr__(self) -> str:
         return self.name
-
-    def change_rydberg_level(self, ryd_lvl: int) -> None:
-        """Changes the Rydberg level used in the Device.
-
-        Args:
-            ryd_lvl: the Rydberg level to use (between 50 and 100).
-
-        Note:
-            Modifications to the `rydberg_level` attribute only affect the
-            outcomes of local emulations.
-        """
-        if not isinstance(ryd_lvl, int):
-            raise TypeError("Rydberg level has to be an int.")
-        if not ((49 < ryd_lvl) & (101 > ryd_lvl)):
-            raise ValueError("Rydberg level should be between 50 and 100.")
-
-        object.__setattr__(self, "rydberg_level", ryd_lvl)
 
     def rydberg_blockade_radius(self, rabi_frequency: float) -> float:
         """Calculates the Rydberg blockade radius for a given Rabi frequency.
@@ -191,6 +233,187 @@ class Device:
 
         self._validate_coords(layout.traps_dict, kind="traps")
 
+    def _validate_atom_number(
+        self, coords: list[np.ndarray], kind: str
+    ) -> None:
+        max_number = cast(int, self.max_atom_num) * (
+            2 if kind == "traps" else 1
+        )
+        if len(coords) > max_number:
+            raise ValueError(
+                f"The number of {kind} ({len(coords)})"
+                " must be less than or equal to the maximum"
+                f" number of {kind} supported by this device"
+                f" ({max_number})."
+            )
+
+    def _validate_atom_distance(
+        self, ids: list[QubitId], coords: list[np.ndarray], kind: str
+    ) -> None:
+        def invalid_dists(dists: np.ndarray) -> np.ndarray:
+            cond1 = dists - self.min_atom_distance < -(
+                10 ** (-COORD_PRECISION)
+            )
+            # Ensures there are no identical traps when
+            # min_atom_distance = 0
+            cond2 = dists < 10 ** (-COORD_PRECISION)
+            return cast(np.ndarray, np.logical_or(cond1, cond2))
+
+        if len(coords) > 1:
+            distances = pdist(coords)  # Pairwise distance between atoms
+            if np.any(invalid_dists(distances)):
+                sq_dists = squareform(distances)
+                mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
+                bad_pairs = np.argwhere(
+                    np.logical_and(invalid_dists(sq_dists), mask)
+                )
+                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
+                raise ValueError(
+                    f"The minimal distance between {kind} in this device "
+                    f"({self.min_atom_distance} µm) is not respected "
+                    f"(up to a precision of 1e{-COORD_PRECISION} µm) "
+                    f"for the pairs: {bad_qbt_pairs}"
+                )
+
+    def _validate_radial_distance(
+        self, ids: list[QubitId], coords: list[np.ndarray], kind: str
+    ) -> None:
+        too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
+        if np.any(too_far):
+            raise ValueError(
+                f"All {kind} must be at most {self.max_radial_distance} μm "
+                f"away from the center of the array, which is not the case "
+                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
+            )
+
+    def _validate_rydberg_level(self, ryd_lvl: int) -> None:
+        if not isinstance(ryd_lvl, int):
+            raise TypeError("Rydberg level has to be an int.")
+        if not 49 < ryd_lvl < 101:
+            raise ValueError("Rydberg level should be between 50 and 100.")
+
+    def _params(self) -> dict[str, Any]:
+        # This is used instead of dataclasses.asdict() because asdict()
+        # is recursive and we have Channel dataclasses in the args that
+        # we don't want to convert to dict
+        return {f.name: getattr(self, f.name) for f in fields(self)}
+
+    def _validate_coords(
+        self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
+    ) -> None:
+        ids = list(coords_dict.keys())
+        coords = list(coords_dict.values())
+        if not (
+            "max_atom_num" in self._optional_parameters
+            and self.max_atom_num is None
+        ):
+            self._validate_atom_number(coords, kind)
+        self._validate_atom_distance(ids, coords, kind)
+        if not (
+            "max_radial_distance" in self._optional_parameters
+            and self.max_radial_distance is None
+        ):
+            self._validate_radial_distance(ids, coords, kind)
+
+    @abstractmethod
+    def _to_dict(self) -> dict[str, Any]:
+        pass
+
+
+@dataclass(frozen=True, repr=False)
+class Device(BaseDevice):
+    r"""Specifications of a neutral-atom device.
+
+    A Device instance is immutable and must have all of its parameters defined.
+    For usage in emulations, it can be converted to a VirtualDevice through the
+    `Device.to_virtual()` method.
+
+    Attributes:
+        name: The name of the device.
+        dimensions: Whether it supports 2D or 3D arrays.
+        rybderg_level : The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states.
+        supports_slm_mask: Whether the device supports the SLM mask feature.
+        pre_calibrated_layouts: RegisterLayout instances that are already
+            available on the Device.
+    """
+    max_atom_num: int
+    max_radial_distance: int
+    pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
+        default_factory=tuple
+    )
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        for ch_id, ch_obj in self._channels:
+            if ch_obj.is_virtual():
+                _sep = "', '"
+                raise ValueError(
+                    "A 'Device' instance cannot contain virtual channels."
+                    f" For channel '{ch_id}', please define: "
+                    f"'{_sep.join(ch_obj._undefined_fields())}'"
+                )
+        for layout in self.pre_calibrated_layouts:
+            self.validate_layout(layout)
+        # Hack to override the docstring of an instance
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
+
+    @property
+    def _optional_parameters(self) -> tuple[str, ...]:
+        return ()
+
+    @property
+    def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
+        """Register layouts already calibrated on this device."""
+        return {str(layout): layout for layout in self.pre_calibrated_layouts}
+
+    def change_rydberg_level(self, ryd_lvl: int) -> None:
+        """Changes the Rydberg level used in the Device.
+
+        Args:
+            ryd_lvl: the Rydberg level to use (between 50 and 100).
+
+        Note:
+            Deprecated in version 0.8.0. Convert the device to a VirtualDevice
+            with 'Device.to_virtual()' and use
+            'VirtualDevice.change_rydberg_level()' instead.
+        """
+        warn(
+            "'Device.change_rydberg_level()' is deprecated and will be removed"
+            " in version 0.9.0.\nConvert the device to a VirtualDevice with "
+            "'Device.to_virtual()' and use "
+            "'VirtualDevice.change_rydberg_level()' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # Ignoring type because it expects a VirtualDevice
+        # Won't fix because this line will be removed
+        VirtualDevice.change_rydberg_level(self, ryd_lvl)  # type: ignore
+
+    def to_virtual(self) -> VirtualDevice:
+        """Converts the Device into a VirtualDevice."""
+        params = self._params()
+        all_params_names = set(params)
+        target_params_names = {f.name for f in fields(VirtualDevice)}
+        for param in all_params_names - target_params_names:
+            del params[param]
+        return VirtualDevice(**params)
+
+    def print_specs(self) -> None:
+        """Prints the device specifications."""
+        title = f"{self.name} Specifications"
+        header = ["-" * len(title), title, "-" * len(title)]
+        print("\n".join(header))
+        print(self._specs())
+
     def _specs(self, for_docs: bool = False) -> str:
         lines = [
             "\nRegister requirements:",
@@ -240,50 +463,59 @@ class Device:
 
         return "\n".join(lines + ch_lines)
 
-    def _validate_coords(
-        self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
-    ) -> None:
-        ids = list(coords_dict.keys())
-        coords = list(coords_dict.values())
-        max_number = self.max_atom_num * (2 if kind == "traps" else 1)
-        if len(coords) > max_number:
-            raise ValueError(
-                f"The number of {kind} ({len(coords)})"
-                " must be less than or equal to the maximum"
-                f" number of {kind} supported by this device"
-                f" ({max_number})."
-            )
-
-        if len(coords) > 1:
-            distances = pdist(coords)  # Pairwise distance between atoms
-            if np.any(
-                distances - self.min_atom_distance
-                < -(10 ** (-COORD_PRECISION))
-            ):
-                sq_dists = squareform(distances)
-                mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
-                bad_pairs = np.argwhere(
-                    np.logical_and(sq_dists < self.min_atom_distance, mask)
-                )
-                bad_qbt_pairs = [(ids[i], ids[j]) for i, j in bad_pairs]
-                raise ValueError(
-                    f"The minimal distance between {kind} in this device "
-                    f"({self.min_atom_distance} µm) is not respected for the "
-                    f"pairs: {bad_qbt_pairs}"
-                )
-
-        too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
-        if np.any(too_far):
-            raise ValueError(
-                f"All {kind} must be at most {self.max_radial_distance} μm "
-                f"away from the center of the array, which is not the case "
-                f"for: {[ids[int(i)] for i in np.where(too_far)[0]]}"
-            )
-
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
             self, _build=False, _module="pulser.devices", _name=self.name
         )
+
+
+@dataclass(frozen=True)
+class VirtualDevice(BaseDevice):
+    r"""Specifications of a virtual neutral-atom device.
+
+    A VirtualDevice can only be used for emulation and allows some parameters
+    to be left undefined. Furthermore, it optionally allows the same channel
+    to be declared multiple times in the same Sequence (when
+    `reusable_channels=True`) and allows the Rydberg level to be changed.
+
+    Attributes:
+        name: The name of the device.
+        dimensions: Whether it supports 2D or 3D arrays.
+        rybderg_level : The value of the principal quantum number :math:`n`
+            when the Rydberg level used is of the form
+            :math:`|nS_{1/2}, m_j = +1/2\rangle`.
+        max_atom_num: Maximum number of atoms supported in an array.
+        max_radial_distance: The furthest away an atom can be from the center
+            of the array (in μm).
+        min_atom_distance: The closest together two atoms can be (in μm).
+        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
+            which sets the van der Waals interaction strength between atoms in
+            different Rydberg states.
+        supports_slm_mask: Whether the device supports the SLM mask feature.
+        reusable_channels: Whether each channel can be declared multiple times
+            on the same pulse sequence.
+    """
+    min_atom_distance: float = 0
+    max_atom_num: Optional[int] = None
+    max_radial_distance: Optional[int] = None
+    supports_slm_mask: bool = True
+    reusable_channels: bool = True
+
+    @property
+    def _optional_parameters(self) -> tuple[str, ...]:
+        return ("max_atom_num", "max_radial_distance")
+
+    def change_rydberg_level(self, ryd_lvl: int) -> None:
+        """Changes the Rydberg level used in the Device.
+
+        Args:
+            ryd_lvl: the Rydberg level to use (between 50 and 100).
+        """
+        self._validate_rydberg_level(ryd_lvl)
+        object.__setattr__(self, "rydberg_level", ryd_lvl)
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, _module="pulser.devices", **self._params())
 
     def find_channel_match(
         self, channel_list: list[tuple[str, Channel]],

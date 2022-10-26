@@ -30,8 +30,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels import Channel
-from pulser.devices import MockDevice
-from pulser.devices._device_datacls import Device
+from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
 )
@@ -102,26 +101,15 @@ class Sequence:
     """
 
     def __init__(
-        self, register: Union[BaseRegister, MappableRegister], device: Device
+        self,
+        register: Union[BaseRegister, MappableRegister],
+        device: BaseDevice,
     ):
         """Initializes a new pulse sequence."""
-        if not isinstance(device, Device):
+        if not isinstance(device, BaseDevice):
             raise TypeError(
-                "'device' must be of type 'Device'. Import a valid"
-                " device from 'pulser.devices'."
+                f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
-        cond1 = device not in pulser.devices._valid_devices
-        cond2 = device not in pulser.devices._mock_devices
-        if cond1 and cond2:
-            names = [d.name for d in pulser.devices._valid_devices]
-            warns_msg = (
-                "The Sequence's device should be imported from "
-                + "'pulser.devices'. Correct operation is not ensured"
-                + " for custom devices. Choose 'MockDevice'"
-                + " or one of the following real devices:\n"
-                + "\n".join(names)
-            )
-            warnings.warn(warns_msg, stacklevel=2)
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
@@ -130,7 +118,7 @@ class Sequence:
             device.validate_register(register)
 
         self._register: Union[BaseRegister, MappableRegister] = register
-        self._device: Device = device
+        self._device: BaseDevice = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
@@ -203,7 +191,9 @@ class Sequence:
             return {
                 id: ch
                 for id, ch in self._device.channels.items()
-                if (id not in occupied_ch_ids or self._device == MockDevice)
+                if (
+                    id not in occupied_ch_ids or self._device.reusable_channels
+                )
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
