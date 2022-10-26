@@ -388,7 +388,7 @@ class Sequence:
                 stacklevel=2,
             )
             return self
-        if new_device == MockDevice:
+        if new_device.reusable_channels:
             raise NotImplementedError(
                 "Switching the device of a sequence"
                 + " to 'MockDevice' is not supported."
