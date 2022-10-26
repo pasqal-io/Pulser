@@ -43,12 +43,12 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.sampler import sample
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
+from pulser.sampler import sample
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
@@ -386,7 +386,7 @@ class Sequence:
                 guarantee the pulse sequence is left unchanged.
 
         Returns:
-            The sequence on the new device, using the matching channels of
+            The sequence on the new device, using the match channels of
             the former device declared in the sequence.
         """
         # Check if the device is new or not
@@ -403,77 +403,26 @@ class Sequence:
                 "Switching the device of a sequence"
                 + " to 'MockDevice' is not supported."
             )
+        # Channel match
+
+        channel_list = cast(list, self.declared_channels.items())
+        channel_names = {
+            item[0]: item[1].channel_id for item in self._schedule.items()
+        }
+        sample_seq = sample(self)
+        channel_match = new_device.find_channel_match(
+            channel_list,
+            channel_names,
+            sample_seq,
+            strict
+        )
+        if None in channel_match.values():
+            if channel_match["strict_error_message"] != "":
+                raise ValueError(channel_match["strict_error_message"])
+            else:
+                raise TypeError(channel_match["ch_type_er_mess"])
         # Initialize the new sequence
         new_seq = Sequence(self.register, new_device)
-
-        # Channel Matching
-
-        matched = False
-        strict_error_message = None
-        ch_type_er_mess = None
-        channel_matching = {}
-        sample_seq = sample(self)
-        alert_phase_jump = False
-        for channel_name, channel_obj in self.declared_channels.items():
-            od_ch_obj = channel_obj
-            for nd_ch_id, nd_ch_obj in new_seq.available_channels.items():
-                # Find the corresponding channel on the new device
-                # We verify the channel class then
-                # check whether the addressing Global or local
-                basis_match = od_ch_obj.basis == nd_ch_obj.basis
-                addressing_match = od_ch_obj.addressing == nd_ch_obj.addressing
-                if not (basis_match and addressing_match):
-                    matched = False
-                    channel_id = self._schedule[channel_name].channel_id
-                    ch_type_er_mess = f"No matching for channel {channel_id}."
-                    continue
-                if not strict:
-                    channel_matching[channel_name] = nd_ch_id
-                    matched = True
-                    break
-                ch_samples = sample_seq.channel_samples[channel_name]
-                ch_sample_phase = ch_samples.phase
-                # Find if there is phase change between pulses or not
-                phase_is_constant = True
-                if ch_sample_phase.size != 0:
-                    phase_is_constant = bool(
-                        np.all(ch_sample_phase == ch_sample_phase[0])
-                    )
-                # Phase_jump_time and cloc_period check
-                phase_jump_time_check = (
-                    od_ch_obj.phase_jump_time == nd_ch_obj.phase_jump_time
-                )
-                clock_period_check = (
-                    od_ch_obj.clock_period % nd_ch_obj.clock_period == 0
-                )
-                if phase_is_constant:
-                    if clock_period_check:
-                        channel_matching[channel_name] = nd_ch_id
-                        matched = True
-                        alert_phase_jump = phase_jump_time_check is False
-                        break
-                    else:
-                        matched = False
-                        strict_error_message = (
-                            "No channel with phase_jump_time"
-                            + " & clock_period match."
-                        )
-                    continue
-                if phase_jump_time_check and clock_period_check:
-                    channel_matching[channel_name] = nd_ch_id
-                    matched = True
-                    break
-                else:
-                    matched = False
-                    strict_error_message = (
-                        "No channel with phase_jump_time"
-                        + " & clock_period match."
-                    )
-            if not matched:
-                if strict_error_message is not None:
-                    raise ValueError(strict_error_message)
-                else:
-                    raise TypeError(ch_type_er_mess)
 
         for call in self._calls[1:]:
             if not (call.name == "declare_channel"):
@@ -481,8 +430,8 @@ class Sequence:
                 continue
             sw_channel_args = list(call.args)
             # Switch the old id with the correct id
-            sw_channel_args[1] = channel_matching[sw_channel_args[0]]
-            if strict and alert_phase_jump:
+            sw_channel_args[1] = channel_match[sw_channel_args[0]]
+            if strict and channel_match["alert_phase_jump"]:
                 warnings.warn(
                     "The phase_jump_time of the new device"
                     + " is different, take it in account"
