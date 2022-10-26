@@ -48,7 +48,6 @@ from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
 from pulser.sampler import sample
-from pulser.devices._mock_device import MockDevice
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
 else:  # pragma: no cover
