@@ -42,12 +42,13 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
+from pulser.sampler import sample
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser.sequence._seq_str import seq_to_str
-from pulser.sampler import sample
+
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from typing import Literal, get_args
 else:  # pragma: no cover
@@ -400,10 +401,7 @@ class Sequence:
         }
         sample_seq = sample(self)
         channel_match = new_device.find_channel_match(
-            channel_list,
-            channel_names,
-            sample_seq,
-            strict
+            channel_list, channel_names, sample_seq, strict
         )
         if None in channel_match.values():
             if channel_match["strict_error_message"] != "":

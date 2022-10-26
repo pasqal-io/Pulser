@@ -320,10 +320,11 @@ class BaseDevice(ABC):
         pass
 
     def find_channel_match(
-        self, channel_list: list[tuple[str, Channel]],
+        self,
+        channel_list: list[tuple[str, Channel]],
         channel_names: dict,
         sample_seq: SequenceSamples,
-        strict: bool
+        strict: bool,
     ) -> dict:
         """Find the match channels on the current device.
 
