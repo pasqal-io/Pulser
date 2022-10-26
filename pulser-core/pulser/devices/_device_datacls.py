@@ -319,6 +319,89 @@ class BaseDevice(ABC):
     def _to_dict(self) -> dict[str, Any]:
         pass
 
+    def find_channel_match(
+        self, channel_list: list[tuple[str, Channel]],
+        channel_names: dict,
+        sample_seq: SequenceSamples,
+        strict: bool
+    ) -> dict:
+        """Find the match channels on the current device.
+
+        Args:
+            channel_list: List of channels for which we look
+            for match channels in the current device.
+            sequence: The sequence built upon the input channels.
+            strict: Enforce a strict match between devices and channels to
+                guarantee the pulse sequence is left unchanged.
+
+        Returns:
+            A dictionary mapping the match between the input
+            channels and the channels on the current device, and
+            different errors when the match fails.
+        """
+        channel_match = {}
+        channel_match["strict_error_message"] = ""
+        channel_match["ch_type_er_mess"] = ""
+        channel_match["alert_phase_jump"] = False
+        for o_d_ch_name, o_d_ch_obj in channel_list:
+            for n_d_ch_id, n_d_ch_obj in self.channels.items():
+                # Find the corresponding channel on the new device
+                # We verify the channel class then
+                # check whether the addressing Global or local
+                basis_match = o_d_ch_obj.basis == n_d_ch_obj.basis
+                addressing_match = (
+                    o_d_ch_obj.addressing == n_d_ch_obj.addressing
+                )
+                if not (basis_match and addressing_match):
+                    channel_id = channel_names[o_d_ch_name]
+                    channel_match[o_d_ch_name] = None
+                    channel_match[
+                        "ch_type_er_mess"
+                    ] = f"No match for channel {channel_id}."
+                    continue
+                if not strict:
+                    channel_match[o_d_ch_name] = n_d_ch_id
+                    break
+                ch_samples = sample_seq.channel_samples[o_d_ch_name]
+                ch_sample_phase = ch_samples.phase
+                # Find if there is phase change between pulses or not
+                phase_is_constant = True
+                if ch_sample_phase.size != 0:
+                    phase_is_constant = bool(
+                        np.all(ch_sample_phase == ch_sample_phase[0])
+                    )
+                # Phase_jump_time and cloc_period check
+                phase_jump_time_check = (
+                    o_d_ch_obj.phase_jump_time == n_d_ch_obj.phase_jump_time
+                )
+                clock_period_check = (
+                    o_d_ch_obj.clock_period % n_d_ch_obj.clock_period == 0
+                )
+                if phase_is_constant:
+                    if clock_period_check:
+                        channel_match[o_d_ch_name] = n_d_ch_id
+                        channel_match["alert_phase_jump"] = (
+                            phase_jump_time_check is False
+                        )
+                        break
+                    else:
+                        channel_match[o_d_ch_name] = None
+                        channel_match["strict_error_message"] = (
+                            "No channel with phase_jump_time"
+                            + " & clock_period match."
+                        )
+                    continue
+                if phase_jump_time_check and clock_period_check:
+                    channel_match[o_d_ch_name] = n_d_ch_id
+                    break
+                else:
+                    channel_match[o_d_ch_name] = None
+                    channel_match["strict_error_message"] = (
+                        "No channel with phase_jump_time"
+                        + " & clock_period match."
+                    )
+        return channel_match
+
 
 @dataclass(frozen=True, repr=False)
 class Device(BaseDevice):
@@ -516,85 +599,3 @@ class VirtualDevice(BaseDevice):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, _module="pulser.devices", **self._params())
-
-    def find_channel_match(
-        self, channel_list: list[tuple[str, Channel]],
-        channel_names: dict,
-        sample_seq: SequenceSamples,
-        strict: bool
-    ) -> dict:
-        """Find the match channels on the current device.
-
-        Args:
-            channel_list: List of channels for which we look
-            for match channels in the current device.
-            sequence: The sequence built upon the input channels.
-            strict: Enforce a strict match between devices and channels to
-                guarantee the pulse sequence is left unchanged.
-        Returns:
-            A dictionary mapping the match between the input
-            channels and the channels on the current device, and
-            different errors when the match fails.
-        """
-        channel_match = {}
-        channel_match["strict_error_message"] = ""
-        channel_match["ch_type_er_mess"] = ""
-        channel_match["alert_phase_jump"] = False
-        for o_d_ch_name, o_d_ch_obj in channel_list:
-            for n_d_ch_id, n_d_ch_obj in self.channels.items():
-                # Find the corresponding channel on the new device
-                # We verify the channel class then
-                # check whether the addressing Global or local
-                basis_match = o_d_ch_obj.basis == n_d_ch_obj.basis
-                addressing_match = (
-                    o_d_ch_obj.addressing == n_d_ch_obj.addressing
-                )
-                if not (basis_match and addressing_match):
-                    channel_id = channel_names[o_d_ch_name]
-                    channel_match[o_d_ch_name] = None
-                    channel_match[
-                        "ch_type_er_mess"
-                    ] = f"No match for channel {channel_id}."
-                    continue
-                if not strict:
-                    channel_match[o_d_ch_name] = n_d_ch_id
-                    break
-                ch_samples = sample_seq.channel_samples[o_d_ch_name]
-                ch_sample_phase = ch_samples.phase
-                # Find if there is phase change between pulses or not
-                phase_is_constant = True
-                if ch_sample_phase.size != 0:
-                    phase_is_constant = bool(
-                        np.all(ch_sample_phase == ch_sample_phase[0])
-                    )
-                # Phase_jump_time and cloc_period check
-                phase_jump_time_check = (
-                    o_d_ch_obj.phase_jump_time == n_d_ch_obj.phase_jump_time
-                )
-                clock_period_check = (
-                    o_d_ch_obj.clock_period % n_d_ch_obj.clock_period == 0
-                )
-                if phase_is_constant:
-                    if clock_period_check:
-                        channel_match[o_d_ch_name] = n_d_ch_id
-                        channel_match["alert_phase_jump"] = (
-                            phase_jump_time_check is False
-                        )
-                        break
-                    else:
-                        channel_match[o_d_ch_name] = None
-                        channel_match["strict_error_message"] = (
-                            "No channel with phase_jump_time"
-                            + " & clock_period match."
-                        )
-                    continue
-                if phase_jump_time_check and clock_period_check:
-                    channel_match[o_d_ch_name] = n_d_ch_id
-                    break
-                else:
-                    channel_match[o_d_ch_name] = None
-                    channel_match["strict_error_message"] = (
-                        "No channel with phase_jump_time"
-                        + " & clock_period match."
-                    )
-        return channel_match
