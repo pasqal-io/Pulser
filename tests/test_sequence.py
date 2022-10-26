@@ -37,12 +37,8 @@ device = Chadoq2
 
 
 def test_init():
-    with pytest.raises(TypeError, match="must be of type 'Device'"):
+    with pytest.raises(TypeError, match="must be of type 'BaseDevice'"):
         Sequence(reg, Device)
-
-    fake_device = Device("fake", 2, 70, 100, 100, 1, Chadoq2._channels)
-    with pytest.warns(UserWarning, match="imported from 'pulser.devices'"):
-        Sequence(reg, fake_device)
 
     seq = Sequence(reg, device)
     assert seq.qubit_info == reg.qubits
@@ -187,6 +183,11 @@ def test_target():
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "raman_local", initial_target={"q1", "q10"})
+
+    # Test unlimited targets with Local channel when 'max_targets=None'
+    assert seq2.declared_channels["ch0"].max_targets is None
+    seq2.target(set(reg.qubit_ids) - {"q2"}, "ch0")
+
     seq2.phase_shift(1, "q2")
     with pytest.raises(ValueError, match="qubits with different phase"):
         seq2.target({"q3", "q1", "q2"}, "ch0")
@@ -615,10 +616,8 @@ def test_hardware_constraints():
             ("raman_local", raman_local),
         ),
     )
-    with pytest.warns(
-        UserWarning, match="should be imported from 'pulser.devices'"
-    ):
-        seq = Sequence(reg, ConstrainedChadoq2)
+
+    seq = Sequence(reg, ConstrainedChadoq2)
     seq.declare_channel("ch0", "rydberg_global")
     seq.declare_channel("ch1", "raman_local", initial_target="q1")
 
