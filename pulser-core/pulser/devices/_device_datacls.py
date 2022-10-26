@@ -288,7 +288,7 @@ class BaseDevice(ABC):
     def _validate_rydberg_level(self, ryd_lvl: int) -> None:
         if not isinstance(ryd_lvl, int):
             raise TypeError("Rydberg level has to be an int.")
-        if not ((49 < ryd_lvl) & (101 > ryd_lvl)):
+        if not 49 < ryd_lvl < 101:
             raise ValueError("Rydberg level should be between 50 and 100.")
 
     def _params(self) -> dict[str, Any]:

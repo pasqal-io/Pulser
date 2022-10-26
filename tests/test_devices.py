@@ -286,6 +286,8 @@ def test_convert_to_virtual():
         max_radial_distance=40,
         _channels=(("rydberg_global", Rydberg.Global(0, 10)),),
     )
-    assert Device(**params).to_virtual() == VirtualDevice(
+    assert Device(
+        pre_calibrated_layouts=(TriangularLatticeLayout(40, 2),), **params
+    ).to_virtual() == VirtualDevice(
         supports_slm_mask=False, reusable_channels=False, **params
     )
