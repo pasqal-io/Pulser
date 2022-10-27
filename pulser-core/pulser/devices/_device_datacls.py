@@ -340,10 +340,10 @@ class BaseDevice(ABC):
             channels and the channels on the current device, and
             different errors when the match fails.
         """
-        channel_match = {}
+        channel_match: dict[str, Any] = {}
+        channel_match["alert_phase_jump"] = False
         channel_match["strict_error_message"] = ""
         channel_match["ch_type_er_mess"] = ""
-        channel_match["alert_phase_jump"] = False
         for o_d_ch_name, o_d_ch_obj in channel_list:
             for n_d_ch_id, n_d_ch_obj in self.channels.items():
                 # Find the corresponding channel on the new device
