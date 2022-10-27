@@ -114,7 +114,7 @@ def serialize_abstract_sequence(
     res: dict[str, Any] = {
         "version": "1",
         "name": seq_name,
-        "register": {},
+        "register": [],
         "channels": {},
         "variables": {},
         "operations": [],
@@ -154,6 +154,9 @@ def serialize_abstract_sequence(
             data = get_all_args(("register", "device"), call)
             res["device"] = data["device"].name
             res["register"] = data["register"]
+            layout = data["register"].layout
+            if layout is not None:
+                res["layout"] = layout
         elif call.name == "declare_channel":
             data = get_all_args(
                 ("channel", "channel_id", "initial_target"), call
@@ -227,6 +230,10 @@ def serialize_abstract_sequence(
                     "basis": basis,
                 }
             )
+        elif call.name == "set_magnetic_field":
+            res["magnetic_field"] = seq.magnetic_field.tolist()
+        elif call.name == "config_slm_mask":
+            res["slm_mask_targets"] = tuple(seq._slm_mask_targets)
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

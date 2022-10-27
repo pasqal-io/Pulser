@@ -18,7 +18,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 from typing import Sequence as abcSequence
 
-from pulser.json.utils import obj_to_dict
+from pulser.json.utils import obj_to_dict, stringify_qubit_ids
 
 if TYPE_CHECKING:  # pragma: no cover
     from pulser.register.base_register import BaseRegister, QubitId
@@ -131,3 +131,6 @@ class MappableRegister:
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._layout, *self._qubit_ids)
+
+    def _to_abstract_repr(self) -> list[str]:
+        return stringify_qubit_ids(self.qubit_ids)

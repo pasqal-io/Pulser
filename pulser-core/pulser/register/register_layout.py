@@ -301,3 +301,7 @@ class RegisterLayout(RegDrawer):
             _module=__name__,
             _name="RegisterLayout",
         )
+
+    def _to_abstract_repr(self) -> dict[str, list[list[float]]]:
+        # TODO: Include the layout slug once that's added
+        return {"coordinates": self.coords.tolist()}

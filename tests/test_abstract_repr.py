@@ -33,6 +33,7 @@ from pulser.json.exceptions import AbstractReprError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import VariableItem
+from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence._call import _Call
 from pulser.waveforms import (
     BlackmanWaveform,
@@ -52,6 +53,10 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 
 
 class TestSerialization:
+    @pytest.fixture
+    def triangular_lattice(self):
+        return TriangularLatticeLayout(50, 6)
+
     @pytest.fixture(params=[Chadoq2, MockDevice])
     def sequence(self, request):
         qubits = {"control": (-2, 0), "target": (2, 0)}
@@ -363,6 +368,41 @@ class TestSerialization:
                     pass
 
             ParamObj(Foo, "bar")._to_abstract_repr()
+
+    def test_mw_sequence(self, triangular_lattice):
+        mag_field = [-10, 40, 0]
+        mask = {"q0", "q2", "q4"}
+        reg = triangular_lattice.hexagonal_register(5)
+        seq = Sequence(reg, MockDevice)
+        seq.declare_channel("mw_ch", "mw_global")
+        seq.set_magnetic_field(*mag_field)
+        seq.config_slm_mask(mask)
+        seq.add(Pulse.ConstantPulse(100, 1, 0, 2), "mw_ch")
+        seq.measure("XY")
+
+        abstract = json.loads(seq.to_abstract_repr())
+        assert abstract["register"] == [
+            {"name": str(qid), "x": c[0], "y": c[1]}
+            for qid, c in reg.qubits.items()
+        ]
+        assert abstract["layout"] == {
+            "coordinates": triangular_lattice.coords.tolist()
+        }
+        assert abstract["magnetic_field"] == mag_field
+        assert abstract["slm_mask_targets"] == list(mask)
+        assert abstract["measurement"] == "XY"
+
+    # TODO: Mappable register test
+
+    # def test_mappable_register(self, triangular_lattice):
+    #     reg = triangular_lattice.make_mappable_register(2)
+    #     seq = Sequence(reg, MockDevice)
+
+    #     abstract = json.loads(seq.to_abstract_repr())
+    #     assert abstract["layout"] == {
+    #         "coordinates": triangular_lattice.coords.tolist()
+    #     }
+    #     assert abstract["register"] == reg.qubit_ids
 
 
 def _get_serialized_seq(
