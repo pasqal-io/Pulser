@@ -133,4 +133,4 @@ class MappableRegister:
         return obj_to_dict(self, self._layout, *self._qubit_ids)
 
     def _to_abstract_repr(self) -> list[str]:
-        return stringify_qubit_ids(self.qubit_ids)
+        return [dict(qid=qid) for qid in stringify_qubit_ids(self.qubit_ids)]

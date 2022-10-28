@@ -901,6 +901,12 @@ class Sequence:
             defaults: The default values for all the variables declared in this
                 Sequence instance, indexed by the name given upon declaration.
                 Check ``Sequence.declared_variables`` to see all the variables.
+                When using a MappableRegister, the Qubit IDs to trap IDs
+                mapping must also be provided under the `qubits` keyword.
+
+        Note:
+            Providing the `defaults` is optional but, when done, it is
+            mandatory to give default values for all the expected parameters.
 
         Returns:
             str: The sequence encoded as an abstract JSON object.

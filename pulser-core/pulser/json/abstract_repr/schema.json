@@ -383,6 +383,23 @@
       ],
       "type": "object"
     },
+    "MappableQubit": {
+      "additionalProperties": false,
+      "properties": {
+        "default_trap": {
+          "description": "An optional default trap ID.",
+          "type": "number"
+        },
+        "qid": {
+          "$ref": "#/definitions/QubitId",
+          "description": "The ID of the qubit."
+        }
+      },
+      "required": [
+        "qid"
+      ],
+      "type": "object"
+    },
     "OpAlign": {
       "additionalProperties": false,
       "description": "Aligns multiple channels in time.\n\nIntroduces delays that align the provided channels with the one that finished the latest, such that the next action added to any of them will start right after the latest channel has finished.",
@@ -728,7 +745,7 @@
             "register": {
               "description": "A  list of qubit IDs.",
               "items": {
-                "$ref": "#/definitions/QubitId"
+                "$ref": "#/definitions/MappableQubit"
               },
               "type": "array"
             },
@@ -821,8 +838,7 @@
         }
       },
       "required": [
-        "type",
-        "value"
+        "type"
       ],
       "type": "object"
     },

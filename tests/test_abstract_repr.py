@@ -392,17 +392,33 @@ class TestSerialization:
         assert abstract["slm_mask_targets"] == list(mask)
         assert abstract["measurement"] == "XY"
 
-    # TODO: Mappable register test
+    def test_mappable_register(self, triangular_lattice):
+        reg = triangular_lattice.make_mappable_register(2)
+        seq = Sequence(reg, MockDevice)
+        _ = seq.declare_variable("var", dtype=int)
 
-    # def test_mappable_register(self, triangular_lattice):
-    #     reg = triangular_lattice.make_mappable_register(2)
-    #     seq = Sequence(reg, MockDevice)
+        abstract = json.loads(seq.to_abstract_repr())
+        assert abstract["layout"] == {
+            "coordinates": triangular_lattice.coords.tolist()
+        }
+        assert abstract["register"] == [{"qid": qid} for qid in reg.qubit_ids]
+        assert abstract["variables"]["var"] == dict(type="int")
 
-    #     abstract = json.loads(seq.to_abstract_repr())
-    #     assert abstract["layout"] == {
-    #         "coordinates": triangular_lattice.coords.tolist()
-    #     }
-    #     assert abstract["register"] == reg.qubit_ids
+        with pytest.raises(
+            ValueError,
+            match="The given 'defaults' produce an invalid sequence.",
+        ):
+            seq.to_abstract_repr(var=0)
+
+        with pytest.raises(TypeError, match="Did not receive values"):
+            seq.to_abstract_repr(qubits={"q1": 0})
+
+        abstract = json.loads(seq.to_abstract_repr(var=0, qubits={"q1": 0}))
+        assert abstract["register"] == [
+            {"qid": "q0"},
+            {"qid": "q1", "default_trap": 0},
+        ]
+        assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
 
 def _get_serialized_seq(

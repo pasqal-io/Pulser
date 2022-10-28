@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Optional, Sequence
 import pulser
 from pulser.json.exceptions import AbstractReprError
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pulser.register import QubitId
 
 
