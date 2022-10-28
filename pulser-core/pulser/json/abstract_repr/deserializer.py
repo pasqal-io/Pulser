@@ -44,8 +44,8 @@ from pulser.waveforms import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pulser.sequence import Sequence
     from pulser.register.base_register import BaseRegister
+    from pulser.sequence import Sequence
 
 with open(Path(__file__).parent / "schema.json") as f:
     schema = json.load(f)
@@ -249,7 +249,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     # Register
     reg: Union[BaseRegister, MappableRegister]
     qubits = obj["register"]
-    if isinstance(qubits[0], dict):
+    if {"name", "x", "y"} == qubits[0].keys():
         # Regular register
         coords = [(q["x"], q["y"]) for q in qubits]
         qubit_ids = [q["name"] for q in qubits]
@@ -263,7 +263,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
         assert (
             layout is not None
         ), "Layout must be defined in a MappableRegister."
-        reg = MappableRegister(layout, *qubits)
+        reg = MappableRegister(layout, *(d["qid"] for d in qubits))
 
     seq = pulser.Sequence(reg, device)
 
