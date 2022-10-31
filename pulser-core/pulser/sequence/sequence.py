@@ -824,12 +824,6 @@ class Sequence:
                 # Build a sequence with specific values for both variables
                 >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
         """
-        # Shallow copy with stored parametrized objects (if any)
-        # NOTE: While seq is a shallow copy, be extra careful with changes to
-        # atributes of seq pointing to mutable objects, as they might be
-        # inadvertedly done to self too
-        seq = copy.copy(self)
-
         if self.is_register_mappable():
             if qubits is None:
                 raise ValueError(
@@ -844,23 +838,30 @@ class Sequence:
             )
 
         self._cross_check_vars(vars)
+
+        # Shallow copy with stored parametrized objects (if any)
+        # NOTE: While seq is a shallow copy, be extra careful with changes to
+        # atributes of seq pointing to mutable objects, as they might be
+        # inadvertedly done to self too
+        seq = copy.copy(self)
+
+        # Eliminates the source of recursiveness errors
+        seq._reset_parametrized()
+
+        # Deepcopy the base sequence (what remains)
+        seq = copy.deepcopy(seq)
+        # NOTE: Changes to seq are now safe to do
+
         if not (self.is_parametrized() or self.is_register_mappable()):
             warnings.warn(
                 "Building a non-parametrized sequence simply returns"
-                " a shallow copy of itself.",
+                " a copy of itself.",
                 stacklevel=2,
             )
             return seq
 
         for name, value in vars.items():
             self._variables[name]._assign(value)
-
-        # Eliminates the source of recursiveness errors
-        seq._reset_parametrized()
-        # Deepcopy the base sequence (what remains)
-        seq = copy.deepcopy(seq)
-
-        # NOTE: Changes to seq are now safe to do
 
         if qubits:
             reg = cast(MappableRegister, self._register).build_register(qubits)
