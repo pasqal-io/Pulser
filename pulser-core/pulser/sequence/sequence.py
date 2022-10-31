@@ -865,9 +865,6 @@ class Sequence:
         if qubits:
             reg = cast(MappableRegister, self._register).build_register(qubits)
             self._set_register(seq, reg)
-            assert self.is_register_mappable()
-            assert not seq.is_register_mappable()
-            assert isinstance(self._calls[0].args[0], MappableRegister)
 
         for call in self._to_build_calls:
             args_ = [
