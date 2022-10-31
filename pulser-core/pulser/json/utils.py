@@ -15,9 +15,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+import warnings
+from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 import pulser
+from pulser.json.exceptions import AbstractReprError
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pulser.register import QubitId
 
 
 def obj_to_dict(
@@ -60,3 +65,22 @@ def obj_to_dict(
 
     pulser.json.supported.validate_serialization(d)
     return d
+
+
+def stringify_qubit_ids(qubit_ids: Sequence[QubitId]) -> list[str]:
+    """Converts all qubit IDs into strings and looks for conflicts."""
+    not_str = [id for id in qubit_ids if not isinstance(id, str)]
+    names = [str(id) for id in qubit_ids]
+    if not_str:
+        warnings.warn(
+            "Register serialization to an abstract representation "
+            "irreversibly converts all qubit ID's to strings.",
+            stacklevel=2,
+        )
+        if len(set(names)) < len(names):
+            collisions = [id for id in not_str if str(id) in qubit_ids]
+            raise AbstractReprError(
+                "Name collisions encountered when converting qubit IDs to "
+                f"strings for IDs: {[(id, str(id)) for id in collisions]}"
+            )
+    return names

@@ -23,6 +23,7 @@ from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.register.mappable_reg import MappableRegister
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
@@ -723,6 +724,11 @@ def test_mappable_register():
 
     seq_ = seq.build(qubits={"q2": 20, "q0": 10})
     assert seq_._last("ryd").targets == {"q2", "q0"}
+    # Check the original sequence is unchanged
+    assert seq.is_register_mappable()
+    init_call = seq._calls[0]
+    assert init_call.name == "__init__"
+    assert isinstance(init_call.args[0], MappableRegister)
     assert not seq_.is_register_mappable()
     assert seq_.register == Register(
         {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}
