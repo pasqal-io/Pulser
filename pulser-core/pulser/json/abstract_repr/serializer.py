@@ -26,7 +26,7 @@ from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.exceptions import AbstractReprError
 from pulser.register.base_register import QubitId
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
 
@@ -102,11 +102,17 @@ def serialize_abstract_sequence(
     """Serializes the Sequence into an abstract JSON object.
 
     Keyword Args:
-        seq_name: A name for the sequence. If not defined, defaults
+        seq_name (str): A name for the sequence. If not defined, defaults
             to "pulser-exported".
         defaults: The default values for all the variables declared in this
             Sequence instance, indexed by the name given upon declaration.
             Check ``Sequence.declared_variables`` to see all the variables.
+            When using a MappableRegister, the Qubit IDs to trap IDs
+            mapping must also be provided under the `qubits` keyword.
+
+    Note:
+        Providing the `defaults` is optional but, when done, it is
+        mandatory to give default values for all the expected parameters.
 
     Returns:
         str: The sequence encoded as an abstract JSON object.
@@ -114,24 +120,29 @@ def serialize_abstract_sequence(
     res: dict[str, Any] = {
         "version": "1",
         "name": seq_name,
-        "register": {},
+        "register": [],
         "channels": {},
         "variables": {},
         "operations": [],
         "measurement": None,
     }
 
-    seq._cross_check_vars(defaults)
-    try:
-        seq.build(**defaults)
-    except Exception:
-        raise ValueError("The given 'defaults' produce an invalid sequence.")
-
     for var in seq._variables.values():
-        value = var._validate_value(defaults[var.name])
-        res["variables"][var.name] = dict(
-            type=var.dtype.__name__, value=value.tolist()
-        )
+        res["variables"][var.name] = dict(type=var.dtype.__name__)
+
+    qubits_default = defaults.pop("qubits", None)
+    if defaults or qubits_default:
+        seq._cross_check_vars(defaults)
+        try:
+            seq.build(qubits=qubits_default, **defaults)
+        except Exception:
+            raise ValueError(
+                "The given 'defaults' produce an invalid sequence."
+            )
+
+        for var in seq._variables.values():
+            value = var._validate_value(defaults[var.name])
+            res["variables"][var.name]["value"] = value.tolist()
 
     def convert_targets(
         target_ids: Union[QubitId, abcSequence[QubitId]]
@@ -154,6 +165,16 @@ def serialize_abstract_sequence(
             data = get_all_args(("register", "device"), call)
             res["device"] = data["device"].name
             res["register"] = data["register"]
+            layout = data["register"].layout
+            if layout is not None:
+                res["layout"] = layout
+            if qubits_default is not None:
+                serial_reg = res["register"]._to_abstract_repr()
+                for q_dict in serial_reg:
+                    qid = q_dict["qid"]
+                    if qid in qubits_default:
+                        q_dict["default_trap"] = qubits_default[qid]
+                res["register"] = serial_reg
         elif call.name == "declare_channel":
             data = get_all_args(
                 ("channel", "channel_id", "initial_target"), call
@@ -227,6 +248,10 @@ def serialize_abstract_sequence(
                     "basis": basis,
                 }
             )
+        elif call.name == "set_magnetic_field":
+            res["magnetic_field"] = seq.magnetic_field.tolist()
+        elif call.name == "config_slm_mask":
+            res["slm_mask_targets"] = tuple(seq._slm_mask_targets)
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

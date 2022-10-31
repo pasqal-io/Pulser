@@ -23,6 +23,7 @@ from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.register.mappable_reg import MappableRegister
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
@@ -37,12 +38,8 @@ device = Chadoq2
 
 
 def test_init():
-    with pytest.raises(TypeError, match="must be of type 'Device'"):
+    with pytest.raises(TypeError, match="must be of type 'BaseDevice'"):
         Sequence(reg, Device)
-
-    fake_device = Device("fake", 2, 70, 100, 100, 1, Chadoq2._channels)
-    with pytest.warns(UserWarning, match="imported from 'pulser.devices'"):
-        Sequence(reg, fake_device)
 
     seq = Sequence(reg, device)
     assert seq.qubit_info == reg.qubits
@@ -187,6 +184,11 @@ def test_target():
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "raman_local", initial_target={"q1", "q10"})
+
+    # Test unlimited targets with Local channel when 'max_targets=None'
+    assert seq2.declared_channels["ch0"].max_targets is None
+    seq2.target(set(reg.qubit_ids) - {"q2"}, "ch0")
+
     seq2.phase_shift(1, "q2")
     with pytest.raises(ValueError, match="qubits with different phase"):
         seq2.target({"q3", "q1", "q2"}, "ch0")
@@ -588,6 +590,7 @@ def test_hardware_constraints():
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         phase_jump_time=120,  # ns
+        clock_period=4,
         mod_bandwidth=4,  # MHz
     )
 
@@ -595,7 +598,10 @@ def test_hardware_constraints():
         2 * np.pi * 20,
         2 * np.pi * 10,
         phase_jump_time=120,  # ns
+        min_retarget_interval=220,
         fixed_retarget_t=200,  # ns
+        max_targets=1,
+        clock_period=4,
         mod_bandwidth=7,  # MHz
     )
 
@@ -611,10 +617,8 @@ def test_hardware_constraints():
             ("raman_local", raman_local),
         ),
     )
-    with pytest.warns(
-        UserWarning, match="should be imported from 'pulser.devices'"
-    ):
-        seq = Sequence(reg, ConstrainedChadoq2)
+
+    seq = Sequence(reg, ConstrainedChadoq2)
     seq.declare_channel("ch0", "rydberg_global")
     seq.declare_channel("ch1", "raman_local", initial_target="q1")
 
@@ -727,6 +731,11 @@ def test_mappable_register():
 
     seq_ = seq.build(qubits={"q2": 20, "q0": 10})
     assert seq_._last("ryd").targets == {"q2", "q0"}
+    # Check the original sequence is unchanged
+    assert seq.is_register_mappable()
+    init_call = seq._calls[0]
+    assert init_call.name == "__init__"
+    assert isinstance(init_call.args[0], MappableRegister)
     assert not seq_.is_register_mappable()
     assert seq_.register == Register(
         {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}

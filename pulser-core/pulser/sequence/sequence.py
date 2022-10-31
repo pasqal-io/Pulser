@@ -30,8 +30,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels import Channel
-from pulser.devices import MockDevice
-from pulser.devices._device_datacls import Device
+from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
 )
@@ -101,26 +100,15 @@ class Sequence:
     """
 
     def __init__(
-        self, register: Union[BaseRegister, MappableRegister], device: Device
+        self,
+        register: Union[BaseRegister, MappableRegister],
+        device: BaseDevice,
     ):
         """Initializes a new pulse sequence."""
-        if not isinstance(device, Device):
+        if not isinstance(device, BaseDevice):
             raise TypeError(
-                "'device' must be of type 'Device'. Import a valid"
-                " device from 'pulser.devices'."
+                f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
-        cond1 = device not in pulser.devices._valid_devices
-        cond2 = device not in pulser.devices._mock_devices
-        if cond1 and cond2:
-            names = [d.name for d in pulser.devices._valid_devices]
-            warns_msg = (
-                "The Sequence's device should be imported from "
-                + "'pulser.devices'. Correct operation is not ensured"
-                + " for custom devices. Choose 'MockDevice'"
-                + " or one of the following real devices:\n"
-                + "\n".join(names)
-            )
-            warnings.warn(warns_msg, stacklevel=2)
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
@@ -129,7 +117,7 @@ class Sequence:
             device.validate_register(register)
 
         self._register: Union[BaseRegister, MappableRegister] = register
-        self._device: Device = device
+        self._device: BaseDevice = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
@@ -202,7 +190,9 @@ class Sequence:
             return {
                 id: ch
                 for id, ch in self._device.channels.items()
-                if (id not in occupied_ch_ids or self._device == MockDevice)
+                if (
+                    id not in occupied_ch_ids or self._device.reusable_channels
+                )
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
@@ -828,17 +818,12 @@ class Sequence:
                 # Build a sequence with specific values for both variables
                 >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
         """
-        # Shallow copy with stored parametrized objects (if any)
-        seq = copy.copy(self)
-
         if self.is_register_mappable():
             if qubits is None:
                 raise ValueError(
                     "'qubits' must be specified when the sequence is created "
                     "with a MappableRegister."
                 )
-            reg = cast(MappableRegister, self._register).build_register(qubits)
-            self._set_register(seq, reg)
 
         elif qubits is not None:
             raise ValueError(
@@ -848,22 +833,33 @@ class Sequence:
 
         self._cross_check_vars(vars)
 
-        if not self.is_parametrized():
-            if not self.is_register_mappable():
-                warnings.warn(
-                    "Building a non-parametrized sequence simply returns"
-                    " a copy of itself.",
-                    stacklevel=2,
-                )
+        # Shallow copy with stored parametrized objects (if any)
+        # NOTE: While seq is a shallow copy, be extra careful with changes to
+        # atributes of seq pointing to mutable objects, as they might be
+        # inadvertedly done to self too
+        seq = copy.copy(self)
+
+        # Eliminates the source of recursiveness errors
+        seq._reset_parametrized()
+
+        # Deepcopy the base sequence (what remains)
+        seq = copy.deepcopy(seq)
+        # NOTE: Changes to seq are now safe to do
+
+        if not (self.is_parametrized() or self.is_register_mappable()):
+            warnings.warn(
+                "Building a non-parametrized sequence simply returns"
+                " a copy of itself.",
+                stacklevel=2,
+            )
             return seq
 
         for name, value in vars.items():
             self._variables[name]._assign(value)
 
-        # Eliminates the source of recursiveness errors
-        seq._reset_parametrized()
-        # Deepcopy the base sequence (what remains)
-        seq = copy.deepcopy(seq)
+        if qubits:
+            reg = cast(MappableRegister, self._register).build_register(qubits)
+            self._set_register(seq, reg)
 
         for call in self._to_build_calls:
             args_ = [
@@ -905,6 +901,12 @@ class Sequence:
             defaults: The default values for all the variables declared in this
                 Sequence instance, indexed by the name given upon declaration.
                 Check ``Sequence.declared_variables`` to see all the variables.
+                When using a MappableRegister, the Qubit IDs to trap IDs
+                mapping must also be provided under the `qubits` keyword.
+
+        Note:
+            Providing the `defaults` is optional but, when done, it is
+            mandatory to give default values for all the expected parameters.
 
         Returns:
             str: The sequence encoded as an abstract JSON object.
@@ -1067,7 +1069,10 @@ class Sequence:
 
         if channel_obj.addressing != "Local":
             raise ValueError("Can only choose target of 'Local' channels.")
-        elif len(qubits_set) > cast(int, channel_obj.max_targets):
+        elif (
+            channel_obj.max_targets is not None
+            and len(qubits_set) > channel_obj.max_targets
+        ):
             raise ValueError(
                 f"This channel can target at most {channel_obj.max_targets} "
                 "qubits at a time."
@@ -1175,8 +1180,8 @@ class Sequence:
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
-        self._device.validate_pulse(pulse, self._schedule[channel].channel_id)
         channel_obj = self._schedule[channel].channel_obj
+        channel_obj.validate_pulse(pulse)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:

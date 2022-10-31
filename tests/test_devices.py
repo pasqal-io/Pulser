@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
 
@@ -19,13 +20,105 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser.devices import Chadoq2, Device
+from pulser.channels import Rydberg
+from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
 
 
-def test_init():
+@pytest.fixture
+def test_params():
+    return dict(
+        name="Test",
+        dimensions=2,
+        rydberg_level=70,
+        _channels=(),
+        min_atom_distance=1,
+        max_atom_num=None,
+        max_radial_distance=None,
+    )
+
+
+@pytest.mark.parametrize(
+    "param, value, msg",
+    [
+        ("name", 1, None),
+        ("interaction_coeff_xy", 1000, None),
+        ("supports_slm_mask", 0, None),
+        ("reusable_channels", "true", None),
+        ("max_atom_num", 1e9, None),
+        ("max_radial_distance", 100.4, None),
+        ("rydberg_level", 70.0, "Rydberg level has to be an int."),
+        (
+            "_channels",
+            ((1, Rydberg.Global(None, None)),),
+            "All channel IDs must be of type 'str', not 'int'",
+        ),
+        (
+            "_channels",
+            (("ch1", "Rydberg.Global(None, None)"),),
+            "All channels must be of type 'Channel', not 'str'",
+        ),
+    ],
+)
+def test_post_init_type_checks(test_params, param, value, msg):
+    test_params[param] = value
+    error_msg = msg or f"{param} must be of type"
+    with pytest.raises(TypeError, match=error_msg):
+        VirtualDevice(**test_params)
+
+
+@pytest.mark.parametrize(
+    "param, value, msg",
+    [
+        (
+            "dimensions",
+            1,
+            re.escape("'dimensions' must be one of (2, 3), not 1."),
+        ),
+        ("rydberg_level", 49, "Rydberg level should be between 50 and 100."),
+        ("rydberg_level", 101, "Rydberg level should be between 50 and 100."),
+        (
+            "min_atom_distance",
+            -0.001,
+            "'min_atom_distance' must be greater than or equal to zero",
+        ),
+        ("max_atom_num", 0, None),
+        ("max_radial_distance", 0, None),
+    ],
+)
+def test_post_init_value_errors(test_params, param, value, msg):
+    test_params[param] = value
+    error_msg = msg or f"When defined, '{param}' must be greater than zero"
+    with pytest.raises(ValueError, match=error_msg):
+        VirtualDevice(**test_params)
+
+
+potential_params = ("max_atom_num", "max_radial_distance")
+
+
+@pytest.mark.parametrize("none_param", potential_params)
+def test_optional_parameters(test_params, none_param):
+    test_params.update({p: 10 for p in potential_params})
+    test_params[none_param] = None
+    with pytest.raises(
+        TypeError,
+        match=f"'{none_param}' can't be None in a 'Device' instance.",
+    ):
+        Device(**test_params)
+    VirtualDevice(**test_params)  # Valid as None on a VirtualDevice
+
+
+def test_tuple_conversion(test_params):
+    test_params["_channels"] = (
+        ["rydberg_global", Rydberg.Global(None, None)],
+    )
+    dev = VirtualDevice(**test_params)
+    assert dev._channels == (("rydberg_global", Rydberg.Global(None, None)),)
+
+
+def test_valid_devices():
     for dev in pulser.devices._valid_devices:
         assert dev.dimensions in (2, 3)
         assert dev.rydberg_level > 49
@@ -45,29 +138,6 @@ def test_init():
     assert Chadoq2.__repr__() == "Chadoq2"
 
 
-def test_mock():
-    dev = pulser.devices.MockDevice
-    assert dev.dimensions == 3
-    assert dev.rydberg_level > 49
-    assert dev.rydberg_level < 101
-    assert dev.max_atom_num > 1000
-    assert dev.min_atom_distance <= 1
-    assert dev.interaction_coeff > 0
-    assert dev.interaction_coeff_xy == 3700
-    names = ["Rydberg", "Raman", "Microwave"]
-    basis = ["ground-rydberg", "digital", "XY"]
-    for ch in dev.channels.values():
-        assert ch.name in names
-        assert ch.basis == basis[names.index(ch.name)]
-        assert ch.addressing in ["Local", "Global"]
-        assert ch.max_abs_detuning >= 1000
-        assert ch.max_amp >= 200
-        if ch.addressing == "Local":
-            assert ch.min_retarget_interval == 0
-            assert ch.max_targets > 1
-            assert ch.max_targets == int(ch.max_targets)
-
-
 def test_change_rydberg_level():
     dev = pulser.devices.MockDevice
     dev.change_rydberg_level(60)
@@ -80,6 +150,13 @@ def test_change_rydberg_level():
     ):
         dev.change_rydberg_level(110)
     dev.change_rydberg_level(70)
+
+    with pytest.warns(DeprecationWarning):
+        assert pulser.__version__ < "0.9"
+        og_ryd_level = Chadoq2.rydberg_level
+        Chadoq2.change_rydberg_level(60)
+        assert Chadoq2.rydberg_level == 60
+        Chadoq2.change_rydberg_level(og_ryd_level)
 
 
 def test_rydberg_blockade():
@@ -181,3 +258,36 @@ def test_calibrated_layouts():
         "TriangularLatticeLayout(100, 6µm)",
         "TriangularLatticeLayout(200, 5µm)",
     }
+
+
+def test_device_with_virtual_channel():
+    with pytest.raises(
+        ValueError,
+        match="A 'Device' instance cannot contain virtual channels.",
+    ):
+        Device(
+            name="TestDevice",
+            dimensions=2,
+            rydberg_level=70,
+            max_atom_num=100,
+            max_radial_distance=50,
+            min_atom_distance=4,
+            _channels=(("rydberg_global", Rydberg.Global(None, 10)),),
+        )
+
+
+def test_convert_to_virtual():
+    params = dict(
+        name="Test",
+        dimensions=2,
+        rydberg_level=80,
+        min_atom_distance=1,
+        max_atom_num=20,
+        max_radial_distance=40,
+        _channels=(("rydberg_global", Rydberg.Global(0, 10)),),
+    )
+    assert Device(
+        pre_calibrated_layouts=(TriangularLatticeLayout(40, 2),), **params
+    ).to_virtual() == VirtualDevice(
+        supports_slm_mask=False, reusable_channels=False, **params
+    )

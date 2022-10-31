@@ -29,7 +29,9 @@ from pulser.json.abstract_repr.signatures import (
 from pulser.json.exceptions import AbstractReprError
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
+from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register import Register
+from pulser.register.register_layout import RegisterLayout
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
@@ -41,7 +43,8 @@ from pulser.waveforms import (
     Waveform,
 )
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
+    from pulser.register.base_register import BaseRegister
     from pulser.sequence import Sequence
 
 with open(Path(__file__).parent / "schema.json") as f:
@@ -236,15 +239,45 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     device_name = obj["device"]
     device = getattr(devices, device_name)
 
+    # Register Layout
+    layout = (
+        RegisterLayout(obj["layout"]["coordinates"])
+        if "layout" in obj
+        else None
+    )
+
     # Register
+    reg: Union[BaseRegister, MappableRegister]
     qubits = obj["register"]
-    reg = Register({q["name"]: (q["x"], q["y"]) for q in qubits})
+    if {"name", "x", "y"} == qubits[0].keys():
+        # Regular register
+        coords = [(q["x"], q["y"]) for q in qubits]
+        qubit_ids = [q["name"] for q in qubits]
+        if layout:
+            trap_ids = layout.get_traps_from_coordinates(*coords)
+            reg = layout.define_register(*trap_ids, qubit_ids=qubit_ids)
+        else:
+            reg = Register(dict(zip(qubit_ids, coords)))
+    else:
+        # Mappable register
+        assert (
+            layout is not None
+        ), "Layout must be defined in a MappableRegister."
+        reg = MappableRegister(layout, *(d["qid"] for d in qubits))
 
     seq = pulser.Sequence(reg, device)
 
     # Channels
     for name, channel_id in obj["channels"].items():
         seq.declare_channel(name, channel_id)
+
+    # Magnetic field
+    if "magnetic_field" in obj:
+        seq.set_magnetic_field(*obj["magnetic_field"])
+
+    # SLM Mask
+    if "slm_mask_targets" in obj:
+        seq.config_slm_mask(obj["slm_mask_targets"])
 
     # Variables
     vars = {}

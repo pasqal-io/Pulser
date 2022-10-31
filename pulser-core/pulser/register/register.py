@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping
 from typing import Any, Optional, Union
 
@@ -25,7 +24,7 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.register._patterns as patterns
-from pulser.json.exceptions import AbstractReprError
+from pulser.json.utils import stringify_qubit_ids
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 
@@ -210,7 +209,7 @@ class Register(BaseRegister, RegDrawer):
     def max_connectivity(
         cls,
         n_qubits: int,
-        device: pulser.devices._device_datacls.Device,
+        device: pulser.devices._device_datacls.BaseDevice,
         spacing: float = None,
         prefix: str = None,
     ) -> Register:
@@ -234,11 +233,8 @@ class Register(BaseRegister, RegDrawer):
             A register with qubits placed for maximum connectivity.
         """
         # Check device
-        if not isinstance(device, pulser.devices._device_datacls.Device):
-            raise TypeError(
-                "'device' must be of type 'Device'. Import a valid"
-                " device from 'pulser.devices'."
-            )
+        if not isinstance(device, pulser.devices._device_datacls.BaseDevice):
+            raise TypeError("'device' must be of type 'BaseDevice'.")
 
         # Check number of qubits (1 or above)
         if n_qubits < 1:
@@ -248,7 +244,7 @@ class Register(BaseRegister, RegDrawer):
             )
 
         # Check number of qubits (less than the max number of atoms)
-        if n_qubits > device.max_atom_num:
+        if device.max_atom_num is not None and n_qubits > device.max_atom_num:
             raise ValueError(
                 f"The number of qubits (`n_qubits` = {n_qubits})"
                 " must be less than or equal to the maximum"
@@ -256,6 +252,11 @@ class Register(BaseRegister, RegDrawer):
                 f" ({device.max_atom_num})."
             )
 
+        if not device.min_atom_distance > 0.0:
+            raise NotImplementedError(
+                "Maximum connectivity layouts are not well defined for a "
+                f"device with 'min_atom_distance={device.min_atom_distance}'."
+            )
         # Default spacing or check minimal distance
         if spacing is None:
             spacing = device.min_atom_distance
@@ -350,20 +351,7 @@ class Register(BaseRegister, RegDrawer):
         return super()._to_dict()
 
     def _to_abstract_repr(self) -> list[dict[str, Union[QubitId, float]]]:
-        not_str = [id for id in self._ids if not isinstance(id, str)]
-        names = [str(id) for id in self._ids]
-        if not_str:
-            warnings.warn(
-                "Register serialization to an abstract representation "
-                "irreversibly converts all qubit ID's to strings.",
-                stacklevel=7,
-            )
-            if len(set(names)) < len(names):
-                collisions = [id for id in not_str if str(id) in self._ids]
-                raise AbstractReprError(
-                    "Name collisions encountered when converting qubit IDs to "
-                    f"strings for IDs: {[(id, str(id)) for id in collisions]}"
-                )
+        names = stringify_qubit_ids(self._ids)
         return [
             {"name": name, "x": x, "y": y}
             for name, (x, y) in zip(names, self._coords)
