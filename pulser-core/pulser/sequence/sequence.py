@@ -818,17 +818,12 @@ class Sequence:
                 # Build a sequence with specific values for both variables
                 >>> seq1 = seq.build(x=0.5, y=[1, 2, 3])
         """
-        # Shallow copy with stored parametrized objects (if any)
-        seq = copy.copy(self)
-
         if self.is_register_mappable():
             if qubits is None:
                 raise ValueError(
                     "'qubits' must be specified when the sequence is created "
                     "with a MappableRegister."
                 )
-            reg = cast(MappableRegister, self._register).build_register(qubits)
-            self._set_register(seq, reg)
 
         elif qubits is not None:
             raise ValueError(
@@ -838,22 +833,33 @@ class Sequence:
 
         self._cross_check_vars(vars)
 
-        if not self.is_parametrized():
-            if not self.is_register_mappable():
-                warnings.warn(
-                    "Building a non-parametrized sequence simply returns"
-                    " a copy of itself.",
-                    stacklevel=2,
-                )
+        # Shallow copy with stored parametrized objects (if any)
+        # NOTE: While seq is a shallow copy, be extra careful with changes to
+        # atributes of seq pointing to mutable objects, as they might be
+        # inadvertedly done to self too
+        seq = copy.copy(self)
+
+        # Eliminates the source of recursiveness errors
+        seq._reset_parametrized()
+
+        # Deepcopy the base sequence (what remains)
+        seq = copy.deepcopy(seq)
+        # NOTE: Changes to seq are now safe to do
+
+        if not (self.is_parametrized() or self.is_register_mappable()):
+            warnings.warn(
+                "Building a non-parametrized sequence simply returns"
+                " a copy of itself.",
+                stacklevel=2,
+            )
             return seq
 
         for name, value in vars.items():
             self._variables[name]._assign(value)
 
-        # Eliminates the source of recursiveness errors
-        seq._reset_parametrized()
-        # Deepcopy the base sequence (what remains)
-        seq = copy.deepcopy(seq)
+        if qubits:
+            reg = cast(MappableRegister, self._register).build_register(qubits)
+            self._set_register(seq, reg)
 
         for call in self._to_build_calls:
             args_ = [
@@ -895,6 +901,12 @@ class Sequence:
             defaults: The default values for all the variables declared in this
                 Sequence instance, indexed by the name given upon declaration.
                 Check ``Sequence.declared_variables`` to see all the variables.
+                When using a MappableRegister, the Qubit IDs to trap IDs
+                mapping must also be provided under the `qubits` keyword.
+
+        Note:
+            Providing the `defaults` is optional but, when done, it is
+            mandatory to give default values for all the expected parameters.
 
         Returns:
             str: The sequence encoded as an abstract JSON object.
