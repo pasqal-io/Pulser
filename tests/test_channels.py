@@ -109,7 +109,7 @@ def test_device_channels():
             assert id == dev._channels[i][0]
             assert isinstance(id, str)
             assert ch == dev._channels[i][1]
-            assert isinstance(ch, pulser.channels.Channel)
+            assert isinstance(ch, pulser.channels.channels.Channel)
             assert ch.name in ["Rydberg", "Raman"]
             assert ch.basis in ["digital", "ground-rydberg"]
             assert ch.addressing in ["Local", "Global"]

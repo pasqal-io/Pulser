@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""The various hardware channel types."""
+"""Defines the Channel ABC and its subclasses."""
 
 from __future__ import annotations
 
@@ -475,7 +475,7 @@ class Channel(ABC):
         return self.name + config
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, **asdict(self))
+        return obj_to_dict(self, _module="pulser.channels", **asdict(self))
 
 
 @dataclass(init=True, repr=False, frozen=True)

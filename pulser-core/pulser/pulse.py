@@ -30,7 +30,7 @@ from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import ConstantWaveform, Waveform
 
 if TYPE_CHECKING:
-    from pulser.channels import Channel
+    from pulser.channels.channels import Channel
 
 
 @dataclass(init=False, repr=False, frozen=True)

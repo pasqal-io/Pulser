@@ -7,7 +7,7 @@ from typing import Optional
 
 import numpy as np
 
-from pulser.channels import Channel
+from pulser.channels.channels import Channel
 from pulser.register import QubitId
 
 """Literal constants for addressing."""
