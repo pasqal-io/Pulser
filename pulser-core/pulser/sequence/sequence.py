@@ -394,10 +394,8 @@ class Sequence:
                 + " to 'MockDevice' is not supported."
             )
         # Channel match
-
         channel_list = cast(list, self.declared_channels.items())
         sample_seq = sample(self)
-
         channel_match: dict[str, Any] = {}
         channel_match["alert_phase_jump"] = False
         channel_match["strict_error_message"] = ""
@@ -458,9 +456,7 @@ class Sequence:
                         "No channel with phase_jump_time"
                         + " & clock_period match."
                     )
-        # channel_match = new_device.find_channel_match(
-        #     channel_list, sample_seq, strict
-        # )
+
         if None in channel_match.values():
             if channel_match["strict_error_message"] != "":
                 raise ValueError(channel_match["strict_error_message"])
