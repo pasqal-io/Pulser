@@ -57,9 +57,11 @@ class RegisterLayout(RegDrawer):
 
     Args:
         trap_coordinates: The trap coordinates defining the layout.
+        slug: An optional identifier for the layout.
     """
 
     trap_coordinates: ArrayLike
+    slug: Optional[str] = None
 
     def __post_init__(self) -> None:
         shape = np.array(self.trap_coordinates).shape
@@ -293,6 +295,9 @@ class RegisterLayout(RegDrawer):
     def __repr__(self) -> str:
         return f"RegisterLayout_{self._safe_hash().hex()}"
 
+    def __str__(self) -> str:
+        return self.slug or self.__repr__()
+
     def _to_dict(self) -> dict[str, Any]:
         # Allows for serialization of subclasses without a special _to_dict()
         return obj_to_dict(
@@ -301,3 +306,7 @@ class RegisterLayout(RegDrawer):
             _module=__name__,
             _name="RegisterLayout",
         )
+
+    def _to_abstract_repr(self) -> dict[str, list[list[float]]]:
+        # TODO: Include the layout slug once that's added
+        return {"coordinates": self.coords.tolist()}
