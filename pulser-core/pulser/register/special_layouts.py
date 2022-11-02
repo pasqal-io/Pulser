@@ -37,8 +37,13 @@ class SquareLatticeLayout(RegisterLayout):
         self._rows = int(rows)
         self._columns = int(columns)
         self._spacing = int(spacing)
+        slug = (
+            f"SquareLatticeLayout({self._rows}x{self._columns}, "
+            f"{self._spacing}µm)"
+        )
         super().__init__(
-            patterns.square_rect(self._rows, self._columns) * self._spacing
+            patterns.square_rect(self._rows, self._columns) * self._spacing,
+            slug=slug,
         )
 
     def square_register(self, side: int, prefix: str = "q") -> Register:
@@ -90,12 +95,6 @@ class SquareLatticeLayout(RegisterLayout):
             Register, self.define_register(*trap_ids, qubit_ids=qubit_ids)
         )
 
-    def __str__(self) -> str:
-        return (
-            f"SquareLatticeLayout({self._rows}x{self._columns}, "
-            f"{self._spacing}µm)"
-        )
-
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._rows, self._columns, self._spacing)
 
@@ -111,7 +110,10 @@ class TriangularLatticeLayout(RegisterLayout):
     def __init__(self, n_traps: int, spacing: int):
         """Initializes a TriangularLatticeLayout."""
         self._spacing = int(spacing)
-        super().__init__(patterns.triangular_hex(int(n_traps)) * self._spacing)
+        slug = f"TriangularLatticeLayout({int(n_traps)}, {self._spacing}µm)"
+        super().__init__(
+            patterns.triangular_hex(int(n_traps)) * self._spacing, slug=slug
+        )
 
     def hexagonal_register(self, n_atoms: int, prefix: str = "q") -> Register:
         """Defines a register with an hexagonal shape.
@@ -163,12 +165,6 @@ class TriangularLatticeLayout(RegisterLayout):
         qubit_ids = [f"{prefix}{i}" for i in range(len(trap_ids))]
         return cast(
             Register, self.define_register(*trap_ids, qubit_ids=qubit_ids)
-        )
-
-    def __str__(self) -> str:
-        return (
-            f"TriangularLatticeLayout({self.number_of_traps}, "
-            f"{self._spacing}µm)"
         )
 
     def _to_dict(self) -> dict[str, Any]:

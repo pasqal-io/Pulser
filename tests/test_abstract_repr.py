@@ -33,6 +33,8 @@ from pulser.json.exceptions import AbstractReprError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import VariableItem
+from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence._call import _Call
 from pulser.waveforms import (
     BlackmanWaveform,
@@ -52,6 +54,10 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 
 
 class TestSerialization:
+    @pytest.fixture
+    def triangular_lattice(self):
+        return TriangularLatticeLayout(50, 6)
+
     @pytest.fixture(params=[Chadoq2, MockDevice])
     def sequence(self, request):
         qubits = {"control": (-2, 0), "target": (2, 0)}
@@ -364,13 +370,65 @@ class TestSerialization:
 
             ParamObj(Foo, "bar")._to_abstract_repr()
 
+    def test_mw_sequence(self, triangular_lattice):
+        mag_field = [-10, 40, 0]
+        mask = {"q0", "q2", "q4"}
+        reg = triangular_lattice.hexagonal_register(5)
+        seq = Sequence(reg, MockDevice)
+        seq.declare_channel("mw_ch", "mw_global")
+        seq.set_magnetic_field(*mag_field)
+        seq.config_slm_mask(mask)
+        seq.add(Pulse.ConstantPulse(100, 1, 0, 2), "mw_ch")
+        seq.measure("XY")
+
+        abstract = json.loads(seq.to_abstract_repr())
+        assert abstract["register"] == [
+            {"name": str(qid), "x": c[0], "y": c[1]}
+            for qid, c in reg.qubits.items()
+        ]
+        assert abstract["layout"] == {
+            "coordinates": triangular_lattice.coords.tolist()
+        }
+        assert abstract["magnetic_field"] == mag_field
+        assert abstract["slm_mask_targets"] == list(mask)
+        assert abstract["measurement"] == "XY"
+
+    def test_mappable_register(self, triangular_lattice):
+        reg = triangular_lattice.make_mappable_register(2)
+        seq = Sequence(reg, MockDevice)
+        _ = seq.declare_variable("var", dtype=int)
+
+        abstract = json.loads(seq.to_abstract_repr())
+        assert abstract["layout"] == {
+            "coordinates": triangular_lattice.coords.tolist()
+        }
+        assert abstract["register"] == [{"qid": qid} for qid in reg.qubit_ids]
+        assert abstract["variables"]["var"] == dict(type="int")
+
+        with pytest.raises(
+            ValueError,
+            match="The given 'defaults' produce an invalid sequence.",
+        ):
+            seq.to_abstract_repr(var=0)
+
+        with pytest.raises(TypeError, match="Did not receive values"):
+            seq.to_abstract_repr(qubits={"q1": 0})
+
+        abstract = json.loads(seq.to_abstract_repr(var=0, qubits={"q1": 0}))
+        assert abstract["register"] == [
+            {"qid": "q0"},
+            {"qid": "q1", "default_trap": 0},
+        ]
+        assert abstract["variables"]["var"] == dict(type="int", value=[0])
+
 
 def _get_serialized_seq(
     operations: list[dict] = None,
     variables: dict[str, dict] = None,
+    **override_kwargs: Any,
 ) -> dict[str, Any]:
 
-    return {
+    seq_dict = {
         "version": "1",
         "name": "John Doe",
         "device": "Chadoq2",
@@ -384,6 +442,8 @@ def _get_serialized_seq(
         "variables": variables or {},
         "measurement": None,
     }
+    seq_dict.update(override_kwargs)
+    return seq_dict
 
 
 def _check_roundtrip(serialized_seq: dict[str, Any]):
@@ -405,8 +465,21 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
                         op[wf] = reconstructed_wf._to_abstract_repr()
 
     seq = Sequence.from_abstract_repr(json.dumps(s))
-    defaults = {name: var["value"] for name, var in s["variables"].items()}
-    rs = seq.to_abstract_repr(seq_name=serialized_seq["name"], **defaults)
+    defaults = {
+        name: var["value"]
+        for name, var in s["variables"].items()
+        if "value" in var
+    }
+    qubits_default = {
+        q["qid"]: q["default_trap"]
+        for q in s["register"]
+        if "default_trap" in q
+    }
+    rs = seq.to_abstract_repr(
+        seq_name=serialized_seq["name"],
+        qubits=qubits_default or None,
+        **defaults,
+    )
     assert s == json.loads(rs)
 
 
@@ -437,8 +510,18 @@ class TestDeserialization:
         for name, chan_id in s["channels"].items():
             seq.declared_channels[name] == chan_id
 
-    def test_deserialize_register(self):
-        s = _get_serialized_seq()
+    _coords = np.array([[0.0, 2.0], [-2.0, 9.0], [12.0, 0.0]])
+    _coords = np.concatenate((_coords, -_coords))
+
+    @pytest.mark.parametrize("layout_coords", [None, _coords])
+    def test_deserialize_register(self, layout_coords):
+        if layout_coords is not None:
+            reg_layout = RegisterLayout(layout_coords)
+            s = _get_serialized_seq(
+                layout={"coordinates": reg_layout.coords.tolist()}
+            )
+        else:
+            s = _get_serialized_seq()
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
@@ -448,6 +531,48 @@ class TestDeserialization:
             assert q["name"] in seq.qubit_info
             assert seq.qubit_info[q["name"]][0] == q["x"]
             assert seq.qubit_info[q["name"]][1] == q["y"]
+
+        # Check layout
+        if layout_coords is not None:
+            assert seq.register.layout == reg_layout
+            q_coords = list(seq.qubit_info.values())
+            assert seq.register._layout_info.trap_ids == tuple(
+                reg_layout.get_traps_from_coordinates(*q_coords)
+            )
+        else:
+            assert "layout" not in s
+            assert seq.register.layout is None
+
+    def test_deserialize_mappable_register(self):
+        layout_coords = (5 * np.arange(8)).reshape((4, 2))
+        s = _get_serialized_seq(
+            register=[{"qid": "q0"}, {"qid": "q1", "default_trap": 2}],
+            layout={"coordinates": layout_coords.tolist()},
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        assert seq.is_register_mappable()
+        qids = [q["qid"] for q in s["register"]]
+        assert seq._register.qubit_ids == tuple(qids)
+        assert seq._register.layout == RegisterLayout(layout_coords)
+
+    def test_deserialize_seq_with_slm_mask(self):
+        s = _get_serialized_seq(slm_mask_targets=["q0"])
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert seq._slm_mask_targets == {"q0"}
+
+    def test_deserialize_seq_with_mag_field(self):
+        mag_field = [10.0, -43.2, 0.0]
+        s = _get_serialized_seq(
+            magnetic_field=mag_field,
+            device="MockDevice",
+            channels={"mw": "mw_global"},
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert np.all(seq.magnetic_field == mag_field)
 
     def test_deserialize_variables(self):
         s = _get_serialized_seq(
