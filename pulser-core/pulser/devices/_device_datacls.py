@@ -322,7 +322,6 @@ class BaseDevice(ABC):
     def find_channel_match(
         self,
         channel_list: list[tuple[str, Channel]],
-        channel_names: dict,
         sample_seq: SequenceSamples,
         strict: bool,
     ) -> dict:
@@ -331,7 +330,7 @@ class BaseDevice(ABC):
         Args:
             channel_list: List of channels for which we look
             for match channels in the current device.
-            sequence: The sequence built upon the input channels.
+            sample_seq: Sample of the given sequence.
             strict: Enforce a strict match between devices and channels to
                 guarantee the pulse sequence is left unchanged.
 
@@ -354,11 +353,10 @@ class BaseDevice(ABC):
                     o_d_ch_obj.addressing == n_d_ch_obj.addressing
                 )
                 if not (basis_match and addressing_match):
-                    channel_id = channel_names[o_d_ch_name]
                     channel_match[o_d_ch_name] = None
                     channel_match[
                         "ch_type_er_mess"
-                    ] = f"No match for channel {channel_id}."
+                    ] = f"No match for channel {o_d_ch_name}."
                     continue
                 if not strict:
                     channel_match[o_d_ch_name] = n_d_ch_id

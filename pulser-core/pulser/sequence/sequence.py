@@ -396,12 +396,9 @@ class Sequence:
         # Channel match
 
         channel_list = cast(list, self.declared_channels.items())
-        channel_names = {
-            item[0]: item[1].channel_id for item in self._schedule.items()
-        }
         sample_seq = sample(self)
         channel_match = new_device.find_channel_match(
-            channel_list, channel_names, sample_seq, strict
+            channel_list, sample_seq, strict
         )
         if None in channel_match.values():
             if channel_match["strict_error_message"] != "":

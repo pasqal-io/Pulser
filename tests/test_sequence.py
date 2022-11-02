@@ -267,14 +267,14 @@ def test_switch_device():
     seq = Sequence(reg, test_device1)
     seq.declare_channel("digital", "raman_global", "q1")
 
-    with pytest.raises(TypeError, match="No match for channel raman_global."):
+    with pytest.raises(TypeError, match="No match for channel digital."):
         seq.switch_device(IroiseMVP)
 
     # Different addressing channels
     seq = Sequence(reg, test_device1)
     seq.declare_channel("ising", "raman_global")
 
-    with pytest.raises(TypeError, match="No match for channel raman_global."):
+    with pytest.raises(TypeError, match="No match for channel ising."):
         seq.switch_device(test_device2)
 
     seq = Sequence(reg, MockDevice)
@@ -286,7 +286,7 @@ def test_switch_device():
     seq = Sequence(reg, test_device2)
     seq.declare_channel("ising", "rmn_local")
 
-    with pytest.raises(TypeError, match="No match for channel rmn_local."):
+    with pytest.raises(TypeError, match="No match for channel ising."):
         seq.switch_device(IroiseMVP)
 
     # Strict: Jump_phase_time & CLock-period criteria
