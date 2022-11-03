@@ -400,7 +400,7 @@ class Sequence:
         channel_match["alert_phase_jump"] = False
         channel_match["strict_error_message"] = ""
         channel_match["ch_type_er_mess"] = ""
-        for o_d_ch_name, o_d_ch_obj in channel_list:
+        for o_d_ch_name, o_d_ch_obj in self.declared_channels.items():
             for n_d_ch_id, n_d_ch_obj in new_device.channels.items():
                 # Find the corresponding channel on the new device
                 # We verify the channel class then
