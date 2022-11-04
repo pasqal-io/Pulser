@@ -38,8 +38,13 @@ def seq_to_str(sequence: Sequence) -> str:
                 full += delay_line.format(ts.ti, ts.tf)
                 continue
 
-            tgts = list(ts.targets)
-            tgt_txt = ", ".join([str(t) for t in tgts])
+            try:
+                tgts = sorted(ts.targets)
+            except TypeError:
+                raise NotImplementedError(
+                    "Can't print sequence with qubit IDs of different types."
+                )
+            tgt_txt = ", ".join(map(str, tgts))
             if isinstance(ts.type, Pulse):
                 full += pulse_line.format(ts.ti, ts.tf, ts.type, tgt_txt)
             elif ts.type == "target":
