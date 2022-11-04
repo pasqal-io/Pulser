@@ -589,7 +589,6 @@ def test_hardware_constraints():
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
-        phase_jump_time=120,  # ns
         clock_period=4,
         mod_bandwidth=4,  # MHz
     )
@@ -597,7 +596,6 @@ def test_hardware_constraints():
     raman_local = Raman.Local(
         2 * np.pi * 20,
         2 * np.pi * 10,
-        phase_jump_time=120,  # ns
         min_retarget_interval=220,
         fixed_retarget_t=200,  # ns
         max_targets=1,

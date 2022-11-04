@@ -64,8 +64,6 @@ class Channel(ABC):
         max_abs_detuning: Maximum possible detuning (in rad/µs), in absolute
             value.
         max_amp: Maximum pulse amplitude (in rad/µs).
-        phase_jump_time: Time taken to change the phase between consecutive
-            pulses (in ns).
         min_retarget_interval: Minimum time required between the ends of two
             target instructions (in ns).
         fixed_retarget_t: Time taken to change the target (in ns).
@@ -86,7 +84,6 @@ class Channel(ABC):
     addressing: ADDRESSING
     max_abs_detuning: Optional[float]
     max_amp: Optional[float]
-    phase_jump_time: int = 0
     min_retarget_interval: Optional[int] = None
     fixed_retarget_t: Optional[int] = None
     max_targets: Optional[int] = None
@@ -128,7 +125,6 @@ class Channel(ABC):
         parameters = [
             "max_amp",
             "max_abs_detuning",
-            "phase_jump_time",
             "clock_period",
             "min_duration",
             "max_duration",
@@ -136,7 +132,6 @@ class Channel(ABC):
         ]
         non_negative = [
             "max_abs_detuning",
-            "phase_jump_time",
             "min_retarget_interval",
             "fixed_retarget_t",
         ]
@@ -206,6 +201,14 @@ class Channel(ABC):
         else:
             return 0
 
+    @property
+    def phase_jump_time(self) -> int:
+        """Time taken to change the phase between consecutive pulses (in ns).
+
+        Corresponds to two times the rise time.
+        """
+        return self.rise_time * 2
+
     def is_virtual(self) -> bool:
         """Whether the channel is virtual (i.e. partially defined)."""
         return bool(self._undefined_fields())
@@ -225,7 +228,6 @@ class Channel(ABC):
         cls,
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
-        phase_jump_time: int = 0,
         min_retarget_interval: int = 0,
         fixed_retarget_t: int = 0,
         max_targets: Optional[int] = None,
@@ -237,8 +239,6 @@ class Channel(ABC):
             max_abs_detuning: Maximum possible detuning (in rad/µs), in
                 absolute value.
             max_amp: Maximum pulse amplitude (in rad/µs).
-            phase_jump_time: Time taken to change the phase between
-                consecutive pulses (in ns).
             min_retarget_interval: Minimum time required between two
                 target instructions (in ns).
             fixed_retarget_t: Time taken to change the target (in ns).
@@ -260,7 +260,6 @@ class Channel(ABC):
             "Local",
             max_abs_detuning,
             max_amp,
-            phase_jump_time,
             min_retarget_interval,
             fixed_retarget_t,
             max_targets,
@@ -272,7 +271,6 @@ class Channel(ABC):
         cls,
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
-        phase_jump_time: int = 0,
         **kwargs: Any,
     ) -> Channel:
         """Initializes the channel with global addressing.
@@ -281,8 +279,6 @@ class Channel(ABC):
             max_abs_detuning: Maximum possible detuning (in rad/µs), in
                 absolute value.
             max_amp: Maximum pulse amplitude (in rad/µs).
-            phase_jump_time: Time taken to change the phase between
-                consecutive pulses (in ns).
 
         Keyword Args:
             clock_period(int, default=4): The duration of a clock cycle
@@ -295,9 +291,7 @@ class Channel(ABC):
             mod_bandwidth(Optional[float], default=None): The modulation
                 bandwidth at -3dB (50% reduction), in MHz.
         """
-        return cls(
-            "Global", max_abs_detuning, max_amp, phase_jump_time, **kwargs
-        )
+        return cls("Global", max_abs_detuning, max_amp, **kwargs)
 
     def validate_duration(self, duration: int) -> int:
         """Validates and adapts the duration of an instruction on this channel.
@@ -453,8 +447,7 @@ class Channel(ABC):
             f"{self.max_abs_detuning}"
             f"{' rad/µs' if self.max_abs_detuning else ''}, "
             f"Max Amplitude: {self.max_amp}"
-            f"{' rad/µs' if self.max_amp else ''}, "
-            f"Phase Jump Time: {self.phase_jump_time} ns"
+            f"{' rad/µs' if self.max_amp else ''}"
         )
         if self.addressing == "Local":
             config += (
