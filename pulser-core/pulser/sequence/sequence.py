@@ -396,7 +396,6 @@ class Sequence:
         # Channel match
         sample_seq = sample(self)
         channel_match: dict[str, Any] = {}
-        channel_match_errors: dict[str, Any] = {}
         alert_phase_jump = False
         strict_error_message = ""
         ch_type_er_mess = ""
