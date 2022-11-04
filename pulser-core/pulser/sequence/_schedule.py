@@ -200,8 +200,10 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                         break
                 elif ch == channel:
                     if op.type.phase != pulse.phase:
-                        phase_jump_buffer = this_chobj.phase_jump_time - (
-                            t0 - op.tf
+                        phase_jump_buffer = (
+                            this_chobj.phase_jump_time
+                            + op.type.fall_time(this_chobj)
+                            - (t0 - op.tf)
                         )
                     break
                 elif op.tf + op.type.fall_time(this_chobj) <= current_max_t:
