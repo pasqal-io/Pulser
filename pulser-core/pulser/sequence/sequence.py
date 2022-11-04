@@ -555,6 +555,12 @@ class Sequence:
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
                   that idles the channel until the end of the other channels'
                   latest pulse.
+
+        Note:
+            When the phase of the pulse to add is different than the phase of
+            the previous pulse on the channel, a delay between the two pulses
+            might be automatically added to ensure the channel's
+            `phase_jump_time` is respected.
         """
         self._validate_channel(channel)
 
