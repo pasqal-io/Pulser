@@ -390,17 +390,17 @@ class Sequence:
             return self
         if new_device.reusable_channels:
             raise NotImplementedError(
-                "Switching the device of a sequence"
-                + " to 'MockDevice' is not supported."
+                "Switching the device of a sequence to one"
+                + " with reusable channels is not supported."
             )
         # Channel match
-        channel_list = cast(list, self.declared_channels.items())
         sample_seq = sample(self)
         channel_match: dict[str, Any] = {}
-        channel_match["alert_phase_jump"] = False
-        channel_match["strict_error_message"] = ""
-        channel_match["ch_type_er_mess"] = ""
-        for o_d_ch_name, o_d_ch_obj in channel_list:
+        channel_match_errors: dict[str, Any] = {}
+        alert_phase_jump = False
+        strict_error_message = ""
+        ch_type_er_mess = ""
+        for o_d_ch_name, o_d_ch_obj in self.declared_channels.items():
             for n_d_ch_id, n_d_ch_obj in new_device.channels.items():
                 # Find the corresponding channel on the new device
                 # We verify the channel class then
@@ -411,9 +411,9 @@ class Sequence:
                 )
                 if not (basis_match and addressing_match):
                     channel_match[o_d_ch_name] = None
-                    channel_match[
-                        "ch_type_er_mess"
-                    ] = f"No match for channel {o_d_ch_name}."
+                    ch_type_er_mess = (
+                        f"No match for channel {o_d_ch_name}."
+                    )
                     continue
                 if not strict:
                     channel_match[o_d_ch_name] = n_d_ch_id
@@ -423,7 +423,7 @@ class Sequence:
                 # Find if there is phase change between pulses or not
                 phase_is_constant = True
                 if ch_sample_phase.size != 0:
-                    phase_is_constant = bool(
+                    phase_is_constant = (
                         np.all(ch_sample_phase == ch_sample_phase[0])
                     )
                 # Phase_jump_time and cloc_period check
@@ -436,13 +436,13 @@ class Sequence:
                 if phase_is_constant:
                     if clock_period_check:
                         channel_match[o_d_ch_name] = n_d_ch_id
-                        channel_match["alert_phase_jump"] = (
+                        alert_phase_jump = (
                             phase_jump_time_check is False
                         )
                         break
                     else:
                         channel_match[o_d_ch_name] = None
-                        channel_match["strict_error_message"] = (
+                        strict_error_message = (
                             "No channel with phase_jump_time"
                             + " & clock_period match."
                         )
@@ -452,16 +452,16 @@ class Sequence:
                     break
                 else:
                     channel_match[o_d_ch_name] = None
-                    channel_match["strict_error_message"] = (
+                    strict_error_message = (
                         "No channel with phase_jump_time"
                         + " & clock_period match."
                     )
 
         if None in channel_match.values():
-            if channel_match["strict_error_message"] != "":
-                raise ValueError(channel_match["strict_error_message"])
+            if strict_error_message != "":
+                raise ValueError(strict_error_message)
             else:
-                raise TypeError(channel_match["ch_type_er_mess"])
+                raise TypeError(ch_type_er_mess)
         # Initialize the new sequence
         new_seq = Sequence(self.register, new_device)
 
@@ -472,7 +472,7 @@ class Sequence:
             sw_channel_args = list(call.args)
             # Switch the old id with the correct id
             sw_channel_args[1] = channel_match[sw_channel_args[0]]
-            if strict and channel_match["alert_phase_jump"]:
+            if strict and alert_phase_jump:
                 warnings.warn(
                     "The phase_jump_time of the new device"
                     + " is different, take it in account"

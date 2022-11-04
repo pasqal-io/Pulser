@@ -259,8 +259,8 @@ def test_switch_device():
     seq = Sequence(reg, Chadoq2)
     with pytest.raises(
         NotImplementedError,
-        match="Switching the device of a sequence"
-        + " to 'MockDevice' is not supported.",
+        match="Switching the device of a sequence to one"
+        + " with reusable channels is not supported.",
     ):
         seq.switch_device(MockDevice)
 
