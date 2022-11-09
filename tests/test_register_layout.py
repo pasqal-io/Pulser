@@ -25,11 +25,18 @@ from pulser.register.special_layouts import (
     TriangularLatticeLayout,
 )
 
-layout = RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]])
-layout3d = RegisterLayout([[0, 0, 0], [1, 1, 1], [0, 1, 0], [1, 0, 1]])
+
+@pytest.fixture
+def layout():
+    return RegisterLayout([[0, 0], [1, 1], [1, 0], [0, 1]], slug="2DLayout")
 
 
-def test_creation():
+@pytest.fixture
+def layout3d():
+    return RegisterLayout([[0, 0, 0], [1, 1, 1], [0, 1, 0], [1, 0, 1]])
+
+
+def test_creation(layout, layout3d):
     with pytest.raises(
         ValueError, match="must be an array or list of coordinates"
     ):
@@ -49,7 +56,14 @@ def test_creation():
         assert np.all(layout.traps_dict[i] == coord)
 
 
-def test_register_definition():
+def test_slug(layout, layout3d):
+    assert layout.slug == "2DLayout"
+    assert layout3d.slug is None
+    assert str(layout) == "2DLayout"
+    assert str(layout3d) == repr(layout3d)
+
+
+def test_register_definition(layout, layout3d):
     with pytest.raises(ValueError, match="must be a unique integer"):
         layout.define_register(0, 1, 1)
 
@@ -96,7 +110,7 @@ def test_register_definition():
         reg2d.rotate(30)
 
 
-def test_draw():
+def test_draw(layout, layout3d):
     with patch("matplotlib.pyplot.show"):
         layout.draw()
 
@@ -107,13 +121,13 @@ def test_draw():
         layout3d.draw(projection=False)
 
 
-def test_repr():
+def test_repr(layout):
     hash_ = sha256(bytes(2))
     hash_.update(layout.coords.tobytes())
     assert repr(layout) == f"RegisterLayout_{hash_.hexdigest()}"
 
 
-def test_eq():
+def test_eq(layout, layout3d):
     assert RegisterLayout([[0, 0], [1, 0]]) != Register.from_coordinates(
         [[0, 0], [1, 0]]
     )
@@ -124,7 +138,7 @@ def test_eq():
     assert hash(layout1) == hash(layout2)
 
 
-def test_traps_from_coordinates():
+def test_traps_from_coordinates(layout):
     assert layout._coords_to_traps == {
         (0, 0): 0,
         (0, 1): 1,

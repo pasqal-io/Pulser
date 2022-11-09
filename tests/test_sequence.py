@@ -23,6 +23,7 @@ from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device
+from pulser.register.mappable_reg import MappableRegister
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
@@ -332,6 +333,22 @@ def test_str():
         + "Phase Reference: 0.0\n\nMeasured in basis: digital"
     )
     assert seq.__str__() == msg
+
+    seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
+    seq2.declare_channel("ch1", "rydberg_global")
+    with pytest.raises(
+        NotImplementedError,
+        match="Can't print sequence with qubit IDs of different types.",
+    ):
+        str(seq2)
+
+    # Check qubit IDs are sorted
+    seq3 = Sequence(Register({"q1": (0, 0), "q0": (5, 5)}), device)
+    seq3.declare_channel("ch2", "rydberg_global")
+    assert str(seq3) == (
+        "Channel: ch2\n"
+        "t: 0 | Initial targets: q0, q1 | Phase Reference: 0.0 \n\n"
+    )
 
 
 def test_sequence():
@@ -730,6 +747,11 @@ def test_mappable_register():
 
     seq_ = seq.build(qubits={"q2": 20, "q0": 10})
     assert seq_._last("ryd").targets == {"q2", "q0"}
+    # Check the original sequence is unchanged
+    assert seq.is_register_mappable()
+    init_call = seq._calls[0]
+    assert init_call.name == "__init__"
+    assert isinstance(init_call.args[0], MappableRegister)
     assert not seq_.is_register_mappable()
     assert seq_.register == Register(
         {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}
