@@ -233,3 +233,100 @@ def test_screen():
     sb.delay(var, "ch1")
     with pytest.raises(RuntimeError, match="can't be called in parametrized"):
         sb.current_phase_ref(4, basis="ground-rydberg")
+
+
+def test_parametrized_in_eom_mode(mod_device):
+    # Case 1: Sequence becomes parametrized while in EOM mode
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_local", initial_target=0)
+
+    assert not seq.is_in_eom_mode("ch0")
+    seq.enable_eom_mode("ch0", amp_on=2.0, detuning_on=0.0)
+    assert seq.is_in_eom_mode("ch0")
+    assert not seq.is_parametrized()
+
+    dt = seq.declare_variable("dt", dtype=int)
+    seq.add_eom_pulse("ch0", dt, 0.0)
+
+    assert seq.is_in_eom_mode("ch0")
+    assert seq.is_parametrized()
+
+    with pytest.raises(
+        RuntimeError, match="The 'ch0' channel is already in EOM mode"
+    ):
+        seq.enable_eom_mode("ch0", amp_on=2.0, detuning_on=0.0)
+
+    with pytest.raises(
+        RuntimeError, match="The chosen channel is in EOM mode"
+    ):
+        seq.target_index(1, "ch0")
+
+    seq.disable_eom_mode("ch0")
+    assert not seq.is_in_eom_mode("ch0")
+
+    with pytest.raises(
+        RuntimeError, match="The 'ch0' channel is not in EOM mode"
+    ):
+        seq.disable_eom_mode("ch0")
+
+    # Just check that building works
+    seq.build(dt=100)
+
+
+def test_parametrized_before_eom_mode(mod_device):
+    # Case 2: Sequence is parametrized before entering EOM mode
+    seq = Sequence(reg, mod_device)
+
+    seq.declare_channel("ch0", "rydberg_local", initial_target=0)
+    seq.declare_channel("raman", "raman_local", initial_target=2)
+    amp = seq.declare_variable("amp", dtype=float)
+    seq.add(Pulse.ConstantPulse(200, amp, -1, 0), "ch0")
+
+    assert not seq.is_in_eom_mode("ch0")
+    assert seq.is_parametrized()
+
+    # Validation is still done whenever possible
+    with pytest.raises(
+        RuntimeError, match="Channel 'ch0' must be in EOM mode."
+    ):
+        seq.add_eom_pulse("ch0", 100, 0.0)
+
+    with pytest.raises(
+        ValueError, match="Invalid option for the detuning choice"
+    ):
+        seq.enable_eom_mode("ch0", amp, 0.0, detuning_off_choice="zero")
+
+    with pytest.raises(
+        TypeError, match="Channel 'raman' does not have an EOM"
+    ):
+        seq.enable_eom_mode("raman", 1.0, 0.0)
+
+    with pytest.raises(
+        ValueError,
+        match="The pulse's amplitude goes over the maximum "
+        "value allowed for the chosen channel.",
+    ):
+        seq.enable_eom_mode("ch0", 10000, 0.0)
+
+    seq.enable_eom_mode("ch0", amp_on=amp, detuning_on=0.0)
+    assert seq.is_in_eom_mode("ch0")
+
+    # Validation still works
+    with pytest.raises(ValueError, match="Invalid protocol 'smallest'"):
+        seq.add_eom_pulse("ch0", 1000, 0.0, protocol="smallest")
+
+    with pytest.raises(
+        TypeError, match="Phase values must be a numeric value."
+    ):
+        seq.add_eom_pulse("ch0", 200, "0.")
+
+    with pytest.raises(ValueError, match="duration has to be at least"):
+        seq.add_eom_pulse("ch0", 0, 0.0)
+
+    seq.add_eom_pulse("ch0", 100, 0.0)
+
+    seq.disable_eom_mode("ch0")
+    assert not seq.is_in_eom_mode("ch0")
+
+    # Just check that building works
+    seq.build(amp=3.0)

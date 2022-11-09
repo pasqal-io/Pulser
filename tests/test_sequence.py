@@ -318,21 +318,38 @@ def test_block_if_measured(call, args):
         getattr(seq, call)(*args)
 
 
-def test_str():
-    seq = Sequence(reg, device)
+def test_str(mod_device):
+    seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     seq.add(pulse, "ch0")
-    seq.delay(200, "ch0")
+    seq.delay(300, "ch0")
     seq.target("q7", "ch0")
+
+    seq.declare_channel("ch1", "rydberg_global")
+    seq.enable_eom_mode("ch1", 2, 0, detuning_off_choice="highest")
+    seq.add_eom_pulse("ch1", duration=100, phase=0, protocol="no-delay")
+    seq.delay(500, "ch1")
+
     seq.measure("digital")
-    msg = (
+    msg_ch0 = (
         "Channel: ch0\nt: 0 | Initial targets: q0 | Phase Reference: 0.0 "
         + "\nt: 0->500 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) "
-        + "| Targets: q0\nt: 500->700 | Delay \nt: 700->700 | Target: q7 | "
-        + "Phase Reference: 0.0\n\nMeasured in basis: digital"
+        + "| Targets: q0\nt: 500->800 | Delay \nt: 800->800 | Target: q7 | "
+        + "Phase Reference: 0.0"
     )
-    assert seq.__str__() == msg
+    targets = ", ".join(sorted(reg.qubit_ids))
+    msg_ch1 = (
+        f"\n\nChannel: ch1\nt: 0 | Initial targets: {targets} "
+        "| Phase Reference: 0.0 "
+        "\nt: 0->100 | Pulse(Amp=2 rad/µs, Detuning=0 rad/µs, Phase=0) "
+        f"| Targets: {targets}"
+        "\nt: 100->600 | EOM Delay | Detuning: -1 rad/µs"
+    )
+
+    measure_msg = "\n\nMeasured in basis: digital"
+    print(seq)
+    assert seq.__str__() == msg_ch0 + msg_ch1 + measure_msg
 
     seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
     seq2.declare_channel("ch1", "rydberg_global")
@@ -919,3 +936,69 @@ def test_multiple_index_targets():
     seq.target_index(var_array + 1, channel="ch0")
     built_seq = seq.build(var_array=[1, 2])
     assert built_seq._last("ch0").targets == {"q2", "q3"}
+
+
+def test_eom_mode(mod_device):
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    assert not seq.is_in_eom_mode("ch0")
+
+    amp_on = 1.0
+    detuning_on = 0.0
+    seq.enable_eom_mode(
+        "ch0", amp_on, detuning_on, detuning_off_choice="lowest"
+    )
+    assert seq.is_in_eom_mode("ch0")
+
+    delay_duration = 200
+    seq.delay(delay_duration, "ch0")
+    detuning_off = seq._schedule["ch0"].eom_blocks[-1].detuning_off
+    assert detuning_off != 0
+
+    with pytest.raises(RuntimeError, match="There is no slot with a pulse."):
+        # The EOM delay slot (which is a pulse slot) is ignored
+        seq._schedule["ch0"].last_pulse_slot()
+
+    delay_slot = seq._schedule["ch0"][-1]
+    assert seq._schedule["ch0"].is_eom_delay(delay_slot)
+    assert delay_slot.ti == 0
+    assert delay_slot.tf == delay_duration
+    assert delay_slot.type == Pulse.ConstantPulse(
+        delay_duration, 0.0, detuning_off, 0.0
+    )
+
+    assert seq._schedule["ch0"].get_eom_mode_intervals() == [
+        (0, delay_slot.tf)
+    ]
+
+    pulse_duration = 100
+    seq.add_eom_pulse("ch0", pulse_duration, 0.0)
+    pulse_slot = seq._schedule["ch0"].last_pulse_slot()
+    assert not seq._schedule["ch0"].is_eom_delay(pulse_slot)
+    assert pulse_slot.ti == delay_slot.tf
+    assert pulse_slot.tf == pulse_slot.ti + pulse_duration
+    eom_pulse = Pulse.ConstantPulse(pulse_duration, amp_on, detuning_on, 0.0)
+    assert pulse_slot.type == eom_pulse
+
+    eom_intervals = seq._schedule["ch0"].get_eom_mode_intervals()
+    assert eom_intervals == [(0, pulse_slot.tf)]
+
+    with pytest.raises(
+        RuntimeError, match="The chosen channel is in EOM mode"
+    ):
+        seq.add(eom_pulse, "ch0")
+
+    ch0_obj = seq.declared_channels["ch0"]
+    assert seq.get_duration() == pulse_slot.tf
+    assert seq.get_duration(include_fall_time=True) == (
+        pulse_slot.tf + eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
+    )
+
+    seq.disable_eom_mode("ch0")
+    assert not seq.is_in_eom_mode("ch0")
+    # Check the EOM interval did not change
+    assert seq._schedule["ch0"].get_eom_mode_intervals() == eom_intervals
+    buffer_delay = seq._schedule["ch0"][-1]
+    assert buffer_delay.ti == pulse_slot.tf
+    assert buffer_delay.tf == buffer_delay.ti + eom_pulse.fall_time(ch0_obj)
+    assert buffer_delay.type == "delay"

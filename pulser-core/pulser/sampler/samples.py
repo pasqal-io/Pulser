@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Optional
 
 import numpy as np
@@ -86,6 +86,7 @@ class ChannelSamples:
     det: np.ndarray
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
+    eom_intervals: list[tuple[int, int]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -120,7 +121,7 @@ class ChannelSamples:
             (0, extension),
             mode="edge" if self.phase.size > 0 else "constant",
         )
-        return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
+        return replace(self, amp=new_amp, det=new_detuning, phase=new_phase)
 
     def is_empty(self) -> bool:
         """Whether the channel is effectively empty.
@@ -148,11 +149,43 @@ class ChannelSamples:
         Returns:
             The modulated channel samples.
         """
-        times = slice(0, max_duration)
-        new_amp = channel_obj.modulate(self.amp)[times]
-        new_detuning = channel_obj.modulate(self.det)[times]
-        new_phase = channel_obj.modulate(self.phase, keep_ends=True)[times]
-        return ChannelSamples(new_amp, new_detuning, new_phase, self.slots)
+
+        def masked(samples: np.ndarray, mask: np.ndarray) -> np.ndarray:
+            new_samples = samples.copy()
+            new_samples[~mask] = 0
+            return new_samples
+
+        new_samples: dict[str, np.ndarray] = {}
+
+        if self.eom_intervals:
+            eom_mask = np.zeros(self.duration, dtype=bool)
+            for start, end in self.eom_intervals:
+                end = min(end, self.duration)  # This is defensive
+                eom_mask[np.arange(start, end)] = True
+
+            for key in ("amp", "det"):
+                samples = getattr(self, key)
+                std = channel_obj.modulate(masked(samples, ~eom_mask))
+                eom = channel_obj.modulate(masked(samples, eom_mask), eom=True)
+                sample_arrs = [std, eom]
+                sample_arrs.sort(key=len)
+                # Extend shortest array to match the longest
+                sample_arrs[0] = np.concatenate(
+                    (
+                        sample_arrs[0],
+                        np.zeros(sample_arrs[1].size - sample_arrs[0].size),
+                    )
+                )
+                new_samples[key] = sample_arrs[0] + sample_arrs[1]
+
+        else:
+            new_samples["amp"] = channel_obj.modulate(self.amp)
+            new_samples["det"] = channel_obj.modulate(self.det)
+
+        new_samples["phase"] = channel_obj.modulate(self.phase, keep_ends=True)
+        for key in new_samples:
+            new_samples[key] = new_samples[key][slice(0, max_duration)]
+        return replace(self, **new_samples)
 
 
 @dataclass
