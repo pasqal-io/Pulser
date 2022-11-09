@@ -163,29 +163,36 @@ class Waveform(ABC):
             " modifications to its duration."
         )
 
-    def modulated_samples(self, channel: Channel) -> np.ndarray:
+    def modulated_samples(
+        self, channel: Channel, eom: bool = False
+    ) -> np.ndarray:
         """The waveform samples as output of a given channel.
 
         This duration is adjusted according to the minimal buffer times.
 
         Args:
             channel: The channel modulating the waveform.
+            eom: Whether to modulate for the EOM.
 
         Returns:
             The array of samples after modulation.
         """
         start, end = self.modulation_buffers(channel)
-        mod_samples = self._modulated_samples(channel)
+        mod_samples = self._modulated_samples(channel, eom=eom)
         tr = channel.rise_time
         trim = slice(tr - start, len(mod_samples) - tr + end)
         return mod_samples[trim]
 
     @functools.lru_cache()
-    def modulation_buffers(self, channel: Channel) -> tuple[int, int]:
+    def modulation_buffers(
+        self, channel: Channel, eom: bool = False
+    ) -> tuple[int, int]:
         """The minimal buffers needed around a modulated waveform.
 
         Args:
             channel: The channel modulating the waveform.
+            eom: Whether to calculate the modulation buffers with
+                the EOM bandwidth.
 
         Returns:
             The minimum buffer times at the start and end of
@@ -195,11 +202,13 @@ class Waveform(ABC):
             return 0, 0
 
         return channel.calc_modulation_buffer(
-            self._samples, self._modulated_samples(channel)
+            self._samples, self._modulated_samples(channel, eom=eom), eom=eom
         )
 
     @functools.lru_cache()
-    def _modulated_samples(self, channel: Channel) -> np.ndarray:
+    def _modulated_samples(
+        self, channel: Channel, eom: bool = False
+    ) -> np.ndarray:
         """The waveform samples as output of a given channel.
 
         This is not adjusted to the minimal buffer times. Use
@@ -207,11 +216,12 @@ class Waveform(ABC):
 
         Args:
             channel: The channel modulating the waveform.
+            eom: Whether to modulate for the EOM.
 
         Returns:
             The array of samples after modulation.
         """
-        return channel.modulate(self._samples)
+        return channel.modulate(self._samples, eom=eom)
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:

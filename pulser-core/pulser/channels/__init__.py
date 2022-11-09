@@ -13,4 +13,4 @@
 # limitations under the License.
 """The various hardware channel types."""
 
-from pulser.channels.channels import Rydberg, Raman, Microwave
+from pulser.channels.channels import Microwave, Raman, Rydberg

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, field, fields
 from sys import version_info
 from typing import Any, Optional, cast
 
@@ -25,6 +25,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.fft import fft, fftfreq, ifft
 
+from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergEOM
 from pulser.json.utils import obj_to_dict
 from pulser.pulse import Pulse
 
@@ -42,10 +43,6 @@ else:  # pragma: no cover
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
-
-# Conversion factor from modulation bandwith to rise time
-# For more info, see https://tinyurl.com/bdeumc8k
-MODBW_TO_TR = 0.48
 
 ADDRESSING = Literal["Global", "Local"]
 CH_TYPE = Literal["Rydberg", "Raman", "Microwave"]
@@ -94,6 +91,7 @@ class Channel(ABC):
     min_duration: int = 1  # ns
     max_duration: Optional[int] = int(1e8)  # ns
     mod_bandwidth: Optional[float] = None  # MHz
+    eom_config: Optional[BaseEOM] = field(init=False, default=None)
 
     @property
     def name(self) -> CH_TYPE:
@@ -209,6 +207,10 @@ class Channel(ABC):
     def is_virtual(self) -> bool:
         """Whether the channel is virtual (i.e. partially defined)."""
         return bool(self._undefined_fields())
+
+    def supports_eom(self) -> bool:
+        """Whether the channel supports EOM mode operation."""
+        return hasattr(self, "eom_config") and self.eom_config is not None
 
     def _undefined_fields(self) -> list[str]:
         optional = [
@@ -366,7 +368,10 @@ class Channel(ABC):
             )
 
     def modulate(
-        self, input_samples: np.ndarray, keep_ends: bool = False
+        self,
+        input_samples: np.ndarray,
+        keep_ends: bool = False,
+        eom: bool = False,
     ) -> np.ndarray:
         """Modulates the input according to the channel's modulation bandwidth.
 
@@ -374,33 +379,43 @@ class Channel(ABC):
             input_samples: The samples to modulate.
             keep_ends: Assume the end values of the samples were kept
                 constant (i.e. there is no ramp from zero on the ends).
+            eom: Whether to calculate the modulation using the EOM
+                bandwidth.
 
         Returns:
             The modulated output signal.
         """
-        if not self.mod_bandwidth:
+        if eom:
+            if not self.supports_eom():
+                raise TypeError(f"The channel {self} does not have an EOM.")
+            eom_config = cast(BaseEOM, self.eom_config)
+            mod_bandwidth = eom_config.mod_bandwidth
+            rise_time = eom_config.rise_time
+
+        elif not self.mod_bandwidth:
             warnings.warn(
                 f"No modulation bandwidth defined for channel '{self}',"
                 " 'Channel.modulate()' returns the 'input_samples' unchanged.",
                 stacklevel=2,
             )
             return input_samples
+        else:
+            mod_bandwidth = self.mod_bandwidth
+            rise_time = self.rise_time
 
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
-        fc = self.mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
+        fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
         if keep_ends:
-            samples = np.pad(input_samples, 2 * self.rise_time, mode="edge")
+            samples = np.pad(input_samples, 2 * rise_time, mode="edge")
         else:
-            samples = np.pad(input_samples, self.rise_time)
+            samples = np.pad(input_samples, rise_time)
         freqs = fftfreq(samples.size)
         modulation = np.exp(-(freqs**2) / fc**2)
         mod_samples = ifft(fft(samples) * modulation).real
         if keep_ends:
             # Cut off the extra ends
-            return cast(
-                np.ndarray, mod_samples[self.rise_time : -self.rise_time]
-            )
+            return cast(np.ndarray, mod_samples[rise_time:-rise_time])
         return cast(np.ndarray, mod_samples)
 
     def calc_modulation_buffer(
@@ -408,6 +423,7 @@ class Channel(ABC):
         input_samples: ArrayLike,
         mod_samples: ArrayLike,
         max_allowed_diff: float = 1e-2,
+        eom: bool = False,
     ) -> tuple[int, int]:
         """Calculates the minimal buffers needed around a modulated waveform.
 
@@ -417,17 +433,23 @@ class Channel(ABC):
                 ``len(input_samples) + 2 * self.rise_time``.
             max_allowed_diff: The maximum allowed difference between
                 the input and modulated samples at the end points.
+            eom: Whether to calculate the modulation buffers with the EOM
+                bandwidth.
 
         Returns:
             The minimum buffer times at the start and end of
             the samples, in ns.
         """
-        if not self.mod_bandwidth:
-            raise TypeError(
-                f"The channel {self} doesn't have a modulation bandwidth."
-            )
-
-        tr = self.rise_time
+        if eom:
+            if not self.supports_eom():
+                raise TypeError(f"The channel {self} does not have an EOM.")
+            tr = cast(BaseEOM, self.eom_config).rise_time
+        else:
+            if not self.mod_bandwidth:
+                raise TypeError(
+                    f"The channel {self} doesn't have a modulation bandwidth."
+                )
+            tr = self.rise_time
         samples = np.pad(input_samples, tr)
         diffs = np.abs(samples - mod_samples) <= max_allowed_diff
         try:
@@ -475,7 +497,10 @@ class Channel(ABC):
         return self.name + config
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, _module="pulser.channels", **asdict(self))
+        params = {
+            f.name: getattr(self, f.name) for f in fields(self) if f.init
+        }
+        return obj_to_dict(self, _module="pulser.channels", **params)
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -499,6 +524,22 @@ class Rydberg(Channel):
     Channel targeting the transition between the ground and rydberg states,
     thus enconding the 'ground-rydberg' basis. See base class.
     """
+
+    eom_config: Optional[RydbergEOM] = None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.eom_config is not None:
+            if not isinstance(self.eom_config, RydbergEOM):
+                raise TypeError(
+                    "When defined, 'eom_config' must be a valid 'RydbergEOM'"
+                    f" instance, not {type(self.eom_config)}."
+                )
+            if self.mod_bandwidth is None:
+                raise ValueError(
+                    "'eom_config' can't be defined in a Channel without a "
+                    "modulation bandwidth."
+                )
 
     @property
     def basis(self) -> Literal["ground-rydberg"]:
