@@ -77,12 +77,8 @@ class _ChannelSchedule:
                 max(duration, self.channel_obj.min_duration)
             )
 
-    def get_samples(self, modulated: bool = False) -> ChannelSamples:
-        """Returns the samples of the channel.
-
-        Args:
-            modulated: Whether to return the modulated samples.
-        """
+    def get_samples(self) -> ChannelSamples:
+        """Returns the samples of the channel."""
         # Keep only pulse slots
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
         dt = self.get_duration()
@@ -102,25 +98,20 @@ class _ChannelSchedule:
             )
             phase[t_start:t_end] += pulse.phase
             tf = s.tf
-            if modulated:
-                # Account for the extended duration of the pulses
-                # after modulation, which is at most fall_time
-                fall_time = pulse.fall_time(self.channel_obj)
-                tf += (
-                    min(fall_time, channel_slots[ind + 1].ti - s.tf)
-                    if ind < len(channel_slots) - 1
-                    else fall_time
-                )
+            # Account for the extended duration of the pulses
+            # after modulation, which is at most fall_time
+            fall_time = pulse.fall_time(
+                self.channel_obj, in_eom_mode=self.in_eom_mode(t=s.ti)
+            )
+            tf += (
+                min(fall_time, channel_slots[ind + 1].ti - s.tf)
+                if ind < len(channel_slots) - 1
+                else fall_time
+            )
 
             slots.append(_TargetSlot(s.ti, tf, s.targets))
 
         ch_samples = ChannelSamples(amp, det, phase, slots)
-
-        if modulated:
-            ch_samples = ch_samples.modulate(
-                self.channel_obj,
-                max_duration=self.get_duration(include_fall_time=True),
-            )
 
         return ch_samples
 

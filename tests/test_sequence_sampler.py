@@ -156,19 +156,18 @@ def test_modulation_local(mod_device):
     assert output_samples.max_duration == seq.get_duration(
         include_fall_time=True
     )
+    out_ch_samples = output_samples.channel_samples["ch0"]
+    # The target slots account for fall time in both cases
+    assert input_samples.channel_samples["ch0"].slots == out_ch_samples.slots
 
     # Check that the target slots account for fall time
-    in_ch_samples = input_samples.channel_samples["ch0"]
-    out_ch_samples = output_samples.channel_samples["ch0"]
-    expected_slots = deepcopy(in_ch_samples.slots)
+    out_slots = out_ch_samples.slots
     # The first slot should extend to the second
-    expected_slots[0].tf += partial_fall
-    assert expected_slots[0].tf == expected_slots[1].ti
+    assert out_slots[0].tf == pulse1.duration + partial_fall
+    assert out_slots[0].tf == out_slots[1].ti
     # The next slots should fully account for fall time
-    expected_slots[1].tf += pulse2.fall_time(ch_obj)
-    expected_slots[2].tf += pulse1.fall_time(ch_obj)
-
-    assert out_ch_samples.slots == expected_slots
+    for slot, pulse in zip(out_slots[1:], (pulse2, pulse1)):
+        assert slot.tf - slot.ti == pulse.duration + pulse.fall_time(ch_obj)
 
     # Check that the samples are fully extracted to the nested dict
     samples_dict = output_samples.to_nested_dict()

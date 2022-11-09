@@ -22,14 +22,22 @@ def sample(
         extended_duration: If defined, extends the samples duration to the
             desired value.
     """
-    samples_list = [
-        ch_schedule.get_samples(modulated=modulation)
-        for ch_schedule in seq._schedule.values()
-    ]
-    if extended_duration:
-        samples_list = [
-            cs.extend_duration(extended_duration) for cs in samples_list
-        ]
+    if seq.is_parametrized():
+        raise NotImplementedError("Parametrized sequences can't be sampled.")
+
+    samples_list = []
+    for ch_schedule in seq._schedule.values():
+        samples = ch_schedule.get_samples()
+        if extended_duration:
+            samples = samples.extend_duration(extended_duration)
+        if modulation:
+            samples = samples.modulate(
+                ch_schedule.channel_obj,
+                max_duration=extended_duration
+                or ch_schedule.get_duration(include_fall_time=True),
+            )
+        samples_list.append(samples)
+
     optionals = {}
     if seq._slm_mask_targets and seq._slm_mask_time:
         optionals["_slm_mask"] = _SlmMask(

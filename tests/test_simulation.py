@@ -968,12 +968,14 @@ def test_simulation_with_modulation(mod_device, reg):
         ("control1", slice(mod_dt, 2 * mod_dt)),
     ]:
         np.testing.assert_allclose(
-            raman_samples[qid]["amp"][time_slice], pulse1_mod_samples
+            raman_samples[qid]["amp"][time_slice],
+            pulse1_mod_samples,
+            atol=1e-2,
         )
         np.testing.assert_equal(
             raman_samples[qid]["det"][time_slice], sim._doppler_detune[qid]
         )
-        np.testing.assert_equal(
+        np.testing.assert_allclose(
             raman_samples[qid]["phase"][time_slice], pulse1.phase
         )
 
@@ -996,7 +998,7 @@ def test_simulation_with_modulation(mod_device, reg):
         np.testing.assert_equal(
             rydberg_samples[qid]["det"][time_slice], sim._doppler_detune[qid]
         )
-        np.testing.assert_equal(
+        np.testing.assert_allclose(
             rydberg_samples[qid]["phase"][time_slice], pulse1.phase
         )
 
