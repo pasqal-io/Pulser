@@ -86,7 +86,7 @@ class PasqalCloud:
                 "must be a real device, instance of 'Device'."
             )
 
-        self._sdk_connection.create_batch(
+        return self._sdk_connection.create_batch(
             serialized_sequence=seq.serialize(),
             jobs=jobs,
             device_type=device_type,
@@ -104,4 +104,6 @@ class PasqalCloud:
         Returns:
             Batch: The batch stored in the PCS database.
         """
-        self._sdk_connection.get_batch(id=id, fetch_results=fetch_results)
+        return self._sdk_connection.get_batch(
+            id=id, fetch_results=fetch_results
+        )
