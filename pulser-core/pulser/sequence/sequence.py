@@ -432,11 +432,10 @@ class Sequence:
                 clock_period_check = (
                     o_d_ch_obj.clock_period % n_d_ch_obj.clock_period == 0
                 )
-                if phase_is_constant:
-                    if clock_period_check:
-                        channel_match[o_d_ch_name] = n_d_ch_id
-                        alert_phase_jump = (
-                            phase_jump_time_check is False
+                if clock_period_check and (phase_is_constant or phase_jump_time_check):
+                    channel_match[o_d_ch_name] = n_d_ch_id
+                    channel_match["alert_phase_jump"] = (
+                            not phase_jump_time_check
                         )
                         break
                     else:
@@ -445,16 +444,7 @@ class Sequence:
                             "No channel with phase_jump_time"
                             + " & clock_period match."
                         )
-                    continue
-                if phase_jump_time_check and clock_period_check:
-                    channel_match[o_d_ch_name] = n_d_ch_id
-                    break
-                else:
-                    channel_match[o_d_ch_name] = None
-                    strict_error_message = (
-                        "No channel with phase_jump_time"
-                        + " & clock_period match."
-                    )
+                continue
 
         if None in channel_match.values():
             if strict_error_message != "":
