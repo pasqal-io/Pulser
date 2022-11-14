@@ -410,9 +410,7 @@ class Sequence:
                 )
                 if not (basis_match and addressing_match):
                     channel_match[o_d_ch_name] = None
-                    ch_type_er_mess = (
-                        f"No match for channel {o_d_ch_name}."
-                    )
+                    ch_type_er_mess = f"No match for channel {o_d_ch_name}."
                     continue
                 if not strict:
                     channel_match[o_d_ch_name] = n_d_ch_id
@@ -422,21 +420,21 @@ class Sequence:
                 # Find if there is phase change between pulses or not
                 phase_is_constant = True
                 if ch_sample_phase.size != 0:
-                    phase_is_constant = (
-                        np.all(ch_sample_phase == ch_sample_phase[0])
-                    )
-                # Phase_jump_time and cloc_period check
+                    phase_is_constant = bool(np.all(
+                        ch_sample_phase == ch_sample_phase[0]
+                    ))
+                # Phase_jump_time and clock_period check
                 phase_jump_time_check = (
                     o_d_ch_obj.phase_jump_time == n_d_ch_obj.phase_jump_time
                 )
                 clock_period_check = (
                     o_d_ch_obj.clock_period % n_d_ch_obj.clock_period == 0
                 )
-                if clock_period_check and (phase_is_constant or phase_jump_time_check):
+                if clock_period_check and (
+                    phase_is_constant or phase_jump_time_check
+                ):
                     channel_match[o_d_ch_name] = n_d_ch_id
-                    alert_phase_jump = (
-                            not phase_jump_time_check
-                        )
+                    alert_phase_jump = not phase_jump_time_check
                     break
                 else:
                     channel_match[o_d_ch_name] = None
@@ -461,9 +459,13 @@ class Sequence:
             sw_channel_args = list(call.args)
             sw_channel_kw_args = call.kwargs
             if "name" in sw_channel_kw_args:
-                sw_channel_kw_args["channel_id"] = channel_match[sw_channel_kw_args["name"]]
+                sw_channel_kw_args["channel_id"] = channel_match[
+                    sw_channel_kw_args["name"]
+                ]
             elif "channel_id" in sw_channel_kw_args:
-                sw_channel_kw_args["channel_id"] = channel_match[sw_channel_args[0]]
+                sw_channel_kw_args["channel_id"] = channel_match[
+                    sw_channel_args[0]
+                ]
             else:
                 sw_channel_args[1] = channel_match[sw_channel_args[0]]
 
@@ -957,7 +959,7 @@ class Sequence:
 
         # Shallow copy with stored parametrized objects (if any)
         # NOTE: While seq is a shallow copy, be extra careful with changes to
-        # atributes of seq pointing to mutable objects, as they might be
+        # attributes of seq pointing to mutable objects, as they might be
         # inadvertedly done to self too
         seq = copy.copy(self)
 
