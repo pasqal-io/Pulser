@@ -304,7 +304,7 @@ def test_switch_device():
     fall = Pulse.ConstantDetuning(
         RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0, 0.7
     )
-    seq.declare_channel("ising", "rydberg_global")
+    seq.declare_channel(name="ising", channel_id="rydberg_global")
     seq.add(rise, "ising")
     seq.add(sweep, "ising")
     seq.add(fall, "ising")

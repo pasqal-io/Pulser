@@ -434,17 +434,16 @@ class Sequence:
                 )
                 if clock_period_check and (phase_is_constant or phase_jump_time_check):
                     channel_match[o_d_ch_name] = n_d_ch_id
-                    channel_match["alert_phase_jump"] = (
+                    alert_phase_jump = (
                             not phase_jump_time_check
                         )
-                        break
-                    else:
-                        channel_match[o_d_ch_name] = None
-                        strict_error_message = (
-                            "No channel with phase_jump_time"
-                            + " & clock_period match."
-                        )
-                continue
+                    break
+                else:
+                    channel_match[o_d_ch_name] = None
+                    strict_error_message = (
+                        "No channel with phase_jump_time"
+                        + " & clock_period match."
+                    )
 
         if None in channel_match.values():
             if strict_error_message != "":
@@ -458,9 +457,16 @@ class Sequence:
             if not (call.name == "declare_channel"):
                 getattr(new_seq, call.name)(*call.args, **call.kwargs)
                 continue
-            sw_channel_args = list(call.args)
             # Switch the old id with the correct id
-            sw_channel_args[1] = channel_match[sw_channel_args[0]]
+            sw_channel_args = list(call.args)
+            sw_channel_kw_args = call.kwargs
+            if "name" in sw_channel_kw_args:
+                sw_channel_kw_args["channel_id"] = channel_match[sw_channel_kw_args["name"]]
+            elif "channel_id" in sw_channel_kw_args:
+                sw_channel_kw_args["channel_id"] = channel_match[sw_channel_args[0]]
+            else:
+                sw_channel_args[1] = channel_match[sw_channel_args[0]]
+
             if strict and alert_phase_jump:
                 warnings.warn(
                     "The phase_jump_time of the new device"
@@ -468,7 +474,7 @@ class Sequence:
                     + " for the upcoming pulses.",
                     stacklevel=2,
                 )
-            new_seq.declare_channel(*sw_channel_args, **call.kwargs)
+            new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
 
         if new_device.rydberg_level != self._device.rydberg_level:
             old_ry_lvl = new_device.rydberg_level
