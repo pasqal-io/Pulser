@@ -444,7 +444,7 @@ class Sequence:
                     )
 
         if None in channel_match.values():
-            if strict_error_message != "":
+            if strict_error_message:
                 raise ValueError(strict_error_message)
             else:
                 raise TypeError(ch_type_er_mess)
