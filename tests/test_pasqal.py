@@ -56,9 +56,13 @@ def fixt():
 
         mock_cloud_sdk = mock_cloud_sdk_class.return_value
 
+        mock_cloud_sdk_class.reset_mock()
+
         yield CloudFixture(
             pasqal_cloud=pasqal_cloud, mock_cloud_sdk=mock_cloud_sdk
         )
+
+        mock_cloud_sdk_class.assert_not_called()
 
 
 test_device = Chadoq2
@@ -115,6 +119,24 @@ def test_virtual_device_on_qpu_error(fixt):
     seq = Sequence(reg, device)
 
     with pytest.raises(TypeError, match="must be a real device"):
+        fixt.pasqal_cloud.create_batch(
+            seq,
+            jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],
+            device_type=DeviceType.QPU,
+            configuration=Configuration(
+                dt=0.1,
+                precision="normal",
+                extra_config=None,
+            ),
+            wait=True,
+        )
+
+def test_wrong_parameters(fixt):
+    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    seq = Sequence(reg, test_device)
+    seq.declare_variable("unset", dtype=int)
+
+    with pytest.raises(TypeError, match="Did not receive values for variables"):
         fixt.pasqal_cloud.create_batch(
             seq,
             jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],

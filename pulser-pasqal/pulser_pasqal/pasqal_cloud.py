@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Allows to connect to the cloud powered by Pasqal to run sequences."""
-from typing import Dict, List, Mapping, Optional, Union
+from __future__ import annotations
+from typing import Mapping, Optional, Union, Any
 
 import sdk
 from numpy.typing import ArrayLike
@@ -33,29 +34,26 @@ class PasqalCloud:
             cloud.
         client_secret: client_secret of the API key you are holding for
             Pasqal cloud.
-        endpoints: Optionally, Pasqal cloud connection URLs.
-        webhook: Optionally, webhook.
+        kwargs: additional arguments to provide to SDK
     """
 
     def __init__(
         self,
         client_id: str,
         client_secret: str,
-        endpoints: Optional[sdk.endpoints.Endpoints],
-        webhook: Optional[str] = None,
+        **kwargs: Any,
     ):
         """Initializes a connection to the cloud."""
         self._sdk_connection = sdk.SDK(
             client_id=client_id,
             client_secret=client_secret,
-            endpoints=endpoints,
-            webhook=webhook,
+            **kwargs,
         )
 
     def create_batch(
         self,
         seq: Sequence,
-        jobs: List[Dict[str, Union[ArrayLike, Mapping[QubitId, int]]]],
+        jobs: list[dict[str, Union[ArrayLike, Mapping[QubitId, int]]]],
         device_type: sdk.DeviceType = sdk.DeviceType.QPU,
         configuration: Optional[sdk.Configuration] = None,
         wait: bool = False,
@@ -86,6 +84,9 @@ class PasqalCloud:
                 "must be a real device, instance of 'Device'."
             )
 
+        for params in jobs:
+            seq.build(**params)
+
         return self._sdk_connection.create_batch(
             serialized_sequence=seq.serialize(),
             jobs=jobs,
@@ -102,7 +103,7 @@ class PasqalCloud:
             fetch_results: Whether to load job results.
 
         Returns:
-            Batch: The batch stored in the PCS database.
+            Batch: The batch stored in the database.
         """
         return self._sdk_connection.get_batch(
             id=id, fetch_results=fetch_results
