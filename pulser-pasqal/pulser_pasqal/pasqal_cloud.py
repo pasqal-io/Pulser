@@ -13,7 +13,8 @@
 # limitations under the License.
 """Allows to connect to the cloud powered by Pasqal to run sequences."""
 from __future__ import annotations
-from typing import Mapping, Optional, Union, Any
+
+from typing import Any, Mapping, Optional, Union
 
 import sdk
 from numpy.typing import ArrayLike
@@ -85,7 +86,7 @@ class PasqalCloud:
             )
 
         for params in jobs:
-            seq.build(**params)
+            seq.build(**params)  # type: ignore
 
         return self._sdk_connection.create_batch(
             serialized_sequence=seq.serialize(),

@@ -131,12 +131,15 @@ def test_virtual_device_on_qpu_error(fixt):
             wait=True,
         )
 
+
 def test_wrong_parameters(fixt):
     reg = Register(dict(enumerate([(0, 0), (0, 10)])))
     seq = Sequence(reg, test_device)
     seq.declare_variable("unset", dtype=int)
 
-    with pytest.raises(TypeError, match="Did not receive values for variables"):
+    with pytest.raises(
+        TypeError, match="Did not receive values for variables"
+    ):
         fixt.pasqal_cloud.create_batch(
             seq,
             jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],
