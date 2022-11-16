@@ -14,14 +14,13 @@
 """Allows to connect to the cloud powered by Pasqal to run sequences."""
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Optional
 
 import sdk
-from numpy.typing import ArrayLike
 
 from pulser import Sequence
 from pulser.devices import Device
-from pulser.register import QubitId
+from pulser_pasqal.job_parameters import JobParameters
 
 
 class PasqalCloud:
@@ -54,7 +53,7 @@ class PasqalCloud:
     def create_batch(
         self,
         seq: Sequence,
-        jobs: list[dict[str, Union[ArrayLike, Mapping[QubitId, int]]]],
+        jobs: list[JobParameters],
         device_type: sdk.DeviceType = sdk.DeviceType.QPU,
         configuration: Optional[sdk.Configuration] = None,
         wait: bool = False,
@@ -86,11 +85,11 @@ class PasqalCloud:
             )
 
         for params in jobs:
-            seq.build(**params)  # type: ignore
+            seq.build(**params.parameters)  # type: ignore
 
         return self._sdk_connection.create_batch(
             serialized_sequence=seq.serialize(),
-            jobs=jobs,
+            jobs=[j.parameters for j in jobs],
             device_type=device_type,
             configuration=configuration,
             wait=wait,

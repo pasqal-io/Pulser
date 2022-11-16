@@ -11,10 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classes for interfacing with Pasqal backends."""
+"""Parameters to build a sequence sent to the cloud."""
+from __future__ import annotations
 
-from sdk import Configuration, DeviceType, Endpoints
+import dataclasses
+from typing import Mapping, Union
 
-from pulser_pasqal._version import __version__
-from pulser_pasqal.job_parameters import JobParameters
-from pulser_pasqal.pasqal_cloud import PasqalCloud
+from numpy.typing import ArrayLike
+
+from pulser.register import QubitId
+
+
+@dataclasses.dataclass
+class JobParameters:
+    """Parameters representing a job to build the sequence."""
+
+    parameters: dict[str, Union[ArrayLike, Mapping[QubitId, int]]]

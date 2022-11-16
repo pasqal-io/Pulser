@@ -26,6 +26,7 @@ from pulser.devices import Chadoq2
 from pulser.register import Register
 from pulser.sequence import Sequence
 from pulser_pasqal import Configuration, DeviceType, Endpoints, PasqalCloud
+from pulser_pasqal.job_parameters import JobParameters
 
 root = Path(__file__).parent.parent
 
@@ -83,7 +84,7 @@ def test_pasqal_cloud(fixt, device_type, device):
     seq = Sequence(reg, device)
 
     create_batch_kwargs = dict(
-        jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],
+        jobs=[JobParameters({"runs": 10, "variables": {"a": [3, 5]}})],
         device_type=device_type,
         configuration=Configuration(
             dt=0.1,
@@ -93,6 +94,11 @@ def test_pasqal_cloud(fixt, device_type, device):
         wait=True,
     )
 
+    expected_create_batch_kwargs = {
+        **create_batch_kwargs,
+        "jobs": [{"runs": 10, "variables": {"a": [3, 5]}}],
+    }
+
     fixt.pasqal_cloud.create_batch(
         seq,
         **create_batch_kwargs,
@@ -100,7 +106,7 @@ def test_pasqal_cloud(fixt, device_type, device):
 
     fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
         seq.serialize(),
-        **create_batch_kwargs,
+        **expected_create_batch_kwargs,
     )
 
     get_batch_kwargs = dict(
@@ -121,7 +127,7 @@ def test_virtual_device_on_qpu_error(fixt):
     with pytest.raises(TypeError, match="must be a real device"):
         fixt.pasqal_cloud.create_batch(
             seq,
-            jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],
+            jobs=[JobParameters({"runs": 10, "variables": {"a": [3, 5]}})],
             device_type=DeviceType.QPU,
             configuration=Configuration(
                 dt=0.1,
@@ -142,7 +148,7 @@ def test_wrong_parameters(fixt):
     ):
         fixt.pasqal_cloud.create_batch(
             seq,
-            jobs=[{"runs": 10, "variables": {"a": [3, 5]}}],
+            jobs=[JobParameters({"runs": 10, "variables": {"a": [3, 5]}})],
             device_type=DeviceType.QPU,
             configuration=Configuration(
                 dt=0.1,
