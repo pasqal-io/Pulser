@@ -34,7 +34,7 @@ class PasqalCloud:
             cloud.
         client_secret: client_secret of the API key you are holding for
             Pasqal cloud.
-        kwargs: additional arguments to provide to SDK
+        kwargs: Additional arguments to provide to SDK
     """
 
     def __init__(
@@ -85,13 +85,13 @@ class PasqalCloud:
             )
 
         for params in jobs:
-            seq.build(**params.parameters)  # type: ignore
+            seq.build(**params.variables.get_dict())  # type: ignore
 
         return self._sdk_connection.create_batch(
             serialized_sequence=self._serialize_seq(
                 seq=seq, device_type=device_type
             ),
-            jobs=[j.parameters for j in jobs],
+            jobs=[j.get_dict() for j in jobs],
             device_type=device_type,
             configuration=configuration,
             wait=wait,

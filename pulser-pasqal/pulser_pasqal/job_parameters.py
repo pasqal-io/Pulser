@@ -15,15 +15,51 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Mapping, Union
+from typing import Dict, Mapping, Optional, Union
 
 from numpy.typing import ArrayLike
 
 from pulser.register import QubitId
+
+JobVariablesDict = Dict[str, Union[ArrayLike, Optional[Mapping[QubitId, int]]]]
+
+
+class JobVariables:
+    """Variables to build the sequence."""
+
+    def __init__(
+        self,
+        qubits: Optional[Mapping[QubitId, int]] = None,
+        **vars: Union[ArrayLike, float, int, str],
+    ):
+        """Initializes the JobVariables class.
+
+        Args:
+            qubits: A mapping between qubit IDs and trap IDs used to define
+                the register. Must only be provided when the sequence is
+                initialized with a MappableRegister.
+            vars: The values for all the variables declared in this Sequence
+                instance, indexed by the name given upon declaration. Check
+                ``Sequence.declared_variables`` to see all the variables.
+        """
+        self._qubits = qubits
+        self._vars = vars
+
+    def get_dict(self) -> JobVariablesDict:
+        """Creates a dictionary used by the Sequence building and the cloud."""
+        return {"qubits": self._qubits, **self._vars}
 
 
 @dataclasses.dataclass
 class JobParameters:
     """Parameters representing a job to build the sequence."""
 
-    parameters: dict[str, Union[ArrayLike, Mapping[QubitId, int]]]
+    runs: int
+    variables: JobVariables
+
+    def get_dict(self) -> dict[str, Union[int, JobVariablesDict]]:
+        """Creates a dictionary to send to the cloud."""
+        return dict(
+            runs=self.runs,
+            variables=self.variables.get_dict(),
+        )

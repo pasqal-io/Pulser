@@ -26,7 +26,7 @@ from pulser.devices import Chadoq2
 from pulser.register import Register
 from pulser.sequence import Sequence
 from pulser_pasqal import Configuration, DeviceType, Endpoints, PasqalCloud
-from pulser_pasqal.job_parameters import JobParameters
+from pulser_pasqal.job_parameters import JobParameters, JobVariables
 
 root = Path(__file__).parent.parent
 
@@ -72,7 +72,7 @@ virtual_device = test_device.to_virtual()
 
 def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     create_batch_kwargs = dict(
-        jobs=[JobParameters({"runs": 10, "variables": {"a": [3, 5]}})],
+        jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
         device_type=device_type,
         configuration=Configuration(
             dt=0.1,
@@ -84,7 +84,7 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
 
     expected_create_batch_kwargs = {
         **create_batch_kwargs,
-        "jobs": [{"runs": 10, "variables": {"a": [3, 5]}}],
+        "jobs": [{"runs": 10, "variables": {"qubits": None, "a": [3, 5]}}],
     }
 
     fixt.pasqal_cloud.create_batch(
@@ -93,7 +93,7 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     )
 
     fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
-        expected_seq_representation,
+        serialized_sequence=expected_seq_representation,
         **expected_create_batch_kwargs,
     )
 
@@ -150,7 +150,7 @@ def test_virtual_device_on_qpu_error(fixt):
     with pytest.raises(TypeError, match="must be a real device"):
         fixt.pasqal_cloud.create_batch(
             seq,
-            jobs=[JobParameters({"runs": 10, "variables": {"a": [3, 5]}})],
+            jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
             device_type=DeviceType.QPU,
             configuration=Configuration(
                 dt=0.1,
@@ -171,7 +171,7 @@ def test_wrong_parameters(fixt):
     ):
         fixt.pasqal_cloud.create_batch(
             seq,
-            jobs=[JobParameters({"runs": 10, "variables": {"a": [3, 5]}})],
+            jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
             device_type=DeviceType.QPU,
             configuration=Configuration(
                 dt=0.1,
