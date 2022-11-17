@@ -30,7 +30,7 @@ class JobVariables:
     def __init__(
         self,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, float, int, str],
+        **vars: Union[ArrayLike, float, int],
     ):
         """Initializes the JobVariables class.
 
