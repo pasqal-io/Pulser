@@ -798,7 +798,7 @@ class Sequence:
         self,
         *,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, float, int, str],
+        **vars: Union[ArrayLike, float, int],
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
