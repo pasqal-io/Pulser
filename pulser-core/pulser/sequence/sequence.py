@@ -157,6 +157,11 @@ class Sequence:
         return cast(BaseRegister, self._register).qubits
 
     @property
+    def device(self) -> BaseDevice:
+        """Device that the sequence is using."""
+        return self._device
+
+    @property
     def register(self) -> BaseRegister:
         """Register with the qubit's IDs and positions."""
         if self.is_register_mappable():
@@ -793,7 +798,7 @@ class Sequence:
         self,
         *,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, float, int, str],
+        **vars: Union[ArrayLike, float, int],
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
