@@ -70,19 +70,7 @@ test_device = Chadoq2
 virtual_device = test_device.to_virtual()
 
 
-@pytest.mark.parametrize(
-    "device_type, device",
-    [
-        [device_type, device]
-        for device_type in DeviceType
-        for device in (test_device, virtual_device)
-        if (device_type, device) != (DeviceType.QPU, virtual_device)
-    ],
-)
-def test_pasqal_cloud(fixt, device_type, device):
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
-    seq = Sequence(reg, device)
-
+def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     create_batch_kwargs = dict(
         jobs=[JobParameters({"runs": 10, "variables": {"a": [3, 5]}})],
         device_type=device_type,
@@ -105,7 +93,7 @@ def test_pasqal_cloud(fixt, device_type, device):
     )
 
     fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
-        seq.serialize(),
+        expected_seq_representation,
         **expected_create_batch_kwargs,
     )
 
@@ -117,6 +105,41 @@ def test_pasqal_cloud(fixt, device_type, device):
     fixt.pasqal_cloud.get_batch(**get_batch_kwargs)
 
     fixt.mock_cloud_sdk.get_batch.assert_called_once_with(**get_batch_kwargs)
+
+
+@pytest.mark.parametrize(
+    "device_type, device",
+    [
+        [device_type, device]
+        for device_type in (DeviceType.EMU_FREE, DeviceType.EMU_SV)
+        for device in (test_device, virtual_device)
+    ],
+)
+def test_pasqal_cloud_emu(fixt, device_type, device):
+    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    seq = Sequence(reg, device)
+
+    check_pasqal_cloud(
+        fixt=fixt,
+        seq=seq,
+        device_type=device_type,
+        expected_seq_representation=seq.to_abstract_repr(),
+    )
+
+
+def test_pasqal_cloud_qpu(fixt):
+    device_type = DeviceType.QPU
+    device = test_device
+
+    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    seq = Sequence(reg, device)
+
+    check_pasqal_cloud(
+        fixt=fixt,
+        seq=seq,
+        device_type=device_type,
+        expected_seq_representation=seq.serialize(),
+    )
 
 
 def test_virtual_device_on_qpu_error(fixt):

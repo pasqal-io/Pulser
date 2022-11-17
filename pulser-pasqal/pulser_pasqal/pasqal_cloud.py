@@ -88,12 +88,21 @@ class PasqalCloud:
             seq.build(**params.parameters)  # type: ignore
 
         return self._sdk_connection.create_batch(
-            serialized_sequence=seq.serialize(),
+            serialized_sequence=self._serialize_seq(
+                seq=seq, device_type=device_type
+            ),
             jobs=[j.parameters for j in jobs],
             device_type=device_type,
             configuration=configuration,
             wait=wait,
         )
+
+    def _serialize_seq(
+        self, seq: Sequence, device_type: sdk.DeviceType
+    ) -> str:
+        if device_type == sdk.DeviceType.QPU:
+            return seq.serialize()
+        return seq.to_abstract_repr()
 
     def get_batch(self, id: int, fetch_results: bool = False) -> sdk.Batch:
         """Retrieve a batch's data and all its jobs.
