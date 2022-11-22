@@ -75,10 +75,16 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Pulser from PyPI
+        timeout-minutes: 5
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install pulser
+          version="$(head -1 VERSION.txt)"
+          until pip install pulser==$version
+          do
+            echo "Failed to install from PyPI, will wait for upload and retry."
+            sleep 30
+          done
       - name: Test the installation
         shell: bash
         run: |
