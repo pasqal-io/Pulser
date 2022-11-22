@@ -186,3 +186,21 @@ def test_support():
         match="No serialization support for 'pulser.waveforms.from_max_val'",
     ):
         validate_serialization(wf_obj_dict)
+
+
+def test_sequence_module():
+    # Check that the sequence module is backwards compatible after refactoring
+    seq = Sequence(Register.square(2), Chadoq2)
+
+    obj_dict = json.loads(seq.serialize())
+    assert obj_dict["__module__"] == "pulser.sequence"
+
+    # Defensively check that the standard format runs
+    Sequence.deserialize(seq.serialize())
+
+    # Use module being used in v0.7.0-0.7.2.0
+    obj_dict["__module__"] == "pulser.sequence.sequence"
+
+    # Check that it also works
+    s = json.dumps(obj_dict)
+    Sequence.deserialize(s)
