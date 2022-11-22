@@ -83,6 +83,7 @@ SUPPORTED_MODULES = {
         "KaiserWaveform",
     ),
     "pulser.sequence.sequence": ("Sequence",),
+    "pulser.sequence": ("Sequence",),
     "pulser.parametrized.variable": ("Variable",),
     "pulser.parametrized.paramobj": ("ParamObj",),
 }
