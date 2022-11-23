@@ -165,7 +165,7 @@ def test_switch_device():
                     phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=3,
-                    mod_bandwidth = 4,
+                    mod_bandwidth=4,
                 ),
             ),
             (
@@ -198,7 +198,7 @@ def test_switch_device():
                     phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=5,
-                    mod_bandwidth = 2,
+                    mod_bandwidth=2,
                 ),
             ),
             (
@@ -227,8 +227,9 @@ def test_switch_device():
                     max_amp=2 * np.pi * 10,
                     phase_jump_time=0,
                     min_retarget_interval=220,
+                    fixed_retarget_t=2,
                     max_targets=1,
-                    mod_bandwidth = 3,
+                    mod_bandwidth=2,
                     clock_period=4,
                     min_duration=16,
                     max_duration=2**26,
@@ -242,7 +243,7 @@ def test_switch_device():
                     clock_period=3,
                     phase_jump_time=500,
                     max_duration=2**26,
-                    mod_bandwidth = 2,
+                    mod_bandwidth=2,
                 ),
             ),
             (
@@ -269,7 +270,7 @@ def test_switch_device():
     ):
         seq.switch_device(Chadoq2)
     assert seq.switch_device(Chadoq2)._device == Chadoq2
- 
+
     seq = Sequence(reg, Chadoq2)
     with pytest.raises(
         NotImplementedError,
@@ -278,11 +279,23 @@ def test_switch_device():
     ):
         seq.switch_device(MockDevice)
 
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ising", "rydberg_global")
+    with pytest.raises(
+        ValueError,
+        match="Device macth failed because of different rydberg levels.",
+    ):
+        seq.switch_device(IroiseMVP)
+
     # Different Channels basis
     test_device1.change_rydberg_level(IroiseMVP.rydberg_level)
     seq = Sequence(reg, test_device1)
     seq.declare_channel("digital", "raman_global", "q1")
-    with pytest.raises(TypeError, match="No match for channel digital."):
+    with pytest.raises(
+        TypeError,
+        match="No match for channel digital with the"
+        + " right basis and addressing.",
+    ):
         seq.switch_device(IroiseMVP)
 
     # Different addressing channels
@@ -290,23 +303,23 @@ def test_switch_device():
     seq = Sequence(reg, test_device1)
     seq.declare_channel("ising", "raman_global")
 
-    with pytest.raises(TypeError, match="No match for channel ising."):
-        seq.switch_device(test_device2)
-
-    seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ising", "rydberg_global")
     with pytest.raises(
-        ValueError,
-        match= "Macth failed because of different rydberg levels."
-        ):
-        seq.switch_device(IroiseMVP)
+        TypeError,
+        match="No match for channel ising with the"
+        + " right basis and addressing.",
+    ):
+        seq.switch_device(test_device2)
 
     # Channel addressing and basis issue
     test_device2.change_rydberg_level(IroiseMVP.rydberg_level)
     seq = Sequence(reg, test_device2)
     seq.declare_channel("ising", "rmn_local")
 
-    with pytest.raises(TypeError, match="No match for channel ising."):
+    with pytest.raises(
+        TypeError,
+        match="No match for channel ising with the"
+        + " right basis and addressing.",
+    ):
         seq.switch_device(IroiseMVP)
 
     # Strict: Jump_phase_time & CLock-period criteria
@@ -332,7 +345,8 @@ def test_switch_device():
 
     with pytest.raises(
         ValueError,
-        match="No channel with phase_jump_time & clock_period match.",
+        match="No channel match for channel ising"
+        + " with the right phase_jump_time & clock_period.",
     ):
         seq.switch_device(MockDevice, True)
 
@@ -354,8 +368,8 @@ def test_switch_device():
 
     with pytest.warns(
         UserWarning,
-        match="The phase_jump_time of the new device"
-        + " is different, take it in account"
+        match="The phase_jump_time of the matching channel"
+        + "on the the new device is different, take it in account"
         + " for the upcoming pulses.",
     ):
         seq.switch_device(Chadoq2, True)
@@ -367,23 +381,34 @@ def test_switch_device():
 
     with pytest.raises(
         ValueError,
-        match="No channel with phase_jump_time & clock_period match.",
+        match="No channel match for channel ising"
+        + " with the right phase_jump_time & clock_period.",
     ):
         seq.switch_device(test_device2, True)
 
     test_device2.change_rydberg_level(test_device3.rydberg_level)
     seq = Sequence(reg, test_device3)
-    seq.declare_channel("ising", "rmn_local2","q0")
+    seq.declare_channel("ising", "rmn_local2", "q0")
     assert seq.switch_device(test_device2, True)._device == test_device2
 
     test_device2.change_rydberg_level(test_device1.rydberg_level)
     seq = Sequence(reg, test_device2)
-    seq.declare_channel("ising", "rmn_local","q0")
+    seq.declare_channel("ising", "rmn_local", "q0")
     with pytest.raises(
         ValueError,
-        match= "The modulation bandwidths don't match."
+        match="No channel match for channel ising"
+        + " with the right mod_bandwidth.",
     ):
         seq.switch_device(test_device1, True)
+    test_device3.change_rydberg_level(test_device2.rydberg_level)
+    seq = Sequence(reg, test_device3)
+    seq.declare_channel("ising", "rmn_local1", "q0")
+    with pytest.raises(
+        ValueError,
+        match="No channel match for channel ising"
+        + " with the right fixed_retarget_t.",
+    ):
+        seq.switch_device(test_device2, True)
 
 
 def test_target():

@@ -393,9 +393,11 @@ class Sequence:
                 "Switching the device of a sequence to one"
                 + " with reusable channels is not supported."
             )
-        
+
         if new_device.rydberg_level != self._device.rydberg_level:
-            raise ValueError( "Macth failed because of different rydberg levels.")
+            raise ValueError(
+                "Device macth failed because of different rydberg levels."
+            )
 
         # Channel match
         sample_seq = sample(self)
@@ -414,21 +416,24 @@ class Sequence:
                 )
                 if not (basis_match and addressing_match):
                     channel_match[o_d_ch_name] = None
-                    ch_type_er_mess = f"No match for channel {o_d_ch_name}."
+                    ch_type_er_mess = (
+                        f"No match for channel {o_d_ch_name}"
+                        + " with the right basis and addressing."
+                    )
                     continue
-                if (
-                    n_d_ch_obj.mod_bandwidth
-                    != o_d_ch_obj.mod_bandwidth
-                ):
+                if n_d_ch_obj.mod_bandwidth != o_d_ch_obj.mod_bandwidth:
                     channel_match[o_d_ch_name] = None
-                    strict_error_message = "The modulation bandwidths don't match."
+                    strict_error_message = (
+                        f"No channel match for channel {o_d_ch_name}"
+                        + " with the right mod_bandwidth."
+                    )
                     break
-                if (
-                    n_d_ch_obj.fixed_retarget_t
-                    != o_d_ch_obj.fixed_retarget_t
-                ):
+                if n_d_ch_obj.fixed_retarget_t != o_d_ch_obj.fixed_retarget_t:
                     channel_match[o_d_ch_name] = None
-                    strict_error_message = "The channels' fixed_retarget arg don't match."
+                    strict_error_message = (
+                        f"No channel match for channel {o_d_ch_name}"
+                        + " with the right fixed_retarget_t."
+                    )
                     break
                 if not strict:
                     channel_match[o_d_ch_name] = n_d_ch_id
@@ -438,9 +443,9 @@ class Sequence:
                 # Find if there is phase change between pulses or not
                 phase_is_constant = True
                 if ch_sample_phase.size != 0:
-                    phase_is_constant = bool(np.all(
-                        ch_sample_phase == ch_sample_phase[0]
-                    ))
+                    phase_is_constant = bool(
+                        np.all(ch_sample_phase == ch_sample_phase[0])
+                    )
                 # Phase_jump_time and clock_period check
                 phase_jump_time_check = (
                     o_d_ch_obj.phase_jump_time == n_d_ch_obj.phase_jump_time
@@ -457,8 +462,8 @@ class Sequence:
                 else:
                     channel_match[o_d_ch_name] = None
                     strict_error_message = (
-                        "No channel with phase_jump_time"
-                        + " & clock_period match."
+                        f"No channel match for channel {o_d_ch_name}"
+                        + " with the right phase_jump_time & clock_period."
                     )
 
         if None in channel_match.values():
@@ -489,8 +494,8 @@ class Sequence:
 
             if strict and alert_phase_jump:
                 warnings.warn(
-                    "The phase_jump_time of the new device"
-                    + " is different, take it in account"
+                    "The phase_jump_time of the matching channel"
+                    + "on the the new device is different, take it in account"
                     + " for the upcoming pulses.",
                     stacklevel=2,
                 )
