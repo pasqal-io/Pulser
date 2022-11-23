@@ -22,7 +22,7 @@ import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
-from pulser.devices._device_datacls import Device
+from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence.sequence import _TimeSlot
@@ -143,7 +143,7 @@ def test_switch_device():
     test_device1 = Device(
         name="test_device1",
         dimensions=2,
-        rydberg_level=60,
+        rydberg_level=70,
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
@@ -165,6 +165,17 @@ def test_switch_device():
                     phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=3,
+                    mod_bandwidth = 4,
+                ),
+            ),
+            (
+                "rydberg_global",
+                Rydberg.Global(
+                    max_abs_detuning=2 * np.pi * 4,
+                    max_amp=2 * np.pi * 3,
+                    clock_period=1,
+                    phase_jump_time=500,
+                    max_duration=2**26,
                 ),
             ),
         ),
@@ -173,7 +184,7 @@ def test_switch_device():
     test_device2 = Device(
         name="test_device1",
         dimensions=2,
-        rydberg_level=60,
+        rydberg_level=70,
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
@@ -187,50 +198,7 @@ def test_switch_device():
                     phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=5,
-                ),
-            ),
-        ),
-    )
-
-    test_device3 = Device(
-        name="test_device1",
-        dimensions=2,
-        rydberg_level=50,
-        max_atom_num=100,
-        max_radial_distance=60,
-        min_atom_distance=5,
-        _channels=(
-            (
-                "rmn_local1",
-                Raman.Local(
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    clock_period=4,
-                    phase_jump_time=750,
-                    max_duration=2**26,
-                    max_targets=6,
-                ),
-            ),
-            (
-                "rmn_local2",
-                Raman.Local(
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    clock_period=1,
-                    phase_jump_time=500,
-                    max_duration=2**26,
-                    max_targets=1,
-                ),
-            ),
-            (
-                "rmn_local3",
-                Raman.Local(
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    clock_period=2,
-                    phase_jump_time=500,
-                    max_duration=2**26,
-                    max_targets=2,
+                    mod_bandwidth = 2,
                 ),
             ),
             (
@@ -238,6 +206,51 @@ def test_switch_device():
                 Rydberg.Global(
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
+                    clock_period=2,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                ),
+            ),
+        ),
+    )
+
+    test_device3 = VirtualDevice(
+        name="test_device1",
+        dimensions=2,
+        rydberg_level=70,
+        min_atom_distance=5,
+        _channels=(
+            (
+                "rmn_local1",
+                Raman.Local(
+                    max_abs_detuning=2 * np.pi * 20,
+                    max_amp=2 * np.pi * 10,
+                    phase_jump_time=0,
+                    min_retarget_interval=220,
+                    max_targets=1,
+                    mod_bandwidth = 3,
+                    clock_period=4,
+                    min_duration=16,
+                    max_duration=2**26,
+                ),
+            ),
+            (
+                "rmn_local2",
+                Raman.Local(
+                    2 * np.pi * 20,
+                    2 * np.pi * 10,
+                    clock_period=3,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                    mod_bandwidth = 2,
+                ),
+            ),
+            (
+                "rydberg_global",
+                Rydberg.Global(
+                    max_abs_detuning=2 * np.pi * 4,
+                    max_amp=2 * np.pi * 3,
+                    clock_period=4,
                     phase_jump_time=500,
                     max_duration=2**26,
                 ),
@@ -255,7 +268,8 @@ def test_switch_device():
         + " returns the sequence unchanged.",
     ):
         seq.switch_device(Chadoq2)
-
+    assert seq.switch_device(Chadoq2)._device == Chadoq2
+ 
     seq = Sequence(reg, Chadoq2)
     with pytest.raises(
         NotImplementedError,
@@ -265,13 +279,14 @@ def test_switch_device():
         seq.switch_device(MockDevice)
 
     # Different Channels basis
+    test_device1.change_rydberg_level(IroiseMVP.rydberg_level)
     seq = Sequence(reg, test_device1)
     seq.declare_channel("digital", "raman_global", "q1")
-
     with pytest.raises(TypeError, match="No match for channel digital."):
         seq.switch_device(IroiseMVP)
 
     # Different addressing channels
+    test_device1.change_rydberg_level(test_device2.rydberg_level)
     seq = Sequence(reg, test_device1)
     seq.declare_channel("ising", "raman_global")
 
@@ -280,10 +295,14 @@ def test_switch_device():
 
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("ising", "rydberg_global")
-    with pytest.warns(UserWarning):
+    with pytest.raises(
+        ValueError,
+        match= "Macth failed because of different rydberg levels."
+        ):
         seq.switch_device(IroiseMVP)
 
     # Channel addressing and basis issue
+    test_device2.change_rydberg_level(IroiseMVP.rydberg_level)
     seq = Sequence(reg, test_device2)
     seq.declare_channel("ising", "rmn_local")
 
@@ -294,7 +313,7 @@ def test_switch_device():
     # Jump_phase_time check 1: post_phase_shift not nill
     r_interatomic = Chadoq2.rydberg_blockade_radius(2 * np.pi)
     reg = Register.square(3, r_interatomic, prefix="q")
-    seq = Sequence(reg, IroiseMVP)
+    seq = Sequence(reg, test_device3)
     rise = Pulse.ConstantDetuning(
         RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0, 0.5
     )
@@ -304,18 +323,18 @@ def test_switch_device():
     fall = Pulse.ConstantDetuning(
         RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0, 0.7
     )
-    seq.declare_channel(name="ising", channel_id="rydberg_global")
+    seq.declare_channel("ising", channel_id="rydberg_global")
     seq.add(rise, "ising")
     seq.add(sweep, "ising")
     seq.add(fall, "ising")
 
-    assert seq.switch_device(test_device3, True)._device == test_device3
+    assert seq.switch_device(test_device1)._device == test_device1
 
     with pytest.raises(
         ValueError,
         match="No channel with phase_jump_time & clock_period match.",
     ):
-        seq.switch_device(Chadoq2, True)
+        seq.switch_device(MockDevice, True)
 
     # Jump_phase_time check 2: No post_phase_shift and pulses with same phase
     rise = Pulse.ConstantDetuning(
@@ -327,8 +346,8 @@ def test_switch_device():
     fall = Pulse.ConstantDetuning(
         RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0
     )
-    seq = Sequence(reg, IroiseMVP)
-    seq.declare_channel("ising", "rydberg_global")
+    seq = Sequence(reg, test_device3)
+    seq.declare_channel(name="ising", channel_id="rydberg_global")
     seq.add(rise, "ising")
     seq.add(sweep, "ising")
     seq.add(fall, "ising")
@@ -342,14 +361,29 @@ def test_switch_device():
         seq.switch_device(Chadoq2, True)
 
     # Clock_period not match
+    test_device1.change_rydberg_level(test_device2.rydberg_level)
     seq = Sequence(reg, test_device1)
-    seq.declare_channel("ising", "raman_local")
+    seq.declare_channel("ising", "rydberg_global")
 
     with pytest.raises(
         ValueError,
         match="No channel with phase_jump_time & clock_period match.",
     ):
         seq.switch_device(test_device2, True)
+
+    test_device2.change_rydberg_level(test_device3.rydberg_level)
+    seq = Sequence(reg, test_device3)
+    seq.declare_channel("ising", "rmn_local2","q0")
+    assert seq.switch_device(test_device2, True)._device == test_device2
+
+    test_device2.change_rydberg_level(test_device1.rydberg_level)
+    seq = Sequence(reg, test_device2)
+    seq.declare_channel("ising", "rmn_local","q0")
+    with pytest.raises(
+        ValueError,
+        match= "The modulation bandwidths don't match."
+    ):
+        seq.switch_device(test_device1, True)
 
 
 def test_target():

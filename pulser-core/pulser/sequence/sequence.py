@@ -388,11 +388,15 @@ class Sequence:
                 stacklevel=2,
             )
             return self
-        if new_device.reusable_channels:
+        if new_device.reusable_channels and not self._device.reusable_channels:
             raise NotImplementedError(
                 "Switching the device of a sequence to one"
                 + " with reusable channels is not supported."
             )
+        
+        if new_device.rydberg_level != self._device.rydberg_level:
+            raise ValueError( "Macth failed because of different rydberg levels.")
+
         # Channel match
         sample_seq = sample(self)
         channel_match: dict[str, Any] = {}
@@ -412,6 +416,20 @@ class Sequence:
                     channel_match[o_d_ch_name] = None
                     ch_type_er_mess = f"No match for channel {o_d_ch_name}."
                     continue
+                if (
+                    n_d_ch_obj.mod_bandwidth
+                    != o_d_ch_obj.mod_bandwidth
+                ):
+                    channel_match[o_d_ch_name] = None
+                    strict_error_message = "The modulation bandwidths don't match."
+                    break
+                if (
+                    n_d_ch_obj.fixed_retarget_t
+                    != o_d_ch_obj.fixed_retarget_t
+                ):
+                    channel_match[o_d_ch_name] = None
+                    strict_error_message = "The channels' fixed_retarget arg don't match."
+                    break
                 if not strict:
                     channel_match[o_d_ch_name] = n_d_ch_id
                     break
@@ -444,7 +462,7 @@ class Sequence:
                     )
 
         if None in channel_match.values():
-            if strict_error_message != "":
+            if strict_error_message:
                 raise ValueError(strict_error_message)
             else:
                 raise TypeError(ch_type_er_mess)
@@ -477,15 +495,6 @@ class Sequence:
                     stacklevel=2,
                 )
             new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
-
-        if new_device.rydberg_level != self._device.rydberg_level:
-            old_ry_lvl = new_device.rydberg_level
-            new_ry_lvl = self._device.rydberg_level
-            warnings.warn(
-                f"The rydberg level of the new device ({old_ry_lvl})"
-                f" is different from the current device's ({new_ry_lvl}).",
-                stacklevel=2,
-            )
         return new_seq
 
     @seq_decorators.block_if_measured
