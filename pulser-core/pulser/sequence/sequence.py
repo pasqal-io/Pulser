@@ -475,7 +475,7 @@ class Sequence:
                 continue
             # Switch the old id with the correct id
             sw_channel_args = list(call.args)
-            sw_channel_kw_args = call.kwargs
+            sw_channel_kw_args = call.kwargs.copy()
             if "name" in sw_channel_kw_args:
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_kw_args["name"]
