@@ -13,4 +13,8 @@
 # limitations under the License.
 """Classes for interfacing with Pasqal backends."""
 
+from sdk import Configuration, DeviceType, Endpoints
+
 from pulser_pasqal._version import __version__
+from pulser_pasqal.job_parameters import JobParameters, JobVariables
+from pulser_pasqal.pasqal_cloud import PasqalCloud
