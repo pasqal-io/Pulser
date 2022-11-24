@@ -632,11 +632,11 @@ class Sequence:
             ).detuning_off_options(amp_on, detuning_on)
 
             if detuning_off_choice == "closest-to-zero":
-                detuning_off = np.min(np.abs(off_options))
+                detuning_off = min(off_options, key=abs)
             elif detuning_off_choice == "lowest":
-                detuning_off = np.min(off_options)
+                detuning_off = min(off_options)
             elif detuning_off_choice == "highest":
-                detuning_off = np.max(off_options)
+                detuning_off = max(off_options)
             off_pulse = Pulse.ConstantPulse(
                 channel_obj.min_duration, 0.0, detuning_off, 0.0
             )
