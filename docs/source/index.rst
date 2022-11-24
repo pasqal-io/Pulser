@@ -72,6 +72,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/interpolated_wfs
    tutorials/serialization
    tutorials/slm_mask
+   tutorials/output_mod_eom
 
 .. toctree::
    :maxdepth: 1
