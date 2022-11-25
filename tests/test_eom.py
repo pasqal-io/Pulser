@@ -93,28 +93,39 @@ def test_detuning_off(limit_amp_fraction, params):
     amp = limit_amp_fraction * limit_amp
 
     def calc_offset(amp):
+        # Manually calculates the offset needed to correct the lightshift
+        # coming from a difference in power between the beams
         if amp <= limit_amp:
+            # Below limit_amp, red_amp=blue_amp so there is no lightshift
             return 0.0
         assert params["limiting_beam"] == RydbergBeam.RED
         red_amp = params["max_limiting_amp"]
         blue_amp = 2 * params["intermediate_detuning"] * amp / red_amp
+        # The offset to have resonance when the pulse is on is -lightshift
         return -(blue_amp**2 - red_amp**2) / (
             4 * params["intermediate_detuning"]
         )
 
-    zero_det = calc_offset(amp)
+    # Case where the EOM pulses are resonant
+    detuning_on = 0.0
+    zero_det = calc_offset(amp)  # detuning when both beams are off = offset
     assert eom._lightshift(amp, *RydbergBeam) == -zero_det
     assert eom._lightshift(amp) == 0.0
-    det_off_options = eom.detuning_off_options(amp, 0.0)
+    det_off_options = eom.detuning_off_options(amp, detuning_on)
     det_off_options.sort()
     assert det_off_options[0] < zero_det  # RED on
     assert det_off_options[1] == zero_det  # All off
     assert det_off_options[2] > zero_det  # BLUE on
 
+    # Case where the EOM pulses are off-resonant
     detuning_on = 1.0
     for beam, ind in [(RydbergBeam.RED, 2), (RydbergBeam.BLUE, 0)]:
+        # When only one beam is controlled, there is a single
+        # detuning_off option
         params["controlled_beams"] = (beam,)
         eom_ = RydbergEOM(**params)
         off_options = eom_.detuning_off_options(amp, detuning_on)
         assert len(off_options) == 1
+        # The new detuning_off is shifted by the new detuning_on,
+        # since that changes the offset compared the resonant case
         assert off_options[0] == det_off_options[ind] + detuning_on
