@@ -44,7 +44,6 @@ else:  # pragma: no cover
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
 
-ADDRESSING = Literal["Global", "Local"]
 CH_TYPE = Literal["Rydberg", "Raman", "Microwave"]
 BASIS = Literal["ground-rydberg", "digital", "XY"]
 
@@ -80,7 +79,7 @@ class Channel(ABC):
         call ``Rydberg.Global(...)``.
     """
 
-    addressing: ADDRESSING
+    addressing: Literal["Global", "Local"]
     max_abs_detuning: Optional[float]
     max_amp: Optional[float]
     phase_jump_time: int = 0
@@ -114,7 +113,7 @@ class Channel(ABC):
         internal_param_value_pairs = [
             ("name", CH_TYPE),
             ("basis", BASIS),
-            ("addressing", ADDRESSING),
+            ("addressing", Literal["Global", "Local"]),
         ]
         for param, type_options in internal_param_value_pairs:
             value = getattr(self, param)

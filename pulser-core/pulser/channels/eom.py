@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Configuration parameters for the a channel's EOM."""
+"""Configuration parameters for a channel's EOM."""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
@@ -40,7 +40,12 @@ class RydbergBeam(Flag):
 
 @dataclass(frozen=True)
 class BaseEOM:
-    """A base class for the EOM configuration."""
+    """A base class for the EOM configuration.
+
+    Attributes:
+        mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
+            in MHz.
+    """
 
     mod_bandwidth: float  # MHz
 
@@ -75,7 +80,7 @@ class RydbergEOM(BaseEOM):
         mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
             in MHz.
         limiting_beam: The beam with the smallest amplitude range.
-        max_limiting_beam: The maximum amplitude the limiting beam can reach,
+        max_limiting_amp: The maximum amplitude the limiting beam can reach,
             in rad/µs.
         intermediate_detuning: The detuning between the two beams, in rad/µs.
         controlled_beams: The beams that can be switched on/off with an EOM.
