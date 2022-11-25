@@ -38,7 +38,7 @@ from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 
 if TYPE_CHECKING:
-    from pulser.channels.channels import Channel
+    from pulser.channels.base_channel import Channel
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
     from functools import cached_property

@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 import pulser.devices as devices
-from pulser.channels.channels import CH_TYPE, get_args
+from pulser.channels.base_channel import CH_TYPE, get_args
 from pulser.json.exceptions import SerializationError
 
 SUPPORTED_BUILTINS = ("float", "int", "str", "set")

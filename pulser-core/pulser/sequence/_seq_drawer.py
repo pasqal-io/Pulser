@@ -26,7 +26,7 @@ from scipy.interpolate import CubicSpline
 
 import pulser
 from pulser import Register, Register3D
-from pulser.channels.channels import Channel
+from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.samples import ChannelSamples
 from pulser.waveforms import InterpolatedWaveform

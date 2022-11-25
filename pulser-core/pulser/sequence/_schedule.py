@@ -21,7 +21,7 @@ from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
 
-from pulser.channels.channels import Channel
+from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import ChannelSamples, _TargetSlot

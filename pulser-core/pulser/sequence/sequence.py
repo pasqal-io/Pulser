@@ -29,7 +29,7 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.sequence._decorators as seq_decorators
-from pulser.channels.channels import Channel
+from pulser.channels.base_channel import Channel
 from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
