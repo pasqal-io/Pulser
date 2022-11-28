@@ -23,7 +23,7 @@ from warnings import warn
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
-from pulser.channels import Channel
+from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId

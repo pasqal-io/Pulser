@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from pulser.channels import Raman, Rydberg
+from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import Device
 
 
@@ -39,6 +40,13 @@ def mod_device() -> Device:
                     clock_period=1,
                     min_duration=1,
                     mod_bandwidth=4.0,  # MHz
+                    eom_config=RydbergEOM(
+                        mod_bandwidth=30.0,
+                        limiting_beam=RydbergBeam.RED,
+                        max_limiting_amp=50 * 2 * np.pi,
+                        intermediate_detuning=800 * 2 * np.pi,
+                        controlled_beams=(RydbergBeam.BLUE,),
+                    ),
                 ),
             ),
             (
@@ -52,6 +60,13 @@ def mod_device() -> Device:
                     clock_period=4,
                     min_retarget_interval=220,
                     mod_bandwidth=4.0,
+                    eom_config=RydbergEOM(
+                        mod_bandwidth=20.0,
+                        limiting_beam=RydbergBeam.RED,
+                        max_limiting_amp=60 * 2 * np.pi,
+                        intermediate_detuning=700 * 2 * np.pi,
+                        controlled_beams=tuple(RydbergBeam),
+                    ),
                 ),
             ),
             (

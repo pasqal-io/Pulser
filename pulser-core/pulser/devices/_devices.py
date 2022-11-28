@@ -15,6 +15,7 @@
 import numpy as np
 
 from pulser.channels import Raman, Rydberg
+from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import Device
 
 Chadoq2 = Device(
@@ -82,6 +83,13 @@ IroiseMVP = Device(
                 min_duration=16,
                 max_duration=2**26,
                 mod_bandwidth=4,
+                eom_config=RydbergEOM(
+                    limiting_beam=RydbergBeam.RED,
+                    max_limiting_amp=40 * 2 * np.pi,
+                    intermediate_detuning=700 * 2 * np.pi,
+                    mod_bandwidth=24,
+                    controlled_beams=(RydbergBeam.BLUE,),
+                ),
             ),
         ),
     ),

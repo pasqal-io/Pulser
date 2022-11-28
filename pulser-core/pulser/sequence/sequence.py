@@ -29,7 +29,7 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.sequence._decorators as seq_decorators
-from pulser.channels import Channel
+from pulser.channels.base_channel import Channel
 from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
@@ -155,6 +155,11 @@ class Sequence:
                 "mappable."
             )
         return cast(BaseRegister, self._register).qubits
+
+    @property
+    def device(self) -> BaseDevice:
+        """Device that the sequence is using."""
+        return self._device
 
     @property
     def register(self) -> BaseRegister:
@@ -799,7 +804,7 @@ class Sequence:
         self,
         *,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, float, int, str],
+        **vars: Union[ArrayLike, float, int],
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
@@ -1156,7 +1161,12 @@ class Sequence:
                 self._basis_ref[basis][qubit].increment_phase(phi)
 
     def _to_dict(self) -> dict[str, Any]:
-        d = obj_to_dict(self, *self._calls[0].args, **self._calls[0].kwargs)
+        d = obj_to_dict(
+            self,
+            *self._calls[0].args,
+            _module="pulser.sequence",
+            **self._calls[0].kwargs,
+        )
         d["__version__"] = pulser.__version__
         d["calls"] = self._calls[1:]
         d["vars"] = self._variables

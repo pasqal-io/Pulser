@@ -334,6 +334,22 @@ def test_str():
     )
     assert seq.__str__() == msg
 
+    seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
+    seq2.declare_channel("ch1", "rydberg_global")
+    with pytest.raises(
+        NotImplementedError,
+        match="Can't print sequence with qubit IDs of different types.",
+    ):
+        str(seq2)
+
+    # Check qubit IDs are sorted
+    seq3 = Sequence(Register({"q1": (0, 0), "q0": (5, 5)}), device)
+    seq3.declare_channel("ch2", "rydberg_global")
+    assert str(seq3) == (
+        "Channel: ch2\n"
+        "t: 0 | Initial targets: q0, q1 | Phase Reference: 0.0 \n\n"
+    )
+
 
 def test_sequence():
     seq = Sequence(reg, device)
