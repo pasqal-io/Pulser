@@ -133,26 +133,39 @@ class RydbergEOM(BaseEOM):
         Returns:
             The possible detuning values when in between pulses.
         """
+        # detuning = offset + lightshift
+
+        # offset takes into account the lightshift when both beams are on
+        # which is not zero when the Rabi freq of both beams is not equal
         offset = detuning_on - self._lightshift(rabi_frequency, *RydbergBeam)
         if len(self.controlled_beams) == 1:
+            # When only one beam is controlled, the lighshift during delays
+            # corresponds to having only the other beam (which can't be
+            # switched off) on.
             lightshifts = [
                 self._lightshift(rabi_frequency, ~self.controlled_beams[0])
             ]
 
         else:
+            # When both beams are controlled, we have three options for the
+            # lightshift: (ON, OFF), (OFF, ON) and (OFF, OFF)
             lightshifts = [
                 self._lightshift(rabi_frequency, beam)
                 for beam in self.controlled_beams
             ]
-            # Extra case where both beams are off
+            # Case where both beams are off ie (OFF, OFF) -> no lightshift
             lightshifts.append(0.0)
+
+        # We sum the offset to all lightshifts to get the effective detuning
         return cast(List[float], (offset + np.array(lightshifts)).tolist())
 
     def _lightshift(
         self, rabi_frequency: float, *beams_on: RydbergBeam
     ) -> float:
+        # lightshift = (rabi_blue**2 - rabi_red**2) / 4 * int_detuning
         rabi_freqs = self._rabi_freq_per_beam(rabi_frequency)
         bias = {RydbergBeam.RED: -1, RydbergBeam.BLUE: 1}
+        # beam off -> beam_rabi_freq = 0
         return sum(bias[beam] * rabi_freqs[beam] ** 2 for beam in beams_on) / (
             4 * self.intermediate_detuning
         )
@@ -160,12 +173,19 @@ class RydbergEOM(BaseEOM):
     def _rabi_freq_per_beam(
         self, rabi_frequency: float
     ) -> dict[RydbergBeam, float]:
+        # rabi_freq = (rabi_red * rabi_blue) / (2 * int_detuning)
         limit_rabi_freq = self.max_limiting_amp**2 / (
             2 * self.intermediate_detuning
         )
+        # limit_rabi_freq is the maximum effective rabi frequency value
+        # below which the rabi frequency of both beams can be matched
         if rabi_frequency <= limit_rabi_freq:
+            # Both beams the same rabi_freq
             beam_amp = np.sqrt(2 * rabi_frequency * self.intermediate_detuning)
             return {beam: beam_amp for beam in RydbergBeam}
+
+        # The limiting beam is at the its maximum amplitude while the other
+        # has the necessary amplitude to reach the desired effective rabi freq
         return {
             self.limiting_beam: self.max_limiting_amp,
             ~self.limiting_beam: 2
