@@ -19,6 +19,7 @@ import pytest
 
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.eom import BaseEOM, RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
 
@@ -109,7 +110,7 @@ def test_device_channels():
             assert id == dev._channels[i][0]
             assert isinstance(id, str)
             assert ch == dev._channels[i][1]
-            assert isinstance(ch, pulser.channels.Channel)
+            assert isinstance(ch, pulser.channels.channels.Channel)
             assert ch.name in ["Rydberg", "Raman"]
             assert ch.basis in ["digital", "ground-rydberg"]
             assert ch.addressing in ["Local", "Global"]
@@ -168,16 +169,50 @@ def test_repr():
     assert ryd.__str__() == r2
 
 
-def test_modulation():
-    rydberg_global = Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)
+_eom_config = RydbergEOM(
+    mod_bandwidth=20,
+    limiting_beam=RydbergBeam.RED,
+    max_limiting_amp=100 * 2 * np.pi,
+    intermediate_detuning=500 * 2 * np.pi,
+    controlled_beams=tuple(RydbergBeam),
+)
 
-    raman_local = Raman.Local(
-        2 * np.pi * 20,
-        2 * np.pi * 10,
-        mod_bandwidth=4,  # MHz
-    )
+
+def test_eom_channel():
+    with pytest.raises(
+        TypeError,
+        match="When defined, 'eom_config' must be a valid 'RydbergEOM'",
+    ):
+        Rydberg.Global(None, None, eom_config=BaseEOM(50))
+
+    with pytest.raises(
+        ValueError,
+        match="'eom_config' can't be defined in a Channel without a"
+        " modulation bandwidth",
+    ):
+        Rydberg.Global(None, None, eom_config=_eom_config)
+
+    assert not Rydberg.Global(None, None).supports_eom()
+    assert Rydberg.Global(
+        None, None, mod_bandwidth=3, eom_config=_eom_config
+    ).supports_eom()
+
+
+def test_modulation_errors():
 
     wf = ConstantWaveform(100, 1)
+    no_eom_msg = "The channel Rydberg.Global(.*) does not have an EOM."
+    with pytest.raises(TypeError, match=no_eom_msg):
+        Rydberg.Global(None, None, mod_bandwidth=10).modulate(
+            wf.samples, eom=True
+        )
+
+    with pytest.raises(TypeError, match=no_eom_msg):
+        Rydberg.Global(None, None, mod_bandwidth=10).calc_modulation_buffer(
+            wf.samples, wf.samples, eom=True
+        )
+
+    rydberg_global = Rydberg.Global(2 * np.pi * 20, 2 * np.pi * 2.5)
     assert rydberg_global.mod_bandwidth is None
     with pytest.warns(UserWarning, match="No modulation bandwidth defined"):
         out_samples = rydberg_global.modulate(wf.samples)
@@ -186,16 +221,41 @@ def test_modulation():
     with pytest.raises(TypeError, match="doesn't have a modulation bandwidth"):
         rydberg_global.calc_modulation_buffer(wf.samples, out_samples)
 
-    out_ = raman_local.modulate(wf.samples)
-    tr = raman_local.rise_time
+
+_raman_local = Raman.Local(
+    2 * np.pi * 20,
+    2 * np.pi * 10,
+    mod_bandwidth=4,  # MHz
+)
+_eom_rydberg = Rydberg.Global(
+    max_amp=2 * np.pi * 10,
+    max_abs_detuning=2 * np.pi * 5,
+    mod_bandwidth=10,
+    eom_config=_eom_config,
+)
+
+
+@pytest.mark.parametrize(
+    "channel, tr, eom, side_buffer_len",
+    [
+        (_raman_local, _raman_local.rise_time, False, 45),
+        (_eom_rydberg, _eom_config.rise_time, True, 0),
+    ],
+)
+def test_modulation(channel, tr, eom, side_buffer_len):
+
+    wf = ConstantWaveform(100, 1)
+    out_ = channel.modulate(wf.samples, eom=eom)
     assert len(out_) == wf.duration + 2 * tr
-    assert raman_local.calc_modulation_buffer(wf.samples, out_) == (tr, tr)
+    assert channel.calc_modulation_buffer(wf.samples, out_, eom=eom) == (
+        tr,
+        tr,
+    )
 
     wf2 = BlackmanWaveform(800, np.pi)
-    side_buffer_len = 45
-    out_ = raman_local.modulate(wf2.samples)
+    out_ = channel.modulate(wf2.samples, eom=eom)
     assert len(out_) == wf2.duration + 2 * tr  # modulate() does not truncate
-    assert raman_local.calc_modulation_buffer(wf2.samples, out_) == (
+    assert channel.calc_modulation_buffer(wf2.samples, out_, eom=eom) == (
         side_buffer_len,
         side_buffer_len,
     )

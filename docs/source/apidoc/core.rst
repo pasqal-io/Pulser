@@ -98,11 +98,26 @@ which when associated with a :class:`pulser.Sequence` condition its development.
 
 
 Channels
-^^^^^^^^^^^
-.. automodule:: pulser.channels
+---------------------
+
+Base Channel
+^^^^^^^^^^^^^^^
+.. automodule:: pulser.channels.base_channel
+   :members:
+
+
+Available Channels
+^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pulser.channels.channels
    :members:
    :show-inheritance:
 
+
+EOM Mode Configuration
+^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pulser.channels.eom
+   :members:
+   :show-inheritance:
 
 Sampler
 ------------------
