@@ -835,6 +835,7 @@ class Simulation:
                 schedule (half of the shortest duration among pulses and
                 delays).
                 Refer to the QuTiP docs_ for an overview of the parameters.
+
                 .. _docs: https://bit.ly/3il9A2u
         """
         if "max_step" in options.keys():
