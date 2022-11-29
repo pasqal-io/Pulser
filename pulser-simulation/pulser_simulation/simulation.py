@@ -832,7 +832,8 @@ class Simulation:
             options: Used as arguments for qutip.Options(). If specified, will
                 override SimConfig solver_options. If no `max_step` value is
                 provided, an automatic one is calculated from the `Sequence`'s
-                schedule (half of the shortest duration among pulses and delays).
+                schedule (half of the shortest duration among pulses and
+                delays).
         """
         if "max_step" in options.keys():
             solv_ops = qutip.Options(**options)
