@@ -481,15 +481,15 @@ class Sequence:
             # Switch the old id with the correct id
             sw_channel_args = list(call.args)
             sw_channel_kw_args = call.kwargs.copy()
-            if "name" in sw_channel_kw_args:
+            if "name" in sw_channel_kw_args: # pragma: no cover
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_kw_args["name"]
                 ]
-            elif "channel_id" in sw_channel_kw_args:
+            elif "channel_id" in sw_channel_kw_args: # pragma: no cover
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_args[0]
                 ]
-            else:
+            else: 
                 sw_channel_args[1] = channel_match[sw_channel_args[0]]
 
             if strict and alert_phase_jump:
