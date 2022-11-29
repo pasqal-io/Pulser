@@ -819,7 +819,7 @@ class Simulation:
     def run(
         self,
         progress_bar: Optional[bool] = False,
-        **options: qutip.solver.Options,
+        **options: dict[str, Any],
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
 
