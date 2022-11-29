@@ -834,6 +834,8 @@ class Simulation:
                 provided, an automatic one is calculated from the `Sequence`'s
                 schedule (half of the shortest duration among pulses and
                 delays).
+                Refer to the QuTiP docs_ for an overview of the parameters.
+.. _docs: https://qutip.org/docs/latest/guide/dynamics/dynamics-options.html
         """
         if "max_step" in options.keys():
             solv_ops = qutip.Options(**options)
