@@ -312,5 +312,7 @@ class RegisterLayout(RegDrawer):
         )
 
     def _to_abstract_repr(self) -> dict[str, list[list[float]]]:
-        # TODO: Include the layout slug once that's added
-        return {"coordinates": self.coords.tolist()}
+        d = {"coordinates": self.coords.tolist()}
+        if self.slug is not None:
+            d["slug"] = self.slug
+        return d
