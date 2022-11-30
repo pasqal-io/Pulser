@@ -66,6 +66,7 @@ class RegisterLayout(RegDrawer):
     def __init__(
         self, trap_coordinates: ArrayLike, slug: Optional[str] = None
     ):
+        """Initializes a RegisterLayout."""
         shape = np.array(trap_coordinates).shape
         if len(shape) != 2:
             raise ValueError(
