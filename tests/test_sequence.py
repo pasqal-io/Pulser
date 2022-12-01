@@ -25,6 +25,7 @@ from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.special_layouts import TriangularLatticeLayout
+from pulser.sampler import sample
 from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
@@ -358,7 +359,7 @@ def test_switch_device():
     twin_seq.add(sweep, "ising")
     new_seq = seq.switch_device(test_device1, True)
 
-    assert new_seq._schedule == twin_seq._schedule
+    assert sample(new_seq).__repr__() == sample(twin_seq).__repr__()
 
     with pytest.raises(
         ValueError,
