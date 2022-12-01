@@ -138,7 +138,7 @@ def test_magnetic_field():
 
 
 def test_switch_device():
-    # Test devices
+    # Devices
 
     test_device1 = Device(
         name="test_device1",
@@ -182,7 +182,7 @@ def test_switch_device():
     )
 
     test_device2 = Device(
-        name="test_device1",
+        name="test_device2",
         dimensions=2,
         rydberg_level=70,
         max_atom_num=100,
@@ -199,6 +199,7 @@ def test_switch_device():
                     max_duration=2**26,
                     max_targets=5,
                     mod_bandwidth=2,
+                    fixed_retarget_t=2,
                 ),
             ),
             (
@@ -215,7 +216,7 @@ def test_switch_device():
     )
 
     test_device3 = VirtualDevice(
-        name="test_device1",
+        name="test_device3",
         dimensions=2,
         rydberg_level=70,
         min_atom_distance=5,
@@ -225,12 +226,12 @@ def test_switch_device():
                 Raman.Local(
                     max_abs_detuning=2 * np.pi * 20,
                     max_amp=2 * np.pi * 10,
-                    phase_jump_time=0,
+                    phase_jump_time=500,
                     min_retarget_interval=220,
-                    fixed_retarget_t=2,
+                    fixed_retarget_t=1,
                     max_targets=1,
                     mod_bandwidth=2,
-                    clock_period=4,
+                    clock_period=3,
                     min_duration=16,
                     max_duration=2**26,
                 ),
@@ -244,6 +245,7 @@ def test_switch_device():
                     phase_jump_time=500,
                     max_duration=2**26,
                     mod_bandwidth=2,
+                    fixed_retarget_t=2,
                 ),
             ),
             (
@@ -259,7 +261,23 @@ def test_switch_device():
         ),
     )
 
-    reg = Register.square(3, 5, prefix="q")
+    # Pulses
+
+    rise = Pulse.ConstantDetuning(
+        RampWaveform(250, 0.0, 2.3 * 2 * np.pi),
+        -4 * np.pi,
+        0.0,
+    )
+    sweep = Pulse.ConstantAmplitude(
+        2.3 * 2 * np.pi,
+        RampWaveform(400, -4 * np.pi, 4 * np.pi),
+        1.0,
+    )
+    fall = Pulse.ConstantDetuning(
+        RampWaveform(500, 2.3 * 2 * np.pi, 0.0),
+        4 * np.pi,
+        0.0,
+    )
 
     # Device checkout
     seq = Sequence(reg, Chadoq2)
@@ -270,6 +288,10 @@ def test_switch_device():
     ):
         seq.switch_device(Chadoq2)
     assert seq.switch_device(Chadoq2)._device == Chadoq2
+
+    # Test not strict mode
+    seq.declare_channel("ising", "rydberg_global")
+    assert "ising" in seq.switch_device(test_device1).declared_channels
 
     seq = Sequence(reg, Chadoq2)
     with pytest.raises(
@@ -283,9 +305,10 @@ def test_switch_device():
     seq.declare_channel("ising", "rydberg_global")
     with pytest.raises(
         ValueError,
-        match="Device macth failed because of different rydberg levels.",
+        match="Device match failed because the devices"
+        + " have different Rydberg levels.",
     ):
-        seq.switch_device(IroiseMVP)
+        seq.switch_device(IroiseMVP, True)
 
     # Different Channels basis
     test_device1.change_rydberg_level(IroiseMVP.rydberg_level)
@@ -323,25 +346,19 @@ def test_switch_device():
         seq.switch_device(IroiseMVP)
 
     # Strict: Jump_phase_time & CLock-period criteria
-    # Jump_phase_time check 1: post_phase_shift not nill
-    r_interatomic = Chadoq2.rydberg_blockade_radius(2 * np.pi)
-    reg = Register.square(3, r_interatomic, prefix="q")
+    # Jump_phase_time check 1: phase not nill
     seq = Sequence(reg, test_device3)
-    rise = Pulse.ConstantDetuning(
-        RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0, 0.5
-    )
-    sweep = Pulse.ConstantAmplitude(
-        2.3 * 2 * np.pi, RampWaveform(400, -4 * np.pi, 4 * np.pi), 1.0, 0.6
-    )
-    fall = Pulse.ConstantDetuning(
-        RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0, 0.7
-    )
-    seq.declare_channel("ising", channel_id="rydberg_global")
-    seq.add(rise, "ising")
-    seq.add(sweep, "ising")
-    seq.add(fall, "ising")
+    twin_seq = Sequence(reg, test_device1)
 
-    assert seq.switch_device(test_device1)._device == test_device1
+    seq.declare_channel("ising", channel_id="rydberg_global")
+    twin_seq.declare_channel("ising", channel_id="rydberg_global")
+    seq.add(rise, "ising")
+    twin_seq.add(rise, "ising")
+    seq.add(sweep, "ising")
+    twin_seq.add(sweep, "ising")
+    new_seq = seq.switch_device(test_device1, True)
+
+    assert new_seq._schedule == twin_seq._schedule
 
     with pytest.raises(
         ValueError,
@@ -350,20 +367,10 @@ def test_switch_device():
     ):
         seq.switch_device(MockDevice, True)
 
-    # Jump_phase_time check 2: No post_phase_shift and pulses with same phase
-    rise = Pulse.ConstantDetuning(
-        RampWaveform(250, 0.0, 2.3 * 2 * np.pi), -4 * np.pi, 0.0
-    )
-    sweep = Pulse.ConstantAmplitude(
-        2.3 * 2 * np.pi, RampWaveform(400, -4 * np.pi, 4 * np.pi), 0.0
-    )
-    fall = Pulse.ConstantDetuning(
-        RampWaveform(500, 2.3 * 2 * np.pi, 0.0), 4 * np.pi, 0.0
-    )
+    # Jump_phase_time check 2: No phase
     seq = Sequence(reg, test_device3)
     seq.declare_channel(name="ising", channel_id="rydberg_global")
     seq.add(rise, "ising")
-    seq.add(sweep, "ising")
     seq.add(fall, "ising")
 
     with pytest.warns(
@@ -390,6 +397,7 @@ def test_switch_device():
     seq = Sequence(reg, test_device3)
     seq.declare_channel("ising", "rmn_local2", "q0")
     assert seq.switch_device(test_device2, True)._device == test_device2
+    assert "ising" in seq.switch_device(test_device2, True).declared_channels
 
     test_device2.change_rydberg_level(test_device1.rydberg_level)
     seq = Sequence(reg, test_device2)
