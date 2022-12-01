@@ -394,9 +394,10 @@ class Sequence:
                 + " with reusable channels is not supported."
             )
 
-        if new_device.rydberg_level != self._device.rydberg_level:
+        if (new_device.rydberg_level != self._device.rydberg_level) and strict:
             raise ValueError(
-                "Device macth failed because of different rydberg levels."
+                "Device match failed because the"
+                + " devices have different Rydberg levels."
             )
 
         # Channel match
