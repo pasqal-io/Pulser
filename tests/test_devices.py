@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 
 import pulser
-from pulser.channels import Rydberg
+from pulser.channels import Microwave, Rydberg
 from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
@@ -44,7 +44,6 @@ def test_params():
     "param, value, msg",
     [
         ("name", 1, None),
-        ("interaction_coeff_xy", 1000, None),
         ("supports_slm_mask", 0, None),
         ("reusable_channels", "true", None),
         ("max_atom_num", 1e9, None),
@@ -59,6 +58,13 @@ def test_params():
             "_channels",
             (("ch1", "Rydberg.Global(None, None)"),),
             "All channels must be of type 'Channel', not 'str'",
+        ),
+        (
+            "_channels",
+            (("mw_ch", Microwave.Global(None, None)),),
+            "When the device has a 'Microwave' channel, "
+            "'interaction_coeff_xy' must be a 'float',"
+            " not '<class 'NoneType'>'.",
         ),
     ],
 )
@@ -127,7 +133,6 @@ def test_valid_devices():
         assert dev.max_radial_distance > 10
         assert dev.min_atom_distance > 0
         assert dev.interaction_coeff > 0
-        assert dev.interaction_coeff_xy > 0
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
