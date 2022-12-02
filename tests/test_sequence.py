@@ -334,7 +334,8 @@ def sequences(devices, pulses):
 
     return seqs
 
-def test_switch_device(devices, sequences):
+
+def test_switch_device_down(devices, sequences):
 
     # Device checkout
 
@@ -344,10 +345,6 @@ def test_switch_device(devices, sequences):
         + " returns the sequence unchanged.",
     ):
         sequences[0].switch_device(Chadoq2)
-    assert sequences[0].switch_device(Chadoq2)._device == Chadoq2
-
-    # Test not strict mode
-    assert "ising" in sequences[0].switch_device(devices[0]).declared_channels
 
     with pytest.raises(
         NotImplementedError,
@@ -383,18 +380,6 @@ def test_switch_device(devices, sequences):
 
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not nill
-    new_seq = sequences[4].switch_device(devices[0], True)
-    s1 = sample(new_seq)
-    # s2 = sample(sequences[4])
-    s3 = sample(sequences[5])
-    nested_s1 = s1.to_nested_dict()["Global"]["ground-rydberg"]
-    # nested_s2 = s2.to_nested_dict()["Global"]["ground-rydberg"]
-    nested_s3 = s3.to_nested_dict()["Global"]["ground-rydberg"]
-
-    # Check if the samples are the same
-    for key in ["amp", "det", "phase"]:
-        np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
-        # np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
 
     with pytest.raises(
         ValueError,
@@ -405,13 +390,13 @@ def test_switch_device(devices, sequences):
 
     # Jump_phase_time check 2: No phase
 
-    # with pytest.warns(
-    #     UserWarning,
-    #     match="The phase_jump_time of the matching channel"
-    #     + "on the the new device is different, take it into account"
-    #     + " for the upcoming pulses.",
-    # ):
-    #     sequences[8].switch_device(Chadoq2, True)
+    with pytest.warns(
+        UserWarning,
+        match="The phase_jump_time of the matching channel"
+        + " on the the new device is different, take it into account"
+        + " for the upcoming pulses.",
+    ):
+        sequences[8].switch_device(Chadoq2, True)
 
     # Clock_period not match
 
@@ -421,12 +406,6 @@ def test_switch_device(devices, sequences):
         + " with the right phase_jump_time & clock_period.",
     ):
         sequences[5].switch_device(devices[1], True)
-
-    assert sequences[7].switch_device(devices[1], True)._device == devices[1]
-    assert (
-        "ising"
-        in sequences[7].switch_device(devices[1], True).declared_channels
-    )
 
     with pytest.raises(
         ValueError,
@@ -441,6 +420,37 @@ def test_switch_device(devices, sequences):
         + " with the right fixed_retarget_t.",
     ):
         sequences[6].switch_device(devices[1], True)
+
+
+def test_switch_device_up(devices, sequences):
+
+    # Device checkout
+    assert sequences[0].switch_device(Chadoq2)._device == Chadoq2
+
+    # Test non-strict mode
+    assert "ising" in sequences[0].switch_device(devices[0]).declared_channels
+
+    # Strict: Jump_phase_time & CLock-period criteria
+    # Jump_phase_time check 1: phase not nill
+    new_seq = sequences[4].switch_device(devices[0], True)
+    s1 = sample(new_seq)
+    s2 = sample(sequences[4])
+    s3 = sample(sequences[5])
+    nested_s1 = s1.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s2 = s2.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s3 = s3.to_nested_dict()["Global"]["ground-rydberg"]
+
+    # Check if the samples are the same
+    for key in ["amp", "det", "phase"]:
+        np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
+        np.testing.assert_array_equal(nested_s1[key], nested_s2[key])
+
+    # Channels with the same mod_bandwidth and fixed_retarget_t
+    assert sequences[7].switch_device(devices[1], True)._device == devices[1]
+    assert (
+        "ising"
+        in sequences[7].switch_device(devices[1], True).declared_channels
+    )
 
 
 def test_target():
