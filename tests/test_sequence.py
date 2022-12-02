@@ -409,7 +409,8 @@ def test_switch_device_down(devices, pulses):
         seq.switch_device(devices[1], True)
 
 
-def test_switch_device_up(devices, pulses):
+@pytest.mark.parametrized("device_ind, strict", [(1, False), (2, True)])
+def test_switch_device_up(devices, pulses, device_ind, strict):
 
     # Device checkout
     seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
@@ -421,7 +422,7 @@ def test_switch_device_up(devices, pulses):
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not nill
     seq1 = init_seq(
-        devices[2],
+        devices[device_ind],
         channel_name="ising",
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
@@ -432,7 +433,7 @@ def test_switch_device_up(devices, pulses):
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
     )
-    new_seq = seq1.switch_device(devices[0], True)
+    new_seq = seq1.switch_device(devices[0], strict)
     s1 = sample(new_seq)
     s2 = sample(seq1)
     s3 = sample(seq2)
