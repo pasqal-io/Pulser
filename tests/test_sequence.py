@@ -409,8 +409,8 @@ def test_switch_device_down(devices, pulses):
         seq.switch_device(devices[1], True)
 
 
-@pytest.mark.parametrized("device_ind, strict", [(1, False), (2, True)])
-def test_switch_device_up(devices, pulses, device_ind, strict):
+@pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
+def test_switch_device_up(device_ind, devices, pulses, strict):
 
     # Device checkout
     seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
