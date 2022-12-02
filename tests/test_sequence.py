@@ -286,156 +286,156 @@ def pulses():
     return [rise, sweep, fall]
 
 
-@pytest.fixture
-def sequences(devices, pulses):
-
-    seqs = []
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("ising", "rydberg_global")
-    seqs.append(seq)
-
-    seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ising", "rydberg_global")
-    seqs.append(seq)
-
-    seq = Sequence(reg, devices[0])
-    seq.declare_channel("digital", "raman_global", "q1")
-    seqs.append(seq)
-
-    seq = Sequence(reg, devices[1])
-    seq.declare_channel("ising", "rmn_local", "q0")
-    seqs.append(seq)
-
-    seq = Sequence(reg, devices[2])
-    seq.declare_channel(name="ising", channel_id="rydberg_global")
-    seq.add(pulses[0], "ising")
-    seq.add(pulses[1], "ising")
-    seqs.append(seq)
-
-    seq = Sequence(reg, devices[0])
-    seq.declare_channel(name="ising", channel_id="rydberg_global")
-    seq.add(pulses[0], "ising")
-    seq.add(pulses[1], "ising")
-    seqs.append(seq)
-
-    seq = Sequence(reg, devices[2])
-    seq.declare_channel("ising", "rmn_local1", "q0")
-    seqs.append(seq)
-
-    seq = Sequence(reg, devices[2])
-    seq.declare_channel("ising", "rmn_local2", "q0")
-    seqs.append(seq)
-
-    seq = Sequence(reg, devices[2])
-    seq.declare_channel(name="ising", channel_id="rydberg_global")
-    seq.add(pulses[0], "ising")
-    seq.add(pulses[2], "ising")
-    seqs.append(seq)
-
-    return seqs
+def init_seq(device, channel_name, channel_id, l_pulses, initial_target=None):
+    seq = Sequence(reg, device)
+    seq.declare_channel(
+        channel_name, channel_id, initial_target=initial_target
+    )
+    if l_pulses is not None:
+        for pulse in l_pulses:
+            seq.add(pulse, channel_name)
+    return seq
 
 
-def test_switch_device_down(devices, sequences):
+def test_switch_device_down(devices, pulses):
 
     # Device checkout
-
+    seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
     with pytest.warns(
         UserWarning,
         match="Switching a sequence to the same device"
         + " returns the sequence unchanged.",
     ):
-        sequences[0].switch_device(Chadoq2)
+        seq.switch_device(Chadoq2)
 
     with pytest.raises(
         NotImplementedError,
         match="Switching the device of a sequence to one"
         + " with reusable channels is not supported.",
     ):
-        sequences[0].switch_device(MockDevice)
+        seq.switch_device(MockDevice)
 
+    seq = init_seq(MockDevice, "ising", "rydberg_global", None)
     with pytest.raises(
         ValueError,
         match="Device match failed because the devices"
         + " have different Rydberg levels.",
     ):
-        sequences[1].switch_device(IroiseMVP, True)
+        seq.switch_device(IroiseMVP, True)
 
     # Different Channels basis
-
+    seq = init_seq(devices[0], "ising", "raman_global", None)
     with pytest.raises(
         TypeError,
-        match="No match for channel digital with the"
+        match="No match for channel ising with the"
         + " right basis and addressing.",
     ):
-        sequences[2].switch_device(Chadoq2)
+        seq.switch_device(Chadoq2)
 
     # Different addressing channels
 
     with pytest.raises(
         TypeError,
-        match="No match for channel digital with the"
+        match="No match for channel ising with the"
         + " right basis and addressing.",
     ):
-        sequences[2].switch_device(devices[1])
+        seq.switch_device(devices[1])
 
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not nill
 
+    seq = init_seq(
+        devices[2],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
     with pytest.raises(
         ValueError,
         match="No channel match for channel ising"
         + " with the right phase_jump_time & clock_period.",
     ):
-        sequences[4].switch_device(MockDevice, True)
+        seq.switch_device(MockDevice, True)
 
     # Jump_phase_time check 2: No phase
 
+    seq = init_seq(
+        devices[2],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=[pulses[0], pulses[2]],
+    )
     with pytest.warns(
         UserWarning,
         match="The phase_jump_time of the matching channel"
         + " on the the new device is different, take it into account"
         + " for the upcoming pulses.",
     ):
-        sequences[8].switch_device(Chadoq2, True)
+        seq.switch_device(Chadoq2, True)
 
     # Clock_period not match
-
+    seq = init_seq(
+        devices[0],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
     with pytest.raises(
         ValueError,
         match="No channel match for channel ising"
         + " with the right phase_jump_time & clock_period.",
     ):
-        sequences[5].switch_device(devices[1], True)
+        seq.switch_device(devices[1], True)
 
+    seq = init_seq(
+        devices[2],
+        channel_name="digital",
+        channel_id="rmn_local1",
+        l_pulses=[],
+        initial_target=["q0"],
+    )
     with pytest.raises(
         ValueError,
-        match="No channel match for channel ising"
+        match="No channel match for channel digital"
         + " with the right mod_bandwidth.",
     ):
-        sequences[6].switch_device(devices[0], True)
+        seq.switch_device(devices[0], True)
 
     with pytest.raises(
         ValueError,
-        match="No channel match for channel ising"
+        match="No channel match for channel digital"
         + " with the right fixed_retarget_t.",
     ):
-        sequences[6].switch_device(devices[1], True)
+        seq.switch_device(devices[1], True)
 
 
-def test_switch_device_up(devices, sequences):
+def test_switch_device_up(devices, pulses):
 
     # Device checkout
-    assert sequences[0].switch_device(Chadoq2)._device == Chadoq2
+    seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
+    assert seq.switch_device(Chadoq2)._device == Chadoq2
 
     # Test non-strict mode
-    assert "ising" in sequences[0].switch_device(devices[0]).declared_channels
+    assert "ising" in seq.switch_device(devices[0]).declared_channels
 
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not nill
-    new_seq = sequences[4].switch_device(devices[0], True)
+    seq1 = init_seq(
+        devices[2],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
+    seq2 = init_seq(
+        devices[0],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
+    new_seq = seq1.switch_device(devices[0], True)
     s1 = sample(new_seq)
-    s2 = sample(sequences[4])
-    s3 = sample(sequences[5])
+    s2 = sample(seq1)
+    s3 = sample(seq2)
     nested_s1 = s1.to_nested_dict()["Global"]["ground-rydberg"]
     nested_s2 = s2.to_nested_dict()["Global"]["ground-rydberg"]
     nested_s3 = s3.to_nested_dict()["Global"]["ground-rydberg"]
@@ -446,11 +446,15 @@ def test_switch_device_up(devices, sequences):
         np.testing.assert_array_equal(nested_s1[key], nested_s2[key])
 
     # Channels with the same mod_bandwidth and fixed_retarget_t
-    assert sequences[7].switch_device(devices[1], True)._device == devices[1]
-    assert (
-        "ising"
-        in sequences[7].switch_device(devices[1], True).declared_channels
+    seq = init_seq(
+        devices[2],
+        channel_name="digital",
+        channel_id="rmn_local2",
+        l_pulses=[],
+        initial_target=["q0"],
     )
+    assert seq.switch_device(devices[1], True)._device == devices[1]
+    assert "digital" in seq.switch_device(devices[1], True).declared_channels
 
 
 def test_target():
