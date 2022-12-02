@@ -37,6 +37,9 @@ class RydbergBeam(Flag):
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self.value)
 
+    def _to_abstract_repr(self) -> str:
+        return self.name
+
 
 @dataclass(frozen=True)
 class BaseEOM:
@@ -70,6 +73,9 @@ class BaseEOM:
             f.name: getattr(self, f.name) for f in fields(self) if f.init
         }
         return obj_to_dict(self, **params)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return {f.name: getattr(self, f.name) for f in fields(self)}
 
 
 @dataclass(frozen=True)

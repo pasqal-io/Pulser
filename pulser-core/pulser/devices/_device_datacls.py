@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from sys import version_info
@@ -25,6 +26,7 @@ from scipy.spatial.distance import pdist, squareform
 
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
@@ -361,6 +363,19 @@ class BaseDevice(ABC):
     def _to_dict(self) -> dict[str, Any]:
         pass
 
+    @abstractmethod
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        params = self._params()
+        ch_list = []
+        for ch_name, ch_obj in params.pop("_channels"):
+            ch_list.append(ch_obj._to_abstract_repr(ch_name))
+
+        return {"version": "1", "channels": ch_list, **params}
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the Sequence into an abstract JSON object."""
+        return json.dumps(self, cls=AbstractReprEncoder)
+
 
 @dataclass(frozen=True, repr=False)
 class Device(BaseDevice):
@@ -514,6 +529,11 @@ class Device(BaseDevice):
             self, _build=False, _module="pulser.devices", _name=self.name
         )
 
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        d = super()._to_abstract_repr()
+        d["is_virtual"] = False
+        return d
+
 
 @dataclass(frozen=True)
 class VirtualDevice(BaseDevice):
@@ -564,3 +584,8 @@ class VirtualDevice(BaseDevice):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, _module="pulser.devices", **self._params())
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        d = super()._to_abstract_repr()
+        d["is_virtual"] = True
+        return d
