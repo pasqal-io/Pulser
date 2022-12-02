@@ -443,7 +443,8 @@ def test_switch_device_up(devices, pulses):
     # Check if the samples are the same
     for key in ["amp", "det", "phase"]:
         np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
-        np.testing.assert_array_equal(nested_s1[key], nested_s2[key])
+        if strict:
+            np.testing.assert_array_equal(nested_s1[key], nested_s2[key])
 
     # Channels with the same mod_bandwidth and fixed_retarget_t
     seq = init_seq(
