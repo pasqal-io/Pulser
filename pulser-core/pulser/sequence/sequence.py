@@ -452,7 +452,7 @@ class Sequence:
                     o_d_ch_obj.phase_jump_time == n_d_ch_obj.phase_jump_time
                 )
                 clock_period_check = (
-                    o_d_ch_obj.clock_period % n_d_ch_obj.clock_period == 0
+                    o_d_ch_obj.clock_period == n_d_ch_obj.clock_period
                 )
                 if clock_period_check and (
                     phase_is_constant or phase_jump_time_check
@@ -495,8 +495,8 @@ class Sequence:
 
             if strict and alert_phase_jump:
                 warnings.warn(
-                    "The phase_jump_time of the matching channel"
-                    + "on the the new device is different, take it in account"
+                    "The phase_jump_time of the matching channel on "
+                    + "the the new device is different, take it into account"
                     + " for the upcoming pulses.",
                     stacklevel=2,
                 )

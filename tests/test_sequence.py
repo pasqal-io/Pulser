@@ -139,9 +139,9 @@ def test_magnetic_field():
 
 
 @pytest.fixture
-def test_devices():
+def devices():
 
-    test_device1 = Device(
+    device1 = Device(
         name="test_device1",
         dimensions=2,
         rydberg_level=70,
@@ -174,7 +174,7 @@ def test_devices():
                 Rydberg.Global(
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
-                    clock_period=1,
+                    clock_period=4,
                     phase_jump_time=500,
                     max_duration=2**26,
                 ),
@@ -182,7 +182,7 @@ def test_devices():
         ),
     )
 
-    test_device2 = Device(
+    device2 = Device(
         name="test_device2",
         dimensions=2,
         rydberg_level=70,
@@ -216,7 +216,7 @@ def test_devices():
         ),
     )
 
-    test_device3 = VirtualDevice(
+    device3 = VirtualDevice(
         name="test_device3",
         dimensions=2,
         rydberg_level=70,
@@ -262,14 +262,14 @@ def test_devices():
         ),
     )
 
-    return [test_device1, test_device2, test_device3]
+    return [device1, device2, device3]
 
 
 @pytest.fixture
 def pulses():
 
     rise = Pulse.ConstantDetuning(
-        RampWaveform(250, 0.0, 2.3 * 2 * np.pi),
+        RampWaveform(252, 0.0, 2.3 * 2 * np.pi),
         -4 * np.pi,
         0.0,
     )
@@ -286,148 +286,161 @@ def pulses():
     return [rise, sweep, fall]
 
 
-def test_switch_device(test_devices, pulses):
+@pytest.fixture
+def sequences(devices, pulses):
+
+    seqs = []
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ising", "rydberg_global")
+    seqs.append(seq)
+
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ising", "rydberg_global")
+    seqs.append(seq)
+
+    seq = Sequence(reg, devices[0])
+    seq.declare_channel("digital", "raman_global", "q1")
+    seqs.append(seq)
+
+    seq = Sequence(reg, devices[1])
+    seq.declare_channel("ising", "rmn_local", "q0")
+    seqs.append(seq)
+
+    seq = Sequence(reg, devices[2])
+    seq.declare_channel(name="ising", channel_id="rydberg_global")
+    seq.add(pulses[0], "ising")
+    seq.add(pulses[1], "ising")
+    seqs.append(seq)
+
+    seq = Sequence(reg, devices[0])
+    seq.declare_channel(name="ising", channel_id="rydberg_global")
+    seq.add(pulses[0], "ising")
+    seq.add(pulses[1], "ising")
+    seqs.append(seq)
+
+    seq = Sequence(reg, devices[2])
+    seq.declare_channel("ising", "rmn_local1", "q0")
+    seqs.append(seq)
+
+    seq = Sequence(reg, devices[2])
+    seq.declare_channel("ising", "rmn_local2", "q0")
+    seqs.append(seq)
+
+    seq = Sequence(reg, devices[2])
+    seq.declare_channel(name="ising", channel_id="rydberg_global")
+    seq.add(pulses[0], "ising")
+    seq.add(pulses[2], "ising")
+    seqs.append(seq)
+
+    return seqs
+
+def test_switch_device(devices, sequences):
 
     # Device checkout
-    seq = Sequence(reg, Chadoq2)
+
     with pytest.warns(
         UserWarning,
         match="Switching a sequence to the same device"
         + " returns the sequence unchanged.",
     ):
-        seq.switch_device(Chadoq2)
-    assert seq.switch_device(Chadoq2)._device == Chadoq2
+        sequences[0].switch_device(Chadoq2)
+    assert sequences[0].switch_device(Chadoq2)._device == Chadoq2
 
     # Test not strict mode
-    seq.declare_channel("ising", "rydberg_global")
-    assert "ising" in seq.switch_device(test_devices[0]).declared_channels
+    assert "ising" in sequences[0].switch_device(devices[0]).declared_channels
 
-    seq = Sequence(reg, Chadoq2)
     with pytest.raises(
         NotImplementedError,
         match="Switching the device of a sequence to one"
         + " with reusable channels is not supported.",
     ):
-        seq.switch_device(MockDevice)
+        sequences[0].switch_device(MockDevice)
 
-    seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ising", "rydberg_global")
     with pytest.raises(
         ValueError,
         match="Device match failed because the devices"
         + " have different Rydberg levels.",
     ):
-        seq.switch_device(IroiseMVP, True)
+        sequences[1].switch_device(IroiseMVP, True)
 
     # Different Channels basis
-    test_devices[0].change_rydberg_level(IroiseMVP.rydberg_level)
-    seq = Sequence(reg, test_devices[0])
-    seq.declare_channel("digital", "raman_global", "q1")
+
     with pytest.raises(
         TypeError,
         match="No match for channel digital with the"
         + " right basis and addressing.",
     ):
-        seq.switch_device(IroiseMVP)
+        sequences[2].switch_device(Chadoq2)
 
     # Different addressing channels
-    test_devices[0].change_rydberg_level(test_devices[1].rydberg_level)
-    seq = Sequence(reg, test_devices[0])
-    seq.declare_channel("ising", "raman_global")
 
     with pytest.raises(
         TypeError,
-        match="No match for channel ising with the"
+        match="No match for channel digital with the"
         + " right basis and addressing.",
     ):
-        seq.switch_device(test_devices[1])
-
-    # Channel addressing and basis issue
-    test_devices[1].change_rydberg_level(IroiseMVP.rydberg_level)
-    seq = Sequence(reg, test_devices[1])
-    seq.declare_channel("ising", "rmn_local")
-
-    with pytest.raises(
-        TypeError,
-        match="No match for channel ising with the"
-        + " right basis and addressing.",
-    ):
-        seq.switch_device(IroiseMVP)
+        sequences[2].switch_device(devices[1])
 
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not nill
-    seq = Sequence(reg, test_devices[2])
-    twin_seq = Sequence(reg, test_devices[0])
+    new_seq = sequences[4].switch_device(devices[0], True)
+    s1 = sample(new_seq)
+    # s2 = sample(sequences[4])
+    s3 = sample(sequences[5])
+    nested_s1 = s1.to_nested_dict()["Global"]["ground-rydberg"]
+    # nested_s2 = s2.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s3 = s3.to_nested_dict()["Global"]["ground-rydberg"]
 
-    seq.declare_channel("ising", channel_id="rydberg_global")
-    twin_seq.declare_channel("ising", channel_id="rydberg_global")
-    seq.add(pulses[0], "ising")
-    twin_seq.add(pulses[0], "ising")
-    seq.add(pulses[1], "ising")
-    twin_seq.add(pulses[1], "ising")
-    new_seq = seq.switch_device(test_devices[0], True)
-
-    assert sample(new_seq).__repr__() == sample(twin_seq).__repr__()
+    # Check if the samples are the same
+    for key in ["amp", "det", "phase"]:
+        np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
+        # np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
 
     with pytest.raises(
         ValueError,
         match="No channel match for channel ising"
         + " with the right phase_jump_time & clock_period.",
     ):
-        seq.switch_device(MockDevice, True)
+        sequences[4].switch_device(MockDevice, True)
 
     # Jump_phase_time check 2: No phase
-    seq = Sequence(reg, test_devices[2])
-    seq.declare_channel(name="ising", channel_id="rydberg_global")
-    seq.add(pulses[0], "ising")
-    seq.add(pulses[2], "ising")
 
-    with pytest.warns(
-        UserWarning,
-        match="The phase_jump_time of the matching channel"
-        + "on the the new device is different, take it in account"
-        + " for the upcoming pulses.",
-    ):
-        seq.switch_device(Chadoq2, True)
+    # with pytest.warns(
+    #     UserWarning,
+    #     match="The phase_jump_time of the matching channel"
+    #     + "on the the new device is different, take it into account"
+    #     + " for the upcoming pulses.",
+    # ):
+    #     sequences[8].switch_device(Chadoq2, True)
 
     # Clock_period not match
-    test_devices[0].change_rydberg_level(test_devices[1].rydberg_level)
-    seq = Sequence(reg, test_devices[0])
-    seq.declare_channel("ising", "rydberg_global")
 
     with pytest.raises(
         ValueError,
         match="No channel match for channel ising"
         + " with the right phase_jump_time & clock_period.",
     ):
-        seq.switch_device(test_devices[1], True)
+        sequences[5].switch_device(devices[1], True)
 
-    test_devices[1].change_rydberg_level(test_devices[2].rydberg_level)
-    seq = Sequence(reg, test_devices[2])
-    seq.declare_channel("ising", "rmn_local2", "q0")
-    assert seq.switch_device(test_devices[1], True)._device == test_devices[1]
+    assert sequences[7].switch_device(devices[1], True)._device == devices[1]
     assert (
-        "ising" in seq.switch_device(test_devices[1], True).declared_channels
+        "ising"
+        in sequences[7].switch_device(devices[1], True).declared_channels
     )
 
-    test_devices[1].change_rydberg_level(test_devices[0].rydberg_level)
-    seq = Sequence(reg, test_devices[1])
-    seq.declare_channel("ising", "rmn_local", "q0")
     with pytest.raises(
         ValueError,
         match="No channel match for channel ising"
         + " with the right mod_bandwidth.",
     ):
-        seq.switch_device(test_devices[0], True)
-    test_devices[2].change_rydberg_level(test_devices[1].rydberg_level)
-    seq = Sequence(reg, test_devices[2])
-    seq.declare_channel("ising", "rmn_local1", "q0")
+        sequences[6].switch_device(devices[0], True)
+
     with pytest.raises(
         ValueError,
         match="No channel match for channel ising"
         + " with the right fixed_retarget_t.",
     ):
-        seq.switch_device(test_devices[1], True)
+        sequences[6].switch_device(devices[1], True)
 
 
 def test_target():
