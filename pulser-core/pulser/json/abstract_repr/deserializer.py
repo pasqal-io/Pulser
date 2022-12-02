@@ -241,7 +241,10 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
 
     # Register Layout
     layout = (
-        RegisterLayout(obj["layout"]["coordinates"])
+        RegisterLayout(
+            obj["layout"]["coordinates"],
+            slug=obj["layout"]["slug"] if "slug" in obj["layout"] else None,
+        )
         if "layout" in obj
         else None
     )

@@ -47,7 +47,7 @@ else:  # pragma: no cover
 COORD_PRECISION = 6
 
 
-@dataclass(repr=False, eq=False, frozen=True)
+@dataclass(init=False, repr=False, eq=False, frozen=True)
 class RegisterLayout(RegDrawer):
     """A layout of traps out of which registers can be defined.
 
@@ -60,11 +60,14 @@ class RegisterLayout(RegDrawer):
         slug: An optional identifier for the layout.
     """
 
-    trap_coordinates: ArrayLike
-    slug: Optional[str] = None
+    _trap_coordinates: ArrayLike
+    slug: Optional[str]
 
-    def __post_init__(self) -> None:
-        shape = np.array(self.trap_coordinates).shape
+    def __init__(
+        self, trap_coordinates: ArrayLike, slug: Optional[str] = None
+    ):
+        """Initializes a RegisterLayout."""
+        shape = np.array(trap_coordinates).shape
         if len(shape) != 2:
             raise ValueError(
                 "'trap_coordinates' must be an array or list of coordinates."
@@ -73,6 +76,8 @@ class RegisterLayout(RegDrawer):
             raise ValueError(
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
             )
+        object.__setattr__(self, "_trap_coordinates", trap_coordinates)
+        object.__setattr__(self, "slug", slug)
 
     @property
     def traps_dict(self) -> dict:
@@ -81,7 +86,7 @@ class RegisterLayout(RegDrawer):
 
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _coords(self) -> np.ndarray:
-        coords = np.array(self.trap_coordinates, dtype=float)
+        coords = np.array(self._trap_coordinates, dtype=float)
         # Sorting the coordinates 1st left to right, 2nd bottom to top
         rounded_coords = np.round(coords, decimals=COORD_PRECISION)
         dims = rounded_coords.shape[1]
@@ -302,11 +307,13 @@ class RegisterLayout(RegDrawer):
         # Allows for serialization of subclasses without a special _to_dict()
         return obj_to_dict(
             self,
-            self.trap_coordinates,
+            self._trap_coordinates,
             _module=__name__,
             _name="RegisterLayout",
         )
 
     def _to_abstract_repr(self) -> dict[str, list[list[float]]]:
-        # TODO: Include the layout slug once that's added
-        return {"coordinates": self.coords.tolist()}
+        d = {"coordinates": self.coords.tolist()}
+        if self.slug is not None:
+            d["slug"] = self.slug
+        return d
