@@ -26,6 +26,7 @@
       "type": "object"
     },
     "Basis": {
+      "description": "The two-level-system basis addressable by a given channel.",
       "enum": [
         "ground-rydberg",
         "digital",
@@ -80,6 +81,10 @@
         "area"
       ],
       "type": "object"
+    },
+    "ChannelId": {
+      "description": "Hardware channel ID in the Device.",
+      "type": "string"
     },
     "ChannelName": {
       "description": "Name of declared channel.",
@@ -152,12 +157,7 @@
       "type": "object"
     },
     "Device": {
-      "enum": [
-        "Chadoq2",
-        "IroiseMVP",
-        "MockDevice"
-      ],
-      "type": "string"
+      "$ref": "device-schema.json"
     },
     "ExprArgument": {
       "anyOf": [
@@ -259,14 +259,11 @@
       ],
       "description": "Mathematical expression involving variables and constants.\n\nThe expression is evaluated in the context of any parametrizable field.\n\nIf the context requires an integer value, the float result is rounded at the end. If the expression type differs from expected by the context (e.g. channel_name), it is a runtime error. If an expression result array length differs from expected, a it is a runtime error."
     },
-    "HardwareChannel": {
-      "description": "Hardware channel name.",
+    "HardcodedDevice": {
       "enum": [
-        "raman_global",
-        "raman_local",
-        "rydberg_local",
-        "rydberg_global",
-        "mw_global"
+        "Chadoq2",
+        "IroiseMVP",
+        "MockDevice"
       ],
       "type": "string"
     },
@@ -608,13 +605,20 @@
             },
             "channels": {
               "additionalProperties": {
-                "$ref": "#/definitions/HardwareChannel"
+                "$ref": "#/definitions/ChannelId"
               },
               "description": "Channels declared in this Sequence.",
               "type": "object"
             },
             "device": {
-              "$ref": "#/definitions/Device",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/HardcodedDevice"
+                },
+                {
+                  "$ref": "#/definitions/Device"
+                }
+              ],
               "description": "A valid device in which to execute the Sequence"
             },
             "layout": {
@@ -698,13 +702,20 @@
             },
             "channels": {
               "additionalProperties": {
-                "$ref": "#/definitions/HardwareChannel"
+                "$ref": "#/definitions/ChannelId"
               },
               "description": "Channels declared in this Sequence.",
               "type": "object"
             },
             "device": {
-              "$ref": "#/definitions/Device",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/HardcodedDevice"
+                },
+                {
+                  "$ref": "#/definitions/Device"
+                }
+              ],
               "description": "A valid device in which to execute the Sequence"
             },
             "layout": {

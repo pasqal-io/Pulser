@@ -113,7 +113,10 @@ class TestSerialization:
         )
 
     def test_schema(self, abstract):
-        with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
+        with open(
+            "pulser-core/pulser/json/abstract_repr/schemas/"
+            "sequence-schema.json"
+        ) as f:
             schema = json.load(f)
         jsonschema.validate(instance=abstract, schema=schema)
 

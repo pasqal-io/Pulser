@@ -47,8 +47,8 @@ if TYPE_CHECKING:
     from pulser.register.base_register import BaseRegister
     from pulser.sequence import Sequence
 
-with open(Path(__file__).parent / "schema.json") as f:
-    schema = json.load(f)
+with open(Path(__file__).parent / "schemas" / "sequence-schema.json") as f:
+    seq_schema = json.load(f)
 
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
@@ -233,7 +233,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     obj = json.loads(obj_str)
 
     # Validate the format of the data against the JSON schema.
-    jsonschema.validate(instance=obj, schema=schema)
+    jsonschema.validate(instance=obj, schema=seq_schema)
 
     # Device
     device_name = obj["device"]
