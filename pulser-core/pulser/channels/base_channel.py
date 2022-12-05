@@ -504,6 +504,5 @@ class Channel(ABC):
     def _to_abstract_repr(self, id: str) -> dict[str, Any]:
         params = {f.name: getattr(self, f.name) for f in fields(self)}
         # FIXME: Get rid of these when possible
-        del params["addressing"]
         del params["phase_jump_time"]
         return {"id": id, "basis": self.basis, **params}

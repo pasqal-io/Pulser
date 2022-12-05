@@ -38,7 +38,7 @@ class RydbergBeam(Flag):
         return obj_to_dict(self, self.value)
 
     def _to_abstract_repr(self) -> str:
-        return self.name
+        return cast(str, self.name)
 
 
 @dataclass(frozen=True)

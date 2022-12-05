@@ -14,14 +14,20 @@
 """Deserializer from JSON in the abstract representation."""
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Type, Union, cast, overload
 
 import jsonschema
 
 import pulser
 import pulser.devices as devices
+from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.base_channel import Channel
+from pulser.channels.eom import RydbergBeam, RydbergEOM
+from pulser.devices import Device, VirtualDevice
+from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
@@ -47,12 +53,21 @@ if TYPE_CHECKING:
     from pulser.register.base_register import BaseRegister
     from pulser.sequence import Sequence
 
-with open(Path(__file__).parent / "schemas" / "sequence-schema.json") as f:
-    seq_schema = json.load(f)
 
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 ExpReturnType = Union[int, float, ParamObj]
+
+schemas_path = Path(__file__).parent / "schemas"
+schemas = {}
+for obj_type in ("device", "sequence"):
+    with open(schemas_path / f"{obj_type}-schema.json") as f:
+        schemas[obj_type] = json.load(f)
+
+resolver = jsonschema.validators.RefResolver(
+    base_uri=f"{schemas_path.resolve().as_uri()}/",
+    referrer=schemas["sequence"],
+)
 
 
 @overload
@@ -220,6 +235,66 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
         )
 
 
+def _deserialize_channel(obj: dict[str, Any]) -> Channel:
+    params: dict[str, Any] = {}
+    channel_cls: Type[Channel]
+    if obj["basis"] == "ground-rydberg":
+        channel_cls = Rydberg
+        params["eom_config"] = None
+        if obj["eom_config"] is not None:
+            data = obj["eom_config"]
+            params["eom_config"] = RydbergEOM(
+                mod_bandwidth=data["mod_bandwidth"],
+                limiting_beam=RydbergBeam[data["limiting_beam"]],
+                max_limiting_amp=data["max_limiting_amp"],
+                intermediate_detuning=data["intermediate_detuning"],
+                controlled_beams=tuple(
+                    RydbergBeam[beam] for beam in data["controlled_beams"]
+                ),
+            )
+    elif obj["basis"] == "digital":
+        channel_cls = Raman
+    elif obj["basis"] == "XY":
+        channel_cls = Microwave
+    else:
+        raise AbstractReprError("The object does not encode a known channel.")
+
+    for param in dataclasses.fields(channel_cls):
+        if param.name == "phase_jump_time":  # FIXME: Remove ASAP
+            continue
+        if param.init and param.name != "eom_config":
+            params[param.name] = obj[param.name]
+    return channel_cls(**params)
+
+
+def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
+    return RegisterLayout(
+        layout_obj["coordinates"],
+        slug=layout_obj["slug"] if "slug" in layout_obj else None,
+    )
+
+
+def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
+    device_cls: Type[Device] | Type[VirtualDevice] = (
+        VirtualDevice if obj["is_virtual"] else Device
+    )
+    _channels = tuple(
+        (ch["id"], _deserialize_channel(ch)) for ch in obj["channels"]
+    )
+    params: dict[str, Any] = {"_channels": _channels}
+    for param in dataclasses.fields(device_cls):
+        if not param.init or param.name == "_channels":
+            continue
+        if param.name == "pre_calibrated_layouts":
+            key = "pre_calibrated_layouts"
+            params[key] = tuple(
+                _deserialize_layout(layout) for layout in obj[key]
+            )
+        else:
+            params[param.name] = obj[param.name]
+    return device_cls(**params)
+
+
 def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     """Deserialize a sequence from an abstract JSON object.
 
@@ -233,21 +308,19 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     obj = json.loads(obj_str)
 
     # Validate the format of the data against the JSON schema.
-    jsonschema.validate(instance=obj, schema=seq_schema)
+    jsonschema.validate(
+        instance=obj, schema=schemas["sequence"], resolver=resolver
+    )
 
     # Device
-    device_name = obj["device"]
-    device = getattr(devices, device_name)
+    if isinstance(obj["device"], str):
+        device_name = obj["device"]
+        device = getattr(devices, device_name)
+    else:
+        device = _deserialize_device_object(obj["device"])
 
     # Register Layout
-    layout = (
-        RegisterLayout(
-            obj["layout"]["coordinates"],
-            slug=obj["layout"]["slug"] if "slug" in obj["layout"] else None,
-        )
-        if "layout" in obj
-        else None
-    )
+    layout = _deserialize_layout(obj["layout"]) if "layout" in obj else None
 
     # Register
     reg: Union[BaseRegister, MappableRegister]
@@ -301,3 +374,19 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
         seq.measure(obj["measurement"])
 
     return seq
+
+
+def deserialize_device(obj_str: str) -> BaseDevice:
+    """Deserialize a device from an abstract JSON object.
+
+    Args:
+        obj_str: the JSON string representing the device encoded
+            in the abstract JSON format.
+
+    Returns:
+        BaseDevice: The Pulser device.
+    """
+    obj = json.loads(obj_str)
+    # Validate the format of the data against the JSON schema.
+    jsonschema.validate(instance=obj, schema=schemas["device"])
+    return _deserialize_device_object(obj)

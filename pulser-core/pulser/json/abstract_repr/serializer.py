@@ -163,7 +163,7 @@ def serialize_abstract_sequence(
     for call in chain(seq._calls, seq._to_build_calls):
         if call.name == "__init__":
             data = get_all_args(("register", "device"), call)
-            res["device"] = data["device"].name
+            res["device"] = data["device"]
             res["register"] = data["register"]
             layout = data["register"].layout
             if layout is not None:

@@ -195,9 +195,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Global",
+              "type": "string"
+            },
             "basis": {
               "const": "ground-rydberg",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -265,6 +269,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -283,9 +288,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Global",
+              "type": "string"
+            },
             "basis": {
               "const": "digital",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -346,6 +355,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -364,9 +374,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Global",
+              "type": "string"
+            },
             "basis": {
               "const": "XY",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -427,6 +441,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -445,9 +460,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Local",
+              "type": "string"
+            },
             "basis": {
               "const": "ground-rydberg",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -518,6 +537,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -536,9 +556,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Local",
+              "type": "string"
+            },
             "basis": {
               "const": "digital",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -602,6 +626,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -620,9 +645,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Local",
+              "type": "string"
+            },
             "basis": {
               "const": "XY",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -686,6 +715,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -735,9 +765,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Global",
+              "type": "string"
+            },
             "basis": {
               "const": "ground-rydberg",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -796,6 +830,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -814,9 +849,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Global",
+              "type": "string"
+            },
             "basis": {
               "const": "digital",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -868,6 +907,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -886,9 +926,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Global",
+              "type": "string"
+            },
             "basis": {
               "const": "XY",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -940,6 +984,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -958,9 +1003,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Local",
+              "type": "string"
+            },
             "basis": {
               "const": "ground-rydberg",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -1019,6 +1068,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -1037,9 +1087,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Local",
+              "type": "string"
+            },
             "basis": {
               "const": "digital",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -1091,6 +1145,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
@@ -1109,9 +1164,13 @@
         {
           "additionalProperties": false,
           "properties": {
+            "addressing": {
+              "const": "Local",
+              "type": "string"
+            },
             "basis": {
               "const": "XY",
-              "description": "The adressed basis name.",
+              "description": "The addressed basis name.",
               "type": "string"
             },
             "clock_period": {
@@ -1163,6 +1222,7 @@
             }
           },
           "required": [
+            "addressing",
             "basis",
             "clock_period",
             "eom_config",
