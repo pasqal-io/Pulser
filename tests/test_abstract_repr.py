@@ -23,8 +23,12 @@ import numpy as np
 import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
-from pulser.devices import Chadoq2, MockDevice
-from pulser.json.abstract_repr.deserializer import VARIABLE_TYPE_MAP
+from pulser.devices import Chadoq2, IroiseMVP, MockDevice
+from pulser.json.abstract_repr.deserializer import (
+    VARIABLE_TYPE_MAP,
+    deserialize_device,
+    resolver,
+)
 from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
@@ -51,6 +55,24 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
     "kaiser_max": (KaiserWaveform.from_max_val, ("max_val", "area", "beta")),
     "blackman_max": (BlackmanWaveform.from_max_val, ("max_val", "area")),
 }
+
+
+class TestDevice:
+    @pytest.fixture(params=[Chadoq2, IroiseMVP, MockDevice])
+    def abstract_device(self, request):
+        device = request.param
+        return json.loads(device.to_abstract_repr())
+
+    def test_device_schema(self, abstract_device):
+        with open(
+            "pulser-core/pulser/json/abstract_repr/schemas/device-schema.json"
+        ) as f:
+            dev_schema = json.load(f)
+        jsonschema.validate(instance=abstract_device, schema=dev_schema)
+
+    def test_roundtrip(self, abstract_device):
+        device = deserialize_device(json.dumps(abstract_device))
+        assert json.loads(device.to_abstract_repr()) == abstract_device
 
 
 class TestSerialization:
@@ -118,7 +140,9 @@ class TestSerialization:
             "sequence-schema.json"
         ) as f:
             schema = json.load(f)
-        jsonschema.validate(instance=abstract, schema=schema)
+        jsonschema.validate(
+            instance=abstract, schema=schema, resolver=resolver
+        )
 
     def test_values(self, abstract):
         assert set(abstract.keys()) == set(
@@ -133,9 +157,13 @@ class TestSerialization:
                 "measurement",
             ]
         )
-        assert abstract["device"] in [
+        device_name = abstract["device"]["name"]
+        assert abstract["device"]["name"] in [
             d.name for d in [*devices._valid_devices, *devices._mock_devices]
         ]
+        assert abstract["device"] == json.loads(
+            getattr(devices, device_name).to_abstract_repr()
+        )
         assert abstract["register"] == [
             {"name": "control", "x": -2.0, "y": 0.0},
             {"name": "target", "x": 2.0, "y": 0.0},
@@ -436,7 +464,7 @@ def _get_serialized_seq(
     seq_dict = {
         "version": "1",
         "name": "John Doe",
-        "device": "Chadoq2",
+        "device": json.loads(Chadoq2.to_abstract_repr()),
         "register": [
             {"name": "q0", "x": 0.0, "y": 2.0},
             {"name": "q42", "x": -2.0, "y": 9.0},
@@ -507,8 +535,8 @@ class TestDeserialization:
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
-        # Check device name
-        assert seq._device.name == s["device"]
+        # Check device
+        assert seq._device == deserialize_device(json.dumps(s["device"]))
 
         # Check channels
         assert len(seq.declared_channels) == len(s["channels"])
@@ -575,7 +603,7 @@ class TestDeserialization:
         mag_field = [10.0, -43.2, 0.0]
         s = _get_serialized_seq(
             magnetic_field=mag_field,
-            device="MockDevice",
+            device=json.loads(MockDevice.to_abstract_repr()),
             channels={"mw": "mw_global"},
         )
         _check_roundtrip(s)
@@ -1210,3 +1238,11 @@ class TestDeserialization:
         ):
             with patch("jsonschema.validate"):
                 Sequence.from_abstract_repr(json.dumps(s))
+
+    @pytest.mark.parametrize("device", [Chadoq2, IroiseMVP, MockDevice])
+    def test_legacy_device(self, device):
+        s = _get_serialized_seq(
+            device=device.name, channels={"global": "rydberg_global"}
+        )
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert seq.device == device

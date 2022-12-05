@@ -256,8 +256,6 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         channel_cls = Raman
     elif obj["basis"] == "XY":
         channel_cls = Microwave
-    else:
-        raise AbstractReprError("The object does not encode a known channel.")
 
     for param in dataclasses.fields(channel_cls):
         if param.name == "phase_jump_time":  # FIXME: Remove ASAP
