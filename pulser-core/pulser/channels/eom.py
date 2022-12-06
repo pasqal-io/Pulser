@@ -184,7 +184,7 @@ class RydbergEOM(BaseEOM):
             beam_amp = np.sqrt(2 * rabi_frequency * self.intermediate_detuning)
             return {beam: beam_amp for beam in RydbergBeam}
 
-        # The limiting beam is at the its maximum amplitude while the other
+        # The limiting beam is at its maximum amplitude while the other
         # has the necessary amplitude to reach the desired effective rabi freq
         return {
             self.limiting_beam: self.max_limiting_amp,

@@ -86,6 +86,7 @@ class ChannelSamples:
     det: np.ndarray
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
+    # (t_start, t_end) of each EOM mode block
     eom_intervals: list[tuple[int, int]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
