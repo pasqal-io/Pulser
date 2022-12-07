@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import dataclasses
 import json
 from typing import Any
 from unittest.mock import patch
@@ -286,7 +287,9 @@ def pulses():
     return [rise, sweep, fall]
 
 
-def init_seq(device, channel_name, channel_id, l_pulses, initial_target=None):
+def init_seq(
+    device, channel_name, channel_id, l_pulses, initial_target=None
+) -> Sequence:
     seq = Sequence(reg, device)
     seq.declare_channel(
         channel_name, channel_id, initial_target=initial_target
@@ -308,38 +311,44 @@ def test_switch_device_down(devices, pulses):
     ):
         seq.switch_device(Chadoq2)
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Switching the device of a sequence to one"
-        + " with reusable channels is not supported.",
-    ):
-        seq.switch_device(MockDevice)
-
-    seq = init_seq(MockDevice, "ising", "rydberg_global", None)
-    with pytest.raises(
-        ValueError,
-        match="Device match failed because the devices"
-        + " have different Rydberg levels.",
-    ):
-        seq.switch_device(IroiseMVP, True)
-
-    # Different Channels basis
-    seq = init_seq(devices[0], "ising", "raman_global", None)
+    # From sequence reusing channels to Device without reusable channels
+    seq = init_seq(MockDevice, "global", "rydberg_global", None)
+    seq.declare_channel("global2", "rydberg_global")
     with pytest.raises(
         TypeError,
-        match="No match for channel ising with the"
-        + " right basis and addressing.",
+        match="No match for channel global2 with the"
+        " right basis and addressing.",
     ):
+        # Can't find a match for the 2nd rydberg_global
         seq.switch_device(Chadoq2)
 
-    # Different addressing channels
-
+    seq = init_seq(MockDevice, "ising", "rydberg_global", None)
+    mod_mock = dataclasses.replace(MockDevice, rydberg_level=50)
     with pytest.raises(
-        TypeError,
-        match="No match for channel ising with the"
-        + " right basis and addressing.",
+        ValueError,
+        match="Strict device match failed because the devices"
+        + " have different Rydberg levels.",
     ):
-        seq.switch_device(devices[1])
+        seq.switch_device(mod_mock, True)
+
+    with pytest.warns(
+        UserWarning,
+        match="Switching to a device with a different Rydberg level,"
+        " check that the expected Rydberg interactions still hold.",
+    ):
+        seq.switch_device(mod_mock, False)
+
+    seq = init_seq(devices[0], "ising", "raman_global", None)
+    for dev_ in (
+        Chadoq2,  # Different Channels basis
+        devices[1],  # Different addressing channels
+    ):
+        with pytest.raises(
+            TypeError,
+            match="No match for channel ising with the"
+            + " right basis and addressing.",
+        ):
+            seq.switch_device(dev_)
 
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not nill
@@ -352,8 +361,8 @@ def test_switch_device_down(devices, pulses):
     )
     with pytest.raises(
         ValueError,
-        match="No channel match for channel ising"
-        + " with the right phase_jump_time & clock_period.",
+        match="No match for channel ising with the same"
+        " phase_jump_time & clock_period.",
     ):
         seq.switch_device(MockDevice, True)
 
@@ -382,8 +391,8 @@ def test_switch_device_down(devices, pulses):
     )
     with pytest.raises(
         ValueError,
-        match="No channel match for channel ising"
-        + " with the right phase_jump_time & clock_period.",
+        match="No match for channel ising with the same "
+        "phase_jump_time & clock_period.",
     ):
         seq.switch_device(devices[1], True)
 
@@ -396,15 +405,14 @@ def test_switch_device_down(devices, pulses):
     )
     with pytest.raises(
         ValueError,
-        match="No channel match for channel digital"
-        + " with the right mod_bandwidth.",
+        match="No match for channel digital with the same mod_bandwidth.",
     ):
         seq.switch_device(devices[0], True)
 
     with pytest.raises(
         ValueError,
-        match="No channel match for channel digital"
-        + " with the right fixed_retarget_t.",
+        match="No match for channel digital"
+        + " with the same fixed_retarget_t.",
     ):
         seq.switch_device(devices[1], True)
 
@@ -457,6 +465,41 @@ def test_switch_device_up(device_ind, devices, pulses, strict):
     )
     assert seq.switch_device(devices[1], True)._device == devices[1]
     assert "digital" in seq.switch_device(devices[1], True).declared_channels
+
+
+def test_switch_device_eom():
+    # Sequence with EOM blocks
+    seq = init_seq(IroiseMVP, "rydberg", "rydberg_global", [])
+    seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
+    seq.add_eom_pulse("rydberg", 100, 0.0)
+    seq.delay(200, "rydberg")
+    assert seq._schedule["rydberg"].eom_blocks
+
+    err_base = "No match for channel rydberg "
+    with pytest.raises(
+        TypeError, match=err_base + "with an EOM configuration."
+    ):
+        seq.switch_device(Chadoq2)
+
+    ch_obj = seq.declared_channels["rydberg"]
+    mod_eom_config = dataclasses.replace(
+        ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
+    )
+    mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
+    mod_iroise = dataclasses.replace(
+        IroiseMVP, _channels=(("rydberg_global", mod_ch_obj),)
+    )
+    with pytest.raises(
+        ValueError, match=err_base + "with the same EOM configuration."
+    ):
+        seq.switch_device(mod_iroise, strict=True)
+
+    mod_seq = seq.switch_device(mod_iroise, strict=False)
+    og_eom_block = seq._schedule["rydberg"].eom_blocks[0]
+    mod_eom_block = mod_seq._schedule["rydberg"].eom_blocks[0]
+    assert og_eom_block.detuning_on == mod_eom_block.detuning_on
+    assert og_eom_block.rabi_freq == mod_eom_block.rabi_freq
+    assert og_eom_block.detuning_off != mod_eom_block.detuning_off
 
 
 def test_target():

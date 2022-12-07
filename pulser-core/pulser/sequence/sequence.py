@@ -398,6 +398,7 @@ class Sequence:
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
 
+    @seq_decorators.screen
     def switch_device(
         self, new_device: BaseDevice, strict: bool = False
     ) -> Sequence:
@@ -421,16 +422,17 @@ class Sequence:
                 stacklevel=2,
             )
             return self
-        if new_device.reusable_channels and not self._device.reusable_channels:
-            raise NotImplementedError(
-                "Switching the device of a sequence to one"
-                + " with reusable channels is not supported."
-            )
 
-        if (new_device.rydberg_level != self._device.rydberg_level) and strict:
-            raise ValueError(
-                "Device match failed because the"
-                + " devices have different Rydberg levels."
+        if new_device.rydberg_level != self._device.rydberg_level:
+            if strict:
+                raise ValueError(
+                    "Strict device match failed because the"
+                    + " devices have different Rydberg levels."
+                )
+            warnings.warn(
+                "Switching to a device with a different Rydberg level,"
+                " check that the expected Rydberg interactions still hold.",
+                stacklevel=2,
             )
 
         # Channel match
@@ -440,7 +442,14 @@ class Sequence:
         strict_error_message = ""
         ch_type_er_mess = ""
         for o_d_ch_name, o_d_ch_obj in self.declared_channels.items():
+            channel_match[o_d_ch_name] = None
             for n_d_ch_id, n_d_ch_obj in new_device.channels.items():
+                if (
+                    not new_device.reusable_channels
+                    and n_d_ch_id in channel_match.values()
+                ):
+                    # Channel already matched and can't be reused
+                    continue
                 # Find the corresponding channel on the new device
                 # We verify the channel class then
                 # check whether the addressing Global or local
@@ -448,30 +457,41 @@ class Sequence:
                 addressing_match = (
                     o_d_ch_obj.addressing == n_d_ch_obj.addressing
                 )
+                base_msg = f"No match for channel {o_d_ch_name}"
                 if not (basis_match and addressing_match):
-                    channel_match[o_d_ch_name] = None
-                    ch_type_er_mess = (
-                        f"No match for channel {o_d_ch_name}"
-                        + " with the right basis and addressing."
+                    # If there already is a message, keeps it
+                    ch_type_er_mess = ch_type_er_mess or (
+                        base_msg + " with the right basis and addressing."
                     )
                     continue
-                if n_d_ch_obj.mod_bandwidth != o_d_ch_obj.mod_bandwidth:
-                    channel_match[o_d_ch_name] = None
-                    strict_error_message = (
-                        f"No channel match for channel {o_d_ch_name}"
-                        + " with the right mod_bandwidth."
-                    )
-                    break
-                if n_d_ch_obj.fixed_retarget_t != o_d_ch_obj.fixed_retarget_t:
-                    channel_match[o_d_ch_name] = None
-                    strict_error_message = (
-                        f"No channel match for channel {o_d_ch_name}"
-                        + " with the right fixed_retarget_t."
-                    )
-                    break
+                if self._schedule[o_d_ch_name].eom_blocks:
+                    if n_d_ch_obj.eom_config is None:
+                        ch_type_er_mess = (
+                            base_msg + " with an EOM configuration."
+                        )
+                        continue
+                    if (
+                        n_d_ch_obj.eom_config != o_d_ch_obj.eom_config
+                        and strict
+                    ):
+                        strict_error_message = (
+                            base_msg + " with the same EOM configuration."
+                        )
+                        continue
                 if not strict:
                     channel_match[o_d_ch_name] = n_d_ch_id
                     break
+                if n_d_ch_obj.mod_bandwidth != o_d_ch_obj.mod_bandwidth:
+                    strict_error_message = strict_error_message or (
+                        base_msg + " with the same mod_bandwidth."
+                    )
+                    continue
+                if n_d_ch_obj.fixed_retarget_t != o_d_ch_obj.fixed_retarget_t:
+                    strict_error_message = strict_error_message or (
+                        base_msg + " with the same fixed_retarget_t."
+                    )
+                    continue
+
                 ch_samples = sample_seq.channel_samples[o_d_ch_name]
                 ch_sample_phase = ch_samples.phase
                 # Find if there is phase change between pulses or not
@@ -493,12 +513,9 @@ class Sequence:
                     channel_match[o_d_ch_name] = n_d_ch_id
                     alert_phase_jump = not phase_jump_time_check
                     break
-                else:
-                    channel_match[o_d_ch_name] = None
-                    strict_error_message = (
-                        f"No channel match for channel {o_d_ch_name}"
-                        + " with the right phase_jump_time & clock_period."
-                    )
+                strict_error_message = strict_error_message or (
+                    base_msg + " with the same phase_jump_time & clock_period."
+                )
 
         if None in channel_match.values():
             if strict_error_message:
