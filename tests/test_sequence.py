@@ -163,7 +163,6 @@ def devices():
                     2 * np.pi * 20,
                     2 * np.pi * 10,
                     clock_period=1,
-                    phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=3,
                     mod_bandwidth=4,
@@ -175,7 +174,6 @@ def devices():
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
                     clock_period=4,
-                    phase_jump_time=500,
                     max_duration=2**26,
                 ),
             ),
@@ -196,7 +194,6 @@ def devices():
                     2 * np.pi * 20,
                     2 * np.pi * 10,
                     clock_period=3,
-                    phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=5,
                     mod_bandwidth=2,
@@ -209,7 +206,6 @@ def devices():
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
                     clock_period=2,
-                    phase_jump_time=500,
                     max_duration=2**26,
                 ),
             ),
@@ -227,7 +223,6 @@ def devices():
                 Raman.Local(
                     max_abs_detuning=2 * np.pi * 20,
                     max_amp=2 * np.pi * 10,
-                    phase_jump_time=500,
                     min_retarget_interval=220,
                     fixed_retarget_t=1,
                     max_targets=1,
@@ -243,7 +238,6 @@ def devices():
                     2 * np.pi * 20,
                     2 * np.pi * 10,
                     clock_period=3,
-                    phase_jump_time=500,
                     max_duration=2**26,
                     mod_bandwidth=2,
                     fixed_retarget_t=2,
@@ -255,7 +249,6 @@ def devices():
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
                     clock_period=4,
-                    phase_jump_time=500,
                     max_duration=2**26,
                 ),
             ),
@@ -341,38 +334,6 @@ def test_switch_device_down(devices, pulses):
     ):
         seq.switch_device(devices[1])
 
-    # Strict: Jump_phase_time & CLock-period criteria
-    # Jump_phase_time check 1: phase not nill
-
-    seq = init_seq(
-        devices[2],
-        channel_name="ising",
-        channel_id="rydberg_global",
-        l_pulses=pulses[:2],
-    )
-    with pytest.raises(
-        ValueError,
-        match="No channel match for channel ising"
-        + " with the right phase_jump_time & clock_period.",
-    ):
-        seq.switch_device(MockDevice, True)
-
-    # Jump_phase_time check 2: No phase
-
-    seq = init_seq(
-        devices[2],
-        channel_name="ising",
-        channel_id="rydberg_global",
-        l_pulses=[pulses[0], pulses[2]],
-    )
-    with pytest.warns(
-        UserWarning,
-        match="The phase_jump_time of the matching channel"
-        + " on the the new device is different, take it into account"
-        + " for the upcoming pulses.",
-    ):
-        seq.switch_device(Chadoq2, True)
-
     # Clock_period not match
     seq = init_seq(
         devices[0],
@@ -383,7 +344,7 @@ def test_switch_device_down(devices, pulses):
     with pytest.raises(
         ValueError,
         match="No channel match for channel ising"
-        + " with the right phase_jump_time & clock_period.",
+        + " with the right clock_period.",
     ):
         seq.switch_device(devices[1], True)
 
