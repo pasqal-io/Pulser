@@ -60,7 +60,8 @@ class BaseDevice(ABC):
         min_atom_distance: The closest together two atoms can be (in μm).
         interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
             which sets the van der Waals interaction strength between atoms in
-            different Rydberg states.
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
     """
     name: str
@@ -70,7 +71,7 @@ class BaseDevice(ABC):
     min_atom_distance: float
     max_atom_num: Optional[int]
     max_radial_distance: Optional[int]
-    interaction_coeff_xy: float = 3700.0
+    interaction_coeff_xy: Optional[float] = None
     supports_slm_mask: bool = False
     reusable_channels: bool = field(default=False, init=False)
 
@@ -130,7 +131,14 @@ class BaseDevice(ABC):
             if not valid:
                 raise ValueError(msg)
 
-        type_check("interaction_coeff_xy", float)
+        if any(
+            ch.basis == "XY" for _, ch in self._channels
+        ) and not isinstance(self.interaction_coeff_xy, float):
+            raise TypeError(
+                "When the device has a 'Microwave' channel, "
+                "'interaction_coeff_xy' must be a 'float',"
+                f" not '{type(self.interaction_coeff_xy)}'."
+            )
         type_check("supports_slm_mask", bool)
         type_check("reusable_channels", bool)
 

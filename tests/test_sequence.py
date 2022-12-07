@@ -22,9 +22,10 @@ import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
-from pulser.devices._device_datacls import Device
+from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.special_layouts import TriangularLatticeLayout
+from pulser.sampler import sample
 from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
@@ -135,6 +136,327 @@ def test_magnetic_field():
     assert seq3_._in_xy
     assert str(seq3) == str(seq3_)
     assert np.all(seq3_.magnetic_field == np.array((1.0, 0.0, 0.0)))
+
+
+@pytest.fixture
+def devices():
+
+    device1 = Device(
+        name="test_device1",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=60,
+        min_atom_distance=5,
+        _channels=(
+            (
+                "raman_global",
+                Raman.Global(
+                    2 * np.pi * 20,
+                    2 * np.pi * 10,
+                    max_duration=2**26,
+                ),
+            ),
+            (
+                "raman_local",
+                Raman.Local(
+                    2 * np.pi * 20,
+                    2 * np.pi * 10,
+                    clock_period=1,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                    max_targets=3,
+                    mod_bandwidth=4,
+                ),
+            ),
+            (
+                "rydberg_global",
+                Rydberg.Global(
+                    max_abs_detuning=2 * np.pi * 4,
+                    max_amp=2 * np.pi * 3,
+                    clock_period=4,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                ),
+            ),
+        ),
+    )
+
+    device2 = Device(
+        name="test_device2",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=60,
+        min_atom_distance=5,
+        _channels=(
+            (
+                "rmn_local",
+                Raman.Local(
+                    2 * np.pi * 20,
+                    2 * np.pi * 10,
+                    clock_period=3,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                    max_targets=5,
+                    mod_bandwidth=2,
+                    fixed_retarget_t=2,
+                ),
+            ),
+            (
+                "rydberg_global",
+                Rydberg.Global(
+                    max_abs_detuning=2 * np.pi * 4,
+                    max_amp=2 * np.pi * 3,
+                    clock_period=2,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                ),
+            ),
+        ),
+    )
+
+    device3 = VirtualDevice(
+        name="test_device3",
+        dimensions=2,
+        rydberg_level=70,
+        min_atom_distance=5,
+        _channels=(
+            (
+                "rmn_local1",
+                Raman.Local(
+                    max_abs_detuning=2 * np.pi * 20,
+                    max_amp=2 * np.pi * 10,
+                    phase_jump_time=500,
+                    min_retarget_interval=220,
+                    fixed_retarget_t=1,
+                    max_targets=1,
+                    mod_bandwidth=2,
+                    clock_period=3,
+                    min_duration=16,
+                    max_duration=2**26,
+                ),
+            ),
+            (
+                "rmn_local2",
+                Raman.Local(
+                    2 * np.pi * 20,
+                    2 * np.pi * 10,
+                    clock_period=3,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                    mod_bandwidth=2,
+                    fixed_retarget_t=2,
+                ),
+            ),
+            (
+                "rydberg_global",
+                Rydberg.Global(
+                    max_abs_detuning=2 * np.pi * 4,
+                    max_amp=2 * np.pi * 3,
+                    clock_period=4,
+                    phase_jump_time=500,
+                    max_duration=2**26,
+                ),
+            ),
+        ),
+    )
+
+    return [device1, device2, device3]
+
+
+@pytest.fixture
+def pulses():
+
+    rise = Pulse.ConstantDetuning(
+        RampWaveform(252, 0.0, 2.3 * 2 * np.pi),
+        -4 * np.pi,
+        0.0,
+    )
+    sweep = Pulse.ConstantAmplitude(
+        2.3 * 2 * np.pi,
+        RampWaveform(400, -4 * np.pi, 4 * np.pi),
+        1.0,
+    )
+    fall = Pulse.ConstantDetuning(
+        RampWaveform(500, 2.3 * 2 * np.pi, 0.0),
+        4 * np.pi,
+        0.0,
+    )
+    return [rise, sweep, fall]
+
+
+def init_seq(device, channel_name, channel_id, l_pulses, initial_target=None):
+    seq = Sequence(reg, device)
+    seq.declare_channel(
+        channel_name, channel_id, initial_target=initial_target
+    )
+    if l_pulses is not None:
+        for pulse in l_pulses:
+            seq.add(pulse, channel_name)
+    return seq
+
+
+def test_switch_device_down(devices, pulses):
+
+    # Device checkout
+    seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
+    with pytest.warns(
+        UserWarning,
+        match="Switching a sequence to the same device"
+        + " returns the sequence unchanged.",
+    ):
+        seq.switch_device(Chadoq2)
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Switching the device of a sequence to one"
+        + " with reusable channels is not supported.",
+    ):
+        seq.switch_device(MockDevice)
+
+    seq = init_seq(MockDevice, "ising", "rydberg_global", None)
+    with pytest.raises(
+        ValueError,
+        match="Device match failed because the devices"
+        + " have different Rydberg levels.",
+    ):
+        seq.switch_device(IroiseMVP, True)
+
+    # Different Channels basis
+    seq = init_seq(devices[0], "ising", "raman_global", None)
+    with pytest.raises(
+        TypeError,
+        match="No match for channel ising with the"
+        + " right basis and addressing.",
+    ):
+        seq.switch_device(Chadoq2)
+
+    # Different addressing channels
+
+    with pytest.raises(
+        TypeError,
+        match="No match for channel ising with the"
+        + " right basis and addressing.",
+    ):
+        seq.switch_device(devices[1])
+
+    # Strict: Jump_phase_time & CLock-period criteria
+    # Jump_phase_time check 1: phase not nill
+
+    seq = init_seq(
+        devices[2],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
+    with pytest.raises(
+        ValueError,
+        match="No channel match for channel ising"
+        + " with the right phase_jump_time & clock_period.",
+    ):
+        seq.switch_device(MockDevice, True)
+
+    # Jump_phase_time check 2: No phase
+
+    seq = init_seq(
+        devices[2],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=[pulses[0], pulses[2]],
+    )
+    with pytest.warns(
+        UserWarning,
+        match="The phase_jump_time of the matching channel"
+        + " on the the new device is different, take it into account"
+        + " for the upcoming pulses.",
+    ):
+        seq.switch_device(Chadoq2, True)
+
+    # Clock_period not match
+    seq = init_seq(
+        devices[0],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
+    with pytest.raises(
+        ValueError,
+        match="No channel match for channel ising"
+        + " with the right phase_jump_time & clock_period.",
+    ):
+        seq.switch_device(devices[1], True)
+
+    seq = init_seq(
+        devices[2],
+        channel_name="digital",
+        channel_id="rmn_local1",
+        l_pulses=[],
+        initial_target=["q0"],
+    )
+    with pytest.raises(
+        ValueError,
+        match="No channel match for channel digital"
+        + " with the right mod_bandwidth.",
+    ):
+        seq.switch_device(devices[0], True)
+
+    with pytest.raises(
+        ValueError,
+        match="No channel match for channel digital"
+        + " with the right fixed_retarget_t.",
+    ):
+        seq.switch_device(devices[1], True)
+
+
+@pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
+def test_switch_device_up(device_ind, devices, pulses, strict):
+
+    # Device checkout
+    seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
+    assert seq.switch_device(Chadoq2)._device == Chadoq2
+
+    # Test non-strict mode
+    assert "ising" in seq.switch_device(devices[0]).declared_channels
+
+    # Strict: Jump_phase_time & CLock-period criteria
+    # Jump_phase_time check 1: phase not nill
+    seq1 = init_seq(
+        devices[device_ind],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
+    seq2 = init_seq(
+        devices[0],
+        channel_name="ising",
+        channel_id="rydberg_global",
+        l_pulses=pulses[:2],
+    )
+    new_seq = seq1.switch_device(devices[0], strict)
+    s1 = sample(new_seq)
+    s2 = sample(seq1)
+    s3 = sample(seq2)
+    nested_s1 = s1.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s2 = s2.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s3 = s3.to_nested_dict()["Global"]["ground-rydberg"]
+
+    # Check if the samples are the same
+    for key in ["amp", "det", "phase"]:
+        np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
+        if strict:
+            np.testing.assert_array_equal(nested_s1[key], nested_s2[key])
+
+    # Channels with the same mod_bandwidth and fixed_retarget_t
+    seq = init_seq(
+        devices[2],
+        channel_name="digital",
+        channel_id="rmn_local2",
+        l_pulses=[],
+        initial_target=["q0"],
+    )
+    assert seq.switch_device(devices[1], True)._device == devices[1]
+    assert "digital" in seq.switch_device(devices[1], True).declared_channels
 
 
 def test_target():

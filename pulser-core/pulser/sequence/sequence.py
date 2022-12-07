@@ -42,6 +42,7 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
+from pulser.sampler import sample
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
@@ -369,6 +370,144 @@ class Sequence:
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
 
+    def switch_device(
+        self, new_device: BaseDevice, strict: bool = False
+    ) -> Sequence:
+        """Switch the device of a sequence.
+
+        Args:
+            new_device: The target device instance.
+            strict: Enforce a strict match between devices and channels to
+                guarantee the pulse sequence is left unchanged.
+
+        Returns:
+            The sequence on the new device, using the match channels of
+            the former device declared in the sequence.
+        """
+        # Check if the device is new or not
+
+        if self._device == new_device:
+            warnings.warn(
+                "Switching a sequence to the same device"
+                + " returns the sequence unchanged.",
+                stacklevel=2,
+            )
+            return self
+        if new_device.reusable_channels and not self._device.reusable_channels:
+            raise NotImplementedError(
+                "Switching the device of a sequence to one"
+                + " with reusable channels is not supported."
+            )
+
+        if (new_device.rydberg_level != self._device.rydberg_level) and strict:
+            raise ValueError(
+                "Device match failed because the"
+                + " devices have different Rydberg levels."
+            )
+
+        # Channel match
+        sample_seq = sample(self)
+        channel_match: dict[str, Any] = {}
+        alert_phase_jump = False
+        strict_error_message = ""
+        ch_type_er_mess = ""
+        for o_d_ch_name, o_d_ch_obj in self.declared_channels.items():
+            for n_d_ch_id, n_d_ch_obj in new_device.channels.items():
+                # Find the corresponding channel on the new device
+                # We verify the channel class then
+                # check whether the addressing Global or local
+                basis_match = o_d_ch_obj.basis == n_d_ch_obj.basis
+                addressing_match = (
+                    o_d_ch_obj.addressing == n_d_ch_obj.addressing
+                )
+                if not (basis_match and addressing_match):
+                    channel_match[o_d_ch_name] = None
+                    ch_type_er_mess = (
+                        f"No match for channel {o_d_ch_name}"
+                        + " with the right basis and addressing."
+                    )
+                    continue
+                if n_d_ch_obj.mod_bandwidth != o_d_ch_obj.mod_bandwidth:
+                    channel_match[o_d_ch_name] = None
+                    strict_error_message = (
+                        f"No channel match for channel {o_d_ch_name}"
+                        + " with the right mod_bandwidth."
+                    )
+                    break
+                if n_d_ch_obj.fixed_retarget_t != o_d_ch_obj.fixed_retarget_t:
+                    channel_match[o_d_ch_name] = None
+                    strict_error_message = (
+                        f"No channel match for channel {o_d_ch_name}"
+                        + " with the right fixed_retarget_t."
+                    )
+                    break
+                if not strict:
+                    channel_match[o_d_ch_name] = n_d_ch_id
+                    break
+                ch_samples = sample_seq.channel_samples[o_d_ch_name]
+                ch_sample_phase = ch_samples.phase
+                # Find if there is phase change between pulses or not
+                phase_is_constant = True
+                if ch_sample_phase.size != 0:
+                    phase_is_constant = bool(
+                        np.all(ch_sample_phase == ch_sample_phase[0])
+                    )
+                # Phase_jump_time and clock_period check
+                phase_jump_time_check = (
+                    o_d_ch_obj.phase_jump_time == n_d_ch_obj.phase_jump_time
+                )
+                clock_period_check = (
+                    o_d_ch_obj.clock_period == n_d_ch_obj.clock_period
+                )
+                if clock_period_check and (
+                    phase_is_constant or phase_jump_time_check
+                ):
+                    channel_match[o_d_ch_name] = n_d_ch_id
+                    alert_phase_jump = not phase_jump_time_check
+                    break
+                else:
+                    channel_match[o_d_ch_name] = None
+                    strict_error_message = (
+                        f"No channel match for channel {o_d_ch_name}"
+                        + " with the right phase_jump_time & clock_period."
+                    )
+
+        if None in channel_match.values():
+            if strict_error_message:
+                raise ValueError(strict_error_message)
+            else:
+                raise TypeError(ch_type_er_mess)
+        # Initialize the new sequence
+        new_seq = Sequence(self.register, new_device)
+
+        for call in self._calls[1:]:
+            if not (call.name == "declare_channel"):
+                getattr(new_seq, call.name)(*call.args, **call.kwargs)
+                continue
+            # Switch the old id with the correct id
+            sw_channel_args = list(call.args)
+            sw_channel_kw_args = call.kwargs.copy()
+            if "name" in sw_channel_kw_args:  # pragma: no cover
+                sw_channel_kw_args["channel_id"] = channel_match[
+                    sw_channel_kw_args["name"]
+                ]
+            elif "channel_id" in sw_channel_kw_args:  # pragma: no cover
+                sw_channel_kw_args["channel_id"] = channel_match[
+                    sw_channel_args[0]
+                ]
+            else:
+                sw_channel_args[1] = channel_match[sw_channel_args[0]]
+
+            if strict and alert_phase_jump:
+                warnings.warn(
+                    "The phase_jump_time of the matching channel on "
+                    + "the the new device is different, take it into account"
+                    + " for the upcoming pulses.",
+                    stacklevel=2,
+                )
+            new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
+        return new_seq
+
     @seq_decorators.block_if_measured
     def declare_channel(
         self,
@@ -552,14 +691,14 @@ class Sequence:
                 simultaneously.
 
                 - ``'min-delay'``: Before adding the pulse, introduces the
-                  smallest possible delay that avoids all exisiting conflicts.
+                 smallest possible delay that avoids all exisiting conflicts.
 
                 - ``'no-delay'``: Adds the pulse to the channel, regardless of
-                  existing conflicts.
+                 existing conflicts.
 
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
-                  that idles the channel until the end of the other channels'
-                  latest pulse.
+                 that idles the channel until the end of the other channels'
+                 latest pulse.
 
         Note:
             When the phase of the pulse to add is different than the phase of
@@ -846,7 +985,7 @@ class Sequence:
 
         # Shallow copy with stored parametrized objects (if any)
         # NOTE: While seq is a shallow copy, be extra careful with changes to
-        # atributes of seq pointing to mutable objects, as they might be
+        # attributes of seq pointing to mutable objects, as they might be
         # inadvertedly done to self too
         seq = copy.copy(self)
 

@@ -387,7 +387,8 @@ class TestSerialization:
             for qid, c in reg.qubits.items()
         ]
         assert abstract["layout"] == {
-            "coordinates": triangular_lattice.coords.tolist()
+            "coordinates": triangular_lattice.coords.tolist(),
+            "slug": triangular_lattice.slug,
         }
         assert abstract["magnetic_field"] == mag_field
         assert abstract["slm_mask_targets"] == list(mask)
@@ -400,7 +401,8 @@ class TestSerialization:
 
         abstract = json.loads(seq.to_abstract_repr())
         assert abstract["layout"] == {
-            "coordinates": triangular_lattice.coords.tolist()
+            "coordinates": triangular_lattice.coords.tolist(),
+            "slug": triangular_lattice.slug,
         }
         assert abstract["register"] == [{"qid": qid} for qid in reg.qubit_ids]
         assert abstract["variables"]["var"] == dict(type="int")
@@ -547,7 +549,10 @@ class TestDeserialization:
         layout_coords = (5 * np.arange(8)).reshape((4, 2))
         s = _get_serialized_seq(
             register=[{"qid": "q0"}, {"qid": "q1", "default_trap": 2}],
-            layout={"coordinates": layout_coords.tolist()},
+            layout={
+                "coordinates": layout_coords.tolist(),
+                "slug": "test_layout",
+            },
         )
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))

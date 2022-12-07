@@ -22,6 +22,7 @@ MockDevice = VirtualDevice(
     max_atom_num=None,
     max_radial_distance=None,
     min_atom_distance=0.0,
+    interaction_coeff_xy=3700.0,
     supports_slm_mask=True,
     _channels=(
         ("rydberg_global", Rydberg.Global(None, None, max_duration=None)),
