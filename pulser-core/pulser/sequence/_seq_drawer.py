@@ -330,7 +330,7 @@ def draw_sequence(
         # Makes sure that [-1, 1] range is always represented
         det_max = max(*ref_ys[1], 1)
         det_min = min(*ref_ys[1], -1)
-        det_range = max(det_max - det_min, 2)
+        det_range = det_max - det_min
         det_top = det_max + det_range * 0.15
         det_bottom = det_min - det_range * 0.05
         ax_lims = [
