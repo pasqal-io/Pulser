@@ -231,6 +231,8 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             # Wait for the last pulse to ramp down (if needed)
             self.wait_for_fall(channel_id)
             # Account for time needed to ramp to desired amplitude
+            # By definition, rise_time goes from 10% to 90%
+            # Roughly 2*rise_time is enough to go from 0% to 100%
             self.add_delay(2 * channel_obj.rise_time, channel_id)
 
         # Set up the EOM
@@ -258,7 +260,6 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         last = self[channel][-1]
         t0 = last.tf
         current_max_t = max(t0, *phase_barrier_ts)
-        phase_jump_buffer = 0
         for ch, ch_schedule in self.items():
             if protocol == "no-delay" or ch == channel:
                 continue
@@ -281,10 +282,16 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     )
                     break
 
+        # Buffer to add between pulses of different phase
+        phase_jump_buffer = 0
         try:
+            # Gets the last pulse on the channel
             last_pulse_slot = self[channel].last_pulse_slot()
             last_pulse = cast(Pulse, last_pulse_slot.type)
+            # Checks if the current pulse changes the phase
             if last_pulse.phase != pulse.phase:
+                # Subtracts the time that has already elapsed since the
+                # last pulse from the phase_jump_time
                 phase_jump_buffer = self[
                     channel
                 ].channel_obj.phase_jump_time - (t0 - last_pulse_slot.tf)
@@ -353,9 +360,11 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
     def wait_for_fall(self, channel: str) -> None:
         """Adds a delay to let the channel's amplitude ramp down."""
+        # Extra time needed for the output to finish
         fall_time = (
             self[channel].get_duration(include_fall_time=True)
             - self[channel].get_duration()
         )
+        # If there is a fall time, a delay is added to account for it
         if fall_time > 0:
             self.add_delay(self[channel].adjust_duration(fall_time), channel)
