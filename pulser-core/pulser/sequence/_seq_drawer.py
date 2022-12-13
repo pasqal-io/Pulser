@@ -26,7 +26,7 @@ from scipy.interpolate import CubicSpline
 
 import pulser
 from pulser import Register, Register3D
-from pulser.channels import Channel
+from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.samples import ChannelSamples
 from pulser.waveforms import InterpolatedWaveform
@@ -327,11 +327,10 @@ def draw_sequence(
         max_amp = 1 if max_amp == 0 else max_amp
         amp_top = max_amp * 1.2
         amp_bottom = min(0.0, *ref_ys[0])
-        det_max = np.max(ref_ys[1])
-        det_min = np.min(ref_ys[1])
+        # Makes sure that [-1, 1] range is always represented
+        det_max = max(*ref_ys[1], 1)
+        det_min = min(*ref_ys[1], -1)
         det_range = det_max - det_min
-        if det_range == 0:
-            det_min, det_max, det_range = -1, 1, 2
         det_top = det_max + det_range * 0.15
         det_bottom = det_min - det_range * 0.05
         ax_lims = [
