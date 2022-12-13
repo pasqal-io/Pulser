@@ -252,6 +252,33 @@ def serialize_abstract_sequence(
             res["magnetic_field"] = seq.magnetic_field.tolist()
         elif call.name == "config_slm_mask":
             res["slm_mask_targets"] = tuple(seq._slm_mask_targets)
+        elif call.name == "enable_eom_mode":
+            data = get_all_args(
+                ("channel", "amp_on", "detuning_on", "optimal_detuning_off"),
+                call,
+            )
+            # Overwritten if in 'data'
+            defaults = dict(optimal_detuning_off=0.0)
+            operations.append({"op": "enable_eom_mode", **defaults, **data})
+        elif call.name == "add_eom_pulse":
+            data = get_all_args(
+                (
+                    "channel",
+                    "duration",
+                    "phase",
+                    "post_phase_shift",
+                    "protocol",
+                ),
+                call,
+            )
+            # Overwritten if in 'data'
+            defaults = dict(post_phase_shift=0.0, protocol="min-delay")
+            operations.append({"op": "add_eom_pulse", **defaults, **data})
+        elif call.name == "disable_eom_mode":
+            data = get_all_args(("channel",), call)
+            operations.append(
+                {"op": "disable_eom_mode", "channel": data["channel"]}
+            )
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

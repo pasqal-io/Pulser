@@ -233,6 +233,27 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             channel=op["channel"],
             protocol=op["protocol"],
         )
+    elif op["op"] == "enable_eom_mode":
+        seq.enable_eom_mode(
+            channel=op["channel"],
+            amp_on=_deserialize_parameter(op["amp_on"], vars),
+            detuning_on=_deserialize_parameter(op["detuning_on"], vars),
+            optimal_detuning_off=_deserialize_parameter(
+                op["optimal_detuning_off"], vars
+            ),
+        )
+    elif op["op"] == "add_eom_pulse":
+        seq.add_eom_pulse(
+            channel=op["channel"],
+            duration=_deserialize_parameter(op["duration"], vars),
+            phase=_deserialize_parameter(op["phase"], vars),
+            post_phase_shift=_deserialize_parameter(
+                op["post_phase_shift"], vars
+            ),
+            protocol=op["protocol"],
+        )
+    elif op["op"] == "disable_eom_mode":
+        seq.disable_eom_mode(channel=op["channel"])
 
 
 def _deserialize_channel(obj: dict[str, Any]) -> Channel:

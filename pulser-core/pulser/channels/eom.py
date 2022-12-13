@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from enum import Flag
 from itertools import chain
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
