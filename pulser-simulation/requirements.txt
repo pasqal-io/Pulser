@@ -1,2 +1,2 @@
-qutip>=4.6.3
+qutip>=4.7.1
 typing-extensions; python_version == '3.7'
