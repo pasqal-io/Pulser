@@ -748,9 +748,9 @@ class Sequence:
             channel: The name of the channel to put in EOM mode.
             amp_on: The amplitude of the EOM pulses (in rad/µs).
             detuning_on: The detuning of the EOM pulses (in rad/µs).
-            optimal_detuning_off: The optimal value of detuning when there is
-                no pulse being played. It will choose the closest value among
-                the existing options.
+            optimal_detuning_off: The optimal value of detuning (in rad/µs)
+                when there is no pulse being played. It will choose the closest
+                value among the existing options.
         """
         if self.is_in_eom_mode(channel):
             raise RuntimeError(
