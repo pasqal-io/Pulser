@@ -958,7 +958,7 @@ def test_hardware_constraints():
     interval = seq._schedule["ch0"].adjust_duration(
         rydberg_global.phase_jump_time + black_pls.fall_time(rydberg_global)
     )
-    assert seq._last("ch0").ti - tf_ == interval
+    assert seq._schedule["ch0"][-1].ti - tf_ == interval
     added_delay_slot = seq._schedule["ch0"][-2]
     assert added_delay_slot.type == "delay"
     assert added_delay_slot.tf - added_delay_slot.ti == interval - mid_delay
