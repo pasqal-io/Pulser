@@ -292,11 +292,6 @@ def test_parametrized_before_eom_mode(mod_device):
         seq.add_eom_pulse("ch0", 100, 0.0)
 
     with pytest.raises(
-        ValueError, match="Invalid option for the detuning choice"
-    ):
-        seq.enable_eom_mode("ch0", amp, 0.0, detuning_off_choice="zero")
-
-    with pytest.raises(
         TypeError, match="Channel 'raman' does not have an EOM"
     ):
         seq.enable_eom_mode("raman", 1.0, 0.0)

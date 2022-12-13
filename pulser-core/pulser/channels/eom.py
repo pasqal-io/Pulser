@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from enum import Flag
 from itertools import chain
-from typing import Any, List, cast
+from typing import Any
 
 import numpy as np
 
@@ -122,7 +122,7 @@ class RydbergEOM(BaseEOM):
 
     def detuning_off_options(
         self, rabi_frequency: float, detuning_on: float
-    ) -> list[float]:
+    ) -> np.ndarray:
         """Calculates the possible detuning values when the amplitude is off.
 
         Args:
@@ -157,7 +157,7 @@ class RydbergEOM(BaseEOM):
             lightshifts.append(0.0)
 
         # We sum the offset to all lightshifts to get the effective detuning
-        return cast(List[float], (offset + np.array(lightshifts)).tolist())
+        return np.array(lightshifts) + offset
 
     def _lightshift(
         self, rabi_frequency: float, *beams_on: RydbergBeam

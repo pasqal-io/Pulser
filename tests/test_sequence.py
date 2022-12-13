@@ -692,7 +692,7 @@ def test_str(mod_device):
     seq.target("q7", "ch0")
 
     seq.declare_channel("ch1", "rydberg_global")
-    seq.enable_eom_mode("ch1", 2, 0, detuning_off_choice="highest")
+    seq.enable_eom_mode("ch1", 2, 0, optimal_detuning_off=10.0)
     seq.add_eom_pulse("ch1", duration=100, phase=0, protocol="no-delay")
     seq.delay(500, "ch1")
 
@@ -1310,9 +1310,7 @@ def test_eom_mode(mod_device):
 
     amp_on = 1.0
     detuning_on = 0.0
-    seq.enable_eom_mode(
-        "ch0", amp_on, detuning_on, detuning_off_choice="lowest"
-    )
+    seq.enable_eom_mode("ch0", amp_on, detuning_on, optimal_detuning_off=-100)
     assert seq.is_in_eom_mode("ch0")
 
     delay_duration = 200

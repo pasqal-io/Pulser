@@ -64,7 +64,6 @@ else:  # pragma: no cover
 
 
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
-DETUNING_OFF_OPTIONS = Literal["highest", "lowest", "closest-to-zero"]
 
 
 class Sequence:
@@ -723,7 +722,7 @@ class Sequence:
         channel: str,
         amp_on: Union[float, Parametrized],
         detuning_on: Union[float, Parametrized],
-        detuning_off_choice: DETUNING_OFF_OPTIONS = "closest-to-zero",
+        optimal_detuning_off: float = 0.0,
     ) -> None:
         """Puts a channel in EOM mode operation.
 
@@ -749,24 +748,10 @@ class Sequence:
             channel: The name of the channel to put in EOM mode.
             amp_on: The amplitude of the EOM pulses (in rad/µs).
             detuning_on: The detuning of the EOM pulses (in rad/µs).
-            detuning_off_choice: The criteria for choosing among the detuning
-                options for when there is no EOM pulse playing.
-
-                - ``'closest-to-zero'``: Picks the detuning value that's
-                    closest to zero.
-
-                - ``'highest'``: Picks the highest detuning value available.
-
-                - ``'lowest'``: Picks the lowest detuning value available.
-
+            optimal_detuning_off: The optimal value of detuning when there is
+                no pulse being played. It will choose the closest value among
+                the existing option.
         """
-        valid_options = get_args(DETUNING_OFF_OPTIONS)
-        if detuning_off_choice not in valid_options:
-            raise ValueError(
-                "Invalid option for the detuning choice "
-                f"'{detuning_off_choice}', only accepts: "
-                + ", ".join(valid_options)
-            )
         if self.is_in_eom_mode(channel):
             raise RuntimeError(
                 f"The '{channel}' channel is already in EOM mode."
@@ -787,12 +772,10 @@ class Sequence:
                 RydbergEOM, channel_obj.eom_config
             ).detuning_off_options(amp_on, detuning_on)
 
-            if detuning_off_choice == "closest-to-zero":
-                detuning_off = min(off_options, key=abs)
-            elif detuning_off_choice == "lowest":
-                detuning_off = min(off_options)
-            elif detuning_off_choice == "highest":
-                detuning_off = max(off_options)
+            closest_option = np.abs(
+                off_options - optimal_detuning_off
+            ).argmin()
+            detuning_off = off_options[closest_option]
             off_pulse = Pulse.ConstantPulse(
                 channel_obj.min_duration, 0.0, detuning_off, 0.0
             )
@@ -886,8 +869,8 @@ class Sequence:
             for arg in (phase, post_phase_shift):
                 if not isinstance(arg, (float, int)):
                     raise TypeError("Phase values must be a numeric value.")
-
             return
+
         eom_settings = self._schedule[channel].eom_blocks[-1]
         eom_pulse = Pulse.ConstantPulse(
             duration,
