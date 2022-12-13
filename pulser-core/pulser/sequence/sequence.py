@@ -722,7 +722,7 @@ class Sequence:
         channel: str,
         amp_on: Union[float, Parametrized],
         detuning_on: Union[float, Parametrized],
-        optimal_detuning_off: float = 0.0,
+        optimal_detuning_off: Union[float, Parametrized] = 0.0,
     ) -> None:
         """Puts a channel in EOM mode operation.
 
@@ -750,7 +750,7 @@ class Sequence:
             detuning_on: The detuning of the EOM pulses (in rad/µs).
             optimal_detuning_off: The optimal value of detuning when there is
                 no pulse being played. It will choose the closest value among
-                the existing option.
+                the existing options.
         """
         if self.is_in_eom_mode(channel):
             raise RuntimeError(
@@ -772,14 +772,15 @@ class Sequence:
                 RydbergEOM, channel_obj.eom_config
             ).detuning_off_options(amp_on, detuning_on)
 
-            closest_option = np.abs(
-                off_options - optimal_detuning_off
-            ).argmin()
-            detuning_off = off_options[closest_option]
-            off_pulse = Pulse.ConstantPulse(
-                channel_obj.min_duration, 0.0, detuning_off, 0.0
-            )
-            channel_obj.validate_pulse(off_pulse)
+            if not isinstance(optimal_detuning_off, Parametrized):
+                closest_option = np.abs(
+                    off_options - optimal_detuning_off
+                ).argmin()
+                detuning_off = off_options[closest_option]
+                off_pulse = Pulse.ConstantPulse(
+                    channel_obj.min_duration, 0.0, detuning_off, 0.0
+                )
+                channel_obj.validate_pulse(off_pulse)
 
             if not self.is_parametrized():
                 self._schedule.enable_eom(
