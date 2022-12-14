@@ -80,7 +80,7 @@ class SquareLatticeLayout(RegisterLayout):
         """
         if rows > self._rows or columns > self._columns:
             raise ValueError(
-                f"A '{rows} x {columns}' array doesn't fit a "
+                f"A '{rows}x{columns}' array doesn't fit a "
                 f"{self._rows}x{self._columns} SquareLatticeLayout."
             )
         points = patterns.square_rect(rows, columns) * self._spacing
@@ -152,7 +152,7 @@ class TriangularLatticeLayout(RegisterLayout):
         """
         if rows * atoms_per_row > self.number_of_traps:
             raise ValueError(
-                f"A '{rows} x {atoms_per_row}' rectangular subset of a "
+                f"A '{rows}x{atoms_per_row}' rectangular subset of a "
                 "triangular lattice has more atoms than there are traps in "
                 f"this TriangularLatticeLayout ({self.number_of_traps})."
             )

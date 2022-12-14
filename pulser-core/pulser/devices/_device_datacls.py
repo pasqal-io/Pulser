@@ -272,7 +272,7 @@ class BaseDevice(ABC):
             raise ValueError(
                 "Given the number of traps in the layout and the "
                 "device's maximum layout filling fraction, the given"
-                f"register has too many qubits ({n_qubits}). "
+                f" register has too many qubits ({n_qubits}). "
                 "On this device, this layout can hold at most "
                 f"{max_qubits} qubits."
             )
