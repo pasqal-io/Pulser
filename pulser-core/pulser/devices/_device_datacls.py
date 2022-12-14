@@ -27,6 +27,7 @@ from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
+from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
@@ -73,6 +74,7 @@ class BaseDevice(ABC):
     max_radial_distance: Optional[int]
     interaction_coeff_xy: Optional[float] = None
     supports_slm_mask: bool = False
+    max_layout_filling: float = 0.5
     reusable_channels: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
@@ -141,6 +143,13 @@ class BaseDevice(ABC):
             )
         type_check("supports_slm_mask", bool)
         type_check("reusable_channels", bool)
+
+        if not (0.0 < self.max_layout_filling <= 1.0):
+            raise ValueError(
+                "The maximum layout filling fraction must be "
+                "greater than 0. and less than or equal to 1., "
+                f"not {self.max_layout_filling}."
+            )
 
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
@@ -222,6 +231,7 @@ class BaseDevice(ABC):
                     "The 'register' is associated with an incompatible "
                     "register layout."
                 )
+            self.validate_layout_filling(register)
 
     def validate_layout(self, layout: RegisterLayout) -> None:
         """Checks if a register layout is compatible with this device.
@@ -240,18 +250,41 @@ class BaseDevice(ABC):
 
         self._validate_coords(layout.traps_dict, kind="traps")
 
-    def _validate_atom_number(
-        self, coords: list[np.ndarray], kind: str
+    def validate_layout_filling(
+        self, register: BaseRegister | MappableRegister
     ) -> None:
-        max_number = cast(int, self.max_atom_num) * (
-            2 if kind == "traps" else 1
+        """Checks if a register properly fills its layout.
+
+        Args:
+            register: The register to validate. Must be created from a register
+                layout.
+        """
+        if register.layout is None:
+            raise TypeError(
+                "'validate_layout_filling' can only be called for"
+                " registers with a register layout."
+            )
+        n_qubits = len(register.qubit_ids)
+        max_qubits = int(
+            register.layout.number_of_traps * self.max_layout_filling
         )
-        if len(coords) > max_number:
+        if n_qubits > max_qubits:
             raise ValueError(
-                f"The number of {kind} ({len(coords)})"
+                "Given the number of traps in the layout and the "
+                "device's maximum layout filling fraction, the given"
+                f"register has too many qubits ({n_qubits}). "
+                "On this device, this layout can hold at most "
+                f"{max_qubits} qubits."
+            )
+
+    def _validate_atom_number(self, coords: list[np.ndarray]) -> None:
+        max_atom_num = cast(int, self.max_atom_num)
+        if len(coords) > max_atom_num:
+            raise ValueError(
+                f"The number of atoms ({len(coords)})"
                 " must be less than or equal to the maximum"
-                f" number of {kind} supported by this device"
-                f" ({max_number})."
+                f" number of atoms supported by this device"
+                f" ({max_atom_num})."
             )
 
     def _validate_atom_distance(
@@ -310,11 +343,11 @@ class BaseDevice(ABC):
     ) -> None:
         ids = list(coords_dict.keys())
         coords = list(coords_dict.values())
-        if not (
+        if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
             and self.max_atom_num is None
         ):
-            self._validate_atom_number(coords, kind)
+            self._validate_atom_number(coords)
         self._validate_atom_distance(ids, coords, kind)
         if not (
             "max_radial_distance" in self._optional_parameters

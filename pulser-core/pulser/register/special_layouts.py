@@ -78,11 +78,6 @@ class SquareLatticeLayout(RegisterLayout):
         Returns:
             The register instance created from this layout.
         """
-        if rows * columns > self.max_atom_num:
-            raise ValueError(
-                f"A '{rows} x {columns}' array has more atoms than those "
-                f"available in this SquareLatticeLayout ({self.max_atom_num})."
-            )
         if rows > self._rows or columns > self._columns:
             raise ValueError(
                 f"A '{rows} x {columns}' array doesn't fit a "
@@ -127,10 +122,11 @@ class TriangularLatticeLayout(RegisterLayout):
         Returns:
             The register instance created from this layout.
         """
-        if n_atoms > self.max_atom_num:
+        if n_atoms > self.number_of_traps:
             raise ValueError(
-                f"This RegisterLayout can hold at most {self.max_atom_num} "
-                f"atoms, not '{n_atoms}'."
+                f"The desired register has more atoms ({n_atoms}) than there"
+                " are traps in this TriangularLatticeLayout"
+                f" ({self.number_of_traps})."
             )
         points = patterns.triangular_hex(n_atoms) * self._spacing
         trap_ids = self.get_traps_from_coordinates(*points)
@@ -154,11 +150,11 @@ class TriangularLatticeLayout(RegisterLayout):
         Returns:
             The register instance created from this layout.
         """
-        if rows * atoms_per_row > self.max_atom_num:
+        if rows * atoms_per_row > self.number_of_traps:
             raise ValueError(
                 f"A '{rows} x {atoms_per_row}' rectangular subset of a "
-                "triangular lattice has more atoms than those available in "
-                f"this TriangularLatticeLayout ({self.max_atom_num})."
+                "triangular lattice has more atoms than there are traps in "
+                f"this TriangularLatticeLayout ({self.number_of_traps})."
             )
         points = patterns.triangular_rect(rows, atoms_per_row) * self._spacing
         trap_ids = self.get_traps_from_coordinates(*points)
