@@ -64,6 +64,8 @@ class BaseDevice(ABC):
             different Rydberg states. Needed only if there is a Microwave
             channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
     """
     name: str
     dimensions: DIMENSIONS
@@ -382,6 +384,8 @@ class Device(BaseDevice):
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
         supports_slm_mask: Whether the device supports the SLM mask feature.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
@@ -456,15 +460,17 @@ class Device(BaseDevice):
 
     def _specs(self, for_docs: bool = False) -> str:
         lines = [
-            "\nRegister requirements:",
+            "\nRegister parameters:",
             f" - Dimensions: {self.dimensions}D",
-            rf" - Rydberg level: {self.rydberg_level}",
+            f" - Rydberg level: {self.rydberg_level}",
             f" - Maximum number of atoms: {self.max_atom_num}",
             f" - Maximum distance from origin: {self.max_radial_distance} μm",
             (
                 " - Minimum distance between neighbouring atoms: "
                 f"{self.min_atom_distance} μm"
             ),
+            f" - Maximum layout filling fraction: {self.max_layout_filling}",
+            f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
             "\nChannels:",
         ]
 
@@ -532,6 +538,8 @@ class VirtualDevice(BaseDevice):
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
         supports_slm_mask: Whether the device supports the SLM mask feature.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """
