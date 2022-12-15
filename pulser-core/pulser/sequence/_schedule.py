@@ -270,14 +270,6 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     if op.tf + 2 * this_chobj.rise_time <= current_max_t:
                         # No pulse behind 'op' needing a delay
                         break
-                elif ch == channel:
-                    if op.type.phase != pulse.phase:
-                        phase_jump_buffer = (
-                            this_chobj.phase_jump_time
-                            + op.type.fall_time(this_chobj)
-                            - (t0 - op.tf)
-                        )
-                    break
                 elif (
                     op.tf
                     + op.type.fall_time(this_chobj, in_eom_mode=in_eom_mode)
@@ -299,10 +291,16 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             # Checks if the current pulse changes the phase
             if last_pulse.phase != pulse.phase:
                 # Subtracts the time that has already elapsed since the
-                # last pulse from the phase_jump_time
-                phase_jump_buffer = self[
-                    channel
-                ].channel_obj.phase_jump_time - (t0 - last_pulse_slot.tf)
+                # last pulse from the phase_jump_time and adds the
+                # fall_time to let the last pulse ramp down
+                ch_obj = self[channel].channel_obj
+                phase_jump_buffer = (
+                    ch_obj.phase_jump_time
+                    + last_pulse.fall_time(
+                        ch_obj, in_eom_mode=self[channel].in_eom_mode()
+                    )
+                    - (t0 - last_pulse_slot.tf)
+                )
         except RuntimeError:
             # No previous pulse
             pass

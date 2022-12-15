@@ -352,8 +352,7 @@ def test_switch_device_down(devices, pulses):
     )
     with pytest.raises(
         ValueError,
-        match="No channel match for channel ising"
-        + " with the same clock_period.",
+        match="No match for channel ising with the same clock_period.",
     ):
         seq.switch_device(devices[1], True)
 
