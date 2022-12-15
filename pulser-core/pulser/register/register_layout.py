@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from sys import version_info
 from typing import Any, Optional, cast
+from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -112,7 +113,15 @@ class RegisterLayout(RegDrawer):
     @property
     def max_atom_num(self) -> int:
         """Maximum number of atoms that can be trapped to form a Register."""
-        return self.number_of_traps // 2
+        warn(
+            "'RegisterLayout.max_atom_num' is deprecated and will be removed"
+            " in version 0.9.0.\n"
+            "It is now the same as 'RegisterLayout.number_of_traps' and "
+            "should be replaced accordingly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.number_of_traps
 
     @property
     def dimensionality(self) -> int:
@@ -162,6 +171,7 @@ class RegisterLayout(RegDrawer):
             raise ValueError("Every 'trap_id' must be a unique integer.")
 
         if not trap_ids_set.issubset(self.traps_dict):
+            # This check makes it redundant to check # qubits <= # traps
             raise ValueError(
                 "All 'trap_ids' must correspond to the ID of a trap."
             )
@@ -177,12 +187,6 @@ class RegisterLayout(RegDrawer):
                     f"provided 'trap_ids' ({len(trap_ids)})."
                 )
 
-        if len(trap_ids) > self.max_atom_num:
-            raise ValueError(
-                "The number of required traps is greater than the maximum "
-                "number of qubits allowed for this layout "
-                f"({self.max_atom_num})."
-            )
         ids = (
             qubit_ids if qubit_ids else [f"q{i}" for i in range(len(trap_ids))]
         )
