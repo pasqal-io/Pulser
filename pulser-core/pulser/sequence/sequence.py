@@ -820,7 +820,8 @@ class Sequence:
 
         Note:
             When the phase between pulses is changed, the necessary buffer
-            time for a phase jump will still be enforced.
+            time for a phase jump will still be enforced (unless
+            ``protocol='no-delay'``).
 
         Args:
             channel: The name of the channel to add the pulse to.
@@ -888,7 +889,8 @@ class Sequence:
             When the phase of the pulse to add is different than the phase of
             the previous pulse on the channel, a delay between the two pulses
             might be automatically added to ensure the channel's
-            `phase_jump_time` is respected.
+            `phase_jump_time` is respected. To override this behaviour, use
+            the ``'no-delay'`` protocol.
         """
         self._validate_channel(channel, block_eom_mode=True)
         self._add(pulse, channel, protocol)

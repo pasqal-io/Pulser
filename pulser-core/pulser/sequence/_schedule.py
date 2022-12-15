@@ -261,7 +261,9 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         t0 = last.tf
         current_max_t = max(t0, *phase_barrier_ts)
         for ch, ch_schedule in self.items():
-            if protocol == "no-delay" or ch == channel:
+            if protocol == "no-delay":
+                break
+            if ch == channel:
                 continue
             this_chobj = self[ch].channel_obj
             in_eom_mode = self[ch].in_eom_mode()
@@ -284,26 +286,27 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         # Buffer to add between pulses of different phase
         phase_jump_buffer = 0
-        try:
-            # Gets the last pulse on the channel
-            last_pulse_slot = self[channel].last_pulse_slot()
-            last_pulse = cast(Pulse, last_pulse_slot.type)
-            # Checks if the current pulse changes the phase
-            if last_pulse.phase != pulse.phase:
-                # Subtracts the time that has already elapsed since the
-                # last pulse from the phase_jump_time and adds the
-                # fall_time to let the last pulse ramp down
-                ch_obj = self[channel].channel_obj
-                phase_jump_buffer = (
-                    ch_obj.phase_jump_time
-                    + last_pulse.fall_time(
-                        ch_obj, in_eom_mode=self[channel].in_eom_mode()
+        if protocol != "no-delay":
+            try:
+                # Gets the last pulse on the channel
+                last_pulse_slot = self[channel].last_pulse_slot()
+                last_pulse = cast(Pulse, last_pulse_slot.type)
+                # Checks if the current pulse changes the phase
+                if last_pulse.phase != pulse.phase:
+                    # Subtracts the time that has already elapsed since the
+                    # last pulse from the phase_jump_time and adds the
+                    # fall_time to let the last pulse ramp down
+                    ch_obj = self[channel].channel_obj
+                    phase_jump_buffer = (
+                        ch_obj.phase_jump_time
+                        + last_pulse.fall_time(
+                            ch_obj, in_eom_mode=self[channel].in_eom_mode()
+                        )
+                        - (t0 - last_pulse_slot.tf)
                     )
-                    - (t0 - last_pulse_slot.tf)
-                )
-        except RuntimeError:
-            # No previous pulse
-            pass
+            except RuntimeError:
+                # No previous pulse
+                pass
 
         delay_duration = max(current_max_t - t0, phase_jump_buffer)
         if delay_duration > 0:

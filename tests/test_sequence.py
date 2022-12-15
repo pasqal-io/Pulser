@@ -1022,10 +1022,16 @@ def test_hardware_constraints():
     assert added_delay_slot.type == "delay"
     assert added_delay_slot.tf - added_delay_slot.ti == interval - mid_delay
 
+    # Check that there is no phase jump buffer with 'no-delay'
+    seq.add(black_pls, "ch0", protocol="no-delay")  # Phase = 0
+    assert seq._schedule["ch0"][-1].ti == seq._schedule["ch0"][-2].tf
+
     tf_ = seq.get_duration("ch0")
     seq.align("ch0", "ch1")
-    fall_time = const_pls.fall_time(rydberg_global)
-    assert seq.get_duration() == tf_ + fall_time
+    fall_time = black_pls.fall_time(rydberg_global)
+    assert seq.get_duration() == seq._schedule["ch0"].adjust_duration(
+        tf_ + fall_time
+    )
 
     with pytest.raises(ValueError, match="'mode' must be one of"):
         seq.draw(mode="all")
@@ -1264,6 +1270,7 @@ def test_multiple_index_targets():
 def test_eom_mode(mod_device):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
+    ch0_obj = seq.declared_channels["ch0"]
     assert not seq.is_in_eom_mode("ch0")
 
     amp_on = 1.0
@@ -1293,26 +1300,39 @@ def test_eom_mode(mod_device):
     ]
 
     pulse_duration = 100
-    seq.add_eom_pulse("ch0", pulse_duration, 0.0)
-    pulse_slot = seq._schedule["ch0"].last_pulse_slot()
-    assert not seq._schedule["ch0"].is_eom_delay(pulse_slot)
-    assert pulse_slot.ti == delay_slot.tf
-    assert pulse_slot.tf == pulse_slot.ti + pulse_duration
+    seq.add_eom_pulse("ch0", pulse_duration, phase=0.0)
+    first_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
+    assert not seq._schedule["ch0"].is_eom_delay(first_pulse_slot)
+    assert first_pulse_slot.ti == delay_slot.tf
+    assert first_pulse_slot.tf == first_pulse_slot.ti + pulse_duration
     eom_pulse = Pulse.ConstantPulse(pulse_duration, amp_on, detuning_on, 0.0)
-    assert pulse_slot.type == eom_pulse
+    assert first_pulse_slot.type == eom_pulse
+
+    # Check phase jump buffer
+    seq.add_eom_pulse("ch0", pulse_duration, phase=np.pi)
+    second_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
+    phase_buffer = (
+        eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
+        + seq.declared_channels["ch0"].phase_jump_time
+    )
+    assert second_pulse_slot.ti == first_pulse_slot.tf + phase_buffer
+
+    # Check phase jump buffer is not enforced with "no-delay"
+    seq.add_eom_pulse("ch0", pulse_duration, phase=0.0, protocol="no-delay")
+    last_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
+    assert last_pulse_slot.ti == second_pulse_slot.tf
 
     eom_intervals = seq._schedule["ch0"].get_eom_mode_intervals()
-    assert eom_intervals == [(0, pulse_slot.tf)]
+    assert eom_intervals == [(0, last_pulse_slot.tf)]
 
     with pytest.raises(
         RuntimeError, match="The chosen channel is in EOM mode"
     ):
         seq.add(eom_pulse, "ch0")
 
-    ch0_obj = seq.declared_channels["ch0"]
-    assert seq.get_duration() == pulse_slot.tf
+    assert seq.get_duration() == last_pulse_slot.tf
     assert seq.get_duration(include_fall_time=True) == (
-        pulse_slot.tf + eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
+        last_pulse_slot.tf + eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
     )
 
     seq.disable_eom_mode("ch0")
@@ -1320,6 +1340,6 @@ def test_eom_mode(mod_device):
     # Check the EOM interval did not change
     assert seq._schedule["ch0"].get_eom_mode_intervals() == eom_intervals
     buffer_delay = seq._schedule["ch0"][-1]
-    assert buffer_delay.ti == pulse_slot.tf
+    assert buffer_delay.ti == last_pulse_slot.tf
     assert buffer_delay.tf == buffer_delay.ti + eom_pulse.fall_time(ch0_obj)
     assert buffer_delay.type == "delay"
