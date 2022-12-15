@@ -260,33 +260,12 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         last = self[channel][-1]
         t0 = last.tf
         current_max_t = max(t0, *phase_barrier_ts)
-        for ch, ch_schedule in self.items():
-            if protocol == "no-delay":
-                break
-            if ch == channel:
-                continue
-            this_chobj = self[ch].channel_obj
-            in_eom_mode = self[ch].in_eom_mode()
-            for op in ch_schedule[::-1]:
-                if not isinstance(op.type, Pulse):
-                    if op.tf + 2 * this_chobj.rise_time <= current_max_t:
-                        # No pulse behind 'op' needing a delay
-                        break
-                elif (
-                    op.tf
-                    + op.type.fall_time(this_chobj, in_eom_mode=in_eom_mode)
-                    <= current_max_t
-                ):
-                    break
-                elif op.targets & last.targets or protocol == "wait-for-all":
-                    current_max_t = op.tf + op.type.fall_time(
-                        this_chobj, in_eom_mode=in_eom_mode
-                    )
-                    break
-
         # Buffer to add between pulses of different phase
         phase_jump_buffer = 0
         if protocol != "no-delay":
+            current_max_t = self._find_add_delay(
+                current_max_t, channel, protocol
+            )
             try:
                 # Gets the last pulse on the channel
                 last_pulse_slot = self[channel].last_pulse_slot()
@@ -377,3 +356,32 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         # If there is a fall time, a delay is added to account for it
         if fall_time > 0:
             self.add_delay(self[channel].adjust_duration(fall_time), channel)
+
+    def _find_add_delay(self, t0: int, channel: str, protocol: str) -> int:
+        current_max_t = t0
+        for ch, ch_schedule in self.items():
+            if ch == channel:
+                continue
+            this_chobj = self[ch].channel_obj
+            in_eom_mode = self[ch].in_eom_mode()
+            for op in ch_schedule[::-1]:
+                if not isinstance(op.type, Pulse):
+                    if op.tf + 2 * this_chobj.rise_time <= current_max_t:
+                        # No pulse behind 'op' needing a delay
+                        break
+                elif (
+                    op.tf
+                    + op.type.fall_time(this_chobj, in_eom_mode=in_eom_mode)
+                    <= current_max_t
+                ):
+                    break
+                elif (
+                    op.targets & self[channel][-1].targets
+                    or protocol == "wait-for-all"
+                ):
+                    current_max_t = op.tf + op.type.fall_time(
+                        this_chobj, in_eom_mode=in_eom_mode
+                    )
+                    break
+
+        return current_max_t
