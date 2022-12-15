@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from hashlib import sha256
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+import pulser
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -50,10 +52,13 @@ def test_creation(layout, layout3d):
         layout3d.coords == [[0, 0, 0], [0, 1, 0], [1, 0, 1], [1, 1, 1]]
     )
     assert layout.number_of_traps == 4
-    assert layout.max_atom_num == 2
     assert layout.dimensionality == 2
     for i, coord in enumerate(layout.coords):
         assert np.all(layout.traps_dict[i] == coord)
+
+    with pytest.warns(DeprecationWarning):
+        assert pulser.__version__ < "0.9"
+        assert layout.max_atom_num == layout.number_of_traps
 
 
 def test_slug(layout, layout3d):
@@ -75,11 +80,6 @@ def test_register_definition(layout, layout3d):
 
     with pytest.raises(ValueError, match="must have the same size"):
         layout.define_register(0, 1, qubit_ids=["a", "b", "c"])
-
-    with pytest.raises(
-        ValueError, match="greater than the maximum number of qubits"
-    ):
-        layout.define_register(0, 1, 3)
 
     assert layout.define_register(0, 1) == Register.from_coordinates(
         [[0, 0], [0, 1]], prefix="q", center=False
@@ -162,15 +162,13 @@ def test_square_lattice_layout():
     assert square.square_register(4) != Register.square(
         4, spacing=5, prefix="q"
     )
-    with pytest.raises(
-        ValueError, match="'6 x 6' array has more atoms than those available"
-    ):
-        square.square_register(6)
+    with pytest.raises(ValueError, match="'8x8' array doesn't fit"):
+        square.square_register(8)
 
     assert square.rectangular_register(3, 7, prefix="r") == Register.rectangle(
         3, 7, spacing=5, prefix="r"
     )
-    with pytest.raises(ValueError, match="'10 x 3' array doesn't fit"):
+    with pytest.raises(ValueError, match="'10x3' array doesn't fit"):
         square.rectangular_register(10, 3)
 
 
@@ -181,28 +179,34 @@ def test_triangular_lattice_layout():
     assert tri.hexagonal_register(19) == Register.hexagon(
         2, spacing=5, prefix="q"
     )
-    with pytest.raises(ValueError, match="hold at most 25 atoms, not '26'"):
-        tri.hexagonal_register(26)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "The desired register has more atoms (51) than there"
+            " are traps in this TriangularLatticeLayout (50)"
+        ),
+    ):
+        tri.hexagonal_register(51)
 
     with pytest.raises(
-        ValueError, match="has more atoms than those available"
+        ValueError, match="has more atoms than there are traps"
     ):
-        tri.rectangular_register(7, 4)
+        tri.rectangular_register(7, 8)
 
     # Case where the register doesn't fit
     with pytest.raises(ValueError, match="not a part of the RegisterLayout"):
         tri.rectangular_register(8, 3)
 
     # But this fits fine, though off-centered with the Register default
-    tri.rectangular_register(5, 5) != Register.triangular_lattice(
+    assert tri.rectangular_register(5, 5) != Register.triangular_lattice(
         5, 5, spacing=5, prefix="q"
     )
 
 
 def test_mappable_register_creation():
     tri = TriangularLatticeLayout(50, 5)
-    with pytest.raises(ValueError, match="greater than the maximum"):
-        tri.make_mappable_register(26)
+    with pytest.raises(ValueError, match="greater than the number of traps"):
+        tri.make_mappable_register(51)
 
     mapp_reg = tri.make_mappable_register(5)
     assert mapp_reg.qubit_ids == ("q0", "q1", "q2", "q3", "q4")
