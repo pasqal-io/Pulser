@@ -46,6 +46,10 @@
               "description": "Maximum number of atoms supported.",
               "type": "number"
             },
+            "max_layout_filling": {
+              "description": "The largest fraction of a layout that can be filled with atoms.",
+              "type": "number"
+            },
             "max_radial_distance": {
               "description": "Maximum distance an atom can be from the center of the array (in µm).",
               "type": "number"
@@ -89,6 +93,7 @@
             "interaction_coeff_xy",
             "is_virtual",
             "max_atom_num",
+            "max_layout_filling",
             "max_radial_distance",
             "min_atom_distance",
             "name",
@@ -140,6 +145,10 @@
                 "null"
               ]
             },
+            "max_layout_filling": {
+              "description": "The largest fraction of a layout that can be filled with atoms.",
+              "type": "number"
+            },
             "max_radial_distance": {
               "description": "Maximum distance an atom can be from the center of the array (in µm).",
               "type": [
@@ -178,6 +187,7 @@
             "interaction_coeff_xy",
             "is_virtual",
             "max_atom_num",
+            "max_layout_filling",
             "max_radial_distance",
             "min_atom_distance",
             "name",
