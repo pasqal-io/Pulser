@@ -171,7 +171,7 @@ class RegisterLayout(RegDrawer):
             raise ValueError("Every 'trap_id' must be a unique integer.")
 
         if not trap_ids_set.issubset(self.traps_dict):
-            # This check makes it redudant to check  # qubits <= # traps
+            # This check makes it redundant to check # qubits <= # traps
             raise ValueError(
                 "All 'trap_ids' must correspond to the ID of a trap."
             )
