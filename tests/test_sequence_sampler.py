@@ -64,6 +64,16 @@ def assert_nested_dict_equality(got: dict, want: dict) -> None:
 # Tests
 
 
+def test_init_error(seq_rydberg):
+    var = seq_rydberg.declare_variable("var")
+    seq_rydberg.delay(var, "ch0")
+    assert seq_rydberg.is_parametrized()
+    with pytest.raises(
+        NotImplementedError, match="Parametrized sequences can't be sampled."
+    ):
+        sample(seq_rydberg)
+
+
 def test_one_pulse_sampling():
     """Test the sample function on a one-pulse sequence."""
     reg = pulser.Register.square(1, prefix="q")
@@ -156,19 +166,18 @@ def test_modulation_local(mod_device):
     assert output_samples.max_duration == seq.get_duration(
         include_fall_time=True
     )
+    out_ch_samples = output_samples.channel_samples["ch0"]
+    # The target slots account for fall time in both cases
+    assert input_samples.channel_samples["ch0"].slots == out_ch_samples.slots
 
     # Check that the target slots account for fall time
-    in_ch_samples = input_samples.channel_samples["ch0"]
-    out_ch_samples = output_samples.channel_samples["ch0"]
-    expected_slots = deepcopy(in_ch_samples.slots)
+    out_slots = out_ch_samples.slots
     # The first slot should extend to the second
-    expected_slots[0].tf += partial_fall
-    assert expected_slots[0].tf == expected_slots[1].ti
+    assert out_slots[0].tf == pulse1.duration + partial_fall
+    assert out_slots[0].tf == out_slots[1].ti
     # The next slots should fully account for fall time
-    expected_slots[1].tf += pulse2.fall_time(ch_obj)
-    expected_slots[2].tf += pulse1.fall_time(ch_obj)
-
-    assert out_ch_samples.slots == expected_slots
+    for slot, pulse in zip(out_slots[1:], (pulse2, pulse1)):
+        assert slot.tf - slot.ti == pulse.duration + pulse.fall_time(ch_obj)
 
     # Check that the samples are fully extracted to the nested dict
     samples_dict = output_samples.to_nested_dict()
@@ -177,6 +186,46 @@ def test_modulation_local(mod_device):
             samples_dict["Local"]["ground-rydberg"][t][qty] for t in range(2)
         )
         np.testing.assert_array_equal(getattr(out_ch_samples, qty), combined)
+
+
+def test_eom_modulation(mod_device):
+    seq = pulser.Sequence(pulser.Register.square(2), mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.enable_eom_mode("ch0", amp_on=1, detuning_on=0.0)
+    seq.add_eom_pulse("ch0", 100, 0.0)
+    seq.delay(200, "ch0")
+    seq.add_eom_pulse("ch0", 100, 0.0)
+    end_of_eom = seq.get_duration()
+    seq.disable_eom_mode("ch0")
+    seq.add(Pulse.ConstantPulse(500, 1, 0, 0), "ch0")
+
+    full_duration = seq.get_duration(include_fall_time=True)
+    eom_mask = np.zeros(full_duration, dtype=bool)
+    eom_mask[:end_of_eom] = True
+
+    input_samples = sample(
+        seq, extended_duration=full_duration
+    ).channel_samples["ch0"]
+    mod_samples = sample(seq, modulation=True, extended_duration=full_duration)
+    chan = seq.declared_channels["ch0"]
+    for qty in ("amp", "det"):
+        samples = getattr(input_samples, qty)
+        eom_input = samples.copy()
+        eom_input[~eom_mask] = 0.0
+        eom_output = chan.modulate(eom_input, eom=True)[:full_duration]
+        aom_input = samples.copy()
+        aom_input[eom_mask] = 0.0
+        aom_output = chan.modulate(aom_input, eom=False)[:full_duration]
+        np.testing.assert_array_equal(eom_input + aom_input, samples)
+
+        want = eom_output + aom_output
+
+        # Check that modulation through sample() = sample() + modulation
+        got = getattr(mod_samples.channel_samples["ch0"], qty)
+        alt_got = getattr(input_samples.modulate(chan, full_duration), qty)
+        np.testing.assert_array_equal(got, alt_got)
+
+        np.testing.assert_array_equal(want, got)
 
 
 @pytest.fixture

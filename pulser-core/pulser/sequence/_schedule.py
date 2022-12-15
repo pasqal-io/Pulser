@@ -25,6 +25,7 @@ from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import ChannelSamples, _TargetSlot
+from pulser.waveforms import ConstantWaveform
 
 
 class _TimeSlot(NamedTuple):
@@ -37,12 +38,22 @@ class _TimeSlot(NamedTuple):
 
 
 @dataclass
+class _EOMSettings:
+    rabi_freq: float
+    detuning_on: float
+    detuning_off: float
+    ti: int
+    tf: Optional[int] = None
+
+
+@dataclass
 class _ChannelSchedule:
     channel_id: str
     channel_obj: Channel
 
     def __post_init__(self) -> None:
         self.slots: list[_TimeSlot] = []
+        self.eom_blocks: list[_EOMSettings] = []
 
     def last_target(self) -> int:
         """Last time a target happened on the channel."""
@@ -50,6 +61,40 @@ class _ChannelSchedule:
             if slot.type == "target":
                 return slot.tf
         return 0  # pragma: no cover
+
+    def last_pulse_slot(self) -> _TimeSlot:
+        """The last slot with a Pulse."""
+        for slot in self.slots[::-1]:
+            if isinstance(slot.type, Pulse) and not self.is_eom_delay(slot):
+                return slot
+        raise RuntimeError("There is no slot with a pulse.")
+
+    def in_eom_mode(self, time_slot: Optional[_TimeSlot] = None) -> bool:
+        """States if a time slot is inside an EOM mode block."""
+        if time_slot is None:
+            return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
+        return any(
+            start <= time_slot.ti < end
+            for start, end in self.get_eom_mode_intervals()
+        )
+
+    def is_eom_delay(self, slot: _TimeSlot) -> bool:
+        """Tells if a pulse slot is actually an EOM delay."""
+        return (
+            self.in_eom_mode(time_slot=slot)
+            and isinstance(slot.type, Pulse)
+            and isinstance(slot.type.amplitude, ConstantWaveform)
+            and slot.type.amplitude[0] == 0.0
+        )
+
+    def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
+        return [
+            (
+                block.ti,
+                block.tf if block.tf is not None else self.get_duration(),
+            )
+            for block in self.eom_blocks
+        ]
 
     def get_duration(self, include_fall_time: bool = False) -> int:
         temp_tf = 0
@@ -61,7 +106,11 @@ class _ChannelSchedule:
                     break
             if isinstance(op.type, Pulse):
                 temp_tf = max(
-                    temp_tf, op.tf + op.type.fall_time(self.channel_obj)
+                    temp_tf,
+                    op.tf
+                    + op.type.fall_time(
+                        self.channel_obj, in_eom_mode=self.in_eom_mode()
+                    ),
                 )
                 break
             elif temp_tf - op.tf >= 2 * self.channel_obj.rise_time:
@@ -77,12 +126,8 @@ class _ChannelSchedule:
                 max(duration, self.channel_obj.min_duration)
             )
 
-    def get_samples(self, modulated: bool = False) -> ChannelSamples:
-        """Returns the samples of the channel.
-
-        Args:
-            modulated: Whether to return the modulated samples.
-        """
+    def get_samples(self) -> ChannelSamples:
+        """Returns the samples of the channel."""
         # Keep only pulse slots
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
         dt = self.get_duration()
@@ -102,25 +147,22 @@ class _ChannelSchedule:
             )
             phase[t_start:t_end] += pulse.phase
             tf = s.tf
-            if modulated:
-                # Account for the extended duration of the pulses
-                # after modulation, which is at most fall_time
-                fall_time = pulse.fall_time(self.channel_obj)
-                tf += (
-                    min(fall_time, channel_slots[ind + 1].ti - s.tf)
-                    if ind < len(channel_slots) - 1
-                    else fall_time
-                )
+            # Account for the extended duration of the pulses
+            # after modulation, which is at most fall_time
+            fall_time = pulse.fall_time(
+                self.channel_obj, in_eom_mode=self.in_eom_mode(time_slot=s)
+            )
+            tf += (
+                min(fall_time, channel_slots[ind + 1].ti - s.tf)
+                if ind < len(channel_slots) - 1
+                else fall_time
+            )
 
             slots.append(_TargetSlot(s.ti, tf, s.targets))
 
-        ch_samples = ChannelSamples(amp, det, phase, slots)
-
-        if modulated:
-            ch_samples = ch_samples.modulate(
-                self.channel_obj,
-                max_duration=self.get_duration(include_fall_time=True),
-            )
+        ch_samples = ChannelSamples(
+            amp, det, phase, slots, self.get_eom_mode_intervals()
+        )
 
         return ch_samples
 
@@ -177,6 +219,36 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                 break
         return mask_time
 
+    def enable_eom(
+        self,
+        channel_id: str,
+        amp_on: float,
+        detuning_on: float,
+        detuning_off: float,
+    ) -> None:
+        channel_obj = self[channel_id].channel_obj
+        if any(isinstance(op.type, Pulse) for op in self[channel_id]):
+            # Wait for the last pulse to ramp down (if needed)
+            self.wait_for_fall(channel_id)
+            # Account for time needed to ramp to desired amplitude
+            # By definition, rise_time goes from 10% to 90%
+            # Roughly 2*rise_time is enough to go from 0% to 100%
+            self.add_delay(2 * channel_obj.rise_time, channel_id)
+
+        # Set up the EOM
+        eom_settings = _EOMSettings(
+            rabi_freq=amp_on,
+            detuning_on=detuning_on,
+            detuning_off=detuning_off,
+            ti=self[channel_id][-1].tf,
+        )
+
+        self[channel_id].eom_blocks.append(eom_settings)
+
+    def disable_eom(self, channel_id: str) -> None:
+        self[channel_id].eom_blocks[-1].tf = self[channel_id][-1].tf
+        self.wait_for_fall(channel_id)
+
     def add_pulse(
         self,
         pulse: Pulse,
@@ -188,27 +260,44 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         last = self[channel][-1]
         t0 = last.tf
         current_max_t = max(t0, *phase_barrier_ts)
-        phase_jump_buffer = 0
         for ch, ch_schedule in self.items():
-            if protocol == "no-delay" and ch != channel:
+            if protocol == "no-delay" or ch == channel:
                 continue
             this_chobj = self[ch].channel_obj
+            in_eom_mode = self[ch].in_eom_mode()
             for op in ch_schedule[::-1]:
                 if not isinstance(op.type, Pulse):
                     if op.tf + 2 * this_chobj.rise_time <= current_max_t:
                         # No pulse behind 'op' needing a delay
                         break
-                elif ch == channel:
-                    if op.type.phase != pulse.phase:
-                        phase_jump_buffer = this_chobj.phase_jump_time - (
-                            t0 - op.tf
-                        )
-                    break
-                elif op.tf + op.type.fall_time(this_chobj) <= current_max_t:
+                elif (
+                    op.tf
+                    + op.type.fall_time(this_chobj, in_eom_mode=in_eom_mode)
+                    <= current_max_t
+                ):
                     break
                 elif op.targets & last.targets or protocol == "wait-for-all":
-                    current_max_t = op.tf + op.type.fall_time(this_chobj)
+                    current_max_t = op.tf + op.type.fall_time(
+                        this_chobj, in_eom_mode=in_eom_mode
+                    )
                     break
+
+        # Buffer to add between pulses of different phase
+        phase_jump_buffer = 0
+        try:
+            # Gets the last pulse on the channel
+            last_pulse_slot = self[channel].last_pulse_slot()
+            last_pulse = cast(Pulse, last_pulse_slot.type)
+            # Checks if the current pulse changes the phase
+            if last_pulse.phase != pulse.phase:
+                # Subtracts the time that has already elapsed since the
+                # last pulse from the phase_jump_time
+                phase_jump_buffer = self[
+                    channel
+                ].channel_obj.phase_jump_time - (t0 - last_pulse_slot.tf)
+        except RuntimeError:
+            # No previous pulse
+            pass
 
         delay_duration = max(current_max_t - t0, phase_jump_buffer)
         if delay_duration > 0:
@@ -223,19 +312,30 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         last = self[channel][-1]
         ti = last.tf
         tf = ti + self[channel].channel_obj.validate_duration(duration)
-        self[channel].slots.append(_TimeSlot("delay", ti, tf, last.targets))
+        if (
+            self[channel].in_eom_mode()
+            and self[channel].eom_blocks[-1].detuning_off != 0
+        ):
+            try:
+                last_pulse = cast(Pulse, self[channel].last_pulse_slot().type)
+                phase = last_pulse.phase
+            except RuntimeError:
+                phase = 0.0
+            delay_pulse = Pulse.ConstantPulse(
+                tf - ti, 0.0, self[channel].eom_blocks[-1].detuning_off, phase
+            )
+            self[channel].slots.append(
+                _TimeSlot(delay_pulse, ti, tf, last.targets)
+            )
+        else:
+            self[channel].slots.append(
+                _TimeSlot("delay", ti, tf, last.targets)
+            )
 
     def add_target(self, qubits_set: set[QubitId], channel: str) -> None:
         channel_obj = self[channel].channel_obj
         if self[channel].slots:
-            fall_time = (
-                self[channel].get_duration(include_fall_time=True)
-                - self[channel].get_duration()
-            )
-            if fall_time > 0:
-                self.add_delay(
-                    self[channel].adjust_duration(fall_time), channel
-                )
+            self.wait_for_fall(channel)
 
             last = self[channel][-1]
             if last.targets == qubits_set:
@@ -257,3 +357,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         self[channel].slots.append(
             _TimeSlot("target", ti, tf, set(qubits_set))
         )
+
+    def wait_for_fall(self, channel: str) -> None:
+        """Adds a delay to let the channel's amplitude ramp down."""
+        # Extra time needed for the output to finish
+        fall_time = (
+            self[channel].get_duration(include_fall_time=True)
+            - self[channel].get_duration()
+        )
+        # If there is a fall time, a delay is added to account for it
+        if fall_time > 0:
+            self.add_delay(self[channel].adjust_duration(fall_time), channel)
