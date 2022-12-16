@@ -102,7 +102,6 @@ def test_draw():
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
-        phase_jump_time=120,  # ns
         mod_bandwidth=4,  # MHz
     )
     with patch("matplotlib.pyplot.show"):
@@ -418,7 +417,6 @@ def test_modulation():
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
-        phase_jump_time=120,  # ns
         mod_bandwidth=4,  # MHz
     )
     mod_samples = constant.modulated_samples(rydberg_global)

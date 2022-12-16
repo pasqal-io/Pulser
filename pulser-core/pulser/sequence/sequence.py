@@ -43,7 +43,6 @@ from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.sampler import sample
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
@@ -436,9 +435,7 @@ class Sequence:
             )
 
         # Channel match
-        sample_seq = sample(self)
         channel_match: dict[str, Any] = {}
-        alert_phase_jump = False
         strict_error_message = ""
         ch_type_er_mess = ""
         for o_d_ch_name, o_d_ch_obj in self.declared_channels.items():
@@ -492,29 +489,12 @@ class Sequence:
                     )
                     continue
 
-                ch_samples = sample_seq.channel_samples[o_d_ch_name]
-                ch_sample_phase = ch_samples.phase
-                # Find if there is phase change between pulses or not
-                phase_is_constant = True
-                if ch_sample_phase.size != 0:
-                    phase_is_constant = bool(
-                        np.all(ch_sample_phase == ch_sample_phase[0])
-                    )
-                # Phase_jump_time and clock_period check
-                phase_jump_time_check = (
-                    o_d_ch_obj.phase_jump_time == n_d_ch_obj.phase_jump_time
-                )
-                clock_period_check = (
-                    o_d_ch_obj.clock_period == n_d_ch_obj.clock_period
-                )
-                if clock_period_check and (
-                    phase_is_constant or phase_jump_time_check
-                ):
+                # Clock_period check
+                if o_d_ch_obj.clock_period == n_d_ch_obj.clock_period:
                     channel_match[o_d_ch_name] = n_d_ch_id
-                    alert_phase_jump = not phase_jump_time_check
                     break
                 strict_error_message = strict_error_message or (
-                    base_msg + " with the same phase_jump_time & clock_period."
+                    base_msg + " with the same clock_period."
                 )
 
         if None in channel_match.values():
@@ -543,13 +523,6 @@ class Sequence:
             else:
                 sw_channel_args[1] = channel_match[sw_channel_args[0]]
 
-            if strict and alert_phase_jump:
-                warnings.warn(
-                    "The phase_jump_time of the matching channel on "
-                    + "the the new device is different, take it into account"
-                    + " for the upcoming pulses.",
-                    stacklevel=2,
-                )
             new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
         return new_seq
 
@@ -848,7 +821,8 @@ class Sequence:
 
         Note:
             When the phase between pulses is changed, the necessary buffer
-            time for a phase jump will still be enforced.
+            time for a phase jump will still be enforced (unless
+            ``protocol='no-delay'``).
 
         Args:
             channel: The name of the channel to add the pulse to.
@@ -911,6 +885,13 @@ class Sequence:
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
                  that idles the channel until the end of the other channels'
                  latest pulse.
+
+        Note:
+            When the phase of the pulse to add is different than the phase of
+            the previous pulse on the channel, a delay between the two pulses
+            might be automatically added to ensure the channel's
+            `phase_jump_time` is respected. To override this behaviour, use
+            the ``'no-delay'`` protocol.
         """
         self._validate_channel(channel, block_eom_mode=True)
         self._add(pulse, channel, protocol)
