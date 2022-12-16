@@ -506,7 +506,6 @@ class Device(BaseDevice):
                         + r"- Maximum :math:`|\delta|`:"
                         + f" {ch.max_abs_detuning:.4g} rad/µs"
                     ),
-                    f"\t- Phase Jump Time: {ch.phase_jump_time} ns",
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [

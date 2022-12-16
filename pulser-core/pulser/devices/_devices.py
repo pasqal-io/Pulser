@@ -32,7 +32,6 @@ Chadoq2 = Device(
             Rydberg.Global(
                 max_abs_detuning=2 * np.pi * 20,
                 max_amp=2 * np.pi * 2.5,
-                phase_jump_time=0,
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
@@ -43,7 +42,6 @@ Chadoq2 = Device(
             Rydberg.Local(
                 max_abs_detuning=2 * np.pi * 20,
                 max_amp=2 * np.pi * 10,
-                phase_jump_time=0,
                 min_retarget_interval=220,
                 fixed_retarget_t=0,
                 max_targets=1,
@@ -57,7 +55,6 @@ Chadoq2 = Device(
             Raman.Local(
                 max_abs_detuning=2 * np.pi * 20,
                 max_amp=2 * np.pi * 10,
-                phase_jump_time=0,
                 min_retarget_interval=220,
                 fixed_retarget_t=0,
                 max_targets=1,
@@ -82,7 +79,6 @@ IroiseMVP = Device(
             Rydberg.Global(
                 max_abs_detuning=2 * np.pi * 4,
                 max_amp=2 * np.pi * 3,
-                phase_jump_time=500,
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
