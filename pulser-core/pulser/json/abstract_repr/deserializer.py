@@ -279,8 +279,6 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         channel_cls = Microwave
 
     for param in dataclasses.fields(channel_cls):
-        if param.name == "phase_jump_time":  # FIXME: Remove ASAP
-            continue
         if param.init and param.name != "eom_config":
             params[param.name] = obj[param.name]
     return channel_cls(**params)
