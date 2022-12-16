@@ -38,11 +38,10 @@ class MappableRegister:
     def __init__(self, register_layout: RegisterLayout, *qubit_ids: QubitId):
         """Initializes the mappable register."""
         self._layout = register_layout
-        if len(qubit_ids) > self._layout.max_atom_num:
+        if len(qubit_ids) > self._layout.number_of_traps:
             raise ValueError(
-                "The number of required traps is greater than the maximum "
-                "number of qubits allowed for this layout "
-                f"({self._layout.max_atom_num})."
+                "The number of required qubits is greater than the number of "
+                f"traps in this layout ({self._layout.number_of_traps})."
             )
         self._qubit_ids = qubit_ids
 
