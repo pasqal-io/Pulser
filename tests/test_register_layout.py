@@ -44,6 +44,11 @@ def test_creation(layout, layout3d):
     ):
         RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
 
+    with pytest.raises(
+            ValueError, match="must be an array or list of coordinates"
+    ):
+        RegisterLayout([0, 1, 2])
+
     with pytest.raises(ValueError, match="size 2 or 3"):
         RegisterLayout([[0], [1], [2]])
 
