@@ -26,6 +26,7 @@
       "type": "object"
     },
     "Basis": {
+      "description": "The two-level-system basis addressable by a given channel.",
       "enum": [
         "ground-rydberg",
         "digital",
@@ -80,6 +81,10 @@
         "area"
       ],
       "type": "object"
+    },
+    "ChannelId": {
+      "description": "Hardware channel ID in the Device.",
+      "type": "string"
     },
     "ChannelName": {
       "description": "Name of declared channel.",
@@ -152,12 +157,7 @@
       "type": "object"
     },
     "Device": {
-      "enum": [
-        "Chadoq2",
-        "IroiseMVP",
-        "MockDevice"
-      ],
-      "type": "string"
+      "$ref": "device-schema.json"
     },
     "ExprArgument": {
       "anyOf": [
@@ -259,14 +259,11 @@
       ],
       "description": "Mathematical expression involving variables and constants.\n\nThe expression is evaluated in the context of any parametrizable field.\n\nIf the context requires an integer value, the float result is rounded at the end. If the expression type differs from expected by the context (e.g. channel_name), it is a runtime error. If an expression result array length differs from expected, a it is a runtime error."
     },
-    "HardwareChannel": {
-      "description": "Hardware channel name.",
+    "HardcodedDevice": {
       "enum": [
-        "raman_global",
-        "raman_local",
-        "rydberg_local",
-        "rydberg_global",
-        "mw_global"
+        "Chadoq2",
+        "IroiseMVP",
+        "MockDevice"
       ],
       "type": "string"
     },
@@ -445,6 +442,100 @@
       ],
       "type": "object"
     },
+    "OpDisableEOM": {
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "The name of the channel to take out of EOM mode."
+        },
+        "op": {
+          "const": "disable_eom_mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "channel"
+      ],
+      "type": "object"
+    },
+    "OpEOMPulse": {
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "The name of the channel to add the pulse to."
+        },
+        "duration": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The duration of the pulse (in ns)."
+        },
+        "op": {
+          "const": "add_eom_pulse",
+          "type": "string"
+        },
+        "phase": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The pulse phase (in radians)."
+        },
+        "post_phase_shift": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "A phase shift (in radians) immediately after the end of the pulse."
+        },
+        "protocol": {
+          "description": "Stipulates how to deal with eventual conflicts with other channels.",
+          "enum": [
+            "min-delay",
+            "no-delay",
+            "wait-for-all"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "channel",
+        "duration",
+        "phase",
+        "post_phase_shift",
+        "protocol"
+      ],
+      "type": "object"
+    },
+    "OpEnableEOM": {
+      "additionalProperties": false,
+      "properties": {
+        "amp_on": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The amplitude of the EOM pulses (in rad/µs)."
+        },
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "The name of the channel to put in EOM mode."
+        },
+        "detuning_on": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The detuning of the EOM pulses (in rad/µs)."
+        },
+        "op": {
+          "const": "enable_eom_mode",
+          "type": "string"
+        },
+        "optimal_detuning_off": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The optimal value of detuning when there is no pulse being played (in rad/µs). It will choose the closest value among the existing options."
+        }
+      },
+      "required": [
+        "op",
+        "channel",
+        "amp_on",
+        "detuning_on",
+        "optimal_detuning_off"
+      ],
+      "type": "object"
+    },
     "OpPhaseShift": {
       "additionalProperties": false,
       "description": "Adds a separate phase shift to atoms. If possible, OpPulse phase and post_phase_shift are preferred.",
@@ -566,6 +657,15 @@
         },
         {
           "$ref": "#/definitions/OpPhaseShift"
+        },
+        {
+          "$ref": "#/definitions/OpEnableEOM"
+        },
+        {
+          "$ref": "#/definitions/OpDisableEOM"
+        },
+        {
+          "$ref": "#/definitions/OpEOMPulse"
         }
       ],
       "description": "Sequence operation. All operations are performed in specified order."
@@ -608,13 +708,20 @@
             },
             "channels": {
               "additionalProperties": {
-                "$ref": "#/definitions/HardwareChannel"
+                "$ref": "#/definitions/ChannelId"
               },
               "description": "Channels declared in this Sequence.",
               "type": "object"
             },
             "device": {
-              "$ref": "#/definitions/Device",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/HardcodedDevice"
+                },
+                {
+                  "$ref": "#/definitions/Device"
+                }
+              ],
               "description": "A valid device in which to execute the Sequence"
             },
             "layout": {
@@ -698,13 +805,20 @@
             },
             "channels": {
               "additionalProperties": {
-                "$ref": "#/definitions/HardwareChannel"
+                "$ref": "#/definitions/ChannelId"
               },
               "description": "Channels declared in this Sequence.",
               "type": "object"
             },
             "device": {
-              "$ref": "#/definitions/Device",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/HardcodedDevice"
+                },
+                {
+                  "$ref": "#/definitions/Device"
+                }
+              ],
               "description": "A valid device in which to execute the Sequence"
             },
             "layout": {

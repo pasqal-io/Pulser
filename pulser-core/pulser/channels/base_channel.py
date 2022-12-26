@@ -493,3 +493,7 @@ class Channel(ABC):
             f.name: getattr(self, f.name) for f in fields(self) if f.init
         }
         return obj_to_dict(self, _module="pulser.channels", **params)
+
+    def _to_abstract_repr(self, id: str) -> dict[str, Any]:
+        params = {f.name: getattr(self, f.name) for f in fields(self)}
+        return {"id": id, "basis": self.basis, **params}
