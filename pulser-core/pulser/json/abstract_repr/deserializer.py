@@ -286,8 +286,7 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
 
 def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
     return RegisterLayout(
-        layout_obj["coordinates"],
-        slug=layout_obj["slug"] if "slug" in layout_obj else None,
+        layout_obj["coordinates"], slug=layout_obj.get("slug")
     )
 
 
