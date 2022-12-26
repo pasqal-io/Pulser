@@ -40,7 +40,7 @@ from pulser_simulation.simresults import (
 )
 
 SUPPORTED_NOISE = {
-    "ising": {"dephasing", "doppler", "amplitude", "SPAM"},
+    "ising": {"dephasing", "doppler", "amplitude", "SPAM", "depolarizing"},
     "XY": {"SPAM"},
 }
 
@@ -225,6 +225,47 @@ class Simulation:
                 for qid in self._qid_index
             ]
 
+        if "depolarizing" in self.config.noise:
+            if self.basis_name == "digital" or self.basis_name == "all":
+                # Go back to previous config
+                self.set_config(prev_config)
+                raise NotImplementedError(
+                    "Cannot include depolarizing noise in digital- or all-basis."
+                )
+
+            # Probability of error occurrence
+
+            prob = self.config.depolarizing_prob
+            n = self._size
+            k = np.sqrt((prob/3) * (1 - prob) ** (n - 1))
+            self._collapse_ops = [
+                np.sqrt((1 - prob) ** n)
+                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+            ]
+            self._collapse_ops += [
+                k
+                * (
+                    self.build_operator([("sigma_rr", [qid])])
+                    - self.build_operator([("sigma_gg", [qid])])
+                )
+                for qid in self._qid_index
+            ]
+            self._collapse_ops += [
+                k
+                * (
+                    self.build_operator([("sigma_rg", [qid])])
+                    + self.build_operator([("sigma_gr", [qid])])
+                )
+                for qid in self._qid_index
+            ]
+            self._collapse_ops += [
+                1j * k
+                * (
+                    self.build_operator([("sigma_rg", [qid])])
+                    - self.build_operator([("sigma_gr", [qid])])
+                )
+                for qid in self._qid_index
+            ]
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
 
@@ -268,6 +309,8 @@ class Simulation:
             param_dict["laser_waist"] = config.laser_waist
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_prob"] = config.dephasing_prob
+        if "depolarizing" in diff_noise_set:
+            param_dict["depolarizing"] = config.depolarizing_prob
         param_dict["temperature"] *= 1.0e6
         # update runs:
         param_dict["runs"] = config.runs
@@ -445,7 +488,7 @@ class Simulation:
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
-        if set(self.config.noise).issubset({"dephasing", "SPAM"}):
+        if set(self.config.noise).issubset({"dephasing", "SPAM", "depolarizing"}):
             local_noises = "SPAM" in self.config.noise and self.config.eta > 0
         samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
@@ -875,7 +918,7 @@ class Simulation:
             else:
                 raise ValueError("`progress_bar` must be a bool.")
 
-            if "dephasing" in self.config.noise:
+            if "dephasing" or "depolarizing" in self.config.noise:
                 # temporary workaround due to a qutip bug when using mesolve
                 liouvillian = qutip.liouvillian(
                     self._hamiltonian, self._collapse_ops
@@ -905,7 +948,7 @@ class Simulation:
             )
 
         # Check if noises ask for averaging over multiple runs:
-        if set(self.config.noise).issubset({"dephasing", "SPAM"}):
+        if set(self.config.noise).issubset({"dephasing", "SPAM", "depolarizing"}):
             # If there is "SPAM", the preparation errors must be zero
             if "SPAM" not in self.config.noise or self.config.eta == 0:
                 return _run_solver()

@@ -34,7 +34,7 @@ else:  # pragma: no cover
             " `pip install typing-extensions`."
         )
 
-NOISE_TYPES = Literal["doppler", "amplitude", "SPAM", "dephasing"]
+NOISE_TYPES = Literal["doppler", "amplitude", "SPAM", "dephasing", "depolarizing"]
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
@@ -54,6 +54,8 @@ class SimConfig:
             noise types:
 
             - "dephasing": Random phase (Z) flip
+            - "depolarizing": model of decohering where the qubit undergoes a 
+              bit-flip error, phase-flip error or both errors.
             - "doppler": Local atom detuning due to finite speed of the
               atoms and Doppler effect with respect to laser frequency
             - "amplitude": Gaussian damping due to finite laser waist
@@ -86,6 +88,7 @@ class SimConfig:
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
+    depolarizing_prob: float = 0.1
     solver_options: Optional[qutip.Options] = None
     spam_dict: dict[str, float] = field(
         init=False, default_factory=dict, repr=False
@@ -132,6 +135,8 @@ class SimConfig:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
         if "dephasing" in self.noise:
             lines.append(f"Dephasing probability: {self.dephasing_prob}")
+        if "depolarizing" in self.noise:
+            lines.append(f"Depolarizing probability: {self.depolarizing_prob}")
         if solver_options:
             lines.append(
                 "Solver Options: \n" + f"{str(self.solver_options)[10:-1]}"
