@@ -52,6 +52,7 @@ jobs:
         timeout-minutes: 5
         shell: bash
         run: |
+          version="$(head -1 VERSION.txt)"
           until pip download pulser==$version
           do
             echo "Failed to download from PyPI, will wait for upload and retry."
@@ -62,6 +63,7 @@ jobs:
     needs: deploy
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
