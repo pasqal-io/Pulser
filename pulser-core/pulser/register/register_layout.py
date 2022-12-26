@@ -68,11 +68,19 @@ class RegisterLayout(RegDrawer):
         self, trap_coordinates: ArrayLike, slug: Optional[str] = None
     ):
         """Initializes a RegisterLayout."""
-        shape = np.array(trap_coordinates).shape
+        array_type_error_msg = ValueError(
+            "'trap_coordinates' must be an array or list of coordinates."
+        )
+
+        try:
+            shape = np.array(trap_coordinates).shape
+        # Following lines are only being covered starting Python 3.11.1
+        except ValueError as e:  # pragma: no cover
+            raise array_type_error_msg from e  # pragma: no cover
+
         if len(shape) != 2:
-            raise ValueError(
-                "'trap_coordinates' must be an array or list of coordinates."
-            )
+            raise array_type_error_msg
+
         if shape[1] not in (2, 3):
             raise ValueError(
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
