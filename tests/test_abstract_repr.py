@@ -23,8 +23,12 @@ import numpy as np
 import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
-from pulser.devices import Chadoq2, MockDevice
-from pulser.json.abstract_repr.deserializer import VARIABLE_TYPE_MAP
+from pulser.devices import Chadoq2, IroiseMVP, MockDevice
+from pulser.json.abstract_repr.deserializer import (
+    VARIABLE_TYPE_MAP,
+    deserialize_device,
+    resolver,
+)
 from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
@@ -51,6 +55,32 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
     "kaiser_max": (KaiserWaveform.from_max_val, ("max_val", "area", "beta")),
     "blackman_max": (BlackmanWaveform.from_max_val, ("max_val", "area")),
 }
+
+
+class TestDevice:
+    @pytest.fixture(params=[Chadoq2, IroiseMVP, MockDevice])
+    def abstract_device(self, request):
+        device = request.param
+        return json.loads(device.to_abstract_repr())
+
+    def test_device_schema(self, abstract_device):
+        with open(
+            "pulser-core/pulser/json/abstract_repr/schemas/device-schema.json"
+        ) as f:
+            dev_schema = json.load(f)
+        jsonschema.validate(instance=abstract_device, schema=dev_schema)
+
+    def test_roundtrip(self, abstract_device):
+        device = deserialize_device(json.dumps(abstract_device))
+        assert json.loads(device.to_abstract_repr()) == abstract_device
+
+
+def validate_schema(instance):
+    with open(
+        "pulser-core/pulser/json/abstract_repr/schemas/" "sequence-schema.json"
+    ) as f:
+        schema = json.load(f)
+    jsonschema.validate(instance=instance, schema=schema, resolver=resolver)
 
 
 class TestSerialization:
@@ -113,9 +143,7 @@ class TestSerialization:
         )
 
     def test_schema(self, abstract):
-        with open("pulser-core/pulser/json/abstract_repr/schema.json") as f:
-            schema = json.load(f)
-        jsonschema.validate(instance=abstract, schema=schema)
+        validate_schema(abstract)
 
     def test_values(self, abstract):
         assert set(abstract.keys()) == set(
@@ -130,9 +158,13 @@ class TestSerialization:
                 "measurement",
             ]
         )
-        assert abstract["device"] in [
+        device_name = abstract["device"]["name"]
+        assert abstract["device"]["name"] in [
             d.name for d in [*devices._valid_devices, *devices._mock_devices]
         ]
+        assert abstract["device"] == json.loads(
+            getattr(devices, device_name).to_abstract_repr()
+        )
         assert abstract["register"] == [
             {"name": "control", "x": -2.0, "y": 0.0},
             {"name": "target", "x": 2.0, "y": 0.0},
@@ -382,6 +414,7 @@ class TestSerialization:
         seq.measure("XY")
 
         abstract = json.loads(seq.to_abstract_repr())
+        validate_schema(abstract)
         assert abstract["register"] == [
             {"name": str(qid), "x": c[0], "y": c[1]}
             for qid, c in reg.qubits.items()
@@ -400,6 +433,7 @@ class TestSerialization:
         _ = seq.declare_variable("var", dtype=int)
 
         abstract = json.loads(seq.to_abstract_repr())
+        validate_schema(abstract)
         assert abstract["layout"] == {
             "coordinates": triangular_lattice.coords.tolist(),
             "slug": triangular_lattice.slug,
@@ -423,6 +457,53 @@ class TestSerialization:
         ]
         assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
+    def test_eom_mode(self, triangular_lattice):
+        reg = triangular_lattice.hexagonal_register(7)
+        seq = Sequence(reg, IroiseMVP)
+        seq.declare_channel("ryd", "rydberg_global")
+        det_off = seq.declare_variable("det_off", dtype=float)
+        duration = seq.declare_variable("duration", dtype=int)
+        seq.enable_eom_mode(
+            "ryd", amp_on=3.0, detuning_on=0.0, optimal_detuning_off=det_off
+        )
+        seq.add_eom_pulse("ryd", duration, 0.0)
+        seq.delay(duration, "ryd")
+        seq.disable_eom_mode("ryd")
+
+        abstract = json.loads(seq.to_abstract_repr())
+        validate_schema(abstract)
+
+        assert abstract["operations"][0] == {
+            "op": "enable_eom_mode",
+            "channel": "ryd",
+            "amp_on": 3.0,
+            "detuning_on": 0.0,
+            "optimal_detuning_off": {
+                "expression": "index",
+                "lhs": {"variable": "det_off"},
+                "rhs": 0,
+            },
+        }
+
+        ser_duration = {
+            "expression": "index",
+            "lhs": {"variable": "duration"},
+            "rhs": 0,
+        }
+        assert abstract["operations"][1] == {
+            "op": "add_eom_pulse",
+            "channel": "ryd",
+            "duration": ser_duration,
+            "phase": 0.0,
+            "post_phase_shift": 0.0,
+            "protocol": "min-delay",
+        }
+
+        assert abstract["operations"][3] == {
+            "op": "disable_eom_mode",
+            "channel": "ryd",
+        }
+
 
 def _get_serialized_seq(
     operations: list[dict] = None,
@@ -433,7 +514,7 @@ def _get_serialized_seq(
     seq_dict = {
         "version": "1",
         "name": "John Doe",
-        "device": "Chadoq2",
+        "device": json.loads(Chadoq2.to_abstract_repr()),
         "register": [
             {"name": "q0", "x": 0.0, "y": 2.0},
             {"name": "q42", "x": -2.0, "y": 9.0},
@@ -504,8 +585,8 @@ class TestDeserialization:
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
-        # Check device name
-        assert seq._device.name == s["device"]
+        # Check device
+        assert seq._device == deserialize_device(json.dumps(s["device"]))
 
         # Check channels
         assert len(seq.declared_channels) == len(s["channels"])
@@ -572,7 +653,7 @@ class TestDeserialization:
         mag_field = [10.0, -43.2, 0.0]
         s = _get_serialized_seq(
             magnetic_field=mag_field,
-            device="MockDevice",
+            device=json.loads(MockDevice.to_abstract_repr()),
             channels={"mw": "mw_global"},
         )
         _check_roundtrip(s)
@@ -886,6 +967,65 @@ class TestDeserialization:
             assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
+
+    def test_deserialize_eom_ops(self):
+        s = _get_serialized_seq(
+            operations=[
+                {
+                    "op": "enable_eom_mode",
+                    "channel": "global",
+                    "amp_on": 3.0,
+                    "detuning_on": 0.0,
+                    "optimal_detuning_off": -1.0,
+                },
+                {
+                    "op": "add_eom_pulse",
+                    "channel": "global",
+                    "duration": {
+                        "expression": "index",
+                        "lhs": {"variable": "duration"},
+                        "rhs": 0,
+                    },
+                    "phase": 0.0,
+                    "post_phase_shift": 0.0,
+                    "protocol": "no-delay",
+                },
+                {
+                    "op": "disable_eom_mode",
+                    "channel": "global",
+                },
+            ],
+            variables={"duration": {"type": "int", "value": [100]}},
+            device=json.loads(IroiseMVP.to_abstract_repr()),
+            channels={"global": "rydberg_global"},
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        # init + declare_channel + enable_eom_mode
+        assert len(seq._calls) == 3
+        # add_eom_pulse + disable_eom
+        assert len(seq._to_build_calls) == 2
+
+        enable_eom_call = seq._calls[-1]
+        assert enable_eom_call.name == "enable_eom_mode"
+        assert enable_eom_call.kwargs == {
+            "channel": "global",
+            "amp_on": 3.0,
+            "detuning_on": 0.0,
+            "optimal_detuning_off": -1.0,
+        }
+
+        disable_eom_call = seq._to_build_calls[-1]
+        assert disable_eom_call.name == "disable_eom_mode"
+        assert disable_eom_call.kwargs == {"channel": "global"}
+
+        eom_pulse_call = seq._to_build_calls[0]
+        assert eom_pulse_call.name == "add_eom_pulse"
+        assert eom_pulse_call.kwargs["channel"] == "global"
+        assert isinstance(eom_pulse_call.kwargs["duration"], VariableItem)
+        assert eom_pulse_call.kwargs["phase"] == 0.0
+        assert eom_pulse_call.kwargs["post_phase_shift"] == 0.0
+        assert eom_pulse_call.kwargs["protocol"] == "no-delay"
 
     @pytest.mark.parametrize(
         "wf_obj",
@@ -1207,3 +1347,11 @@ class TestDeserialization:
         ):
             with patch("jsonschema.validate"):
                 Sequence.from_abstract_repr(json.dumps(s))
+
+    @pytest.mark.parametrize("device", [Chadoq2, IroiseMVP, MockDevice])
+    def test_legacy_device(self, device):
+        s = _get_serialized_seq(
+            device=device.name, channels={"global": "rydberg_global"}
+        )
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert seq.device == device
