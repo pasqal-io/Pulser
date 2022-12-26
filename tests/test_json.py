@@ -50,6 +50,18 @@ def test_encoder():
         encode(1j)
 
 
+def test_device(mod_device):
+    assert encode_decode(Chadoq2) == Chadoq2
+    with pytest.raises(SerializationError):
+        encode_decode(mod_device)
+
+
+def test_virtual_device(mod_device):
+    assert encode_decode(MockDevice) == MockDevice
+    virtual_mod = mod_device.to_virtual()
+    assert encode_decode(virtual_mod) == virtual_mod
+
+
 def test_register_2d():
     reg = Register({"c": (1, 2), "d": (8, 4)})
     seq = Sequence(reg, device=Chadoq2)

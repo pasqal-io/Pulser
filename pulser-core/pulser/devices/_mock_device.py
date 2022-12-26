@@ -13,49 +13,22 @@
 # limitations under the License.
 
 from pulser.channels import Microwave, Raman, Rydberg
-from pulser.devices._device_datacls import Device
+from pulser.devices._device_datacls import VirtualDevice
 
-MockDevice = Device(
+MockDevice = VirtualDevice(
     name="MockDevice",
     dimensions=3,
     rydberg_level=70,
-    max_atom_num=2000,
-    max_radial_distance=1000,
-    min_atom_distance=1,
+    max_atom_num=None,
+    max_radial_distance=None,
+    min_atom_distance=0.0,
+    interaction_coeff_xy=3700.0,
+    supports_slm_mask=True,
     _channels=(
-        (
-            "rydberg_global",
-            Rydberg.Global(1000, 200, clock_period=1, min_duration=1),
-        ),
-        (
-            "rydberg_local",
-            Rydberg.Local(
-                1000,
-                200,
-                min_retarget_interval=0,
-                max_targets=2000,
-                clock_period=1,
-                min_duration=1,
-            ),
-        ),
-        (
-            "raman_global",
-            Raman.Global(1000, 200, clock_period=1, min_duration=1),
-        ),
-        (
-            "raman_local",
-            Raman.Local(
-                1000,
-                200,
-                min_retarget_interval=0,
-                max_targets=2000,
-                clock_period=1,
-                min_duration=1,
-            ),
-        ),
-        (
-            "mw_global",
-            Microwave.Global(1000, 200, clock_period=1, min_duration=1),
-        ),
+        ("rydberg_global", Rydberg.Global(None, None, max_duration=None)),
+        ("rydberg_local", Rydberg.Local(None, None, max_duration=None)),
+        ("raman_global", Raman.Global(None, None, max_duration=None)),
+        ("raman_local", Raman.Local(None, None, max_duration=None)),
+        ("mw_global", Microwave.Global(None, None, max_duration=None)),
     ),
 )

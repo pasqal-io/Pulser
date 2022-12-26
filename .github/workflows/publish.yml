@@ -48,14 +48,24 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: twine upload dist/*
+      - name: Confirm deployment
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          until pip download pulser==$version
+          do
+            echo "Failed to download from PyPI, will wait for upload and retry."
+            sleep 30
+          done
 
   check-release:
     needs: deploy
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
@@ -79,6 +89,7 @@ jobs:
       - name: Test the installation
         shell: bash
         run: |
+          version="$(head -1 VERSION.txt)"
           python -c "import pulser; assert pulser.__version__ == '$version'"
           grep -e pytest dev_requirements.txt | sed 's/ //g' | xargs pip install
           pytest

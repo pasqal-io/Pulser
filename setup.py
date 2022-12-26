@@ -22,13 +22,13 @@ if "dev" in __version__:
     raise RuntimeError(
         "The 'pulser' distribution can only be installed or packaged for "
         "stable versions. To install the full development version, run "
-        "`pip install -e ./pulser-core -e ./pulser-simulation` instead."
+        "`make dev-install` instead."
     )
 
 with open("packages.txt", "r") as f:
     requirements = [f"{pkg.strip()}=={__version__}" for pkg in f.readlines()]
 
-# Just a meta-package that requires 'pulser-core' and 'pulser-simulation'
+# Just a meta-package that requires all pulser packages
 setup(
     name="pulser",
     version=__version__,

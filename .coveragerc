@@ -6,6 +6,8 @@ exclude_lines =
     pragma: no cover
     # Don't test pass statements
     pass
+    # These lines can never be covered
+    if TYPE_CHECKING:
 
 omit =
     tests/*
@@ -18,3 +20,4 @@ show_missing = True
 source =
     pulser-core/pulser/
     pulser-simulation/pulser_simulation/
+    pulser-pasqal/pulser_pasqal/

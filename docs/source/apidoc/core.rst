@@ -71,35 +71,53 @@ Devices
 
 Structure of a Device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The :class:`Device` class sets the structure of every device instance.
+The :class:`Device` class sets the structure of a physical device, 
+while :class:`VirtualDevice` is a more permissive device type which can
+only be used in emulators, as it does not necessarily represent the
+constraints of a physical device. 
 
-.. automodule:: pulser.devices._device_datacls
-   :members:
+Illustrative instances of :class:`Device` (see `Physical Devices`_) and :class:`VirtualDevice` 
+(the `MockDevice`) come included in the `pulser.devices` module.
+
+.. autoclass:: pulser.devices._device_datacls.Device
+  :members:
+
+.. autoclass:: pulser.devices._device_datacls.VirtualDevice
+  :members:
+
+.. _Physical Devices:
 
 Physical Devices
 ^^^^^^^^^^^^^^^^^^^
-Each device instance holds the characteristics of a physical device,
+Each `Device`` instance holds the characteristics of a physical device,
 which when associated with a :class:`pulser.Sequence` condition its development.
 
 .. autodata:: pulser.devices.Chadoq2
 
 .. autodata:: pulser.devices.IroiseMVP
 
-The MockDevice
-^^^^^^^^^^^^^^^^
-A very permissive device that supports sequences which are currently unfeasible
-on physical devices. Unlike with physical devices, its channels remain available
-after declaration and can be declared again so as to have multiple channels
-with the same characteristics.
-
-.. autodata:: pulser.devices.MockDevice
 
 Channels
-^^^^^^^^^^^
-.. automodule:: pulser.channels
+---------------------
+
+Base Channel
+^^^^^^^^^^^^^^^
+.. automodule:: pulser.channels.base_channel
+   :members:
+
+
+Available Channels
+^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pulser.channels.channels
    :members:
    :show-inheritance:
 
+
+EOM Mode Configuration
+^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pulser.channels.eom
+   :members:
+   :show-inheritance:
 
 Sampler
 ------------------

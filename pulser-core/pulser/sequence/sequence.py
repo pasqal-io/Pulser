@@ -29,9 +29,9 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.sequence._decorators as seq_decorators
-from pulser.channels import Channel
-from pulser.devices import MockDevice
-from pulser.devices._device_datacls import Device
+from pulser.channels.base_channel import Channel
+from pulser.channels.eom import RydbergEOM
+from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
 )
@@ -101,35 +101,25 @@ class Sequence:
     """
 
     def __init__(
-        self, register: Union[BaseRegister, MappableRegister], device: Device
+        self,
+        register: Union[BaseRegister, MappableRegister],
+        device: BaseDevice,
     ):
         """Initializes a new pulse sequence."""
-        if not isinstance(device, Device):
+        if not isinstance(device, BaseDevice):
             raise TypeError(
-                "'device' must be of type 'Device'. Import a valid"
-                " device from 'pulser.devices'."
+                f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
-        cond1 = device not in pulser.devices._valid_devices
-        cond2 = device not in pulser.devices._mock_devices
-        if cond1 and cond2:
-            names = [d.name for d in pulser.devices._valid_devices]
-            warns_msg = (
-                "The Sequence's device should be imported from "
-                + "'pulser.devices'. Correct operation is not ensured"
-                + " for custom devices. Choose 'MockDevice'"
-                + " or one of the following real devices:\n"
-                + "\n".join(names)
-            )
-            warnings.warn(warns_msg, stacklevel=2)
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
             device.validate_layout(register.layout)
+            device.validate_layout_filling(register)
         else:
             device.validate_register(register)
 
         self._register: Union[BaseRegister, MappableRegister] = register
-        self._device: Device = device
+        self._device: BaseDevice = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
@@ -169,6 +159,11 @@ class Sequence:
         return cast(BaseRegister, self._register).qubits
 
     @property
+    def device(self) -> BaseDevice:
+        """Device that the sequence is using."""
+        return self._device
+
+    @property
     def register(self) -> BaseRegister:
         """Register with the qubit's IDs and positions."""
         if self.is_register_mappable():
@@ -202,7 +197,9 @@ class Sequence:
             return {
                 id: ch
                 for id, ch in self._device.channels.items()
-                if (id not in occupied_ch_ids or self._device == MockDevice)
+                if (
+                    id not in occupied_ch_ids or self._device.reusable_channels
+                )
                 and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
@@ -235,6 +232,32 @@ class Sequence:
             Whether the sequence is parametrized.
         """
         return not self._building
+
+    def is_in_eom_mode(self, channel: str) -> bool:
+        """States whether a channel is currently in EOM mode.
+
+        Args:
+            channel: The name of the declared channel to inspect.
+
+        Returns:
+            Whether the channel is in EOM mode.
+
+        """
+        self._validate_channel(channel)
+        if not self.is_parametrized():
+            return self._schedule[channel].in_eom_mode()
+
+        # Look for the latest stored EOM mode enable/disable
+        for call in reversed(self._calls + self._to_build_calls):
+            if call.name not in ("enable_eom_mode", "disable_eom_mode"):
+                continue
+            # Channel is the first positional arg in both methods
+            ch_arg = call.args[0] if call.args else call.kwargs["channel"]
+            if ch_arg == channel:
+                # If it's not "enable_eom_mode", then it's "disable_eom_mode"
+                return cast(bool, call.name == "enable_eom_mode")
+        # If it reaches here, there were no EOM calls found
+        return False
 
     def is_register_mappable(self) -> bool:
         """States whether the sequence's register is mappable.
@@ -353,6 +376,10 @@ class Sequence:
             qubits: Iterable of qubit ID's to mask during the first global
                 pulse of the sequence.
         """
+        if not self._device.supports_slm_mask:
+            raise ValueError(
+                f"The '{self._device}' device does not have an SLM mask."
+            )
         try:
             targets = set(qubits)
         except TypeError:
@@ -369,6 +396,135 @@ class Sequence:
 
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
+
+    @seq_decorators.screen
+    def switch_device(
+        self, new_device: BaseDevice, strict: bool = False
+    ) -> Sequence:
+        """Switch the device of a sequence.
+
+        Args:
+            new_device: The target device instance.
+            strict: Enforce a strict match between devices and channels to
+                guarantee the pulse sequence is left unchanged.
+
+        Returns:
+            The sequence on the new device, using the match channels of
+            the former device declared in the sequence.
+        """
+        # Check if the device is new or not
+
+        if self._device == new_device:
+            warnings.warn(
+                "Switching a sequence to the same device"
+                + " returns the sequence unchanged.",
+                stacklevel=2,
+            )
+            return self
+
+        if new_device.rydberg_level != self._device.rydberg_level:
+            if strict:
+                raise ValueError(
+                    "Strict device match failed because the"
+                    + " devices have different Rydberg levels."
+                )
+            warnings.warn(
+                "Switching to a device with a different Rydberg level,"
+                " check that the expected Rydberg interactions still hold.",
+                stacklevel=2,
+            )
+
+        # Channel match
+        channel_match: dict[str, Any] = {}
+        strict_error_message = ""
+        ch_type_er_mess = ""
+        for o_d_ch_name, o_d_ch_obj in self.declared_channels.items():
+            channel_match[o_d_ch_name] = None
+            for n_d_ch_id, n_d_ch_obj in new_device.channels.items():
+                if (
+                    not new_device.reusable_channels
+                    and n_d_ch_id in channel_match.values()
+                ):
+                    # Channel already matched and can't be reused
+                    continue
+                # Find the corresponding channel on the new device
+                # We verify the channel class then
+                # check whether the addressing Global or local
+                basis_match = o_d_ch_obj.basis == n_d_ch_obj.basis
+                addressing_match = (
+                    o_d_ch_obj.addressing == n_d_ch_obj.addressing
+                )
+                base_msg = f"No match for channel {o_d_ch_name}"
+                if not (basis_match and addressing_match):
+                    # If there already is a message, keeps it
+                    ch_type_er_mess = ch_type_er_mess or (
+                        base_msg + " with the right basis and addressing."
+                    )
+                    continue
+                if self._schedule[o_d_ch_name].eom_blocks:
+                    if n_d_ch_obj.eom_config is None:
+                        ch_type_er_mess = (
+                            base_msg + " with an EOM configuration."
+                        )
+                        continue
+                    if (
+                        n_d_ch_obj.eom_config != o_d_ch_obj.eom_config
+                        and strict
+                    ):
+                        strict_error_message = (
+                            base_msg + " with the same EOM configuration."
+                        )
+                        continue
+                if not strict:
+                    channel_match[o_d_ch_name] = n_d_ch_id
+                    break
+                if n_d_ch_obj.mod_bandwidth != o_d_ch_obj.mod_bandwidth:
+                    strict_error_message = strict_error_message or (
+                        base_msg + " with the same mod_bandwidth."
+                    )
+                    continue
+                if n_d_ch_obj.fixed_retarget_t != o_d_ch_obj.fixed_retarget_t:
+                    strict_error_message = strict_error_message or (
+                        base_msg + " with the same fixed_retarget_t."
+                    )
+                    continue
+
+                # Clock_period check
+                if o_d_ch_obj.clock_period == n_d_ch_obj.clock_period:
+                    channel_match[o_d_ch_name] = n_d_ch_id
+                    break
+                strict_error_message = strict_error_message or (
+                    base_msg + " with the same clock_period."
+                )
+
+        if None in channel_match.values():
+            if strict_error_message:
+                raise ValueError(strict_error_message)
+            else:
+                raise TypeError(ch_type_er_mess)
+        # Initialize the new sequence
+        new_seq = Sequence(self.register, new_device)
+
+        for call in self._calls[1:]:
+            if not (call.name == "declare_channel"):
+                getattr(new_seq, call.name)(*call.args, **call.kwargs)
+                continue
+            # Switch the old id with the correct id
+            sw_channel_args = list(call.args)
+            sw_channel_kw_args = call.kwargs.copy()
+            if "name" in sw_channel_kw_args:  # pragma: no cover
+                sw_channel_kw_args["channel_id"] = channel_match[
+                    sw_channel_kw_args["name"]
+                ]
+            elif "channel_id" in sw_channel_kw_args:  # pragma: no cover
+                sw_channel_kw_args["channel_id"] = channel_match[
+                    sw_channel_args[0]
+                ]
+            else:
+                sw_channel_args[1] = channel_match[sw_channel_args[0]]
+
+            new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
+        return new_seq
 
     @seq_decorators.block_if_measured
     def declare_channel(
@@ -534,6 +690,174 @@ class Sequence:
             return var
 
     @seq_decorators.store
+    @seq_decorators.block_if_measured
+    def enable_eom_mode(
+        self,
+        channel: str,
+        amp_on: Union[float, Parametrized],
+        detuning_on: Union[float, Parametrized],
+        optimal_detuning_off: Union[float, Parametrized] = 0.0,
+    ) -> None:
+        """Puts a channel in EOM mode operation.
+
+        For channels with a finite modulation bandwidth and an EOM, operation
+        in EOM mode allows for the execution of square pulses with a higher
+        bandwidth than that which is tipically available. It can be turned on
+        and off through the `Sequence.enable_eom_mode()` and
+        `Sequence.disable_eom_mode()` methods.
+        A channel in EOM mode can only execute square pulses with a given
+        amplitude (`amp_on`) and detuning (`detuning_on`), which are
+        chosen at the moment the EOM mode is enabled. Furthermore, the
+        detuning when there is no pulse being played (`detuning_off`) is
+        restricted to a set of values that depends on `amp_on` and
+        `detuning_on`.
+        While in EOM mode, one can only add pulses of variable duration
+        (through `Sequence.add_eom_pulse()`) or delays.
+
+        Note:
+            Enabling the EOM mode will automatically enforce a buffer time from
+            the last pulse on the chose channel.
+
+        Args:
+            channel: The name of the channel to put in EOM mode.
+            amp_on: The amplitude of the EOM pulses (in rad/µs).
+            detuning_on: The detuning of the EOM pulses (in rad/µs).
+            optimal_detuning_off: The optimal value of detuning (in rad/µs)
+                when there is no pulse being played. It will choose the closest
+                value among the existing options.
+        """
+        if self.is_in_eom_mode(channel):
+            raise RuntimeError(
+                f"The '{channel}' channel is already in EOM mode."
+            )
+        channel_obj = self.declared_channels[channel]
+        if not channel_obj.supports_eom():
+            raise TypeError(f"Channel '{channel}' does not have an EOM.")
+
+        on_pulse = Pulse.ConstantPulse(
+            channel_obj.min_duration, amp_on, detuning_on, 0.0
+        )
+        if not isinstance(on_pulse, Parametrized):
+            channel_obj.validate_pulse(on_pulse)
+            amp_on = cast(float, amp_on)
+            detuning_on = cast(float, detuning_on)
+
+            off_options = cast(
+                RydbergEOM, channel_obj.eom_config
+            ).detuning_off_options(amp_on, detuning_on)
+
+            if not isinstance(optimal_detuning_off, Parametrized):
+                closest_option = np.abs(
+                    off_options - optimal_detuning_off
+                ).argmin()
+                detuning_off = off_options[closest_option]
+                off_pulse = Pulse.ConstantPulse(
+                    channel_obj.min_duration, 0.0, detuning_off, 0.0
+                )
+                channel_obj.validate_pulse(off_pulse)
+
+            if not self.is_parametrized():
+                self._schedule.enable_eom(
+                    channel, amp_on, detuning_on, detuning_off
+                )
+
+    @seq_decorators.store
+    @seq_decorators.block_if_measured
+    def disable_eom_mode(self, channel: str) -> None:
+        """Takes a channel out of EOM mode operation.
+
+        For channels with a finite modulation bandwidth and an EOM, operation
+        in EOM mode allows for the execution of square pulses with a higher
+        bandwidth than that which is tipically available. It can be turned on
+        and off through the `Sequence.enable_eom_mode()` and
+        `Sequence.disable_eom_mode()` methods.
+        A channel in EOM mode can only execute square pulses with a given
+        amplitude (`amp_on`) and detuning (`detuning_on`), which are
+        chosen at the moment the EOM mode is enabled. Furthermore, the
+        detuning when there is no pulse being played (`detuning_off`) is
+        restricted to a set of values that depends on `amp_on` and
+        `detuning_on`.
+        While in EOM mode, one can only add pulses of variable duration
+        (through `Sequence.add_eom_pulse()`) or delays.
+
+        Note:
+            Disable the EOM mode will automatically enforce a buffer time from
+            the moment it is turned off.
+
+        Args:
+            channel: The name of the channel to take out of EOM mode.
+        """
+        if not self.is_in_eom_mode(channel):
+            raise RuntimeError(f"The '{channel}' channel is not in EOM mode.")
+        if not self.is_parametrized():
+            self._schedule.disable_eom(channel)
+
+    @seq_decorators.store
+    @seq_decorators.mark_non_empty
+    @seq_decorators.block_if_measured
+    def add_eom_pulse(
+        self,
+        channel: str,
+        duration: Union[int, Parametrized],
+        phase: Union[float, Parametrized],
+        post_phase_shift: Union[float, Parametrized] = 0.0,
+        protocol: PROTOCOLS = "min-delay",
+    ) -> None:
+        """Adds a square pulse to a channel in EOM mode.
+
+        For channels with a finite modulation bandwidth and an EOM, operation
+        in EOM mode allows for the execution of square pulses with a higher
+        bandwidth than that which is tipically available. It can be turned on
+        and off through the `Sequence.enable_eom_mode()` and
+        `Sequence.disable_eom_mode()` methods.
+        A channel in EOM mode can only execute square pulses with a given
+        amplitude (`amp_on`) and detuning (`detuning_on`), which are
+        chosen at the moment the EOM mode is enabled. Furthermore, the
+        detuning when there is no pulse being played (`detuning_off`) is
+        restricted to a set of values that depends on `amp_on` and
+        `detuning_on`.
+        While in EOM mode, one can only add pulses of variable duration
+        (through `Sequence.add_eom_pulse()`) or delays.
+
+        Note:
+            When the phase between pulses is changed, the necessary buffer
+            time for a phase jump will still be enforced (unless
+            ``protocol='no-delay'``).
+
+        Args:
+            channel: The name of the channel to add the pulse to.
+            duration: The duration of the pulse (in ns).
+            phase: The pulse phase (in radians).
+            post_phase_shift: Optionally lets you add a phase shift (in rads)
+                immediately after the end of the pulse.
+            protocol: Stipulates how to deal with eventual conflicts with
+                other channels (see `Sequence.add()` for more details).
+        """
+        if not self.is_in_eom_mode(channel):
+            raise RuntimeError(f"Channel '{channel}' must be in EOM mode.")
+
+        if self.is_parametrized():
+            self._validate_add_protocol(protocol)
+            # Test the parameters
+            if not isinstance(duration, Parametrized):
+                channel_obj = self.declared_channels[channel]
+                channel_obj.validate_duration(duration)
+            for arg in (phase, post_phase_shift):
+                if not isinstance(arg, (float, int)):
+                    raise TypeError("Phase values must be a numeric value.")
+            return
+
+        eom_settings = self._schedule[channel].eom_blocks[-1]
+        eom_pulse = Pulse.ConstantPulse(
+            duration,
+            eom_settings.rabi_freq,
+            eom_settings.detuning_on,
+            phase,
+            post_phase_shift=post_phase_shift,
+        )
+        self._add(eom_pulse, channel, protocol)
+
+    @seq_decorators.store
     @seq_decorators.mark_non_empty
     @seq_decorators.block_if_measured
     def add(
@@ -553,61 +877,24 @@ class Sequence:
                 simultaneously.
 
                 - ``'min-delay'``: Before adding the pulse, introduces the
-                  smallest possible delay that avoids all exisiting conflicts.
+                 smallest possible delay that avoids all exisiting conflicts.
 
                 - ``'no-delay'``: Adds the pulse to the channel, regardless of
-                  existing conflicts.
+                 existing conflicts.
 
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
-                  that idles the channel until the end of the other channels'
-                  latest pulse.
+                 that idles the channel until the end of the other channels'
+                 latest pulse.
+
+        Note:
+            When the phase of the pulse to add is different than the phase of
+            the previous pulse on the channel, a delay between the two pulses
+            might be automatically added to ensure the channel's
+            `phase_jump_time` is respected. To override this behaviour, use
+            the ``'no-delay'`` protocol.
         """
-        self._validate_channel(channel)
-
-        valid_protocols = get_args(PROTOCOLS)
-        if protocol not in valid_protocols:
-            raise ValueError(
-                f"Invalid protocol '{protocol}', only accepts protocols: "
-                + ", ".join(valid_protocols)
-            )
-
-        if self.is_parametrized():
-            if not isinstance(pulse, Parametrized):
-                self._validate_and_adjust_pulse(pulse, channel)
-            return
-
-        pulse = cast(Pulse, pulse)
-        channel_obj = self._schedule[channel].channel_obj
-        last = self._last(channel)
-        basis = channel_obj.basis
-
-        ph_refs = {
-            self._basis_ref[basis][q].phase.last_phase for q in last.targets
-        }
-        if len(ph_refs) != 1:
-            raise ValueError(
-                "Cannot do a multiple-target pulse on qubits with different "
-                "phase references for the same basis."
-            )
-        else:
-            phase_ref = ph_refs.pop()
-
-        pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
-
-        phase_barriers = [
-            self._basis_ref[basis][q].phase.last_time for q in last.targets
-        ]
-
-        self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
-
-        true_finish = self._last(channel).tf + pulse.fall_time(channel_obj)
-        for qubit in last.targets:
-            self._basis_ref[basis][qubit].update_last_used(true_finish)
-
-        if pulse.post_phase_shift:
-            self._phase_shift(
-                pulse.post_phase_shift, *last.targets, basis=basis
-            )
+        self._validate_channel(channel, block_eom_mode=True)
+        self._add(pulse, channel, protocol)
 
     @seq_decorators.store
     def target(
@@ -799,7 +1086,7 @@ class Sequence:
         self,
         *,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, float, int, str],
+        **vars: Union[ArrayLike, float, int],
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
@@ -841,7 +1128,7 @@ class Sequence:
 
         # Shallow copy with stored parametrized objects (if any)
         # NOTE: While seq is a shallow copy, be extra careful with changes to
-        # atributes of seq pointing to mutable objects, as they might be
+        # attributes of seq pointing to mutable objects, as they might be
         # inadvertedly done to self too
         seq = copy.copy(self)
 
@@ -1055,6 +1342,53 @@ class Sequence:
             fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
+    def _add(
+        self,
+        pulse: Union[Pulse, Parametrized],
+        channel: str,
+        protocol: PROTOCOLS,
+    ) -> None:
+        self._validate_add_protocol(protocol)
+        if self.is_parametrized():
+            if not isinstance(pulse, Parametrized):
+                self._validate_and_adjust_pulse(pulse, channel)
+            return
+
+        pulse = cast(Pulse, pulse)
+        channel_obj = self._schedule[channel].channel_obj
+        last = self._last(channel)
+        basis = channel_obj.basis
+
+        ph_refs = {
+            self._basis_ref[basis][q].phase.last_phase for q in last.targets
+        }
+        if len(ph_refs) != 1:
+            raise ValueError(
+                "Cannot do a multiple-target pulse on qubits with different "
+                "phase references for the same basis."
+            )
+        else:
+            phase_ref = ph_refs.pop()
+
+        pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
+
+        phase_barriers = [
+            self._basis_ref[basis][q].phase.last_time for q in last.targets
+        ]
+
+        self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
+
+        true_finish = self._last(channel).tf + pulse.fall_time(
+            channel_obj, in_eom_mode=self.is_in_eom_mode(channel)
+        )
+        for qubit in last.targets:
+            self._basis_ref[basis][qubit].update_last_used(true_finish)
+
+        if pulse.post_phase_shift:
+            self._phase_shift(
+                pulse.post_phase_shift, *last.targets, basis=basis
+            )
+
     @seq_decorators.block_if_measured
     def _target(
         self,
@@ -1062,7 +1396,7 @@ class Sequence:
         channel: str,
         _index: bool = False,
     ) -> None:
-        self._validate_channel(channel)
+        self._validate_channel(channel, block_eom_mode=True)
         channel_obj = self._schedule[channel].channel_obj
         try:
             qubits_set = (
@@ -1075,7 +1409,10 @@ class Sequence:
 
         if channel_obj.addressing != "Local":
             raise ValueError("Can only choose target of 'Local' channels.")
-        elif len(qubits_set) > cast(int, channel_obj.max_targets):
+        elif (
+            channel_obj.max_targets is not None
+            and len(qubits_set) > channel_obj.max_targets
+        ):
             raise ValueError(
                 f"This channel can target at most {channel_obj.max_targets} "
                 "qubits at a time."
@@ -1176,7 +1513,9 @@ class Sequence:
         """Shortcut to last element in the channel's schedule."""
         return self._schedule[channel][-1]
 
-    def _validate_channel(self, channel: str) -> None:
+    def _validate_channel(
+        self, channel: str, block_eom_mode: bool = False
+    ) -> None:
         if isinstance(channel, Parametrized):
             raise NotImplementedError(
                 "Using parametrized objects or variables to refer to channels "
@@ -1184,12 +1523,14 @@ class Sequence:
             )
         if channel not in self._schedule:
             raise ValueError("Use the name of a declared channel.")
+        if block_eom_mode and self.is_in_eom_mode(channel):
+            raise RuntimeError("The chosen channel is in EOM mode.")
 
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
-        self._device.validate_pulse(pulse, self._schedule[channel].channel_id)
         channel_obj = self._schedule[channel].channel_obj
+        channel_obj.validate_pulse(pulse)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:
@@ -1208,6 +1549,14 @@ class Sequence:
             new_det = pulse.detuning
 
         return Pulse(new_amp, new_det, new_phase, pulse.post_phase_shift)
+
+    def _validate_add_protocol(self, protocol: str) -> None:
+        valid_protocols = get_args(PROTOCOLS)
+        if protocol not in valid_protocols:
+            raise ValueError(
+                f"Invalid protocol '{protocol}', only accepts protocols: "
+                + ", ".join(valid_protocols)
+            )
 
     def _reset_parametrized(self) -> None:
         """Resets all attributes related to parametrization."""

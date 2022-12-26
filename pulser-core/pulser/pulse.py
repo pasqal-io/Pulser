@@ -18,17 +18,20 @@ from __future__ import annotations
 import functools
 import itertools
 from dataclasses import dataclass, field
-from typing import Any, Union, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.channels import Channel
+import pulser
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import ConstantWaveform, Waveform
+
+if TYPE_CHECKING:
+    from pulser.channels.base_channel import Channel
 
 
 @dataclass(init=False, repr=False, frozen=True)
@@ -188,12 +191,18 @@ class Pulse:
         fig.tight_layout()
         plt.show()
 
-    def fall_time(self, channel: Channel) -> int:
+    def fall_time(self, channel: Channel, in_eom_mode: bool = False) -> int:
         """Calculates the extra time needed to ramp down to zero."""
-        aligned_start_extra_time = channel.rise_time
+        aligned_start_extra_time = (
+            channel.rise_time
+            if not in_eom_mode
+            else cast(
+                pulser.channels.eom.BaseEOM, channel.eom_config
+            ).rise_time
+        )
         end_extra_time = max(
-            self.amplitude.modulation_buffers(channel)[1],
-            self.detuning.modulation_buffers(channel)[1],
+            self.amplitude.modulation_buffers(channel, eom=in_eom_mode)[1],
+            self.detuning.modulation_buffers(channel, eom=in_eom_mode)[1],
         )
         return aligned_start_extra_time + end_extra_time
 
