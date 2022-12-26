@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import dataclasses
 import json
 from typing import Any
 from unittest.mock import patch
@@ -163,7 +164,6 @@ def devices():
                     2 * np.pi * 20,
                     2 * np.pi * 10,
                     clock_period=1,
-                    phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=3,
                     mod_bandwidth=4,
@@ -175,7 +175,6 @@ def devices():
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
                     clock_period=4,
-                    phase_jump_time=500,
                     max_duration=2**26,
                 ),
             ),
@@ -196,7 +195,6 @@ def devices():
                     2 * np.pi * 20,
                     2 * np.pi * 10,
                     clock_period=3,
-                    phase_jump_time=500,
                     max_duration=2**26,
                     max_targets=5,
                     mod_bandwidth=2,
@@ -209,7 +207,6 @@ def devices():
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
                     clock_period=2,
-                    phase_jump_time=500,
                     max_duration=2**26,
                 ),
             ),
@@ -227,7 +224,6 @@ def devices():
                 Raman.Local(
                     max_abs_detuning=2 * np.pi * 20,
                     max_amp=2 * np.pi * 10,
-                    phase_jump_time=500,
                     min_retarget_interval=220,
                     fixed_retarget_t=1,
                     max_targets=1,
@@ -243,7 +239,6 @@ def devices():
                     2 * np.pi * 20,
                     2 * np.pi * 10,
                     clock_period=3,
-                    phase_jump_time=500,
                     max_duration=2**26,
                     mod_bandwidth=2,
                     fixed_retarget_t=2,
@@ -255,7 +250,6 @@ def devices():
                     max_abs_detuning=2 * np.pi * 4,
                     max_amp=2 * np.pi * 3,
                     clock_period=4,
-                    phase_jump_time=500,
                     max_duration=2**26,
                 ),
             ),
@@ -286,7 +280,9 @@ def pulses():
     return [rise, sweep, fall]
 
 
-def init_seq(device, channel_name, channel_id, l_pulses, initial_target=None):
+def init_seq(
+    device, channel_name, channel_id, l_pulses, initial_target=None
+) -> Sequence:
     seq = Sequence(reg, device)
     seq.declare_channel(
         channel_name, channel_id, initial_target=initial_target
@@ -308,70 +304,44 @@ def test_switch_device_down(devices, pulses):
     ):
         seq.switch_device(Chadoq2)
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Switching the device of a sequence to one"
-        + " with reusable channels is not supported.",
-    ):
-        seq.switch_device(MockDevice)
-
-    seq = init_seq(MockDevice, "ising", "rydberg_global", None)
-    with pytest.raises(
-        ValueError,
-        match="Device match failed because the devices"
-        + " have different Rydberg levels.",
-    ):
-        seq.switch_device(IroiseMVP, True)
-
-    # Different Channels basis
-    seq = init_seq(devices[0], "ising", "raman_global", None)
+    # From sequence reusing channels to Device without reusable channels
+    seq = init_seq(MockDevice, "global", "rydberg_global", None)
+    seq.declare_channel("global2", "rydberg_global")
     with pytest.raises(
         TypeError,
-        match="No match for channel ising with the"
-        + " right basis and addressing.",
+        match="No match for channel global2 with the"
+        " right basis and addressing.",
     ):
+        # Can't find a match for the 2nd rydberg_global
         seq.switch_device(Chadoq2)
 
-    # Different addressing channels
-
-    with pytest.raises(
-        TypeError,
-        match="No match for channel ising with the"
-        + " right basis and addressing.",
-    ):
-        seq.switch_device(devices[1])
-
-    # Strict: Jump_phase_time & CLock-period criteria
-    # Jump_phase_time check 1: phase not nill
-
-    seq = init_seq(
-        devices[2],
-        channel_name="ising",
-        channel_id="rydberg_global",
-        l_pulses=pulses[:2],
-    )
+    seq = init_seq(MockDevice, "ising", "rydberg_global", None)
+    mod_mock = dataclasses.replace(MockDevice, rydberg_level=50)
     with pytest.raises(
         ValueError,
-        match="No channel match for channel ising"
-        + " with the right phase_jump_time & clock_period.",
+        match="Strict device match failed because the devices"
+        + " have different Rydberg levels.",
     ):
-        seq.switch_device(MockDevice, True)
+        seq.switch_device(mod_mock, True)
 
-    # Jump_phase_time check 2: No phase
-
-    seq = init_seq(
-        devices[2],
-        channel_name="ising",
-        channel_id="rydberg_global",
-        l_pulses=[pulses[0], pulses[2]],
-    )
     with pytest.warns(
         UserWarning,
-        match="The phase_jump_time of the matching channel"
-        + " on the the new device is different, take it into account"
-        + " for the upcoming pulses.",
+        match="Switching to a device with a different Rydberg level,"
+        " check that the expected Rydberg interactions still hold.",
     ):
-        seq.switch_device(Chadoq2, True)
+        seq.switch_device(mod_mock, False)
+
+    seq = init_seq(devices[0], "ising", "raman_global", None)
+    for dev_ in (
+        Chadoq2,  # Different Channels basis
+        devices[1],  # Different addressing channels
+    ):
+        with pytest.raises(
+            TypeError,
+            match="No match for channel ising with the"
+            + " right basis and addressing.",
+        ):
+            seq.switch_device(dev_)
 
     # Clock_period not match
     seq = init_seq(
@@ -382,8 +352,7 @@ def test_switch_device_down(devices, pulses):
     )
     with pytest.raises(
         ValueError,
-        match="No channel match for channel ising"
-        + " with the right phase_jump_time & clock_period.",
+        match="No match for channel ising with the same clock_period.",
     ):
         seq.switch_device(devices[1], True)
 
@@ -396,15 +365,14 @@ def test_switch_device_down(devices, pulses):
     )
     with pytest.raises(
         ValueError,
-        match="No channel match for channel digital"
-        + " with the right mod_bandwidth.",
+        match="No match for channel digital with the same mod_bandwidth.",
     ):
         seq.switch_device(devices[0], True)
 
     with pytest.raises(
         ValueError,
-        match="No channel match for channel digital"
-        + " with the right fixed_retarget_t.",
+        match="No match for channel digital"
+        + " with the same fixed_retarget_t.",
     ):
         seq.switch_device(devices[1], True)
 
@@ -457,6 +425,41 @@ def test_switch_device_up(device_ind, devices, pulses, strict):
     )
     assert seq.switch_device(devices[1], True)._device == devices[1]
     assert "digital" in seq.switch_device(devices[1], True).declared_channels
+
+
+def test_switch_device_eom():
+    # Sequence with EOM blocks
+    seq = init_seq(IroiseMVP, "rydberg", "rydberg_global", [])
+    seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
+    seq.add_eom_pulse("rydberg", 100, 0.0)
+    seq.delay(200, "rydberg")
+    assert seq._schedule["rydberg"].eom_blocks
+
+    err_base = "No match for channel rydberg "
+    with pytest.raises(
+        TypeError, match=err_base + "with an EOM configuration."
+    ):
+        seq.switch_device(Chadoq2)
+
+    ch_obj = seq.declared_channels["rydberg"]
+    mod_eom_config = dataclasses.replace(
+        ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
+    )
+    mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
+    mod_iroise = dataclasses.replace(
+        IroiseMVP, _channels=(("rydberg_global", mod_ch_obj),)
+    )
+    with pytest.raises(
+        ValueError, match=err_base + "with the same EOM configuration."
+    ):
+        seq.switch_device(mod_iroise, strict=True)
+
+    mod_seq = seq.switch_device(mod_iroise, strict=False)
+    og_eom_block = seq._schedule["rydberg"].eom_blocks[0]
+    mod_eom_block = mod_seq._schedule["rydberg"].eom_blocks[0]
+    assert og_eom_block.detuning_on == mod_eom_block.detuning_on
+    assert og_eom_block.rabi_freq == mod_eom_block.rabi_freq
+    assert og_eom_block.detuning_off != mod_eom_block.detuning_off
 
 
 def test_target():
@@ -640,21 +643,38 @@ def test_block_if_measured(call, args):
         getattr(seq, call)(*args)
 
 
-def test_str():
-    seq = Sequence(reg, device)
+def test_str(mod_device):
+    seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     seq.add(pulse, "ch0")
-    seq.delay(200, "ch0")
+    seq.delay(300, "ch0")
     seq.target("q7", "ch0")
+
+    seq.declare_channel("ch1", "rydberg_global")
+    seq.enable_eom_mode("ch1", 2, 0, optimal_detuning_off=10.0)
+    seq.add_eom_pulse("ch1", duration=100, phase=0, protocol="no-delay")
+    seq.delay(500, "ch1")
+
     seq.measure("digital")
-    msg = (
+    msg_ch0 = (
         "Channel: ch0\nt: 0 | Initial targets: q0 | Phase Reference: 0.0 "
         + "\nt: 0->500 | Pulse(Amp=2 rad/µs, Detuning=-10 rad/µs, Phase=0) "
-        + "| Targets: q0\nt: 500->700 | Delay \nt: 700->700 | Target: q7 | "
-        + "Phase Reference: 0.0\n\nMeasured in basis: digital"
+        + "| Targets: q0\nt: 500->800 | Delay \nt: 800->800 | Target: q7 | "
+        + "Phase Reference: 0.0"
     )
-    assert seq.__str__() == msg
+    targets = ", ".join(sorted(reg.qubit_ids))
+    msg_ch1 = (
+        f"\n\nChannel: ch1\nt: 0 | Initial targets: {targets} "
+        "| Phase Reference: 0.0 "
+        "\nt: 0->100 | Pulse(Amp=2 rad/µs, Detuning=0 rad/µs, Phase=0) "
+        f"| Targets: {targets}"
+        "\nt: 100->600 | EOM Delay | Detuning: -1 rad/µs"
+    )
+
+    measure_msg = "\n\nMeasured in basis: digital"
+    print(seq)
+    assert seq.__str__() == msg_ch0 + msg_ch1 + measure_msg
 
     seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
     seq2.declare_channel("ch1", "rydberg_global")
@@ -927,7 +947,6 @@ def test_hardware_constraints():
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
-        phase_jump_time=120,  # ns
         clock_period=4,
         mod_bandwidth=4,  # MHz
     )
@@ -935,7 +954,6 @@ def test_hardware_constraints():
     raman_local = Raman.Local(
         2 * np.pi * 20,
         2 * np.pi * 10,
-        phase_jump_time=120,  # ns
         min_retarget_interval=220,
         fixed_retarget_t=200,  # ns
         max_targets=1,
@@ -996,18 +1014,24 @@ def test_hardware_constraints():
     mid_delay = 40
     seq.delay(mid_delay, "ch0")
     seq.add(const_pls, "ch0")  # Phase = π
-    assert seq._last("ch0").ti - tf_ == rydberg_global.phase_jump_time
+    interval = seq._schedule["ch0"].adjust_duration(
+        rydberg_global.phase_jump_time + black_pls.fall_time(rydberg_global)
+    )
+    assert seq._schedule["ch0"][-1].ti - tf_ == interval
     added_delay_slot = seq._schedule["ch0"][-2]
     assert added_delay_slot.type == "delay"
-    assert (
-        added_delay_slot.tf - added_delay_slot.ti
-        == rydberg_global.phase_jump_time - mid_delay
-    )
+    assert added_delay_slot.tf - added_delay_slot.ti == interval - mid_delay
+
+    # Check that there is no phase jump buffer with 'no-delay'
+    seq.add(black_pls, "ch0", protocol="no-delay")  # Phase = 0
+    assert seq._schedule["ch0"][-1].ti == seq._schedule["ch0"][-2].tf
 
     tf_ = seq.get_duration("ch0")
     seq.align("ch0", "ch1")
-    fall_time = const_pls.fall_time(rydberg_global)
-    assert seq.get_duration() == tf_ + fall_time
+    fall_time = black_pls.fall_time(rydberg_global)
+    assert seq.get_duration() == seq._schedule["ch0"].adjust_duration(
+        tf_ + fall_time
+    )
 
     with pytest.raises(ValueError, match="'mode' must be one of"):
         seq.draw(mode="all")
@@ -1241,3 +1265,81 @@ def test_multiple_index_targets():
     seq.target_index(var_array + 1, channel="ch0")
     built_seq = seq.build(var_array=[1, 2])
     assert built_seq._last("ch0").targets == {"q2", "q3"}
+
+
+def test_eom_mode(mod_device):
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+    ch0_obj = seq.declared_channels["ch0"]
+    assert not seq.is_in_eom_mode("ch0")
+
+    amp_on = 1.0
+    detuning_on = 0.0
+    seq.enable_eom_mode("ch0", amp_on, detuning_on, optimal_detuning_off=-100)
+    assert seq.is_in_eom_mode("ch0")
+
+    delay_duration = 200
+    seq.delay(delay_duration, "ch0")
+    detuning_off = seq._schedule["ch0"].eom_blocks[-1].detuning_off
+    assert detuning_off != 0
+
+    with pytest.raises(RuntimeError, match="There is no slot with a pulse."):
+        # The EOM delay slot (which is a pulse slot) is ignored
+        seq._schedule["ch0"].last_pulse_slot()
+
+    delay_slot = seq._schedule["ch0"][-1]
+    assert seq._schedule["ch0"].is_eom_delay(delay_slot)
+    assert delay_slot.ti == 0
+    assert delay_slot.tf == delay_duration
+    assert delay_slot.type == Pulse.ConstantPulse(
+        delay_duration, 0.0, detuning_off, 0.0
+    )
+
+    assert seq._schedule["ch0"].get_eom_mode_intervals() == [
+        (0, delay_slot.tf)
+    ]
+
+    pulse_duration = 100
+    seq.add_eom_pulse("ch0", pulse_duration, phase=0.0)
+    first_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
+    assert not seq._schedule["ch0"].is_eom_delay(first_pulse_slot)
+    assert first_pulse_slot.ti == delay_slot.tf
+    assert first_pulse_slot.tf == first_pulse_slot.ti + pulse_duration
+    eom_pulse = Pulse.ConstantPulse(pulse_duration, amp_on, detuning_on, 0.0)
+    assert first_pulse_slot.type == eom_pulse
+
+    # Check phase jump buffer
+    seq.add_eom_pulse("ch0", pulse_duration, phase=np.pi)
+    second_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
+    phase_buffer = (
+        eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
+        + seq.declared_channels["ch0"].phase_jump_time
+    )
+    assert second_pulse_slot.ti == first_pulse_slot.tf + phase_buffer
+
+    # Check phase jump buffer is not enforced with "no-delay"
+    seq.add_eom_pulse("ch0", pulse_duration, phase=0.0, protocol="no-delay")
+    last_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
+    assert last_pulse_slot.ti == second_pulse_slot.tf
+
+    eom_intervals = seq._schedule["ch0"].get_eom_mode_intervals()
+    assert eom_intervals == [(0, last_pulse_slot.tf)]
+
+    with pytest.raises(
+        RuntimeError, match="The chosen channel is in EOM mode"
+    ):
+        seq.add(eom_pulse, "ch0")
+
+    assert seq.get_duration() == last_pulse_slot.tf
+    assert seq.get_duration(include_fall_time=True) == (
+        last_pulse_slot.tf + eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
+    )
+
+    seq.disable_eom_mode("ch0")
+    assert not seq.is_in_eom_mode("ch0")
+    # Check the EOM interval did not change
+    assert seq._schedule["ch0"].get_eom_mode_intervals() == eom_intervals
+    buffer_delay = seq._schedule["ch0"][-1]
+    assert buffer_delay.ti == last_pulse_slot.tf
+    assert buffer_delay.tf == buffer_delay.ti + eom_pulse.fall_time(ch0_obj)
+    assert buffer_delay.type == "delay"

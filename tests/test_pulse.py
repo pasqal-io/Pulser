@@ -18,6 +18,8 @@ import numpy as np
 import pytest
 
 from pulser import Pulse
+from pulser.channels import Rydberg
+from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 
 cwf = ConstantWaveform(100, -10)
@@ -76,3 +78,22 @@ def test_draw():
     pls_ = Pulse.ConstantDetuning(bwf, -10, 1, post_phase_shift=-np.pi)
     with patch("matplotlib.pyplot.show"):
         pls_.draw()
+
+
+def test_fall_time():
+    eom_config = RydbergEOM(
+        mod_bandwidth=24,
+        max_limiting_amp=100,
+        limiting_beam=RydbergBeam.RED,
+        intermediate_detuning=700,
+        controlled_beams=tuple(RydbergBeam),
+    )
+    assert eom_config.rise_time == 20
+    channel = Rydberg.Global(
+        None, None, mod_bandwidth=4, eom_config=eom_config
+    )
+    assert channel.rise_time == 120
+
+    pulse = Pulse.ConstantPulse(1000, 1, 0, 0)
+    assert pulse.fall_time(channel, in_eom_mode=False) == 240
+    assert pulse.fall_time(channel, in_eom_mode=True) == 40

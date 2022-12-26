@@ -92,6 +92,12 @@ def test_post_init_type_checks(test_params, param, value, msg):
         ),
         ("max_atom_num", 0, None),
         ("max_radial_distance", 0, None),
+        (
+            "max_layout_filling",
+            0.0,
+            "maximum layout filling fraction must be greater than 0. and"
+            " less than or equal to 1.",
+        ),
     ],
 )
 def test_post_init_value_errors(test_params, param, value, msg):
@@ -133,6 +139,7 @@ def test_valid_devices():
         assert dev.max_radial_distance > 10
         assert dev.min_atom_distance > 0
         assert dev.interaction_coeff > 0
+        assert 0 < dev.max_layout_filling <= 1
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
@@ -197,16 +204,13 @@ def test_validate_register():
     with pytest.raises(
         ValueError, match="associated with an incompatible register layout"
     ):
-        tri_layout = TriangularLatticeLayout(201, 5)
+        tri_layout = TriangularLatticeLayout(200, 20)
         Chadoq2.validate_register(tri_layout.hexagonal_register(10))
 
     Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))
 
 
 def test_validate_layout():
-    with pytest.raises(ValueError, match="The number of traps"):
-        Chadoq2.validate_layout(RegisterLayout(Register.square(20)._coords))
-
     coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
         Chadoq2.validate_layout(Register.from_coordinates(coords))
@@ -233,8 +237,38 @@ def test_validate_layout():
     Chadoq2.validate_layout(valid_tri_layout)
 
 
+@pytest.mark.parametrize(
+    "register",
+    [
+        TriangularLatticeLayout(100, 5).hexagonal_register(80),
+        TriangularLatticeLayout(100, 5).make_mappable_register(51),
+    ],
+)
+def test_layout_filling(register):
+    assert Chadoq2.max_layout_filling == 0.5
+    assert register.layout.number_of_traps == 100
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "the given register has too many qubits "
+            f"({len(register.qubit_ids)}). "
+            "On this device, this layout can hold at most 50 qubits."
+        ),
+    ):
+        Chadoq2.validate_layout_filling(register)
+
+
+def test_layout_filling_fail():
+    with pytest.raises(
+        TypeError,
+        match="'validate_layout_filling' can only be called for"
+        " registers with a register layout.",
+    ):
+        Chadoq2.validate_layout_filling(Register.square(5))
+
+
 def test_calibrated_layouts():
-    with pytest.raises(ValueError, match="The number of traps"):
+    with pytest.raises(ValueError, match="The minimal distance between traps"):
         Device(
             name="TestDevice",
             dimensions=2,
@@ -243,7 +277,7 @@ def test_calibrated_layouts():
             max_radial_distance=50,
             min_atom_distance=4,
             _channels=(),
-            pre_calibrated_layouts=(TriangularLatticeLayout(201, 5),),
+            pre_calibrated_layouts=(TriangularLatticeLayout(201, 3),),
         )
 
     TestDevice = Device(
