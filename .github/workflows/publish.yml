@@ -52,6 +52,7 @@ jobs:
         timeout-minutes: 5
         shell: bash
         run: |
+          version="$(head -1 VERSION.txt)"
           until pip download pulser==$version
           do
             echo "Failed to download from PyPI, will wait for upload and retry."
