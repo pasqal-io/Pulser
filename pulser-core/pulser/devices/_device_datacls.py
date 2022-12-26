@@ -19,7 +19,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from sys import version_info
 from typing import Any, Optional, cast
-from warnings import warn
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -433,29 +432,6 @@ class Device(BaseDevice):
     def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
         """Register layouts already calibrated on this device."""
         return {str(layout): layout for layout in self.pre_calibrated_layouts}
-
-    def change_rydberg_level(self, ryd_lvl: int) -> None:
-        """Changes the Rydberg level used in the Device.
-
-        Args:
-            ryd_lvl: the Rydberg level to use (between 50 and 100).
-
-        Note:
-            Deprecated in version 0.8.0. Convert the device to a VirtualDevice
-            with 'Device.to_virtual()' and use
-            'VirtualDevice.change_rydberg_level()' instead.
-        """
-        warn(
-            "'Device.change_rydberg_level()' is deprecated and will be removed"
-            " in version 0.9.0.\nConvert the device to a VirtualDevice with "
-            "'Device.to_virtual()' and use "
-            "'VirtualDevice.change_rydberg_level()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # Ignoring type because it expects a VirtualDevice
-        # Won't fix because this line will be removed
-        VirtualDevice.change_rydberg_level(self, ryd_lvl)  # type: ignore
 
     def to_virtual(self) -> VirtualDevice:
         """Converts the Device into a VirtualDevice."""

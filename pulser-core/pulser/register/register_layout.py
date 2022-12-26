@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from hashlib import sha256
 from sys import version_info
 from typing import Any, Optional, cast
-from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -117,19 +116,6 @@ class RegisterLayout(RegDrawer):
     def number_of_traps(self) -> int:
         """The number of traps in the layout."""
         return len(self._coords)
-
-    @property
-    def max_atom_num(self) -> int:
-        """Maximum number of atoms that can be trapped to form a Register."""
-        warn(
-            "'RegisterLayout.max_atom_num' is deprecated and will be removed"
-            " in version 0.9.0.\n"
-            "It is now the same as 'RegisterLayout.number_of_traps' and "
-            "should be replaced accordingly.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.number_of_traps
 
     @property
     def dimensionality(self) -> int:

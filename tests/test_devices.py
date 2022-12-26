@@ -163,13 +163,6 @@ def test_change_rydberg_level():
         dev.change_rydberg_level(110)
     dev.change_rydberg_level(70)
 
-    with pytest.warns(DeprecationWarning):
-        assert pulser.__version__ < "0.9"
-        og_ryd_level = Chadoq2.rydberg_level
-        Chadoq2.change_rydberg_level(60)
-        assert Chadoq2.rydberg_level == 60
-        Chadoq2.change_rydberg_level(og_ryd_level)
-
 
 def test_rydberg_blockade():
     dev = pulser.devices.MockDevice
