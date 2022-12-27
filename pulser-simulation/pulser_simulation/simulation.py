@@ -876,14 +876,11 @@ class Simulation:
                 raise ValueError("`progress_bar` must be a bool.")
 
             if "dephasing" in self.config.noise:
-                # temporary workaround due to a qutip bug when using mesolve
-                liouvillian = qutip.liouvillian(
-                    self._hamiltonian, self._collapse_ops
-                )
                 result = qutip.mesolve(
-                    liouvillian,
+                    self._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
+                    self._collapse_ops,
                     progress_bar=p_bar,
                     options=solv_ops,
                 )
