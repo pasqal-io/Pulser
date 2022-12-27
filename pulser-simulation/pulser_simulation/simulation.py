@@ -237,7 +237,7 @@ class Simulation:
 
             prob = self.config.depolarizing_prob
             n = self._size
-            k = np.sqrt((prob/3) * (1 - prob) ** (n - 1))
+            k = np.sqrt((prob / 3) * (1 - prob) ** (n - 1))
             self._collapse_ops = [
                 np.sqrt((1 - prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
@@ -259,13 +259,15 @@ class Simulation:
                 for qid in self._qid_index
             ]
             self._collapse_ops += [
-                1j * k
+                1j
+                * k
                 * (
                     self.build_operator([("sigma_gr", [qid])]).dag()
                     - self.build_operator([("sigma_gr", [qid])])
                 )
                 for qid in self._qid_index
             ]
+
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
 
@@ -488,7 +490,9 @@ class Simulation:
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
-        if set(self.config.noise).issubset({"dephasing", "SPAM", "depolarizing"}):
+        if set(self.config.noise).issubset(
+            {"dephasing", "SPAM", "depolarizing"}
+        ):
             local_noises = "SPAM" in self.config.noise and self.config.eta > 0
         samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
@@ -948,7 +952,9 @@ class Simulation:
             )
 
         # Check if noises ask for averaging over multiple runs:
-        if set(self.config.noise).issubset({"dephasing", "SPAM", "depolarizing"}):
+        if set(self.config.noise).issubset(
+            {"dephasing", "SPAM", "depolarizing"}
+        ):
             # If there is "SPAM", the preparation errors must be zero
             if "SPAM" not in self.config.noise or self.config.eta == 0:
                 return _run_solver()

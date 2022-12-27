@@ -569,6 +569,8 @@ def test_noise(seq):
     sim2.run()
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="dephasing"))
+    # with pytest.raises(NotImplementedError, match="Cannot include"):
+    #     sim2.set_config(SimConfig(noise="depolarizing"))
     assert sim2.config.spam_dict == {
         "eta": 0.9,
         "epsilon": 0.01,
@@ -611,6 +613,21 @@ def test_dephasing():
         )
 
 
+# def test_depolarizing():
+#     np.random.seed(123)
+#     reg = Register.from_coordinates([(0, 0)], prefix="q")
+#     seq = Sequence(reg, Chadoq2)
+#     seq.declare_channel("ch0", "rydberg_global")
+#     duration = 2500
+#     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
+#     seq.add(pulse, "ch0")
+#     sim = Simulation(
+#         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
+#     )
+#     assert sim.run().sample_final_state() == Counter({"0": 579, "1": 421})
+#     assert len(sim._collapse_ops) != 0
+
+
 def test_add_config():
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, Chadoq2)
@@ -624,9 +641,16 @@ def test_add_config():
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
     sim.add_config(
-        SimConfig(noise=("dephasing", "SPAM", "doppler"), temperature=20000)
+        SimConfig(
+            noise=("dephasing", "SPAM", "doppler"),
+            temperature=20000,
+        )
     )
-    assert "dephasing" in sim.config.noise and "SPAM" in sim.config.noise
+    assert (
+        "dephasing" in sim.config.noise
+        and "SPAM" in sim.config.noise
+        # and "depolarizing" in sim.config.noise
+    )
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.0e-6
     sim.set_config(SimConfig(noise="dephasing", laser_waist=175.0))

@@ -34,7 +34,9 @@ else:  # pragma: no cover
             " `pip install typing-extensions`."
         )
 
-NOISE_TYPES = Literal["doppler", "amplitude", "SPAM", "dephasing", "depolarizing"]
+NOISE_TYPES = Literal[
+    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing"
+]
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
@@ -54,7 +56,7 @@ class SimConfig:
             noise types:
 
             - "dephasing": Random phase (Z) flip
-            - "depolarizing": model of decohering where the qubit undergoes a 
+            - "depolarizing": model of decohering where the qubit undergoes a
               bit-flip error, phase-flip error or both errors.
             - "doppler": Local atom detuning due to finite speed of the
               atoms and Doppler effect with respect to laser frequency
