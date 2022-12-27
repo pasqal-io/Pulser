@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from enum import Flag
 from itertools import chain
-from typing import Any, List, cast
+from typing import Any, cast
 
 import numpy as np
 
@@ -36,6 +36,9 @@ class RydbergBeam(Flag):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self.value)
+
+    def _to_abstract_repr(self) -> str:
+        return cast(str, self.name)
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,9 @@ class BaseEOM:
             f.name: getattr(self, f.name) for f in fields(self) if f.init
         }
         return obj_to_dict(self, **params)
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        return {f.name: getattr(self, f.name) for f in fields(self)}
 
 
 @dataclass(frozen=True)
@@ -122,7 +128,7 @@ class RydbergEOM(BaseEOM):
 
     def detuning_off_options(
         self, rabi_frequency: float, detuning_on: float
-    ) -> list[float]:
+    ) -> np.ndarray:
         """Calculates the possible detuning values when the amplitude is off.
 
         Args:
@@ -157,7 +163,7 @@ class RydbergEOM(BaseEOM):
             lightshifts.append(0.0)
 
         # We sum the offset to all lightshifts to get the effective detuning
-        return cast(List[float], (offset + np.array(lightshifts)).tolist())
+        return np.array(lightshifts) + offset
 
     def _lightshift(
         self, rabi_frequency: float, *beams_on: RydbergBeam
@@ -184,7 +190,7 @@ class RydbergEOM(BaseEOM):
             beam_amp = np.sqrt(2 * rabi_frequency * self.intermediate_detuning)
             return {beam: beam_amp for beam in RydbergBeam}
 
-        # The limiting beam is at the its maximum amplitude while the other
+        # The limiting beam is at its maximum amplitude while the other
         # has the necessary amplitude to reach the desired effective rabi freq
         return {
             self.limiting_beam: self.max_limiting_amp,

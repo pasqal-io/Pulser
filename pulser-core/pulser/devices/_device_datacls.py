@@ -14,19 +14,21 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from sys import version_info
 from typing import Any, Optional, cast
-from warnings import warn
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
+from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
@@ -63,6 +65,8 @@ class BaseDevice(ABC):
             different Rydberg states. Needed only if there is a Microwave
             channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
     """
     name: str
     dimensions: DIMENSIONS
@@ -73,6 +77,7 @@ class BaseDevice(ABC):
     max_radial_distance: Optional[int]
     interaction_coeff_xy: Optional[float] = None
     supports_slm_mask: bool = False
+    max_layout_filling: float = 0.5
     reusable_channels: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
@@ -141,6 +146,13 @@ class BaseDevice(ABC):
             )
         type_check("supports_slm_mask", bool)
         type_check("reusable_channels", bool)
+
+        if not (0.0 < self.max_layout_filling <= 1.0):
+            raise ValueError(
+                "The maximum layout filling fraction must be "
+                "greater than 0. and less than or equal to 1., "
+                f"not {self.max_layout_filling}."
+            )
 
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
@@ -222,6 +234,7 @@ class BaseDevice(ABC):
                     "The 'register' is associated with an incompatible "
                     "register layout."
                 )
+            self.validate_layout_filling(register)
 
     def validate_layout(self, layout: RegisterLayout) -> None:
         """Checks if a register layout is compatible with this device.
@@ -240,18 +253,41 @@ class BaseDevice(ABC):
 
         self._validate_coords(layout.traps_dict, kind="traps")
 
-    def _validate_atom_number(
-        self, coords: list[np.ndarray], kind: str
+    def validate_layout_filling(
+        self, register: BaseRegister | MappableRegister
     ) -> None:
-        max_number = cast(int, self.max_atom_num) * (
-            2 if kind == "traps" else 1
+        """Checks if a register properly fills its layout.
+
+        Args:
+            register: The register to validate. Must be created from a register
+                layout.
+        """
+        if register.layout is None:
+            raise TypeError(
+                "'validate_layout_filling' can only be called for"
+                " registers with a register layout."
+            )
+        n_qubits = len(register.qubit_ids)
+        max_qubits = int(
+            register.layout.number_of_traps * self.max_layout_filling
         )
-        if len(coords) > max_number:
+        if n_qubits > max_qubits:
             raise ValueError(
-                f"The number of {kind} ({len(coords)})"
+                "Given the number of traps in the layout and the "
+                "device's maximum layout filling fraction, the given"
+                f" register has too many qubits ({n_qubits}). "
+                "On this device, this layout can hold at most "
+                f"{max_qubits} qubits."
+            )
+
+    def _validate_atom_number(self, coords: list[np.ndarray]) -> None:
+        max_atom_num = cast(int, self.max_atom_num)
+        if len(coords) > max_atom_num:
+            raise ValueError(
+                f"The number of atoms ({len(coords)})"
                 " must be less than or equal to the maximum"
-                f" number of {kind} supported by this device"
-                f" ({max_number})."
+                f" number of atoms supported by this device"
+                f" ({max_atom_num})."
             )
 
     def _validate_atom_distance(
@@ -310,11 +346,11 @@ class BaseDevice(ABC):
     ) -> None:
         ids = list(coords_dict.keys())
         coords = list(coords_dict.values())
-        if not (
+        if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
             and self.max_atom_num is None
         ):
-            self._validate_atom_number(coords, kind)
+            self._validate_atom_number(coords)
         self._validate_atom_distance(ids, coords, kind)
         if not (
             "max_radial_distance" in self._optional_parameters
@@ -325,6 +361,19 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
         pass
+
+    @abstractmethod
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        params = self._params()
+        ch_list = []
+        for ch_name, ch_obj in params.pop("_channels"):
+            ch_list.append(ch_obj._to_abstract_repr(ch_name))
+
+        return {"version": "1", "channels": ch_list, **params}
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the Sequence into an abstract JSON object."""
+        return json.dumps(self, cls=AbstractReprEncoder)
 
 
 @dataclass(frozen=True, repr=False)
@@ -349,6 +398,8 @@ class Device(BaseDevice):
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
         supports_slm_mask: Whether the device supports the SLM mask feature.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
@@ -382,29 +433,6 @@ class Device(BaseDevice):
         """Register layouts already calibrated on this device."""
         return {str(layout): layout for layout in self.pre_calibrated_layouts}
 
-    def change_rydberg_level(self, ryd_lvl: int) -> None:
-        """Changes the Rydberg level used in the Device.
-
-        Args:
-            ryd_lvl: the Rydberg level to use (between 50 and 100).
-
-        Note:
-            Deprecated in version 0.8.0. Convert the device to a VirtualDevice
-            with 'Device.to_virtual()' and use
-            'VirtualDevice.change_rydberg_level()' instead.
-        """
-        warn(
-            "'Device.change_rydberg_level()' is deprecated and will be removed"
-            " in version 0.9.0.\nConvert the device to a VirtualDevice with "
-            "'Device.to_virtual()' and use "
-            "'VirtualDevice.change_rydberg_level()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # Ignoring type because it expects a VirtualDevice
-        # Won't fix because this line will be removed
-        VirtualDevice.change_rydberg_level(self, ryd_lvl)  # type: ignore
-
     def to_virtual(self) -> VirtualDevice:
         """Converts the Device into a VirtualDevice."""
         params = self._params()
@@ -423,15 +451,17 @@ class Device(BaseDevice):
 
     def _specs(self, for_docs: bool = False) -> str:
         lines = [
-            "\nRegister requirements:",
+            "\nRegister parameters:",
             f" - Dimensions: {self.dimensions}D",
-            rf" - Rydberg level: {self.rydberg_level}",
+            f" - Rydberg level: {self.rydberg_level}",
             f" - Maximum number of atoms: {self.max_atom_num}",
             f" - Maximum distance from origin: {self.max_radial_distance} μm",
             (
                 " - Minimum distance between neighbouring atoms: "
                 f"{self.min_atom_distance} μm"
             ),
+            f" - Maximum layout filling fraction: {self.max_layout_filling}",
+            f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
             "\nChannels:",
         ]
 
@@ -452,7 +482,6 @@ class Device(BaseDevice):
                         + r"- Maximum :math:`|\delta|`:"
                         + f" {ch.max_abs_detuning:.4g} rad/µs"
                     ),
-                    f"\t- Phase Jump Time: {ch.phase_jump_time} ns",
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [
@@ -474,6 +503,11 @@ class Device(BaseDevice):
         return obj_to_dict(
             self, _build=False, _module="pulser.devices", _name=self.name
         )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        d = super()._to_abstract_repr()
+        d["is_virtual"] = False
+        return d
 
 
 @dataclass(frozen=True)
@@ -499,6 +533,8 @@ class VirtualDevice(BaseDevice):
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states.
         supports_slm_mask: Whether the device supports the SLM mask feature.
+        max_layout_filling: The largest fraction of a layout that can be filled
+            with atoms.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """
@@ -523,3 +559,8 @@ class VirtualDevice(BaseDevice):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, _module="pulser.devices", **self._params())
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        d = super()._to_abstract_repr()
+        d["is_virtual"] = True
+        return d

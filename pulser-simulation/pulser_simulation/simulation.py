@@ -312,7 +312,7 @@ class Simulation:
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_prob"] = config.dephasing_prob
         if "depolarizing" in diff_noise_set:
-            param_dict["depolarizing"] = config.depolarizing_prob
+            param_dict["depolarizing_prob"] = config.depolarizing_prob
         param_dict["temperature"] *= 1.0e6
         # update runs:
         param_dict["runs"] = config.runs
@@ -923,14 +923,11 @@ class Simulation:
                 raise ValueError("`progress_bar` must be a bool.")
 
             if "dephasing" or "depolarizing" in self.config.noise:
-                # temporary workaround due to a qutip bug when using mesolve
-                liouvillian = qutip.liouvillian(
-                    self._hamiltonian, self._collapse_ops
-                )
                 result = qutip.mesolve(
-                    liouvillian,
+                    self._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
+                    self._collapse_ops,
                     progress_bar=p_bar,
                     options=solv_ops,
                 )

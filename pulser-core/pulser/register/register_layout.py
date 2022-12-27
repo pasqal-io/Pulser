@@ -67,11 +67,19 @@ class RegisterLayout(RegDrawer):
         self, trap_coordinates: ArrayLike, slug: Optional[str] = None
     ):
         """Initializes a RegisterLayout."""
-        shape = np.array(trap_coordinates).shape
+        array_type_error_msg = ValueError(
+            "'trap_coordinates' must be an array or list of coordinates."
+        )
+
+        try:
+            shape = np.array(trap_coordinates).shape
+        # Following lines are only being covered starting Python 3.11.1
+        except ValueError as e:  # pragma: no cover
+            raise array_type_error_msg from e  # pragma: no cover
+
         if len(shape) != 2:
-            raise ValueError(
-                "'trap_coordinates' must be an array or list of coordinates."
-            )
+            raise array_type_error_msg
+
         if shape[1] not in (2, 3):
             raise ValueError(
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
@@ -108,11 +116,6 @@ class RegisterLayout(RegDrawer):
     def number_of_traps(self) -> int:
         """The number of traps in the layout."""
         return len(self._coords)
-
-    @property
-    def max_atom_num(self) -> int:
-        """Maximum number of atoms that can be trapped to form a Register."""
-        return self.number_of_traps // 2
 
     @property
     def dimensionality(self) -> int:
@@ -162,6 +165,7 @@ class RegisterLayout(RegDrawer):
             raise ValueError("Every 'trap_id' must be a unique integer.")
 
         if not trap_ids_set.issubset(self.traps_dict):
+            # This check makes it redundant to check # qubits <= # traps
             raise ValueError(
                 "All 'trap_ids' must correspond to the ID of a trap."
             )
@@ -177,12 +181,6 @@ class RegisterLayout(RegDrawer):
                     f"provided 'trap_ids' ({len(trap_ids)})."
                 )
 
-        if len(trap_ids) > self.max_atom_num:
-            raise ValueError(
-                "The number of required traps is greater than the maximum "
-                "number of qubits allowed for this layout "
-                f"({self.max_atom_num})."
-            )
         ids = (
             qubit_ids if qubit_ids else [f"q{i}" for i in range(len(trap_ids))]
         )

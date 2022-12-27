@@ -563,14 +563,17 @@ def test_config():
 
 
 def test_noise(seq):
+    np.random.seed(3)
     sim2 = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
     )
-    sim2.run()
+    assert sim2.run().sample_final_state() == Counter(
+        {"000": 857, "110": 73, "100": 70}
+    )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="dephasing"))
-    # with pytest.raises(NotImplementedError, match="Cannot include"):
-    #     sim2.set_config(SimConfig(noise="depolarizing"))
+    with pytest.raises(NotImplementedError, match="Cannot include"):
+        sim2.set_config(SimConfig(noise="depolarizing"))
     assert sim2.config.spam_dict == {
         "eta": 0.9,
         "epsilon": 0.01,
@@ -613,19 +616,19 @@ def test_dephasing():
         )
 
 
-# def test_depolarizing():
-#     np.random.seed(123)
-#     reg = Register.from_coordinates([(0, 0)], prefix="q")
-#     seq = Sequence(reg, Chadoq2)
-#     seq.declare_channel("ch0", "rydberg_global")
-#     duration = 2500
-#     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
-#     seq.add(pulse, "ch0")
-#     sim = Simulation(
-#         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
-#     )
-#     assert sim.run().sample_final_state() == Counter({"0": 579, "1": 421})
-#     assert len(sim._collapse_ops) != 0
+def test_depolarizing():
+    np.random.seed(123)
+    reg = Register.from_coordinates([(0, 0)], prefix="q")
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch0", "rydberg_global")
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
+    seq.add(pulse, "ch0")
+    sim = Simulation(
+        seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
+    )
+    assert sim.run().sample_final_state() == Counter({"0": 579, "1": 421})
+    assert len(sim._collapse_ops) != 0
 
 
 def test_add_config():
@@ -642,14 +645,14 @@ def test_add_config():
         sim.add_config("bad_cfg")
     sim.add_config(
         SimConfig(
-            noise=("dephasing", "SPAM", "doppler"),
+            noise=("dephasing", "SPAM", "doppler", "depolarizing"),
             temperature=20000,
         )
     )
     assert (
         "dephasing" in sim.config.noise
         and "SPAM" in sim.config.noise
-        # and "depolarizing" in sim.config.noise
+        and "depolarizing" in sim.config.noise
     )
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.0e-6
@@ -992,12 +995,14 @@ def test_simulation_with_modulation(mod_device, reg):
         ("control1", slice(mod_dt, 2 * mod_dt)),
     ]:
         np.testing.assert_allclose(
-            raman_samples[qid]["amp"][time_slice], pulse1_mod_samples
+            raman_samples[qid]["amp"][time_slice],
+            pulse1_mod_samples,
+            atol=1e-2,
         )
         np.testing.assert_equal(
             raman_samples[qid]["det"][time_slice], sim._doppler_detune[qid]
         )
-        np.testing.assert_equal(
+        np.testing.assert_allclose(
             raman_samples[qid]["phase"][time_slice], pulse1.phase
         )
 
@@ -1020,7 +1025,7 @@ def test_simulation_with_modulation(mod_device, reg):
         np.testing.assert_equal(
             rydberg_samples[qid]["det"][time_slice], sim._doppler_detune[qid]
         )
-        np.testing.assert_equal(
+        np.testing.assert_allclose(
             rydberg_samples[qid]["phase"][time_slice], pulse1.phase
         )
 
