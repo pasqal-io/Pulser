@@ -91,7 +91,7 @@ computers and simulators, check the pages in :doc:`review`.
    :caption: Other Applications
 
    tutorials/cz_gate
-   tutorials/qaoa_mis
+   tutorials/qubo
 
 .. toctree::
    :maxdepth: 3
