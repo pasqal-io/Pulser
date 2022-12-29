@@ -915,6 +915,8 @@ class Simulation:
             """Returns CoherentResults: Object containing evolution results."""
             # Decide if progress bar will be fed to QuTiP solver
             p_bar: Optional[bool]
+            global sas
+            sas =""
             if progress_bar is True:
                 p_bar = True
             elif (progress_bar is False) or (progress_bar is None):
@@ -923,6 +925,7 @@ class Simulation:
                 raise ValueError("`progress_bar` must be a bool.")
 
             if "dephasing" or "depolarizing" in self.config.noise:
+                sas = "yaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                 result = qutip.mesolve(
                     self._hamiltonian,
                     self.initial_state,
@@ -932,6 +935,7 @@ class Simulation:
                     options=solv_ops,
                 )
             else:
+                sas = "yooooooooooooooooooooooooooooooooooooooooooooooo"
                 result = qutip.sesolve(
                     self._hamiltonian,
                     self.initial_state,
@@ -947,7 +951,6 @@ class Simulation:
                 self._meas_basis,
                 meas_errors,
             )
-
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
             {"dephasing", "SPAM", "depolarizing"}
@@ -1009,10 +1012,10 @@ class Simulation:
             Counter({k: v / n_measures for k, v in total_count[t].items()})
             for t in time_indices
         ]
-        return NoisyResults(
+        return (NoisyResults(
             total_run_prob,
             self._size,
             self.basis_name,
             self._eval_times_array,
             n_measures,
-        )
+        ), sas)
