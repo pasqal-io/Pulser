@@ -922,7 +922,10 @@ class Simulation:
             else:
                 raise ValueError("`progress_bar` must be a bool.")
 
-            if "dephasing" or "depolarizing" in self.config.noise:
+            if (
+                "dephasing" in self.config.noise
+                or "depolarizing" in self.config.noise
+            ):
                 result = qutip.mesolve(
                     self._hamiltonian,
                     self.initial_state,
@@ -947,6 +950,7 @@ class Simulation:
                 self._meas_basis,
                 meas_errors,
             )
+
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
             {"dephasing", "SPAM", "depolarizing"}
