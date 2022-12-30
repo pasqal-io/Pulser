@@ -160,11 +160,7 @@ class _ChannelSchedule:
 
             slots.append(_TargetSlot(s.ti, tf, s.targets))
 
-        ch_samples = ChannelSamples(
-            amp, det, phase, slots, self.get_eom_mode_intervals()
-        )
-
-        return ch_samples
+        return ChannelSamples(amp, det, phase, slots, self.eom_blocks)
 
     @overload
     def __getitem__(self, key: int) -> _TimeSlot:
