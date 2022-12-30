@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, cast
 
 import numpy as np
 
 from pulser.channels.base_channel import Channel
+from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
 
 if TYPE_CHECKING:
@@ -184,6 +185,7 @@ class ChannelSamples:
             eom_mask = np.zeros(self.duration, dtype=bool)
             # Extension of the EOM mask outside of the EOM interval
             eom_mask_ext = eom_mask.copy()
+            eom_fall_time = 2 * cast(BaseEOM, channel_obj.eom_config).rise_time
             for block in self.eom_blocks:
                 # If block.tf is None, uses the full duration as the tf
                 end = block.tf or self.duration
@@ -193,8 +195,8 @@ class ChannelSamples:
                 # samples is kept at 'detuning_off', which permits a smooth
                 # transition to/from the EOM modulated samples
                 std_samples["det"][block.ti : end] = block.detuning_off
-                # Extends EOM masks to include fall time of the last pulse
-                ext_end = end + 2 * channel_obj.eom_config.rise_time
+                # Extends EOM masks to include fall time
+                ext_end = end + eom_fall_time
                 eom_mask_ext[end:ext_end] = True
 
             # We need 'eom_mask_ext' on its own, but we can already add it
@@ -206,9 +208,7 @@ class ChannelSamples:
                 # including the fall time (unlike when it is disabled).
                 # For modulation, we make the detuning during the last
                 # fall time to be kept at 'detuning_off'
-                eom_samples["det"][
-                    -2 * channel_obj.eom_config.rise_time :
-                ] = block.detuning_off
+                eom_samples["det"][-eom_fall_time:] = block.detuning_off
 
             for key in ("amp", "det"):
                 # First, we modulated the pre-filtered standard samples, then
