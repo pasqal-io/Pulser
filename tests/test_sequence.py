@@ -669,7 +669,7 @@ def test_str(mod_device):
         "| Phase Reference: 0.0 "
         "\nt: 0->100 | Pulse(Amp=2 rad/µs, Detuning=0 rad/µs, Phase=0) "
         f"| Targets: {targets}"
-        "\nt: 100->600 | EOM Delay | Detuning: -1 rad/µs"
+        "\nt: 100->600 | Detuned Delay | Detuning: -1 rad/µs"
     )
 
     measure_msg = "\n\nMeasured in basis: digital"

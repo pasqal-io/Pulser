@@ -80,11 +80,18 @@ class _ChannelSchedule:
 
     def is_eom_delay(self, slot: _TimeSlot) -> bool:
         """Tells if a pulse slot is actually an EOM delay."""
+        return self.in_eom_mode(time_slot=slot) and self.is_detuned_delay(
+            cast(Pulse, slot.type)  # Abusive cast but method checks type
+        )
+
+    @staticmethod
+    def is_detuned_delay(pulse: Pulse) -> bool:
+        """Tells if a pulse is actually a delay with a constant detuning."""
         return (
-            self.in_eom_mode(time_slot=slot)
-            and isinstance(slot.type, Pulse)
-            and isinstance(slot.type.amplitude, ConstantWaveform)
-            and slot.type.amplitude[0] == 0.0
+            isinstance(pulse, Pulse)
+            and isinstance(pulse.amplitude, ConstantWaveform)
+            and pulse.amplitude[0] == 0.0
+            and isinstance(pulse.detuning, ConstantWaveform)
         )
 
     def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
