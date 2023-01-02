@@ -223,9 +223,14 @@ def test_eom_modulation(mod_device, disable_eom):
 
         eom_input = samples.copy()
         eom_input[ext_eom_mask] = aom_output[ext_eom_mask]
-        if not disable_eom and qty == "det":
-            eom_input[end_of_eom:] = det_off
-        eom_output = chan.modulate(eom_input, eom=True)[:full_duration]
+        if qty == "det":
+            if not disable_eom:
+                eom_input[end_of_eom:] = det_off
+            eom_input = np.insert(eom_input, 0, det_off)
+            eom_output = chan.modulate(eom_input, eom=True, keep_ends=True)[1:]
+        else:
+            eom_output = chan.modulate(eom_input, eom=True)
+        eom_output = eom_output[:full_duration]
 
         aom_output[eom_mask + ext_eom_mask] = 0.0
         eom_output[~(eom_mask + ext_eom_mask)] = 0.0

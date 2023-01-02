@@ -222,16 +222,31 @@ class ChannelSamples:
                 # This equates to a ramp back to a modified detuning value,
                 # so we subsitute the detuning at the end of each block by the
                 # standard modulated detuning during the transition period
+                # Finally, the modified EOM samples are modulated
                 if key == "det":
-                    eom_samples[key][eom_mask_ext] = modulated_std[
+                    samples_ = eom_samples[key]
+                    samples_[eom_mask_ext] = modulated_std[
                         : len(eom_mask_ext)
                     ][eom_mask_ext]
+                    # Starts out in EOM mode, so we prepend 'detuning_off'
+                    # such that the modulation starts off from that value
+                    # We then remove the extra value after modulation
+                    if eom_mask[0]:
+                        samples_ = np.insert(
+                            samples_,
+                            0,
+                            self.eom_blocks[0].detuning_off,
+                        )
+                    modulated_eom = channel_obj.modulate(
+                        samples_, eom=True, keep_ends=True
+                    )[(1 if eom_mask[0] else 0) :]
+                else:
+                    modulated_eom = channel_obj.modulate(
+                        eom_samples[key], eom=True
+                    )
 
-                # Finally, the modified EOM samples are modulated and then
                 # filtered to include only the parts inside the EOM mask
-                eom = masked(
-                    channel_obj.modulate(eom_samples[key], eom=True), eom_mask
-                )
+                eom = masked(modulated_eom, eom_mask)
 
                 # 'std' and 'eom' are then summed, but before the shortest
                 # array is extended so that they are of the same length
