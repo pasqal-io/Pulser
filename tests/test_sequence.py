@@ -1343,3 +1343,16 @@ def test_eom_mode(mod_device):
     assert buffer_delay.ti == last_pulse_slot.tf
     assert buffer_delay.tf == buffer_delay.ti + eom_pulse.fall_time(ch0_obj)
     assert buffer_delay.type == "delay"
+
+    # Check buffer when EOM is not enabled at the start of the sequence
+    seq.enable_eom_mode("ch0", amp_on, detuning_on, optimal_detuning_off=-100)
+    last_slot = seq._schedule["ch0"][-1]
+    assert len(seq._schedule["ch0"].eom_blocks) == 2
+    new_eom_block = seq._schedule["ch0"].eom_blocks[1]
+    assert new_eom_block.detuning_off != 0
+    assert last_slot.ti == buffer_delay.tf  # Nothing else was added
+    duration = last_slot.tf - last_slot.ti
+    # The buffer is a Pulse at 'detuning_off' and zero amplitude
+    assert last_slot.type == Pulse.ConstantPulse(
+        duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
+    )

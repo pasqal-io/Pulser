@@ -188,7 +188,8 @@ def test_modulation_local(mod_device):
         np.testing.assert_array_equal(getattr(out_ch_samples, qty), combined)
 
 
-def test_eom_modulation(mod_device):
+@pytest.mark.parametrize("disable_eom", [True, False])
+def test_eom_modulation(mod_device, disable_eom):
     seq = pulser.Sequence(pulser.Register.square(2), mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.enable_eom_mode("ch0", amp_on=1, detuning_on=0.0)
@@ -196,12 +197,18 @@ def test_eom_modulation(mod_device):
     seq.delay(200, "ch0")
     seq.add_eom_pulse("ch0", 100, 0.0)
     end_of_eom = seq.get_duration()
-    seq.disable_eom_mode("ch0")
-    seq.add(Pulse.ConstantPulse(500, 1, 0, 0), "ch0")
+    if disable_eom:
+        seq.disable_eom_mode("ch0")
+        seq.add(Pulse.ConstantPulse(500, 1, 0, 0), "ch0")
 
     full_duration = seq.get_duration(include_fall_time=True)
     eom_mask = np.zeros(full_duration, dtype=bool)
     eom_mask[:end_of_eom] = True
+    ext_eom_mask = np.zeros_like(eom_mask)
+    eom_config = seq.declared_channels["ch0"].eom_config
+    ext_eom_mask[end_of_eom : end_of_eom + 2 * eom_config.rise_time] = True
+
+    det_off = seq._schedule["ch0"].eom_blocks[-1].detuning_off
 
     input_samples = sample(
         seq, extended_duration=full_duration
@@ -210,13 +217,18 @@ def test_eom_modulation(mod_device):
     chan = seq.declared_channels["ch0"]
     for qty in ("amp", "det"):
         samples = getattr(input_samples, qty)
-        eom_input = samples.copy()
-        eom_input[~eom_mask] = 0.0
-        eom_output = chan.modulate(eom_input, eom=True)[:full_duration]
         aom_input = samples.copy()
-        aom_input[eom_mask] = 0.0
+        aom_input[eom_mask] = det_off if qty == "det" else 0.0
         aom_output = chan.modulate(aom_input, eom=False)[:full_duration]
-        np.testing.assert_array_equal(eom_input + aom_input, samples)
+
+        eom_input = samples.copy()
+        eom_input[ext_eom_mask] = aom_output[ext_eom_mask]
+        if not disable_eom and qty == "det":
+            eom_input[end_of_eom:] = det_off
+        eom_output = chan.modulate(eom_input, eom=True)[:full_duration]
+
+        aom_output[eom_mask + ext_eom_mask] = 0.0
+        eom_output[~(eom_mask + ext_eom_mask)] = 0.0
 
         want = eom_output + aom_output
 
@@ -225,7 +237,7 @@ def test_eom_modulation(mod_device):
         alt_got = getattr(input_samples.modulate(chan, full_duration), qty)
         np.testing.assert_array_equal(got, alt_got)
 
-        np.testing.assert_array_equal(want, got)
+        np.testing.assert_allclose(want, got, atol=1e-10)
 
 
 @pytest.fixture
