@@ -237,9 +237,12 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         amp_on: float,
         detuning_on: float,
         detuning_off: float,
+        _skip_buffer: bool = False,
     ) -> None:
         channel_obj = self[channel_id].channel_obj
-        if any(isinstance(op.type, Pulse) for op in self[channel_id]):
+        if not _skip_buffer and any(
+            isinstance(op.type, Pulse) for op in self[channel_id]
+        ):
             # Wait for the last pulse to ramp down (if needed)
             self.wait_for_fall(channel_id)
             # Account for time needed to ramp to desired amplitude
@@ -270,9 +273,10 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         self[channel_id].eom_blocks.append(eom_settings)
 
-    def disable_eom(self, channel_id: str) -> None:
+    def disable_eom(self, channel_id: str, _skip_buffer: bool = False) -> None:
         self[channel_id].eom_blocks[-1].tf = self[channel_id][-1].tf
-        self.wait_for_fall(channel_id)
+        if not _skip_buffer:
+            self.wait_for_fall(channel_id)
 
     def add_pulse(
         self,
