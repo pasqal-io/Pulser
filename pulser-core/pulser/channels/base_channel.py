@@ -30,10 +30,10 @@ from pulser.json.utils import obj_to_dict
 from pulser.pulse import Pulse
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal, get_args
+    from typing import Literal
 else:  # pragma: no cover
     try:
-        from typing_extensions import Literal, get_args  # type: ignore
+        from typing_extensions import Literal  # type: ignore
     except ImportError:
         raise ImportError(
             "Using pulser with Python version 3.7 requires the"
@@ -43,9 +43,6 @@ else:  # pragma: no cover
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
-
-CH_TYPE = Literal["Rydberg", "Raman", "Microwave"]
-BASIS = Literal["ground-rydberg", "digital", "XY"]
 
 
 @dataclass(init=True, repr=False, frozen=True)  # type: ignore[misc]
@@ -90,31 +87,23 @@ class Channel(ABC):
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
 
     @property
-    def name(self) -> CH_TYPE:
+    def name(self) -> str:
         """The name of the channel."""
         _name = type(self).__name__
-        options = get_args(CH_TYPE)
-        assert (
-            _name in options
-        ), f"The channel must be one of {options}, not {_name}."
-        return cast(CH_TYPE, _name)
+        options = self._internal_param_valid_options["name"]
+        assert _name, f"The channel must be one of {options}, not {_name}."
+        return _name
 
     @property
     @abstractmethod
-    def basis(self) -> BASIS:
+    def basis(self) -> str:
         """The addressed basis name."""
         pass
 
     def __post_init__(self) -> None:
         """Validates the channel's parameters."""
-        internal_param_value_pairs = [
-            ("name", CH_TYPE),
-            ("basis", BASIS),
-            ("addressing", Literal["Global", "Local"]),
-        ]
-        for param, type_options in internal_param_value_pairs:
+        for param, options in self._internal_param_valid_options.items():
             value = getattr(self, param)
-            options = get_args(type_options)
             assert (
                 value in options
             ), f"The channel {param} must be one of {options}, not {value}."
@@ -185,6 +174,15 @@ class Channel(ABC):
                 " greater than or equal to 'min_duration'"
                 f"({self.min_duration})."
             )
+
+    @property
+    def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
+        """Internal parameters and their valid options."""
+        return dict(
+            name=("Rydberg", "Raman", "Microwave"),
+            basis=("ground-rydberg", "digital", "XY"),
+            addressing=("Local", "Global"),
+        )
 
     @property
     def rise_time(self) -> int:
