@@ -62,10 +62,12 @@ class _ChannelSchedule:
                 return slot.tf
         return 0  # pragma: no cover
 
-    def last_pulse_slot(self) -> _TimeSlot:
+    def last_pulse_slot(self, ignore_detuned_delay: bool = False) -> _TimeSlot:
         """The last slot with a Pulse."""
         for slot in self.slots[::-1]:
-            if isinstance(slot.type, Pulse) and not self.is_eom_delay(slot):
+            if isinstance(slot.type, Pulse) and not (
+                ignore_detuned_delay and self.is_detuned_delay(slot.type)
+            ):
                 return slot
         raise RuntimeError("There is no slot with a pulse.")
 
@@ -76,12 +78,6 @@ class _ChannelSchedule:
         return any(
             start <= time_slot.ti < end
             for start, end in self.get_eom_mode_intervals()
-        )
-
-    def is_eom_delay(self, slot: _TimeSlot) -> bool:
-        """Tells if a pulse slot is actually an EOM delay."""
-        return self.in_eom_mode(time_slot=slot) and self.is_detuned_delay(
-            cast(Pulse, slot.type)  # Abusive cast but method checks type
         )
 
     @staticmethod
@@ -284,7 +280,9 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             )
             try:
                 # Gets the last pulse on the channel
-                last_pulse_slot = self[channel].last_pulse_slot()
+                last_pulse_slot = self[channel].last_pulse_slot(
+                    ignore_detuned_delay=True
+                )
                 last_pulse = cast(Pulse, last_pulse_slot.type)
                 # Checks if the current pulse changes the phase
                 if last_pulse.phase != pulse.phase:

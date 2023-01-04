@@ -1285,10 +1285,11 @@ def test_eom_mode(mod_device):
 
     with pytest.raises(RuntimeError, match="There is no slot with a pulse."):
         # The EOM delay slot (which is a pulse slot) is ignored
-        seq._schedule["ch0"].last_pulse_slot()
+        seq._schedule["ch0"].last_pulse_slot(ignore_detuned_delay=True)
 
     delay_slot = seq._schedule["ch0"][-1]
-    assert seq._schedule["ch0"].is_eom_delay(delay_slot)
+    assert seq._schedule["ch0"].in_eom_mode(delay_slot)
+    assert seq._schedule["ch0"].is_detuned_delay(delay_slot.type)
     assert delay_slot.ti == 0
     assert delay_slot.tf == delay_duration
     assert delay_slot.type == Pulse.ConstantPulse(
@@ -1302,11 +1303,11 @@ def test_eom_mode(mod_device):
     pulse_duration = 100
     seq.add_eom_pulse("ch0", pulse_duration, phase=0.0)
     first_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
-    assert not seq._schedule["ch0"].is_eom_delay(first_pulse_slot)
     assert first_pulse_slot.ti == delay_slot.tf
     assert first_pulse_slot.tf == first_pulse_slot.ti + pulse_duration
     eom_pulse = Pulse.ConstantPulse(pulse_duration, amp_on, detuning_on, 0.0)
     assert first_pulse_slot.type == eom_pulse
+    assert not seq._schedule["ch0"].is_detuned_delay(eom_pulse)
 
     # Check phase jump buffer
     seq.add_eom_pulse("ch0", pulse_duration, phase=np.pi)
