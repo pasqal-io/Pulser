@@ -40,7 +40,14 @@ from pulser_simulation.simresults import (
 )
 
 SUPPORTED_NOISE = {
-    "ising": {"dephasing", "doppler", "amplitude", "SPAM", "depolarizing"},
+    "ising": {
+        "dephasing",
+        "doppler",
+        "amplitude",
+        "SPAM",
+        "depolarizing",
+        "gen_noise",
+    },
     "XY": {"SPAM"},
 }
 

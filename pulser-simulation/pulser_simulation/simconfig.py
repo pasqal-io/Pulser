@@ -35,7 +35,7 @@ else:  # pragma: no cover
         )
 
 NOISE_TYPES = Literal[
-    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing"
+    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "gen_noise"
 ]
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
@@ -58,6 +58,9 @@ class SimConfig:
             - "dephasing": Random phase (Z) flip
             - "depolarizing": model of decohering where the qubit undergoes a
               bit-flip error, phase-flip error or both errors.
+            - "gen_noise": general model of noise channels where the qubit
+            undergoes a modification according to the specified noise
+            operators, it encapsulates dephasing and depolarizing channels.
             - "doppler": Local atom detuning due to finite speed of the
               atoms and Doppler effect with respect to laser frequency
             - "amplitude": Gaussian damping due to finite laser waist
@@ -91,6 +94,12 @@ class SimConfig:
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
     depolarizing_prob: float = 0.1
+    gen_noise_probs: list[float] = field(
+        init=True, default_factory=list, repr=False
+    )
+    gen_noise_opers: list[qutip.Qobj] = field(
+        init=True, default_factory=dict, repr=False
+    )
     solver_options: Optional[qutip.Options] = None
     spam_dict: dict[str, float] = field(
         init=False, default_factory=dict, repr=False
@@ -106,6 +115,12 @@ class SimConfig:
                 f"{self.amp_sigma}) must be greater than or equal"
                 " to 0. and smaller than 1."
             )
+        if len(self.gen_noise_opers) != len(self.gen_noise_probs):
+            raise ValueError(
+                f"The operators list length ({len(self.gen_noise_opers)}) "
+                f"and probabilities list length ({len(self.gen_noise_probs)})"
+                "are supposed to be equal."
+            )
         self._process_temperature()
         self._change_attribute(
             "spam_dict",
@@ -118,6 +133,7 @@ class SimConfig:
         self._check_noise_types()
         self._check_spam_dict()
         self._calc_sigma_doppler()
+        self._check_gen_noise()
 
     def __str__(self, solver_options: bool = False) -> str:
         lines = [
@@ -130,6 +146,13 @@ class SimConfig:
             lines.append("Noise types:           " + ", ".join(self.noise))
         if "SPAM" in self.noise:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
+        if "gen_noise" in self.noise:
+            lines.append(
+                f"General noise probability distribution:       {self.gen_noise_probs}"
+            )
+            lines.append(
+                f"General noise operators:       {self.gen_noise_opers}"
+            )
         if "doppler" in self.noise:
             lines.append(f"Temperature:           {self.temperature*1.e6}µK")
             lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
@@ -183,3 +206,37 @@ class SimConfig:
 
     def _change_attribute(self, attr_name: str, new_value: Any) -> None:
         object.__setattr__(self, attr_name, new_value)
+
+    def _check_gen_noise(self) -> None:
+        # Check the validity of the distribution of probability
+        if "gen_noise" in self.noise:
+            prob_distr = np.array(self.gen_noise_probs)
+            boundaries = np.any(prob_distr < 0 or prob_distr > 1.0)
+            sum_p = sum(prob_distr) > 1.0
+            if sum_p or boundaries:
+                raise ValueError(
+                    "The distribution given is not a probability distribution."
+                )
+        # Check the validity of operators
+        for operator in self.gen_noise_opers:
+            # type checking
+            try:
+                if operator.type != "oper":
+                    raise TypeError(
+                        "Operators are supposed to be of type oper."
+                    )
+                if operator.shape != (2, 2):
+                    raise ValueError(
+                        f"Operator's shape must be (2,2) not {operator.shape}"
+                    )
+            except AttributeError:
+                raise TypeError(f"{operator} is not a Qobj.")
+        if "gen_noise" in self.noise:
+            sum_op = qutip.Qobj(shape=(2, 2))
+            identity = qutip.Qobj([[1.0, 0], [0, 1.0]])
+            length = len(self.gen_noise_probs)
+            for i in range(length):
+                sum_op += self.gen_noise_probs[i] * self.gen_noise_opers[i]
+
+            if sum_op != identity:
+                raise ValueError("The completeness relation is not verified.")
