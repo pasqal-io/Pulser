@@ -148,7 +148,7 @@ class SimConfig:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
         if "gen_noise" in self.noise:
             lines.append(
-                f"General noise probability distribution:       {self.gen_noise_probs}"
+                f"General noise distribution:       {self.gen_noise_probs}"
             )
             lines.append(
                 f"General noise operators:       {self.gen_noise_opers}"
@@ -210,6 +210,9 @@ class SimConfig:
     def _check_gen_noise(self) -> None:
         # Check the validity of the distribution of probability
         if "gen_noise" in self.noise:
+            if self.gen_noise_opers == [] or self.gen_noise_probs == []:
+                raise ValueError("Fill the general noise parameters.")
+
             prob_distr = np.array(self.gen_noise_probs)
             boundaries = np.any(prob_distr < 0 or prob_distr > 1.0)
             sum_p = sum(prob_distr) > 1.0
@@ -217,26 +220,28 @@ class SimConfig:
                 raise ValueError(
                     "The distribution given is not a probability distribution."
                 )
-        # Check the validity of operators
-        for operator in self.gen_noise_opers:
-            # type checking
-            try:
-                if operator.type != "oper":
-                    raise TypeError(
-                        "Operators are supposed to be of type oper."
-                    )
-                if operator.shape != (2, 2):
-                    raise ValueError(
-                        f"Operator's shape must be (2,2) not {operator.shape}"
-                    )
-            except AttributeError:
-                raise TypeError(f"{operator} is not a Qobj.")
-        if "gen_noise" in self.noise:
+            # Check the validity of operators
+            for operator in self.gen_noise_opers:
+                # type checking
+                try:
+                    if operator.type != "oper":
+                        raise TypeError(
+                            "Operators are supposed to be of type oper."
+                        )
+                    if operator.shape != (2, 2):
+                        raise ValueError(
+                            "Operator's shape must be (2,2) "
+                            f"not {operator.shape}"
+                        )
+                except AttributeError:
+                    raise TypeError(f"{operator} is not a Qobj.")
+
+            # Completeness relation checking
             sum_op = qutip.Qobj(shape=(2, 2))
             identity = qutip.Qobj([[1.0, 0], [0, 1.0]])
             length = len(self.gen_noise_probs)
             for i in range(length):
                 sum_op += self.gen_noise_probs[i] * self.gen_noise_opers[i]
 
-            if sum_op != identity:
-                raise ValueError("The completeness relation is not verified.")
+            # if sum_op != identity:
+            #     raise ValueError("The completeness relation is not verified.")
