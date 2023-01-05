@@ -141,14 +141,7 @@ class _ChannelSchedule:
             pulse = cast(Pulse, s.type)
             amp[s.ti : s.tf] += pulse.amplitude.samples
             det[s.ti : s.tf] += pulse.detuning.samples
-            ph_jump_t = self.channel_obj.phase_jump_time
-            t_start = s.ti - ph_jump_t if ind > 0 else 0
-            t_end = (
-                channel_slots[ind + 1].ti - ph_jump_t
-                if ind < len(channel_slots) - 1
-                else dt
-            )
-            phase[t_start:t_end] += pulse.phase
+
             tf = s.tf
             # Account for the extended duration of the pulses
             # after modulation, which is at most fall_time
@@ -160,8 +153,28 @@ class _ChannelSchedule:
                 if ind < len(channel_slots) - 1
                 else fall_time
             )
-
             slots.append(_TargetSlot(s.ti, tf, s.targets))
+
+            # The phase of detuned delays is not considered
+            if self.is_detuned_delay(pulse):
+                continue
+
+            ph_jump_t = self.channel_obj.phase_jump_time
+            for last_pulse_ind in range(ind - 1, -1, -1):  # From ind-1 to 0
+                last_pulse_slot = channel_slots[last_pulse_ind]
+                # Skips over detuned delay pulses
+                if not self.is_detuned_delay(
+                    cast(Pulse, last_pulse_slot.type)
+                ):
+                    # Accounts for when pulse is added with 'no-delay'
+                    # i.e. there is no phase_jump_time in between a phase jump
+                    t_start = max(s.ti - ph_jump_t, last_pulse_slot.tf)
+                    break
+            else:
+                t_start = 0
+            # Overrides all values from t_start on. The next pulses will do
+            # the same, so the last phase is automatically kept till the endm
+            phase[t_start:] = pulse.phase
 
         return ChannelSamples(amp, det, phase, slots, self.eom_blocks)
 

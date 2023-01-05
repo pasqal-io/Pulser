@@ -331,6 +331,46 @@ def test_extend_duration(seq_rydberg):
     assert extended_short.slots == short.slots
 
 
+def test_phase_sampling(mod_device):
+    reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
+    seq = pulser.Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+
+    dt = 100
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=1), "ch0")
+    # With 'no-delay', the jump should in between the two pulses
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=2), "ch0", protocol="no-delay")
+    # With the standard protocol, there shoud be a delay added and then
+    # phase jump time is accounted for
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=3), "ch0")
+    pulse3_start = seq.get_duration() - dt
+    # Detuned delay (its phase should be ignored)
+    seq.add(
+        Pulse.ConstantPulse(1000, 0, 1, phase=0), "ch0", protocol="no-delay"
+    )
+    end_of_detuned_delay = seq.get_duration()
+    # phase jump time happens during the detuned delay
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=4), "ch0")
+    full_duration = seq.get_duration()
+    # Nothing was added between the detuned delay and pulse4
+    assert end_of_detuned_delay == full_duration - dt
+
+    ph_jump_time = seq.declared_channels["ch0"].phase_jump_time
+    assert ph_jump_time > 0
+    expected_phase = np.zeros(full_duration)
+    expected_phase[:dt] = 1.0
+    transition2_3 = pulse3_start - ph_jump_time
+    assert transition2_3 >= 2 * dt  # = End of pulse2
+    expected_phase[dt:transition2_3] = 2.0
+    # The detuned delay is ignored
+    transition3_4 = full_duration - dt - ph_jump_time
+    expected_phase[transition2_3:transition3_4] = 3.0
+    expected_phase[transition3_4:] = 4.0
+
+    got_phase = sample(seq).channel_samples["ch0"].phase
+    np.testing.assert_array_equal(expected_phase, got_phase)
+
+
 # Fixtures
 
 
