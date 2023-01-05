@@ -230,13 +230,22 @@ class Simulation:
                 # Go back to previous config
                 self.set_config(prev_config)
                 raise NotImplementedError(
-                    "Cannot include depolarizing noise in digital- or all-basis."
+                    "Cannot include depolarizing "
+                    + "noise in digital- or all-basis."
                 )
 
             # Probability of error occurrence
 
             prob = self.config.depolarizing_prob
             n = self._size
+            if prob > 0.1 and n > 1:
+                warnings.warn(
+                    "The depolarizing model is a first-order approximation"
+                    f" in the depolarizing probability. p = {2*prob}"
+                    " is too large for realistic results.",
+                    stacklevel=2,
+                )
+
             k = np.sqrt((prob / 3) * (1 - prob) ** (n - 1))
             self._collapse_ops = [
                 np.sqrt((1 - prob) ** n)
