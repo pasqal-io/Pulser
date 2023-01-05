@@ -24,12 +24,11 @@ def test_init():
         runs=100,
     )
     str_config = config.__str__(True)
+    assert "SPAM, doppler, dephasing, amplitude, depolarizing" in str_config
     assert (
-        "SPAM, doppler, dephasing, amplitude",
-        "depolarizing" in str_config
-        and "1000.0µK" in str_config
+        "1000.0µK" in str_config
         and "100" in str_config
-        and "Solver Options" in str_config,
+        and "Solver Options" in str_config
     )
     with pytest.raises(ValueError, match="is not a valid noise type."):
         SimConfig(noise="bad_noise")
