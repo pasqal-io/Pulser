@@ -123,7 +123,7 @@ def test_draw(layout, layout3d):
 
     with patch("matplotlib.pyplot.show"):
         layout3d.draw(projection=False)
-    
+
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.pyplot.savefig"):
             layout3d.draw(fig_name="my_registerlayout.pdf")
