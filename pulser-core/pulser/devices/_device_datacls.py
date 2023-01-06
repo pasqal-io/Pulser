@@ -18,7 +18,7 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from sys import version_info
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -73,9 +73,9 @@ class BaseDevice(ABC):
     rydberg_level: int
     _channels: tuple[tuple[str, Channel], ...]
     min_atom_distance: float
-    max_atom_num: Optional[int]
-    max_radial_distance: Optional[int]
-    interaction_coeff_xy: Optional[float] = None
+    max_atom_num: int | None
+    max_radial_distance: int | None
+    interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
     max_layout_filling: float = 0.5
     reusable_channels: bool = field(default=False, init=False)
@@ -539,8 +539,8 @@ class VirtualDevice(BaseDevice):
             on the same pulse sequence.
     """
     min_atom_distance: float = 0
-    max_atom_num: Optional[int] = None
-    max_radial_distance: Optional[int] = None
+    max_atom_num: int | None = None
+    max_radial_distance: int | None = None
     supports_slm_mask: bool = True
     reusable_channels: bool = True
 
