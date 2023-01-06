@@ -102,7 +102,7 @@ class BaseDevice(ABC):
                 f"not {self.dimensions}."
             )
         self._validate_rydberg_level(self.rydberg_level)
-        for ch_id, ch_obj in self._channels:
+        for ch_id, ch_obj in self.channels.items():
             type_check("All channel IDs", str, value_override=ch_id)
             type_check("All channels", Channel, value_override=ch_obj)
 
@@ -137,7 +137,7 @@ class BaseDevice(ABC):
                 raise ValueError(msg)
 
         if any(
-            ch.basis == "XY" for _, ch in self._channels
+            ch.basis == "XY" for ch in self.channels.values()
         ) and not isinstance(self.interaction_coeff_xy, float):
             raise TypeError(
                 "When the device has a 'Microwave' channel, "
@@ -411,7 +411,7 @@ class Device(BaseDevice):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        for ch_id, ch_obj in self._channels:
+        for ch_id, ch_obj in self.channels.items():
             if ch_obj.is_virtual():
                 _sep = "', '"
                 raise ValueError(
@@ -466,7 +466,7 @@ class Device(BaseDevice):
         ]
 
         ch_lines = []
-        for name, ch in self._channels:
+        for name, ch in self.channels.items():
             if for_docs:
                 ch_lines += [
                     f" - ID: '{name}'",
