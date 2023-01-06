@@ -502,8 +502,8 @@ class Sequence:
                 raise ValueError(strict_error_message)
             else:
                 raise TypeError(ch_type_er_mess)
-        # Initialize the new sequence
-        new_seq = Sequence(self.register, new_device)
+        # Initialize the new sequence (works for Sequence subclasses too)
+        new_seq = type(self)(register=self.register, device=new_device)
 
         for call in self._calls[1:]:
             if not (call.name == "declare_channel"):
