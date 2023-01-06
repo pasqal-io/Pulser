@@ -81,9 +81,11 @@ Illustrative instances of :class:`Device` (see `Physical Devices`_) and :class:`
 
 .. autoclass:: pulser.devices._device_datacls.Device
   :members:
+  :inherited-members:
 
 .. autoclass:: pulser.devices._device_datacls.VirtualDevice
   :members:
+  :inherited-members:
 
 .. _Physical Devices:
 
