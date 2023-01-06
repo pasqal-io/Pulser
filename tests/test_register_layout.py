@@ -115,10 +115,18 @@ def test_draw(layout, layout3d):
         layout.draw()
 
     with patch("matplotlib.pyplot.show"):
+        with patch("matplotlib.pyplot.savefig"):
+            layout.draw(fig_name="my_registerlayout.pdf")
+
+    with patch("matplotlib.pyplot.show"):
         layout3d.draw()
 
     with patch("matplotlib.pyplot.show"):
         layout3d.draw(projection=False)
+    
+    with patch("matplotlib.pyplot.show"):
+        with patch("matplotlib.pyplot.savefig"):
+            layout3d.draw(fig_name="my_registerlayout.pdf")
 
 
 def test_repr(layout):
