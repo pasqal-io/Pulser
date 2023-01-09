@@ -197,6 +197,8 @@ class RegisterLayout(RegDrawer):
         draw_graph: bool = False,
         draw_half_radius: bool = False,
         projection: bool = True,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register layout.
 
@@ -211,6 +213,11 @@ class RegisterLayout(RegDrawer):
                 if the `blockade_radius` is defined.
             projection: If the layout is in 3D, draws it
                 as projections on different planes.
+            fig_name: The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig: Keywords arguments for
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -252,6 +259,8 @@ class RegisterLayout(RegDrawer):
                 draw_half_radius=draw_half_radius,
                 are_traps=True,
             )
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def make_mappable_register(
