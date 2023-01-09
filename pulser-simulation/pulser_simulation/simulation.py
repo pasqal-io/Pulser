@@ -209,7 +209,7 @@ class Simulation:
                 )
             # Probability of phase (Z) flip:
             # First order in prob
-            prob = self.config.dephasing_prob / 2
+            prob = self.config.dephasing_prob
             n = self._size
             if prob > 0.1 and n > 1:
                 warnings.warn(
@@ -294,65 +294,34 @@ class Simulation:
                 )
 
             # Probability distribution of error occurences
-            prob = np.array(self.config.gen_noise_probs)
             n = self._size
             m = len(self.config.gen_noise_opers)
-            identity = qutip.Qobj[[1.0, 0.0], [0.0, 1.0]]
             if n > 1:
-                for i in range(m):
+                for i in range(1, m):
                     prob_i = self.config.gen_noise_probs[i]
-                    if (
-                        prob_i > 0.1
-                        and self.config.gen_noise_opers[i] != identity
-                    ):
+                    if prob_i > 0.1:
                         warnings.warn(
-                            "The general noise model is a first-order approximation"
-                            f" in the noise probability. p = {2*prob_i}"
-                            " is too large for realistic results.",
+                            "The general noise model is a first-order"
+                            " approximation in the noise probability."
+                            f"p={2*prob_i} is large for realistic results.",
                             stacklevel=2,
                         )
                         break
             # Building collapse operators
-            X = qutip.sigmax()
-            Y = qutip.sigmay()
-            Z = qutip.sigmaz()
-            identity = qutip.Qobj([[1.0, 0.0], [0.0, 1.0]])
-            basis = [X, Y, Z, identity]
-            for j in range(m):
-                operator = self.config.gen_noise_opers[i]
-                coeff = [0.0, 0.0, 0.0, 0.0]
-                for i in range(4):
-                    coeff[i] = 0.5 * np.trace(basis[i] * operator)
-
-                # self._collapse_ops = [
-                #     np.sqrt((1 - prob) ** n)
-                #     * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-                # ]
-                # self._collapse_ops += [
-                #     k
-                #     * (
-                #         self.build_operator([("sigma_rr", [qid])])
-                #         - self.build_operator([("sigma_gg", [qid])])
-                #     )
-                #     for qid in self._qid_index
-                # ]
-                # self._collapse_ops += [
-                #     k
-                #     * (
-                #         self.build_operator([("sigma_gr", [qid])]).dag()
-                #         + self.build_operator([("sigma_gr", [qid])])
-                #     )
-                #     for qid in self._qid_index
-                # ]
-                # self._collapse_ops += [
-                #     1j
-                #     * k
-                #     * (
-                #         self.build_operator([("sigma_gr", [qid])]).dag()
-                #         - self.build_operator([("sigma_gr", [qid])])
-                #     )
-                #     for qid in self._qid_index
-                # ]
+            prob_id = self.config.gen_noise_probs[0]
+            self._collapse_ops += [
+                np.sqrt(prob_id**n)
+                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+            ]
+            for i in range(1, m):
+                k = np.sqrt(
+                    self.config.gen_noise_probs[i] * prob_id ** (n - 1)
+                )
+                c_op = k * self.config.gen_noise_opers[i]
+                self._collapse_ops += [
+                    self.build_operator([(c_op, [qid])])
+                    for qid in self._qid_index
+                ]
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.

@@ -93,7 +93,7 @@ class SimConfig:
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
-    depolarizing_prob: float = 0.1
+    depolarizing_prob: float = 0.05
     gen_noise_probs: list[float] = field(
         init=True, default_factory=list, repr=False
     )

@@ -74,6 +74,16 @@ def seq(reg):
     return seq
 
 
+@pytest.fixture
+def matrices():
+    pauli = {}
+    pauli["I"] = qutip.qeye(2)
+    pauli["X"] = qutip.sigmax()
+    pauli["Y"] = qutip.sigmay()
+    pauli["Z"] = qutip.sigmaz()
+    return pauli
+
+
 def test_bad_import():
     with pytest.warns(
         UserWarning,
@@ -562,7 +572,7 @@ def test_config():
     )
 
 
-def test_noise(seq):
+def test_noise(seq, matrices):
     np.random.seed(3)
     sim2 = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
@@ -574,6 +584,14 @@ def test_noise(seq):
         sim2.set_config(SimConfig(noise="dephasing"))
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="depolarizing"))
+    with pytest.raises(NotImplementedError, match="Cannot include"):
+        sim2.set_config(
+            SimConfig(
+                noise="gen_noise",
+                gen_noise_opers=[matrices["I"]],
+                gen_noise_probs=[1.0],
+            )
+        )
     assert sim2.config.spam_dict == {
         "eta": 0.9,
         "epsilon": 0.01,
@@ -595,7 +613,7 @@ def test_dephasing():
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq.add(pulse, "ch0")
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
@@ -603,11 +621,9 @@ def test_dephasing():
     assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
+        reg = Register.from_coordinates([(0, 0), (0, 7)], prefix="q")
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
-        duration = 2500
-        pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
         seq2.add(pulse, "ch0")
         sim = Simulation(
             seq2,
@@ -622,19 +638,17 @@ def test_depolarizing():
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq.add(pulse, "ch0")
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 579, "1": 421})
+    assert sim.run().sample_final_state() == Counter({"0": 585, "1": 415})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
+        reg = Register.from_coordinates([(0, 0), (0, 6)], prefix="q")
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
-        duration = 2500
-        pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
         seq2.add(pulse, "ch0")
         sim = Simulation(
             seq2,
@@ -643,7 +657,42 @@ def test_depolarizing():
         )
 
 
-def test_add_config():
+def test_gen_noise(matrices):
+    np.random.seed(123)
+    reg = Register.from_coordinates([(0, 0)], prefix="q")
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch0", "rydberg_global")
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
+    seq.add(pulse, "ch0")
+    sim = Simulation(
+        seq,
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise="gen_noise",
+            gen_noise_opers=[matrices["I"], matrices["Z"]],
+            gen_noise_probs=[0.95, 0.05],
+        ),
+    )
+    assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
+    assert len(sim._collapse_ops) != 0
+    with pytest.warns(UserWarning, match="first-order"):
+        reg = Register.from_coordinates([(0, 0), (0, 8)], prefix="q")
+        seq2 = Sequence(reg, Chadoq2)
+        seq2.declare_channel("ch0", "rydberg_global")
+        seq2.add(pulse, "ch0")
+        sim = Simulation(
+            seq2,
+            sampling_rate=0.01,
+            config=SimConfig(
+                noise="gen_noise",
+                gen_noise_opers=[matrices["I"], matrices["Z"]],
+                gen_noise_probs=[0.5, 0.5],
+            ),
+        )
+
+
+def test_add_config(matrices):
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, Chadoq2)
     seq.declare_channel("ch0", "rydberg_global")
@@ -657,7 +706,15 @@ def test_add_config():
         sim.add_config("bad_cfg")
     sim.add_config(
         SimConfig(
-            noise=("dephasing", "SPAM", "doppler", "depolarizing"),
+            noise=(
+                "dephasing",
+                "SPAM",
+                "doppler",
+                "depolarizing",
+                "gen_noise",
+            ),
+            gen_noise_opers=[matrices["I"], matrices["X"]],
+            gen_noise_probs=[0.4, 0.6],
             temperature=20000,
         )
     )
@@ -665,6 +722,7 @@ def test_add_config():
         "dephasing" in sim.config.noise
         and "SPAM" in sim.config.noise
         and "depolarizing" in sim.config.noise
+        and "gen_noise" in sim.config.noise
     )
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.0e-6
