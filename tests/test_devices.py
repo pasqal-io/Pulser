@@ -18,9 +18,10 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from packaging import version
 
 import pulser
-from pulser.channels import Microwave, Rydberg
+from pulser.channels import Microwave, Raman, Rydberg
 from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
@@ -106,6 +107,17 @@ def test_post_init_type_checks(test_params, param, value, msg):
             "maximum layout filling fraction must be greater than 0. and"
             " less than or equal to 1.",
         ),
+        (
+            "channel_ids",
+            ("rydberg_global", "rydberg_global"),
+            "When defined, 'channel_ids' can't have repeated elements.",
+        ),
+        (
+            "channel_ids",
+            ("rydberg_global",),
+            "When defined, the number of channel IDs must"
+            " match the number of channel objects.",
+        ),
     ],
 )
 def test_post_init_value_errors(test_params, param, value, msg):
@@ -128,6 +140,26 @@ def test_optional_parameters(test_params, none_param):
     ):
         Device(**test_params)
     VirtualDevice(**test_params)  # Valid as None on a VirtualDevice
+
+
+def test_default_channel_ids(test_params):
+    # Needed because of the Microwave global channel
+    test_params["interaction_coeff_xy"] = 10000.0
+    test_params["channel_objects"] = (
+        Rydberg.Local(None, None),
+        Raman.Local(None, None),
+        Rydberg.Local(None, None),
+        Raman.Global(None, None),
+        Microwave.Global(None, None),
+    )
+    dev = VirtualDevice(**test_params)
+    assert dev.channel_ids == (
+        "rydberg_local",
+        "raman_local",
+        "rydberg_local_2",
+        "raman_global",
+        "mw_global",
+    )
 
 
 def test_tuple_conversion(test_params):
@@ -331,3 +363,61 @@ def test_convert_to_virtual():
     ).to_virtual() == VirtualDevice(
         supports_slm_mask=False, reusable_channels=False, **params
     )
+
+
+@pytest.mark.parametrize(
+    "conflict_param, conflict_value",
+    [("channel_objects", Rydberg.Global(0, 20)), ("channel_ids", "custom_id")],
+)
+def test_channels_deprecation_error(
+    test_params, conflict_param, conflict_value
+):
+    current_ver = version.parse(pulser.__version__)
+    remove_ver = version.parse("0.10.0")
+    assert (
+        current_ver.major <= remove_ver.major
+        and current_ver.minor < remove_ver.minor
+    )
+    test_params["_channels"] = (
+        ("custom_rydberg", Rydberg.Global(0, 10)),
+        ("raman_local", Raman.Local(10, 20, max_targets=1)),
+    )
+    test_params[conflict_param] = conflict_value
+
+    with pytest.warns(DeprecationWarning):
+        with pytest.raises(
+            ValueError,
+            match="'_channels' can't be specified when 'channel_objects'"
+            " or 'channel_ids' are also provided.",
+        ):
+            VirtualDevice(**test_params)
+
+
+def test_channels_deprecation():
+    current_ver = version.parse(pulser.__version__)
+    remove_ver = version.parse("0.10.0")
+    assert (
+        current_ver.major <= remove_ver.major
+        and current_ver.minor < remove_ver.minor
+    )
+    params = dict(
+        name="Test",
+        dimensions=2,
+        rydberg_level=80,
+        min_atom_distance=1,
+        max_atom_num=20,
+        max_radial_distance=40,
+        _channels=(
+            ("custom_rydberg", Rydberg.Global(0, 10)),
+            ("raman_local", Raman.Local(10, 20, max_targets=1)),
+        ),
+    )
+    with pytest.warns(DeprecationWarning):
+        dev = Device(**params)
+
+    assert dev.channel_ids == ("custom_rydberg", "raman_local")
+    assert dev.channel_objects == (
+        Rydberg.Global(0, 10),
+        Raman.Local(10, 20, max_targets=1),
+    )
+    assert dev._channels == ()

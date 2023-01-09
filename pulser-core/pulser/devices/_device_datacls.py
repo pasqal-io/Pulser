@@ -164,7 +164,7 @@ class BaseDevice(ABC):
             )
             if self.channel_objects or self.channel_ids:
                 raise ValueError(
-                    "'_channels' can't be specified when 'channel_objects"
+                    "'_channels' can't be specified when 'channel_objects'"
                     " or 'channel_ids' are also provided."
                 )
             ch_objs = []

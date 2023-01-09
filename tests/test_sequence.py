@@ -937,16 +937,14 @@ def test_hardware_constraints():
         mod_bandwidth=7,  # MHz
     )
 
-    ConstrainedChadoq2 = (
-        Device(
-            name="ConstrainedChadoq2",
-            dimensions=2,
-            rydberg_level=70,
-            max_atom_num=100,
-            max_radial_distance=50,
-            min_atom_distance=4,
-            channel_objects=(rydberg_global, raman_local),
-        ),
+    ConstrainedChadoq2 = Device(
+        name="ConstrainedChadoq2",
+        dimensions=2,
+        rydberg_level=70,
+        max_atom_num=100,
+        max_radial_distance=50,
+        min_atom_distance=4,
+        channel_objects=(rydberg_global, raman_local),
     )
 
     seq = Sequence(reg, ConstrainedChadoq2)
@@ -1219,7 +1217,7 @@ def test_multiple_index_targets():
         max_radial_distance=50,
         min_atom_distance=4,
         channel_objects=(
-            Raman.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=2)
+            Raman.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=2),
         ),
     )
 
