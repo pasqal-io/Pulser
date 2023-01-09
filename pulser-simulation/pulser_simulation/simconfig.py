@@ -214,7 +214,7 @@ class SimConfig:
                 raise ValueError("Fill the general noise parameters.")
 
             for prob in self.gen_noise_probs:
-                if type(prob) != type(1.0):
+                if not isinstance(prob, float):
                     raise TypeError(
                         "gen_noise_probs is a list of floats"
                         f" it must not contain a {type(prob)}."
@@ -223,7 +223,7 @@ class SimConfig:
             prob_distr = np.array(self.gen_noise_probs)
             lower_bound = np.any(prob_distr < 0.0)
             upper_bound = np.any(prob_distr > 1.0)
-            sum_p = sum(prob_distr) > 1.0
+            sum_p = sum(prob_distr) != 1.0
             if sum_p or lower_bound or upper_bound:
                 raise ValueError(
                     "The distribution given is not a probability distribution."
@@ -231,10 +231,9 @@ class SimConfig:
             # Check the validity of operators
             for operator in self.gen_noise_opers:
                 # type checking
-                qutip.qobj.Qobj
 
                 if type(operator) != qutip.qobj.Qobj:
-                    raise AttributeError(f"{operator} is not a Qobj.")
+                    raise TypeError(f"{operator} is not a Qobj.")
                 if operator.type != "oper":
                     raise TypeError(
                         "Operators are supposed to be of type oper."
@@ -242,12 +241,17 @@ class SimConfig:
                 if operator.shape != (2, 2):
                     raise NotImplementedError(
                         "Operator's shape must be (2,2) "
-                        f"not {operator.shape}"
+                        f"not {operator.shape}."
                     )
-
+            # Identity position
+            identity = qutip.qeye(2)
+            if self.gen_noise_opers[0] != identity:
+                raise NotImplementedError(
+                    "You must put the identity matrix at the "
+                    "beginning of the operator list."
+                )
             # Completeness relation checking
             sum_op = qutip.Qobj(shape=(2, 2))
-            identity = qutip.Qobj([[1.0, 0.0], [0.0, 1.0]])
             length = len(self.gen_noise_probs)
             for i in range(length):
                 sum_op += (

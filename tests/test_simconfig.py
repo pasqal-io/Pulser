@@ -15,9 +15,21 @@
 import pytest
 
 from pulser_simulation import SimConfig
+from qutip import qeye, sigmax, sigmaz, Qobj
 
 
-def test_init():
+@pytest.fixture
+def matrices():
+    pauli = {}
+    pauli["I"] = qeye(2)
+    pauli["X"] = sigmax()
+    pauli["Zh"] = 0.5 * sigmaz()
+    pauli["ket"] = Qobj([[1.0], [2.0]])
+    pauli["I3"] = qeye(3)
+    return pauli
+
+
+def test_init(matrices):
     config = SimConfig(
         noise=("SPAM", "doppler", "dephasing", "amplitude", "depolarizing"),
         temperature=1000.0,
@@ -40,3 +52,63 @@ def test_init():
         ValueError, match="The standard deviation in amplitude"
     ):
         SimConfig(amp_sigma=-0.001)
+    with pytest.raises(ValueError, match="The operators list length"):
+        SimConfig(gen_noise_probs=[1.0])
+    with pytest.raises(ValueError, match="Fill the general noise parameters."):
+        SimConfig(noise=("gen_noise"))
+    with pytest.raises(TypeError, match="gen_noise_probs is a list of floats"):
+        SimConfig(
+            noise=("gen_noise"), gen_noise_probs=[""], gen_noise_opers=[""]
+        )
+    with pytest.raises(ValueError, match="is not a probability distribution."):
+        SimConfig(
+            noise=("gen_noise"),
+            gen_noise_opers=[matrices["I"], matrices["X"]],
+            gen_noise_probs=[-1.0, 0.5],
+        )
+    with pytest.raises(ValueError, match="is not a probability distribution."):
+        SimConfig(
+            noise=("gen_noise"),
+            gen_noise_opers=[matrices["I"], matrices["X"]],
+            gen_noise_probs=[0.5, 2.0],
+        )
+    with pytest.raises(ValueError, match="is not a probability distribution."):
+        SimConfig(
+            noise=("gen_noise"),
+            gen_noise_opers=[matrices["I"], matrices["X"]],
+            gen_noise_probs=[0.3, 0.2],
+        )
+    with pytest.raises(TypeError, match="is not a Qobj."):
+        SimConfig(
+            noise=("gen_noise"), gen_noise_opers=[2.0], gen_noise_probs=[1.0]
+        )
+    with pytest.raises(TypeError, match="to be of type oper."):
+        SimConfig(
+            noise=("gen_noise"),
+            gen_noise_opers=[matrices["ket"]],
+            gen_noise_probs=[1.0],
+        )
+    with pytest.raises(
+        NotImplementedError, match="Operator's shape"
+    ):
+        SimConfig(
+            noise=("gen_noise"),
+            gen_noise_opers=[matrices["I3"]],
+            gen_noise_probs=[1.0],
+        )
+    with pytest.raises(
+        NotImplementedError, match="You must put the identity matrix"
+    ):
+        SimConfig(
+            noise=("gen_noise"),
+            gen_noise_opers=[matrices["X"], matrices["I"]],
+            gen_noise_probs=[0.5, 0.5],
+        )
+    with pytest.raises(
+        ValueError, match="The completeness relation is not"
+    ):
+        SimConfig(
+            noise=("gen_noise"),
+            gen_noise_opers=[matrices["I"], matrices["Zh"]],
+            gen_noise_probs=[0.5, 0.5],
+        )
