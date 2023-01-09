@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import pytest
+from qutip import Qobj, qeye, sigmax, sigmaz
 
 from pulser_simulation import SimConfig
-from qutip import qeye, sigmax, sigmaz, Qobj
 
 
 @pytest.fixture

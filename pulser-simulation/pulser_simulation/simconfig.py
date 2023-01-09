@@ -98,7 +98,7 @@ class SimConfig:
         init=True, default_factory=list, repr=False
     )
     gen_noise_opers: list[qutip.Qobj] = field(
-        init=True, default_factory=dict, repr=False
+        init=True, default_factory=list, repr=False
     )
     solver_options: Optional[qutip.Options] = None
     spam_dict: dict[str, float] = field(
