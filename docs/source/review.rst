@@ -57,7 +57,7 @@ channel's output *amplitude*, *detuning* and *phase*. While the phase is constan
 throughout a pulse, the amplitude and detuning are described by **Waveforms**,
 which define these quantities values throughout the pulse.
 
-.. figure:: https://pasqal.io/wp-content/uploads/2021/02/pulser_animation.gif
+.. figure:: files/pulser_animation.gif
     :align: center
     :alt: pulser_animation
     :figclass: align-center

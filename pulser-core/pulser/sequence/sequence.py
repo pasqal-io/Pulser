@@ -877,14 +877,12 @@ class Sequence:
                 simultaneously.
 
                 - ``'min-delay'``: Before adding the pulse, introduces the
-                 smallest possible delay that avoids all exisiting conflicts.
-
+                  smallest possible delay that avoids all exisiting conflicts.
                 - ``'no-delay'``: Adds the pulse to the channel, regardless of
-                 existing conflicts.
-
+                  existing conflicts.
                 - ``'wait-for-all'``: Before adding the pulse, adds a delay
-                 that idles the channel until the end of the other channels'
-                 latest pulse.
+                  that idles the channel until the end of the other channels'
+                  latest pulse.
 
         Note:
             When the phase of the pulse to add is different than the phase of
