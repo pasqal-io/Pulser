@@ -15,7 +15,9 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC, abstractmethod
+from collections import Counter
 from dataclasses import dataclass, field, fields
 from sys import version_info
 from typing import Any, cast
@@ -53,7 +55,12 @@ class BaseDevice(ABC):
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
-        rybderg_level : The value of the principal quantum number :math:`n`
+        channel_objects: The Channel subclass instances specifying each
+            channel in the device.
+        channel_ids: Custom IDs for each channel object. When defined,
+            an ID must be given for each channel. If not defined, the IDs are
+            generated internally based on the channels' names and addressing.
+        rybderg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -71,7 +78,6 @@ class BaseDevice(ABC):
     name: str
     dimensions: DIMENSIONS
     rydberg_level: int
-    _channels: tuple[tuple[str, Channel], ...]
     min_atom_distance: float
     max_atom_num: int | None
     max_radial_distance: int | None
@@ -79,6 +85,9 @@ class BaseDevice(ABC):
     supports_slm_mask: bool = False
     max_layout_filling: float = 0.5
     reusable_channels: bool = field(default=False, init=False)
+    channel_ids: tuple[str, ...] | None = None
+    channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
+    _channels: tuple[tuple[str, Channel], ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         def type_check(
@@ -102,9 +111,6 @@ class BaseDevice(ABC):
                 f"not {self.dimensions}."
             )
         self._validate_rydberg_level(self.rydberg_level)
-        for ch_id, ch_obj in self.channels.items():
-            type_check("All channel IDs", str, value_override=ch_id)
-            type_check("All channels", Channel, value_override=ch_obj)
 
         for param in (
             "min_atom_distance",
@@ -136,14 +142,6 @@ class BaseDevice(ABC):
             if not valid:
                 raise ValueError(msg)
 
-        if any(
-            ch.basis == "XY" for ch in self.channels.values()
-        ) and not isinstance(self.interaction_coeff_xy, float):
-            raise TypeError(
-                "When the device has a 'Microwave' channel, "
-                "'interaction_coeff_xy' must be a 'float',"
-                f" not '{type(self.interaction_coeff_xy)}'."
-            )
         type_check("supports_slm_mask", bool)
         type_check("reusable_channels", bool)
 
@@ -154,13 +152,83 @@ class BaseDevice(ABC):
                 f"not {self.max_layout_filling}."
             )
 
+        if self._channels:
+            warnings.warn(
+                "Specifying the channels of a device through the '_channels'"
+                " argument is deprecated since v0.9.0 and will be removed in"
+                " v0.10.0. Instead, use 'channel_objects' to specify the"
+                " channels and, optionally, 'channel_ids' to specify custom"
+                " channel IDs.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if self.channel_objects or self.channel_ids:
+                raise ValueError(
+                    "'_channels' can't be specified when 'channel_objects"
+                    " or 'channel_ids' are also provided."
+                )
+            ch_objs = []
+            ch_ids = []
+            for ch_id, ch_obj in self._channels:
+                ch_ids.append(ch_id)
+                ch_objs.append(ch_obj)
+            object.__setattr__(self, "channel_ids", tuple(ch_ids))
+            object.__setattr__(self, "channel_objects", tuple(ch_objs))
+            object.__setattr__(self, "_channels", ())
+
+        for ch_obj in self.channel_objects:
+            type_check("All channels", Channel, value_override=ch_obj)
+
+        if self.channel_ids is not None:
+            if not (
+                isinstance(self.channel_ids, (tuple, list))
+                and all(isinstance(el, str) for el in self.channel_ids)
+            ):
+                raise TypeError(
+                    "When defined, 'channel_ids' must be a tuple or a list "
+                    "of strings."
+                )
+            if len(self.channel_ids) != len(set(self.channel_ids)):
+                raise ValueError(
+                    "When defined, 'channel_ids' can't have "
+                    "repeated elements."
+                )
+            if len(self.channel_ids) != len(self.channel_objects):
+                raise ValueError(
+                    "When defined, the number of channel IDs must"
+                    " match the number of channel objects."
+                )
+        else:
+            # Make the channel IDs from the default IDs
+            ids_counter: Counter = Counter()
+            ids = []
+            for ch_obj in self.channel_objects:
+                id = ch_obj.default_id()
+                ids_counter.update([id])
+                if ids_counter[id] > 1:
+                    # If there is more than one with the same ID
+                    id += f"_{ids_counter[id]}"
+                ids.append(id)
+            object.__setattr__(self, "channel_ids", tuple(ids))
+
+        if any(
+            ch.basis == "XY" for ch in self.channel_objects
+        ) and not isinstance(self.interaction_coeff_xy, float):
+            raise TypeError(
+                "When the device has a 'Microwave' channel, "
+                "'interaction_coeff_xy' must be a 'float',"
+                f" not '{type(self.interaction_coeff_xy)}'."
+            )
+
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
 
         # Turns mutable lists into immutable tuples
-        object.__setattr__(self, "_channels", to_tuple(self._channels))
+        for param in self._params():
+            if "channel" in param:
+                object.__setattr__(self, param, to_tuple(getattr(self, param)))
 
     @property
     @abstractmethod
@@ -170,12 +238,12 @@ class BaseDevice(ABC):
     @property
     def channels(self) -> dict[str, Channel]:
         """Dictionary of available channels on this device."""
-        return dict(self._channels)
+        return dict(zip(cast(tuple, self.channel_ids), self.channel_objects))
 
     @property
     def supported_bases(self) -> set[str]:
         """Available electronic transitions for control and measurement."""
-        return {ch.basis for ch in self.channels.values()}
+        return {ch.basis for ch in self.channel_objects}
 
     @property
     def interaction_coeff(self) -> float:
@@ -364,11 +432,13 @@ class BaseDevice(ABC):
 
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
-        params = self._params()
+        ex_params = ("_channels", "channel_objects", "channel_ids")
+        params = {
+            k: v for k, v in self._params().items() if k not in ex_params
+        }
         ch_list = []
-        for ch_name, ch_obj in params.pop("_channels"):
+        for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
-
         return {"version": "1", "channels": ch_list, **params}
 
     def to_abstract_repr(self) -> str:

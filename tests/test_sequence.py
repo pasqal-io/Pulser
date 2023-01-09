@@ -149,34 +149,25 @@ def devices():
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
-        _channels=(
-            (
-                "raman_global",
-                Raman.Global(
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    max_duration=2**26,
-                ),
+        channel_objects=(
+            Raman.Global(
+                2 * np.pi * 20,
+                2 * np.pi * 10,
+                max_duration=2**26,
             ),
-            (
-                "raman_local",
-                Raman.Local(
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    clock_period=1,
-                    max_duration=2**26,
-                    max_targets=3,
-                    mod_bandwidth=4,
-                ),
+            Raman.Local(
+                2 * np.pi * 20,
+                2 * np.pi * 10,
+                clock_period=1,
+                max_duration=2**26,
+                max_targets=3,
+                mod_bandwidth=4,
             ),
-            (
-                "rydberg_global",
-                Rydberg.Global(
-                    max_abs_detuning=2 * np.pi * 4,
-                    max_amp=2 * np.pi * 3,
-                    clock_period=4,
-                    max_duration=2**26,
-                ),
+            Rydberg.Global(
+                max_abs_detuning=2 * np.pi * 4,
+                max_amp=2 * np.pi * 3,
+                clock_period=4,
+                max_duration=2**26,
             ),
         ),
     )
@@ -188,27 +179,22 @@ def devices():
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
-        _channels=(
-            (
-                "rmn_local",
-                Raman.Local(
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    clock_period=3,
-                    max_duration=2**26,
-                    max_targets=5,
-                    mod_bandwidth=2,
-                    fixed_retarget_t=2,
-                ),
+        channel_ids=("rmn_local", "rydberg_global"),
+        channel_objects=(
+            Raman.Local(
+                2 * np.pi * 20,
+                2 * np.pi * 10,
+                clock_period=3,
+                max_duration=2**26,
+                max_targets=5,
+                mod_bandwidth=2,
+                fixed_retarget_t=2,
             ),
-            (
-                "rydberg_global",
-                Rydberg.Global(
-                    max_abs_detuning=2 * np.pi * 4,
-                    max_amp=2 * np.pi * 3,
-                    clock_period=2,
-                    max_duration=2**26,
-                ),
+            Rydberg.Global(
+                max_abs_detuning=2 * np.pi * 4,
+                max_amp=2 * np.pi * 3,
+                clock_period=2,
+                max_duration=2**26,
             ),
         ),
     )
@@ -218,40 +204,32 @@ def devices():
         dimensions=2,
         rydberg_level=70,
         min_atom_distance=5,
-        _channels=(
-            (
-                "rmn_local1",
-                Raman.Local(
-                    max_abs_detuning=2 * np.pi * 20,
-                    max_amp=2 * np.pi * 10,
-                    min_retarget_interval=220,
-                    fixed_retarget_t=1,
-                    max_targets=1,
-                    mod_bandwidth=2,
-                    clock_period=3,
-                    min_duration=16,
-                    max_duration=2**26,
-                ),
+        channel_ids=("rmn_local1", "rmn_local2", "rydberg_global"),
+        channel_objects=(
+            Raman.Local(
+                max_abs_detuning=2 * np.pi * 20,
+                max_amp=2 * np.pi * 10,
+                min_retarget_interval=220,
+                fixed_retarget_t=1,
+                max_targets=1,
+                mod_bandwidth=2,
+                clock_period=3,
+                min_duration=16,
+                max_duration=2**26,
             ),
-            (
-                "rmn_local2",
-                Raman.Local(
-                    2 * np.pi * 20,
-                    2 * np.pi * 10,
-                    clock_period=3,
-                    max_duration=2**26,
-                    mod_bandwidth=2,
-                    fixed_retarget_t=2,
-                ),
+            Raman.Local(
+                2 * np.pi * 20,
+                2 * np.pi * 10,
+                clock_period=3,
+                max_duration=2**26,
+                mod_bandwidth=2,
+                fixed_retarget_t=2,
             ),
-            (
-                "rydberg_global",
-                Rydberg.Global(
-                    max_abs_detuning=2 * np.pi * 4,
-                    max_amp=2 * np.pi * 3,
-                    clock_period=4,
-                    max_duration=2**26,
-                ),
+            Rydberg.Global(
+                max_abs_detuning=2 * np.pi * 4,
+                max_amp=2 * np.pi * 3,
+                clock_period=4,
+                max_duration=2**26,
             ),
         ),
     )
@@ -446,9 +424,7 @@ def test_switch_device_eom():
         ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
     )
     mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
-    mod_iroise = dataclasses.replace(
-        IroiseMVP, _channels=(("rydberg_global", mod_ch_obj),)
-    )
+    mod_iroise = dataclasses.replace(IroiseMVP, channel_objects=(mod_ch_obj,))
     with pytest.raises(
         ValueError, match=err_base + "with the same EOM configuration."
     ):
@@ -961,16 +937,15 @@ def test_hardware_constraints():
         mod_bandwidth=7,  # MHz
     )
 
-    ConstrainedChadoq2 = Device(
-        name="ConstrainedChadoq2",
-        dimensions=2,
-        rydberg_level=70,
-        max_atom_num=100,
-        max_radial_distance=50,
-        min_atom_distance=4,
-        _channels=(
-            ("rydberg_global", rydberg_global),
-            ("raman_local", raman_local),
+    ConstrainedChadoq2 = (
+        Device(
+            name="ConstrainedChadoq2",
+            dimensions=2,
+            rydberg_level=70,
+            max_atom_num=100,
+            max_radial_distance=50,
+            min_atom_distance=4,
+            channel_objects=(rydberg_global, raman_local),
         ),
     )
 
@@ -1243,11 +1218,8 @@ def test_multiple_index_targets():
         max_atom_num=100,
         max_radial_distance=50,
         min_atom_distance=4,
-        _channels=(
-            (
-                "raman_local",
-                Raman.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=2),
-            ),
+        channel_objects=(
+            Raman.Local(2 * np.pi * 20, 2 * np.pi * 10, max_targets=2)
         ),
     )
 

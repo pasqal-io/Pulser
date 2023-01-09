@@ -33,7 +33,8 @@ def test_params():
         name="Test",
         dimensions=2,
         rydberg_level=70,
-        _channels=(),
+        channel_ids=None,
+        channel_objects=(),
         min_atom_distance=1,
         max_atom_num=None,
         max_radial_distance=None,
@@ -50,18 +51,25 @@ def test_params():
         ("max_radial_distance", 100.4, None),
         ("rydberg_level", 70.0, "Rydberg level has to be an int."),
         (
-            "_channels",
-            ((1, Rydberg.Global(None, None)),),
-            "All channel IDs must be of type 'str', not 'int'",
+            "channel_ids",
+            {"fake_channel"},
+            "When defined, 'channel_ids' must be a tuple or a list "
+            "of strings.",
         ),
         (
-            "_channels",
-            (("ch1", "Rydberg.Global(None, None)"),),
+            "channel_ids",
+            ("ch1", 2),
+            "When defined, 'channel_ids' must be a tuple or a list "
+            "of strings.",
+        ),
+        (
+            "channel_objects",
+            ("Rydberg.Global(None, None)",),
             "All channels must be of type 'Channel', not 'str'",
         ),
         (
-            "_channels",
-            (("mw_ch", Microwave.Global(None, None)),),
+            "channel_objects",
+            (Microwave.Global(None, None),),
             "When the device has a 'Microwave' channel, "
             "'interaction_coeff_xy' must be a 'float',"
             " not '<class 'NoneType'>'.",
@@ -123,11 +131,11 @@ def test_optional_parameters(test_params, none_param):
 
 
 def test_tuple_conversion(test_params):
-    test_params["_channels"] = (
-        ["rydberg_global", Rydberg.Global(None, None)],
-    )
+    test_params["channel_objects"] = [Rydberg.Global(None, None)]
+    test_params["channel_ids"] = ["custom_channel"]
     dev = VirtualDevice(**test_params)
-    assert dev._channels == (("rydberg_global", Rydberg.Global(None, None)),)
+    assert dev.channel_objects == (Rydberg.Global(None, None),)
+    assert dev.channel_ids == ("custom_channel",)
 
 
 def test_valid_devices():
@@ -269,7 +277,7 @@ def test_calibrated_layouts():
             max_atom_num=100,
             max_radial_distance=50,
             min_atom_distance=4,
-            _channels=(),
+            channel_objects=(),
             pre_calibrated_layouts=(TriangularLatticeLayout(201, 3),),
         )
 
@@ -280,7 +288,7 @@ def test_calibrated_layouts():
         max_atom_num=100,
         max_radial_distance=50,
         min_atom_distance=4,
-        _channels=(),
+        channel_objects=(),
         pre_calibrated_layouts=(
             TriangularLatticeLayout(100, 6.8),  # Rounds down with int()
             TriangularLatticeLayout(200, 5),
@@ -304,7 +312,7 @@ def test_device_with_virtual_channel():
             max_atom_num=100,
             max_radial_distance=50,
             min_atom_distance=4,
-            _channels=(("rydberg_global", Rydberg.Global(None, 10)),),
+            channel_objects=(Rydberg.Global(None, 10),),
         )
 
 
@@ -316,7 +324,7 @@ def test_convert_to_virtual():
         min_atom_distance=1,
         max_atom_num=20,
         max_radial_distance=40,
-        _channels=(("rydberg_global", Rydberg.Global(0, 10)),),
+        channel_objects=(Rydberg.Global(0, 10),),
     )
     assert Device(
         pre_calibrated_layouts=(TriangularLatticeLayout(40, 2),), **params
