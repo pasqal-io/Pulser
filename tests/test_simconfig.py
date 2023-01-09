@@ -31,7 +31,16 @@ def matrices():
 
 def test_init(matrices):
     config = SimConfig(
-        noise=("SPAM", "doppler", "dephasing", "amplitude", "depolarizing"),
+        noise=(
+            "SPAM",
+            "doppler",
+            "dephasing",
+            "amplitude",
+            "depolarizing",
+            "gen_noise",
+        ),
+        gen_noise_opers=[matrices["I"]],
+        gen_noise_probs=[1.0],
         temperature=1000.0,
         runs=100,
     )
@@ -42,6 +51,7 @@ def test_init(matrices):
         and "100" in str_config
         and "Solver Options" in str_config
     )
+    assert "General noise distribution", "General noise operators"
     with pytest.raises(ValueError, match="is not a valid noise type."):
         SimConfig(noise="bad_noise")
     with pytest.raises(ValueError, match="Temperature field"):
@@ -88,9 +98,7 @@ def test_init(matrices):
             gen_noise_opers=[matrices["ket"]],
             gen_noise_probs=[1.0],
         )
-    with pytest.raises(
-        NotImplementedError, match="Operator's shape"
-    ):
+    with pytest.raises(NotImplementedError, match="Operator's shape"):
         SimConfig(
             noise=("gen_noise"),
             gen_noise_opers=[matrices["I3"]],
@@ -104,9 +112,7 @@ def test_init(matrices):
             gen_noise_opers=[matrices["X"], matrices["I"]],
             gen_noise_probs=[0.5, 0.5],
         )
-    with pytest.raises(
-        ValueError, match="The completeness relation is not"
-    ):
+    with pytest.raises(ValueError, match="The completeness relation is not"):
         SimConfig(
             noise=("gen_noise"),
             gen_noise_opers=[matrices["I"], matrices["Zh"]],
