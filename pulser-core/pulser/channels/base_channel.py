@@ -19,7 +19,7 @@ import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from sys import version_info
-from typing import Any, Optional, cast
+from typing import Any, Optional, Type, TypeVar, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -43,6 +43,8 @@ else:  # pragma: no cover
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
+
+ChannelType = TypeVar("ChannelType", bound="Channel")
 
 
 @dataclass(init=True, repr=False, frozen=True)  # type: ignore[misc]
@@ -224,14 +226,14 @@ class Channel(ABC):
 
     @classmethod
     def Local(
-        cls,
+        cls: Type[ChannelType],
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
         min_retarget_interval: int = 0,
         fixed_retarget_t: int = 0,
         max_targets: Optional[int] = None,
         **kwargs: Any,
-    ) -> Channel:
+    ) -> ChannelType:
         """Initializes the channel with local addressing.
 
         Args:
@@ -267,11 +269,11 @@ class Channel(ABC):
 
     @classmethod
     def Global(
-        cls,
+        cls: Type[ChannelType],
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
         **kwargs: Any,
-    ) -> Channel:
+    ) -> ChannelType:
         """Initializes the channel with global addressing.
 
         Args:
