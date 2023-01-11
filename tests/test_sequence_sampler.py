@@ -188,7 +188,8 @@ def test_modulation_local(mod_device):
         np.testing.assert_array_equal(getattr(out_ch_samples, qty), combined)
 
 
-def test_eom_modulation(mod_device):
+@pytest.mark.parametrize("disable_eom", [True, False])
+def test_eom_modulation(mod_device, disable_eom):
     seq = pulser.Sequence(pulser.Register.square(2), mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.enable_eom_mode("ch0", amp_on=1, detuning_on=0.0)
@@ -196,12 +197,18 @@ def test_eom_modulation(mod_device):
     seq.delay(200, "ch0")
     seq.add_eom_pulse("ch0", 100, 0.0)
     end_of_eom = seq.get_duration()
-    seq.disable_eom_mode("ch0")
-    seq.add(Pulse.ConstantPulse(500, 1, 0, 0), "ch0")
+    if disable_eom:
+        seq.disable_eom_mode("ch0")
+        seq.add(Pulse.ConstantPulse(500, 1, 0, 0), "ch0")
 
     full_duration = seq.get_duration(include_fall_time=True)
     eom_mask = np.zeros(full_duration, dtype=bool)
     eom_mask[:end_of_eom] = True
+    ext_eom_mask = np.zeros_like(eom_mask)
+    eom_config = seq.declared_channels["ch0"].eom_config
+    ext_eom_mask[end_of_eom : end_of_eom + 2 * eom_config.rise_time] = True
+
+    det_off = seq._schedule["ch0"].eom_blocks[-1].detuning_off
 
     input_samples = sample(
         seq, extended_duration=full_duration
@@ -210,13 +217,23 @@ def test_eom_modulation(mod_device):
     chan = seq.declared_channels["ch0"]
     for qty in ("amp", "det"):
         samples = getattr(input_samples, qty)
-        eom_input = samples.copy()
-        eom_input[~eom_mask] = 0.0
-        eom_output = chan.modulate(eom_input, eom=True)[:full_duration]
         aom_input = samples.copy()
-        aom_input[eom_mask] = 0.0
+        aom_input[eom_mask] = det_off if qty == "det" else 0.0
         aom_output = chan.modulate(aom_input, eom=False)[:full_duration]
-        np.testing.assert_array_equal(eom_input + aom_input, samples)
+
+        eom_input = samples.copy()
+        eom_input[ext_eom_mask] = aom_output[ext_eom_mask]
+        if qty == "det":
+            if not disable_eom:
+                eom_input[end_of_eom:] = det_off
+            eom_input = np.insert(eom_input, 0, det_off)
+            eom_output = chan.modulate(eom_input, eom=True, keep_ends=True)[1:]
+        else:
+            eom_output = chan.modulate(eom_input, eom=True)
+        eom_output = eom_output[:full_duration]
+
+        aom_output[eom_mask + ext_eom_mask] = 0.0
+        eom_output[~(eom_mask + ext_eom_mask)] = 0.0
 
         want = eom_output + aom_output
 
@@ -225,7 +242,7 @@ def test_eom_modulation(mod_device):
         alt_got = getattr(input_samples.modulate(chan, full_duration), qty)
         np.testing.assert_array_equal(got, alt_got)
 
-        np.testing.assert_array_equal(want, got)
+        np.testing.assert_allclose(want, got, atol=1e-10)
 
 
 @pytest.fixture
@@ -312,6 +329,46 @@ def test_extend_duration(seq_rydberg):
             old_qty_samples[-1] if qty == "phase" else 0.0,
         )
     assert extended_short.slots == short.slots
+
+
+def test_phase_sampling(mod_device):
+    reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
+    seq = pulser.Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_global")
+
+    dt = 100
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=1), "ch0")
+    # With 'no-delay', the jump should in between the two pulses
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=2), "ch0", protocol="no-delay")
+    # With the standard protocol, there shoud be a delay added and then
+    # phase jump time is accounted for
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=3), "ch0")
+    pulse3_start = seq.get_duration() - dt
+    # Detuned delay (its phase should be ignored)
+    seq.add(
+        Pulse.ConstantPulse(1000, 0, 1, phase=0), "ch0", protocol="no-delay"
+    )
+    end_of_detuned_delay = seq.get_duration()
+    # phase jump time happens during the detuned delay
+    seq.add(Pulse.ConstantPulse(dt, 1, 0, phase=4), "ch0")
+    full_duration = seq.get_duration()
+    # Nothing was added between the detuned delay and pulse4
+    assert end_of_detuned_delay == full_duration - dt
+
+    ph_jump_time = seq.declared_channels["ch0"].phase_jump_time
+    assert ph_jump_time > 0
+    expected_phase = np.zeros(full_duration)
+    expected_phase[:dt] = 1.0
+    transition2_3 = pulse3_start - ph_jump_time
+    assert transition2_3 >= 2 * dt  # = End of pulse2
+    expected_phase[dt:transition2_3] = 2.0
+    # The detuned delay is ignored
+    transition3_4 = full_duration - dt - ph_jump_time
+    expected_phase[transition2_3:transition3_4] = 3.0
+    expected_phase[transition3_4:] = 4.0
+
+    got_phase = sample(seq).channel_samples["ch0"].phase
+    np.testing.assert_array_equal(expected_phase, got_phase)
 
 
 # Fixtures
