@@ -217,12 +217,18 @@ class ChannelSamples:
                 modulated_std = channel_obj.modulate(std_samples[key])
                 std = masked(modulated_std, ~eom_mask)
 
-                # At the end of an EOM block, the detuning is ramping back to
-                # detuning off by the EOM while detuning is being ramped down
-                # This equates to a ramp back to a modified detuning value,
-                # so we subsitute the detuning at the end of each block by the
-                # standard modulated detuning during the transition period
-                # Finally, the modified EOM samples are modulated
+                # At the end of an EOM block, the EOM(s) are switched back
+                # to the OFF configuration, so the detuning should go quickly
+                # back to `detuning_off`.
+                # However, the applied detuning and the lightshift are
+                # simultaneously being ramped to zero, so the fast ramp doesn't
+                # reach `detuning_off` but rather a modified detuning value
+                # (closer to zero). Then, the detuning goes slowly
+                # to zero (as dictacted by the standard modulation bandwidth).
+                # To mimick this effect, we substitute the detuning at the end
+                # of each block by the standard modulated detuning during the
+                # transition period, so the EOM modulation is superimposed on
+                # the standard modulation
                 if key == "det":
                     samples_ = eom_samples[key]
                     samples_[eom_mask_ext] = modulated_std[
@@ -237,6 +243,7 @@ class ChannelSamples:
                             0,
                             self.eom_blocks[0].detuning_off,
                         )
+                    # Finally, the modified EOM samples are modulated
                     modulated_eom = channel_obj.modulate(
                         samples_, eom=True, keep_ends=True
                     )[(1 if eom_mask[0] else 0) :]
