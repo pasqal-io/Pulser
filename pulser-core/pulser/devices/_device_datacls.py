@@ -503,17 +503,9 @@ class Device(BaseDevice):
         """Register layouts already calibrated on this device."""
         return {str(layout): layout for layout in self.pre_calibrated_layouts}
 
-    def to_virtual(
-        self, reusable_channels_to_virtual: bool = False
-    ) -> VirtualDevice:
-        """Converts the Device into a VirtualDevice.
-
-        Args:
-            reusable_channels_to_virtual: Sets the value of reusable_channels
-                in the VirtualDevice
-        """
+    def to_virtual(self) -> VirtualDevice:
+        """Converts the Device into a VirtualDevice."""
         params = self._params()
-        params["reusable_channels"] = reusable_channels_to_virtual
         all_params_names = set(params)
         target_params_names = {f.name for f in fields(VirtualDevice)}
         for param in all_params_names - target_params_names:

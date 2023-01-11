@@ -28,7 +28,7 @@ def seq_to_str(sequence: Sequence) -> str:
     pulse_line = "t: {}->{} | {} | Targets: {}\n"
     target_line = "t: {}->{} | Target: {} | Phase Reference: {}\n"
     delay_line = "t: {}->{} | Delay \n"
-    eom_delay_line = "t: {}->{} | EOM Delay | Detuning: {:.3g} rad/µs\n"
+    det_delay_line = "t: {}->{} | Detuned Delay | Detuning: {:.3g} rad/µs\n"
     for ch, seq in sequence._schedule.items():
         basis = sequence.declared_channels[ch].basis
         full += f"Channel: {ch}\n"
@@ -46,9 +46,9 @@ def seq_to_str(sequence: Sequence) -> str:
                 )
             tgt_txt = ", ".join(map(str, tgts))
             if isinstance(ts.type, Pulse):
-                if seq.is_eom_delay(ts):
+                if seq.is_detuned_delay(ts.type):
                     det = ts.type.detuning[0]
-                    full += eom_delay_line.format(ts.ti, ts.tf, det)
+                    full += det_delay_line.format(ts.ti, ts.tf, det)
                 else:
                     full += pulse_line.format(ts.ti, ts.tf, ts.type, tgt_txt)
             elif ts.type == "target":
