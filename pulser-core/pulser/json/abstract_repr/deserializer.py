@@ -294,12 +294,17 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     device_cls: Type[Device] | Type[VirtualDevice] = (
         VirtualDevice if obj["is_virtual"] else Device
     )
-    _channels = tuple(
-        (ch["id"], _deserialize_channel(ch)) for ch in obj["channels"]
+    ch_ids = []
+    ch_objs = []
+    for ch in obj["channels"]:
+        ch_ids.append(ch["id"])
+        ch_objs.append(_deserialize_channel(ch))
+    params: dict[str, Any] = dict(
+        channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
-    params: dict[str, Any] = {"_channels": _channels}
+    ex_params = ("_channels", "channel_objects", "channel_ids")
     for param in dataclasses.fields(device_cls):
-        if not param.init or param.name == "_channels":
+        if not param.init or param.name in ex_params:
             continue
         if param.name == "pre_calibrated_layouts":
             key = "pre_calibrated_layouts"

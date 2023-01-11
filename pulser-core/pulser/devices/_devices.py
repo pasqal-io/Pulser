@@ -26,42 +26,33 @@ Chadoq2 = Device(
     max_radial_distance=50,
     min_atom_distance=4,
     supports_slm_mask=True,
-    _channels=(
-        (
-            "rydberg_global",
-            Rydberg.Global(
-                max_abs_detuning=2 * np.pi * 20,
-                max_amp=2 * np.pi * 2.5,
-                clock_period=4,
-                min_duration=16,
-                max_duration=2**26,
-            ),
+    channel_objects=(
+        Rydberg.Global(
+            max_abs_detuning=2 * np.pi * 20,
+            max_amp=2 * np.pi * 2.5,
+            clock_period=4,
+            min_duration=16,
+            max_duration=2**26,
         ),
-        (
-            "rydberg_local",
-            Rydberg.Local(
-                max_abs_detuning=2 * np.pi * 20,
-                max_amp=2 * np.pi * 10,
-                min_retarget_interval=220,
-                fixed_retarget_t=0,
-                max_targets=1,
-                clock_period=4,
-                min_duration=16,
-                max_duration=2**26,
-            ),
+        Rydberg.Local(
+            max_abs_detuning=2 * np.pi * 20,
+            max_amp=2 * np.pi * 10,
+            min_retarget_interval=220,
+            fixed_retarget_t=0,
+            max_targets=1,
+            clock_period=4,
+            min_duration=16,
+            max_duration=2**26,
         ),
-        (
-            "raman_local",
-            Raman.Local(
-                max_abs_detuning=2 * np.pi * 20,
-                max_amp=2 * np.pi * 10,
-                min_retarget_interval=220,
-                fixed_retarget_t=0,
-                max_targets=1,
-                clock_period=4,
-                min_duration=16,
-                max_duration=2**26,
-            ),
+        Raman.Local(
+            max_abs_detuning=2 * np.pi * 20,
+            max_amp=2 * np.pi * 10,
+            min_retarget_interval=220,
+            fixed_retarget_t=0,
+            max_targets=1,
+            clock_period=4,
+            min_duration=16,
+            max_duration=2**26,
         ),
     ),
 )
@@ -73,23 +64,20 @@ IroiseMVP = Device(
     max_atom_num=100,
     max_radial_distance=60,
     min_atom_distance=5,
-    _channels=(
-        (
-            "rydberg_global",
-            Rydberg.Global(
-                max_abs_detuning=2 * np.pi * 4,
-                max_amp=2 * np.pi * 3,
-                clock_period=4,
-                min_duration=16,
-                max_duration=2**26,
-                mod_bandwidth=4,
-                eom_config=RydbergEOM(
-                    limiting_beam=RydbergBeam.RED,
-                    max_limiting_amp=40 * 2 * np.pi,
-                    intermediate_detuning=700 * 2 * np.pi,
-                    mod_bandwidth=24,
-                    controlled_beams=(RydbergBeam.BLUE,),
-                ),
+    channel_objects=(
+        Rydberg.Global(
+            max_abs_detuning=2 * np.pi * 4,
+            max_amp=2 * np.pi * 3,
+            clock_period=4,
+            min_duration=16,
+            max_duration=2**26,
+            mod_bandwidth=4,
+            eom_config=RydbergEOM(
+                limiting_beam=RydbergBeam.RED,
+                max_limiting_amp=40 * 2 * np.pi,
+                intermediate_detuning=700 * 2 * np.pi,
+                mod_bandwidth=24,
+                controlled_beams=(RydbergBeam.BLUE,),
             ),
         ),
     ),

@@ -488,6 +488,10 @@ class Channel(ABC):
         config += f", Basis: '{self.basis}')"
         return self.name + config
 
+    def default_id(self) -> str:
+        """Generates the default ID for indexing this channel in a Device."""
+        return f"{self.name.lower()}_{self.addressing.lower()}"
+
     def _to_dict(self) -> dict[str, Any]:
         params = {
             f.name: getattr(self, f.name) for f in fields(self) if f.init
