@@ -24,11 +24,11 @@ MockDevice = VirtualDevice(
     min_atom_distance=0.0,
     interaction_coeff_xy=3700.0,
     supports_slm_mask=True,
-    _channels=(
-        ("rydberg_global", Rydberg.Global(None, None, max_duration=None)),
-        ("rydberg_local", Rydberg.Local(None, None, max_duration=None)),
-        ("raman_global", Raman.Global(None, None, max_duration=None)),
-        ("raman_local", Raman.Local(None, None, max_duration=None)),
-        ("mw_global", Microwave.Global(None, None, max_duration=None)),
+    channel_objects=(
+        Rydberg.Global(None, None, max_duration=None),
+        Rydberg.Local(None, None, max_duration=None),
+        Raman.Global(None, None, max_duration=None),
+        Raman.Local(None, None, max_duration=None),
+        Microwave.Global(None, None, max_duration=None),
     ),
 )
