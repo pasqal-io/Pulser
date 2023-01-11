@@ -433,9 +433,9 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
         ex_params = ("_channels", "channel_objects", "channel_ids")
-        params = {
-            k: v for k, v in self._params().items() if k not in ex_params
-        }
+        params = self._params()
+        for p in ex_params:
+            params.pop(p, None)
         ch_list = []
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
