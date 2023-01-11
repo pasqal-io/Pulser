@@ -78,3 +78,7 @@ class Microwave(Channel):
     def basis(self) -> Literal["XY"]:
         """The addressed basis name."""
         return "XY"
+
+    def default_id(self) -> str:
+        """Generates the default ID for indexing this channel in a Device."""
+        return f"mw_{self.addressing.lower()}"
