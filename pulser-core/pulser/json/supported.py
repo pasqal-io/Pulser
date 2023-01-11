@@ -73,7 +73,7 @@ SUPPORTED_MODULES = {
         [dev.name for dev in devices._valid_devices] + ["VirtualDevice"]
     ),
     "pulser.channels": ("Rydberg", "Raman", "Microwave"),
-    "pulser.channels.eom": ("RydbergEOM", "RydbergBeam"),
+    "pulser.channels.eom": ("BaseEOM", "RydbergEOM", "RydbergBeam"),
     "pulser.pulse": ("Pulse",),
     "pulser.waveforms": (
         "CompositeWaveform",
