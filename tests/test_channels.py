@@ -107,9 +107,9 @@ def test_virtual_channel(max_amp, max_abs_detuning, max_duration, max_targets):
 def test_device_channels():
     for dev in pulser.devices._valid_devices:
         for i, (id, ch) in enumerate(dev.channels.items()):
-            assert id == dev._channels[i][0]
+            assert id == dev.channel_ids[i]
             assert isinstance(id, str)
-            assert ch == dev._channels[i][1]
+            assert ch == dev.channel_objects[i]
             assert isinstance(ch, pulser.channels.channels.Channel)
             assert ch.name in ["Rydberg", "Raman"]
             assert ch.basis in ["digital", "ground-rydberg"]
