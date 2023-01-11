@@ -504,7 +504,7 @@ class Device(BaseDevice):
         return {str(layout): layout for layout in self.pre_calibrated_layouts}
 
     def to_virtual(
-        self, reusable_channels_to_virtual: bool = True
+        self, reusable_channels_to_virtual: bool = False
     ) -> VirtualDevice:
         """Converts the Device into a VirtualDevice.
 
