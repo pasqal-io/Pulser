@@ -716,7 +716,8 @@ class Sequence:
 
         Note:
             Enabling the EOM mode will automatically enforce a buffer time from
-            the last pulse on the chose channel.
+            the last pulse on the chosen channel. The detuning will go to the
+            `detuning_off` value during this buffer.
 
         Args:
             channel: The name of the channel to put in EOM mode.
@@ -781,8 +782,8 @@ class Sequence:
         (through `Sequence.add_eom_pulse()`) or delays.
 
         Note:
-            Disable the EOM mode will automatically enforce a buffer time from
-            the moment it is turned off.
+            Disabling the EOM mode will automatically enforce a buffer time
+            from the moment it is turned off.
 
         Args:
             channel: The name of the channel to take out of EOM mode.

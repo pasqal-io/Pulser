@@ -669,7 +669,7 @@ def test_str(mod_device):
         "| Phase Reference: 0.0 "
         "\nt: 0->100 | Pulse(Amp=2 rad/µs, Detuning=0 rad/µs, Phase=0) "
         f"| Targets: {targets}"
-        "\nt: 100->600 | EOM Delay | Detuning: -1 rad/µs"
+        "\nt: 100->600 | Detuned Delay | Detuning: -1 rad/µs"
     )
 
     measure_msg = "\n\nMeasured in basis: digital"
@@ -1285,10 +1285,11 @@ def test_eom_mode(mod_device):
 
     with pytest.raises(RuntimeError, match="There is no slot with a pulse."):
         # The EOM delay slot (which is a pulse slot) is ignored
-        seq._schedule["ch0"].last_pulse_slot()
+        seq._schedule["ch0"].last_pulse_slot(ignore_detuned_delay=True)
 
     delay_slot = seq._schedule["ch0"][-1]
-    assert seq._schedule["ch0"].is_eom_delay(delay_slot)
+    assert seq._schedule["ch0"].in_eom_mode(delay_slot)
+    assert seq._schedule["ch0"].is_detuned_delay(delay_slot.type)
     assert delay_slot.ti == 0
     assert delay_slot.tf == delay_duration
     assert delay_slot.type == Pulse.ConstantPulse(
@@ -1302,11 +1303,11 @@ def test_eom_mode(mod_device):
     pulse_duration = 100
     seq.add_eom_pulse("ch0", pulse_duration, phase=0.0)
     first_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
-    assert not seq._schedule["ch0"].is_eom_delay(first_pulse_slot)
     assert first_pulse_slot.ti == delay_slot.tf
     assert first_pulse_slot.tf == first_pulse_slot.ti + pulse_duration
     eom_pulse = Pulse.ConstantPulse(pulse_duration, amp_on, detuning_on, 0.0)
     assert first_pulse_slot.type == eom_pulse
+    assert not seq._schedule["ch0"].is_detuned_delay(eom_pulse)
 
     # Check phase jump buffer
     seq.add_eom_pulse("ch0", pulse_duration, phase=np.pi)
@@ -1343,3 +1344,16 @@ def test_eom_mode(mod_device):
     assert buffer_delay.ti == last_pulse_slot.tf
     assert buffer_delay.tf == buffer_delay.ti + eom_pulse.fall_time(ch0_obj)
     assert buffer_delay.type == "delay"
+
+    # Check buffer when EOM is not enabled at the start of the sequence
+    seq.enable_eom_mode("ch0", amp_on, detuning_on, optimal_detuning_off=-100)
+    last_slot = seq._schedule["ch0"][-1]
+    assert len(seq._schedule["ch0"].eom_blocks) == 2
+    new_eom_block = seq._schedule["ch0"].eom_blocks[1]
+    assert new_eom_block.detuning_off != 0
+    assert last_slot.ti == buffer_delay.tf  # Nothing else was added
+    duration = last_slot.tf - last_slot.ti
+    # The buffer is a Pulse at 'detuning_off' and zero amplitude
+    assert last_slot.type == Pulse.ConstantPulse(
+        duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
+    )
