@@ -58,9 +58,8 @@ class SimConfig:
             - "dephasing": Random phase (Z) flip
             - "depolarizing": model of decohering where the qubit undergoes a
               bit-flip error, phase-flip error or both errors.
-            - "gen_noise": general model of noise channels where the qubit
-            undergoes a modification according to the specified noise
-            operators, it encapsulates dephasing and depolarizing channels.
+            - "gen_noise": general noise channel through which we can custom
+            variety of operator-based noise channels.
             - "doppler": Local atom detuning due to finite speed of the
               atoms and Doppler effect with respect to laser frequency
             - "amplitude": Gaussian damping due to finite laser waist
