@@ -1070,7 +1070,7 @@ def test_mappable_register():
     assert seq.is_register_mappable()
     init_call = seq._calls[0]
     assert init_call.name == "__init__"
-    assert isinstance(init_call.args[0], MappableRegister)
+    assert isinstance(init_call.kwargs["register"], MappableRegister)
     assert not seq_.is_register_mappable()
     assert seq_.register == Register(
         {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}

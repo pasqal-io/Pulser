@@ -492,7 +492,7 @@ class Channel(ABC):
         """Generates the default ID for indexing this channel in a Device."""
         return f"{self.name.lower()}_{self.addressing.lower()}"
 
-    def _to_dict(self, _module="pulser.channels") -> dict[str, Any]:
+    def _to_dict(self, _module: str = "pulser.channels") -> dict[str, Any]:
         params = {
             f.name: getattr(self, f.name) for f in fields(self) if f.init
         }
