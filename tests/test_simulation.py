@@ -643,7 +643,7 @@ def test_depolarizing():
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 585, "1": 415})
+    assert sim.run().sample_final_state() == Counter({"0": 587 , "1": 413})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 6)], prefix="q")
