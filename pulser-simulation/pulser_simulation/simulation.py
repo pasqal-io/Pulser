@@ -209,7 +209,7 @@ class Simulation:
                 )
             # Probability of phase (Z) flip:
             # First order in prob
-            prob = self.config.dephasing_prob
+            prob = self.config.dephasing_prob / 2
             n = self._size
             if prob > 0.1 and n > 1:
                 warnings.warn(
@@ -243,19 +243,19 @@ class Simulation:
 
             # Probability of error occurrence
 
-            prob = self.config.depolarizing_prob
+            prob = self.config.depolarizing_prob / 4
             n = self._size
             if prob > 0.1 and n > 1:
                 warnings.warn(
                     "The depolarizing model is a first-order approximation"
-                    f" in the depolarizing probability. p = {2*prob}"
+                    f" in the depolarizing probability. p = {4*prob}"
                     " is too large for realistic results.",
                     stacklevel=2,
                 )
 
-            k = np.sqrt((prob / 3) * (1 - prob) ** (n - 1))
+            k = np.sqrt((prob) * (1 - prob) ** (n - 1))
             self._collapse_ops = [
-                np.sqrt((1 - prob) ** n)
+                np.sqrt((1 - 3 * prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
             self._collapse_ops += [
@@ -303,7 +303,7 @@ class Simulation:
                         warnings.warn(
                             "The general noise model is a first-order"
                             " approximation in the noise probability."
-                            f"p={2*prob_i} is large for realistic results.",
+                            f"p={prob_i} is large for realistic results.",
                             stacklevel=2,
                         )
                         break
