@@ -365,6 +365,20 @@ def test_convert_to_virtual():
     )
 
 
+def test_device_params():
+    all_params = Chadoq2._params()
+    init_params = Chadoq2._params(init_only=True)
+    assert set(all_params) - set(init_params) == {"reusable_channels"}
+
+    virtual_chadoq2 = Chadoq2.to_virtual()
+    all_virtual_params = virtual_chadoq2._params()
+    init_virtual_params = virtual_chadoq2._params(init_only=True)
+    assert all_virtual_params == init_virtual_params
+    assert set(all_params) - set(all_virtual_params) == {
+        "pre_calibrated_layouts"
+    }
+
+
 @pytest.mark.parametrize(
     "conflict_param, conflict_value",
     [("channel_objects", Rydberg.Global(0, 20)), ("channel_ids", "custom_id")],

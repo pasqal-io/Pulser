@@ -91,10 +91,7 @@ class Channel(ABC):
     @property
     def name(self) -> str:
         """The name of the channel."""
-        _name = type(self).__name__
-        options = self._internal_param_valid_options["name"]
-        assert _name, f"The channel must be one of {options}, not {_name}."
-        return _name
+        return type(self).__name__
 
     @property
     @abstractmethod
