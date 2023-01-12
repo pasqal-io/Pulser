@@ -62,10 +62,12 @@ class _ChannelSchedule:
                 return slot.tf
         return 0  # pragma: no cover
 
-    def last_pulse_slot(self) -> _TimeSlot:
+    def last_pulse_slot(self, ignore_detuned_delay: bool = False) -> _TimeSlot:
         """The last slot with a Pulse."""
         for slot in self.slots[::-1]:
-            if isinstance(slot.type, Pulse) and not self.is_eom_delay(slot):
+            if isinstance(slot.type, Pulse) and not (
+                ignore_detuned_delay and self.is_detuned_delay(slot.type)
+            ):
                 return slot
         raise RuntimeError("There is no slot with a pulse.")
 
@@ -78,13 +80,14 @@ class _ChannelSchedule:
             for start, end in self.get_eom_mode_intervals()
         )
 
-    def is_eom_delay(self, slot: _TimeSlot) -> bool:
-        """Tells if a pulse slot is actually an EOM delay."""
+    @staticmethod
+    def is_detuned_delay(pulse: Pulse) -> bool:
+        """Tells if a pulse is actually a delay with a constant detuning."""
         return (
-            self.in_eom_mode(time_slot=slot)
-            and isinstance(slot.type, Pulse)
-            and isinstance(slot.type.amplitude, ConstantWaveform)
-            and slot.type.amplitude[0] == 0.0
+            isinstance(pulse, Pulse)
+            and isinstance(pulse.amplitude, ConstantWaveform)
+            and pulse.amplitude[0] == 0.0
+            and isinstance(pulse.detuning, ConstantWaveform)
         )
 
     def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
@@ -138,14 +141,7 @@ class _ChannelSchedule:
             pulse = cast(Pulse, s.type)
             amp[s.ti : s.tf] += pulse.amplitude.samples
             det[s.ti : s.tf] += pulse.detuning.samples
-            ph_jump_t = self.channel_obj.phase_jump_time
-            t_start = s.ti - ph_jump_t if ind > 0 else 0
-            t_end = (
-                channel_slots[ind + 1].ti - ph_jump_t
-                if ind < len(channel_slots) - 1
-                else dt
-            )
-            phase[t_start:t_end] += pulse.phase
+
             tf = s.tf
             # Account for the extended duration of the pulses
             # after modulation, which is at most fall_time
@@ -157,14 +153,30 @@ class _ChannelSchedule:
                 if ind < len(channel_slots) - 1
                 else fall_time
             )
-
             slots.append(_TargetSlot(s.ti, tf, s.targets))
 
-        ch_samples = ChannelSamples(
-            amp, det, phase, slots, self.get_eom_mode_intervals()
-        )
+            # The phase of detuned delays is not considered
+            if self.is_detuned_delay(pulse):
+                continue
 
-        return ch_samples
+            ph_jump_t = self.channel_obj.phase_jump_time
+            for last_pulse_ind in range(ind - 1, -1, -1):  # From ind-1 to 0
+                last_pulse_slot = channel_slots[last_pulse_ind]
+                # Skips over detuned delay pulses
+                if not self.is_detuned_delay(
+                    cast(Pulse, last_pulse_slot.type)
+                ):
+                    # Accounts for when pulse is added with 'no-delay'
+                    # i.e. there is no phase_jump_time in between a phase jump
+                    t_start = max(s.ti - ph_jump_t, last_pulse_slot.tf)
+                    break
+            else:
+                t_start = 0
+            # Overrides all values from t_start on. The next pulses will do
+            # the same, so the last phase is automatically kept till the endm
+            phase[t_start:] = pulse.phase
+
+        return ChannelSamples(amp, det, phase, slots, self.eom_blocks)
 
     @overload
     def __getitem__(self, key: int) -> _TimeSlot:
@@ -233,7 +245,20 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             # Account for time needed to ramp to desired amplitude
             # By definition, rise_time goes from 10% to 90%
             # Roughly 2*rise_time is enough to go from 0% to 100%
-            self.add_delay(2 * channel_obj.rise_time, channel_id)
+            if detuning_off != 0:
+                self.add_pulse(
+                    Pulse.ConstantPulse(
+                        2 * channel_obj.rise_time,
+                        0.0,
+                        detuning_off,
+                        self._get_last_pulse_phase(channel_id),
+                    ),
+                    channel_id,
+                    phase_barrier_ts=[0],
+                    protocol="no-delay",
+                )
+            else:
+                self.add_delay(2 * channel_obj.rise_time, channel_id)
 
         # Set up the EOM
         eom_settings = _EOMSettings(
@@ -268,7 +293,9 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             )
             try:
                 # Gets the last pulse on the channel
-                last_pulse_slot = self[channel].last_pulse_slot()
+                last_pulse_slot = self[channel].last_pulse_slot(
+                    ignore_detuned_delay=True
+                )
                 last_pulse = cast(Pulse, last_pulse_slot.type)
                 # Checks if the current pulse changes the phase
                 if last_pulse.phase != pulse.phase:
@@ -304,11 +331,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             self[channel].in_eom_mode()
             and self[channel].eom_blocks[-1].detuning_off != 0
         ):
-            try:
-                last_pulse = cast(Pulse, self[channel].last_pulse_slot().type)
-                phase = last_pulse.phase
-            except RuntimeError:
-                phase = 0.0
+            phase = self._get_last_pulse_phase(channel)
             delay_pulse = Pulse.ConstantPulse(
                 tf - ti, 0.0, self[channel].eom_blocks[-1].detuning_off, phase
             )
@@ -385,3 +408,11 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     break
 
         return current_max_t
+
+    def _get_last_pulse_phase(self, channel: str) -> float:
+        try:
+            last_pulse = cast(Pulse, self[channel].last_pulse_slot().type)
+            phase = last_pulse.phase
+        except RuntimeError:
+            phase = 0.0
+        return phase

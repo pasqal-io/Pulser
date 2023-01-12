@@ -3,12 +3,16 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, cast
 
 import numpy as np
 
 from pulser.channels.base_channel import Channel
+from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
+
+if TYPE_CHECKING:
+    from pulser.sequence._schedule import _EOMSettings
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
@@ -86,8 +90,7 @@ class ChannelSamples:
     det: np.ndarray
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
-    # (t_start, t_end) of each EOM mode block
-    eom_intervals: list[tuple[int, int]] = field(default_factory=list)
+    eom_blocks: list[_EOMSettings] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -116,7 +119,17 @@ class ChannelSamples:
             raise ValueError("Can't extend samples to a lower duration.")
 
         new_amp = np.pad(self.amp, (0, extension))
-        new_detuning = np.pad(self.det, (0, extension))
+        # When in EOM mode, we need to keep the detuning at detuning_off
+        if self.eom_blocks and self.eom_blocks[-1].tf is None:
+            final_detuning = self.eom_blocks[-1].detuning_off
+        else:
+            final_detuning = 0.0
+        new_detuning = np.pad(
+            self.det,
+            (0, extension),
+            constant_values=(final_detuning,),
+            mode="constant",
+        )
         new_phase = np.pad(
             self.phase,
             (0, extension),
@@ -153,29 +166,103 @@ class ChannelSamples:
 
         def masked(samples: np.ndarray, mask: np.ndarray) -> np.ndarray:
             new_samples = samples.copy()
+            # Extend the mask to fit the size of the samples
+            mask = np.pad(mask, (0, len(new_samples) - len(mask)), mode="edge")
             new_samples[~mask] = 0
             return new_samples
 
         new_samples: dict[str, np.ndarray] = {}
 
-        if self.eom_intervals:
+        std_samples = {
+            key: getattr(self, key).copy() for key in ("amp", "det")
+        }
+        eom_samples = {
+            key: getattr(self, key).copy() for key in ("amp", "det")
+        }
+
+        if self.eom_blocks:
+            # Note: self.duration already includes the fall time
             eom_mask = np.zeros(self.duration, dtype=bool)
-            for start, end in self.eom_intervals:
-                end = min(end, self.duration)  # This is defensive
-                eom_mask[np.arange(start, end)] = True
+            # Extension of the EOM mask outside of the EOM interval
+            eom_mask_ext = eom_mask.copy()
+            eom_fall_time = 2 * cast(BaseEOM, channel_obj.eom_config).rise_time
+            for block in self.eom_blocks:
+                # If block.tf is None, uses the full duration as the tf
+                end = block.tf or self.duration
+                eom_mask[block.ti : end] = True
+                std_samples["amp"][block.ti : end] = 0
+                # For modulation purposes, the detuning on the standard
+                # samples is kept at 'detuning_off', which permits a smooth
+                # transition to/from the EOM modulated samples
+                std_samples["det"][block.ti : end] = block.detuning_off
+                # Extends EOM masks to include fall time
+                ext_end = end + eom_fall_time
+                eom_mask_ext[end:ext_end] = True
+
+            # We need 'eom_mask_ext' on its own, but we can already add it
+            # to the 'eom_mask'
+            eom_mask = eom_mask + eom_mask_ext
+
+            if block.tf is None:
+                # The sequence finishes in EOM mode, so 'end' was already
+                # including the fall time (unlike when it is disabled).
+                # For modulation, we make the detuning during the last
+                # fall time to be kept at 'detuning_off'
+                eom_samples["det"][-eom_fall_time:] = block.detuning_off
 
             for key in ("amp", "det"):
-                samples = getattr(self, key)
-                std = channel_obj.modulate(masked(samples, ~eom_mask))
-                eom = channel_obj.modulate(masked(samples, eom_mask), eom=True)
+                # First, we modulated the pre-filtered standard samples, then
+                # we mask them to include only the parts outside the EOM mask
+                # This ensures smooth transitions between EOM and STD samples
+                modulated_std = channel_obj.modulate(std_samples[key])
+                std = masked(modulated_std, ~eom_mask)
+
+                # At the end of an EOM block, the EOM(s) are switched back
+                # to the OFF configuration, so the detuning should go quickly
+                # back to `detuning_off`.
+                # However, the applied detuning and the lightshift are
+                # simultaneously being ramped to zero, so the fast ramp doesn't
+                # reach `detuning_off` but rather a modified detuning value
+                # (closer to zero). Then, the detuning goes slowly
+                # to zero (as dictacted by the standard modulation bandwidth).
+                # To mimick this effect, we substitute the detuning at the end
+                # of each block by the standard modulated detuning during the
+                # transition period, so the EOM modulation is superimposed on
+                # the standard modulation
+                if key == "det":
+                    samples_ = eom_samples[key]
+                    samples_[eom_mask_ext] = modulated_std[
+                        : len(eom_mask_ext)
+                    ][eom_mask_ext]
+                    # Starts out in EOM mode, so we prepend 'detuning_off'
+                    # such that the modulation starts off from that value
+                    # We then remove the extra value after modulation
+                    if eom_mask[0]:
+                        samples_ = np.insert(
+                            samples_,
+                            0,
+                            self.eom_blocks[0].detuning_off,
+                        )
+                    # Finally, the modified EOM samples are modulated
+                    modulated_eom = channel_obj.modulate(
+                        samples_, eom=True, keep_ends=True
+                    )[(1 if eom_mask[0] else 0) :]
+                else:
+                    modulated_eom = channel_obj.modulate(
+                        eom_samples[key], eom=True
+                    )
+
+                # filtered to include only the parts inside the EOM mask
+                eom = masked(modulated_eom, eom_mask)
+
+                # 'std' and 'eom' are then summed, but before the shortest
+                # array is extended so that they are of the same length
                 sample_arrs = [std, eom]
                 sample_arrs.sort(key=len)
                 # Extend shortest array to match the longest
-                sample_arrs[0] = np.concatenate(
-                    (
-                        sample_arrs[0],
-                        np.zeros(sample_arrs[1].size - sample_arrs[0].size),
-                    )
+                sample_arrs[0] = np.pad(
+                    sample_arrs[0],
+                    (0, sample_arrs[1].size - sample_arrs[0].size),
                 )
                 new_samples[key] = sample_arrs[0] + sample_arrs[1]
 
