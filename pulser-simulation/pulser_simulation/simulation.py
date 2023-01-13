@@ -301,7 +301,7 @@ class Simulation:
                     prob_i = self.config.gen_noise_probs[i]
                     if prob_i > 0.1:
                         warnings.warn(
-                            "The general noise model is a first-order"
+                            "The effective noise model is a first-order"
                             " approximation in the noise probability."
                             f"p={prob_i} is large for realistic results.",
                             stacklevel=2,
