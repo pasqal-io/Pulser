@@ -118,7 +118,7 @@ class SimConfig:
             raise ValueError(
                 f"The operators list length ({len(self.gen_noise_opers)}) "
                 f"and probabilities list length ({len(self.gen_noise_probs)})"
-                "are supposed to be equal."
+                "must be equal."
             )
         self._process_temperature()
         self._change_attribute(
