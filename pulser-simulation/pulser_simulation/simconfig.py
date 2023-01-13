@@ -96,12 +96,8 @@ class SimConfig:
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
     depolarizing_prob: float = 0.05
-    gen_noise_probs: list[float] = field(
-        init=False, default_factory=list, repr=False
-    )
-    gen_noise_opers: list[qutip.Qobj] = field(
-        init=False, default_factory=list, repr=False
-    )
+    gen_noise_probs: list[float] = field(default_factory=list, repr=False)
+    gen_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
     spam_dict: dict[str, float] = field(
         init=False, default_factory=dict, repr=False
