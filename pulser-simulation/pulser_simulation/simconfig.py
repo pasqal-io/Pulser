@@ -56,9 +56,9 @@ class SimConfig:
             noise types:
 
             - "dephasing": Random phase (Z) flip
-            - "depolarizing": Model of decohering where, under a given
-              probability, a qubit undergoes either a bit-flip error,
-              a phase-flip error or both.
+            - "depolarizing": Quantum noise where the state(rho) is
+              turned into a mixed state I/2 with probability p,
+              and left unchanged with probability 1-p.
             - "gen_noise": General effective noise channel defined by
               the set of collapse operators **gen_noise_opers**
               and the corresponding probability distribution
