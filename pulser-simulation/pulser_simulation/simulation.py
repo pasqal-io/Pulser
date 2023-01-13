@@ -253,7 +253,7 @@ class Simulation:
                     stacklevel=2,
                 )
 
-            k = np.sqrt((prob) * (1 - 3*prob) ** (n - 1))
+            k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
             self._collapse_ops = [
                 np.sqrt((1 - 3 * prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
