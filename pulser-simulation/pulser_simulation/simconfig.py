@@ -56,10 +56,13 @@ class SimConfig:
             noise types:
 
             - "dephasing": Random phase (Z) flip
-            - "depolarizing": model of decohering where the qubit undergoes a
-              bit-flip error, phase-flip error or both errors.
-            - "gen_noise": general noise channel through which we can custom
-              variety of effective noise channels.
+            - "depolarizing": Model of decohering where under a given
+              probability a qubit undergoes either a bit-flip error,
+              a phase-flip error or both.
+            - "gen_noise": general effective noise channels defined by
+              the set of collapse operators **gen_noise_opers**
+              and the corresponding probability distribution
+              **gen_noise_probs**.
             - "doppler": Local atom detuning due to finite speed of the
               atoms and Doppler effect with respect to laser frequency
             - "amplitude": Gaussian damping due to finite laser waist
@@ -94,10 +97,10 @@ class SimConfig:
     dephasing_prob: float = 0.05
     depolarizing_prob: float = 0.05
     gen_noise_probs: list[float] = field(
-        init=True, default_factory=list, repr=False
+        init=False, default_factory=list, repr=False
     )
     gen_noise_opers: list[qutip.Qobj] = field(
-        init=True, default_factory=list, repr=False
+        init=False, default_factory=list, repr=False
     )
     solver_options: Optional[qutip.Options] = None
     spam_dict: dict[str, float] = field(
