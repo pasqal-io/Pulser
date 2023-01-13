@@ -221,7 +221,8 @@ class SimConfig:
             prob_distr = np.array(self.gen_noise_probs)
             lower_bound = np.any(prob_distr < 0.0)
             upper_bound = np.any(prob_distr > 1.0)
-            sum_p = sum(prob_distr) != 1.0
+            sum_p = not np.isclose(sum(prob_distr), 1.0)
+
             if sum_p or lower_bound or upper_bound:
                 raise ValueError(
                     "The distribution given is not a probability distribution."

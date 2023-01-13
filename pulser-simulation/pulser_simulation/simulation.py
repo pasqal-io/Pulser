@@ -278,8 +278,8 @@ class Simulation:
                 1j
                 * k
                 * (
-                    self.build_operator([("sigma_gr", [qid])]).dag()
-                    - self.build_operator([("sigma_gr", [qid])])
+                    -self.build_operator([("sigma_gr", [qid])]).dag()
+                    + self.build_operator([("sigma_gr", [qid])])
                 )
                 for qid in self._qid_index
             ]
