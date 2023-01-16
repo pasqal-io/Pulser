@@ -201,7 +201,7 @@ class Simulation:
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
 
-        # Kraus_ops = []
+        Kraus_ops = []
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
@@ -222,19 +222,11 @@ class Simulation:
                 )
             k = np.sqrt(prob * (1 - prob) ** (n - 1))
 
-            # Kraus_ops.append(np.sqrt((1 - prob) ** n) * qutip.eyes(2))
-            self._collapse_ops = [
+            self._collapse_ops += [
                 np.sqrt((1 - prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            self._collapse_ops += [
-                k
-                * (
-                    self.build_operator([("sigma_rr", [qid])])
-                    - self.build_operator([("sigma_gg", [qid])])
-                )
-                for qid in self._qid_index
-            ]
+            Kraus_ops.append(k * qutip.sigmaz())
 
         if "depolarizing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
@@ -244,7 +236,6 @@ class Simulation:
                     "Cannot include depolarizing "
                     + "noise in digital- or all-basis."
                 )
-
             # Probability of error occurrence
 
             prob = self.config.depolarizing_prob / 4
@@ -258,35 +249,13 @@ class Simulation:
                 )
 
             k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
-            self._collapse_ops = [
+            self._collapse_ops += [
                 np.sqrt((1 - 3 * prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            self._collapse_ops += [
-                k
-                * (
-                    self.build_operator([("sigma_rr", [qid])])
-                    - self.build_operator([("sigma_gg", [qid])])
-                )
-                for qid in self._qid_index
-            ]
-            self._collapse_ops += [
-                k
-                * (
-                    self.build_operator([("sigma_gr", [qid])]).dag()
-                    + self.build_operator([("sigma_gr", [qid])])
-                )
-                for qid in self._qid_index
-            ]
-            self._collapse_ops += [
-                1j
-                * k
-                * (
-                    -self.build_operator([("sigma_gr", [qid])]).dag()
-                    + self.build_operator([("sigma_gr", [qid])])
-                )
-                for qid in self._qid_index
-            ]
+            Kraus_ops.append(k * qutip.sigmax())
+            Kraus_ops.append(k * qutip.sigmay())
+            Kraus_ops.append(k * qutip.sigmaz())
 
         if "eff_noise" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
@@ -296,7 +265,6 @@ class Simulation:
                     "Cannot include general "
                     + "noise in digital- or all-basis."
                 )
-
             # Probability distribution of error occurences
             n = self._size
             m = len(self.config.eff_noise_opers)
@@ -311,7 +279,7 @@ class Simulation:
                             stacklevel=2,
                         )
                         break
-            # Building collapse operators
+            # Deriving Kraus operators
             prob_id = self.config.eff_noise_probs[0]
             self._collapse_ops += [
                 np.sqrt(prob_id**n)
@@ -321,11 +289,15 @@ class Simulation:
                 k = np.sqrt(
                     self.config.eff_noise_probs[i] * prob_id ** (n - 1)
                 )
-                c_op = k * self.config.eff_noise_opers[i]
-                self._collapse_ops += [
-                    self.build_operator([(c_op, [qid])])
-                    for qid in self._qid_index
-                ]
+                K_op = k * self.config.eff_noise_opers[i]
+                Kraus_ops.append(K_op)
+
+        # Building collapse operators
+        for operator in Kraus_ops:
+            self._collapse_ops += [
+                self.build_operator([(operator, [qid])])
+                for qid in self._qid_index
+            ]
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
