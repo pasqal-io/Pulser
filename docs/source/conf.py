@@ -74,6 +74,3 @@ html_static_path = ["_static"]
 html_css_files = [
     "css/max_width.css",
 ]
-
-# Configure the width of the prompts in notebooks
-nbsphinx_prompt_width = "90sw"
