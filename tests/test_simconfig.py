@@ -36,22 +36,30 @@ def test_init(matrices):
             "doppler",
             "dephasing",
             "amplitude",
-            "depolarizing",
-            "gen_noise",
         ),
-        gen_noise_opers=[matrices["I"]],
-        gen_noise_probs=[1.0],
         temperature=1000.0,
         runs=100,
     )
     str_config = config.__str__(True)
-    assert "SPAM, doppler, dephasing, amplitude, depolarizing" in str_config
+    assert "SPAM, doppler, dephasing, amplitude" in str_config
     assert (
         "1000.0µK" in str_config
         and "100" in str_config
         and "Solver Options" in str_config
     )
-    assert "General noise distribution", "General noise operators"
+    config = SimConfig(noise="depolarizing")
+    str_config = config.__str__(True)
+    assert "depolarizing" in str_config
+    config = SimConfig(
+        noise="eff_noise",
+        eff_noise_opers=[matrices["I"], matrices["X"]],
+        eff_noise_probs=[0.3, 0.7],
+    )
+    str_config = config.__str__(True)
+    assert (
+        "General noise distribution" in str_config
+        and "General noise operators" in str_config
+    )
     with pytest.raises(ValueError, match="is not a valid noise type."):
         SimConfig(noise="bad_noise")
     with pytest.raises(ValueError, match="Temperature field"):
@@ -62,59 +70,79 @@ def test_init(matrices):
         ValueError, match="The standard deviation in amplitude"
     ):
         SimConfig(amp_sigma=-0.001)
+    with pytest.raises(
+        NotImplementedError,
+        match="Depolarizing, dephasing and eff_noise channels",
+    ):
+        SimConfig(noise=("dephasing", "depolarizing"))
+    with pytest.raises(
+        NotImplementedError,
+        match="Depolarizing, dephasing and eff_noise channels",
+    ):
+        SimConfig(noise=("eff_noise", "depolarizing"))
+    with pytest.raises(
+        NotImplementedError,
+        match="Depolarizing, dephasing and eff_noise channels",
+    ):
+        SimConfig(noise=("dephasing", "eff_noise"))
+    with pytest.raises(
+        NotImplementedError,
+        match="Depolarizing, dephasing and eff_noise channels",
+    ):
+        SimConfig(noise=("dephasing", "depolarizing", "eff_noise"))
     with pytest.raises(ValueError, match="The operators list length"):
-        SimConfig(gen_noise_probs=[1.0])
+        SimConfig(noise=("eff_noise"), eff_noise_probs=[1.0])
     with pytest.raises(ValueError, match="Fill the general noise parameters."):
-        SimConfig(noise=("gen_noise"))
-    with pytest.raises(TypeError, match="gen_noise_probs is a list of floats"):
+        SimConfig(noise=("eff_noise"))
+    with pytest.raises(TypeError, match="eff_noise_probs is a list of floats"):
         SimConfig(
-            noise=("gen_noise"), gen_noise_probs=[""], gen_noise_opers=[""]
+            noise=("eff_noise"), eff_noise_probs=[""], eff_noise_opers=[""]
         )
     with pytest.raises(ValueError, match="is not a probability distribution."):
         SimConfig(
-            noise=("gen_noise"),
-            gen_noise_opers=[matrices["I"], matrices["X"]],
-            gen_noise_probs=[-1.0, 0.5],
+            noise=("eff_noise"),
+            eff_noise_opers=[matrices["I"], matrices["X"]],
+            eff_noise_probs=[-1.0, 0.5],
         )
     with pytest.raises(ValueError, match="is not a probability distribution."):
         SimConfig(
-            noise=("gen_noise"),
-            gen_noise_opers=[matrices["I"], matrices["X"]],
-            gen_noise_probs=[0.5, 2.0],
+            noise=("eff_noise"),
+            eff_noise_opers=[matrices["I"], matrices["X"]],
+            eff_noise_probs=[0.5, 2.0],
         )
     with pytest.raises(ValueError, match="is not a probability distribution."):
         SimConfig(
-            noise=("gen_noise"),
-            gen_noise_opers=[matrices["I"], matrices["X"]],
-            gen_noise_probs=[0.3, 0.2],
+            noise=("eff_noise"),
+            eff_noise_opers=[matrices["I"], matrices["X"]],
+            eff_noise_probs=[0.3, 0.2],
         )
     with pytest.raises(TypeError, match="is not a Qobj."):
         SimConfig(
-            noise=("gen_noise"), gen_noise_opers=[2.0], gen_noise_probs=[1.0]
+            noise=("eff_noise"), eff_noise_opers=[2.0], eff_noise_probs=[1.0]
         )
     with pytest.raises(TypeError, match="to be of type oper."):
         SimConfig(
-            noise=("gen_noise"),
-            gen_noise_opers=[matrices["ket"]],
-            gen_noise_probs=[1.0],
+            noise=("eff_noise"),
+            eff_noise_opers=[matrices["ket"]],
+            eff_noise_probs=[1.0],
         )
     with pytest.raises(NotImplementedError, match="Operator's shape"):
         SimConfig(
-            noise=("gen_noise"),
-            gen_noise_opers=[matrices["I3"]],
-            gen_noise_probs=[1.0],
+            noise=("eff_noise"),
+            eff_noise_opers=[matrices["I3"]],
+            eff_noise_probs=[1.0],
         )
     with pytest.raises(
         NotImplementedError, match="You must put the identity matrix"
     ):
         SimConfig(
-            noise=("gen_noise"),
-            gen_noise_opers=[matrices["X"], matrices["I"]],
-            gen_noise_probs=[0.5, 0.5],
+            noise=("eff_noise"),
+            eff_noise_opers=[matrices["X"], matrices["I"]],
+            eff_noise_probs=[0.5, 0.5],
         )
     with pytest.raises(ValueError, match="The completeness relation is not"):
         SimConfig(
-            noise=("gen_noise"),
-            gen_noise_opers=[matrices["I"], matrices["Zh"]],
-            gen_noise_probs=[0.5, 0.5],
+            noise=("eff_noise"),
+            eff_noise_opers=[matrices["I"], matrices["Zh"]],
+            eff_noise_probs=[0.5, 0.5],
         )

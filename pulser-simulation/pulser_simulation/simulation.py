@@ -46,7 +46,7 @@ SUPPORTED_NOISE = {
         "amplitude",
         "SPAM",
         "depolarizing",
-        "gen_noise",
+        "eff_noise",
     },
     "XY": {"SPAM"},
 }
@@ -200,6 +200,8 @@ class Simulation:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
+
+        # Kraus_ops = []
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
@@ -219,6 +221,8 @@ class Simulation:
                     stacklevel=2,
                 )
             k = np.sqrt(prob * (1 - prob) ** (n - 1))
+
+            # Kraus_ops.append(np.sqrt((1 - prob) ** n) * qutip.eyes(2))
             self._collapse_ops = [
                 np.sqrt((1 - prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
@@ -284,7 +288,7 @@ class Simulation:
                 for qid in self._qid_index
             ]
 
-        if "gen_noise" in self.config.noise:
+        if "eff_noise" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
                 self.set_config(prev_config)
@@ -295,10 +299,10 @@ class Simulation:
 
             # Probability distribution of error occurences
             n = self._size
-            m = len(self.config.gen_noise_opers)
+            m = len(self.config.eff_noise_opers)
             if n > 1:
                 for i in range(1, m):
-                    prob_i = self.config.gen_noise_probs[i]
+                    prob_i = self.config.eff_noise_probs[i]
                     if prob_i > 0.1:
                         warnings.warn(
                             "The effective noise model is a first-order"
@@ -308,16 +312,16 @@ class Simulation:
                         )
                         break
             # Building collapse operators
-            prob_id = self.config.gen_noise_probs[0]
+            prob_id = self.config.eff_noise_probs[0]
             self._collapse_ops += [
                 np.sqrt(prob_id**n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
             for i in range(1, m):
                 k = np.sqrt(
-                    self.config.gen_noise_probs[i] * prob_id ** (n - 1)
+                    self.config.eff_noise_probs[i] * prob_id ** (n - 1)
                 )
-                c_op = k * self.config.gen_noise_opers[i]
+                c_op = k * self.config.eff_noise_opers[i]
                 self._collapse_ops += [
                     self.build_operator([(c_op, [qid])])
                     for qid in self._qid_index
@@ -368,9 +372,9 @@ class Simulation:
             param_dict["dephasing_prob"] = config.dephasing_prob
         if "depolarizing" in diff_noise_set:
             param_dict["depolarizing_prob"] = config.depolarizing_prob
-        if "gen_noise" in diff_noise_set:
-            param_dict["gen_noise_opers"] = config.gen_noise_opers
-            param_dict["gen_noise_probs"] = config.gen_noise_probs
+        if "eff_noise" in diff_noise_set:
+            param_dict["eff_noise_opers"] = config.eff_noise_opers
+            param_dict["eff_noise_probs"] = config.eff_noise_probs
         param_dict["temperature"] *= 1.0e6
         # update runs:
         param_dict["runs"] = config.runs
@@ -549,7 +553,7 @@ class Simulation:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
         if set(self.config.noise).issubset(
-            {"dephasing", "SPAM", "depolarizing", "gen_noise"}
+            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
         ):
             local_noises = "SPAM" in self.config.noise and self.config.eta > 0
         samples = self.samples_obj.to_nested_dict(all_local=local_noises)
@@ -983,7 +987,7 @@ class Simulation:
             if (
                 "dephasing" in self.config.noise
                 or "depolarizing" in self.config.noise
-                or "gen_noise" in self.config.noise
+                or "eff_noise" in self.config.noise
             ):
                 result = qutip.mesolve(
                     self._hamiltonian,
@@ -1012,7 +1016,7 @@ class Simulation:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "SPAM", "depolarizing", "gen_noise"}
+            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
         ):
             # If there is "SPAM", the preparation errors must be zero
             if "SPAM" not in self.config.noise or self.config.eta == 0:

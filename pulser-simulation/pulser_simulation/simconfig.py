@@ -35,7 +35,7 @@ else:  # pragma: no cover
         )
 
 NOISE_TYPES = Literal[
-    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "gen_noise"
+    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"
 ]
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
@@ -59,10 +59,10 @@ class SimConfig:
             - "depolarizing": Quantum noise where the state(rho) is
               turned into a mixed state I/2 with probability p,
               and left unchanged with probability 1-p.
-            - "gen_noise": General effective noise channel defined by
-              the set of collapse operators **gen_noise_opers**
+            - "eff_noise": General effective noise channel defined by
+              the set of collapse operators **eff_noise_opers**
               and the corresponding probability distribution
-              **gen_noise_probs**.
+              **eff_noise_probs**.
             - "doppler": Local atom detuning due to finite speed of the
               atoms and Doppler effect with respect to laser frequency
             - "amplitude": Gaussian damping due to finite laser waist
@@ -96,8 +96,8 @@ class SimConfig:
     epsilon_prime: float = 0.05
     dephasing_prob: float = 0.05
     depolarizing_prob: float = 0.05
-    gen_noise_probs: list[float] = field(default_factory=list, repr=False)
-    gen_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
+    eff_noise_probs: list[float] = field(default_factory=list, repr=False)
+    eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
     spam_dict: dict[str, float] = field(
         init=False, default_factory=dict, repr=False
@@ -113,12 +113,6 @@ class SimConfig:
                 f"{self.amp_sigma}) must be greater than or equal"
                 " to 0. and smaller than 1."
             )
-        if len(self.gen_noise_opers) != len(self.gen_noise_probs):
-            raise ValueError(
-                f"The operators list length ({len(self.gen_noise_opers)}) "
-                f"and probabilities list length ({len(self.gen_noise_probs)})"
-                "must be equal."
-            )
         self._process_temperature()
         self._change_attribute(
             "spam_dict",
@@ -131,7 +125,7 @@ class SimConfig:
         self._check_noise_types()
         self._check_spam_dict()
         self._calc_sigma_doppler()
-        self._check_gen_noise()
+        self._check_eff_noise()
 
     def __str__(self, solver_options: bool = False) -> str:
         lines = [
@@ -144,12 +138,12 @@ class SimConfig:
             lines.append("Noise types:           " + ", ".join(self.noise))
         if "SPAM" in self.noise:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
-        if "gen_noise" in self.noise:
+        if "eff_noise" in self.noise:
             lines.append(
-                f"General noise distribution:       {self.gen_noise_probs}"
+                f"General noise distribution:       {self.eff_noise_probs}"
             )
             lines.append(
-                f"General noise operators:       {self.gen_noise_opers}"
+                f"General noise operators:       {self.eff_noise_opers}"
             )
         if "doppler" in self.noise:
             lines.append(f"Temperature:           {self.temperature*1.e6}µK")
@@ -195,6 +189,20 @@ class SimConfig:
                     + "Valid noise types: "
                     + ", ".join(get_args(NOISE_TYPES))
                 )
+        dephasing_on = "dephasing" in self.noise
+        depolarizing_on = "depolarizing" in self.noise
+        eff_noise_on = "eff_noise" in self.noise
+        eff_noise_conflict = (
+            (dephasing_on and depolarizing_on)
+            or (depolarizing_on and eff_noise_on)
+            or (dephasing_on and eff_noise_on)
+        )
+        if eff_noise_conflict:
+            raise NotImplementedError(
+                "Depolarizing, dephasing and eff_noise channels"
+                "cannot be activated at the same time in"
+                " one simulation."
+            )
 
     def _calc_sigma_doppler(self) -> None:
         # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
@@ -205,20 +213,26 @@ class SimConfig:
     def _change_attribute(self, attr_name: str, new_value: Any) -> None:
         object.__setattr__(self, attr_name, new_value)
 
-    def _check_gen_noise(self) -> None:
+    def _check_eff_noise(self) -> None:
         # Check the validity of the distribution of probability
-        if "gen_noise" in self.noise:
-            if self.gen_noise_opers == [] or self.gen_noise_probs == []:
+        if "eff_noise" in self.noise:
+            if len(self.eff_noise_opers) != len(self.eff_noise_probs):
+                raise ValueError(
+                    f"The operators list length({len(self.eff_noise_opers)}) "
+                    "and probabilities list length"
+                    f"({len(self.eff_noise_probs)}) must be equal."
+                )
+            if self.eff_noise_opers == [] or self.eff_noise_probs == []:
                 raise ValueError("Fill the general noise parameters.")
 
-            for prob in self.gen_noise_probs:
+            for prob in self.eff_noise_probs:
                 if not isinstance(prob, float):
                     raise TypeError(
-                        "gen_noise_probs is a list of floats"
+                        "eff_noise_probs is a list of floats"
                         f" it must not contain a {type(prob)}."
                     )
 
-            prob_distr = np.array(self.gen_noise_probs)
+            prob_distr = np.array(self.eff_noise_probs)
             lower_bound = np.any(prob_distr < 0.0)
             upper_bound = np.any(prob_distr > 1.0)
             sum_p = not np.isclose(sum(prob_distr), 1.0)
@@ -228,7 +242,7 @@ class SimConfig:
                     "The distribution given is not a probability distribution."
                 )
             # Check the validity of operators
-            for operator in self.gen_noise_opers:
+            for operator in self.eff_noise_opers:
                 # type checking
 
                 if type(operator) != qutip.qobj.Qobj:
@@ -244,19 +258,19 @@ class SimConfig:
                     )
             # Identity position
             identity = qutip.qeye(2)
-            if self.gen_noise_opers[0] != identity:
+            if self.eff_noise_opers[0] != identity:
                 raise NotImplementedError(
                     "You must put the identity matrix at the "
                     "beginning of the operator list."
                 )
             # Completeness relation checking
             sum_op = qutip.Qobj(shape=(2, 2))
-            length = len(self.gen_noise_probs)
+            length = len(self.eff_noise_probs)
             for i in range(length):
                 sum_op += (
-                    self.gen_noise_probs[i]
-                    * self.gen_noise_opers[i]
-                    * self.gen_noise_opers[i].dag()
+                    self.eff_noise_probs[i]
+                    * self.eff_noise_opers[i]
+                    * self.eff_noise_opers[i].dag()
                 )
 
             if sum_op != identity:

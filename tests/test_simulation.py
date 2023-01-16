@@ -587,9 +587,9 @@ def test_noise(seq, matrices):
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(
             SimConfig(
-                noise="gen_noise",
-                gen_noise_opers=[matrices["I"]],
-                gen_noise_probs=[1.0],
+                noise="eff_noise",
+                eff_noise_opers=[matrices["I"]],
+                eff_noise_probs=[1.0],
             )
         )
     assert sim2.config.spam_dict == {
@@ -657,7 +657,7 @@ def test_depolarizing():
         )
 
 
-def test_gen_noise(matrices):
+def test_eff_noise(matrices):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, Chadoq2)
@@ -669,9 +669,9 @@ def test_gen_noise(matrices):
         seq,
         sampling_rate=0.01,
         config=SimConfig(
-            noise="gen_noise",
-            gen_noise_opers=[matrices["I"], matrices["Z"]],
-            gen_noise_probs=[0.95, 0.05],
+            noise="eff_noise",
+            eff_noise_opers=[matrices["I"], matrices["Z"]],
+            eff_noise_probs=[0.95, 0.05],
         ),
     )
     assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
@@ -685,9 +685,9 @@ def test_gen_noise(matrices):
             seq2,
             sampling_rate=0.01,
             config=SimConfig(
-                noise="gen_noise",
-                gen_noise_opers=[matrices["I"], matrices["Z"]],
-                gen_noise_probs=[0.5, 0.5],
+                noise="eff_noise",
+                eff_noise_opers=[matrices["I"], matrices["Z"]],
+                eff_noise_probs=[0.5, 0.5],
             ),
         )
 
@@ -707,29 +707,35 @@ def test_add_config(matrices):
     sim.add_config(
         SimConfig(
             noise=(
-                "dephasing",
                 "SPAM",
                 "doppler",
-                "depolarizing",
-                "gen_noise",
+                "eff_noise",
             ),
-            gen_noise_opers=[matrices["I"], matrices["X"]],
-            gen_noise_probs=[0.4, 0.6],
+            eff_noise_opers=[matrices["I"], matrices["X"]],
+            eff_noise_probs=[0.4, 0.6],
             temperature=20000,
         )
     )
     assert (
-        "dephasing" in sim.config.noise
+        "doppler" in sim.config.noise
         and "SPAM" in sim.config.noise
-        and "depolarizing" in sim.config.noise
-        and "gen_noise" in sim.config.noise
+        and "eff_noise" in sim.config.noise
     )
     assert sim.config.eta == 0.5
     assert sim.config.temperature == 20000.0e-6
-    sim.set_config(SimConfig(noise="dephasing", laser_waist=175.0))
-    sim.add_config(SimConfig(noise=("SPAM", "amplitude"), laser_waist=172.0))
-    assert "amplitude" in sim.config.noise and "SPAM" in sim.config.noise
+    sim.set_config(SimConfig(noise="doppler", laser_waist=175.0))
+    sim.add_config(
+        SimConfig(noise=("SPAM", "amplitude", "dephasing"), laser_waist=172.0)
+    )
+    assert (
+        "amplitude" in sim.config.noise
+        and "dephasing" in sim.config.noise
+        and "SPAM" in sim.config.noise
+    )
     assert sim.config.laser_waist == 172.0
+    sim.set_config(SimConfig(noise="SPAM", eta=0.5))
+    sim.add_config(SimConfig(noise="depolarizing"))
+    assert "depolarizing" in sim.config.noise
 
 
 def test_concurrent_pulses():
