@@ -29,7 +29,7 @@ def matrices():
     return pauli
 
 
-def test_init(matrices):
+def test_init1(matrices):
     config = SimConfig(
         noise=(
             "SPAM",
@@ -70,26 +70,23 @@ def test_init(matrices):
         ValueError, match="The standard deviation in amplitude"
     ):
         SimConfig(amp_sigma=-0.001)
+
+
+@pytest.mark.parametrize(
+    "noise_sample,",
+    [
+        ("dephasing", "depolarizing"),
+        ("eff_noise", "depolarizing"),
+        ("eff_noise", "dephasing"),
+        ("depolarizing", "eff_noise", "dephasing"),
+    ],
+)
+def test_init2(matrices, noise_sample):
     with pytest.raises(
         NotImplementedError,
         match="Depolarizing, dephasing and eff_noise channels",
     ):
-        SimConfig(noise=("dephasing", "depolarizing"))
-    with pytest.raises(
-        NotImplementedError,
-        match="Depolarizing, dephasing and eff_noise channels",
-    ):
-        SimConfig(noise=("eff_noise", "depolarizing"))
-    with pytest.raises(
-        NotImplementedError,
-        match="Depolarizing, dephasing and eff_noise channels",
-    ):
-        SimConfig(noise=("dephasing", "eff_noise"))
-    with pytest.raises(
-        NotImplementedError,
-        match="Depolarizing, dephasing and eff_noise channels",
-    ):
-        SimConfig(noise=("dephasing", "depolarizing", "eff_noise"))
+        SimConfig(noise=noise_sample)
     with pytest.raises(ValueError, match="The operators list length"):
         SimConfig(noise=("eff_noise"), eff_noise_probs=[1.0])
     with pytest.raises(ValueError, match="Fill the general noise parameters."):
