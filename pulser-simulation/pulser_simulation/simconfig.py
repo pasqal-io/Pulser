@@ -224,7 +224,7 @@ class SimConfig:
             for prob in self.eff_noise_probs:
                 if not isinstance(prob, float):
                     raise TypeError(
-                        "eff_noise_probs is a list of floats"
+                        "eff_noise_probs is a list of floats,"
                         f" it must not contain a {type(prob)}."
                     )
 
