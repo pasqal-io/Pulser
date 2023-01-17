@@ -192,11 +192,7 @@ class SimConfig:
         dephasing_on = "dephasing" in self.noise
         depolarizing_on = "depolarizing" in self.noise
         eff_noise_on = "eff_noise" in self.noise
-        eff_noise_conflict = (
-            (dephasing_on and depolarizing_on)
-            or (depolarizing_on and eff_noise_on)
-            or (dephasing_on and eff_noise_on)
-        )
+        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
         if eff_noise_conflict:
             raise NotImplementedError(
                 "Depolarizing, dephasing and eff_noise channels"
