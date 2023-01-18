@@ -99,6 +99,15 @@ class Channel(ABC):
         """The addressed basis name."""
         pass
 
+    @property
+    def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
+        """Internal parameters and their valid options."""
+        return dict(
+            name=("Rydberg", "Raman", "Microwave"),
+            basis=("ground-rydberg", "digital", "XY"),
+            addressing=("Local", "Global"),
+        )
+
     def __post_init__(self) -> None:
         """Validates the channel's parameters."""
         for param, options in self._internal_param_valid_options.items():
@@ -173,15 +182,6 @@ class Channel(ABC):
                 " greater than or equal to 'min_duration'"
                 f"({self.min_duration})."
             )
-
-    @property
-    def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
-        """Internal parameters and their valid options."""
-        return dict(
-            name=("Rydberg", "Raman", "Microwave"),
-            basis=("ground-rydberg", "digital", "XY"),
-            addressing=("Local", "Global"),
-        )
 
     @property
     def rise_time(self) -> int:
