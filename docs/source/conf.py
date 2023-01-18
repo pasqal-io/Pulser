@@ -74,13 +74,3 @@ html_static_path = ["_static"]
 html_css_files = [
     "css/max_width.css",
 ]
-
-nbsphinx_prolog = """
-.. raw:: html
-
-    <style>
-        pre {
-            white-space: pre-wrap;
-        }
-    </style>
-"""
