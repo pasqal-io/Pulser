@@ -19,7 +19,7 @@ import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from sys import version_info
-from typing import Any, Optional, cast
+from typing import Any, Optional, Type, TypeVar, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -30,10 +30,10 @@ from pulser.json.utils import obj_to_dict
 from pulser.pulse import Pulse
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal, get_args
+    from typing import Literal
 else:  # pragma: no cover
     try:
-        from typing_extensions import Literal, get_args  # type: ignore
+        from typing_extensions import Literal  # type: ignore
     except ImportError:
         raise ImportError(
             "Using pulser with Python version 3.7 requires the"
@@ -44,8 +44,7 @@ else:  # pragma: no cover
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
 
-CH_TYPE = Literal["Rydberg", "Raman", "Microwave"]
-BASIS = Literal["ground-rydberg", "digital", "XY"]
+ChannelType = TypeVar("ChannelType", bound="Channel")
 
 
 @dataclass(init=True, repr=False, frozen=True)  # type: ignore[misc]
@@ -90,31 +89,29 @@ class Channel(ABC):
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
 
     @property
-    def name(self) -> CH_TYPE:
+    def name(self) -> str:
         """The name of the channel."""
-        _name = type(self).__name__
-        options = get_args(CH_TYPE)
-        assert (
-            _name in options
-        ), f"The channel must be one of {options}, not {_name}."
-        return cast(CH_TYPE, _name)
+        return type(self).__name__
 
     @property
     @abstractmethod
-    def basis(self) -> BASIS:
+    def basis(self) -> str:
         """The addressed basis name."""
         pass
 
+    @property
+    def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
+        """Internal parameters and their valid options."""
+        return dict(
+            name=("Rydberg", "Raman", "Microwave"),
+            basis=("ground-rydberg", "digital", "XY"),
+            addressing=("Local", "Global"),
+        )
+
     def __post_init__(self) -> None:
         """Validates the channel's parameters."""
-        internal_param_value_pairs = [
-            ("name", CH_TYPE),
-            ("basis", BASIS),
-            ("addressing", Literal["Global", "Local"]),
-        ]
-        for param, type_options in internal_param_value_pairs:
+        for param, options in self._internal_param_valid_options.items():
             value = getattr(self, param)
-            options = get_args(type_options)
             assert (
                 value in options
             ), f"The channel {param} must be one of {options}, not {value}."
@@ -226,14 +223,14 @@ class Channel(ABC):
 
     @classmethod
     def Local(
-        cls,
+        cls: Type[ChannelType],
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
         min_retarget_interval: int = 0,
         fixed_retarget_t: int = 0,
         max_targets: Optional[int] = None,
         **kwargs: Any,
-    ) -> Channel:
+    ) -> ChannelType:
         """Initializes the channel with local addressing.
 
         Args:
@@ -269,11 +266,11 @@ class Channel(ABC):
 
     @classmethod
     def Global(
-        cls,
+        cls: Type[ChannelType],
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
         **kwargs: Any,
-    ) -> Channel:
+    ) -> ChannelType:
         """Initializes the channel with global addressing.
 
         Args:
@@ -488,11 +485,15 @@ class Channel(ABC):
         config += f", Basis: '{self.basis}')"
         return self.name + config
 
-    def _to_dict(self) -> dict[str, Any]:
+    def default_id(self) -> str:
+        """Generates the default ID for indexing this channel in a Device."""
+        return f"{self.name.lower()}_{self.addressing.lower()}"
+
+    def _to_dict(self, _module: str = "pulser.channels") -> dict[str, Any]:
         params = {
             f.name: getattr(self, f.name) for f in fields(self) if f.init
         }
-        return obj_to_dict(self, _module="pulser.channels", **params)
+        return obj_to_dict(self, _module=_module, **params)
 
     def _to_abstract_repr(self, id: str) -> dict[str, Any]:
         params = {f.name: getattr(self, f.name) for f in fields(self)}

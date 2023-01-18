@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from hashlib import sha256
 from sys import version_info
 from typing import Any, Optional, cast
-from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -119,19 +118,6 @@ class RegisterLayout(RegDrawer):
         return len(self._coords)
 
     @property
-    def max_atom_num(self) -> int:
-        """Maximum number of atoms that can be trapped to form a Register."""
-        warn(
-            "'RegisterLayout.max_atom_num' is deprecated and will be removed"
-            " in version 0.9.0.\n"
-            "It is now the same as 'RegisterLayout.number_of_traps' and "
-            "should be replaced accordingly.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.number_of_traps
-
-    @property
     def dimensionality(self) -> int:
         """The dimensionality of the layout (2 or 3)."""
         return self._coords.shape[1]
@@ -211,6 +197,8 @@ class RegisterLayout(RegDrawer):
         draw_graph: bool = False,
         draw_half_radius: bool = False,
         projection: bool = True,
+        fig_name: str = None,
+        kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register layout.
 
@@ -225,6 +213,11 @@ class RegisterLayout(RegDrawer):
                 if the `blockade_radius` is defined.
             projection: If the layout is in 3D, draws it
                 as projections on different planes.
+            fig_name: The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig: Keywords arguments for
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -266,6 +259,8 @@ class RegisterLayout(RegDrawer):
                 draw_half_radius=draw_half_radius,
                 are_traps=True,
             )
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
         plt.show()
 
     def make_mappable_register(

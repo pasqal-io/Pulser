@@ -23,7 +23,7 @@ Pulser is designed to let users create experiments that are tailored to a
 specific device. In this way, you can have maximal flexibility and control over
 the behaviour of relevant physical parameters, within the bounds set by the chosen device.
 
-.. figure:: https://pasqal.io/wp-content/uploads/2021/02/pulser_animation.gif
+.. figure:: files/pulser_animation.gif
     :align: center
     :alt: pulser_animation
     :figclass: align-center
@@ -74,6 +74,8 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/serialization
    tutorials/slm_mask
    tutorials/output_mod_eom
+   tutorials/virtual_devices
+
 
 .. toctree::
    :maxdepth: 1
@@ -91,7 +93,7 @@ computers and simulators, check the pages in :doc:`review`.
    :caption: Other Applications
 
    tutorials/cz_gate
-   tutorials/qaoa_mis
+   tutorials/qubo
 
 .. toctree::
    :maxdepth: 3

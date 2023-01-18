@@ -18,9 +18,10 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from packaging import version
 
 import pulser
-from pulser.channels import Microwave, Rydberg
+from pulser.channels import Microwave, Raman, Rydberg
 from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
@@ -33,7 +34,8 @@ def test_params():
         name="Test",
         dimensions=2,
         rydberg_level=70,
-        _channels=(),
+        channel_ids=None,
+        channel_objects=(),
         min_atom_distance=1,
         max_atom_num=None,
         max_radial_distance=None,
@@ -50,18 +52,25 @@ def test_params():
         ("max_radial_distance", 100.4, None),
         ("rydberg_level", 70.0, "Rydberg level has to be an int."),
         (
-            "_channels",
-            ((1, Rydberg.Global(None, None)),),
-            "All channel IDs must be of type 'str', not 'int'",
+            "channel_ids",
+            {"fake_channel"},
+            "When defined, 'channel_ids' must be a tuple or a list "
+            "of strings.",
         ),
         (
-            "_channels",
-            (("ch1", "Rydberg.Global(None, None)"),),
+            "channel_ids",
+            ("ch1", 2),
+            "When defined, 'channel_ids' must be a tuple or a list "
+            "of strings.",
+        ),
+        (
+            "channel_objects",
+            ("Rydberg.Global(None, None)",),
             "All channels must be of type 'Channel', not 'str'",
         ),
         (
-            "_channels",
-            (("mw_ch", Microwave.Global(None, None)),),
+            "channel_objects",
+            (Microwave.Global(None, None),),
             "When the device has a 'Microwave' channel, "
             "'interaction_coeff_xy' must be a 'float',"
             " not '<class 'NoneType'>'.",
@@ -98,6 +107,17 @@ def test_post_init_type_checks(test_params, param, value, msg):
             "maximum layout filling fraction must be greater than 0. and"
             " less than or equal to 1.",
         ),
+        (
+            "channel_ids",
+            ("rydberg_global", "rydberg_global"),
+            "When defined, 'channel_ids' can't have repeated elements.",
+        ),
+        (
+            "channel_ids",
+            ("rydberg_global",),
+            "When defined, the number of channel IDs must"
+            " match the number of channel objects.",
+        ),
     ],
 )
 def test_post_init_value_errors(test_params, param, value, msg):
@@ -122,12 +142,32 @@ def test_optional_parameters(test_params, none_param):
     VirtualDevice(**test_params)  # Valid as None on a VirtualDevice
 
 
-def test_tuple_conversion(test_params):
-    test_params["_channels"] = (
-        ["rydberg_global", Rydberg.Global(None, None)],
+def test_default_channel_ids(test_params):
+    # Needed because of the Microwave global channel
+    test_params["interaction_coeff_xy"] = 10000.0
+    test_params["channel_objects"] = (
+        Rydberg.Local(None, None),
+        Raman.Local(None, None),
+        Rydberg.Local(None, None),
+        Raman.Global(None, None),
+        Microwave.Global(None, None),
     )
     dev = VirtualDevice(**test_params)
-    assert dev._channels == (("rydberg_global", Rydberg.Global(None, None)),)
+    assert dev.channel_ids == (
+        "rydberg_local",
+        "raman_local",
+        "rydberg_local_2",
+        "raman_global",
+        "mw_global",
+    )
+
+
+def test_tuple_conversion(test_params):
+    test_params["channel_objects"] = [Rydberg.Global(None, None)]
+    test_params["channel_ids"] = ["custom_channel"]
+    dev = VirtualDevice(**test_params)
+    assert dev.channel_objects == (Rydberg.Global(None, None),)
+    assert dev.channel_ids == ("custom_channel",)
 
 
 def test_valid_devices():
@@ -162,13 +202,6 @@ def test_change_rydberg_level():
     ):
         dev.change_rydberg_level(110)
     dev.change_rydberg_level(70)
-
-    with pytest.warns(DeprecationWarning):
-        assert pulser.__version__ < "0.9"
-        og_ryd_level = Chadoq2.rydberg_level
-        Chadoq2.change_rydberg_level(60)
-        assert Chadoq2.rydberg_level == 60
-        Chadoq2.change_rydberg_level(og_ryd_level)
 
 
 def test_rydberg_blockade():
@@ -276,7 +309,7 @@ def test_calibrated_layouts():
             max_atom_num=100,
             max_radial_distance=50,
             min_atom_distance=4,
-            _channels=(),
+            channel_objects=(),
             pre_calibrated_layouts=(TriangularLatticeLayout(201, 3),),
         )
 
@@ -287,7 +320,7 @@ def test_calibrated_layouts():
         max_atom_num=100,
         max_radial_distance=50,
         min_atom_distance=4,
-        _channels=(),
+        channel_objects=(),
         pre_calibrated_layouts=(
             TriangularLatticeLayout(100, 6.8),  # Rounds down with int()
             TriangularLatticeLayout(200, 5),
@@ -311,7 +344,7 @@ def test_device_with_virtual_channel():
             max_atom_num=100,
             max_radial_distance=50,
             min_atom_distance=4,
-            _channels=(("rydberg_global", Rydberg.Global(None, 10)),),
+            channel_objects=(Rydberg.Global(None, 10),),
         )
 
 
@@ -323,10 +356,82 @@ def test_convert_to_virtual():
         min_atom_distance=1,
         max_atom_num=20,
         max_radial_distance=40,
-        _channels=(("rydberg_global", Rydberg.Global(0, 10)),),
+        channel_objects=(Rydberg.Global(0, 10),),
     )
     assert Device(
         pre_calibrated_layouts=(TriangularLatticeLayout(40, 2),), **params
     ).to_virtual() == VirtualDevice(
         supports_slm_mask=False, reusable_channels=False, **params
     )
+
+
+def test_device_params():
+    all_params = Chadoq2._params()
+    init_params = Chadoq2._params(init_only=True)
+    assert set(all_params) - set(init_params) == {"reusable_channels"}
+
+    virtual_chadoq2 = Chadoq2.to_virtual()
+    all_virtual_params = virtual_chadoq2._params()
+    init_virtual_params = virtual_chadoq2._params(init_only=True)
+    assert all_virtual_params == init_virtual_params
+    assert set(all_params) - set(all_virtual_params) == {
+        "pre_calibrated_layouts"
+    }
+
+
+@pytest.mark.parametrize(
+    "conflict_param, conflict_value",
+    [("channel_objects", Rydberg.Global(0, 20)), ("channel_ids", "custom_id")],
+)
+def test_channels_deprecation_error(
+    test_params, conflict_param, conflict_value
+):
+    current_ver = version.parse(pulser.__version__)
+    remove_ver = version.parse("0.10.0")
+    assert (
+        current_ver.major <= remove_ver.major
+        and current_ver.minor < remove_ver.minor
+    )
+    test_params["_channels"] = (
+        ("custom_rydberg", Rydberg.Global(0, 10)),
+        ("raman_local", Raman.Local(10, 20, max_targets=1)),
+    )
+    test_params[conflict_param] = conflict_value
+
+    with pytest.warns(DeprecationWarning):
+        with pytest.raises(
+            ValueError,
+            match="'_channels' can't be specified when 'channel_objects'"
+            " or 'channel_ids' are also provided.",
+        ):
+            VirtualDevice(**test_params)
+
+
+def test_channels_deprecation():
+    current_ver = version.parse(pulser.__version__)
+    remove_ver = version.parse("0.10.0")
+    assert (
+        current_ver.major <= remove_ver.major
+        and current_ver.minor < remove_ver.minor
+    )
+    params = dict(
+        name="Test",
+        dimensions=2,
+        rydberg_level=80,
+        min_atom_distance=1,
+        max_atom_num=20,
+        max_radial_distance=40,
+        _channels=(
+            ("custom_rydberg", Rydberg.Global(0, 10)),
+            ("raman_local", Raman.Local(10, 20, max_targets=1)),
+        ),
+    )
+    with pytest.warns(DeprecationWarning):
+        dev = Device(**params)
+
+    assert dev.channel_ids == ("custom_rydberg", "raman_local")
+    assert dev.channel_objects == (
+        Rydberg.Global(0, 10),
+        Raman.Local(10, 20, max_targets=1),
+    )
+    assert dev._channels == ()

@@ -19,7 +19,6 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-import pulser
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -60,10 +59,6 @@ def test_creation(layout, layout3d):
     assert layout.dimensionality == 2
     for i, coord in enumerate(layout.coords):
         assert np.all(layout.traps_dict[i] == coord)
-
-    with pytest.warns(DeprecationWarning):
-        assert pulser.__version__ < "0.9"
-        assert layout.max_atom_num == layout.number_of_traps
 
 
 def test_slug(layout, layout3d):
@@ -120,10 +115,18 @@ def test_draw(layout, layout3d):
         layout.draw()
 
     with patch("matplotlib.pyplot.show"):
+        with patch("matplotlib.pyplot.savefig"):
+            layout.draw(fig_name="my_registerlayout.pdf")
+
+    with patch("matplotlib.pyplot.show"):
         layout3d.draw()
 
     with patch("matplotlib.pyplot.show"):
         layout3d.draw(projection=False)
+
+    with patch("matplotlib.pyplot.show"):
+        with patch("matplotlib.pyplot.savefig"):
+            layout3d.draw(fig_name="my_registerlayout.pdf")
 
 
 def test_repr(layout):

@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC, abstractmethod
+from collections import Counter
 from dataclasses import dataclass, field, fields
 from sys import version_info
-from typing import Any, Optional, cast
-from warnings import warn
+from typing import Any, cast
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -54,7 +55,12 @@ class BaseDevice(ABC):
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
-        rybderg_level : The value of the principal quantum number :math:`n`
+        channel_objects: The Channel subclass instances specifying each
+            channel in the device.
+        channel_ids: Custom IDs for each channel object. When defined,
+            an ID must be given for each channel. If not defined, the IDs are
+            generated internally based on the channels' names and addressing.
+        rybderg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -72,14 +78,16 @@ class BaseDevice(ABC):
     name: str
     dimensions: DIMENSIONS
     rydberg_level: int
-    _channels: tuple[tuple[str, Channel], ...]
     min_atom_distance: float
-    max_atom_num: Optional[int]
-    max_radial_distance: Optional[int]
-    interaction_coeff_xy: Optional[float] = None
+    max_atom_num: int | None
+    max_radial_distance: int | None
+    interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
     max_layout_filling: float = 0.5
     reusable_channels: bool = field(default=False, init=False)
+    channel_ids: tuple[str, ...] | None = None
+    channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
+    _channels: tuple[tuple[str, Channel], ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         def type_check(
@@ -103,9 +111,6 @@ class BaseDevice(ABC):
                 f"not {self.dimensions}."
             )
         self._validate_rydberg_level(self.rydberg_level)
-        for ch_id, ch_obj in self._channels:
-            type_check("All channel IDs", str, value_override=ch_id)
-            type_check("All channels", Channel, value_override=ch_obj)
 
         for param in (
             "min_atom_distance",
@@ -137,14 +142,6 @@ class BaseDevice(ABC):
             if not valid:
                 raise ValueError(msg)
 
-        if any(
-            ch.basis == "XY" for _, ch in self._channels
-        ) and not isinstance(self.interaction_coeff_xy, float):
-            raise TypeError(
-                "When the device has a 'Microwave' channel, "
-                "'interaction_coeff_xy' must be a 'float',"
-                f" not '{type(self.interaction_coeff_xy)}'."
-            )
         type_check("supports_slm_mask", bool)
         type_check("reusable_channels", bool)
 
@@ -155,13 +152,83 @@ class BaseDevice(ABC):
                 f"not {self.max_layout_filling}."
             )
 
+        if self._channels:
+            warnings.warn(
+                "Specifying the channels of a device through the '_channels'"
+                " argument is deprecated since v0.9.0 and will be removed in"
+                " v0.10.0. Instead, use 'channel_objects' to specify the"
+                " channels and, optionally, 'channel_ids' to specify custom"
+                " channel IDs.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if self.channel_objects or self.channel_ids:
+                raise ValueError(
+                    "'_channels' can't be specified when 'channel_objects'"
+                    " or 'channel_ids' are also provided."
+                )
+            ch_objs = []
+            ch_ids = []
+            for ch_id, ch_obj in self._channels:
+                ch_ids.append(ch_id)
+                ch_objs.append(ch_obj)
+            object.__setattr__(self, "channel_ids", tuple(ch_ids))
+            object.__setattr__(self, "channel_objects", tuple(ch_objs))
+            object.__setattr__(self, "_channels", ())
+
+        for ch_obj in self.channel_objects:
+            type_check("All channels", Channel, value_override=ch_obj)
+
+        if self.channel_ids is not None:
+            if not (
+                isinstance(self.channel_ids, (tuple, list))
+                and all(isinstance(el, str) for el in self.channel_ids)
+            ):
+                raise TypeError(
+                    "When defined, 'channel_ids' must be a tuple or a list "
+                    "of strings."
+                )
+            if len(self.channel_ids) != len(set(self.channel_ids)):
+                raise ValueError(
+                    "When defined, 'channel_ids' can't have "
+                    "repeated elements."
+                )
+            if len(self.channel_ids) != len(self.channel_objects):
+                raise ValueError(
+                    "When defined, the number of channel IDs must"
+                    " match the number of channel objects."
+                )
+        else:
+            # Make the channel IDs from the default IDs
+            ids_counter: Counter = Counter()
+            ids = []
+            for ch_obj in self.channel_objects:
+                id = ch_obj.default_id()
+                ids_counter.update([id])
+                if ids_counter[id] > 1:
+                    # If there is more than one with the same ID
+                    id += f"_{ids_counter[id]}"
+                ids.append(id)
+            object.__setattr__(self, "channel_ids", tuple(ids))
+
+        if any(
+            ch.basis == "XY" for ch in self.channel_objects
+        ) and not isinstance(self.interaction_coeff_xy, float):
+            raise TypeError(
+                "When the device has a 'Microwave' channel, "
+                "'interaction_coeff_xy' must be a 'float',"
+                f" not '{type(self.interaction_coeff_xy)}'."
+            )
+
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
 
         # Turns mutable lists into immutable tuples
-        object.__setattr__(self, "_channels", to_tuple(self._channels))
+        for param in self._params():
+            if "channel" in param:
+                object.__setattr__(self, param, to_tuple(getattr(self, param)))
 
     @property
     @abstractmethod
@@ -171,12 +238,12 @@ class BaseDevice(ABC):
     @property
     def channels(self) -> dict[str, Channel]:
         """Dictionary of available channels on this device."""
-        return dict(self._channels)
+        return dict(zip(cast(tuple, self.channel_ids), self.channel_objects))
 
     @property
     def supported_bases(self) -> set[str]:
         """Available electronic transitions for control and measurement."""
-        return {ch.basis for ch in self.channels.values()}
+        return {ch.basis for ch in self.channel_objects}
 
     @property
     def interaction_coeff(self) -> float:
@@ -336,11 +403,15 @@ class BaseDevice(ABC):
         if not 49 < ryd_lvl < 101:
             raise ValueError("Rydberg level should be between 50 and 100.")
 
-    def _params(self) -> dict[str, Any]:
+    def _params(self, init_only: bool = False) -> dict[str, Any]:
         # This is used instead of dataclasses.asdict() because asdict()
         # is recursive and we have Channel dataclasses in the args that
         # we don't want to convert to dict
-        return {f.name: getattr(self, f.name) for f in fields(self)}
+        return {
+            f.name: getattr(self, f.name)
+            for f in fields(self)
+            if not init_only or f.init
+        }
 
     def _validate_coords(
         self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
@@ -365,11 +436,13 @@ class BaseDevice(ABC):
 
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
+        ex_params = ("_channels", "channel_objects", "channel_ids")
         params = self._params()
+        for p in ex_params:
+            params.pop(p, None)
         ch_list = []
-        for ch_name, ch_obj in params.pop("_channels"):
+        for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
-
         return {"version": "1", "channels": ch_list, **params}
 
     def to_abstract_repr(self) -> str:
@@ -412,7 +485,7 @@ class Device(BaseDevice):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        for ch_id, ch_obj in self._channels:
+        for ch_id, ch_obj in self.channels.items():
             if ch_obj.is_virtual():
                 _sep = "', '"
                 raise ValueError(
@@ -433,29 +506,6 @@ class Device(BaseDevice):
     def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
         """Register layouts already calibrated on this device."""
         return {str(layout): layout for layout in self.pre_calibrated_layouts}
-
-    def change_rydberg_level(self, ryd_lvl: int) -> None:
-        """Changes the Rydberg level used in the Device.
-
-        Args:
-            ryd_lvl: the Rydberg level to use (between 50 and 100).
-
-        Note:
-            Deprecated in version 0.8.0. Convert the device to a VirtualDevice
-            with 'Device.to_virtual()' and use
-            'VirtualDevice.change_rydberg_level()' instead.
-        """
-        warn(
-            "'Device.change_rydberg_level()' is deprecated and will be removed"
-            " in version 0.9.0.\nConvert the device to a VirtualDevice with "
-            "'Device.to_virtual()' and use "
-            "'VirtualDevice.change_rydberg_level()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # Ignoring type because it expects a VirtualDevice
-        # Won't fix because this line will be removed
-        VirtualDevice.change_rydberg_level(self, ryd_lvl)  # type: ignore
 
     def to_virtual(self) -> VirtualDevice:
         """Converts the Device into a VirtualDevice."""
@@ -490,7 +540,7 @@ class Device(BaseDevice):
         ]
 
         ch_lines = []
-        for name, ch in self._channels:
+        for name, ch in self.channels.items():
             if for_docs:
                 ch_lines += [
                     f" - ID: '{name}'",
@@ -563,8 +613,8 @@ class VirtualDevice(BaseDevice):
             on the same pulse sequence.
     """
     min_atom_distance: float = 0
-    max_atom_num: Optional[int] = None
-    max_radial_distance: Optional[int] = None
+    max_atom_num: int | None = None
+    max_radial_distance: int | None = None
     supports_slm_mask: bool = True
     reusable_channels: bool = True
 
@@ -574,6 +624,10 @@ class VirtualDevice(BaseDevice):
 
     def change_rydberg_level(self, ryd_lvl: int) -> None:
         """Changes the Rydberg level used in the Device.
+
+        Find the :math:`C_6` coefficient matching the Rydberg level on
+        `this page <https://github.com/pasqal-io/Pulser/blob/develop/
+        pulser-core/pulser/devices/interaction_coefficients/C6_coeffs.json>`_
 
         Args:
             ryd_lvl: the Rydberg level to use (between 50 and 100).
