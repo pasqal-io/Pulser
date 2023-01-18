@@ -192,11 +192,7 @@ class SimConfig:
         dephasing_on = "dephasing" in self.noise
         depolarizing_on = "depolarizing" in self.noise
         eff_noise_on = "eff_noise" in self.noise
-        eff_noise_conflict = (
-            (dephasing_on and depolarizing_on)
-            or (depolarizing_on and eff_noise_on)
-            or (dephasing_on and eff_noise_on)
-        )
+        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
         if eff_noise_conflict:
             raise NotImplementedError(
                 "Depolarizing, dephasing and eff_noise channels"
@@ -223,12 +219,12 @@ class SimConfig:
                     f"({len(self.eff_noise_probs)}) must be equal."
                 )
             if self.eff_noise_opers == [] or self.eff_noise_probs == []:
-                raise ValueError("Fill the general noise parameters.")
+                raise ValueError("The general noise parameters have not been filled.")
 
             for prob in self.eff_noise_probs:
                 if not isinstance(prob, float):
                     raise TypeError(
-                        "eff_noise_probs is a list of floats"
+                        "eff_noise_probs is a list of floats,"
                         f" it must not contain a {type(prob)}."
                     )
 

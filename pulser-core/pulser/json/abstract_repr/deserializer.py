@@ -302,7 +302,7 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     params: dict[str, Any] = dict(
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
-    ex_params = ("_channels", "channel_objects", "channel_ids")
+    ex_params = ("channel_objects", "channel_ids")
     for param in dataclasses.fields(device_cls):
         if not param.init or param.name in ex_params:
             continue

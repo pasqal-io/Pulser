@@ -12,13 +12,14 @@ build:
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
-   configuration: docs/source/conf.py
+  configuration: docs/source/conf.py
+  fail_on_warning: true
 
 # Optionally declare the Python requirements required to build your docs
 python:
-   install:
-     - requirements: docs/requirements.txt
-     - requirements: dev_requirements.txt
-     - requirements: pulser-core/rtd_requirements.txt
-     - requirements: pulser-simulation/rtd_requirements.txt
-     - requirements: pulser-pasqal/rtd_requirements.txt
+  install:
+    - requirements: docs/requirements.txt
+    - requirements: dev_requirements.txt
+    - requirements: pulser-core/rtd_requirements.txt
+    - requirements: pulser-simulation/rtd_requirements.txt
+    - requirements: pulser-pasqal/rtd_requirements.txt
