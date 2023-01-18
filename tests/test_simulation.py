@@ -621,7 +621,7 @@ def test_dephasing():
     assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 7)], prefix="q")
+        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
@@ -648,7 +648,7 @@ def test_depolarizing():
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 6)], prefix="q")
+        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
@@ -685,7 +685,7 @@ def test_eff_noise(matrices):
     )
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 8)], prefix="q")
+        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
