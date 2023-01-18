@@ -101,7 +101,7 @@ class PulserDecoder(JSONDecoder):
         if not build:
             return cls
 
-        if obj_name == "Sequence":
+        if "Sequence" in obj_name:
             seq = cls(*obj["__args__"], **obj["__kwargs__"])
             for name, args, kwargs in obj["calls"]:
                 getattr(seq, name)(*args, **kwargs)

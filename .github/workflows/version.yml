@@ -3,7 +3,7 @@ name: version
 on:
   pull_request:
     paths:
-      - 'VERSION.txt'
+      - "VERSION.txt"
 
 jobs:
   validate-version:
@@ -12,7 +12,7 @@ jobs:
       - name: Check out base branch
         uses: actions/checkout@v3
         with:
-          ref:  ${{ github.event.pull_request.base.ref }}
+          ref: ${{ github.event.pull_request.base.ref }}
       - name: Get old version
         run: |
           old_version="$(head -1 VERSION.txt)"
@@ -20,7 +20,7 @@ jobs:
           echo "old_version=$old_version" >> $GITHUB_ENV
       - name: Check out head branch
         uses: actions/checkout@v3
-      - name: Get new version 
+      - name: Get new version
         run: |
           new_version="$(head -1 VERSION.txt)"
           echo "New version: $new_version"
@@ -30,7 +30,7 @@ jobs:
       - name: Check stable version validity
         if: github.event.pull_request.base.ref == 'master'
         run: |
-          pattern=^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)$
+          pattern=^\(0\|[1-9][0-9]*\)\.\(0\|[1-9][0-9]*\)\.\(0\|[1-9][0-9]*\)$
           if [[ ${{ env.new_version }} =~ $pattern ]]; then
             echo "New version is valid."; exit 0
           else
@@ -39,10 +39,9 @@ jobs:
       - name: Check development version validity
         if: github.event.pull_request.base.ref != 'master'
         run: |
-          pattern=^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)dev\(0\|[1-9]\d*\)$
+          pattern=^\(0\|[1-9][0-9]*\)\.\(0\|[1-9][0-9]*\)dev\(0\|[1-9][0-9]*\)$
           if [[ ${{ env.new_version }} =~ $pattern ]]; then
             echo "New version is valid."; exit 0
           else
             echo "New version is invalid."; exit 1
           fi
-
