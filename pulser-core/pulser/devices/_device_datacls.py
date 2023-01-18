@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import json
-import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field, fields
@@ -87,7 +86,6 @@ class BaseDevice(ABC):
     reusable_channels: bool = field(default=False, init=False)
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
-    _channels: tuple[tuple[str, Channel], ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         def type_check(
@@ -151,30 +149,6 @@ class BaseDevice(ABC):
                 "greater than 0. and less than or equal to 1., "
                 f"not {self.max_layout_filling}."
             )
-
-        if self._channels:
-            warnings.warn(
-                "Specifying the channels of a device through the '_channels'"
-                " argument is deprecated since v0.9.0 and will be removed in"
-                " v0.10.0. Instead, use 'channel_objects' to specify the"
-                " channels and, optionally, 'channel_ids' to specify custom"
-                " channel IDs.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if self.channel_objects or self.channel_ids:
-                raise ValueError(
-                    "'_channels' can't be specified when 'channel_objects'"
-                    " or 'channel_ids' are also provided."
-                )
-            ch_objs = []
-            ch_ids = []
-            for ch_id, ch_obj in self._channels:
-                ch_ids.append(ch_id)
-                ch_objs.append(ch_obj)
-            object.__setattr__(self, "channel_ids", tuple(ch_ids))
-            object.__setattr__(self, "channel_objects", tuple(ch_objs))
-            object.__setattr__(self, "_channels", ())
 
         for ch_obj in self.channel_objects:
             type_check("All channels", Channel, value_override=ch_obj)
@@ -436,7 +410,7 @@ class BaseDevice(ABC):
 
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
-        ex_params = ("_channels", "channel_objects", "channel_ids")
+        ex_params = ("channel_objects", "channel_ids")
         params = self._params()
         for p in ex_params:
             params.pop(p, None)
