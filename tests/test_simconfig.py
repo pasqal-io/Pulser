@@ -90,12 +90,6 @@ def test_eff_noise_init(noise_sample):
 
 
 @pytest.mark.parametrize(
-    "oper_list",
-    [
-        [qeye(2), sigmax()],
-    ],
-)
-@pytest.mark.parametrize(
     "prob_distr",
     [
         [-1.0, 0.5],
@@ -103,23 +97,25 @@ def test_eff_noise_init(noise_sample):
         [0.3, 0.2],
     ],
 )
-def test_eff_noise_probs(oper_list, prob_distr):
+def test_eff_noise_probs(prob_distr):
     with pytest.raises(ValueError, match="is not a probability distribution."):
         SimConfig(
             noise=("eff_noise"),
-            eff_noise_opers=oper_list,
+            eff_noise_opers=[qeye(2), sigmax()],
             eff_noise_probs=prob_distr,
-        )
-    with pytest.raises(TypeError, match="eff_noise_probs is a list of floats"):
-        SimConfig(
-            noise=("eff_noise"), eff_noise_probs=[""], eff_noise_opers=[""]
         )
 
 
 def test_eff_noise_opers(matrices):
     with pytest.raises(ValueError, match="The operators list length"):
         SimConfig(noise=("eff_noise"), eff_noise_probs=[1.0])
-    with pytest.raises(ValueError, match="Fill the general noise parameters."):
+    with pytest.raises(TypeError, match="eff_noise_probs is a list of floats"):
+        SimConfig(
+            noise=("eff_noise"), eff_noise_probs=[""], eff_noise_opers=[""]
+        )
+    with pytest.raises(
+        ValueError, match="The general noise parameters have not been filled."
+    ):
         SimConfig(noise=("eff_noise"))
     with pytest.raises(TypeError, match="is not a Qobj."):
         SimConfig(
