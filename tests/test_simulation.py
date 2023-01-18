@@ -644,6 +644,8 @@ def test_depolarizing():
         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
     )
     assert sim.run().sample_final_state() == Counter({"0": 587, "1": 413})
+    trace_2 = sim.run()._results[-1] ** 2
+    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 6)], prefix="q")
@@ -671,10 +673,16 @@ def test_eff_noise(matrices):
         config=SimConfig(
             noise="eff_noise",
             eff_noise_opers=[matrices["I"], matrices["Z"]],
-            eff_noise_probs=[0.95, 0.05],
+            eff_noise_probs=[0.975, 0.025],
         ),
     )
-    assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
+    sim_dph = Simulation(
+        seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
+    )
+    assert (
+        sim._collapse_ops == sim_dph._collapse_ops
+        and sim.run().states[-1] == sim_dph.run().states[-1]
+    )
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 8)], prefix="q")

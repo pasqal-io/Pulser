@@ -202,6 +202,7 @@ class Simulation:
         self._construct_hamiltonian()
 
         Kraus_ops = []
+        self._collapse_ops = []
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
