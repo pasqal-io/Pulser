@@ -122,7 +122,9 @@ class Sequence:
         self._device: BaseDevice = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
-        self._calls: list[_Call] = [_Call("__init__", (register, device), {})]
+        self._calls: list[_Call] = [
+            _Call("__init__", (), {"register": register, "device": device})
+        ]
         self._schedule: _Schedule = _Schedule()
         self._basis_ref: dict[str, dict[QubitId, _QubitRef]] = {}
         # IDs of all qubits in device
@@ -502,8 +504,8 @@ class Sequence:
                 raise ValueError(strict_error_message)
             else:
                 raise TypeError(ch_type_er_mess)
-        # Initialize the new sequence
-        new_seq = Sequence(self.register, new_device)
+        # Initialize the new sequence (works for Sequence subclasses too)
+        new_seq = type(self)(register=self.register, device=new_device)
 
         for call in self._calls[1:]:
             if not (call.name == "declare_channel"):
@@ -1488,11 +1490,11 @@ class Sequence:
             for qubit in target_ids:
                 self._basis_ref[basis][qubit].increment_phase(phi)
 
-    def _to_dict(self) -> dict[str, Any]:
+    def _to_dict(self, _module: str = "pulser.sequence") -> dict[str, Any]:
         d = obj_to_dict(
             self,
             *self._calls[0].args,
-            _module="pulser.sequence",
+            _module=_module,
             **self._calls[0].kwargs,
         )
         d["__version__"] = pulser.__version__

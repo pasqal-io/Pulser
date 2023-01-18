@@ -403,11 +403,15 @@ class BaseDevice(ABC):
         if not 49 < ryd_lvl < 101:
             raise ValueError("Rydberg level should be between 50 and 100.")
 
-    def _params(self) -> dict[str, Any]:
+    def _params(self, init_only: bool = False) -> dict[str, Any]:
         # This is used instead of dataclasses.asdict() because asdict()
         # is recursive and we have Channel dataclasses in the args that
         # we don't want to convert to dict
-        return {f.name: getattr(self, f.name) for f in fields(self)}
+        return {
+            f.name: getattr(self, f.name)
+            for f in fields(self)
+            if not init_only or f.init
+        }
 
     def _validate_coords(
         self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
