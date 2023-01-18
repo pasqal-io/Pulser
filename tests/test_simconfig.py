@@ -29,7 +29,7 @@ def matrices():
     return pauli
 
 
-def test_init1(matrices):
+def test_init(matrices):
     config = SimConfig(
         noise=(
             "SPAM",
@@ -81,6 +81,14 @@ def test_init1(matrices):
         ("depolarizing", "eff_noise", "dephasing"),
     ],
 )
+def test_eff_noise_init(noise_sample):
+    with pytest.raises(
+        NotImplementedError,
+        match="Depolarizing, dephasing and eff_noise channels",
+    ):
+        SimConfig(noise=noise_sample)
+
+
 @pytest.mark.parametrize(
     "oper_list",
     [
@@ -95,29 +103,24 @@ def test_init1(matrices):
         [0.3, 0.2],
     ],
 )
-def test_eff_noise_config(noise_sample, oper_list, prob_distr):
-    with pytest.raises(
-        NotImplementedError,
-        match="Depolarizing, dephasing and eff_noise channels",
-    ):
-        SimConfig(noise=noise_sample)
+def test_eff_noise_probs(oper_list, prob_distr):
     with pytest.raises(ValueError, match="is not a probability distribution."):
         SimConfig(
             noise=("eff_noise"),
             eff_noise_opers=oper_list,
             eff_noise_probs=prob_distr,
         )
-
-
-def test_multiple_kraus_noise(matrices):
-    with pytest.raises(ValueError, match="The operators list length"):
-        SimConfig(noise=("eff_noise"), eff_noise_probs=[1.0])
-    with pytest.raises(ValueError, match="Fill the general noise parameters."):
-        SimConfig(noise=("eff_noise"))
     with pytest.raises(TypeError, match="eff_noise_probs is a list of floats"):
         SimConfig(
             noise=("eff_noise"), eff_noise_probs=[""], eff_noise_opers=[""]
         )
+
+
+def test_eff_noise_opers(matrices):
+    with pytest.raises(ValueError, match="The operators list length"):
+        SimConfig(noise=("eff_noise"), eff_noise_probs=[1.0])
+    with pytest.raises(ValueError, match="Fill the general noise parameters."):
+        SimConfig(noise=("eff_noise"))
     with pytest.raises(TypeError, match="is not a Qobj."):
         SimConfig(
             noise=("eff_noise"), eff_noise_opers=[2.0], eff_noise_probs=[1.0]
