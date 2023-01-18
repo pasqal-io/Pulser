@@ -226,7 +226,7 @@ class Simulation:
                 np.sqrt((1 - prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            Kraus_ops.append(k * qutip.sigmaz())
+            kraus_ops.append(k * qutip.sigmaz())
 
         if "depolarizing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
@@ -253,9 +253,9 @@ class Simulation:
                 np.sqrt((1 - 3 * prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            Kraus_ops.append(k * qutip.sigmax())
-            Kraus_ops.append(k * qutip.sigmay())
-            Kraus_ops.append(k * qutip.sigmaz())
+            kraus_ops.append(k * qutip.sigmax())
+            kraus_ops.append(k * qutip.sigmay())
+            kraus_ops.append(k * qutip.sigmaz())
 
         if "eff_noise" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
@@ -290,10 +290,10 @@ class Simulation:
                     self.config.eff_noise_probs[i] * prob_id ** (n - 1)
                 )
                 K_op = k * self.config.eff_noise_opers[i]
-                Kraus_ops.append(K_op)
+                kraus_ops.append(K_op)
 
         # Building collapse operators
-        for operator in Kraus_ops:
+        for operator in kraus_ops:
             self._collapse_ops += [
                 self.build_operator([(operator, [qid])])
                 for qid in self._qid_index

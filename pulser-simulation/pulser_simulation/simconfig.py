@@ -219,7 +219,7 @@ class SimConfig:
                     f"({len(self.eff_noise_probs)}) must be equal."
                 )
             if self.eff_noise_opers == [] or self.eff_noise_probs == []:
-                raise ValueError("The general noise parameters have not been filled.")
+                raise ValueError("Fill the general noise parameters.")
 
             for prob in self.eff_noise_probs:
                 if not isinstance(prob, float):
