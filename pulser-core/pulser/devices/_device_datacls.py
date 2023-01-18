@@ -621,6 +621,10 @@ class VirtualDevice(BaseDevice):
     def change_rydberg_level(self, ryd_lvl: int) -> None:
         """Changes the Rydberg level used in the Device.
 
+        Find the :math:`C_6` coefficient matching the Rydberg level on
+        `this page <https://github.com/pasqal-io/Pulser/blob/develop/
+        pulser-core/pulser/devices/interaction_coefficients/C6_coeffs.json>`_
+
         Args:
             ryd_lvl: the Rydberg level to use (between 50 and 100).
         """
