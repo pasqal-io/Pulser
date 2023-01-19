@@ -289,8 +289,8 @@ class Simulation:
                 k = np.sqrt(
                     self.config.eff_noise_probs[i] * prob_id ** (n - 1)
                 )
-                K_op = k * self.config.eff_noise_opers[i]
-                kraus_ops.append(K_op)
+                k_op = k * self.config.eff_noise_opers[i]
+                kraus_ops.append(k_op)
 
         # Building collapse operators
         for operator in kraus_ops:
