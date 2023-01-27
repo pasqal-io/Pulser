@@ -147,9 +147,9 @@ class SimConfig:
             )
         if "doppler" in self.noise:
             lines.append(f"Temperature:           {self.temperature*1.e6}µK")
-            lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "amplitude" in self.noise:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
+            lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "dephasing" in self.noise:
             lines.append(f"Dephasing probability: {self.dephasing_prob}")
         if "depolarizing" in self.noise:
