@@ -14,7 +14,7 @@
 """Custom decorators used by the Sequence class."""
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from functools import wraps
 from itertools import chain
 from typing import TYPE_CHECKING, Any, TypeVar, cast
@@ -58,10 +58,14 @@ def verify_variable(seq: Sequence, x: Any) -> None:
                     "Sequence's 'declare_variable' method as your"
                     "variables."
                 )
-    elif isinstance(x, Iterable) and not isinstance(x, str):
+    elif not isinstance(x, str):
         # Recursively look for parametrized objs inside the arguments
-        for y in x:
-            verify_variable(seq, y)
+        try:
+            for y in x:
+                verify_variable(seq, y)
+        except TypeError:
+            # x is not iterable, do nothing
+            pass
 
 
 def verify_parametrization(func: F) -> F:

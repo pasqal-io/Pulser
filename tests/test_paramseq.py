@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import copy
+from collections.abc import Iterable
 
 import numpy as np
 import pytest
@@ -325,3 +326,15 @@ def test_parametrized_before_eom_mode(mod_device):
 
     # Just check that building works
     seq.build(amp=3.0)
+
+
+def test_iterable_variable_check():
+    seq = Sequence(reg, device)
+    seq.declare_channel("ch0", "rydberg_global")
+    #
+    delay_t = np.array(100)
+    # A 0-D array is identified as an Iterable but then fails iteration
+    # Giving this as an argument to a sequence call should still work
+    assert isinstance(delay_t, Iterable)
+    seq.delay(delay_t, "ch0")
+    assert seq.get_duration() == delay_t
