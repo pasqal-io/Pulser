@@ -1345,7 +1345,7 @@ def test_eom_buffer(mod_device, initial_instruction, non_zero_detuning_off):
         phase = np.pi
         seq.add(Pulse.ConstantPulse(16, 1, 0, np.pi), "ch0")
     eom_block_starts = seq.get_duration(include_fall_time=True)
-    # Adjusg the moment the EOM block starts to the clock period
+    # Adjust the moment the EOM block starts to the clock period
     eom_block_starts = seq._schedule["ch0"].adjust_duration(eom_block_starts)
 
     eom_config = seq.declared_channels["ch0"].eom_config
