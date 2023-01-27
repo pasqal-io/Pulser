@@ -126,7 +126,7 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     got_amp = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["amp"]
     np.testing.assert_array_equal(got_amp, want_amp)
 
-    want_det = chan.modulate(np.ones(N))
+    want_det = chan.modulate(np.ones(N), keep_ends=True)
     got_det = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["det"]
     np.testing.assert_array_equal(got_det, want_det)
 
@@ -219,7 +219,9 @@ def test_eom_modulation(mod_device, disable_eom):
         samples = getattr(input_samples, qty)
         aom_input = samples.copy()
         aom_input[eom_mask] = det_off if qty == "det" else 0.0
-        aom_output = chan.modulate(aom_input, eom=False)[:full_duration]
+        aom_output = chan.modulate(
+            aom_input, eom=False, keep_ends=(qty == "det")
+        )[:full_duration]
 
         eom_input = samples.copy()
         eom_input[ext_eom_mask] = aom_output[ext_eom_mask]
