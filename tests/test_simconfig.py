@@ -57,8 +57,8 @@ def test_init(matrices):
     )
     str_config = config.__str__(True)
     assert (
-        "General noise distribution" in str_config
-        and "General noise operators" in str_config
+        "Effective noise distribution" in str_config
+        and "Effective noise operators" in str_config
     )
     with pytest.raises(ValueError, match="is not a valid noise type."):
         SimConfig(noise="bad_noise")
