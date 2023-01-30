@@ -140,10 +140,10 @@ class SimConfig:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
         if "eff_noise" in self.noise:
             lines.append(
-                f"General noise distribution:       {self.eff_noise_probs}"
+                f"Effective noise distribution:       {self.eff_noise_probs}"
             )
             lines.append(
-                f"General noise operators:       {self.eff_noise_opers}"
+                f"Effective noise operators:       {self.eff_noise_opers}"
             )
         if "doppler" in self.noise:
             lines.append(f"Temperature:           {self.temperature*1.e6}µK")
