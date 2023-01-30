@@ -276,3 +276,19 @@ class SimConfig:
                     "The completeness relation is not verified."
                     f" Ended up with {sum_op} instead of {identity}."
                 )
+
+    @property
+    def supported_noise(self) -> dict:
+        """Return the noises implemented on pulser."""
+        SUPPORTED_NOISE = {
+            "ising": {
+                "dephasing",
+                "doppler",
+                "amplitude",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+            },
+            "XY": {"SPAM"},
+        }
+        return SUPPORTED_NOISE
