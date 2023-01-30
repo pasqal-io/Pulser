@@ -174,7 +174,9 @@ class Simulation:
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
-        not_supported = set(cfg.noise) - cfg.supported_noises[self._interaction]
+        not_supported = (
+            set(cfg.noise) - cfg.supported_noises[self._interaction]
+        )
         if not_supported:
             raise NotImplementedError(
                 f"Interaction mode '{self._interaction}' does not support "
