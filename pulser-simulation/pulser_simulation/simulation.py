@@ -40,7 +40,14 @@ from pulser_simulation.simresults import (
 )
 
 SUPPORTED_NOISE = {
-    "ising": {"dephasing", "doppler", "amplitude", "SPAM"},
+    "ising": {
+        "dephasing",
+        "doppler",
+        "amplitude",
+        "SPAM",
+        "depolarizing",
+        "eff_noise",
+    },
     "XY": {"SPAM"},
 }
 
@@ -193,6 +200,8 @@ class Simulation:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
+
+        kraus_ops = []
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
@@ -212,16 +221,81 @@ class Simulation:
                     stacklevel=2,
                 )
             k = np.sqrt(prob * (1 - prob) ** (n - 1))
-            self._collapse_ops = [
+
+            self._collapse_ops += [
                 np.sqrt((1 - prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            self._collapse_ops += [
-                k
-                * (
-                    self.build_operator([("sigma_rr", [qid])])
-                    - self.build_operator([("sigma_gg", [qid])])
+            kraus_ops.append(k * qutip.sigmaz())
+
+        if "depolarizing" in self.config.noise:
+            if self.basis_name == "digital" or self.basis_name == "all":
+                # Go back to previous config
+                self.set_config(prev_config)
+                raise NotImplementedError(
+                    "Cannot include depolarizing "
+                    + "noise in digital- or all-basis."
                 )
+            # Probability of error occurrence
+
+            prob = self.config.depolarizing_prob / 4
+            n = self._size
+            if prob > 0.1 and n > 1:
+                warnings.warn(
+                    "The depolarizing model is a first-order approximation"
+                    f" in the depolarizing probability. p = {4*prob}"
+                    " is too large for realistic results.",
+                    stacklevel=2,
+                )
+
+            k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
+            self._collapse_ops += [
+                np.sqrt((1 - 3 * prob) ** n)
+                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+            ]
+            kraus_ops.append(k * qutip.sigmax())
+            kraus_ops.append(k * qutip.sigmay())
+            kraus_ops.append(k * qutip.sigmaz())
+
+        if "eff_noise" in self.config.noise:
+            if self.basis_name == "digital" or self.basis_name == "all":
+                # Go back to previous config
+                self.set_config(prev_config)
+                raise NotImplementedError(
+                    "Cannot include general "
+                    + "noise in digital- or all-basis."
+                )
+            # Probability distribution of error occurences
+            n = self._size
+            m = len(self.config.eff_noise_opers)
+            if n > 1:
+                for i in range(1, m):
+                    prob_i = self.config.eff_noise_probs[i]
+                    if prob_i > 0.1:
+                        warnings.warn(
+                            "The effective noise model is a first-order"
+                            " approximation in the noise probability."
+                            f"p={prob_i} is large for realistic results.",
+                            stacklevel=2,
+                        )
+                        break
+            # Deriving Kraus operators
+            prob_id = self.config.eff_noise_probs[0]
+            self._collapse_ops += [
+                np.sqrt(prob_id**n)
+                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+            ]
+            for i in range(1, m):
+                k = np.sqrt(
+                    self.config.eff_noise_probs[i] * prob_id ** (n - 1)
+                )
+                k_op = k * self.config.eff_noise_opers[i]
+                kraus_ops.append(k_op)
+
+        # Building collapse operators
+        for operator in kraus_ops:
+            self._collapse_ops += [
+                self.build_operator([(operator, [qid])])
                 for qid in self._qid_index
             ]
 
@@ -268,6 +342,11 @@ class Simulation:
             param_dict["laser_waist"] = config.laser_waist
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_prob"] = config.dephasing_prob
+        if "depolarizing" in diff_noise_set:
+            param_dict["depolarizing_prob"] = config.depolarizing_prob
+        if "eff_noise" in diff_noise_set:
+            param_dict["eff_noise_opers"] = config.eff_noise_opers
+            param_dict["eff_noise_probs"] = config.eff_noise_probs
         param_dict["temperature"] *= 1.0e6
         # update runs:
         param_dict["runs"] = config.runs
@@ -445,7 +524,9 @@ class Simulation:
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
-        if set(self.config.noise).issubset({"dephasing", "SPAM"}):
+        if set(self.config.noise).issubset(
+            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
+        ):
             local_noises = "SPAM" in self.config.noise and self.config.eta > 0
         samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
@@ -875,7 +956,11 @@ class Simulation:
             else:
                 raise ValueError("`progress_bar` must be a bool.")
 
-            if "dephasing" in self.config.noise:
+            if (
+                "dephasing" in self.config.noise
+                or "depolarizing" in self.config.noise
+                or "eff_noise" in self.config.noise
+            ):
                 result = qutip.mesolve(
                     self._hamiltonian,
                     self.initial_state,
@@ -902,7 +987,9 @@ class Simulation:
             )
 
         # Check if noises ask for averaging over multiple runs:
-        if set(self.config.noise).issubset({"dephasing", "SPAM"}):
+        if set(self.config.noise).issubset(
+            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
+        ):
             # If there is "SPAM", the preparation errors must be zero
             if "SPAM" not in self.config.noise or self.config.eta == 0:
                 return _run_solver()
