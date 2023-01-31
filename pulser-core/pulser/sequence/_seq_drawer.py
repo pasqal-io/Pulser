@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from itertools import combinations
+from itertools import chain, combinations
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
@@ -313,6 +313,8 @@ def draw_sequence(
         ch_data = data[ch]
         basis = ch_obj.basis
         ys = ch_data.get_input_curves()
+        ys_mod = [()] * 3
+        yseff = [()] * 3
         draw_output = draw_modulation and (
             ch_obj.mod_bandwidth or not draw_input
         )
@@ -322,7 +324,10 @@ def draw_sequence(
         if sampling_rate:
             curves = ys_mod if draw_output else ys
             yseff = ch_data.interpolate_curves(curves, sampling_rate)
-        ref_ys = yseff if sampling_rate else ys
+        ref_ys = [
+            list(chain.from_iterable(all_ys))
+            for all_ys in zip(ys, ys_mod, yseff)
+        ]
         max_amp = np.max(ref_ys[0])
         max_amp = 1 if max_amp == 0 else max_amp
         amp_top = max_amp * 1.2

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import dataclasses
+import itertools
 import json
 from typing import Any
 from unittest.mock import patch
@@ -1327,3 +1328,53 @@ def test_eom_mode(mod_device):
     assert last_slot.type == Pulse.ConstantPulse(
         duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
     )
+
+
+@pytest.mark.parametrize(
+    "initial_instruction, non_zero_detuning_off",
+    list(itertools.product([None, "delay", "add"], [True, False])),
+)
+def test_eom_buffer(mod_device, initial_instruction, non_zero_detuning_off):
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
+    seq.declare_channel("other", "rydberg_global")
+    if initial_instruction == "delay":
+        seq.delay(16, "ch0")
+        phase = 0
+    elif initial_instruction == "add":
+        phase = np.pi
+        seq.add(Pulse.ConstantPulse(16, 1, 0, np.pi), "ch0")
+    eom_block_starts = seq.get_duration(include_fall_time=True)
+    # Adjust the moment the EOM block starts to the clock period
+    eom_block_starts = seq._schedule["ch0"].adjust_duration(eom_block_starts)
+
+    eom_config = seq.declared_channels["ch0"].eom_config
+    limit_rabi_freq = eom_config.max_limiting_amp**2 / (
+        2 * eom_config.intermediate_detuning
+    )
+    amp_on = limit_rabi_freq * (1.1 if non_zero_detuning_off else 0.5)
+
+    # Show that EOM mode ignores other channels and uses "no-delay" by default
+    seq.add(Pulse.ConstantPulse(100, 1, -1, 0), "other")
+    seq.enable_eom_mode("ch0", amp_on, 0)
+    assert len(seq._schedule["ch0"].eom_blocks) == 1
+    eom_block = seq._schedule["ch0"].eom_blocks[0]
+    if non_zero_detuning_off:
+        assert eom_block.detuning_off != 0
+    else:
+        assert eom_block.detuning_off == 0
+    if not initial_instruction:
+        assert seq.get_duration(channel="ch0") == 0  # Channel remains empty
+    else:
+        last_slot = seq._schedule["ch0"][-1]
+        assert last_slot.ti == eom_block_starts  # Nothing else was added
+        duration = last_slot.tf - last_slot.ti
+        # The buffer is a Pulse at 'detuning_off' and zero amplitude
+        assert (
+            last_slot.type
+            == Pulse.ConstantPulse(
+                duration, 0.0, eom_block.detuning_off, phase
+            )
+            if non_zero_detuning_off
+            else "delay"
+        )
