@@ -214,7 +214,9 @@ class ChannelSamples:
                 # First, we modulated the pre-filtered standard samples, then
                 # we mask them to include only the parts outside the EOM mask
                 # This ensures smooth transitions between EOM and STD samples
-                modulated_std = channel_obj.modulate(std_samples[key])
+                modulated_std = channel_obj.modulate(
+                    std_samples[key], keep_ends=key == "det"
+                )
                 std = masked(modulated_std, ~eom_mask)
 
                 # At the end of an EOM block, the EOM(s) are switched back
@@ -268,7 +270,7 @@ class ChannelSamples:
 
         else:
             new_samples["amp"] = channel_obj.modulate(self.amp)
-            new_samples["det"] = channel_obj.modulate(self.det)
+            new_samples["det"] = channel_obj.modulate(self.det, keep_ends=True)
 
         new_samples["phase"] = channel_obj.modulate(self.phase, keep_ends=True)
         for key in new_samples:
