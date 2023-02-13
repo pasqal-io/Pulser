@@ -145,6 +145,20 @@ class ChannelSamples:
         """
         return np.count_nonzero(self.amp) + np.count_nonzero(self.det) == 0
 
+    def _generate_std_samples(self) -> ChannelSamples:
+        new_samples = {
+            key: getattr(self, key).copy() for key in ("amp", "det")
+        }
+        for block in self.eom_blocks:
+            region = slice(block.ti, block.tf)
+            new_samples["amp"][region] = 0
+            # For modulation purposes, the detuning on the standard
+            # samples is kept at 'detuning_off', which permits a smooth
+            # transition to/from the EOM modulated samples
+            new_samples["det"][region] = block.detuning_off
+
+        return replace(self, **new_samples)
+
     def modulate(
         self, channel_obj: Channel, max_duration: Optional[int] = None
     ) -> ChannelSamples:
@@ -173,14 +187,12 @@ class ChannelSamples:
 
         new_samples: dict[str, np.ndarray] = {}
 
-        std_samples = {
-            key: getattr(self, key).copy() for key in ("amp", "det")
-        }
         eom_samples = {
             key: getattr(self, key).copy() for key in ("amp", "det")
         }
 
         if self.eom_blocks:
+            std_samples = self._generate_std_samples()
             # Note: self.duration already includes the fall time
             eom_mask = np.zeros(self.duration, dtype=bool)
             # Extension of the EOM mask outside of the EOM interval
@@ -190,11 +202,6 @@ class ChannelSamples:
                 # If block.tf is None, uses the full duration as the tf
                 end = block.tf or self.duration
                 eom_mask[block.ti : end] = True
-                std_samples["amp"][block.ti : end] = 0
-                # For modulation purposes, the detuning on the standard
-                # samples is kept at 'detuning_off', which permits a smooth
-                # transition to/from the EOM modulated samples
-                std_samples["det"][block.ti : end] = block.detuning_off
                 # Extends EOM masks to include fall time
                 ext_end = end + eom_fall_time
                 eom_mask_ext[end:ext_end] = True
@@ -215,7 +222,7 @@ class ChannelSamples:
                 # we mask them to include only the parts outside the EOM mask
                 # This ensures smooth transitions between EOM and STD samples
                 modulated_std = channel_obj.modulate(
-                    std_samples[key], keep_ends=key == "det"
+                    getattr(std_samples, key), keep_ends=key == "det"
                 )
                 std = masked(modulated_std, ~eom_mask)
 
