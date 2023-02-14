@@ -46,7 +46,7 @@ from pulser.register.mappable_reg import MappableRegister
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
-from pulser.sequence._seq_drawer import draw_sequence, Figure
+from pulser.sequence._seq_drawer import Figure, draw_sequence
 from pulser.sequence._seq_str import seq_to_str
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
