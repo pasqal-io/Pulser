@@ -403,13 +403,15 @@ class Channel(ABC):
             mod_padding = self._modulation_padding
 
         if keep_ends:
-            samples = np.pad(input_samples, 2 * mod_padding, mode="edge")
+            samples = np.pad(
+                input_samples, mod_padding + self.rise_time, mode="edge"
+            )
         else:
             samples = np.pad(input_samples, mod_padding)
         mod_samples = self.apply_modulation(samples, mod_bandwidth)
         if keep_ends:
             # Cut off the extra ends
-            return mod_samples[mod_padding:-mod_padding]
+            return mod_samples[self.rise_time : -self.rise_time]
         return mod_samples
 
     @staticmethod

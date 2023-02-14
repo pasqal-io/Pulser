@@ -164,9 +164,8 @@ class ChannelSamples:
     ) -> ChannelSamples:
         """Modulates the samples for a given channel.
 
-        It assumes that the phase starts at its initial value and is kept at
-        its final value. The same could potentially be done for the detuning,
-        but it's not as safe of an assumption so it's not done for now.
+        It assumes that the detuning and phase start at their initial values
+        and are kept at their final values.
 
         Args:
             channel_obj: The channel object for which to modulate the samples.
