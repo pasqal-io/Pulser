@@ -357,6 +357,15 @@ class Channel(ABC):
                 "allowed for the chosen channel."
             )
 
+    @property
+    def _modulation_padding(self) -> int:
+        """The padding added to the input signals before modulation.
+
+        Defined in number of samples to pad before and after signal
+        (i.e. the signal is extended by 2*_modulation_padding).
+        """
+        return self.rise_time
+
     def modulate(
         self,
         input_samples: np.ndarray,
@@ -380,7 +389,7 @@ class Channel(ABC):
                 raise TypeError(f"The channel {self} does not have an EOM.")
             eom_config = cast(BaseEOM, self.eom_config)
             mod_bandwidth = eom_config.mod_bandwidth
-            rise_time = eom_config.rise_time
+            mod_padding = eom_config.rise_time
 
         elif not self.mod_bandwidth:
             warnings.warn(
@@ -391,22 +400,41 @@ class Channel(ABC):
             return input_samples
         else:
             mod_bandwidth = self.mod_bandwidth
-            rise_time = self.rise_time
+            mod_padding = self._modulation_padding
 
+        if keep_ends:
+            samples = np.pad(
+                input_samples, mod_padding + self.rise_time, mode="edge"
+            )
+        else:
+            samples = np.pad(input_samples, mod_padding)
+        mod_samples = self.apply_modulation(samples, mod_bandwidth)
+        if keep_ends:
+            # Cut off the extra ends
+            return mod_samples[self.rise_time : -self.rise_time]
+        return mod_samples
+
+    @staticmethod
+    def apply_modulation(
+        input_samples: np.ndarray, mod_bandwidth: float
+    ) -> np.ndarray:
+        """Applies the modulation transfer fuction to the input samples.
+
+        Note:
+            This is strictly the application of the modulation transfer
+            function. The samples should be padded beforehand.
+
+        Args:
+            input_samples: The samples to modulate.
+            mod_bandwidth: The modulation bandwidth at -3dB (50% reduction),
+                in MHz.
+        """
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
         fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
-        if keep_ends:
-            samples = np.pad(input_samples, 2 * rise_time, mode="edge")
-        else:
-            samples = np.pad(input_samples, rise_time)
-        freqs = fftfreq(samples.size)
+        freqs = fftfreq(input_samples.size)
         modulation = np.exp(-(freqs**2) / fc**2)
-        mod_samples = ifft(fft(samples) * modulation).real
-        if keep_ends:
-            # Cut off the extra ends
-            return cast(np.ndarray, mod_samples[rise_time:-rise_time])
-        return cast(np.ndarray, mod_samples)
+        return cast(np.ndarray, ifft(fft(input_samples) * modulation).real)
 
     def calc_modulation_buffer(
         self,
