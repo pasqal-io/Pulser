@@ -157,8 +157,8 @@ class _ChannelSchedule:
             )
             slots.append(_TargetSlot(s.ti, tf, s.targets))
 
-            # The phase of detuned delays is not considered
             if ignore_detuned_delay_phase and self.is_detuned_delay(pulse):
+                # The phase of detuned delays is not considered
                 continue
 
             ph_jump_t = self.channel_obj.phase_jump_time
