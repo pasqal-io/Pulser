@@ -129,7 +129,9 @@ class _ChannelSchedule:
                 max(duration, self.channel_obj.min_duration)
             )
 
-    def get_samples(self) -> ChannelSamples:
+    def get_samples(
+        self, ignore_detuned_delay_phase: bool = True
+    ) -> ChannelSamples:
         """Returns the samples of the channel."""
         # Keep only pulse slots
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
@@ -155,16 +157,19 @@ class _ChannelSchedule:
             )
             slots.append(_TargetSlot(s.ti, tf, s.targets))
 
-            # The phase of detuned delays is not considered
-            if self.is_detuned_delay(pulse):
+            if ignore_detuned_delay_phase and self.is_detuned_delay(pulse):
+                # The phase of detuned delays is not considered
                 continue
 
             ph_jump_t = self.channel_obj.phase_jump_time
             for last_pulse_ind in range(ind - 1, -1, -1):  # From ind-1 to 0
                 last_pulse_slot = channel_slots[last_pulse_ind]
                 # Skips over detuned delay pulses
-                if not self.is_detuned_delay(
-                    cast(Pulse, last_pulse_slot.type)
+                if not (
+                    ignore_detuned_delay_phase
+                    and self.is_detuned_delay(
+                        cast(Pulse, last_pulse_slot.type)
+                    )
                 ):
                     # Accounts for when pulse is added with 'no-delay'
                     # i.e. there is no phase_jump_time in between a phase jump
@@ -173,7 +178,7 @@ class _ChannelSchedule:
             else:
                 t_start = 0
             # Overrides all values from t_start on. The next pulses will do
-            # the same, so the last phase is automatically kept till the endm
+            # the same, so the last phase is automatically kept till the end
             phase[t_start:] = pulse.phase
 
         return ChannelSamples(amp, det, phase, slots, self.eom_blocks)

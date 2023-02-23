@@ -162,7 +162,7 @@ def draw_sequence(
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
-) -> tuple[Figure, Figure]:
+) -> tuple[Figure | None, Figure]:
     """Draws the entire sequence.
 
     Args:

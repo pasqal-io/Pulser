@@ -46,7 +46,7 @@ from pulser.register.mappable_reg import MappableRegister
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
-from pulser.sequence._seq_drawer import draw_sequence
+from pulser.sequence._seq_drawer import Figure, draw_sequence
 from pulser.sequence._seq_str import seq_to_str
 
 if version_info[:2] >= (3, 8):  # pragma: no cover
@@ -1328,8 +1328,7 @@ class Sequence:
                 "Can't draw the register for a sequence without a defined "
                 "register."
             )
-        fig_reg, fig = draw_sequence(
-            self,
+        fig_reg, fig = self._plot(
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
@@ -1338,13 +1337,16 @@ class Sequence:
             draw_modulation="output" in mode,
             draw_phase_curve=draw_phase_curve,
         )
-        if fig_name is not None and draw_register:
+        if fig_name is not None and fig_reg is not None:
             name, ext = os.path.splitext(fig_name)
             fig.savefig(name + "_pulses" + ext, **kwargs_savefig)
             fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
         elif fig_name:
             fig.savefig(fig_name, **kwargs_savefig)
         plt.show()
+
+    def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
+        return draw_sequence(self, **draw_options)
 
     def _add(
         self,

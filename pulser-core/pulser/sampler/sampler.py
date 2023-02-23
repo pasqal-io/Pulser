@@ -8,6 +8,8 @@ from pulser.sampler.samples import SequenceSamples, _SlmMask
 if TYPE_CHECKING:
     from pulser import Sequence
 
+IGNORE_DETUNED_DELAY_PHASE = True
+
 
 def sample(
     seq: Sequence,
@@ -27,7 +29,7 @@ def sample(
 
     samples_list = []
     for ch_schedule in seq._schedule.values():
-        samples = ch_schedule.get_samples()
+        samples = ch_schedule.get_samples(IGNORE_DETUNED_DELAY_PHASE)
         if extended_duration:
             samples = samples.extend_duration(extended_duration)
         if modulation:
