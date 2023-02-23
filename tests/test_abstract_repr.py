@@ -439,7 +439,7 @@ class TestSerialization:
             "slug": triangular_lattice.slug,
         }
         assert abstract["register"] == [{"qid": qid} for qid in reg.qubit_ids]
-        assert abstract["variables"]["var"] == dict(type="int")
+        assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
         with pytest.raises(
             ValueError,
@@ -605,6 +605,17 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
     )
     assert s == json.loads(rs)
 
+    # Remove the defaults and check it still works
+    for var in seq.declared_variables.values():
+        s["variables"][var.name]["value"] = [var.dtype()] * var.size
+    for q in s["register"]:
+        q.pop("default_trap", None)
+    s["name"] = "pulser-exported"
+
+    seq2 = Sequence.from_abstract_repr(json.dumps(s))
+    rs_no_defaults = seq2.to_abstract_repr()
+    assert s == json.loads(rs_no_defaults)
+
 
 # Needed to replace lambdas in the pytest.mark.parametrize calls (due to mypy)
 def _get_op(op: dict) -> Any:
@@ -700,7 +711,8 @@ class TestDeserialization:
         seq = Sequence.from_abstract_repr(json.dumps(s))
         assert np.all(seq.magnetic_field == mag_field)
 
-    def test_deserialize_variables(self):
+    @pytest.mark.parametrize("without_default", [True, False])
+    def test_deserialize_variables(self, without_default):
         s = _get_serialized_seq(
             variables={
                 "yolo": {"type": "int", "value": [42, 43, 44]},
@@ -709,6 +721,9 @@ class TestDeserialization:
         )
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
+        if without_default:
+            # Serialize and deserialize again, without the defaults
+            seq = Sequence.from_abstract_repr(seq.to_abstract_repr())
 
         # Check variables
         assert len(seq.declared_variables) == len(s["variables"])

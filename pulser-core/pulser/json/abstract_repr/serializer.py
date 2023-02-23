@@ -143,6 +143,11 @@ def serialize_abstract_sequence(
         for var in seq._variables.values():
             value = var._validate_value(defaults[var.name])
             res["variables"][var.name]["value"] = value.tolist()
+    else:
+        # Still need to set a default value for the variables because the
+        # deserializer uses it to infer the size of the variable
+        for var in seq._variables.values():
+            res["variables"][var.name]["value"] = [var.dtype()] * var.size
 
     def convert_targets(
         target_ids: Union[QubitId, abcSequence[QubitId]]
