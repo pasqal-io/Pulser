@@ -216,36 +216,28 @@ def serialize_abstract_sequence(
             )
         elif call.name == "measure":
             data = get_all_args(("basis",), call)
-            res["measurement"] = data["basis"]
+            res["measurement"] = data.get("basis", "ground-rydberg")
         elif call.name == "add":
             data = get_all_args(("pulse", "channel", "protocol"), call)
             op_dict = {
                 "op": "pulse",
                 "channel": data["channel"],
-                "protocol": "min-delay"
-                if "protocol" not in data
-                else data["protocol"],
+                "protocol": data.get("protocol", "min-delay"),
             }
             op_dict.update(data["pulse"]._to_abstract_repr())
             operations.append(op_dict)
         elif "phase_shift" in call.name:
-            try:
-                basis = call.kwargs["basis"]
-            except KeyError:
-                basis = "digital"
             targets = call.args[1:]
             if call.name == "phase_shift":
                 targets = convert_targets(targets)
-            elif call.name == "phase_shift_index":
-                pass
-            else:
+            elif call.name != "phase_shift_index":
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
             operations.append(
                 {
                     "op": "phase_shift",
                     "phi": call.args[0],
                     "targets": targets,
-                    "basis": basis,
+                    "basis": call.kwargs.get("basis", "digital"),
                 }
             )
         elif call.name == "set_magnetic_field":
@@ -258,8 +250,8 @@ def serialize_abstract_sequence(
                 call,
             )
             # Overwritten if in 'data'
-            defaults = dict(optimal_detuning_off=0.0)
-            operations.append({"op": "enable_eom_mode", **defaults, **data})
+            defaults_: dict[str, Any] = dict(optimal_detuning_off=0.0)
+            operations.append({"op": "enable_eom_mode", **defaults_, **data})
         elif call.name == "add_eom_pulse":
             data = get_all_args(
                 (
@@ -272,8 +264,8 @@ def serialize_abstract_sequence(
                 call,
             )
             # Overwritten if in 'data'
-            defaults = dict(post_phase_shift=0.0, protocol="min-delay")
-            operations.append({"op": "add_eom_pulse", **defaults, **data})
+            defaults_ = dict(post_phase_shift=0.0, protocol="min-delay")
+            operations.append({"op": "add_eom_pulse", **defaults_, **data})
         elif call.name == "disable_eom_mode":
             data = get_all_args(("channel",), call)
             operations.append(
