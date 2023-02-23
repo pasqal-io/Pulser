@@ -14,6 +14,7 @@
 """Utility functions for JSON serialization to the abstract representation."""
 from __future__ import annotations
 
+import inspect
 import json
 from itertools import chain
 from typing import TYPE_CHECKING, Any
@@ -159,10 +160,20 @@ def serialize_abstract_sequence(
         indices = seq.register.find_indices(target_array.tolist())
         return indices[0] if og_dim == 0 else indices
 
+    def get_kwarg_default(call_name: str, kwarg_name: str) -> Any:
+        sig = inspect.signature(getattr(seq, call_name))
+        return sig.parameters[kwarg_name].default
+
     def get_all_args(
         pos_args_signature: tuple[str, ...], call: _Call
     ) -> dict[str, Any]:
-        return {**dict(zip(pos_args_signature, call.args)), **call.kwargs}
+        params = {**dict(zip(pos_args_signature, call.args)), **call.kwargs}
+        default_values = {
+            p_name: get_kwarg_default(call.name, p_name)
+            for p_name in pos_args_signature
+            if p_name not in params
+        }
+        return {**default_values, **params}
 
     operations = res["operations"]
     for call in chain(seq._calls, seq._to_build_calls):
@@ -185,7 +196,7 @@ def serialize_abstract_sequence(
                 ("channel", "channel_id", "initial_target"), call
             )
             res["channels"][data["channel"]] = data["channel_id"]
-            if "initial_target" in data and data["initial_target"] is not None:
+            if data["initial_target"] is not None:
                 operations.append(
                     {
                         "op": "target",
@@ -221,13 +232,13 @@ def serialize_abstract_sequence(
             )
         elif call.name == "measure":
             data = get_all_args(("basis",), call)
-            res["measurement"] = data.get("basis", "ground-rydberg")
+            res["measurement"] = data["basis"]
         elif call.name == "add":
             data = get_all_args(("pulse", "channel", "protocol"), call)
             op_dict = {
                 "op": "pulse",
                 "channel": data["channel"],
-                "protocol": data.get("protocol", "min-delay"),
+                "protocol": data["protocol"],
             }
             op_dict.update(data["pulse"]._to_abstract_repr())
             operations.append(op_dict)
@@ -242,7 +253,9 @@ def serialize_abstract_sequence(
                     "op": "phase_shift",
                     "phi": call.args[0],
                     "targets": targets,
-                    "basis": call.kwargs.get("basis", "digital"),
+                    "basis": call.kwargs.get(
+                        "basis", get_kwarg_default(call.name, "basis")
+                    ),
                 }
             )
         elif call.name == "set_magnetic_field":
@@ -254,9 +267,7 @@ def serialize_abstract_sequence(
                 ("channel", "amp_on", "detuning_on", "optimal_detuning_off"),
                 call,
             )
-            # Overwritten if in 'data'
-            defaults_: dict[str, Any] = dict(optimal_detuning_off=0.0)
-            operations.append({"op": "enable_eom_mode", **defaults_, **data})
+            operations.append({"op": "enable_eom_mode", **data})
         elif call.name == "add_eom_pulse":
             data = get_all_args(
                 (
@@ -268,9 +279,7 @@ def serialize_abstract_sequence(
                 ),
                 call,
             )
-            # Overwritten if in 'data'
-            defaults_ = dict(post_phase_shift=0.0, protocol="min-delay")
-            operations.append({"op": "add_eom_pulse", **defaults_, **data})
+            operations.append({"op": "add_eom_pulse", **data})
         elif call.name == "disable_eom_mode":
             data = get_all_args(("channel",), call)
             operations.append(
