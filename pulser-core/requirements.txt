@@ -1,5 +1,5 @@
 jsonschema
-matplotlib
+matplotlib >= 3.6.2
 numpy >= 1.20
 scipy
 backports.cached-property; python_version == '3.7'
