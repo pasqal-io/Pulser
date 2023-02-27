@@ -19,6 +19,8 @@ from collections.abc import Mapping
 from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.pyplot import FigureBase
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -296,6 +298,7 @@ class Register(BaseRegister, RegDrawer):
         draw_half_radius: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
+        fig: Optional[FigureBase] = None,
     ) -> None:
         """Draws the entire register.
 
@@ -328,11 +331,16 @@ class Register(BaseRegister, RegDrawer):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
+
+        show = fig is None
+        fig = fig if fig is not None else plt.figure()
+
         pos = np.array(self._coords)
-        fig, ax = self._initialize_fig_axes(
+        _, ax = self._initialize_fig_axes(
             pos,
             blockade_radius=blockade_radius,
             draw_half_radius=draw_half_radius,
+            fig = fig
         )
         super()._draw_2D(
             ax,
@@ -344,8 +352,11 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
         if fig_name is not None:
+            assert isinstance(fig, Figure), "A SubFigure cannot be saved"
             plt.savefig(fig_name, **kwargs_savefig)
-        plt.show()
+
+        if show:
+            plt.show()
 
     def _to_dict(self) -> dict[str, Any]:
         return super()._to_dict()
