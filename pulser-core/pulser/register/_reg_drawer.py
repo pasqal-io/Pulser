@@ -21,7 +21,6 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import collections as mc
-from matplotlib.pyplot import FigureBase
 from scipy.spatial import KDTree
 
 from pulser.register.base_register import QubitId
@@ -294,7 +293,6 @@ class RegDrawer:
         pos: np.ndarray,
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
-        fig: Optional[FigureBase] = None,
     ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
         """Creates the Figure and Axes for drawing the register."""
         diffs = RegDrawer._register_dims(
@@ -307,8 +305,7 @@ class RegDrawer:
         Ls = proportions * min(
             big_side / 4, 10
         )  # Figsize is, at most, (10,10)
-        fig = fig if fig is not None else plt.figure(figsize=Ls)
-        axes = fig.subplots()
+        fig, axes = plt.subplots(figsize=Ls)
 
         return (fig, axes)
 

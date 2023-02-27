@@ -20,8 +20,7 @@ from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.pyplot import FigureBase
+from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 import pulser
@@ -298,7 +297,8 @@ class Register(BaseRegister, RegDrawer):
         draw_half_radius: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
-        fig: Optional[FigureBase] = None,
+        custom_ax: Optional[Axes] = None,
+        show: bool = True,
     ) -> None:
         """Draws the entire register.
 
@@ -320,6 +320,13 @@ class Register(BaseRegister, RegDrawer):
                 is ``None``.
             fig: If present, custom figure to use under which the plot will
                 be drawn. It allows combining multiple plots.
+            custom_ax: If present, instead of creating its own Axes object,
+                the function will use the provided one. Warning: if fig_name
+                is set, it may save content beyond what is drawn in this
+                function.
+            show: Whether or not to call `plt.show()` before returning. When
+                combining this plot with other ones in a single figure, one may
+                need to set this flag to False.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -334,18 +341,15 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
 
-        show = fig is None
-        fig = fig if fig is not None else plt.figure()
-
         pos = np.array(self._coords)
-        _, ax = self._initialize_fig_axes(
-            pos,
-            blockade_radius=blockade_radius,
-            draw_half_radius=draw_half_radius,
-            fig=fig,
-        )
+        if custom_ax is None:
+            _, custom_ax = self._initialize_fig_axes(
+                pos,
+                blockade_radius=blockade_radius,
+                draw_half_radius=draw_half_radius,
+            )
         super()._draw_2D(
-            ax,
+            custom_ax,
             pos,
             self._ids,
             with_labels=with_labels,
@@ -354,7 +358,6 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
         if fig_name is not None:
-            assert isinstance(fig, Figure), "A SubFigure cannot be saved"
             plt.savefig(fig_name, **kwargs_savefig)
 
         if show:
