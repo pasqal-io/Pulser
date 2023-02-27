@@ -19,9 +19,9 @@ from collections.abc import Mapping
 from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.pyplot import FigureBase
-import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
@@ -318,6 +318,8 @@ class Register(BaseRegister, RegDrawer):
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
+            fig: If present, custom figure to use under which the plot will
+                be drawn. It allows combining multiple plots.
 
         Note:
             When drawing half the blockade radius, we say there is a blockade
@@ -340,7 +342,7 @@ class Register(BaseRegister, RegDrawer):
             pos,
             blockade_radius=blockade_radius,
             draw_half_radius=draw_half_radius,
-            fig = fig
+            fig=fig,
         )
         super()._draw_2D(
             ax,
