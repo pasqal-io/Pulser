@@ -318,8 +318,6 @@ class Register(BaseRegister, RegDrawer):
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
-            fig: If present, custom figure to use under which the plot will
-                be drawn. It allows combining multiple plots.
             custom_ax: If present, instead of creating its own Axes object,
                 the function will use the provided one. Warning: if fig_name
                 is set, it may save content beyond what is drawn in this
