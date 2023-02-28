@@ -41,7 +41,12 @@ def test_creation(layout, layout3d):
     with pytest.raises(
         ValueError, match="must be an array or list of coordinates"
     ):
-        RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
+        np_version = tuple(map(int, np.__version__.split(".")))
+        warning_type = (
+            np.VisibleDeprecationWarning if np_version < (1, 22) else None
+        )
+        with pytest.warns(warning_type):
+            RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
 
     with pytest.raises(
         ValueError, match="must be an array or list of coordinates"
