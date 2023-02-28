@@ -258,7 +258,9 @@ class TestSerialization:
 
     def test_exceptions(self, sequence):
         with pytest.raises(TypeError, match="not JSON serializable"):
-            Sequence(Register3D.cubic(2), MockDevice).to_abstract_repr()
+            Sequence(
+                Register3D.cubic(2, prefix="q"), MockDevice
+            ).to_abstract_repr()
 
         with pytest.raises(
             ValueError, match="No signature found for 'FakeWaveform'"
@@ -277,7 +279,10 @@ class TestSerialization:
         with pytest.raises(
             AbstractReprError, match="Name collisions encountered"
         ):
-            Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
+            with pytest.warns(
+                UserWarning, match="converts all qubit ID's to strings"
+            ):
+                Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
 
         with pytest.raises(
             AbstractReprError,
@@ -338,6 +343,9 @@ class TestSerialization:
             serialized_obj
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:Serialization of 'getattr':UserWarning"
+    )
     def test_paramobj_serialization(self, sequence):
         var = sequence._variables["duration"][0]
         ser_var = {
@@ -350,7 +358,13 @@ class TestSerialization:
         with pytest.raises(
             ValueError, match="Serialization of calls to parametrized objects"
         ):
-            param_obj_call = BlackmanWaveform(var, 1)()
+            with pytest.warns(
+                UserWarning,
+                match="Calls to methods of parametrized objects are only "
+                "executed if they serve as arguments of other parametrized"
+                " objects that are themselves built",
+            ):
+                param_obj_call = BlackmanWaveform(var, 1)()
             json.dumps(param_obj_call, cls=AbstractReprEncoder)
 
         s = json.dumps(
@@ -719,7 +733,10 @@ class TestDeserialization:
                 "zou": {"type": "float", "value": [3.14]},
             }
         )
-        _check_roundtrip(s)
+        with pytest.warns(
+            UserWarning, match="Building a non-parametrized sequence"
+        ):
+            _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
         if without_default:
             # Serialize and deserialize again, without the defaults

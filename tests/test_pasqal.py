@@ -87,10 +87,11 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
         "jobs": [{"runs": 10, "variables": {"qubits": None, "a": [3, 5]}}],
     }
 
-    fixt.pasqal_cloud.create_batch(
-        seq,
-        **create_batch_kwargs,
-    )
+    with pytest.warns(UserWarning, match="No declared variables named: a"):
+        fixt.pasqal_cloud.create_batch(
+            seq,
+            **create_batch_kwargs,
+        )
 
     fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
         serialized_sequence=expected_seq_representation,
@@ -116,7 +117,9 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     ],
 )
 def test_pasqal_cloud_emu(fixt, device_type, device):
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    reg = Register.from_coordinates(
+        [(0, 0), (0, 10)], center=False, prefix="q"
+    )
     seq = Sequence(reg, device)
 
     check_pasqal_cloud(
@@ -169,14 +172,17 @@ def test_wrong_parameters(fixt):
     with pytest.raises(
         TypeError, match="Did not receive values for variables"
     ):
-        fixt.pasqal_cloud.create_batch(
-            seq,
-            jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
-            device_type=DeviceType.QPU,
-            configuration=Configuration(
-                dt=0.1,
-                precision="normal",
-                extra_config=None,
-            ),
-            wait=True,
-        )
+        with pytest.warns(UserWarning, match="No declared variables named: a"):
+            fixt.pasqal_cloud.create_batch(
+                seq,
+                jobs=[
+                    JobParameters(runs=10, variables=JobVariables(a=[3, 5]))
+                ],
+                device_type=DeviceType.QPU,
+                configuration=Configuration(
+                    dt=0.1,
+                    precision="normal",
+                    extra_config=None,
+                ),
+                wait=True,
+            )

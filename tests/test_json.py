@@ -140,7 +140,8 @@ def test_rare_cases():
     with pytest.raises(
         ValueError, match="Serialization of calls to parametrized objects"
     ):
-        s = encode(wf.draw())
+        with pytest.warns(UserWarning, match="Serialization of 'getattr'"):
+            s = encode(wf.draw())
     s = encode(wf)
 
     with pytest.raises(ValueError, match="not encode a Sequence"):

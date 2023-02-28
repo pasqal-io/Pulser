@@ -126,7 +126,8 @@ def test_initialization_and_construction_of_hamiltonian(seq):
             assert sh == sim.dim**sim._size
 
     assert not seq.is_parametrized()
-    seq_copy = seq.build()  # Take a copy of the sequence
+    with pytest.warns(UserWarning, match="returns a copy of itself"):
+        seq_copy = seq.build()  # Take a copy of the sequence
     x = seq_copy.declare_variable("x")
     seq_copy.add(Pulse.ConstantPulse(x, 1, 0, 0), "ryd")
     assert seq_copy.is_parametrized()
