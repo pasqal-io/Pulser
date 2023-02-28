@@ -280,7 +280,7 @@ class SimConfig:
     @property
     def supported_noises(self) -> dict:
         """Return the noises implemented on pulser."""
-        SUPPORTED_NOISES = {
+        return {
             "ising": {
                 "dephasing",
                 "doppler",
@@ -291,4 +291,3 @@ class SimConfig:
             },
             "XY": {"SPAM"},
         }
-        return SUPPORTED_NOISES
