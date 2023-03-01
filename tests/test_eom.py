@@ -14,7 +14,7 @@
 
 import pytest
 
-from pulser.channels.eom import RydbergBeam, RydbergEOM
+from pulser.channels.eom import MODBW_TO_TR, RydbergBeam, RydbergEOM
 
 
 @pytest.fixture
@@ -33,6 +33,7 @@ def params():
     [
         ("mod_bandwidth", 0),
         ("mod_bandwidth", -3),
+        ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
         ("max_limiting_amp", 0),
         ("intermediate_detuning", -500),
         ("intermediate_detuning", 0),
@@ -40,9 +41,15 @@ def params():
 )
 def test_bad_value_init_eom(bad_param, bad_value, params):
     params[bad_param] = bad_value
-    with pytest.raises(
-        ValueError, match=f"'{bad_param}' must be greater than zero"
-    ):
+    if bad_param == "mod_bandwidth" and bad_value > 0:
+        error_type = NotImplementedError
+        error_message = (
+            f"'mod_bandwidth' must be lower than {MODBW_TO_TR*1e3} MHz"
+        )
+    else:
+        error_type = ValueError
+        error_message = f"'{bad_param}' must be greater than zero"
+    with pytest.raises(error_type, match=error_message):
         RydbergEOM(**params)
 
 
