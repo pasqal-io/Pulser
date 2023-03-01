@@ -303,8 +303,8 @@ class ParamObj(Parametrized, OpSupport):
     def __getattr__(self, name: str) -> ParamObj:
         if hasattr(self.cls, name):
             warnings.warn(
-                "Serialization of 'getattr' calls to parametrized "
-                "objects is not supported, so this object can't be serialied.",
+                "Serialization of 'getattr' calls to parametrized objects "
+                "is not supported, so this object can't be serialized.",
                 stacklevel=2,
             )
             return ParamObj(getattr, self, name)

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import re
 from hashlib import sha256
 from unittest.mock import patch
@@ -38,7 +39,13 @@ def layout3d():
 
 
 def test_creation(layout, layout3d):
-    with pytest.raises(
+    np_version = tuple(map(int, np.__version__.split(".")))
+    context_manager = (
+        pytest.warns(np.VisibleDeprecationWarning)
+        if np_version < (1, 22)
+        else contextlib.nullcontext()
+    )
+    with context_manager, pytest.raises(
         ValueError, match="must be an array or list of coordinates"
     ):
         RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
