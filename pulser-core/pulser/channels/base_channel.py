@@ -182,6 +182,13 @@ class Channel(ABC):
                 " greater than or equal to 'min_duration'"
                 f"({self.min_duration})."
             )
+        if (
+            self.mod_bandwidth is not None
+            and self.mod_bandwidth > MODBW_TO_TR * 1e3
+        ):
+            raise NotImplementedError(
+                f"'mod_bandwidth' must be lower than {MODBW_TO_TR*1e3} MHz"
+            )
 
     @property
     def rise_time(self) -> int:
