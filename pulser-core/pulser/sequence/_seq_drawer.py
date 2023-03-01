@@ -141,11 +141,15 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
 
         # Store everything
         samples = sch.get_samples()
-        data[ch] = ChannelDrawContent(
-            samples.extend_duration(total_duration), target
+        data[ch] = dict(
+            channel_draw_content = ChannelDrawContent(
+                samples.extend_duration(total_duration),
+                target
+            ),
+            channel_eom_intervals = sch.get_eom_mode_intervals()
         )
         if interp_pts:
-            data[ch].interp_pts = dict(interp_pts)
+            data[ch]["channel_draw_content"].interp_pts = dict(interp_pts)
     if hasattr(seq, "_measurement"):
         data["measurement"] = seq._measurement
     data["total_duration"] = total_duration
@@ -207,16 +211,17 @@ def draw_sequence(
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
     for ch in seq._schedule:
-        if np.count_nonzero(data[ch].samples.det) > 0:
-            data[ch].curves_on["detuning"] = True
-        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
-            data[ch].curves_on["phase"] = True
+        if np.count_nonzero(data[ch]["channel_draw_content"].samples.det) > 0:
+            data[ch]["channel_draw_content"].curves_on["detuning"] = True
+        if draw_phase_curve and np.count_nonzero(data[ch]["channel_draw_content"].samples.phase) > 0:
+            data[ch]["channel_draw_content"].curves_on["phase"] = True
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
     ph_box = dict(boxstyle="round", facecolor="ghostwhite")
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
+    eom_box = dict(boxstyle="round", facecolor="lemonchiffon")
 
     # Draw masked register
     if draw_register:
@@ -262,7 +267,7 @@ def draw_sequence(
             ax_reg.set_title("Masked register", pad=10)
 
     ratios = [
-        SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in seq.declared_channels
+        SIZE_PER_WIDTH[data[ch]["channel_draw_content"].n_axes_on] for ch in seq.declared_channels
     ]
     fig = plt.figure(
         constrained_layout=False,
@@ -279,9 +284,9 @@ def draw_sequence(
             labelcolor="w", top=False, bottom=False, left=False, right=False
         )
         ax.set_ylabel(ch, labelpad=40, fontsize=18)
-        subgs = gs_.subgridspec(data[ch].n_axes_on, 1, hspace=0.0)
+        subgs = gs_.subgridspec(data[ch]["channel_draw_content"].n_axes_on, 1, hspace=0.0)
         ch_axes[ch] = [
-            fig.add_subplot(subgs[i, :]) for i in range(data[ch].n_axes_on)
+            fig.add_subplot(subgs[i, :]) for i in range(data[ch]["channel_draw_content"].n_axes_on)
         ]
         for j, ax in enumerate(ch_axes[ch]):
             ax.axvline(0, linestyle="--", linewidth=0.5, color="grey")
@@ -310,7 +315,8 @@ def draw_sequence(
 
     for ch, axes in ch_axes.items():
         ch_obj = seq.declared_channels[ch]
-        ch_data = data[ch]
+        ch_data = data[ch]["channel_draw_content"]
+        ch_eom_intervals = data[ch]["channel_eom_intervals"]
         basis = ch_obj.basis
         ys = ch_data.get_input_curves()
         ys_mod = [()] * 3
@@ -526,6 +532,23 @@ def draw_sequence(
                     fontsize=14,
                     bbox=ph_box,
                 )
+
+        # Draw the EOM intervals
+        for ch_eom_interval in ch_eom_intervals:
+            for ax in axes:
+                ax.axvspan(ch_eom_interval[0], ch_eom_interval[1], color="lemonchiffon", alpha=0.5, zorder=-100)
+            tgt_txt_x = ch_eom_interval[0]
+            tgt_txt_y = axes[0].get_ylim()[1]
+            axes[0].text(
+                tgt_txt_x,
+                tgt_txt_y,
+                "EOM",
+                fontsize=12,
+                ha="left",
+                va="top",
+                bbox=eom_box,
+            )
+
 
         # Draw the SLM mask
         if seq._slm_mask_targets and seq._slm_mask_time:
