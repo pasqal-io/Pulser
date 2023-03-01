@@ -439,7 +439,7 @@ class TestSerialization:
             "slug": triangular_lattice.slug,
         }
         assert abstract["register"] == [{"qid": qid} for qid in reg.qubit_ids]
-        assert abstract["variables"]["var"] == dict(type="int")
+        assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
         with pytest.raises(
             ValueError,
@@ -504,13 +504,52 @@ class TestSerialization:
             "channel": "ryd",
         }
 
+    @pytest.mark.parametrize("use_default", [True, False])
+    def test_default_basis(
+        self, triangular_lattice: TriangularLatticeLayout, use_default
+    ):
+        phase_kwargs = {} if use_default else dict(basis="ground-rydberg")
+        measure_kwargs = {} if use_default else dict(basis="digital")
+
+        seq = Sequence(triangular_lattice.hexagonal_register(5), Chadoq2)
+        seq.declare_channel("ryd", "rydberg_global")
+        seq.declare_channel("raman", "raman_local", initial_target="q0")
+        seq.phase_shift(1, "q0", **phase_kwargs)
+        seq.phase_shift_index(2, 1, **phase_kwargs)
+        seq.measure(**measure_kwargs)
+
+        abstract = json.loads(seq.to_abstract_repr())
+        validate_schema(abstract)
+        assert len(abstract["operations"]) == 3
+
+        assert abstract["operations"][0] == {
+            "op": "target",
+            "channel": "raman",
+            "target": 0,
+        }
+
+        assert abstract["operations"][1] == {
+            "op": "phase_shift",
+            "basis": phase_kwargs.get("basis", "digital"),
+            "targets": [0],
+            "phi": 1,
+        }
+        assert abstract["operations"][2] == {
+            "op": "phase_shift",
+            "basis": phase_kwargs.get("basis", "digital"),
+            "targets": [1],
+            "phi": 2,
+        }
+        assert abstract["measurement"] == measure_kwargs.get(
+            "basis", "ground-rydberg"
+        )
+
 
 def _get_serialized_seq(
     operations: list[dict] = None,
     variables: dict[str, dict] = None,
     **override_kwargs: Any,
 ) -> dict[str, Any]:
-
     seq_dict = {
         "version": "1",
         "name": "John Doe",
@@ -564,6 +603,17 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
         **defaults,
     )
     assert s == json.loads(rs)
+
+    # Remove the defaults and check it still works
+    for var in seq.declared_variables.values():
+        s["variables"][var.name]["value"] = [var.dtype()] * var.size
+    for q in s["register"]:
+        q.pop("default_trap", None)
+    s["name"] = "pulser-exported"
+
+    seq2 = Sequence.from_abstract_repr(json.dumps(s))
+    rs_no_defaults = seq2.to_abstract_repr()
+    assert s == json.loads(rs_no_defaults)
 
 
 # Needed to replace lambdas in the pytest.mark.parametrize calls (due to mypy)
@@ -660,7 +710,8 @@ class TestDeserialization:
         seq = Sequence.from_abstract_repr(json.dumps(s))
         assert np.all(seq.magnetic_field == mag_field)
 
-    def test_deserialize_variables(self):
+    @pytest.mark.parametrize("without_default", [True, False])
+    def test_deserialize_variables(self, without_default):
         s = _get_serialized_seq(
             variables={
                 "yolo": {"type": "int", "value": [42, 43, 44]},
@@ -669,6 +720,9 @@ class TestDeserialization:
         )
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
+        if without_default:
+            # Serialize and deserialize again, without the defaults
+            seq = Sequence.from_abstract_repr(seq.to_abstract_repr())
 
         # Check variables
         assert len(seq.declared_variables) == len(s["variables"])

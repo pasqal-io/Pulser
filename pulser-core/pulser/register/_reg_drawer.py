@@ -323,7 +323,7 @@ class RegDrawer:
         )
 
         proportions = []
-        for (ix, iy) in combinations(np.arange(3), 2):
+        for ix, iy in combinations(np.arange(3), 2):
             big_side = max(diffs[[ix, iy]])
             Ls = diffs[[ix, iy]] / big_side
             Ls *= max(

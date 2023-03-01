@@ -199,7 +199,6 @@ def test_eom_channel():
 
 
 def test_modulation_errors():
-
     wf = ConstantWaveform(100, 1)
     no_eom_msg = "The channel Rydberg.Global(.*) does not have an EOM."
     with pytest.raises(TypeError, match=no_eom_msg):
@@ -243,7 +242,6 @@ _eom_rydberg = Rydberg.Global(
     ],
 )
 def test_modulation(channel, tr, eom, side_buffer_len):
-
     wf = ConstantWaveform(100, 1)
     out_ = channel.modulate(wf.samples, eom=eom)
     assert len(out_) == wf.duration + 2 * tr
