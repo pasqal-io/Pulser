@@ -137,11 +137,12 @@ def test_rare_cases():
     var = seq.declare_variable("var")
 
     wf = BlackmanWaveform(var * 100 // 10, var)
-    with pytest.raises(
+    with pytest.warns(
+        UserWarning, match="Serialization of 'getattr'"
+    ), pytest.raises(
         ValueError, match="Serialization of calls to parametrized objects"
     ):
-        with pytest.warns(UserWarning, match="Serialization of 'getattr'"):
-            s = encode(wf.draw())
+        s = encode(wf.draw())
     s = encode(wf)
 
     with pytest.raises(ValueError, match="not encode a Sequence"):

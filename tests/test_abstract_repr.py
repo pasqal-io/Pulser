@@ -276,13 +276,12 @@ class TestSerialization:
         with pytest.raises(ValueError, match="'foo' is not in the signature"):
             abstract_repr("ConstantWaveform", 1000, 1, foo=0)
 
-        with pytest.raises(
+        with pytest.warns(
+            UserWarning, match="converts all qubit ID's to strings"
+        ), pytest.raises(
             AbstractReprError, match="Name collisions encountered"
         ):
-            with pytest.warns(
-                UserWarning, match="converts all qubit ID's to strings"
-            ):
-                Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
+            Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
 
         with pytest.raises(
             AbstractReprError,
@@ -355,16 +354,16 @@ class TestSerialization:
         }
         wf = BlackmanWaveform(1000, 1.0)
         ser_wf = wf._to_abstract_repr()
-        with pytest.raises(
-            ValueError, match="Serialization of calls to parametrized objects"
-        ):
-            with pytest.warns(
-                UserWarning,
-                match="Calls to methods of parametrized objects are only "
-                "executed if they serve as arguments of other parametrized"
-                " objects that are themselves built",
-            ):
-                param_obj_call = BlackmanWaveform(var, 1)()
+        warn_msg = (
+            "Calls to methods of parametrized objects are only "
+            "executed if they serve as arguments of other parametrized"
+            " objects that are themselves built"
+        )
+        with pytest.warns(UserWarning, match=warn_msg):
+            param_obj_call = BlackmanWaveform(var, 1)()
+
+        err_msg = "Serialization of calls to parametrized objects"
+        with pytest.raises(ValueError, match=err_msg):
             json.dumps(param_obj_call, cls=AbstractReprEncoder)
 
         s = json.dumps(

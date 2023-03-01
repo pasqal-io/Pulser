@@ -417,15 +417,14 @@ def test_switch_device_eom():
     assert seq._schedule["rydberg"].eom_blocks
 
     err_base = "No match for channel rydberg "
-    with pytest.raises(
+    warns_msg = (
+        "Switching to a device with a different Rydberg level,"
+        " check that the expected Rydberg interactions still hold."
+    )
+    with pytest.warns(UserWarning, match=warns_msg), pytest.raises(
         TypeError, match=err_base + "with an EOM configuration."
     ):
-        with pytest.warns(
-            UserWarning,
-            match="Switching to a device with a different Rydberg level,"
-            " check that the expected Rydberg interactions still hold.",
-        ):
-            seq.switch_device(Chadoq2)
+        seq.switch_device(Chadoq2)
 
     ch_obj = seq.declared_channels["rydberg"]
     mod_eom_config = dataclasses.replace(

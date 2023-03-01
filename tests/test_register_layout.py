@@ -39,17 +39,16 @@ def layout3d():
 
 
 def test_creation(layout, layout3d):
-    with pytest.raises(
+    np_version = tuple(map(int, np.__version__.split(".")))
+    context_manager = (
+        pytest.warns(np.VisibleDeprecationWarning)
+        if np_version < (1, 22)
+        else contextlib.nullcontext()
+    )
+    with context_manager, pytest.raises(
         ValueError, match="must be an array or list of coordinates"
     ):
-        np_version = tuple(map(int, np.__version__.split(".")))
-        context_manager = (
-            pytest.warns(np.VisibleDeprecationWarning)
-            if np_version < (1, 22)
-            else contextlib.nullcontext()
-        )
-        with context_manager:
-            RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
+        RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
 
     with pytest.raises(
         ValueError, match="must be an array or list of coordinates"

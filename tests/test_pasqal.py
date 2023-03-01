@@ -169,20 +169,17 @@ def test_wrong_parameters(fixt):
     seq = Sequence(reg, test_device)
     seq.declare_variable("unset", dtype=int)
 
-    with pytest.raises(
-        TypeError, match="Did not receive values for variables"
-    ):
-        with pytest.warns(UserWarning, match="No declared variables named: a"):
-            fixt.pasqal_cloud.create_batch(
-                seq,
-                jobs=[
-                    JobParameters(runs=10, variables=JobVariables(a=[3, 5]))
-                ],
-                device_type=DeviceType.QPU,
-                configuration=Configuration(
-                    dt=0.1,
-                    precision="normal",
-                    extra_config=None,
-                ),
-                wait=True,
-            )
+    with pytest.warns(
+        UserWarning, match="No declared variables named: a"
+    ), pytest.raises(TypeError, match="Did not receive values for variables"):
+        fixt.pasqal_cloud.create_batch(
+            seq,
+            jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
+            device_type=DeviceType.QPU,
+            configuration=Configuration(
+                dt=0.1,
+                precision="normal",
+                extra_config=None,
+            ),
+            wait=True,
+        )
