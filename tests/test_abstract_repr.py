@@ -564,7 +564,6 @@ def _get_serialized_seq(
     variables: dict[str, dict] = None,
     **override_kwargs: Any,
 ) -> dict[str, Any]:
-
     seq_dict = {
         "version": "1",
         "name": "John Doe",

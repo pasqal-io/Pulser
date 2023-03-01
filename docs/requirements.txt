@@ -4,7 +4,7 @@ sphinx-rtd-theme # documentation theme
 sphinx_autodoc_typehints == 1.21.3
 nbsphinx
 nbsphinx-link
-ipython != 8.7.0 # Avoids bug with code highlighting
+ipython >= 8.10 # Avoids bug with code highlighting
 
 # Not on PyPI
 # pandoc

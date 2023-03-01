@@ -143,7 +143,6 @@ def test_magnetic_field():
 
 @pytest.fixture
 def devices():
-
     device1 = Device(
         name="test_device1",
         dimensions=2,
@@ -241,7 +240,6 @@ def devices():
 
 @pytest.fixture
 def pulses():
-
     rise = Pulse.ConstantDetuning(
         RampWaveform(252, 0.0, 2.3 * 2 * np.pi),
         -4 * np.pi,
@@ -274,7 +272,6 @@ def init_seq(
 
 
 def test_switch_device_down(devices, pulses):
-
     # Device checkout
     seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
     with pytest.warns(
@@ -359,7 +356,6 @@ def test_switch_device_down(devices, pulses):
 
 @pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
 def test_switch_device_up(device_ind, devices, pulses, strict):
-
     # Device checkout
     seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
     with pytest.warns(
