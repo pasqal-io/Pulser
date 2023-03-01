@@ -97,8 +97,9 @@ def test_paramobj():
     assert str(pulse2) == f"Pulse({str(bwf)}, {str(bwf)}, 1)"
     with pytest.raises(AttributeError):
         bwf._duration
-    time = bwf.duration
-    samps = bwf.samples
+    with pytest.warns(UserWarning, match="Serialization of 'getattr'"):
+        time = bwf.duration
+        samps = bwf.samples
     cwf = CompositeWaveform(bwf, bwf)
     t._assign(1000)
     a._assign(np.pi)
