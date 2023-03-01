@@ -75,11 +75,14 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     create_batch_kwargs = dict(
         jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
         device_type=device_type,
-        configuration={
-            "dt": 10.0,
-            "precision": "normal",
-        },
+        configuration=BaseConfig(
+            extra_config={
+                "dt": 10.0,
+                "precision": "normal",
+            }
+        ),
         wait=True,
+        fetch_results=False,
     )
 
     expected_create_batch_kwargs = {
@@ -99,7 +102,7 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     )
 
     get_batch_kwargs = dict(
-        id=10,
+        id="uuid",
         fetch_results=True,
     )
 

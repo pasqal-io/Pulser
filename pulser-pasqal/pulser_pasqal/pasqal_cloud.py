@@ -56,8 +56,9 @@ class PasqalCloud:
         seq: Sequence,
         jobs: list[JobParameters],
         device_type: sdk.DeviceType = sdk.DeviceType.QPU,
-        configuration: Optional[Union[sdk.device.configuration.BaseConfig, Dict[str, Any]]] = None,
+        configuration: Optional[sdk.device.configuration.BaseConfig] = None,
         wait: bool = False,
+        fetch_results: bool = False,
     ) -> sdk.Batch:
         """Create a new batch and send it to the API.
 
@@ -70,9 +71,9 @@ class PasqalCloud:
             device_type: The type of device to use, either an emulator or a QPU
                 If set to QPU, the device_type will be set to the one
                 stored in the serialized sequence.
-            configuration: A dictionary with extra configuration for the
-                emulators that accept it.
-            wait: Whether to wait for results to be sent back.
+            configuration: Optional xtra configuration for emulators.
+            wait: Whether to wait for the batch to be done.
+            fetch_results: Whether to download the results. Implies waiting for the batch.
 
         Returns:
             Batch: The new batch that has been created in the database.
@@ -96,6 +97,7 @@ class PasqalCloud:
             device_type=device_type,
             configuration=configuration,
             wait=wait,
+            fetch_results=fetch_results,
         )
 
     def _serialize_seq(
@@ -105,7 +107,7 @@ class PasqalCloud:
             return seq.serialize()
         return seq.to_abstract_repr()
 
-    def get_batch(self, id: int, fetch_results: bool = False) -> sdk.Batch:
+    def get_batch(self, id: str, fetch_results: bool = False) -> sdk.Batch:
         """Retrieve a batch's data and all its jobs.
 
         Args:
