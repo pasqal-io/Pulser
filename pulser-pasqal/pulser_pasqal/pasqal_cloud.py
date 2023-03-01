@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Allows to connect to the cloud powered by Pasqal to run sequences."""
+"""Allows to connect to PASQAL's cloud platform to run sequences."""
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional, Union
 
 import sdk
 
@@ -24,29 +24,30 @@ from pulser_pasqal.job_parameters import JobParameters
 
 
 class PasqalCloud:
-    """Manager of the connection to the cloud powered by Pasqal.
+    """Manager of the connection to PASQAL's cloud platform.
 
     The cloud connection enables to run sequences on simulators or on real
     QPUs.
 
     Args:
-        client_id: client_id of the API key you are holding for Pasqal
-            cloud.
-        client_secret: client_secret of the API key you are holding for
-            Pasqal cloud.
+        username: your username in the PASQAL cloud platform.
+        password: the password for your PASQAL cloud platform account.
+        group_id: the group_id associated to the account.
         kwargs: Additional arguments to provide to SDK
     """
 
     def __init__(
         self,
-        client_id: str,
-        client_secret: str,
+        username: str,
+        password: str,
+        group_id: str,
         **kwargs: Any,
     ):
-        """Initializes a connection to the cloud."""
+        """Initializes a connection to the Pasqal cloud platform."""
         self._sdk_connection = sdk.SDK(
-            client_id=client_id,
-            client_secret=client_secret,
+            username=username,
+            password=password,
+            group_id=group_id,
             **kwargs,
         )
 
@@ -55,7 +56,7 @@ class PasqalCloud:
         seq: Sequence,
         jobs: list[JobParameters],
         device_type: sdk.DeviceType = sdk.DeviceType.QPU,
-        configuration: Optional[sdk.Configuration] = None,
+        configuration: Optional[Union[sdk.device.configuration.BaseConfig, Dict[str, Any]]] = None,
         wait: bool = False,
     ) -> sdk.Batch:
         """Create a new batch and send it to the API.

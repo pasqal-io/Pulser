@@ -1,1 +1,1 @@
-pasqal-sdk == 0.1.6
+pasqal-sdk == 0.1.12
