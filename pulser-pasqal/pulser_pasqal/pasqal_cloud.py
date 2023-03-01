@@ -14,7 +14,7 @@
 """Allows to connect to PASQAL's cloud platform to run sequences."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional
 
 import sdk
 
@@ -73,7 +73,7 @@ class PasqalCloud:
                 stored in the serialized sequence.
             configuration: Optional xtra configuration for emulators.
             wait: Whether to wait for the batch to be done.
-            fetch_results: Whether to download the results. Implies waiting for the batch.
+            fetch_results: Whether to download the results. Implies waiting for the batch. # noqa: 501
 
         Returns:
             Batch: The new batch that has been created in the database.
