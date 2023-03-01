@@ -621,7 +621,7 @@ class CoherentResults(SimulationResults):
             return sampled_state
 
         detected_sample_dict: Counter = Counter()
-        for (shot, n_detects) in sampled_state.items():
+        for shot, n_detects in sampled_state.items():
             eps = self._meas_errors["epsilon"]
             eps_p = self._meas_errors["epsilon_prime"]
             # Shot as an array of 1s and 0s

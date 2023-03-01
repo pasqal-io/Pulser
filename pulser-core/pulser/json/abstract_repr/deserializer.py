@@ -150,7 +150,6 @@ def _deserialize_parameter(
 
 
 def _deserialize_waveform(obj: dict, vars: dict) -> Waveform:
-
     if obj["kind"] == "constant":
         return ConstantWaveform(
             duration=_deserialize_parameter(obj["duration"], vars),

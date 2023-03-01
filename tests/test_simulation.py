@@ -452,7 +452,6 @@ def test_eval_times(seq):
         sim = Simulation(seq, sampling_rate=1.0)
         sim.evaluation_times = 3.0
     with pytest.raises(ValueError, match="Wrong evaluation time label."):
-
         sim = Simulation(seq, sampling_rate=1.0)
         sim.evaluation_times = 123
     with pytest.raises(ValueError, match="Wrong evaluation time label."):
