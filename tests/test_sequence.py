@@ -17,6 +17,7 @@ import json
 from typing import Any
 from unittest.mock import patch
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -142,7 +143,6 @@ def test_magnetic_field():
 
 @pytest.fixture
 def devices():
-
     device1 = Device(
         name="test_device1",
         dimensions=2,
@@ -240,7 +240,6 @@ def devices():
 
 @pytest.fixture
 def pulses():
-
     rise = Pulse.ConstantDetuning(
         RampWaveform(252, 0.0, 2.3 * 2 * np.pi),
         -4 * np.pi,
@@ -273,7 +272,6 @@ def init_seq(
 
 
 def test_switch_device_down(devices, pulses):
-
     # Device checkout
     seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
     with pytest.warns(
@@ -358,10 +356,14 @@ def test_switch_device_down(devices, pulses):
 
 @pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
 def test_switch_device_up(device_ind, devices, pulses, strict):
-
     # Device checkout
     seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
-    assert seq.switch_device(Chadoq2)._device == Chadoq2
+    with pytest.warns(
+        UserWarning,
+        match="Switching a sequence to the same device returns the "
+        "sequence unchanged",
+    ):
+        assert seq.switch_device(Chadoq2)._device == Chadoq2
 
     # Test non-strict mode
     assert "ising" in seq.switch_device(devices[0]).declared_channels
@@ -415,7 +417,11 @@ def test_switch_device_eom():
     assert seq._schedule["rydberg"].eom_blocks
 
     err_base = "No match for channel rydberg "
-    with pytest.raises(
+    warns_msg = (
+        "Switching to a device with a different Rydberg level,"
+        " check that the expected Rydberg interactions still hold."
+    )
+    with pytest.warns(UserWarning, match=warns_msg), pytest.raises(
         TypeError, match=err_base + "with an EOM configuration."
     ):
         seq.switch_device(Chadoq2)
@@ -685,6 +691,7 @@ def test_sequence():
         with patch("matplotlib.figure.Figure.savefig"):
             seq.draw(fig_name="my_sequence.pdf")
             seq.draw(draw_register=True, fig_name="both.pdf")
+    plt.close()
 
     pulse1 = Pulse(
         InterpolatedWaveform(500, [0, 1, 0]),
@@ -754,6 +761,7 @@ def test_sequence():
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_shifts=True)
+    plt.close()
 
     assert seq.get_duration() == 4000
 
@@ -761,10 +769,11 @@ def test_sequence():
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_area=True)
+    plt.close()
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_curve=True)
-
+    plt.close()
     s = seq.serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence.deserialize(s)
@@ -895,6 +904,7 @@ def test_slm_mask():
     # Check drawing method
     with patch("matplotlib.pyplot.show"):
         seq_xy2.draw()
+    plt.close()
 
 
 def test_draw_register():
@@ -908,7 +918,7 @@ def test_draw_register():
     seq.config_slm_mask(targets)
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_register=True)
-
+    plt.close()
     # Draw 3d register from sequence
     reg3d = Register3D.cubic(3, 8)
     seq3d = Sequence(reg3d, MockDevice)
@@ -918,6 +928,7 @@ def test_draw_register():
     seq3d.measure(basis="XY")
     with patch("matplotlib.pyplot.show"):
         seq3d.draw(draw_register=True)
+    plt.close()
 
 
 def test_hardware_constraints():
@@ -1024,6 +1035,7 @@ def test_hardware_constraints():
         ):
             seq.draw(mode="output")
         seq.draw(mode="input+output")
+    plt.close()
 
 
 def test_mappable_register():
@@ -1328,6 +1340,10 @@ def test_eom_mode(mod_device):
     assert last_slot.type == Pulse.ConstantPulse(
         duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
     )
+
+    # Test drawing in eom mode
+    with patch("matplotlib.pyplot.show"):
+        seq.draw()
 
 
 @pytest.mark.parametrize(

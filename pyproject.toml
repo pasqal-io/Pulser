@@ -5,3 +5,11 @@ line-length = 79
 profile = "black"
 line_length = 79
 src_paths = ["pulser-core", "pulser-simulation", "pulser-pasqal"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # All warnings are turned into errors
+    "error",
+    # Except this particular warnings, which is ignored
+    'ignore:A duration of \d+ ns is not a multiple of:UserWarning',
+    ]

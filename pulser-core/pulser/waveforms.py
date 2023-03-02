@@ -1019,7 +1019,6 @@ class KaiserWaveform(Waveform):
                     duration_best = duration
 
         else:
-
             # Start with a waveform based on the duration guess
 
             kaiser_guess = np.kaiser(duration_guess, beta)

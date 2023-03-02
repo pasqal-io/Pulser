@@ -338,7 +338,6 @@ def test_serialization():
 
 
 def test_get_item():
-
     # Check errors raised
 
     duration = constant.duration

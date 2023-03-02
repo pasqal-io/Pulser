@@ -1,5 +1,5 @@
 # tests
-black[jupyter] < 23.1
+black[jupyter] ~= 23.1
 flake8
 flake8-docstrings
 isort

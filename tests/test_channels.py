@@ -19,7 +19,7 @@ import pytest
 
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
-from pulser.channels.eom import BaseEOM, RydbergBeam, RydbergEOM
+from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
 
@@ -32,12 +32,17 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
         ("min_duration", 0),
         ("max_duration", 0),
         ("mod_bandwidth", 0),
+        ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
     ],
 )
 def test_bad_init_global_channel(bad_param, bad_value):
     kwargs = dict(max_abs_detuning=None, max_amp=None)
     kwargs[bad_param] = bad_value
-    with pytest.raises(ValueError, match=f"'{bad_param}' must be"):
+    if bad_param == "mod_bandwidth" and bad_value > 1:
+        error_type = NotImplementedError
+    else:
+        error_type = ValueError
+    with pytest.raises(error_type, match=f"'{bad_param}' must be"):
         Microwave.Global(**kwargs)
 
 
@@ -53,12 +58,17 @@ def test_bad_init_global_channel(bad_param, bad_value):
         ("min_duration", -2),
         ("max_duration", -1),
         ("mod_bandwidth", -1e4),
+        ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
     ],
 )
 def test_bad_init_local_channel(bad_param, bad_value):
     kwargs = dict(max_abs_detuning=None, max_amp=None)
     kwargs[bad_param] = bad_value
-    with pytest.raises(ValueError, match=f"'{bad_param}' must be"):
+    if bad_param == "mod_bandwidth" and bad_value > 1:
+        error_type = NotImplementedError
+    else:
+        error_type = ValueError
+    with pytest.raises(error_type, match=f"'{bad_param}' must be"):
         Rydberg.Local(**kwargs)
 
 
@@ -199,7 +209,6 @@ def test_eom_channel():
 
 
 def test_modulation_errors():
-
     wf = ConstantWaveform(100, 1)
     no_eom_msg = "The channel Rydberg.Global(.*) does not have an EOM."
     with pytest.raises(TypeError, match=no_eom_msg):
@@ -243,7 +252,6 @@ _eom_rydberg = Rydberg.Global(
     ],
 )
 def test_modulation(channel, tr, eom, side_buffer_len):
-
     wf = ConstantWaveform(100, 1)
     out_ = channel.modulate(wf.samples, eom=eom)
     assert len(out_) == wf.duration + 2 * tr
