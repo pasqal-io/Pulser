@@ -124,10 +124,17 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
         target: dict[Union[str, tuple[int, int]], Any] = {}
         # Extracting the EOM Buffers
         eom_intervals = sch.get_eom_mode_intervals()
-        eom_start_buffers = []
-        eom_end_buffers = []
+        nb_eom_intervals = len(eom_intervals)
+        eom_start_buffers = [() for _ in range(nb_eom_intervals)]
+        eom_end_buffers = [() for _ in range(nb_eom_intervals)]
         in_eom_mode = False
         eom_block_n = -1
+        # Duration of last eom interval is extended if eom mode not disabled at the end
+        if seq.get_duration() == eom_intervals[-1][1]:
+            eom_intervals[-1] = (eom_intervals[-1][0], total_duration)
+        # sampling the channel schedule
+        samples = sch.get_samples()
+        extended_samples = samples.extend_duration(total_duration)
         for slot in sch:
             if slot.ti == -1:
                 target["initial"] = slot.targets
@@ -140,15 +147,17 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
                         in_eom_mode = True
                         eom_block_n += 1
                 elif in_eom_mode:
-                    # eom_end_buffer when EOM mode is disabled
+                    # Buffer when EOM mode is disabled and next slot is a delay
                     in_eom_mode = False
-                    eom_end_buffers.append((slot.ti, slot.tf))
+                    if slot.type == "delay":
+                        eom_end_buffers[eom_block_n] = (slot.ti, slot.tf)
                 if (
-                    eom_block_n + 1 < len(eom_intervals)
+                    eom_block_n + 1 < nb_eom_intervals
                     and slot.tf == eom_intervals[eom_block_n + 1][0]
+                    and extended_samples.det[slot.tf - 1] == sch.eom_blocks[eom_block_n + 1].detuning_off
                 ):
-                    # eom_start_buffer when next slot is in eom mode
-                    eom_start_buffers.append((slot.ti, slot.tf))
+                    # eom_start_buffer if next slot is in eom mode and final det matches det_off of next eom block
+                    eom_start_buffers[eom_block_n+1] = (slot.ti, slot.tf)
 
             if slot.type == "target":
                 target[(slot.ti, slot.tf - 1)] = slot.targets
@@ -164,10 +173,9 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
                     interp_pts[wf_type] += pts.tolist()
 
         # Store everything
-        samples = sch.get_samples()
         data[ch] = dict(
             channel_draw_content=ChannelDrawContent(
-                samples.extend_duration(total_duration), target
+                extended_samples, target
             ),
             channel_eom_intervals=eom_intervals,
             channel_eom_start_buffers=eom_start_buffers,
@@ -574,25 +582,51 @@ def draw_sequence(
                 )
 
         # Draw the EOM intervals
-        for ch_eom_start_buffer in ch_eom_start_buffers:
+        for ch_eom_start_buffer, ch_eom_interval, ch_eom_end_buffer in zip(ch_eom_start_buffers, ch_eom_intervals, ch_eom_end_buffers):
             for ax in axes:
-                nvspan = ch_eom_start_buffer[1] - ch_eom_start_buffer[0]
-                for i in range(nvspan):
-                    ax.axvspan(
-                        ch_eom_start_buffer[0] + i,
-                        ch_eom_start_buffer[0] + (i + 1),
-                        facecolor=eom_vspan["color"],
-                        alpha=eom_vspan["alpha"] * (i + 1) / nvspan,
-                        zorder=-100,
+                if ch_eom_start_buffer:
+                    nvspan = ch_eom_start_buffer[1] - ch_eom_start_buffer[0]
+                    for i in range(nvspan):
+                        ax.axvspan(
+                            ch_eom_start_buffer[0] + i,
+                            ch_eom_start_buffer[0] + (i + 1),
+                            facecolor=eom_vspan["color"],
+                            alpha=eom_vspan["alpha"] * (i + 1) / nvspan,
+                            zorder=-100,
+                        )
+                    ax.axvline(
+                        ch_eom_start_buffer[0],
+                        ax.get_ylim()[0],
+                        ax.get_ylim()[1],
+                        color=eom_vspan["color"],
+                        alpha=cast(float, eom_vspan["alpha"]) / 2.0,
                     )
-                ax.axvline(
-                    ch_eom_start_buffer[0],
-                    ax.get_ylim()[0],
-                    ax.get_ylim()[1],
+                ax.axvspan(
+                    ch_eom_interval[0],
+                    ch_eom_interval[1],
                     color=eom_vspan["color"],
-                    alpha=cast(float, eom_vspan["alpha"]) / 2.0,
+                    alpha=eom_vspan["alpha"],
+                    zorder=-100,
                 )
-            tgt_txt_x = ch_eom_start_buffer[0]
+                if ch_eom_end_buffer:
+                    nvspan = ch_eom_end_buffer[1] - ch_eom_end_buffer[0]
+                    for i in range(nvspan):
+                        ax.axvspan(
+                            ch_eom_end_buffer[0] + i,
+                            ch_eom_end_buffer[0] + i + 1,
+                            facecolor=eom_vspan["color"],
+                            alpha=eom_vspan["alpha"] * (1 - (i + 1) / nvspan),
+                            zorder=-100,
+                        )
+
+                    ax.axvline(
+                        ch_eom_end_buffer[1],
+                        ax.get_ylim()[0],
+                        ax.get_ylim()[1],
+                        color=eom_vspan["color"],
+                        alpha=cast(float, eom_vspan["alpha"]) / 2.0,
+                    )
+            tgt_txt_x = ch_eom_start_buffer[0] if ch_eom_start_buffer else ch_eom_interval[0]
             tgt_txt_y = axes[0].get_ylim()[1]
             axes[0].text(
                 tgt_txt_x,
@@ -603,35 +637,6 @@ def draw_sequence(
                 va="top",
                 bbox=eom_box,
             )
-
-        for ch_eom_interval in ch_eom_intervals:
-            for ax in axes:
-                ax.axvspan(
-                    ch_eom_interval[0],
-                    ch_eom_interval[1],
-                    color=eom_vspan["color"],
-                    alpha=eom_vspan["alpha"],
-                    zorder=-100,
-                )
-        for ch_eom_end_buffer in ch_eom_end_buffers:
-            for ax in axes:
-                nvspan = ch_eom_end_buffer[1] - ch_eom_end_buffer[0]
-                for i in range(nvspan):
-                    ax.axvspan(
-                        ch_eom_end_buffer[0] + i,
-                        ch_eom_end_buffer[0] + i + 1,
-                        facecolor=eom_vspan["color"],
-                        alpha=eom_vspan["alpha"] * (1 - (i + 1) / nvspan),
-                        zorder=-100,
-                    )
-                ax.axvline(
-                    ch_eom_end_buffer[1],
-                    ax.get_ylim()[0],
-                    ax.get_ylim()[1],
-                    color=eom_vspan["color"],
-                    alpha=cast(float, eom_vspan["alpha"]) / 2.0,
-                )
-
         # Draw the SLM mask
         if seq._slm_mask_targets and seq._slm_mask_time:
             tf_m = seq._slm_mask_time[1]
