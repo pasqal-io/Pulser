@@ -42,7 +42,7 @@ def test_creation(layout, layout3d):
     np_version = tuple(map(int, np.__version__.split(".")))
     context_manager = (
         pytest.warns(np.VisibleDeprecationWarning)
-        if np_version < (1, 22)
+        if np_version < (1, 24)
         else contextlib.nullcontext()
     )
     with context_manager, pytest.raises(
