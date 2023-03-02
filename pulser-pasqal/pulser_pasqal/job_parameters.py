@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Parameters to build a sequence sent to the cloud."""
+"""Parameters to build a sequence sent to the PASQAL cloud plaftorm."""
 from __future__ import annotations
 
 import dataclasses
