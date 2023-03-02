@@ -38,9 +38,9 @@ class PasqalCloud:
 
     def __init__(
         self,
-        username: str,
-        password: str,
-        group_id: str,
+        username: str = "",
+        password: str = "",
+        group_id: str = "",
         **kwargs: Any,
     ):
         """Initializes a connection to the Pasqal cloud platform."""
