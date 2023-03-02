@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Allows to connect to the cloud powered by Pasqal to run sequences."""
+"""Allows to connect to PASQAL's cloud platform to run sequences."""
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -24,29 +24,30 @@ from pulser_pasqal.job_parameters import JobParameters
 
 
 class PasqalCloud:
-    """Manager of the connection to the cloud powered by Pasqal.
+    """Manager of the connection to PASQAL's cloud platform.
 
     The cloud connection enables to run sequences on simulators or on real
     QPUs.
 
     Args:
-        client_id: client_id of the API key you are holding for Pasqal
-            cloud.
-        client_secret: client_secret of the API key you are holding for
-            Pasqal cloud.
+        username: your username in the PASQAL cloud platform.
+        password: the password for your PASQAL cloud platform account.
+        group_id: the group_id associated to the account.
         kwargs: Additional arguments to provide to SDK
     """
 
     def __init__(
         self,
-        client_id: str,
-        client_secret: str,
+        username: str = "",
+        password: str = "",
+        group_id: str = "",
         **kwargs: Any,
     ):
-        """Initializes a connection to the cloud."""
+        """Initializes a connection to the Pasqal cloud platform."""
         self._sdk_connection = sdk.SDK(
-            client_id=client_id,
-            client_secret=client_secret,
+            username=username,
+            password=password,
+            group_id=group_id,
             **kwargs,
         )
 
@@ -55,8 +56,9 @@ class PasqalCloud:
         seq: Sequence,
         jobs: list[JobParameters],
         device_type: sdk.DeviceType = sdk.DeviceType.QPU,
-        configuration: Optional[sdk.Configuration] = None,
+        configuration: Optional[sdk.BaseConfig] = None,
         wait: bool = False,
+        fetch_results: bool = False,
     ) -> sdk.Batch:
         """Create a new batch and send it to the API.
 
@@ -69,9 +71,9 @@ class PasqalCloud:
             device_type: The type of device to use, either an emulator or a QPU
                 If set to QPU, the device_type will be set to the one
                 stored in the serialized sequence.
-            configuration: A dictionary with extra configuration for the
-                emulators that accept it.
-            wait: Whether to wait for results to be sent back.
+            configuration: Optional extra configuration for emulators.
+            wait: Whether to wait for the batch to be done.
+            fetch_results: Whether to download the results. Implies waiting for the batch. # noqa: 501
 
         Returns:
             Batch: The new batch that has been created in the database.
@@ -88,23 +90,15 @@ class PasqalCloud:
             seq.build(**params.variables.get_dict())  # type: ignore
 
         return self._sdk_connection.create_batch(
-            serialized_sequence=self._serialize_seq(
-                seq=seq, device_type=device_type
-            ),
+            serialized_sequence=seq.to_abstract_repr(),
             jobs=[j.get_dict() for j in jobs],
             device_type=device_type,
             configuration=configuration,
             wait=wait,
+            fetch_results=fetch_results,
         )
 
-    def _serialize_seq(
-        self, seq: Sequence, device_type: sdk.DeviceType
-    ) -> str:
-        if device_type == sdk.DeviceType.QPU:
-            return seq.serialize()
-        return seq.to_abstract_repr()
-
-    def get_batch(self, id: int, fetch_results: bool = False) -> sdk.Batch:
+    def get_batch(self, id: str, fetch_results: bool = False) -> sdk.Batch:
         """Retrieve a batch's data and all its jobs.
 
         Args:
