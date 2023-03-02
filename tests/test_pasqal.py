@@ -144,7 +144,7 @@ def test_pasqal_cloud_qpu(fixt):
         fixt=fixt,
         seq=seq,
         device_type=device_type,
-        expected_seq_representation=seq.serialize(),
+        expected_seq_representation=seq.to_abstract_repr(),
     )
 
 
