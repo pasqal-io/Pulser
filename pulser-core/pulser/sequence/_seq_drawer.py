@@ -46,7 +46,7 @@ LABELS = [
 
 
 class EOMSegment:
-    """The class to draw an eom slot."""
+    """The class to mark an EOM slot."""
 
     def __init__(self, ti: int | None = None, tf: int | None = None) -> None:
         """Class is defined from its start and end value."""
@@ -208,9 +208,9 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
                         in_eom_mode = True
                         eom_block_n += 1
                 elif in_eom_mode:
-                    # Buffer when EOM mode is disabled and next slot is a delay
+                    # Buffer when EOM mode is disabled and next slot has 0 amp
                     in_eom_mode = False
-                    if slot.type == "delay":
+                    if extended_samples.amp[slot.ti] == 0:
                         eom_end_buffers[eom_block_n] = EOMSegment(
                             slot.ti, slot.tf
                         )
