@@ -21,6 +21,7 @@ from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from scipy.interpolate import CubicSpline
 
@@ -44,12 +45,69 @@ LABELS = [
 ]
 
 
+class EOMSegment:
+    """The class to draw an eom slot."""
+
+    def __init__(self, ti: int | None = None, tf: int | None = None) -> None:
+        """Class is defined from its start and end value."""
+        self.ti = ti
+        self.tf = tf
+        self.color = "steelblue"
+        self.alpha = 0.3
+
+    @property
+    def isempty(self) -> bool:
+        """Defines if the class is empty."""
+        return self.ti is None or self.tf is None
+
+    @property
+    def nvspan(self) -> int:
+        """Defines the number of points in the slot."""
+        return cast(int, self.tf) - cast(int, self.ti)
+
+    def draw(self, ax: Axes) -> None:
+        """Draws a rectangle between the start and end value."""
+        if not self.isempty:
+            ax.axvspan(
+                self.ti,
+                self.tf,
+                color=self.color,
+                alpha=self.alpha,
+                zorder=-100,
+            )
+
+    def smooth_draw(self, ax: Axes, decreasing: bool = False) -> None:
+        """Draws a rectangle with an increasing/decreasing opacity."""
+        if not self.isempty:
+            for i in range(self.nvspan):
+                ax.axvspan(
+                    cast(int, self.ti) + i,
+                    cast(int, self.ti) + i + 1,
+                    facecolor=self.color,
+                    alpha=self.alpha
+                    * (
+                        decreasing + (-1) ** decreasing * (i + 1) / self.nvspan
+                    ),
+                    zorder=-100,
+                )
+            ax.axvline(
+                self.tf if decreasing else self.ti,
+                ax.get_ylim()[0],
+                ax.get_ylim()[1],
+                color=self.color,
+                alpha=self.alpha / 2.0,
+            )
+
+
 @dataclass
 class ChannelDrawContent:
     """The contents for drawing a single channel."""
 
     samples: ChannelSamples
     target: dict[Union[str, tuple[int, int]], Any]
+    eom_intervals: list[EOMSegment]
+    eom_start_buffers: list[EOMSegment]
+    eom_end_buffers: list[EOMSegment]
     interp_pts: dict[str, list[list[float]]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -123,15 +181,18 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
         target: dict[Union[str, tuple[int, int]], Any] = {}
         # Extracting the EOM Buffers
-        eom_intervals = sch.get_eom_mode_intervals()
+        eom_intervals = [
+            EOMSegment(eom_interval[0], eom_interval[1])
+            for eom_interval in sch.get_eom_mode_intervals()
+        ]
         nb_eom_intervals = len(eom_intervals)
-        eom_start_buffers = [() for _ in range(nb_eom_intervals)]
-        eom_end_buffers = [() for _ in range(nb_eom_intervals)]
+        eom_start_buffers = [EOMSegment() for _ in range(nb_eom_intervals)]
+        eom_end_buffers = [EOMSegment() for _ in range(nb_eom_intervals)]
         in_eom_mode = False
         eom_block_n = -1
-        # Duration of last eom interval is extended if eom mode not disabled at the end
-        if seq.get_duration() == eom_intervals[-1][1]:
-            eom_intervals[-1] = (eom_intervals[-1][0], total_duration)
+        # Last eom interval is extended if eom mode not disabled at the end
+        if nb_eom_intervals > 0 and seq.get_duration() == eom_intervals[-1].tf:
+            eom_intervals[-1].tf = total_duration
         # sampling the channel schedule
         samples = sch.get_samples()
         extended_samples = samples.extend_duration(total_duration)
@@ -150,14 +211,19 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
                     # Buffer when EOM mode is disabled and next slot is a delay
                     in_eom_mode = False
                     if slot.type == "delay":
-                        eom_end_buffers[eom_block_n] = (slot.ti, slot.tf)
+                        eom_end_buffers[eom_block_n] = EOMSegment(
+                            slot.ti, slot.tf
+                        )
                 if (
                     eom_block_n + 1 < nb_eom_intervals
-                    and slot.tf == eom_intervals[eom_block_n + 1][0]
-                    and extended_samples.det[slot.tf - 1] == sch.eom_blocks[eom_block_n + 1].detuning_off
+                    and slot.tf == eom_intervals[eom_block_n + 1].ti
+                    and extended_samples.det[slot.tf - 1]
+                    == sch.eom_blocks[eom_block_n + 1].detuning_off
                 ):
-                    # eom_start_buffer if next slot is in eom mode and final det matches det_off of next eom block
-                    eom_start_buffers[eom_block_n+1] = (slot.ti, slot.tf)
+                    # Buffer if next is eom and final det matches det_off
+                    eom_start_buffers[eom_block_n + 1] = EOMSegment(
+                        slot.ti, slot.tf
+                    )
 
             if slot.type == "target":
                 target[(slot.ti, slot.tf - 1)] = slot.targets
@@ -173,16 +239,15 @@ def gather_data(seq: pulser.sequence.Sequence, gather_output: bool) -> dict:
                     interp_pts[wf_type] += pts.tolist()
 
         # Store everything
-        data[ch] = dict(
-            channel_draw_content=ChannelDrawContent(
-                extended_samples, target
-            ),
-            channel_eom_intervals=eom_intervals,
-            channel_eom_start_buffers=eom_start_buffers,
-            channel_eom_end_buffers=eom_end_buffers,
+        data[ch] = ChannelDrawContent(
+            extended_samples,
+            target,
+            eom_intervals,
+            eom_start_buffers,
+            eom_end_buffers,
         )
         if interp_pts:
-            data[ch]["channel_draw_content"].interp_pts = dict(interp_pts)
+            data[ch].interp_pts = dict(interp_pts)
     if hasattr(seq, "_measurement"):
         data["measurement"] = seq._measurement
     data["total_duration"] = total_duration
@@ -244,16 +309,10 @@ def draw_sequence(
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
     for ch in seq._schedule:
-        if np.count_nonzero(data[ch]["channel_draw_content"].samples.det) > 0:
-            data[ch]["channel_draw_content"].curves_on["detuning"] = True
-        if (
-            draw_phase_curve
-            and np.count_nonzero(
-                data[ch]["channel_draw_content"].samples.phase
-            )
-            > 0
-        ):
-            data[ch]["channel_draw_content"].curves_on["phase"] = True
+        if np.count_nonzero(data[ch].samples.det) > 0:
+            data[ch].curves_on["detuning"] = True
+        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
+            data[ch].curves_on["phase"] = True
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
@@ -261,9 +320,6 @@ def draw_sequence(
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
-
-    # Parameters for the EOM vspan
-    eom_vspan: dict[str, str | float] = {"alpha": 0.3, "color": "steelblue"}
 
     # Draw masked register
     if draw_register:
@@ -309,8 +365,7 @@ def draw_sequence(
             ax_reg.set_title("Masked register", pad=10)
 
     ratios = [
-        SIZE_PER_WIDTH[data[ch]["channel_draw_content"].n_axes_on]
-        for ch in seq.declared_channels
+        SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in seq.declared_channels
     ]
     fig = plt.figure(
         constrained_layout=False,
@@ -327,12 +382,9 @@ def draw_sequence(
             labelcolor="w", top=False, bottom=False, left=False, right=False
         )
         ax.set_ylabel(ch, labelpad=40, fontsize=18)
-        subgs = gs_.subgridspec(
-            data[ch]["channel_draw_content"].n_axes_on, 1, hspace=0.0
-        )
+        subgs = gs_.subgridspec(data[ch].n_axes_on, 1, hspace=0.0)
         ch_axes[ch] = [
-            fig.add_subplot(subgs[i, :])
-            for i in range(data[ch]["channel_draw_content"].n_axes_on)
+            fig.add_subplot(subgs[i, :]) for i in range(data[ch].n_axes_on)
         ]
         for j, ax in enumerate(ch_axes[ch]):
             ax.axvline(0, linestyle="--", linewidth=0.5, color="grey")
@@ -361,10 +413,10 @@ def draw_sequence(
 
     for ch, axes in ch_axes.items():
         ch_obj = seq.declared_channels[ch]
-        ch_data = data[ch]["channel_draw_content"]
-        ch_eom_intervals = data[ch]["channel_eom_intervals"]
-        ch_eom_start_buffers = data[ch]["channel_eom_start_buffers"]
-        ch_eom_end_buffers = data[ch]["channel_eom_end_buffers"]
+        ch_data = data[ch]
+        ch_eom_intervals = data[ch].eom_intervals
+        ch_eom_start_buffers = data[ch].eom_start_buffers
+        ch_eom_end_buffers = data[ch].eom_end_buffers
         basis = ch_obj.basis
         ys = ch_data.get_input_curves()
         ys_mod = [()] * 3
@@ -582,51 +634,14 @@ def draw_sequence(
                 )
 
         # Draw the EOM intervals
-        for ch_eom_start_buffer, ch_eom_interval, ch_eom_end_buffer in zip(ch_eom_start_buffers, ch_eom_intervals, ch_eom_end_buffers):
+        for ch_eom_start_buffer, ch_eom_interval, ch_eom_end_buffer in zip(
+            ch_eom_start_buffers, ch_eom_intervals, ch_eom_end_buffers
+        ):
             for ax in axes:
-                if ch_eom_start_buffer:
-                    nvspan = ch_eom_start_buffer[1] - ch_eom_start_buffer[0]
-                    for i in range(nvspan):
-                        ax.axvspan(
-                            ch_eom_start_buffer[0] + i,
-                            ch_eom_start_buffer[0] + (i + 1),
-                            facecolor=eom_vspan["color"],
-                            alpha=eom_vspan["alpha"] * (i + 1) / nvspan,
-                            zorder=-100,
-                        )
-                    ax.axvline(
-                        ch_eom_start_buffer[0],
-                        ax.get_ylim()[0],
-                        ax.get_ylim()[1],
-                        color=eom_vspan["color"],
-                        alpha=cast(float, eom_vspan["alpha"]) / 2.0,
-                    )
-                ax.axvspan(
-                    ch_eom_interval[0],
-                    ch_eom_interval[1],
-                    color=eom_vspan["color"],
-                    alpha=eom_vspan["alpha"],
-                    zorder=-100,
-                )
-                if ch_eom_end_buffer:
-                    nvspan = ch_eom_end_buffer[1] - ch_eom_end_buffer[0]
-                    for i in range(nvspan):
-                        ax.axvspan(
-                            ch_eom_end_buffer[0] + i,
-                            ch_eom_end_buffer[0] + i + 1,
-                            facecolor=eom_vspan["color"],
-                            alpha=eom_vspan["alpha"] * (1 - (i + 1) / nvspan),
-                            zorder=-100,
-                        )
-
-                    ax.axvline(
-                        ch_eom_end_buffer[1],
-                        ax.get_ylim()[0],
-                        ax.get_ylim()[1],
-                        color=eom_vspan["color"],
-                        alpha=cast(float, eom_vspan["alpha"]) / 2.0,
-                    )
-            tgt_txt_x = ch_eom_start_buffer[0] if ch_eom_start_buffer else ch_eom_interval[0]
+                ch_eom_start_buffer.smooth_draw(ax, decreasing=False)
+                ch_eom_interval.draw(ax)
+                ch_eom_end_buffer.smooth_draw(ax, decreasing=True)
+            tgt_txt_x = ch_eom_start_buffer.ti or ch_eom_interval.ti
             tgt_txt_y = axes[0].get_ylim()[1]
             axes[0].text(
                 tgt_txt_x,
