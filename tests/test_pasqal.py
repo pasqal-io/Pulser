@@ -137,7 +137,7 @@ def test_pasqal_cloud_qpu(fixt):
     device_type = DeviceType.QPU
     device = test_device
 
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
     seq = Sequence(reg, device)
 
     check_pasqal_cloud(
@@ -149,7 +149,7 @@ def test_pasqal_cloud_qpu(fixt):
 
 
 def test_virtual_device_on_qpu_error(fixt):
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
     device = Chadoq2.to_virtual()
     seq = Sequence(reg, device)
 
@@ -163,7 +163,7 @@ def test_virtual_device_on_qpu_error(fixt):
 
 
 def test_wrong_parameters(fixt):
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
     seq = Sequence(reg, test_device)
     seq.declare_variable("unset", dtype=int)
 
