@@ -1341,6 +1341,10 @@ def test_eom_mode(mod_device):
         duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
     )
 
+    # Test drawing in eom mode
+    with patch("matplotlib.pyplot.show"):
+        seq.draw()
+
 
 @pytest.mark.parametrize(
     "initial_instruction, non_zero_detuning_off",
