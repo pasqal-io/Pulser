@@ -25,7 +25,7 @@ import pulser_pasqal
 from pulser.devices import Chadoq2
 from pulser.register import Register
 from pulser.sequence import Sequence
-from pulser_pasqal import Configuration, DeviceType, Endpoints, PasqalCloud
+from pulser_pasqal import BaseConfig, DeviceType, Endpoints, PasqalCloud
 from pulser_pasqal.job_parameters import JobParameters, JobVariables
 
 root = Path(__file__).parent.parent
@@ -45,8 +45,9 @@ class CloudFixture:
 def fixt():
     with patch("sdk.SDK", autospec=True) as mock_cloud_sdk_class:
         pasqal_cloud_kwargs = dict(
-            client_id="abc",
-            client_secret="def",
+            username="abc",
+            password="def",
+            group_id="ghi",
             endpoints=Endpoints(core="core_url", account="account_url"),
             webhook="xyz",
         )
@@ -74,12 +75,14 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     create_batch_kwargs = dict(
         jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
         device_type=device_type,
-        configuration=Configuration(
-            dt=0.1,
-            precision="normal",
-            extra_config=None,
+        configuration=BaseConfig(
+            extra_config={
+                "dt": 10.0,
+                "precision": "normal",
+            }
         ),
         wait=True,
+        fetch_results=False,
     )
 
     expected_create_batch_kwargs = {
@@ -99,7 +102,7 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     )
 
     get_batch_kwargs = dict(
-        id=10,
+        id="uuid",
         fetch_results=True,
     )
 
@@ -112,7 +115,7 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
     "device_type, device",
     [
         [device_type, device]
-        for device_type in (DeviceType.EMU_FREE, DeviceType.EMU_SV)
+        for device_type in (DeviceType.EMU_FREE, DeviceType.EMU_TN)
         for device in (test_device, virtual_device)
     ],
 )
@@ -134,19 +137,19 @@ def test_pasqal_cloud_qpu(fixt):
     device_type = DeviceType.QPU
     device = test_device
 
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
     seq = Sequence(reg, device)
 
     check_pasqal_cloud(
         fixt=fixt,
         seq=seq,
         device_type=device_type,
-        expected_seq_representation=seq.serialize(),
+        expected_seq_representation=seq.to_abstract_repr(),
     )
 
 
 def test_virtual_device_on_qpu_error(fixt):
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
     device = Chadoq2.to_virtual()
     seq = Sequence(reg, device)
 
@@ -155,17 +158,12 @@ def test_virtual_device_on_qpu_error(fixt):
             seq,
             jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
             device_type=DeviceType.QPU,
-            configuration=Configuration(
-                dt=0.1,
-                precision="normal",
-                extra_config=None,
-            ),
             wait=True,
         )
 
 
 def test_wrong_parameters(fixt):
-    reg = Register(dict(enumerate([(0, 0), (0, 10)])))
+    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
     seq = Sequence(reg, test_device)
     seq.declare_variable("unset", dtype=int)
 
@@ -176,10 +174,5 @@ def test_wrong_parameters(fixt):
             seq,
             jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
             device_type=DeviceType.QPU,
-            configuration=Configuration(
-                dt=0.1,
-                precision="normal",
-                extra_config=None,
-            ),
             wait=True,
         )
