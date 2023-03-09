@@ -691,7 +691,6 @@ def test_sequence():
         with patch("matplotlib.figure.Figure.savefig"):
             seq.draw(fig_name="my_sequence.pdf")
             seq.draw(draw_register=True, fig_name="both.pdf")
-    plt.close()
 
     pulse1 = Pulse(
         InterpolatedWaveform(500, [0, 1, 0]),
@@ -761,7 +760,6 @@ def test_sequence():
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_shifts=True)
-    plt.close()
 
     assert seq.get_duration() == 4000
 
@@ -769,15 +767,14 @@ def test_sequence():
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_area=True)
-    plt.close()
 
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_phase_curve=True)
-    plt.close()
     s = seq.serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence.deserialize(s)
     assert str(seq) == str(seq_)
+    plt.close("all")
 
 
 def test_config_slm_mask():
@@ -904,7 +901,7 @@ def test_slm_mask():
     # Check drawing method
     with patch("matplotlib.pyplot.show"):
         seq_xy2.draw()
-    plt.close()
+    plt.close("all")
 
 
 def test_draw_register():
@@ -918,7 +915,6 @@ def test_draw_register():
     seq.config_slm_mask(targets)
     with patch("matplotlib.pyplot.show"):
         seq.draw(draw_register=True)
-    plt.close()
     # Draw 3d register from sequence
     reg3d = Register3D.cubic(3, 8)
     seq3d = Sequence(reg3d, MockDevice)
@@ -928,7 +924,7 @@ def test_draw_register():
     seq3d.measure(basis="XY")
     with patch("matplotlib.pyplot.show"):
         seq3d.draw(draw_register=True)
-    plt.close()
+    plt.close("all")
 
 
 def test_hardware_constraints():
@@ -1035,7 +1031,7 @@ def test_hardware_constraints():
         ):
             seq.draw(mode="output")
         seq.draw(mode="input+output")
-    plt.close()
+    plt.close("all")
 
 
 def test_mappable_register():
