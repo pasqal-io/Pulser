@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -131,7 +130,7 @@ def test_mappable_register():
     assert not new_mapped_seq.is_register_mappable()
 
 
-def test_rare_cases():
+def test_rare_cases(patch_plt_show):
     reg = Register.square(4)
     seq = Sequence(reg, Chadoq2)
     var = seq.declare_variable("var")
@@ -158,11 +157,10 @@ def test_rare_cases():
     assert wf_.build() == BlackmanWaveform(100, 10)
     with pytest.warns(UserWarning, match="Serialization of 'getattr'"):
         draw_func = wf_.draw
-    with patch("matplotlib.pyplot.show"):
-        with pytest.warns(
-            UserWarning, match="Calls to methods of parametrized objects"
-        ):
-            draw_func().build()
+    with pytest.warns(
+        UserWarning, match="Calls to methods of parametrized objects"
+    ):
+        draw_func().build()
 
     rotated_reg = parametrize(Register.rotate)(reg, var)
     with pytest.raises(NotImplementedError):

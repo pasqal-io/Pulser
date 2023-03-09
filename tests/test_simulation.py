@@ -395,12 +395,11 @@ def test_add_max_step_and_delays():
     assert np.isclose(occ_auto[-1], 0.5, 1e-4)
 
 
-def test_run(seq):
+def test_run(seq, patch_plt_show):
     sim = Simulation(seq, sampling_rate=0.01)
     sim.set_config(SimConfig("SPAM", eta=0.0))
-    with patch("matplotlib.pyplot.show"):
-        with patch("matplotlib.pyplot.savefig"):
-            sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
+    with patch("matplotlib.pyplot.savefig"):
+        sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     bad_initial = np.array([1.0])
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor(
@@ -1042,7 +1041,7 @@ def test_effective_size_disjoint():
         )
 
 
-def test_simulation_with_modulation(mod_device, reg):
+def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.config_slm_mask({"control1"})
@@ -1121,5 +1120,4 @@ def test_simulation_with_modulation(mod_device, reg):
         sim.draw(draw_interp_pts=True)
 
     # Drawing with modulation
-    with patch("matplotlib.pyplot.show"):
-        sim.draw()
+    sim.draw()

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -72,3 +73,11 @@ def mod_device() -> Device:
             ),
         ),
     )
+
+
+@pytest.fixture()
+def patch_plt_show(monkeypatch):
+    # Close residual figures
+    plt.close("all")
+    # Closes a figure instead of showing it
+    monkeypatch.setattr(plt, "show", plt.close)
