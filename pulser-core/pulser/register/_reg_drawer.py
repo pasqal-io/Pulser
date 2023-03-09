@@ -31,6 +31,20 @@ class RegDrawer:
     """Helper functions for Register drawing."""
 
     @staticmethod
+    def _compute_ordered_qubit_colors(
+        ids: abcSequence[QubitId],
+        qubit_colors: Optional[dict[QubitId, str]] = None,
+    ) -> list[str]:
+        def default_qubit_color() -> str:
+            return "darkgreen"
+
+        all_qubit_colors = defaultdict(
+            default_qubit_color,
+            dict() if qubit_colors is None else qubit_colors,
+        )
+        return [all_qubit_colors[q_id] for q_id in ids]
+
+    @staticmethod
     def _draw_2D(
         ax: plt.axes._subplots.AxesSubplot,
         pos: np.ndarray,
@@ -44,14 +58,9 @@ class RegDrawer:
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
     ) -> None:
-        def default_qubit_color() -> str:
-            return "darkgreen"
-
-        all_qubit_colors = defaultdict(
-            default_qubit_color,
-            dict() if qubit_colors is None else qubit_colors,
+        ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(
+            ids, qubit_colors
         )
-        ordered_qubit_colors = [all_qubit_colors[q_id] for q_id in ids]
 
         ix, iy = plane
 
@@ -184,8 +193,13 @@ class RegDrawer:
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        qubit_colors: Optional[dict[QubitId, str]] = None,
         are_traps: bool = False,
     ) -> None:
+        ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(
+            ids, qubit_colors
+        )
+
         if draw_graph and blockade_radius is not None:
             epsilon = 1e-9  # Accounts for rounding errors
             edges = KDTree(pos).query_pairs(blockade_radius * (1 + epsilon))
@@ -212,6 +226,7 @@ class RegDrawer:
                     blockade_radius=blockade_radius,
                     draw_graph=draw_graph,
                     draw_half_radius=draw_half_radius,
+                    qubit_colors=qubit_colors,
                     are_traps=are_traps,
                 )
                 ax.set_title(
@@ -234,7 +249,7 @@ class RegDrawer:
             if are_traps:
                 params = dict(s=50, c="white", edgecolors="black")
             else:
-                params = dict(s=30, c="darkgreen")
+                params = dict(s=30, c=ordered_qubit_colors)
 
             for i in range(1, 3):
                 ax = fig.add_subplot(
@@ -259,7 +274,7 @@ class RegDrawer:
 
                 if draw_half_radius and blockade_radius is not None:
                     mesh_num = 20 if len(ids) > 10 else 40
-                    for r in pos:
+                    for r, color in zip(pos, ordered_qubit_colors):
                         x0, y0, z0 = r
                         radius = blockade_radius / 2
 
@@ -274,7 +289,7 @@ class RegDrawer:
                         y = radius * np.sin(u) * np.sin(v) + y0
                         z = radius * np.cos(v) + z0
                         # alpha controls opacity
-                        ax.plot_surface(x, y, z, color="darkgreen", alpha=0.1)
+                        ax.plot_surface(x, y, z, color=color, alpha=0.1)
 
                 if draw_graph and blockade_radius is not None:
                     for x, y, z in bonds.values():
