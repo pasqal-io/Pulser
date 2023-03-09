@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
 from typing import Optional
@@ -39,15 +40,25 @@ class RegDrawer:
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        qubit_colors: Optional[dict[QubitId, str]] = None,
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
     ) -> None:
+        def default_qubit_color() -> str:
+            return "darkgreen"
+
+        all_qubit_colors = defaultdict(
+            default_qubit_color,
+            dict() if qubit_colors is None else qubit_colors,
+        )
+        ordered_qubit_colors = [all_qubit_colors[q_id] for q_id in ids]
+
         ix, iy = plane
 
         if are_traps:
             params = dict(s=50, edgecolors="black", facecolors="none")
         else:
-            params = dict(s=30, c="darkgreen")
+            params = dict(s=30, c=ordered_qubit_colors)
 
         ax.scatter(pos[:, ix], pos[:, iy], alpha=0.7, **params)
 
@@ -139,12 +150,12 @@ class RegDrawer:
                 txt._get_wrap_line_width = lambda: 50.0
 
         if draw_half_radius and blockade_radius is not None:
-            for p in pos:
+            for p, color in zip(pos, ordered_qubit_colors):
                 circle = plt.Circle(
                     tuple(p[[ix, iy]]),
                     blockade_radius / 2,
                     alpha=0.1,
-                    color="darkgreen",
+                    color=color,
                 )
                 ax.add_patch(circle)
                 ax.autoscale()
