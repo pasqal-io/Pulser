@@ -290,8 +290,6 @@ draw_params = [
 
 @pytest.mark.parametrize("draw_params", draw_params)
 def test_drawing(draw_params):
-    plt.close()
-
     with pytest.raises(ValueError, match="Blockade radius"):
         reg = Register.from_coordinates([(1, 0), (0, 1)])
         reg.draw(blockade_radius=0.0, draw_half_radius=True, **draw_params)
@@ -307,8 +305,6 @@ def test_drawing(draw_params):
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.pyplot.savefig"):
             reg.draw(fig_name="my_register.pdf", **draw_params)
-
-    plt.close()
 
     reg = Register.rectangle(1, 8)
     with patch("matplotlib.pyplot.show"):
@@ -326,7 +322,7 @@ def test_drawing(draw_params):
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
 
-    plt.close()
+    plt.close("all")
 
 
 def test_orthorombic():
@@ -359,8 +355,6 @@ def test_cubic():
 
 @pytest.mark.parametrize("draw_params", draw_params)
 def test_drawing3D(draw_params):
-    plt.close()
-
     with pytest.raises(ValueError, match="Blockade radius"):
         reg = Register3D.from_coordinates([(1, 0, 0), (0, 0, 1)])
         reg.draw(blockade_radius=0.0, **draw_params)
@@ -381,8 +375,6 @@ def test_drawing3D(draw_params):
 
     with pytest.raises(ValueError, match="'blockade_radius' to draw."):
         reg.draw(draw_half_radius=True, **draw_params)
-
-    plt.close()
 
     reg = Register3D.cuboid(2, 2, 2)
     with patch("matplotlib.pyplot.show"):
@@ -408,7 +400,7 @@ def test_drawing3D(draw_params):
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
         reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
 
-    plt.close()
+    plt.close("all")
 
 
 def test_to_2D():
