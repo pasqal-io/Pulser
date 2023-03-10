@@ -276,8 +276,8 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
                 )
             except ValueError as e:
                 raise AbstractReprError(
-                    f"RydbergEOM deserialization failed with error: {e}"
-                )
+                    "RydbergEOM deserialization failed."
+                ) from e
     elif obj["basis"] == "digital":
         channel_cls = Raman
     elif obj["basis"] == "XY":
@@ -290,9 +290,7 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
     try:
         ch_obj = channel_cls(**params)
     except (ValueError, NotImplementedError) as e:
-        raise AbstractReprError(
-            f"Channel deserialization failed with error: {e}"
-        )
+        raise AbstractReprError("Channel deserialization failed.") from e
     return ch_obj
 
 
@@ -303,8 +301,8 @@ def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
         )
     except ValueError as e:
         raise AbstractReprError(
-            f"Register layout deserialization failed with error: {e}"
-        )
+            "Register layout deserialization failed."
+        ) from e
     return reg_layout
 
 
@@ -334,9 +332,7 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     try:
         device = device_cls(**params)
     except (ValueError, TypeError) as e:
-        raise AbstractReprError(
-            f"Device deserialization failed with error: {e}"
-        )
+        raise AbstractReprError("Device deserialization failed.") from e
     return device
 
 
@@ -436,9 +432,10 @@ def deserialize_device(obj_str: str) -> BaseDevice:
         fails due to an invalid 'obj_str'.
     """
     if not isinstance(obj_str, str):
-        raise DeserializeDeviceError(
+        type_error = TypeError(
             f"'obj_str' must be a string, not {type(obj_str)}."
         )
+        raise DeserializeDeviceError from type_error
 
     try:
         obj = json.loads(obj_str)
@@ -450,5 +447,5 @@ def deserialize_device(obj_str: str) -> BaseDevice:
         jsonschema.exceptions.ValidationError,  # From jsonschema.validate
         AbstractReprError,  # From _deserialize_device_object
     ) as e:
-        raise DeserializeDeviceError(e)
+        raise DeserializeDeviceError from e
     return device
