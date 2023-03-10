@@ -73,9 +73,8 @@ class RegisterLayout(RegDrawer):
 
         try:
             coords_arr = np.array(trap_coordinates, dtype=float)
-        # Following lines are only being covered starting Python 3.11.1
-        except ValueError as e:  # pragma: no cover
-            raise array_type_error_msg from e  # pragma: no cover
+        except ValueError as e:
+            raise array_type_error_msg from e
 
         shape = coords_arr.shape
         if len(shape) != 2:
