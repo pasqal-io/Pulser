@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Optional
+from typing import Mapping, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,14 +33,14 @@ class RegDrawer:
     @staticmethod
     def _compute_ordered_qubit_colors(
         ids: abcSequence[QubitId],
-        qubit_colors: Optional[dict[QubitId, str]] = None,
+        qubit_colors: Mapping[QubitId, str],
     ) -> list[str]:
         def default_qubit_color() -> str:
             return "darkgreen"
 
         all_qubit_colors = defaultdict(
             default_qubit_color,
-            dict() if qubit_colors is None else qubit_colors,
+            qubit_colors,
         )
         return [all_qubit_colors[q_id] for q_id in ids]
 
@@ -54,7 +54,7 @@ class RegDrawer:
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
-        qubit_colors: Optional[dict[QubitId, str]] = None,
+        qubit_colors: Mapping[QubitId, str] = dict(),
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
     ) -> None:
@@ -193,7 +193,7 @@ class RegDrawer:
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
-        qubit_colors: Optional[dict[QubitId, str]] = None,
+        qubit_colors: Mapping[QubitId, str] = dict(),
         are_traps: bool = False,
     ) -> None:
         ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(

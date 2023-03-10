@@ -178,7 +178,7 @@ class Register3D(BaseRegister, RegDrawer):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
-        qubit_colors: Optional[dict[QubitId, str]] = None,
+        qubit_colors: Mapping[QubitId, str] = dict(),
         projection: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
