@@ -58,6 +58,12 @@ def test_creation(layout, layout3d):
     with pytest.raises(ValueError, match="size 2 or 3"):
         RegisterLayout([[0], [1], [2]])
 
+    with pytest.raises(
+        ValueError,
+        match="All trap coordinates of a register layout must be unique.",
+    ):
+        RegisterLayout([[0, 1], [0.0, 1.0]])
+
     assert np.all(layout.coords == [[0, 0], [0, 1], [1, 0], [1, 1]])
     assert np.all(
         layout3d.coords == [[0, 0, 0], [0, 1, 0], [1, 0, 1], [1, 1, 1]]
