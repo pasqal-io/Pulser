@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from matplotlib import pyplot as plt
 from scipy.interpolate import PchipInterpolator, interp1d
 
 from pulser.channels import Rydberg
@@ -105,8 +106,11 @@ def test_draw():
         mod_bandwidth=4,  # MHz
     )
     with patch("matplotlib.pyplot.show"):
+        plt.close()
         composite.draw()
+        plt.close()
         blackman.draw(output_channel=rydberg_global)
+        plt.close()
         interp.draw(output_channel=rydberg_global)
 
 

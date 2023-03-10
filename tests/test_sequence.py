@@ -677,6 +677,7 @@ def test_str(mod_device):
 
 
 def test_sequence():
+    plt.close()
     seq = Sequence(reg, device)
     assert seq.get_duration() == 0
     with pytest.raises(RuntimeError, match="empty sequence"):
@@ -686,6 +687,8 @@ def test_sequence():
     seq.declare_channel("ch2", "rydberg_global")
     assert seq.get_duration("ch0") == 0
     assert seq.get_duration("ch2") == 0
+
+    plt.close()
 
     with patch("matplotlib.pyplot.show"):
         with patch("matplotlib.figure.Figure.savefig"):
@@ -908,6 +911,7 @@ def test_slm_mask():
 
 
 def test_draw_register():
+    plt.close()
     # Draw 2d register from sequence
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
