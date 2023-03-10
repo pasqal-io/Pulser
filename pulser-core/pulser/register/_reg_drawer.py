@@ -15,9 +15,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Mapping, Optional
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
