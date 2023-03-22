@@ -11,9 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from unittest.mock import patch
-
 import numpy as np
 import pytest
 
@@ -74,10 +71,9 @@ def test_repr():
     assert pls_.__repr__() == msg
 
 
-def test_draw():
+def test_draw(patch_plt_show):
     pls_ = Pulse.ConstantDetuning(bwf, -10, 1, post_phase_shift=-np.pi)
-    with patch("matplotlib.pyplot.show"):
-        pls_.draw()
+    pls_.draw()
 
 
 def test_fall_time():

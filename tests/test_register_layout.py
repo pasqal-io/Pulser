@@ -116,23 +116,18 @@ def test_register_definition(layout, layout3d):
         reg2d.rotate(30)
 
 
-def test_draw(layout, layout3d):
-    with patch("matplotlib.pyplot.show"):
-        layout.draw()
+def test_draw(layout, layout3d, patch_plt_show):
+    layout.draw()
 
-    with patch("matplotlib.pyplot.show"):
-        with patch("matplotlib.pyplot.savefig"):
-            layout.draw(fig_name="my_registerlayout.pdf")
+    with patch("matplotlib.pyplot.savefig"):
+        layout.draw(fig_name="my_registerlayout.pdf")
 
-    with patch("matplotlib.pyplot.show"):
-        layout3d.draw()
+    layout3d.draw()
 
-    with patch("matplotlib.pyplot.show"):
-        layout3d.draw(projection=False)
+    layout3d.draw(projection=False)
 
-    with patch("matplotlib.pyplot.show"):
-        with patch("matplotlib.pyplot.savefig"):
-            layout3d.draw(fig_name="my_registerlayout.pdf")
+    with patch("matplotlib.pyplot.savefig"):
+        layout3d.draw(fig_name="my_registerlayout.pdf")
 
 
 def test_repr(layout):
