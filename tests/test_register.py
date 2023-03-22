@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from matplotlib import pyplot as plt
 
 from pulser import Register, Register3D
 from pulser.devices import Chadoq2, MockDevice
