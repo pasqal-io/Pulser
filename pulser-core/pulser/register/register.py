@@ -295,6 +295,7 @@ class Register(BaseRegister, RegDrawer):
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
+        qubit_colors: Mapping[QubitId, str] = dict(),
         fig_name: str = None,
         kwargs_savefig: dict = {},
         custom_ax: Optional[Axes] = None,
@@ -313,6 +314,10 @@ class Register(BaseRegister, RegDrawer):
             draw_graph: Whether or not to draw the
                 interaction between atoms as edges in a graph. Will only draw
                 if the `blockade_radius` is defined.
+            qubit_colors: By default, atoms are drawn with a common default
+                color. If this parameter is present, it replaces the colors
+                for the specified atoms. Non-specified ones are stilled colored
+                with the default value.
             fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig: Keywords arguments for
@@ -354,6 +359,7 @@ class Register(BaseRegister, RegDrawer):
             blockade_radius=blockade_radius,
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
+            qubit_colors=qubit_colors,
         )
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)
