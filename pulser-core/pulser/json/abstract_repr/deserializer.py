@@ -288,22 +288,20 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         if param.init and param.name != "eom_config":
             params[param.name] = obj[param.name]
     try:
-        ch_obj = channel_cls(**params)
+        return channel_cls(**params)
     except (ValueError, NotImplementedError) as e:
         raise AbstractReprError("Channel deserialization failed.") from e
-    return ch_obj
 
 
 def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
     try:
-        reg_layout = RegisterLayout(
+        return RegisterLayout(
             layout_obj["coordinates"], slug=layout_obj.get("slug")
         )
     except ValueError as e:
         raise AbstractReprError(
             "Register layout deserialization failed."
         ) from e
-    return reg_layout
 
 
 def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
@@ -330,10 +328,9 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
         else:
             params[param.name] = obj[param.name]
     try:
-        device = device_cls(**params)
+        return device_cls(**params)
     except (ValueError, TypeError) as e:
         raise AbstractReprError("Device deserialization failed.") from e
-    return device
 
 
 def deserialize_abstract_sequence(obj_str: str) -> Sequence:
@@ -441,11 +438,10 @@ def deserialize_device(obj_str: str) -> BaseDevice:
         obj = json.loads(obj_str)
         # Validate the format of the data against the JSON schema.
         jsonschema.validate(instance=obj, schema=schemas["device"])
-        device = _deserialize_device_object(obj)
+        return _deserialize_device_object(obj)
     except (
         json.JSONDecodeError,  # From json.loads
         jsonschema.exceptions.ValidationError,  # From jsonschema.validate
         AbstractReprError,  # From _deserialize_device_object
     ) as e:
         raise DeserializeDeviceError from e
-    return device
