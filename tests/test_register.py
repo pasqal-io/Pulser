@@ -280,33 +280,42 @@ def test_rotation():
     assert np.all(np.isclose(reg._coords, coords_))
 
 
-def test_drawing():
+draw_params = [
+    dict(),
+    dict(qubit_colors=dict()),
+    dict(qubit_colors={1: "darkred"}),
+]
+
+
+@pytest.mark.parametrize("draw_params", draw_params)
+def test_drawing(draw_params, patch_plt_show):
     with pytest.raises(ValueError, match="Blockade radius"):
         reg = Register.from_coordinates([(1, 0), (0, 1)])
-        reg.draw(blockade_radius=0.0, draw_half_radius=True)
+        reg.draw(blockade_radius=0.0, draw_half_radius=True, **draw_params)
 
     reg = Register.from_coordinates([(1, 0), (0, 1)])
-    with patch("matplotlib.pyplot.show"):
-        reg.draw(blockade_radius=0.1, draw_graph=True)
+    reg.draw(blockade_radius=0.1, draw_graph=True, **draw_params)
 
     reg = Register.triangular_lattice(3, 8)
-    with patch("matplotlib.pyplot.show"):
-        reg.draw()
+    reg.draw(**draw_params)
 
-    with patch("matplotlib.pyplot.show"):
-        with patch("matplotlib.pyplot.savefig"):
-            reg.draw(fig_name="my_register.pdf")
+    with patch("matplotlib.pyplot.savefig"):
+        reg.draw(fig_name="my_register.pdf")
 
     reg = Register.rectangle(1, 8)
-    with patch("matplotlib.pyplot.show"):
-        reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
+    reg.draw(
+        blockade_radius=5,
+        draw_half_radius=True,
+        draw_graph=True,
+        **draw_params,
+    )
 
     with pytest.raises(ValueError, match="'blockade_radius' to draw."):
-        reg.draw(draw_half_radius=True)
+        reg.draw(draw_half_radius=True, **draw_params)
 
     reg = Register.square(1)
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
-        reg.draw(blockade_radius=5, draw_half_radius=True)
+        reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
 
 
 def test_orthorombic():
@@ -337,44 +346,49 @@ def test_cubic():
         Register3D.cubic(2, 0.0)
 
 
-def test_drawing3D():
+@pytest.mark.parametrize("draw_params", draw_params)
+def test_drawing3D(draw_params, patch_plt_show):
     with pytest.raises(ValueError, match="Blockade radius"):
         reg = Register3D.from_coordinates([(1, 0, 0), (0, 0, 1)])
-        reg.draw(blockade_radius=0.0)
+        reg.draw(blockade_radius=0.0, **draw_params)
 
     reg = Register3D.cubic(3, 8)
-    with patch("matplotlib.pyplot.show"):
-        with patch("matplotlib.pyplot.savefig"):
-            reg.draw(fig_name="my_register.pdf")
+
+    with patch("matplotlib.pyplot.savefig"):
+        reg.draw(fig_name="my_register.pdf", **draw_params)
 
     reg = Register3D.cuboid(1, 8, 2)
-    with patch("matplotlib.pyplot.show"):
-        reg.draw(blockade_radius=5, draw_half_radius=True, draw_graph=True)
+    reg.draw(
+        blockade_radius=5,
+        draw_half_radius=True,
+        draw_graph=True,
+        **draw_params,
+    )
 
     with pytest.raises(ValueError, match="'blockade_radius' to draw."):
-        reg.draw(draw_half_radius=True)
+        reg.draw(draw_half_radius=True, **draw_params)
 
     reg = Register3D.cuboid(2, 2, 2)
-    with patch("matplotlib.pyplot.show"):
-        reg.draw(
-            blockade_radius=5,
-            draw_half_radius=True,
-            draw_graph=True,
-            projection=False,
-            with_labels=True,
-        )
-    with patch("matplotlib.pyplot.show"):
-        reg.draw(
-            blockade_radius=5,
-            draw_half_radius=True,
-            draw_graph=False,
-            projection=True,
-            with_labels=True,
-        )
+    reg.draw(
+        blockade_radius=5,
+        draw_half_radius=True,
+        draw_graph=True,
+        projection=False,
+        with_labels=True,
+        **draw_params,
+    )
+    reg.draw(
+        blockade_radius=5,
+        draw_half_radius=True,
+        draw_graph=False,
+        projection=True,
+        with_labels=True,
+        **draw_params,
+    )
 
     reg = Register3D.cubic(1)
     with pytest.raises(NotImplementedError, match="Needs more than one atom"):
-        reg.draw(blockade_radius=5, draw_half_radius=True)
+        reg.draw(blockade_radius=5, draw_half_radius=True, **draw_params)
 
 
 def test_to_2D():

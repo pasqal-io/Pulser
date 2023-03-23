@@ -17,7 +17,6 @@ import json
 from typing import Any
 from unittest.mock import patch
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -676,7 +675,7 @@ def test_str(mod_device):
     )
 
 
-def test_sequence():
+def test_sequence(patch_plt_show):
     seq = Sequence(reg, device)
     assert seq.get_duration() == 0
     with pytest.raises(RuntimeError, match="empty sequence"):
@@ -687,11 +686,9 @@ def test_sequence():
     assert seq.get_duration("ch0") == 0
     assert seq.get_duration("ch2") == 0
 
-    with patch("matplotlib.pyplot.show"):
-        with patch("matplotlib.figure.Figure.savefig"):
-            seq.draw(fig_name="my_sequence.pdf")
-            seq.draw(draw_register=True, fig_name="both.pdf")
-    plt.close()
+    with patch("matplotlib.figure.Figure.savefig"):
+        seq.draw(fig_name="my_sequence.pdf")
+        seq.draw(draw_register=True, fig_name="both.pdf")
 
     pulse1 = Pulse(
         InterpolatedWaveform(500, [0, 1, 0]),
@@ -759,21 +756,15 @@ def test_sequence():
     seq.align("ch0", "ch2")
     assert seq.get_duration("ch2") == seq.get_duration("ch0")
 
-    with patch("matplotlib.pyplot.show"):
-        seq.draw(draw_phase_shifts=True)
-    plt.close()
+    seq.draw(draw_phase_shifts=True)
 
     assert seq.get_duration() == 4000
 
     seq.measure(basis="digital")
 
-    with patch("matplotlib.pyplot.show"):
-        seq.draw(draw_phase_area=True)
-    plt.close()
+    seq.draw(draw_phase_area=True)
+    seq.draw(draw_phase_curve=True)
 
-    with patch("matplotlib.pyplot.show"):
-        seq.draw(draw_phase_curve=True)
-    plt.close()
     s = seq.serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence.deserialize(s)
@@ -844,7 +835,7 @@ def test_config_slm_mask():
         seq_i.config_slm_mask(targets_i)
 
 
-def test_slm_mask():
+def test_slm_mask(patch_plt_show):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
@@ -902,12 +893,10 @@ def test_slm_mask():
     assert str(seq_xy5) == str(seq_xy5_)
 
     # Check drawing method
-    with patch("matplotlib.pyplot.show"):
-        seq_xy2.draw()
-    plt.close()
+    seq_xy2.draw()
 
 
-def test_draw_register():
+def test_draw_register(patch_plt_show):
     # Draw 2d register from sequence
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
@@ -916,9 +905,8 @@ def test_draw_register():
     seq.declare_channel("ch_xy", "mw_global")
     seq.add(pulse, "ch_xy")
     seq.config_slm_mask(targets)
-    with patch("matplotlib.pyplot.show"):
-        seq.draw(draw_register=True)
-    plt.close()
+    seq.draw(draw_register=True)
+
     # Draw 3d register from sequence
     reg3d = Register3D.cubic(3, 8)
     seq3d = Sequence(reg3d, MockDevice)
@@ -926,12 +914,10 @@ def test_draw_register():
     seq3d.add(pulse, "ch_xy")
     seq3d.config_slm_mask([6, 15])
     seq3d.measure(basis="XY")
-    with patch("matplotlib.pyplot.show"):
-        seq3d.draw(draw_register=True)
-    plt.close()
+    seq3d.draw(draw_register=True)
 
 
-def test_hardware_constraints():
+def test_hardware_constraints(patch_plt_show):
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
@@ -1021,24 +1007,20 @@ def test_hardware_constraints():
     with pytest.raises(ValueError, match="'mode' must be one of"):
         seq.draw(mode="all")
 
-    with patch("matplotlib.pyplot.show"):
-        with pytest.warns(
-            UserWarning,
-            match="'draw_phase_area' doesn't work in 'output' mode",
-        ):
-            seq.draw(
-                mode="output", draw_interp_pts=False, draw_phase_area=True
-            )
-        with pytest.warns(
-            UserWarning,
-            match="'draw_interp_pts' doesn't work in 'output' mode",
-        ):
-            seq.draw(mode="output")
-        seq.draw(mode="input+output")
-    plt.close()
+    with pytest.warns(
+        UserWarning,
+        match="'draw_phase_area' doesn't work in 'output' mode",
+    ):
+        seq.draw(mode="output", draw_interp_pts=False, draw_phase_area=True)
+    with pytest.warns(
+        UserWarning,
+        match="'draw_interp_pts' doesn't work in 'output' mode",
+    ):
+        seq.draw(mode="output")
+    seq.draw(mode="input+output")
 
 
-def test_mappable_register():
+def test_mappable_register(patch_plt_show):
     layout = TriangularLatticeLayout(100, 5)
     mapp_reg = layout.make_mappable_register(10)
     seq = Sequence(mapp_reg, Chadoq2)
@@ -1063,8 +1045,7 @@ def test_mappable_register():
         seq.draw(draw_register=True)
 
     # Can draw if 'draw_register=False'
-    with patch("matplotlib.pyplot.show"):
-        seq.draw()
+    seq.draw()
 
     with pytest.raises(ValueError, match="'qubits' must be specified"):
         seq.build()
@@ -1250,7 +1231,7 @@ def test_multiple_index_targets():
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
-def test_eom_mode(mod_device):
+def test_eom_mode(mod_device, patch_plt_show):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     ch0_obj = seq.declared_channels["ch0"]
@@ -1340,6 +1321,9 @@ def test_eom_mode(mod_device):
     assert last_slot.type == Pulse.ConstantPulse(
         duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
     )
+
+    # Test drawing in eom mode
+    seq.draw()
 
 
 @pytest.mark.parametrize(
