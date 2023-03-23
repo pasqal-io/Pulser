@@ -63,9 +63,17 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Advanced Features
+   :caption: Classical Simulation
 
    tutorials/noisy_sim
+   tutorials/spam
+   tutorials/laser_noise
+   tutorials/kraus_ops
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Advanced Features
+
    tutorials/phase_shifts_vz_gates
    tutorials/composite_wfs
    tutorials/paramseqs
