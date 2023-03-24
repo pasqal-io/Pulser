@@ -62,7 +62,7 @@ computers and simulators, check the pages in :doc:`review`.
    review
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Classical Simulation
 
    tutorials/noisy_sim
