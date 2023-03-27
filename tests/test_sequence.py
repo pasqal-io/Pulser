@@ -204,7 +204,12 @@ def devices():
         dimensions=2,
         rydberg_level=70,
         min_atom_distance=5,
-        channel_ids=("rmn_local1", "rmn_local2", "rydberg_global"),
+        channel_ids=(
+            "rmn_local1",
+            "rmn_local2",
+            "rmn_local3",
+            "rydberg_global",
+        ),
         channel_objects=(
             Raman.Local(
                 max_abs_detuning=2 * np.pi * 20,
@@ -224,6 +229,12 @@ def devices():
                 max_duration=2**26,
                 mod_bandwidth=2,
                 fixed_retarget_t=2,
+            ),
+            Raman.Local(
+                0,
+                2 * np.pi * 10,
+                clock_period=4,
+                max_duration=2**26,
             ),
             Rydberg.Global(
                 max_abs_detuning=2 * np.pi * 4,
@@ -258,7 +269,12 @@ def pulses():
 
 
 def init_seq(
-    device, channel_name, channel_id, l_pulses, initial_target=None
+    device,
+    channel_name,
+    channel_id,
+    l_pulses,
+    initial_target=None,
+    parametrized=False,
 ) -> Sequence:
     seq = Sequence(reg, device)
     seq.declare_channel(
@@ -267,12 +283,19 @@ def init_seq(
     if l_pulses is not None:
         for pulse in l_pulses:
             seq.add(pulse, channel_name)
+    if parametrized:
+        delay = seq.declare_variable("delay", dtype=int)
+        seq.delay(delay, channel_name)
+
     return seq
 
 
-def test_switch_device_down(devices, pulses):
+@pytest.mark.parametrize("parametrized", [False, True])
+def test_switch_device_down(devices, pulses, parametrized):
     # Device checkout
-    seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
+    seq = init_seq(
+        Chadoq2, "ising", "rydberg_global", None, parametrized=parametrized
+    )
     with pytest.warns(
         UserWarning,
         match="Switching a sequence to the same device"
@@ -281,7 +304,9 @@ def test_switch_device_down(devices, pulses):
         seq.switch_device(Chadoq2)
 
     # From sequence reusing channels to Device without reusable channels
-    seq = init_seq(MockDevice, "global", "rydberg_global", None)
+    seq = init_seq(
+        MockDevice, "global", "rydberg_global", None, parametrized=parametrized
+    )
     seq.declare_channel("global2", "rydberg_global")
     with pytest.raises(
         TypeError,
@@ -291,23 +316,37 @@ def test_switch_device_down(devices, pulses):
         # Can't find a match for the 2nd rydberg_global
         seq.switch_device(Chadoq2)
 
-    seq = init_seq(MockDevice, "ising", "rydberg_global", None)
-    mod_mock = dataclasses.replace(MockDevice, rydberg_level=50)
-    with pytest.raises(
-        ValueError,
-        match="Strict device match failed because the devices"
-        + " have different Rydberg levels.",
-    ):
-        seq.switch_device(mod_mock, True)
+    seq_ising = init_seq(
+        MockDevice, "ising", "rydberg_global", None, parametrized=parametrized
+    )
 
-    with pytest.warns(
-        UserWarning,
-        match="Switching to a device with a different Rydberg level,"
-        " check that the expected Rydberg interactions still hold.",
-    ):
-        seq.switch_device(mod_mock, False)
+    seq_xy = init_seq(
+        MockDevice, "microwave", "mw_global", None, parametrized=parametrized
+    )
+    mod_mock = dataclasses.replace(
+        MockDevice, rydberg_level=50, interaction_coeff_xy=100.0
+    )
+    for seq, msg in [
+        (seq_ising, "Rydberg level"),
+        (seq_xy, "XY interaction coefficient"),
+    ]:
+        with pytest.raises(
+            ValueError,
+            match="Strict device match failed because the devices"
+            f" have different {msg}s.",
+        ):
+            seq.switch_device(mod_mock, True)
 
-    seq = init_seq(devices[0], "ising", "raman_global", None)
+        with pytest.warns(
+            UserWarning,
+            match=f"Switching to a device with a different {msg},"
+            " check that the expected interactions still hold.",
+        ):
+            seq.switch_device(mod_mock, False)
+
+    seq = init_seq(
+        devices[0], "ising", "raman_global", None, parametrized=parametrized
+    )
     for dev_ in (
         Chadoq2,  # Different Channels basis
         devices[1],  # Different addressing channels
@@ -325,6 +364,7 @@ def test_switch_device_down(devices, pulses):
         channel_name="ising",
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
+        parametrized=parametrized,
     )
     with pytest.raises(
         ValueError,
@@ -338,6 +378,7 @@ def test_switch_device_down(devices, pulses):
         channel_id="rmn_local1",
         l_pulses=[],
         initial_target=["q0"],
+        parametrized=parametrized,
     )
     with pytest.raises(
         ValueError,
@@ -352,11 +393,29 @@ def test_switch_device_down(devices, pulses):
     ):
         seq.switch_device(devices[1], True)
 
+    seq = init_seq(
+        devices[2],
+        channel_name="digital",
+        channel_id="rmn_local3",
+        l_pulses=[],
+        initial_target=["q0"],
+        parametrized=parametrized,
+    )
+    with pytest.raises(
+        ValueError,
+        match="No match for channel digital"
+        + " with the same min_retarget_interval.",
+    ):
+        seq.switch_device(Chadoq2, True)
 
+
+@pytest.mark.parametrize("parametrized", [False, True])
 @pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
-def test_switch_device_up(device_ind, devices, pulses, strict):
+def test_switch_device_up(device_ind, devices, pulses, strict, parametrized):
     # Device checkout
-    seq = init_seq(Chadoq2, "ising", "rydberg_global", None)
+    seq = init_seq(
+        Chadoq2, "ising", "rydberg_global", None, parametrized=parametrized
+    )
     with pytest.warns(
         UserWarning,
         match="Switching a sequence to the same device returns the "
@@ -374,14 +433,21 @@ def test_switch_device_up(device_ind, devices, pulses, strict):
         channel_name="ising",
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
+        parametrized=parametrized,
     )
     seq2 = init_seq(
         devices[0],
         channel_name="ising",
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
+        parametrized=parametrized,
     )
     new_seq = seq1.switch_device(devices[0], strict)
+    if parametrized:
+        # Build the parametrized sequence so they can be samples
+        seq1 = seq1.build(delay=120)
+        seq2 = seq2.build(delay=120)
+        new_seq = new_seq.build(delay=120)
     s1 = sample(new_seq)
     s2 = sample(seq1)
     s3 = sample(seq2)
@@ -402,23 +468,27 @@ def test_switch_device_up(device_ind, devices, pulses, strict):
         channel_id="rmn_local2",
         l_pulses=[],
         initial_target=["q0"],
+        parametrized=parametrized,
     )
     assert seq.switch_device(devices[1], True)._device == devices[1]
     assert "digital" in seq.switch_device(devices[1], True).declared_channels
 
 
-def test_switch_device_eom():
+@pytest.mark.parametrize("parametrized", [False, True])
+def test_switch_device_eom(parametrized):
     # Sequence with EOM blocks
-    seq = init_seq(IroiseMVP, "rydberg", "rydberg_global", [])
+    seq = init_seq(
+        IroiseMVP, "rydberg", "rydberg_global", [], parametrized=parametrized
+    )
     seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
     seq.add_eom_pulse("rydberg", 100, 0.0)
     seq.delay(200, "rydberg")
-    assert seq._schedule["rydberg"].eom_blocks
+    assert seq.is_in_eom_mode("rydberg")
 
     err_base = "No match for channel rydberg "
     warns_msg = (
         "Switching to a device with a different Rydberg level,"
-        " check that the expected Rydberg interactions still hold."
+        " check that the expected interactions still hold."
     )
     with pytest.warns(UserWarning, match=warns_msg), pytest.raises(
         TypeError, match=err_base + "with an EOM configuration."
@@ -437,6 +507,9 @@ def test_switch_device_eom():
         seq.switch_device(mod_iroise, strict=True)
 
     mod_seq = seq.switch_device(mod_iroise, strict=False)
+    if parametrized:
+        seq = seq.build(delay=120)
+        mod_seq = mod_seq.build(delay=120)
     og_eom_block = seq._schedule["rydberg"].eom_blocks[0]
     mod_eom_block = mod_seq._schedule["rydberg"].eom_blocks[0]
     assert og_eom_block.detuning_on == mod_eom_block.detuning_on
