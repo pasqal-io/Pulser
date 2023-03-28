@@ -444,12 +444,20 @@ class Sequence:
                 stacklevel=2,
             )
 
+        def check_retarget(ch_obj: Channel) -> bool:
+            # Check the min_retarget_interval when it is is not
+            # fully covered by the fixed_retarget_t
+            return ch_obj.addressing == "Local" and cast(
+                int, ch_obj.fixed_retarget_t
+            ) < cast(int, ch_obj.min_retarget_interval)
+
         # Channel match
         channel_match: dict[str, Any] = {}
         strict_error_message = ""
         ch_match_err = ""
         for old_ch_name, old_ch_obj in self.declared_channels.items():
             channel_match[old_ch_name] = None
+            # Find the corresponding channel on the new device
             for new_ch_id, new_ch_obj in new_device.channels.items():
                 if (
                     not new_device.reusable_channels
@@ -457,7 +465,7 @@ class Sequence:
                 ):
                     # Channel already matched and can't be reused
                     continue
-                # Find the corresponding channel on the new device
+
                 # We verify the channel class then
                 # check whether the addressing is Global or Local
                 basis_match = old_ch_obj.basis == new_ch_obj.basis
@@ -497,13 +505,6 @@ class Sequence:
                     "fixed_retarget_t",
                     "clock_period",
                 ]
-
-                def check_retarget(ch_obj: Channel) -> bool:
-                    # Check the min_retarget_interval when it is is not
-                    # fully covered by the fixed_retarget_t
-                    return ch_obj.addressing == "Local" and cast(
-                        int, ch_obj.fixed_retarget_t
-                    ) < cast(int, ch_obj.min_retarget_interval)
 
                 if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
                     params_to_check.append("min_retarget_interval")
