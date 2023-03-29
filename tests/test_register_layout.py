@@ -136,6 +136,13 @@ def test_repr(layout):
     assert repr(layout) == f"RegisterLayout_{hash_.hexdigest()}"
 
 
+def test_static_hash(layout):
+    assert layout.static_hash() == int.from_bytes(
+        layout._safe_hash(), byteorder="big"
+    )
+    assert repr(layout) == f"RegisterLayout_{layout.static_hash():x}"
+
+
 def test_eq(layout, layout3d):
     assert RegisterLayout([[0, 0], [1, 0]]) != Register.from_coordinates(
         [[0, 0], [1, 0]]

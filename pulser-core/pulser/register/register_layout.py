@@ -302,6 +302,21 @@ class RegisterLayout(RegDrawer):
         hash.update(self.coords.tobytes())
         return hash.digest()
 
+    def static_hash(self) -> int:
+        """Returns the layout's idempotent hash.
+
+        Python's standard hash is not idempotent as it changes between
+        sessions. This hash can be used when an idempotent hash is
+        required.
+
+        Note:
+            This hash will be returned as an 'int'. When converting to
+            to 'hex', 'hex()' will prepend '0x' to the string,
+            unlike in other cases (e.g. 'bytes.hex()').
+            To avoid this mismatch, prefer 'f{i:x}' over hex(i).
+        """
+        return int(self._safe_hash().hex(), base=16)
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, RegisterLayout):
             return False
