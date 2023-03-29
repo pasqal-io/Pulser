@@ -162,6 +162,16 @@ class ParamObj(Parametrized, OpSupport):
         self._vars_state: dict[str, int] = {}
 
     @property
+    def _default_kwargs(self) -> dict[str, Any]:
+        """The default values for the object's keyword arguments."""
+        cls_signature = inspect.signature(self.cls).parameters
+        return {
+            param: cls_signature[param].default
+            for param in cls_signature
+            if cls_signature[param].default != cls_signature[param].empty
+        }
+
+    @property
     def variables(self) -> dict[str, Variable]:
         """Returns all involved variables."""
         return self._variables
@@ -241,19 +251,18 @@ class ParamObj(Parametrized, OpSupport):
                 # classmethod
                 cls_name = self.args[0].__name__
                 name = f"{cls_name}.{op_name}"
-                if cls_name == "Pulse":
-                    signature = (
-                        "amplitude",
-                        "detuning",
-                        "phase",
-                        "post_phase_shift",
-                    )
-                    all_args = {
-                        **dict(zip(signature, self.args[1:])),
-                        **self.kwargs,
-                    }
-                    if "post_phase_shift" not in all_args:
-                        all_args["post_phase_shift"] = 0.0
+                signature = SIGNATURES[
+                    "Pulse" if cls_name == "Pulse" else name
+                ]
+                # No existing classmethod has *args in its signature
+                assert (
+                    signature.var_pos is None
+                ), "Unexpected signature with VAR_POSITIONAL arguments."
+                all_args = {
+                    **self._default_kwargs,
+                    **dict(zip(signature.all_pos_args(), self.args[1:])),
+                    **self.kwargs,
+                }
                 if name == "Pulse.ConstantAmplitude":
                     all_args["amplitude"] = abstract_repr(
                         "ConstantWaveform", 0, all_args["amplitude"]
@@ -265,13 +274,28 @@ class ParamObj(Parametrized, OpSupport):
                     )
                     return abstract_repr("Pulse", **all_args)
                 else:
-                    return abstract_repr(name, *self.args[1:], **self.kwargs)
+                    return abstract_repr(name, **all_args)
 
             raise NotImplementedError(
                 "Instance or static method serialization is not supported."
             )
         elif op_name in SIGNATURES:
-            return abstract_repr(op_name, *self.args, **self.kwargs)
+            signature = SIGNATURES[op_name]
+            filtered_defaults = {
+                key: value
+                for key, value in self._default_kwargs.items()
+                if key in signature.keyword
+            }
+            full_kwargs = {**filtered_defaults, **self.kwargs}
+            if signature.var_pos is not None:
+                # No args can be given with a keyword
+                return abstract_repr(op_name, *self.args, **full_kwargs)
+
+            all_args = {
+                **full_kwargs,
+                **dict(zip(signature.all_pos_args(), self.args)),
+            }
+            return abstract_repr(op_name, **all_args)
 
         elif op_name in UNARY_OPERATORS:
             return dict(expression=op_name, lhs=self.args[0])

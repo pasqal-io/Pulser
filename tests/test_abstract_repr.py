@@ -537,7 +537,9 @@ class TestSerialization:
             beta=ser_var,  # The given beta parameter
         )
 
-        s = json.dumps(InterpolatedWaveform(var, [1, 2, -3]))
+        s = json.dumps(
+            InterpolatedWaveform(var, [1, 2, -3]), cls=AbstractReprEncoder
+        )
         assert json.loads(s) == dict(
             kind="interpolated",
             duration=ser_var,
@@ -547,7 +549,9 @@ class TestSerialization:
 
         list_var = sequence.declare_variable("list_var", size=3)
         ser_list_var = {"variable": "list_var"}
-        s = json.dumps(InterpolatedWaveform(var, list_var))
+        s = json.dumps(
+            InterpolatedWaveform(var, list_var), cls=AbstractReprEncoder
+        )
         assert json.loads(s) == dict(
             kind="interpolated",
             duration=ser_var,
@@ -561,7 +565,10 @@ class TestSerialization:
             " representation."
         )
         with pytest.raises(AbstractReprError, match=err_msg):
-            json.dumps(InterpolatedWaveform(1000, np.cos(list_var)))
+            json.dumps(
+                InterpolatedWaveform(1000, np.cos(list_var)),
+                cls=AbstractReprEncoder,
+            )
 
         with pytest.raises(
             AbstractReprError, match="No abstract representation for 'Foo'"
