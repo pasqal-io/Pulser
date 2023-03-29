@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
+import pulser.parametrized
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
@@ -295,6 +296,26 @@ class ParamObj(Parametrized, OpSupport):
                 **full_kwargs,
                 **dict(zip(signature.all_pos_args(), self.args)),
             }
+            if op_name == "InterpolatedWaveform" and all_args["times"] is None:
+                if isinstance(
+                    all_args["values"],
+                    pulser.parametrized.Variable,  # Avoids circular import
+                ):
+                    num_values = all_args["values"].size
+                else:
+                    try:
+                        num_values = len(all_args["values"])
+                    except TypeError:
+                        raise AbstractReprError(
+                            "An InterpolatedWaveform with 'values' of unknown "
+                            "length and unspecified 'times' can't be "
+                            "serialized to the abstract representation. To "
+                            "keep the same argument for 'values', provide "
+                            "compatible 'times' explicitly."
+                        )
+
+                all_args["times"] = np.linspace(0, 1, num=num_values)
+
             return abstract_repr(op_name, **all_args)
 
         elif op_name in UNARY_OPERATORS:
