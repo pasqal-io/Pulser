@@ -137,10 +137,9 @@ def test_repr(layout):
 
 
 def test_static_hash(layout):
-    assert layout.static_hash() == int.from_bytes(
-        layout._safe_hash(), byteorder="big"
-    )
-    assert repr(layout) == f"RegisterLayout_{layout.static_hash():x}"
+    int_hash = int.from_bytes(layout._safe_hash(), byteorder="big")
+    assert layout.static_hash() == f"{int_hash:x}"
+    assert repr(layout) == f"RegisterLayout_{layout.static_hash()}"
 
 
 def test_eq(layout, layout3d):
