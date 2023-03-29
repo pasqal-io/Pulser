@@ -490,18 +490,18 @@ class TestSerialization:
         )
 
         s = json.dumps(
-            Pulse.ConstantDetuning(wf, 0.0, var, post_phase_shift=1.0),
+            Pulse.ConstantDetuning(wf, 0.0, var),
             cls=AbstractReprEncoder,
         )
         assert json.loads(s) == dict(
             amplitude=ser_wf,
             detuning={"kind": "constant", "duration": 0, "value": 0.0},
             phase=ser_var,
-            post_phase_shift=1.0,
+            post_phase_shift=0.0,  # The default is added
         )
 
         s = json.dumps(
-            Pulse.ConstantPulse(var, 2.0, 0.0, 1.0, 1.0),
+            Pulse.ConstantPulse(var, 2.0, 0.0, 1.0, post_phase_shift=1.0),
             cls=AbstractReprEncoder,
         )
         assert json.loads(s) == dict(
@@ -517,6 +517,51 @@ class TestSerialization:
             match="Instance or static method serialization is not supported.",
         ):
             method_call._to_abstract_repr()
+
+        # Check the defaults are added when not specified
+        s = json.dumps(
+            KaiserWaveform.from_max_val(1.0, var), cls=AbstractReprEncoder
+        )
+        assert json.loads(s) == dict(
+            kind="kaiser_max",
+            max_val=1.0,
+            area=ser_var,
+            beta=14.0,  # The default beta parameter
+        )
+
+        s = json.dumps(KaiserWaveform(var, var, var), cls=AbstractReprEncoder)
+        assert json.loads(s) == dict(
+            kind="kaiser",
+            duration=ser_var,
+            area=ser_var,
+            beta=ser_var,  # The given beta parameter
+        )
+
+        s = json.dumps(InterpolatedWaveform(var, [1, 2, -3]))
+        assert json.loads(s) == dict(
+            kind="interpolated",
+            duration=ser_var,
+            values=[1, 2, -3],
+            times=[0.0, 0.5, 1.0],
+        )
+
+        list_var = sequence.declare_variable("list_var", size=3)
+        ser_list_var = {"variable": "list_var"}
+        s = json.dumps(InterpolatedWaveform(var, list_var))
+        assert json.loads(s) == dict(
+            kind="interpolated",
+            duration=ser_var,
+            values=ser_list_var,
+            times=[0.0, 0.5, 1.0],
+        )
+
+        err_msg = (
+            "An InterpolatedWaveform with 'values' of unknown length "
+            "and unspecified 'times' can't be serialized to the abstract"
+            " representation."
+        )
+        with pytest.raises(AbstractReprError, match=err_msg):
+            json.dumps(InterpolatedWaveform(1000, np.cos(list_var)))
 
         with pytest.raises(
             AbstractReprError, match="No abstract representation for 'Foo'"
