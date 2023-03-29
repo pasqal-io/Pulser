@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import contextlib
 import re
 from hashlib import sha256
 from unittest.mock import patch
@@ -39,13 +38,7 @@ def layout3d():
 
 
 def test_creation(layout, layout3d):
-    np_version = tuple(map(int, np.__version__.split(".")))
-    context_manager = (
-        pytest.warns(np.VisibleDeprecationWarning)
-        if np_version < (1, 24)
-        else contextlib.nullcontext()
-    )
-    with context_manager, pytest.raises(
+    with pytest.raises(
         ValueError, match="must be an array or list of coordinates"
     ):
         RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
@@ -57,6 +50,12 @@ def test_creation(layout, layout3d):
 
     with pytest.raises(ValueError, match="size 2 or 3"):
         RegisterLayout([[0], [1], [2]])
+
+    with pytest.raises(
+        ValueError,
+        match="All trap coordinates of a register layout must be unique.",
+    ):
+        RegisterLayout([[0, 1], [0.0, 1.0]])
 
     assert np.all(layout.coords == [[0, 0], [0, 1], [1, 0], [1, 1]])
     assert np.all(
