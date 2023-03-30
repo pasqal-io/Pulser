@@ -72,11 +72,11 @@ class RegisterLayout(RegDrawer):
         )
 
         try:
-            shape = np.array(trap_coordinates).shape
-        # Following lines are only being covered starting Python 3.11.1
-        except ValueError as e:  # pragma: no cover
-            raise array_type_error_msg from e  # pragma: no cover
+            coords_arr = np.array(trap_coordinates, dtype=float)
+        except ValueError as e:
+            raise array_type_error_msg from e
 
+        shape = coords_arr.shape
         if len(shape) != 2:
             raise array_type_error_msg
 
@@ -84,6 +84,12 @@ class RegisterLayout(RegDrawer):
             raise ValueError(
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
             )
+
+        if len(np.unique(trap_coordinates, axis=0)) != shape[0]:
+            raise ValueError(
+                "All trap coordinates of a register layout must be unique."
+            )
+
         object.__setattr__(self, "_trap_coordinates", trap_coordinates)
         object.__setattr__(self, "slug", slug)
 
@@ -295,6 +301,22 @@ class RegisterLayout(RegDrawer):
         hash = sha256(bytes(self.dimensionality))
         hash.update(self.coords.tobytes())
         return hash.digest()
+
+    def static_hash(self) -> str:
+        """Returns the layout's idempotent hash.
+
+        Python's standard hash is not idempotent as it changes between
+        sessions. This hash can be used when an idempotent hash is
+        required.
+
+        Returns:
+            str: An hexstring encoding the hash.
+
+        Note:
+            This hash will be returned as an hexstring without
+            the '0x' prefix (unlike what is returned by 'hex()').
+        """
+        return self._safe_hash().hex()
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, RegisterLayout):

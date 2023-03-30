@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type, Union, cast, overload
 
 import jsonschema
+import jsonschema.exceptions
 
 import pulser
 import pulser.devices as devices
@@ -32,7 +33,7 @@ from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
 )
-from pulser.json.exceptions import AbstractReprError
+from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
@@ -263,30 +264,44 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         params["eom_config"] = None
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
-            params["eom_config"] = RydbergEOM(
-                mod_bandwidth=data["mod_bandwidth"],
-                limiting_beam=RydbergBeam[data["limiting_beam"]],
-                max_limiting_amp=data["max_limiting_amp"],
-                intermediate_detuning=data["intermediate_detuning"],
-                controlled_beams=tuple(
-                    RydbergBeam[beam] for beam in data["controlled_beams"]
-                ),
-            )
+            try:
+                params["eom_config"] = RydbergEOM(
+                    mod_bandwidth=data["mod_bandwidth"],
+                    limiting_beam=RydbergBeam[data["limiting_beam"]],
+                    max_limiting_amp=data["max_limiting_amp"],
+                    intermediate_detuning=data["intermediate_detuning"],
+                    controlled_beams=tuple(
+                        RydbergBeam[beam] for beam in data["controlled_beams"]
+                    ),
+                )
+            except ValueError as e:
+                raise AbstractReprError(
+                    "RydbergEOM deserialization failed."
+                ) from e
     elif obj["basis"] == "digital":
         channel_cls = Raman
     elif obj["basis"] == "XY":
         channel_cls = Microwave
+    # No other basis allowed by the schema
 
     for param in dataclasses.fields(channel_cls):
         if param.init and param.name != "eom_config":
             params[param.name] = obj[param.name]
-    return channel_cls(**params)
+    try:
+        return channel_cls(**params)
+    except (ValueError, NotImplementedError) as e:
+        raise AbstractReprError("Channel deserialization failed.") from e
 
 
 def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
-    return RegisterLayout(
-        layout_obj["coordinates"], slug=layout_obj.get("slug")
-    )
+    try:
+        return RegisterLayout(
+            layout_obj["coordinates"], slug=layout_obj.get("slug")
+        )
+    except ValueError as e:
+        raise AbstractReprError(
+            "Register layout deserialization failed."
+        ) from e
 
 
 def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
@@ -312,7 +327,10 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
             )
         else:
             params[param.name] = obj[param.name]
-    return device_cls(**params)
+    try:
+        return device_cls(**params)
+    except (ValueError, TypeError) as e:
+        raise AbstractReprError("Device deserialization failed.") from e
 
 
 def deserialize_abstract_sequence(obj_str: str) -> Sequence:
@@ -405,8 +423,25 @@ def deserialize_device(obj_str: str) -> BaseDevice:
 
     Returns:
         BaseDevice: The Pulser device.
+
+    Raises:
+        DeserializeDeviceError: Whenever the device deserialization
+        fails due to an invalid 'obj_str'.
     """
-    obj = json.loads(obj_str)
-    # Validate the format of the data against the JSON schema.
-    jsonschema.validate(instance=obj, schema=schemas["device"])
-    return _deserialize_device_object(obj)
+    if not isinstance(obj_str, str):
+        type_error = TypeError(
+            f"'obj_str' must be a string, not {type(obj_str)}."
+        )
+        raise DeserializeDeviceError from type_error
+
+    try:
+        obj = json.loads(obj_str)
+        # Validate the format of the data against the JSON schema.
+        jsonschema.validate(instance=obj, schema=schemas["device"])
+        return _deserialize_device_object(obj)
+    except (
+        json.JSONDecodeError,  # From json.loads
+        jsonschema.exceptions.ValidationError,  # From jsonschema.validate
+        AbstractReprError,  # From _deserialize_device_object
+    ) as e:
+        raise DeserializeDeviceError from e

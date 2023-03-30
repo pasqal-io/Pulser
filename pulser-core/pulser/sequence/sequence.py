@@ -399,7 +399,6 @@ class Sequence:
         # If checks have passed, set the SLM mask targets
         self._slm_mask_targets = targets
 
-    @seq_decorators.screen
     def switch_device(
         self, new_device: BaseDevice, strict: bool = False
     ) -> Sequence:
@@ -424,53 +423,73 @@ class Sequence:
             )
             return self
 
-        if new_device.rydberg_level != self._device.rydberg_level:
+        if self._in_xy:
+            interaction_param = "interaction_coeff_xy"
+            name_in_msg = "XY interaction coefficient"
+        else:
+            interaction_param = "rydberg_level"
+            name_in_msg = "Rydberg level"
+
+        if getattr(new_device, interaction_param) != getattr(
+            self._device, interaction_param
+        ):
             if strict:
                 raise ValueError(
                     "Strict device match failed because the"
-                    + " devices have different Rydberg levels."
+                    f" devices have different {name_in_msg}s."
                 )
             warnings.warn(
-                "Switching to a device with a different Rydberg level,"
-                " check that the expected Rydberg interactions still hold.",
+                f"Switching to a device with a different {name_in_msg},"
+                " check that the expected interactions still hold.",
                 stacklevel=2,
             )
+
+        def check_retarget(ch_obj: Channel) -> bool:
+            # Check the min_retarget_interval when it is is not
+            # fully covered by the fixed_retarget_t
+            return ch_obj.addressing == "Local" and cast(
+                int, ch_obj.fixed_retarget_t
+            ) < cast(int, ch_obj.min_retarget_interval)
 
         # Channel match
         channel_match: dict[str, Any] = {}
         strict_error_message = ""
-        ch_type_er_mess = ""
-        for o_d_ch_name, o_d_ch_obj in self.declared_channels.items():
-            channel_match[o_d_ch_name] = None
-            for n_d_ch_id, n_d_ch_obj in new_device.channels.items():
+        ch_match_err = ""
+        for old_ch_name, old_ch_obj in self.declared_channels.items():
+            channel_match[old_ch_name] = None
+            # Find the corresponding channel on the new device
+            for new_ch_id, new_ch_obj in new_device.channels.items():
                 if (
                     not new_device.reusable_channels
-                    and n_d_ch_id in channel_match.values()
+                    and new_ch_id in channel_match.values()
                 ):
                     # Channel already matched and can't be reused
                     continue
-                # Find the corresponding channel on the new device
+
                 # We verify the channel class then
-                # check whether the addressing Global or local
-                basis_match = o_d_ch_obj.basis == n_d_ch_obj.basis
+                # check whether the addressing is Global or Local
+                basis_match = old_ch_obj.basis == new_ch_obj.basis
                 addressing_match = (
-                    o_d_ch_obj.addressing == n_d_ch_obj.addressing
+                    old_ch_obj.addressing == new_ch_obj.addressing
                 )
-                base_msg = f"No match for channel {o_d_ch_name}"
+                base_msg = f"No match for channel {old_ch_name}"
                 if not (basis_match and addressing_match):
                     # If there already is a message, keeps it
-                    ch_type_er_mess = ch_type_er_mess or (
+                    ch_match_err = ch_match_err or (
                         base_msg + " with the right basis and addressing."
                     )
                     continue
-                if self._schedule[o_d_ch_name].eom_blocks:
-                    if n_d_ch_obj.eom_config is None:
-                        ch_type_er_mess = (
-                            base_msg + " with an EOM configuration."
-                        )
+                if any(
+                    call.name == "enable_eom_mode"
+                    for call in self._calls + self._to_build_calls
+                ):
+                    # Uses EOM mode, so the new device needs a matching
+                    # EOM configuration
+                    if new_ch_obj.eom_config is None:
+                        ch_match_err = base_msg + " with an EOM configuration."
                         continue
                     if (
-                        n_d_ch_obj.eom_config != o_d_ch_obj.eom_config
+                        new_ch_obj.eom_config != old_ch_obj.eom_config
                         and strict
                     ):
                         strict_error_message = (
@@ -478,36 +497,42 @@ class Sequence:
                         )
                         continue
                 if not strict:
-                    channel_match[o_d_ch_name] = n_d_ch_id
+                    channel_match[old_ch_name] = new_ch_id
                     break
-                if n_d_ch_obj.mod_bandwidth != o_d_ch_obj.mod_bandwidth:
-                    strict_error_message = strict_error_message or (
-                        base_msg + " with the same mod_bandwidth."
-                    )
-                    continue
-                if n_d_ch_obj.fixed_retarget_t != o_d_ch_obj.fixed_retarget_t:
-                    strict_error_message = strict_error_message or (
-                        base_msg + " with the same fixed_retarget_t."
-                    )
-                    continue
 
-                # Clock_period check
-                if o_d_ch_obj.clock_period == n_d_ch_obj.clock_period:
-                    channel_match[o_d_ch_name] = n_d_ch_id
+                params_to_check = [
+                    "mod_bandwidth",
+                    "fixed_retarget_t",
+                    "clock_period",
+                ]
+
+                if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
+                    params_to_check.append("min_retarget_interval")
+                for param_ in params_to_check:
+                    if getattr(new_ch_obj, param_) != getattr(
+                        old_ch_obj, param_
+                    ):
+                        strict_error_message = strict_error_message or (
+                            base_msg + f" with the same {param_}."
+                        )
+                        break
+                else:
+                    # Only reached if all checks passed
+                    channel_match[old_ch_name] = new_ch_id
                     break
-                strict_error_message = strict_error_message or (
-                    base_msg + " with the same clock_period."
-                )
 
         if None in channel_match.values():
             if strict_error_message:
                 raise ValueError(strict_error_message)
             else:
-                raise TypeError(ch_type_er_mess)
+                raise TypeError(ch_match_err)
         # Initialize the new sequence (works for Sequence subclasses too)
         new_seq = type(self)(register=self.register, device=new_device)
 
-        for call in self._calls[1:]:
+        # Copy the variables to the new sequence
+        new_seq._variables = self.declared_variables
+
+        for call in self._calls[1:] + self._to_build_calls:
             if not (call.name == "declare_channel"):
                 getattr(new_seq, call.name)(*call.args, **call.kwargs)
                 continue
