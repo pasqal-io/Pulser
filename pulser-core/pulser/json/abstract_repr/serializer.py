@@ -70,12 +70,8 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
     res.update(signature.extra)  # Starts with extra info ({} if undefined)
     # With PulseSignature.all_pos_args(), we safeguard against the opposite
     # case where an expected keyword argument is given as a positional argument
-    res.update(
-        {
-            arg_name: arg_val
-            for arg_name, arg_val in zip(signature.all_pos_args(), args)
-        }
-    )
+    res.update(dict(zip(signature.all_pos_args(), args)))
+
     # Account for keyword arguments given as pos args
     max_pos_args = len(signature.pos) + len(
         set(signature.keyword) - set(kwargs)
