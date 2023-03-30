@@ -39,18 +39,6 @@ from pulser_simulation.simresults import (
     SimulationResults,
 )
 
-SUPPORTED_NOISE = {
-    "ising": {
-        "dephasing",
-        "doppler",
-        "amplitude",
-        "SPAM",
-        "depolarizing",
-        "eff_noise",
-    },
-    "XY": {"SPAM"},
-}
-
 
 class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
@@ -186,7 +174,9 @@ class Simulation:
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
-        not_supported = set(cfg.noise) - SUPPORTED_NOISE[self._interaction]
+        not_supported = (
+            set(cfg.noise) - cfg.supported_noises[self._interaction]
+        )
         if not_supported:
             raise NotImplementedError(
                 f"Interaction mode '{self._interaction}' does not support "
@@ -202,6 +192,7 @@ class Simulation:
         self._construct_hamiltonian()
 
         kraus_ops = []
+        self._collapse_ops = []
         if "dephasing" in self.config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
@@ -314,7 +305,9 @@ class Simulation:
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
 
-        not_supported = set(config.noise) - SUPPORTED_NOISE[self._interaction]
+        not_supported = (
+            set(config.noise) - config.supported_noises[self._interaction]
+        )
         if not_supported:
             raise NotImplementedError(
                 f"Interaction mode '{self._interaction}' does not support "
