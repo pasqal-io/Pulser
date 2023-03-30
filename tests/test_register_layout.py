@@ -169,7 +169,7 @@ def test_traps_from_coordinates(layout):
 
 def test_square_lattice_layout():
     square = SquareLatticeLayout(9, 7, 5)
-    assert str(square) == "SquareLatticeLayout(9x7, 5µm)"
+    assert str(square) == "SquareLatticeLayout(9x7, 5.0µm)"
     assert square.square_register(3) == Register.square(
         3, spacing=5, prefix="q"
     )
@@ -189,7 +189,7 @@ def test_square_lattice_layout():
 
 def test_triangular_lattice_layout():
     tri = TriangularLatticeLayout(50, 5)
-    assert str(tri) == "TriangularLatticeLayout(50, 5µm)"
+    assert str(tri) == "TriangularLatticeLayout(50, 5.0µm)"
 
     assert tri.hexagonal_register(19) == Register.hexagon(
         2, spacing=5, prefix="q"
