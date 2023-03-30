@@ -321,13 +321,13 @@ def test_calibrated_layouts():
         min_atom_distance=4,
         channel_objects=(),
         pre_calibrated_layouts=(
-            TriangularLatticeLayout(100, 6.8),  # Rounds down with int()
+            TriangularLatticeLayout(100, 6.8),
             TriangularLatticeLayout(200, 5),
         ),
     )
     assert TestDevice.calibrated_register_layouts.keys() == {
-        "TriangularLatticeLayout(100, 6µm)",
-        "TriangularLatticeLayout(200, 5µm)",
+        "TriangularLatticeLayout(100, 6.8µm)",
+        "TriangularLatticeLayout(200, 5.0µm)",
     }
 
 
