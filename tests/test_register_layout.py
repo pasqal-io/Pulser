@@ -136,6 +136,12 @@ def test_repr(layout):
     assert repr(layout) == f"RegisterLayout_{hash_.hexdigest()}"
 
 
+def test_static_hash(layout):
+    int_hash = int.from_bytes(layout._safe_hash(), byteorder="big")
+    assert layout.static_hash() == f"{int_hash:x}"
+    assert repr(layout) == f"RegisterLayout_{layout.static_hash()}"
+
+
 def test_eq(layout, layout3d):
     assert RegisterLayout([[0, 0], [1, 0]]) != Register.from_coordinates(
         [[0, 0], [1, 0]]
@@ -163,7 +169,7 @@ def test_traps_from_coordinates(layout):
 
 def test_square_lattice_layout():
     square = SquareLatticeLayout(9, 7, 5)
-    assert str(square) == "SquareLatticeLayout(9x7, 5µm)"
+    assert str(square) == "SquareLatticeLayout(9x7, 5.0µm)"
     assert square.square_register(3) == Register.square(
         3, spacing=5, prefix="q"
     )
@@ -183,7 +189,7 @@ def test_square_lattice_layout():
 
 def test_triangular_lattice_layout():
     tri = TriangularLatticeLayout(50, 5)
-    assert str(tri) == "TriangularLatticeLayout(50, 5µm)"
+    assert str(tri) == "TriangularLatticeLayout(50, 5.0µm)"
 
     assert tri.hexagonal_register(19) == Register.hexagon(
         2, spacing=5, prefix="q"
