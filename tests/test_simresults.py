@@ -97,8 +97,7 @@ def test_initialization():
 @pytest.mark.parametrize("noisychannel", [True, False])
 def test_get_final_state(noisychannel):
     _results = results_noisych if noisychannel else results
-    if noisychannel:
-        assert _results.get_final_state().isoper
+    assert _results.get_final_state().isoper or not noisychannel
     with pytest.raises(TypeError, match="Can't reduce"):
         _results.get_final_state(reduce_to_basis="digital")
     assert (
