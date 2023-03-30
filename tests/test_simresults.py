@@ -33,22 +33,27 @@ q_dict = {
 reg = Register(q_dict)
 
 duration = 1000
-pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+pi_pulse = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
 
 seq = Sequence(reg, Chadoq2)
 
 # Declare Channels
 seq.declare_channel("ryd", "rydberg_global")
-seq.add(pi, "ryd")
+seq.add(pi_pulse, "ryd")
 seq_no_meas = deepcopy(seq)
 seq_no_meas_noisy = deepcopy(seq)
 seq.measure("ground-rydberg")
 
-sim = Simulation(seq)
 cfg_noisy = SimConfig(noise=("SPAM", "doppler", "amplitude"), amp_sigma=1e-3)
+cfg_noisych = SimConfig(noise="dephasing", dephasing_prob=0.01)
+
+sim = Simulation(seq)
 sim_noisy = Simulation(seq, config=cfg_noisy)
+sim_noisych = Simulation(seq, config=cfg_noisych)
+
 results = sim.run()
 results_noisy = sim_noisy.run()
+results_noisych = sim_noisych.run()
 
 state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
 ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
@@ -89,28 +94,41 @@ def test_initialization():
     assert results.states[0] == ground
 
 
-def test_get_final_state():
+@pytest.mark.parametrize("noisychannel", [True, False])
+def test_get_final_state(noisychannel):
+    _results = results_noisych if noisychannel else results
+    if noisychannel:
+        assert _results.get_final_state().isoper
     with pytest.raises(TypeError, match="Can't reduce"):
-        results.get_final_state(reduce_to_basis="digital")
+        _results.get_final_state(reduce_to_basis="digital")
     assert (
-        results.get_final_state(
+        _results.get_final_state(
             reduce_to_basis="ground-rydberg", ignore_global_phase=False
         )
-        == results.states[-1].tidyup()
+        == _results.states[-1].tidyup()
     )
+    # Get final state is last state in results
     assert np.all(
         np.isclose(
-            np.abs(results.get_final_state().full()),
-            np.abs(results.states[-1].full()),
+            np.abs(_results.get_final_state(ignore_global_phase=False).full()),
+            np.abs(_results.states[-1].full()),
+        )
+    )
+    # For atoms that are far enough there is no impact of global_phase
+    # Density matrix states are not changed by global phase
+    assert np.all(
+        np.isclose(
+            np.abs(_results.get_final_state(ignore_global_phase=True).full()),
+            np.abs(_results.states[-1].full()),
         )
     )
 
     seq_ = Sequence(reg, Chadoq2)
     seq_.declare_channel("ryd", "rydberg_global")
     seq_.declare_channel("ram", "raman_local", initial_target="A")
-    seq_.add(pi, "ram")
-    seq_.add(pi, "ram")
-    seq_.add(pi, "ryd")
+    seq_.add(pi_pulse, "ram")
+    seq_.add(pi_pulse, "ram")
+    seq_.add(pi_pulse, "ryd")
 
     sim_ = Simulation(seq_)
     results_ = sim_.run()
@@ -120,7 +138,6 @@ def test_get_final_state():
 
     with pytest.raises(TypeError, match="Can't reduce to chosen basis"):
         results_.get_final_state(reduce_to_basis="digital")
-
     h_states = results_.get_final_state(
         reduce_to_basis="digital", tol=1, normalize=False
     ).eliminate_states([0])
@@ -143,7 +160,7 @@ def test_get_final_state_noisy():
     np.random.seed(123)
     seq_ = Sequence(reg, Chadoq2)
     seq_.declare_channel("ram", "raman_local", initial_target="A")
-    seq_.add(pi, "ram")
+    seq_.add(pi_pulse, "ram")
     noisy_config = SimConfig(noise=("SPAM", "doppler"))
     sim_noisy = Simulation(seq_, config=noisy_config)
     res3 = sim_noisy.run()
@@ -193,7 +210,7 @@ def test_expect():
     reg_single = Register.from_coordinates([(0, 0)], prefix="q")
     seq_single = Sequence(reg_single, Chadoq2)
     seq_single.declare_channel("ryd", "rydberg_global")
-    seq_single.add(pi, "ryd")
+    seq_single.add(pi_pulse, "ryd")
     sim_single = Simulation(seq_single)
     results_single = sim_single.run()
     op = [qutip.basis(2, 0).proj()]
@@ -227,8 +244,8 @@ def test_expect():
     seq3dim = Sequence(reg, Chadoq2)
     seq3dim.declare_channel("ryd", "rydberg_global")
     seq3dim.declare_channel("ram", "raman_local", initial_target="A")
-    seq3dim.add(pi, "ram")
-    seq3dim.add(pi, "ryd")
+    seq3dim.add(pi_pulse, "ram")
+    seq3dim.add(pi_pulse, "ryd")
     sim3dim = Simulation(seq3dim)
     exp3dim = sim3dim.run().expect(
         [qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))]
@@ -271,7 +288,7 @@ def test_sample_final_state():
     sampling0 = results.sample_final_state(N_samples=911)
     assert sampling0 == {"00": 911}
     seq_no_meas.declare_channel("raman", "raman_local", "B")
-    seq_no_meas.add(pi, "raman")
+    seq_no_meas.add(pi_pulse, "raman")
     res_3level = Simulation(seq_no_meas).run()
     # Raman pi pulse on one atom will not affect other,
     # even with global pi on rydberg
@@ -311,12 +328,14 @@ def test_results_xy():
     }
     reg = Register(q_dict)
     duration = 1000
-    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+    pi_pulse = Pulse.ConstantDetuning(
+        BlackmanWaveform(duration, np.pi), 0.0, 0
+    )
     seq = Sequence(reg, MockDevice)
 
     # Declare Channels
     seq.declare_channel("ch0", "mw_global")
-    seq.add(pi, "ch0")
+    seq.add(pi_pulse, "ch0")
     seq.measure("XY")
 
     sim = Simulation(seq)

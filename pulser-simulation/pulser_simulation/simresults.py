@@ -441,9 +441,9 @@ class CoherentResults(SimulationResults):
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible. Doesn't
                 apply to XY mode.
-            ignore_global_phase: If True, changes the
-                final state's global phase such that the largest term (in
-                absolute value) is real.
+            ignore_global_phase: If True and if the final state is a vector,
+                changes the final state's global phase such that the largest
+                term (in absolute value) is real.
             tol: Maximum allowed population of each
                 eliminated state.
             normalize: Whether to normalize the reduced
@@ -460,7 +460,8 @@ class CoherentResults(SimulationResults):
         """
         t_index = self._get_index_from_time(t, t_tol)
         state = cast(qutip.Qobj, self._results[t_index].copy())
-        if ignore_global_phase:
+        is_density_matrix = state.isoper
+        if ignore_global_phase and not is_density_matrix:
             full = state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
             state *= np.exp(-1j * global_ph)
@@ -471,6 +472,12 @@ class CoherentResults(SimulationResults):
                     + f" to the {reduce_to_basis} basis."
                 )
         elif reduce_to_basis is not None:
+            if is_density_matrix:  # pragma: no cover
+                # Not tested as noise in digital or all basis not implemented
+                raise NotImplementedError(
+                    "Reduce to basis not implemented for density matrix"
+                    " states."
+                )
             if reduce_to_basis == "ground-rydberg":
                 ex_state = "2"
             elif reduce_to_basis == "digital":
