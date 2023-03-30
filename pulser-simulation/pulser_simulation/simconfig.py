@@ -140,16 +140,16 @@ class SimConfig:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
         if "eff_noise" in self.noise:
             lines.append(
-                f"General noise distribution:       {self.eff_noise_probs}"
+                f"Effective noise distribution:       {self.eff_noise_probs}"
             )
             lines.append(
-                f"General noise operators:       {self.eff_noise_opers}"
+                f"Effective noise operators:       {self.eff_noise_opers}"
             )
         if "doppler" in self.noise:
             lines.append(f"Temperature:           {self.temperature*1.e6}µK")
-            lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "amplitude" in self.noise:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
+            lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "dephasing" in self.noise:
             lines.append(f"Dephasing probability: {self.dephasing_prob}")
         if "depolarizing" in self.noise:
@@ -276,3 +276,18 @@ class SimConfig:
                     "The completeness relation is not verified."
                     f" Ended up with {sum_op} instead of {identity}."
                 )
+
+    @property
+    def supported_noises(self) -> dict:
+        """Return the noises implemented on pulser."""
+        return {
+            "ising": {
+                "dephasing",
+                "doppler",
+                "amplitude",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+            },
+            "XY": {"SPAM"},
+        }

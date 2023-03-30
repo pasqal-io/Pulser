@@ -14,7 +14,6 @@
 
 import json
 import re
-from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -98,16 +97,16 @@ def test_integral():
     assert ramp.integral == 24
 
 
-def test_draw():
+def test_draw(patch_plt_show):
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         mod_bandwidth=4,  # MHz
     )
-    with patch("matplotlib.pyplot.show"):
-        composite.draw()
-        blackman.draw(output_channel=rydberg_global)
-        interp.draw(output_channel=rydberg_global)
+
+    composite.draw()
+    blackman.draw(output_channel=rydberg_global)
+    interp.draw(output_channel=rydberg_global)
 
 
 def test_eq():

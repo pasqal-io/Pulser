@@ -28,3 +28,9 @@ class AbstractReprError(Exception):
     """
 
     pass
+
+
+class DeserializeDeviceError(Exception):
+    """Exception raised when device deserialization fails."""
+
+    pass

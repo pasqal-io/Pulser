@@ -9,6 +9,9 @@ on:
 jobs:
   full-tests:
     runs-on: ${{ matrix.os }}
+    env:
+      # Set Matplotlib backend to fix flaky execution on Windows
+      MPLBACKEND: agg
     strategy:
       fail-fast: false
       matrix:
