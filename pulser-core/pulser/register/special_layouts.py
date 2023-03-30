@@ -32,11 +32,11 @@ class SquareLatticeLayout(RegisterLayout):
         spacing: The distance between neighbouring traps (in µm).
     """
 
-    def __init__(self, rows: int, columns: int, spacing: int):
+    def __init__(self, rows: int, columns: int, spacing: float):
         """Initializes a SquareLatticeLayout."""
         self._rows = int(rows)
         self._columns = int(columns)
-        self._spacing = int(spacing)
+        self._spacing = float(spacing)
         slug = (
             f"SquareLatticeLayout({self._rows}x{self._columns}, "
             f"{self._spacing}µm)"
@@ -102,9 +102,9 @@ class TriangularLatticeLayout(RegisterLayout):
         spacing: The distance between neighbouring traps (in µm).
     """
 
-    def __init__(self, n_traps: int, spacing: int):
+    def __init__(self, n_traps: int, spacing: float):
         """Initializes a TriangularLatticeLayout."""
-        self._spacing = int(spacing)
+        self._spacing = float(spacing)
         slug = f"TriangularLatticeLayout({int(n_traps)}, {self._spacing}µm)"
         super().__init__(
             patterns.triangular_hex(int(n_traps)) * self._spacing, slug=slug

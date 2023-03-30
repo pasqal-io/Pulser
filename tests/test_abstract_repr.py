@@ -14,8 +14,10 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
-from typing import Any
+from copy import deepcopy
+from typing import Any, Type
 from unittest.mock import patch
 
 import jsonschema
@@ -23,7 +25,7 @@ import numpy as np
 import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
-from pulser.devices import Chadoq2, IroiseMVP, MockDevice
+from pulser.devices import Chadoq2, Device, IroiseMVP, MockDevice
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_device,
@@ -33,7 +35,7 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
-from pulser.json.exceptions import AbstractReprError
+from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import VariableItem
@@ -63,16 +65,127 @@ class TestDevice:
         device = request.param
         return json.loads(device.to_abstract_repr())
 
-    def test_device_schema(self, abstract_device):
+    @pytest.fixture
+    def device_schema(self):
         with open(
             "pulser-core/pulser/json/abstract_repr/schemas/device-schema.json"
         ) as f:
             dev_schema = json.load(f)
-        jsonschema.validate(instance=abstract_device, schema=dev_schema)
+        return dev_schema
+
+    def test_device_schema(self, abstract_device, device_schema):
+        jsonschema.validate(instance=abstract_device, schema=device_schema)
 
     def test_roundtrip(self, abstract_device):
         device = deserialize_device(json.dumps(abstract_device))
         assert json.loads(device.to_abstract_repr()) == abstract_device
+
+    def test_exceptions(self, abstract_device, device_schema):
+        def check_error_raised(
+            obj_str: str, original_err: Type[Exception], err_msg: str = ""
+        ) -> Exception:
+            with pytest.raises(DeserializeDeviceError) as exc_info:
+                deserialize_device(obj_str)
+
+            cause = exc_info.value.__cause__
+            assert isinstance(cause, original_err)
+            assert re.search(re.escape(err_msg), str(cause)) is not None
+            return cause
+
+        good_device = deserialize_device(json.dumps(abstract_device))
+
+        check_error_raised(
+            abstract_device, TypeError, "'obj_str' must be a string"
+        )
+
+        # JSONDecodeError from json.loads()
+        bad_str = "\ufeff"
+        with pytest.raises(
+            json.JSONDecodeError, match="Unexpected UTF-8 BOM"
+        ) as err:
+            json.loads(bad_str)
+        err_msg = str(err.value)
+        check_error_raised(bad_str, json.JSONDecodeError, err_msg)
+
+        # jsonschema.exceptions.ValidationError from jsonschema
+        invalid_dev = abstract_device.copy()
+        invalid_dev["rydberg_level"] = "70"
+        with pytest.raises(jsonschema.exceptions.ValidationError) as err:
+            jsonschema.validate(instance=invalid_dev, schema=device_schema)
+        check_error_raised(
+            json.dumps(invalid_dev),
+            jsonschema.exceptions.ValidationError,
+            str(err.value),
+        )
+
+        # AbstractReprError from invalid RydbergEOM configuration
+        if good_device.channels["rydberg_global"].eom_config:
+            bad_eom_dev = deepcopy(abstract_device)
+            for ch_dict in bad_eom_dev["channels"]:
+                if ch_dict["eom_config"]:
+                    assert "max_limiting_amp" in ch_dict["eom_config"]
+                    ch_dict["eom_config"]["max_limiting_amp"] = 0.0
+                    break
+            prev_err = check_error_raised(
+                json.dumps(bad_eom_dev),
+                AbstractReprError,
+                "RydbergEOM deserialization failed.",
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+
+        # AbstractReprError from ValueError in channel creation
+        bad_ch_dev1 = deepcopy(abstract_device)
+        bad_ch_dev1["channels"][0]["min_duration"] = -1
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev1),
+            AbstractReprError,
+            "Channel deserialization failed.",
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+
+        # AbstractReprError from NotImplementedError in channel creation
+        bad_ch_dev2 = deepcopy(abstract_device)
+        bad_ch_dev2["channels"][0]["mod_bandwidth"] = 1000
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev2),
+            AbstractReprError,
+            "Channel deserialization failed.",
+        )
+        assert isinstance(prev_err.__cause__, NotImplementedError)
+
+        # AbstractReprError from bad layout (only in physical devices)
+        if isinstance(good_device, Device):
+            bad_layout_dev = abstract_device.copy()
+            # Identical coords fail
+            bad_layout_obj = {"coordinates": [[0, 0], [0.0, 0.0]]}
+            bad_layout_dev["pre_calibrated_layouts"] = [bad_layout_obj]
+            prev_err = check_error_raised(
+                json.dumps(bad_layout_dev),
+                AbstractReprError,
+                "Register layout deserialization failed.",
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+
+        # AbstractReprError from TypeError in device init
+        if "XY" in good_device.supported_bases:
+            bad_xy_coeff_dev = abstract_device.copy()
+            bad_xy_coeff_dev["interaction_coeff_xy"] = None
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
+
+        # AbstractReprError from ValueError in device init
+        bad_dev = abstract_device.copy()
+        bad_dev["min_atom_distance"] = -1
+        prev_err = check_error_raised(
+            json.dumps(bad_dev),
+            AbstractReprError,
+            "Device deserialization failed.",
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
 
 
 def validate_schema(instance):
@@ -377,18 +490,18 @@ class TestSerialization:
         )
 
         s = json.dumps(
-            Pulse.ConstantDetuning(wf, 0.0, var, post_phase_shift=1.0),
+            Pulse.ConstantDetuning(wf, 0.0, var),
             cls=AbstractReprEncoder,
         )
         assert json.loads(s) == dict(
             amplitude=ser_wf,
             detuning={"kind": "constant", "duration": 0, "value": 0.0},
             phase=ser_var,
-            post_phase_shift=1.0,
+            post_phase_shift=0.0,  # The default is added
         )
 
         s = json.dumps(
-            Pulse.ConstantPulse(var, 2.0, 0.0, 1.0, 1.0),
+            Pulse.ConstantPulse(var, 2.0, 0.0, 1.0, post_phase_shift=1.0),
             cls=AbstractReprEncoder,
         )
         assert json.loads(s) == dict(
@@ -404,6 +517,58 @@ class TestSerialization:
             match="Instance or static method serialization is not supported.",
         ):
             method_call._to_abstract_repr()
+
+        # Check the defaults are added when not specified
+        s = json.dumps(
+            KaiserWaveform.from_max_val(1.0, var), cls=AbstractReprEncoder
+        )
+        assert json.loads(s) == dict(
+            kind="kaiser_max",
+            max_val=1.0,
+            area=ser_var,
+            beta=14.0,  # The default beta parameter
+        )
+
+        s = json.dumps(KaiserWaveform(var, var, var), cls=AbstractReprEncoder)
+        assert json.loads(s) == dict(
+            kind="kaiser",
+            duration=ser_var,
+            area=ser_var,
+            beta=ser_var,  # The given beta parameter
+        )
+
+        s = json.dumps(
+            InterpolatedWaveform(var, [1, 2, -3]), cls=AbstractReprEncoder
+        )
+        assert json.loads(s) == dict(
+            kind="interpolated",
+            duration=ser_var,
+            values=[1, 2, -3],
+            times=[0.0, 0.5, 1.0],
+        )
+
+        list_var = sequence.declare_variable("list_var", size=3)
+        ser_list_var = {"variable": "list_var"}
+        s = json.dumps(
+            InterpolatedWaveform(var, list_var), cls=AbstractReprEncoder
+        )
+        assert json.loads(s) == dict(
+            kind="interpolated",
+            duration=ser_var,
+            values=ser_list_var,
+            times=[0.0, 0.5, 1.0],
+        )
+
+        err_msg = (
+            "An InterpolatedWaveform with 'values' of unknown length "
+            "and unspecified 'times' can't be serialized to the abstract"
+            " representation."
+        )
+        with pytest.raises(AbstractReprError, match=err_msg):
+            json.dumps(
+                InterpolatedWaveform(1000, np.cos(list_var)),
+                cls=AbstractReprEncoder,
+            )
 
         with pytest.raises(
             AbstractReprError, match="No abstract representation for 'Foo'"

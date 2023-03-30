@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import contextlib
 import re
 from hashlib import sha256
 from unittest.mock import patch
@@ -39,13 +38,7 @@ def layout3d():
 
 
 def test_creation(layout, layout3d):
-    np_version = tuple(map(int, np.__version__.split(".")))
-    context_manager = (
-        pytest.warns(np.VisibleDeprecationWarning)
-        if np_version < (1, 24)
-        else contextlib.nullcontext()
-    )
-    with context_manager, pytest.raises(
+    with pytest.raises(
         ValueError, match="must be an array or list of coordinates"
     ):
         RegisterLayout([[0, 0, 0], [1, 1], [1, 0], [0, 1]])
@@ -57,6 +50,12 @@ def test_creation(layout, layout3d):
 
     with pytest.raises(ValueError, match="size 2 or 3"):
         RegisterLayout([[0], [1], [2]])
+
+    with pytest.raises(
+        ValueError,
+        match="All trap coordinates of a register layout must be unique.",
+    ):
+        RegisterLayout([[0, 1], [0.0, 1.0]])
 
     assert np.all(layout.coords == [[0, 0], [0, 1], [1, 0], [1, 1]])
     assert np.all(
@@ -137,6 +136,12 @@ def test_repr(layout):
     assert repr(layout) == f"RegisterLayout_{hash_.hexdigest()}"
 
 
+def test_static_hash(layout):
+    int_hash = int.from_bytes(layout._safe_hash(), byteorder="big")
+    assert layout.static_hash() == f"{int_hash:x}"
+    assert repr(layout) == f"RegisterLayout_{layout.static_hash()}"
+
+
 def test_eq(layout, layout3d):
     assert RegisterLayout([[0, 0], [1, 0]]) != Register.from_coordinates(
         [[0, 0], [1, 0]]
@@ -164,7 +169,7 @@ def test_traps_from_coordinates(layout):
 
 def test_square_lattice_layout():
     square = SquareLatticeLayout(9, 7, 5)
-    assert str(square) == "SquareLatticeLayout(9x7, 5µm)"
+    assert str(square) == "SquareLatticeLayout(9x7, 5.0µm)"
     assert square.square_register(3) == Register.square(
         3, spacing=5, prefix="q"
     )
@@ -184,7 +189,7 @@ def test_square_lattice_layout():
 
 def test_triangular_lattice_layout():
     tri = TriangularLatticeLayout(50, 5)
-    assert str(tri) == "TriangularLatticeLayout(50, 5µm)"
+    assert str(tri) == "TriangularLatticeLayout(50, 5.0µm)"
 
     assert tri.hexagonal_register(19) == Register.hexagon(
         2, spacing=5, prefix="q"
