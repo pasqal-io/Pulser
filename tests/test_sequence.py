@@ -985,6 +985,14 @@ def test_config_slm_mask(device):
     with pytest.raises(ValueError, match="configured only once"):
         seq_i.config_slm_mask(targets_i)
 
+    mapp_reg = TriangularLatticeLayout(20, 5).make_mappable_register(10)
+    fail_seq = Sequence(mapp_reg, device)
+    with pytest.raises(
+        RuntimeError,
+        match="The SLM mask can't be combined with a mappable register.",
+    ):
+        fail_seq.config_slm_mask({"q0", "q2", "q4"})
+
 
 def test_slm_mask(reg, patch_plt_show):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
