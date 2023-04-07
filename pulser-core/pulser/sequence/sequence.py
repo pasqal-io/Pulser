@@ -527,7 +527,7 @@ class Sequence:
             else:
                 raise TypeError(ch_match_err)
         # Initialize the new sequence (works for Sequence subclasses too)
-        new_seq = type(self)(register=self.register, device=new_device)
+        new_seq = type(self)(register=self._register, device=new_device)
 
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
