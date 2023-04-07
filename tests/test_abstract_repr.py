@@ -722,6 +722,24 @@ class TestSerialization:
             "basis", "ground-rydberg"
         )
 
+    @pytest.mark.xfail(reason="Can't get index of mappable register qubits.")
+    @pytest.mark.parametrize(
+        "op,args",
+        [
+            ("target", ("q0", "raman_local")),
+            ("phase_shift", (1, "q0", "q1")),
+        ],
+    )
+    def test_mappable_reg_with_local_ops(
+        self, op, args, triangular_lattice: TriangularLatticeLayout
+    ):
+        mappable_reg = triangular_lattice.make_mappable_register(5)
+        seq = Sequence(mappable_reg, MockDevice)
+
+        seq.declare_channel("raman_local", "raman_local")
+        getattr(seq, op)(*args)
+        seq.to_abstract_repr()
+
 
 def _get_serialized_seq(
     operations: list[dict] = None,
