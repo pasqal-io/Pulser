@@ -37,9 +37,10 @@ from pulser.waveforms import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def reg():
-    return Register.triangular_lattice(4, 7, spacing=5, prefix="q")
+    layout = TriangularLatticeLayout(100, spacing=5)
+    return layout.rectangular_register(4, 7, prefix="q")
 
 
 @pytest.fixture
@@ -283,8 +284,14 @@ def init_seq(
     l_pulses,
     initial_target=None,
     parametrized=False,
+    mappable_reg=False,
 ) -> Sequence:
-    seq = Sequence(reg, device)
+    register = (
+        reg.layout.make_mappable_register(len(reg.qubits))
+        if mappable_reg
+        else reg
+    )
+    seq = Sequence(register, device)
     seq.declare_channel(
         channel_name, channel_id, initial_target=initial_target
     )
@@ -298,8 +305,9 @@ def init_seq(
     return seq
 
 
+@pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_down(reg, devices, pulses, parametrized):
+def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
     # Device checkout
     seq = init_seq(
         reg,
@@ -308,6 +316,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         "rydberg_global",
         None,
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     with pytest.warns(
         UserWarning,
@@ -324,6 +333,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         "rydberg_global",
         None,
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     seq.declare_channel("global2", "rydberg_global")
     with pytest.raises(
@@ -341,6 +351,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         "rydberg_global",
         None,
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
 
     seq_xy = init_seq(
@@ -350,6 +361,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         "mw_global",
         None,
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     mod_mock = dataclasses.replace(
         MockDevice, rydberg_level=50, interaction_coeff_xy=100.0
@@ -379,6 +391,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         "raman_global",
         None,
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     for dev_ in (
         Chadoq2,  # Different Channels basis
@@ -399,6 +412,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     with pytest.raises(
         ValueError,
@@ -414,6 +428,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         l_pulses=[],
         initial_target=["q0"],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     with pytest.raises(
         ValueError,
@@ -436,6 +451,7 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         l_pulses=[],
         initial_target=["q0"],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     with pytest.raises(
         ValueError,
@@ -445,10 +461,11 @@ def test_switch_device_down(reg, devices, pulses, parametrized):
         seq.switch_device(Chadoq2, True)
 
 
+@pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
 @pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
 def test_switch_device_up(
-    reg, device_ind, devices, pulses, strict, parametrized
+    reg, device_ind, devices, pulses, strict, mappable_reg, parametrized
 ):
     # Device checkout
     seq = init_seq(
@@ -458,6 +475,7 @@ def test_switch_device_up(
         "rydberg_global",
         None,
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     with pytest.warns(
         UserWarning,
@@ -478,6 +496,7 @@ def test_switch_device_up(
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     seq2 = init_seq(
         reg,
@@ -486,13 +505,19 @@ def test_switch_device_up(
         channel_id="rydberg_global",
         l_pulses=pulses[:2],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     new_seq = seq1.switch_device(devices[0], strict)
+    build_kwargs = {}
     if parametrized:
-        # Build the parametrized sequence so they can be samples
-        seq1 = seq1.build(delay=120)
-        seq2 = seq2.build(delay=120)
-        new_seq = new_seq.build(delay=120)
+        build_kwargs["delay"] = 120
+    if mappable_reg:
+        build_kwargs["qubits"] = {"q0": 50}
+
+    if build_kwargs:
+        seq1 = seq1.build(**build_kwargs)
+        seq2 = seq2.build(**build_kwargs)
+        new_seq = new_seq.build(**build_kwargs)
     s1 = sample(new_seq)
     s2 = sample(seq1)
     s3 = sample(seq2)
@@ -515,13 +540,15 @@ def test_switch_device_up(
         l_pulses=[],
         initial_target=["q0"],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     assert seq.switch_device(devices[1], True)._device == devices[1]
     assert "digital" in seq.switch_device(devices[1], True).declared_channels
 
 
+@pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_eom(reg, parametrized):
+def test_switch_device_eom(reg, mappable_reg, parametrized):
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
