@@ -382,6 +382,12 @@ class Sequence:
             raise ValueError(
                 f"The '{self._device}' device does not have an SLM mask."
             )
+
+        if self.is_register_mappable():
+            raise RuntimeError(
+                "The SLM mask can't be combined with a mappable register."
+            )
+
         try:
             targets = set(qubits)
         except TypeError:
