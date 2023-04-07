@@ -36,11 +36,18 @@ from pulser.waveforms import (
     RampWaveform,
 )
 
-reg = Register.triangular_lattice(4, 7, spacing=5, prefix="q")
-device = Chadoq2
+
+@pytest.fixture()
+def reg():
+    return Register.triangular_lattice(4, 7, spacing=5, prefix="q")
 
 
-def test_init():
+@pytest.fixture
+def device():
+    return Chadoq2
+
+
+def test_init(reg, device):
     with pytest.raises(TypeError, match="must be of type 'BaseDevice'"):
         Sequence(reg, Device)
 
@@ -50,7 +57,7 @@ def test_init():
     assert seq.available_channels.keys() == device.channels.keys()
 
 
-def test_channel_declaration():
+def test_channel_declaration(reg, device):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     seq.declare_channel("ch0", "rydberg_global")
@@ -95,7 +102,7 @@ def test_channel_declaration():
         seq2.declare_channel("ch3", "rydberg_global")
 
 
-def test_magnetic_field():
+def test_magnetic_field(reg):
     seq = Sequence(reg, MockDevice)
     with pytest.raises(
         AttributeError,
@@ -269,6 +276,7 @@ def pulses():
 
 
 def init_seq(
+    reg,
     device,
     channel_name,
     channel_id,
@@ -291,10 +299,15 @@ def init_seq(
 
 
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_down(devices, pulses, parametrized):
+def test_switch_device_down(reg, devices, pulses, parametrized):
     # Device checkout
     seq = init_seq(
-        Chadoq2, "ising", "rydberg_global", None, parametrized=parametrized
+        reg,
+        Chadoq2,
+        "ising",
+        "rydberg_global",
+        None,
+        parametrized=parametrized,
     )
     with pytest.warns(
         UserWarning,
@@ -305,7 +318,12 @@ def test_switch_device_down(devices, pulses, parametrized):
 
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
-        MockDevice, "global", "rydberg_global", None, parametrized=parametrized
+        reg,
+        MockDevice,
+        "global",
+        "rydberg_global",
+        None,
+        parametrized=parametrized,
     )
     seq.declare_channel("global2", "rydberg_global")
     with pytest.raises(
@@ -317,11 +335,21 @@ def test_switch_device_down(devices, pulses, parametrized):
         seq.switch_device(Chadoq2)
 
     seq_ising = init_seq(
-        MockDevice, "ising", "rydberg_global", None, parametrized=parametrized
+        reg,
+        MockDevice,
+        "ising",
+        "rydberg_global",
+        None,
+        parametrized=parametrized,
     )
 
     seq_xy = init_seq(
-        MockDevice, "microwave", "mw_global", None, parametrized=parametrized
+        reg,
+        MockDevice,
+        "microwave",
+        "mw_global",
+        None,
+        parametrized=parametrized,
     )
     mod_mock = dataclasses.replace(
         MockDevice, rydberg_level=50, interaction_coeff_xy=100.0
@@ -345,7 +373,12 @@ def test_switch_device_down(devices, pulses, parametrized):
             seq.switch_device(mod_mock, False)
 
     seq = init_seq(
-        devices[0], "ising", "raman_global", None, parametrized=parametrized
+        reg,
+        devices[0],
+        "ising",
+        "raman_global",
+        None,
+        parametrized=parametrized,
     )
     for dev_ in (
         Chadoq2,  # Different Channels basis
@@ -360,6 +393,7 @@ def test_switch_device_down(devices, pulses, parametrized):
 
     # Clock_period not match
     seq = init_seq(
+        reg,
         devices[0],
         channel_name="ising",
         channel_id="rydberg_global",
@@ -373,6 +407,7 @@ def test_switch_device_down(devices, pulses, parametrized):
         seq.switch_device(devices[1], True)
 
     seq = init_seq(
+        reg,
         devices[2],
         channel_name="digital",
         channel_id="rmn_local1",
@@ -394,6 +429,7 @@ def test_switch_device_down(devices, pulses, parametrized):
         seq.switch_device(devices[1], True)
 
     seq = init_seq(
+        reg,
         devices[2],
         channel_name="digital",
         channel_id="rmn_local3",
@@ -411,10 +447,17 @@ def test_switch_device_down(devices, pulses, parametrized):
 
 @pytest.mark.parametrize("parametrized", [False, True])
 @pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
-def test_switch_device_up(device_ind, devices, pulses, strict, parametrized):
+def test_switch_device_up(
+    reg, device_ind, devices, pulses, strict, parametrized
+):
     # Device checkout
     seq = init_seq(
-        Chadoq2, "ising", "rydberg_global", None, parametrized=parametrized
+        reg,
+        Chadoq2,
+        "ising",
+        "rydberg_global",
+        None,
+        parametrized=parametrized,
     )
     with pytest.warns(
         UserWarning,
@@ -429,6 +472,7 @@ def test_switch_device_up(device_ind, devices, pulses, strict, parametrized):
     # Strict: Jump_phase_time & CLock-period criteria
     # Jump_phase_time check 1: phase not nill
     seq1 = init_seq(
+        reg,
         devices[device_ind],
         channel_name="ising",
         channel_id="rydberg_global",
@@ -436,6 +480,7 @@ def test_switch_device_up(device_ind, devices, pulses, strict, parametrized):
         parametrized=parametrized,
     )
     seq2 = init_seq(
+        reg,
         devices[0],
         channel_name="ising",
         channel_id="rydberg_global",
@@ -463,6 +508,7 @@ def test_switch_device_up(device_ind, devices, pulses, strict, parametrized):
 
     # Channels with the same mod_bandwidth and fixed_retarget_t
     seq = init_seq(
+        reg,
         devices[2],
         channel_name="digital",
         channel_id="rmn_local2",
@@ -475,10 +521,15 @@ def test_switch_device_up(device_ind, devices, pulses, strict, parametrized):
 
 
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_eom(parametrized):
+def test_switch_device_eom(reg, parametrized):
     # Sequence with EOM blocks
     seq = init_seq(
-        IroiseMVP, "rydberg", "rydberg_global", [], parametrized=parametrized
+        reg,
+        IroiseMVP,
+        "rydberg",
+        "rydberg_global",
+        [],
+        parametrized=parametrized,
     )
     seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
     seq.add_eom_pulse("rydberg", 100, 0.0)
@@ -517,7 +568,7 @@ def test_switch_device_eom(parametrized):
     assert og_eom_block.detuning_off != mod_eom_block.detuning_off
 
 
-def test_target():
+def test_target(reg, device):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q1")
     seq.declare_channel("ch1", "rydberg_global")
@@ -574,7 +625,7 @@ def test_target():
         seq2.target({"q3", "q1", "q2"}, "ch0")
 
 
-def test_delay():
+def test_delay(reg, device):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local")
     with pytest.raises(ValueError, match="Use the name of a declared channel"):
@@ -586,7 +637,7 @@ def test_delay():
     assert seq._last("ch0") == _TimeSlot("delay", 0, 388, {"q19"})
 
 
-def test_delay_min_duration():
+def test_delay_min_duration(reg, device):
     # Check that a delay shorter than a channel's minimal duration
     # is automatically extended to that minimal duration
     seq = Sequence(reg, device)
@@ -605,7 +656,7 @@ def test_delay_min_duration():
     )
 
 
-def test_phase():
+def test_phase(reg, device):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.phase_shift(-1, "q0", "q1")
@@ -635,7 +686,7 @@ def test_phase():
     assert seq.current_phase_ref("q10", "digital") == 1
 
 
-def test_align():
+def test_align(reg, device):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.declare_channel("ch1", "rydberg_global")
@@ -648,7 +699,7 @@ def test_align():
         seq.align("ch1")
 
 
-def test_measure():
+def test_measure(reg, device):
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "rydberg_global")
@@ -682,7 +733,7 @@ def test_measure():
         ("measure", tuple()),
     ],
 )
-def test_block_if_measured(call, args):
+def test_block_if_measured(reg, call, args):
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
     # For the align command
@@ -698,7 +749,7 @@ def test_block_if_measured(call, args):
         getattr(seq, call)(*args)
 
 
-def test_str(mod_device):
+def test_str(reg, device, mod_device):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
@@ -748,7 +799,7 @@ def test_str(mod_device):
     )
 
 
-def test_sequence(patch_plt_show):
+def test_sequence(reg, device, patch_plt_show):
     seq = Sequence(reg, device)
     assert seq.get_duration() == 0
     with pytest.raises(RuntimeError, match="empty sequence"):
@@ -844,7 +895,7 @@ def test_sequence(patch_plt_show):
     assert str(seq) == str(seq_)
 
 
-def test_config_slm_mask():
+def test_config_slm_mask(device):
     reg_s = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     seq_s = Sequence(reg_s, device)
 
@@ -908,7 +959,7 @@ def test_config_slm_mask():
         seq_i.config_slm_mask(targets_i)
 
 
-def test_slm_mask(patch_plt_show):
+def test_slm_mask(reg, patch_plt_show):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
@@ -969,7 +1020,7 @@ def test_slm_mask(patch_plt_show):
     seq_xy2.draw()
 
 
-def test_draw_register(patch_plt_show):
+def test_draw_register(reg, patch_plt_show):
     # Draw 2d register from sequence
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
@@ -990,7 +1041,7 @@ def test_draw_register(patch_plt_show):
     seq3d.draw(draw_register=True)
 
 
-def test_hardware_constraints(patch_plt_show):
+def test_hardware_constraints(reg, patch_plt_show):
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
@@ -1173,7 +1224,7 @@ index_function_mappable_register_values = [
     ),
 ]
 
-index_function_params = "reg, build_params, index, expected_target"
+index_function_params = "register, build_params, index, expected_target"
 
 
 @pytest.mark.parametrize(
@@ -1184,10 +1235,10 @@ index_function_params = "reg, build_params, index, expected_target"
     ],
 )
 def test_parametrized_index_functions(
-    reg, build_params, index, expected_target
+    register, build_params, index, expected_target
 ):
     phi = np.pi / 4
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(register, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
     index_var = seq.declare_variable("index", dtype=int)
@@ -1211,10 +1262,10 @@ def test_parametrized_index_functions(
     ],
 )
 def test_non_parametrized_index_functions_in_parametrized_context(
-    reg, build_params, index, expected_target
+    register, build_params, index, expected_target
 ):
     phi = np.pi / 4
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(register, Chadoq2)
     seq.declare_channel("ch0", "raman_local")
     phi_var = seq.declare_variable("phi_var", dtype=int)
 
@@ -1231,9 +1282,9 @@ def test_non_parametrized_index_functions_in_parametrized_context(
     index_function_params, index_function_non_mappable_register_values
 )
 def test_non_parametrized_non_mappable_register_index_functions(
-    reg, build_params, index, expected_target
+    register, build_params, index, expected_target
 ):
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(register, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
     phi = np.pi / 4
@@ -1255,9 +1306,9 @@ def test_non_parametrized_non_mappable_register_index_functions(
     index_function_params, index_function_mappable_register_values
 )
 def test_non_parametrized_mappable_register_index_functions_failure(
-    reg, build_params, index, expected_target
+    register, build_params, index, expected_target
 ):
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(register, Chadoq2)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
     phi = np.pi / 4
@@ -1275,7 +1326,7 @@ def test_non_parametrized_mappable_register_index_functions_failure(
         seq.phase_shift_index(phi, index)
 
 
-def test_multiple_index_targets():
+def test_multiple_index_targets(reg):
     test_device = Device(
         name="test_device",
         dimensions=2,
@@ -1304,7 +1355,7 @@ def test_multiple_index_targets():
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
-def test_eom_mode(mod_device, patch_plt_show):
+def test_eom_mode(reg, mod_device, patch_plt_show):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     ch0_obj = seq.declared_channels["ch0"]
@@ -1403,7 +1454,9 @@ def test_eom_mode(mod_device, patch_plt_show):
     "initial_instruction, non_zero_detuning_off",
     list(itertools.product([None, "delay", "add"], [True, False])),
 )
-def test_eom_buffer(mod_device, initial_instruction, non_zero_detuning_off):
+def test_eom_buffer(
+    reg, mod_device, initial_instruction, non_zero_detuning_off
+):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
     seq.declare_channel("other", "rydberg_global")
