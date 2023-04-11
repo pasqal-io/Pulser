@@ -21,7 +21,16 @@ import os
 import warnings
 from collections.abc import Iterable, Mapping
 from sys import version_info
-from typing import Any, Optional, Tuple, Union, cast, overload
+from typing import (
+    Any,
+    Generic,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -61,11 +70,12 @@ else:  # pragma: no cover
             " `pip install typing-extensions`."
         )
 
+DeviceType = TypeVar("DeviceType", bound=BaseDevice)
 
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
 
 
-class Sequence:
+class Sequence(Generic[DeviceType]):
     """A sequence of operations on a device.
 
     A sequence is composed by
@@ -103,7 +113,7 @@ class Sequence:
     def __init__(
         self,
         register: Union[BaseRegister, MappableRegister],
-        device: BaseDevice,
+        device: DeviceType,
     ):
         """Initializes a new pulse sequence."""
         if not isinstance(device, BaseDevice):
@@ -119,7 +129,7 @@ class Sequence:
             device.validate_register(register)
 
         self._register: Union[BaseRegister, MappableRegister] = register
-        self._device: BaseDevice = device
+        self._device = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [
@@ -161,7 +171,7 @@ class Sequence:
         return cast(BaseRegister, self._register).qubits
 
     @property
-    def device(self) -> BaseDevice:
+    def device(self) -> DeviceType:
         """Device that the sequence is using."""
         return self._device
 
@@ -382,6 +392,12 @@ class Sequence:
             raise ValueError(
                 f"The '{self._device}' device does not have an SLM mask."
             )
+
+        if self.is_register_mappable():
+            raise RuntimeError(
+                "The SLM mask can't be combined with a mappable register."
+            )
+
         try:
             targets = set(qubits)
         except TypeError:
@@ -400,7 +416,7 @@ class Sequence:
         self._slm_mask_targets = targets
 
     def switch_device(
-        self, new_device: BaseDevice, strict: bool = False
+        self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:
         """Switch the device of a sequence.
 
@@ -527,7 +543,7 @@ class Sequence:
             else:
                 raise TypeError(ch_match_err)
         # Initialize the new sequence (works for Sequence subclasses too)
-        new_seq = type(self)(register=self.register, device=new_device)
+        new_seq = type(self)(register=self._register, device=new_device)
 
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
