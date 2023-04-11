@@ -155,6 +155,7 @@ def serialize_abstract_sequence(
             target_array = target_array[np.newaxis]
         try:
             indices = seq.register.find_indices(target_array.tolist())
+        # RuntimeError raised when calling seq.register for a MappableRegister
         except RuntimeError:
             raise NotImplementedError(
                 "Serialization of sequences with local operations and"
