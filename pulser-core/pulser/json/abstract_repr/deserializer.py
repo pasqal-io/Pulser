@@ -28,7 +28,6 @@ from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import Device, VirtualDevice
-from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
@@ -414,7 +413,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     return seq
 
 
-def deserialize_device(obj_str: str) -> BaseDevice:
+def deserialize_device(obj_str: str) -> Device | VirtualDevice:
     """Deserialize a device from an abstract JSON object.
 
     Args:
@@ -422,7 +421,7 @@ def deserialize_device(obj_str: str) -> BaseDevice:
             in the abstract JSON format.
 
     Returns:
-        BaseDevice: The Pulser device.
+        The Pulser device.
 
     Raises:
         DeserializeDeviceError: Whenever the device deserialization
