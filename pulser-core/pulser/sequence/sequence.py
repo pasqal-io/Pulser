@@ -1305,6 +1305,7 @@ class Sequence(Generic[DeviceType]):
         draw_phase_curve: bool = False,
         fig_name: str = None,
         kwargs_savefig: dict = {},
+        show: bool = True,
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -1339,6 +1340,9 @@ class Sequence(Generic[DeviceType]):
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
+            show: Whether or not to call `plt.show()` before returning. When
+                combining this plot with other ones in a single figure, one may
+                need to set this flag to False.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
@@ -1384,7 +1388,9 @@ class Sequence(Generic[DeviceType]):
             fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
         elif fig_name:
             fig.savefig(fig_name, **kwargs_savefig)
-        plt.show()
+
+        if show:
+            plt.show()
 
     def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
         return draw_sequence(self, **draw_options)
