@@ -16,10 +16,11 @@
 from __future__ import annotations
 
 import collections.abc
+import typing
 from abc import ABC, abstractmethod
 from collections import Counter
 from functools import lru_cache
-from typing import Mapping, Optional, Tuple, Union, cast
+from typing import Mapping, Optional, Tuple, TypeVar, Union, cast, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,14 +28,22 @@ import qutip
 from numpy.typing import ArrayLike
 from qutip.piqs import isdiagonal
 
+from pulser.result import Result, SampledResult
+from pulser_simulation.qutip_result import QutipResult
 
-class SimulationResults(ABC):
+ResultType = TypeVar("ResultType", bound=Result)
+
+
+class SimulationResults(ABC, typing.Sequence[ResultType]):
     """Results of a simulation run of a pulse sequence.
 
     Parent class for NoisyResults and CoherentResults.
     Contains methods for studying the states and extracting useful information
     from them.
     """
+
+    # Use the pseudo-density matrix when calculating expectation values
+    _use_pseudo_dens: bool = False
 
     def __init__(
         self, size: int, basis_name: str, sim_times: np.ndarray
@@ -57,9 +66,7 @@ class SimulationResults(ABC):
             )
         self._basis_name = basis_name
         self._sim_times = sim_times
-        self._results: Union[list[Counter], list[qutip.Qobj]]
-        # Use the pseudo-density matrix when calculating expectation values
-        self._use_pseudo_dens: bool = False
+        self._results: list[ResultType]
 
     @property
     @abstractmethod
@@ -77,19 +84,14 @@ class SimulationResults(ABC):
         """Returns the final state of the system."""
         pass
 
-    @abstractmethod
-    def _calc_weights(self, t_index: int) -> np.ndarray:
-        """Computes the bitstring probabilities for sampled states."""
-        pass
-
     def expect(
         self, obs_list: collections.abc.Sequence[Union[qutip.Qobj, ArrayLike]]
     ) -> list[Union[float, complex, ArrayLike]]:
         """Returns the expectation values of operators in obs_list.
 
         Args:
-            obs_list: Input observable
-                list. ArrayLike objects will be converted to qutip.Qobj.
+            obs_list: Input observable list. ArrayLike objects will
+                be converted to qutip.Qobj.
 
         Returns:
             Expectation values of obs_list.
@@ -120,8 +122,7 @@ class SimulationResults(ABC):
                 if not isdiagonal(obs):
                     raise ValueError(f"Observable {obs!r} is non-diagonal.")
                 states = [
-                    self._calc_pseudo_density(ind)
-                    for ind in range(len(self._results))
+                    self._calc_pseudo_density(ind) for ind in range(len(self))
                 ]
             else:
                 states = self.states
@@ -144,13 +145,7 @@ class SimulationResults(ABC):
             measured quantum states at time t.
         """
         t_index = self._get_index_from_time(t, t_tol)
-        dist = np.random.multinomial(n_samples, self._calc_weights(t_index))
-        return Counter(
-            {
-                np.binary_repr(i, self._size): dist[i]
-                for i in np.nonzero(dist)[0]
-            }
-        )
+        return self[t_index].sample(n_samples)
 
     def sample_final_state(self, N_samples: int = 1000) -> Counter:
         """Returns the result of multiple measurements of the final state.
@@ -213,7 +208,7 @@ class SimulationResults(ABC):
             )
             return proj
 
-        w = self._calc_weights(t_index)
+        w = self[t_index]._weights()
         return sum(
             w[i] * _proj_from_bitstring(np.binary_repr(i, width=self._size))
             for i in np.nonzero(w)[0]
@@ -231,6 +226,24 @@ class SimulationResults(ABC):
         # 0 = |g or d> = |1>; 1 = |r or u> = |0>
         return qutip.basis(2, 1 - state_n).proj()
 
+    @overload
+    def __getitem__(self, key: int) -> ResultType:
+        pass
+
+    @overload
+    def __getitem__(self, key: slice) -> list[ResultType]:
+        pass
+
+    def __getitem__(self, key: int | slice) -> ResultType | list[ResultType]:
+        return self._results[key]
+
+    def __len__(self) -> int:
+        return len(self._results)
+
+    def __iter__(self) -> collections.abc.Iterator[ResultType]:
+        for res in self._results:
+            yield res
+
 
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
@@ -242,9 +255,11 @@ class NoisyResults(SimulationResults):
     information from them.
     """
 
+    _use_pseudo_dens: bool = True
+
     def __init__(
         self,
-        run_output: list[Counter],
+        run_output: list[SampledResult],
         size: int,
         basis_name: str,
         sim_times: np.ndarray,
@@ -277,8 +292,7 @@ class NoisyResults(SimulationResults):
         basis_name_ = "digital" if basis_name == "all" else basis_name
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
-        self._results = run_output
-        self._use_pseudo_dens = True
+        self._results: list[SampledResult] = run_output
 
     @property
     def states(self) -> list[qutip.Qobj]:
@@ -288,7 +302,7 @@ class NoisyResults(SimulationResults):
     @property
     def results(self) -> list[Counter]:
         """Probability distribution of the bitstrings."""
-        return self._results
+        return [Counter(res.probability_dist) for res in self]
 
     def get_state(self, t: float, t_tol: float = 1.0e-3) -> qutip.Qobj:
         """Gets the state at time t as a diagonal density matrix.
@@ -319,12 +333,6 @@ class NoisyResults(SimulationResults):
             States probability distribution as a density matrix.
         """
         return self.get_state(self._sim_times[-1])
-
-    def _calc_weights(self, t_index: int) -> np.ndarray:
-        weights = np.zeros(2**self._size)
-        for bin_rep, prob in self._results[t_index].items():
-            weights[int(bin_rep, base=2)] = prob
-        return weights
 
     def plot(
         self,
@@ -373,7 +381,7 @@ class CoherentResults(SimulationResults):
 
     def __init__(
         self,
-        run_output: list[qutip.Qobj],
+        run_output: list[QutipResult],
         size: int,
         basis_name: str,
         sim_times: np.ndarray,
@@ -422,7 +430,7 @@ class CoherentResults(SimulationResults):
     @property
     def states(self) -> list[qutip.Qobj]:
         """List of ``qutip.Qobj`` for each state in the simulation."""
-        return list(self._results)
+        return [res.state for res in self]
 
     def get_state(
         self,
@@ -459,47 +467,9 @@ class CoherentResults(SimulationResults):
                 states with significant occupation probabilites.
         """
         t_index = self._get_index_from_time(t, t_tol)
-        state = cast(qutip.Qobj, self._results[t_index].copy())
-        is_density_matrix = state.isoper
-        if ignore_global_phase and not is_density_matrix:
-            full = state.full()
-            global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
-            state *= np.exp(-1j * global_ph)
-        if self._dim != 3:
-            if reduce_to_basis not in [None, self._basis_name]:
-                raise TypeError(
-                    f"Can't reduce a system in {self._basis_name}"
-                    + f" to the {reduce_to_basis} basis."
-                )
-        elif reduce_to_basis is not None:
-            if is_density_matrix:  # pragma: no cover
-                # Not tested as noise in digital or all basis not implemented
-                raise NotImplementedError(
-                    "Reduce to basis not implemented for density matrix"
-                    " states."
-                )
-            if reduce_to_basis == "ground-rydberg":
-                ex_state = "2"
-            elif reduce_to_basis == "digital":
-                ex_state = "0"
-            else:
-                raise ValueError(
-                    "'reduce_to_basis' must be 'ground-rydberg' "
-                    + f"or 'digital', not '{reduce_to_basis}'."
-                )
-            ex_inds = [
-                i
-                for i in range(3**self._size)
-                if ex_state in np.base_repr(i, base=3).zfill(self._size)
-            ]
-            ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
-            if not np.all(np.isclose(ex_probs, 0, atol=tol)):
-                raise TypeError(
-                    "Can't reduce to chosen basis because the population of a "
-                    "state to eliminate is above the allowed tolerance."
-                )
-            state = state.eliminate_states(ex_inds, normalize=normalize)
-        return state.tidyup()
+        return self[t_index].get_state(
+            reduce_to_basis, ignore_global_phase, tol, normalize
+        )
 
     def get_final_state(
         self,
@@ -537,58 +507,6 @@ class CoherentResults(SimulationResults):
             tol,
             normalize,
         )
-
-    def _calc_weights(self, t_index: int) -> np.ndarray:
-        n = self._size
-        state_t = cast(qutip.Qobj, self._results[t_index]).unit()
-        if state_t.type != "ket":
-            probs = np.abs(state_t.diag())
-        else:
-            probs = (np.abs(state_t.full()) ** 2).flatten()
-
-        if self._dim == 2:
-            if self._meas_basis == self._basis_name:
-                # State vector ordered with r first for 'ground_rydberg'
-                # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
-                # Invert the order ->  [00, 01, 10, 11] correspondence
-                # The same applies in XY mode, which is ordered with u first
-                weights = (
-                    probs if self._meas_basis == "digital" else probs[::-1]
-                )
-            else:
-                # Only 000...000 is measured
-                weights = np.zeros(probs.size)
-                weights[0] = 1.0
-
-        elif self._dim == 3:
-            if self._meas_basis == "ground-rydberg":
-                one_state = 0  # 1 = |r>
-                ex_one = slice(1, 3)
-            elif self._meas_basis == "digital":
-                one_state = 2  # 1 = |h>
-                ex_one = slice(0, 2)
-            probs = probs.reshape([3] * n)
-            weights = np.zeros(2**n)
-            for dec_val in range(2**n):
-                ind: list[Union[int, slice]] = []
-                for v in np.binary_repr(dec_val, width=n):
-                    if v == "0":
-                        ind.append(ex_one)
-                    else:
-                        ind.append(one_state)
-                # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
-                # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
-                # We sum all probabilites that correspond to measuring
-                # 11010, namely hhghg, hhrhg, hhghr, hhrhr
-                weights[dec_val] = np.sum(probs[tuple(ind)])
-        else:
-            raise NotImplementedError(
-                "Cannot sample system with single-atom state vectors of "
-                "dimension > 3."
-            )
-        # Takes care of numerical artefacts in case sum(weights) != 1
-        weights /= sum(weights)
-        return cast(np.ndarray, weights)
 
     def _meas_projector(self, state_n: int) -> qutip.Qobj:
         if self._meas_errors:

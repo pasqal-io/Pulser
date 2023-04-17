@@ -275,15 +275,11 @@ def test_sample_final_state():
     assert results_no_meas.sample_final_state() == Counter(
         {"00": 88, "01": 156, "10": 188, "11": 568}
     )
-    with pytest.raises(NotImplementedError, match="dimension > 3"):
-        results_large_dim = deepcopy(results)
-        results_large_dim._dim = 7
-        results_large_dim.sample_final_state()
 
     sampling = results.sample_final_state(1234)
     assert len(sampling) == 4  # Check that all states were observed.
 
-    results._meas_basis = "digital"
+    results[-1].matching_meas_basis = False
     sampling0 = results.sample_final_state(N_samples=911)
     assert sampling0 == {"00": 911}
     seq_no_meas.declare_channel("raman", "raman_local", "B")
@@ -292,8 +288,10 @@ def test_sample_final_state():
     # Raman pi pulse on one atom will not affect other,
     # even with global pi on rydberg
     assert len(res_3level.sample_final_state()) == 2
-    res_3level._meas_basis = "ground-rydberg"
-    sampling_three_levelB = res_3level.sample_final_state()
+
+    seq_no_meas.measure("ground-rydberg")
+    res_3level_gb = Simulation(seq_no_meas).run()
+    sampling_three_levelB = res_3level_gb.sample_final_state()
     # Rydberg will affect both:
     assert len(sampling_three_levelB) == 4
 
