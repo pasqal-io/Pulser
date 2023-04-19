@@ -18,6 +18,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from pulser.register import QubitId
@@ -73,9 +74,31 @@ class Result(ABC):
             }
         )
 
-    def plot_histogram(self) -> None:
-        """Plots the result in an histogram."""
-        raise NotImplementedError
+    def plot_histogram(
+        self,
+        min_probability: float = 0.001,
+        max_n_bitstrings: int | None = None,
+        show: bool = True,
+    ) -> None:
+        """Plots the result in an histogram.
+
+        Args:
+            min_probability: The minimum measurement probability a bitstring
+                must have to be displayed.
+            max_n_bitstrings: An optional limit on the number of bitrstrings
+                displayed.
+            show: Whether or not to call `plt.show()` before returning.
+        """
+        probs = np.array(
+            Counter(self.probability_dist).most_common(max_n_bitstrings),
+            dtype=object,
+        )
+        probs = probs[probs[:, 1] >= min_probability]
+        plt.bar(probs[:, 0], probs[:, 1])
+        plt.xticks(rotation="vertical")
+        plt.ylabel("Probabilites")
+        if show:
+            plt.show()
 
 
 @dataclass
