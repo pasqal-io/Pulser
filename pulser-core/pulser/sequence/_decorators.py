@@ -97,21 +97,6 @@ def store(func: F) -> F:
     return cast(F, wrapper)
 
 
-def check_allow_qubit_index(func: F) -> F:
-    """Checks if using qubit indices is allowed."""
-
-    @wraps(func)
-    def wrapper(self: Sequence, *args: Any, **kwargs: Any) -> Any:
-        if not self.is_parametrized() and self.is_register_mappable():
-            raise RuntimeError(
-                f"Sequence.{func.__name__} cannot be called in"
-                " non-parametrized sequences using a mappable register."
-            )
-        func(self, *args, **kwargs)
-
-    return cast(F, wrapper)
-
-
 def mark_non_empty(func: F) -> F:
     """Marks the sequence as non-empty."""
 

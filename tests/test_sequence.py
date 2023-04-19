@@ -16,7 +16,7 @@ import itertools
 import json
 from typing import Any
 from unittest.mock import patch
-
+from copy import copy
 import numpy as np
 import pytest
 
@@ -25,6 +25,7 @@ from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
+from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sampler import sample
@@ -507,7 +508,7 @@ def test_switch_device_up(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    new_seq = seq1.switch_device(devices[0], strict)
+    new_seq = copy(seq1.switch_device(devices[0], strict))
     build_kwargs = {}
     if parametrized:
         build_kwargs["delay"] = 120
@@ -987,11 +988,8 @@ def test_config_slm_mask(device):
 
     mapp_reg = TriangularLatticeLayout(20, 5).make_mappable_register(10)
     fail_seq = Sequence(mapp_reg, device)
-    with pytest.raises(
-        RuntimeError,
-        match="The SLM mask can't be combined with a mappable register.",
-    ):
-        fail_seq.config_slm_mask({"q0", "q2", "q4"})
+    # Works now
+    fail_seq.config_slm_mask({"q0", "q2", "q4"})
 
 
 def test_slm_mask(reg, patch_plt_show):
@@ -1179,35 +1177,50 @@ def test_hardware_constraints(reg, patch_plt_show):
     seq.draw(mode="input+output")
 
 
-def test_mappable_register(patch_plt_show):
+def test_mappable_register(patch_plt_show, reg):
     layout = TriangularLatticeLayout(100, 5)
     mapp_reg = layout.make_mappable_register(10)
     seq = Sequence(mapp_reg, Chadoq2)
     assert seq.is_register_mappable()
+    assert isinstance(seq._register, BaseRegister)
     reserved_qids = tuple([f"q{i}" for i in range(10)])
     assert seq._qids == set(reserved_qids)
-    with pytest.raises(RuntimeError, match="Can't access the qubit info"):
+    assert np.all(seq._register._coords == layout.coords[:10])
+    with pytest.warns(UserWarning, match="Accessing the qubit information"):
         seq.qubit_info
-    with pytest.raises(
-        RuntimeError, match="Can't access the sequence's register"
-    ):
+    with pytest.warns(UserWarning, match="Accessing the sequence's register"):
         seq.register
 
-    seq.declare_channel("ryd", "rydberg_global")
     seq.declare_channel("ram", "raman_local", initial_target="q2")
-    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd")
+    seq.declare_channel("ryd_loc", "rydberg_local")
+    # No Global channel shown, sequence can be printed without warnings
+    seq.__str__()
+    # Warning if sequence has Global channels and a mappable register
+    seq.declare_channel("ryd_glob", "rydberg_global")
+    warn_message_global = (
+        "Showing the register for a sequence with a mappable register."
+        + "Target qubits of channel ryd_glob will be defined in build."
+    )
+    with pytest.warns(UserWarning, match=warn_message_global):
+        seq.__str__()
+    # Index of mappable register can be accessed
+    seq.phase_shift_index(np.pi / 4, 2, basis="digital")  # 2->"q2"
+    seq.target_index(8, "ryd_loc")  # 8->"q8"
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_glob")
     seq.add(Pulse.ConstantPulse(200, 1, 0, 0), "ram")
-    assert seq._last("ryd").targets == set(reserved_qids)
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_loc")
+    assert seq._last("ryd_glob").targets == set(reserved_qids)
     assert seq._last("ram").targets == {"q2"}
+    assert seq._last("ryd_loc").targets == {"q8"}
 
-    with pytest.raises(ValueError, match="Can't draw the register"):
+    with pytest.warns(
+        UserWarning,
+        match="Drawing the register of a sequence with a mappable register",
+    ):
         seq.draw(draw_register=True)
 
     # Can draw if 'draw_register=False'
     seq.draw()
-
-    with pytest.raises(ValueError, match="'qubits' must be specified"):
-        seq.build()
 
     with pytest.raises(
         ValueError, match="targeted but have not been assigned"
@@ -1215,10 +1228,10 @@ def test_mappable_register(patch_plt_show):
         seq.build(qubits={"q0": 1, "q1": 10})
 
     with pytest.warns(UserWarning, match="No declared variables named: a"):
-        seq.build(qubits={"q2": 20, "q0": 10}, a=5)
+        seq.build(qubits={"q2": 20, "q0": 10, "q8": 0}, a=5)
 
-    seq_ = seq.build(qubits={"q2": 20, "q0": 10})
-    assert seq_._last("ryd").targets == {"q2", "q0"}
+    seq_ = seq.build(qubits={"q2": 20, "q0": 10, "q8": 0})
+    assert seq_._last("ryd_glob").targets == {"q0", "q2", "q8"}
     # Check the original sequence is unchanged
     assert seq.is_register_mappable()
     init_call = seq._calls[0]
@@ -1226,10 +1239,22 @@ def test_mappable_register(patch_plt_show):
     assert isinstance(init_call.kwargs["register"], MappableRegister)
     assert not seq_.is_register_mappable()
     assert seq_.register == Register(
-        {"q0": layout.traps_dict[10], "q2": layout.traps_dict[20]}
+        {
+            "q0": layout.traps_dict[10],
+            "q2": layout.traps_dict[20],
+            "q8": layout.traps_dict[0],
+        }
     )
     with pytest.raises(ValueError, match="already has a concrete register"):
-        seq_.build(qubits={"q2": 20, "q0": 10})
+        seq_.build(qubits={"q2": 20, "q0": 10, "q8": 0})
+
+    # Also possible to build the default register
+    with pytest.warns(UserWarning, match="'qubits' not specified"):
+        seq.build()
+    # This time the register of the sequence is modified
+    assert not seq.is_register_mappable()
+    assert np.all(seq.register.qubit_ids == reserved_qids)
+    assert np.all(seq.register._coords == layout.coords[:10])
 
 
 index_function_non_mappable_register_values: Any = [
@@ -1337,28 +1362,28 @@ def test_non_parametrized_non_mappable_register_index_functions(
     assert seq.current_phase_ref(expected_target, "digital") == phi
 
 
-@pytest.mark.parametrize(
-    index_function_params, index_function_mappable_register_values
-)
-def test_non_parametrized_mappable_register_index_functions_failure(
-    register, build_params, index, expected_target
-):
-    seq = Sequence(register, Chadoq2)
-    seq.declare_channel("ch0", "rydberg_local")
-    seq.declare_channel("ch1", "raman_local")
-    phi = np.pi / 4
-    with pytest.raises(
-        RuntimeError,
-        match="Sequence.target_index cannot be called in"
-        " non-parametrized sequences",
-    ):
-        seq.target_index(index, channel="ch0")
-    with pytest.raises(
-        RuntimeError,
-        match="Sequence.phase_shift_index cannot be called in"
-        " non-parametrized sequences",
-    ):
-        seq.phase_shift_index(phi, index)
+# @pytest.mark.parametrize(
+#     index_function_params, index_function_mappable_register_values
+# )
+# def test_non_parametrized_mappable_register_index_functions_failure(
+#     register, build_params, index, expected_target
+# ):
+#     seq = Sequence(register, Chadoq2)
+#     seq.declare_channel("ch0", "rydberg_local")
+#     seq.declare_channel("ch1", "raman_local")
+#     phi = np.pi / 4
+#     with pytest.raises(
+#         RuntimeError,
+#         match="Sequence.target_index cannot be called in"
+#         " non-parametrized sequences",
+#     ):
+#         seq.target_index(index, channel="ch0")
+#     with pytest.raises(
+#         RuntimeError,
+#         match="Sequence.phase_shift_index cannot be called in"
+#         " non-parametrized sequences",
+#     ):
+#         seq.phase_shift_index(phi, index)
 
 
 def test_multiple_index_targets(reg):
