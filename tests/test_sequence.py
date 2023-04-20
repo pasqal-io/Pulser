@@ -11,12 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import dataclasses
 import itertools
 import json
 from typing import Any
 from unittest.mock import patch
-from copy import copy
+
 import numpy as np
 import pytest
 
@@ -27,6 +29,7 @@ from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
+from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sampler import sample
 from pulser.sequence.sequence import _TimeSlot
@@ -508,7 +511,7 @@ def test_switch_device_up(
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    new_seq = copy(seq1.switch_device(devices[0], strict))
+    new_seq = seq1.switch_device(devices[0], strict)
     build_kwargs = {}
     if parametrized:
         build_kwargs["delay"] = 120
@@ -923,73 +926,53 @@ def test_sequence(reg, device, patch_plt_show):
     assert str(seq) == str(seq_)
 
 
-def test_config_slm_mask(device):
-    reg_s = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
-    seq_s = Sequence(reg_s, device)
-
+@pytest.mark.parametrize("is_register_mappable", [False, True])
+@pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
+def test_config_slm_mask(is_register_mappable, qubit_ids, device):
+    reg: Register | MappableRegister
+    trap_ids = [(0, 0), (10, 10), (-10, -10)]
+    if not is_register_mappable:
+        reg = Register(dict(zip(qubit_ids, trap_ids)))
+    else:
+        reg = MappableRegister(
+            RegisterLayout(trap_ids + [(0, 10), (0, 20), (0, -10)]), *qubit_ids
+        )
+        print(reg.qubit_ids)
+        print(reg.layout.coords)
+    is_str_qubit_id = isinstance(qubit_ids[0], str)
+    seq = Sequence(reg, device)
     with pytest.raises(ValueError, match="does not have an SLM mask."):
-        seq_ = Sequence(reg_s, IroiseMVP)
-        seq_.config_slm_mask(["q0"])
+        seq_ = Sequence(reg, IroiseMVP)
+        seq_.config_slm_mask(["q0" if is_str_qubit_id else 0])
 
     with pytest.raises(TypeError, match="must be castable to set"):
-        seq_s.config_slm_mask(0)
+        seq.config_slm_mask(0)
     with pytest.raises(TypeError, match="must be castable to set"):
-        seq_s.config_slm_mask((0))
+        seq.config_slm_mask((0))
     with pytest.raises(ValueError, match="exist in the register"):
-        seq_s.config_slm_mask("q0")
+        seq.config_slm_mask("q0")
     with pytest.raises(ValueError, match="exist in the register"):
-        seq_s.config_slm_mask(["q3"])
+        seq.config_slm_mask(["q3" if is_str_qubit_id else 3])
     with pytest.raises(ValueError, match="exist in the register"):
-        seq_s.config_slm_mask(("q3",))
+        seq.config_slm_mask(("q3" if is_str_qubit_id else 3,))
     with pytest.raises(ValueError, match="exist in the register"):
-        seq_s.config_slm_mask({"q3"})
+        seq.config_slm_mask({"q3" if is_str_qubit_id else 3})
     with pytest.raises(ValueError, match="exist in the register"):
-        seq_s.config_slm_mask([0])
+        seq.config_slm_mask([0 if is_str_qubit_id else "0"])
     with pytest.raises(ValueError, match="exist in the register"):
-        seq_s.config_slm_mask((0,))
+        seq.config_slm_mask((0 if is_str_qubit_id else "0",))
     with pytest.raises(ValueError, match="exist in the register"):
-        seq_s.config_slm_mask({0})
+        seq.config_slm_mask({0 if is_str_qubit_id else "0"})
 
-    targets_s = ["q0", "q2"]
-    seq_s.config_slm_mask(targets_s)
-    assert seq_s._slm_mask_targets == {"q0", "q2"}
+    targets = ["q0" if is_str_qubit_id else 0, "q2" if is_str_qubit_id else 2]
+    seq.config_slm_mask(targets)
+    if is_str_qubit_id:
+        assert seq._slm_mask_targets == {"q0", "q2"}
+    else:
+        assert seq._slm_mask_targets == {0, 2}
 
     with pytest.raises(ValueError, match="configured only once"):
-        seq_s.config_slm_mask(targets_s)
-
-    reg_i = Register({0: (0, 0), 1: (10, 10), 2: (-10, -10)})
-    seq_i = Sequence(reg_i, device)
-
-    with pytest.raises(TypeError, match="must be castable to set"):
-        seq_i.config_slm_mask(0)
-    with pytest.raises(TypeError, match="must be castable to set"):
-        seq_i.config_slm_mask((0))
-    with pytest.raises(ValueError, match="exist in the register"):
-        seq_i.config_slm_mask("q0")
-    with pytest.raises(ValueError, match="exist in the register"):
-        seq_i.config_slm_mask([3])
-    with pytest.raises(ValueError, match="exist in the register"):
-        seq_i.config_slm_mask((3,))
-    with pytest.raises(ValueError, match="exist in the register"):
-        seq_i.config_slm_mask({3})
-    with pytest.raises(ValueError, match="exist in the register"):
-        seq_i.config_slm_mask(["0"])
-    with pytest.raises(ValueError, match="exist in the register"):
-        seq_i.config_slm_mask(("0",))
-    with pytest.raises(ValueError, match="exist in the register"):
-        seq_i.config_slm_mask({"0"})
-
-    targets_i = [0, 2]
-    seq_i.config_slm_mask(targets_i)
-    assert seq_i._slm_mask_targets == {0, 2}
-
-    with pytest.raises(ValueError, match="configured only once"):
-        seq_i.config_slm_mask(targets_i)
-
-    mapp_reg = TriangularLatticeLayout(20, 5).make_mappable_register(10)
-    fail_seq = Sequence(mapp_reg, device)
-    # Works now
-    fail_seq.config_slm_mask({"q0", "q2", "q4"})
+        seq.config_slm_mask(targets)
 
 
 def test_slm_mask(reg, patch_plt_show):
@@ -1177,7 +1160,7 @@ def test_hardware_constraints(reg, patch_plt_show):
     seq.draw(mode="input+output")
 
 
-def test_mappable_register(patch_plt_show, reg):
+def test_mappable_register(patch_plt_show):
     layout = TriangularLatticeLayout(100, 5)
     mapp_reg = layout.make_mappable_register(10)
     seq = Sequence(mapp_reg, Chadoq2)

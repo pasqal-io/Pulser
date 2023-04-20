@@ -556,7 +556,10 @@ class Sequence(Generic[DeviceType]):
         new_seq = type(self)(
             register=self._register
             if not self.is_register_mappable()
-            else MappableRegister(self._register.layout, *self._register._ids),
+            else MappableRegister(
+                cast(RegisterLayout, self._register.layout),
+                *self._register._ids,
+            ),
             device=new_device,
         )
 
@@ -1212,7 +1215,8 @@ class Sequence(Generic[DeviceType]):
 
         if qubits:
             map_reg = MappableRegister(
-                self._register.layout, *self._register._ids
+                cast(RegisterLayout, self._register.layout),
+                *self._register._ids,
             )
             reg = map_reg.build_register(qubits)
             self._set_register(seq, reg)
