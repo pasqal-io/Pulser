@@ -236,6 +236,7 @@ class BaseDevice(ABC):
         Returns:
             The rydberg blockade radius, in μm.
         """
+        # mypy can't guarantee that float**float is a float, so we need to cast
         return cast(
             float, (self.interaction_coeff / rabi_frequency) ** (1 / 6)
         )
