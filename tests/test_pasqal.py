@@ -25,7 +25,7 @@ import pulser_pasqal
 from pulser.devices import Chadoq2
 from pulser.register import Register
 from pulser.sequence import Sequence
-from pulser_pasqal import BaseConfig, DeviceType, Endpoints, PasqalCloud
+from pulser_pasqal import BaseConfig, EmulatorType, Endpoints, PasqalCloud
 from pulser_pasqal.job_parameters import JobParameters, JobVariables
 
 root = Path(__file__).parent.parent
@@ -43,12 +43,12 @@ class CloudFixture:
 
 @pytest.fixture
 def fixt():
-    with patch("sdk.SDK", autospec=True) as mock_cloud_sdk_class:
+    with patch("pasqal_cloud.SDK", autospec=True) as mock_cloud_sdk_class:
         pasqal_cloud_kwargs = dict(
             username="abc",
             password="def",
             group_id="ghi",
-            endpoints=Endpoints(core="core_url", account="account_url"),
+            endpoints=Endpoints(core="core_url"),
             webhook="xyz",
         )
 
@@ -71,10 +71,10 @@ test_device = Chadoq2
 virtual_device = test_device.to_virtual()
 
 
-def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
+def check_pasqal_cloud(fixt, seq, emulator, expected_seq_representation):
     create_batch_kwargs = dict(
         jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
-        device_type=device_type,
+        emulator=emulator,
         configuration=BaseConfig(
             extra_config={
                 "dt": 10.0,
@@ -112,14 +112,14 @@ def check_pasqal_cloud(fixt, seq, device_type, expected_seq_representation):
 
 
 @pytest.mark.parametrize(
-    "device_type, device",
+    "emulator, device",
     [
-        [device_type, device]
-        for device_type in (DeviceType.EMU_FREE, DeviceType.EMU_TN)
+        [emulator, device]
+        for emulator in (EmulatorType.EMU_FREE, EmulatorType.EMU_TN)
         for device in (test_device, virtual_device)
     ],
 )
-def test_pasqal_cloud_emu(fixt, device_type, device):
+def test_pasqal_cloud_emu(fixt, emulator, device):
     reg = Register.from_coordinates(
         [(0, 0), (0, 10)], center=False, prefix="q"
     )
@@ -128,13 +128,12 @@ def test_pasqal_cloud_emu(fixt, device_type, device):
     check_pasqal_cloud(
         fixt=fixt,
         seq=seq,
-        device_type=device_type,
+        emulator=emulator,
         expected_seq_representation=seq.to_abstract_repr(),
     )
 
 
 def test_pasqal_cloud_qpu(fixt):
-    device_type = DeviceType.QPU
     device = test_device
 
     reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
@@ -143,7 +142,7 @@ def test_pasqal_cloud_qpu(fixt):
     check_pasqal_cloud(
         fixt=fixt,
         seq=seq,
-        device_type=device_type,
+        emulator=None,
         expected_seq_representation=seq.to_abstract_repr(),
     )
 
@@ -157,7 +156,7 @@ def test_virtual_device_on_qpu_error(fixt):
         fixt.pasqal_cloud.create_batch(
             seq,
             jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
-            device_type=DeviceType.QPU,
+            emulator=None,
             wait=True,
         )
 
@@ -173,6 +172,6 @@ def test_wrong_parameters(fixt):
         fixt.pasqal_cloud.create_batch(
             seq,
             jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
-            device_type=DeviceType.QPU,
+            emulator=None,
             wait=True,
         )
