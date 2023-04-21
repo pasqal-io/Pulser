@@ -47,7 +47,7 @@ else:  # pragma: no cover
 DIMENSIONS = Literal[2, 3]
 
 
-@dataclass(frozen=True, repr=False)  # type: ignore[misc]
+@dataclass(frozen=True, repr=False)
 class BaseDevice(ABC):
     r"""Base class of a neutral-atom device.
 
@@ -236,7 +236,9 @@ class BaseDevice(ABC):
         Returns:
             The rydberg blockade radius, in μm.
         """
-        return (self.interaction_coeff / rabi_frequency) ** (1 / 6)
+        return cast(
+            float, (self.interaction_coeff / rabi_frequency) ** (1 / 6)
+        )
 
     def rabi_from_blockade(self, blockade_radius: float) -> float:
         """The maximum Rabi frequency value to enforce a given blockade radius.

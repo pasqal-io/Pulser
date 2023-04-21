@@ -433,7 +433,7 @@ class CustomWaveform(Waveform):
     def __init__(self, samples: ArrayLike):
         """Initializes a custom waveform."""
         samples_arr = np.array(samples, dtype=float)
-        self._samples: np.ndarray = samples_arr
+        self._samples_arr: np.ndarray = samples_arr
         super().__init__(len(samples_arr))
 
     @property
@@ -448,8 +448,7 @@ class CustomWaveform(Waveform):
         Returns:
             A numpy array with a value for each time step.
         """
-        # self._samples is already cached when initialized in __init__
-        pass
+        return self._samples_arr
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._samples)
