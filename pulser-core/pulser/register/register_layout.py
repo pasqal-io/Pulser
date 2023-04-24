@@ -203,7 +203,7 @@ class RegisterLayout(RegDrawer):
         draw_graph: bool = False,
         draw_half_radius: bool = False,
         projection: bool = True,
-        fig_name: str = None,
+        fig_name: str | None = None,
         kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register layout.

@@ -180,7 +180,7 @@ class Register3D(BaseRegister, RegDrawer):
         draw_half_radius: bool = False,
         qubit_colors: Mapping[QubitId, str] = dict(),
         projection: bool = False,
-        fig_name: str = None,
+        fig_name: str | None = None,
         kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register.
