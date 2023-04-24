@@ -742,8 +742,8 @@ class TestSerialization:
 
 
 def _get_serialized_seq(
-    operations: list[dict] = None,
-    variables: dict[str, dict] = None,
+    operations: list[dict] = [],
+    variables: dict[str, dict] = {},
     **override_kwargs: Any,
 ) -> dict[str, Any]:
     seq_dict = {
@@ -756,8 +756,8 @@ def _get_serialized_seq(
             {"name": "q666", "x": 12.0, "y": 0.0},
         ],
         "channels": {"digital": "raman_local", "global": "rydberg_global"},
-        "operations": operations or [],
-        "variables": variables or {},
+        "operations": operations,
+        "variables": variables,
         "measurement": None,
     }
     seq_dict.update(override_kwargs)
