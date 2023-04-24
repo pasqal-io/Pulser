@@ -1303,7 +1303,7 @@ class Sequence(Generic[DeviceType]):
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
         draw_phase_curve: bool = False,
-        fig_name: str = None,
+        fig_name: str | None = None,
         kwargs_savefig: dict = {},
         show: bool = True,
     ) -> None:

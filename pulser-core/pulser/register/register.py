@@ -211,8 +211,8 @@ class Register(BaseRegister, RegDrawer):
         cls,
         n_qubits: int,
         device: pulser.devices._device_datacls.BaseDevice,
-        spacing: float = None,
-        prefix: str = None,
+        spacing: float | None = None,
+        prefix: str | None = None,
     ) -> Register:
         """Initializes the register with maximum connectivity for a device.
 
@@ -296,7 +296,7 @@ class Register(BaseRegister, RegDrawer):
         draw_graph: bool = True,
         draw_half_radius: bool = False,
         qubit_colors: Mapping[QubitId, str] = dict(),
-        fig_name: str = None,
+        fig_name: str | None = None,
         kwargs_savefig: dict = {},
         custom_ax: Optional[Axes] = None,
         show: bool = True,

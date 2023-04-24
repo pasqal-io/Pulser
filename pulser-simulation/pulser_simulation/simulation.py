@@ -472,7 +472,7 @@ class Simulation:
         draw_interp_pts: bool = False,
         draw_phase_shifts: bool = False,
         draw_phase_curve: bool = False,
-        fig_name: str = None,
+        fig_name: str | None = None,
         kwargs_savefig: dict = {},
     ) -> None:
         """Draws the input sequence and the one used by the solver.

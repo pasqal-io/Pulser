@@ -47,7 +47,7 @@ warnings.filterwarnings("once", "A duration of")
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
 
-@dataclass(init=True, repr=False, frozen=True)  # type: ignore[misc]
+@dataclass(init=True, repr=False, frozen=True)
 class Channel(ABC):
     """Base class of a hardware channel.
 
