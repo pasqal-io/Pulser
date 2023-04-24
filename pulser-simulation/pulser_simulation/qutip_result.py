@@ -42,8 +42,11 @@ class QutipResult(Result):
 
     @property
     def sampling_errors(self) -> dict[str, float]:
-        """The sampling error associated to each bitstring probability."""
-        return {bitstr: 0.0 for bitstr in self.probability_dist}
+        """The sampling error associated to each bitstring's sampling rate.
+
+        Uses the standard error of the mean as a quantifier for sampling error.
+        """
+        return {bitstr: 0.0 for bitstr in self.sampling_dist}
 
     @property
     def _dim(self) -> int:

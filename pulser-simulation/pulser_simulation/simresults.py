@@ -302,7 +302,7 @@ class NoisyResults(SimulationResults):
     @property
     def results(self) -> list[Counter]:
         """Probability distribution of the bitstrings."""
-        return [Counter(res.probability_dist) for res in self]
+        return [Counter(res.sampling_dist) for res in self]
 
     def get_state(self, t: float, t_tol: float = 1.0e-3) -> qutip.Qobj:
         """Gets the state at time t as a diagonal density matrix.

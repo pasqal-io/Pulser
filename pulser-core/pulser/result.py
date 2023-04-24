@@ -32,8 +32,14 @@ class Result(ABC):
     meas_basis: str
 
     @property
-    def probability_dist(self) -> dict[str, float]:
-        """Probability distribution of each bitstring."""
+    def sampling_dist(self) -> dict[str, float]:
+        """Sampling distribution of the measured bitstring.
+
+        Args:
+            atom_order: The order of the atoms in the bitstrings that
+                represent the measured states.
+            meas_basis: The measurement basis.
+        """
         n = self._size
         return {
             np.binary_repr(ind, width=n): prob
@@ -44,7 +50,10 @@ class Result(ABC):
     @property
     @abstractmethod
     def sampling_errors(self) -> dict[str, float]:
-        """The sampling error associated to each bitstring probability."""
+        """The sampling error associated to each bitstring's sampling rate.
+
+        Uses the standard error of the mean as a quantifier for sampling error.
+        """
         pass
 
     @property
@@ -53,18 +62,17 @@ class Result(ABC):
 
     @abstractmethod
     def _weights(self) -> np.ndarray:
-        """Contains the probability of every state in an ordered array."""
+        """The sampling rate for every state in an ordered array."""
         pass
 
     def sample(self, n_samples: int) -> Counter[str]:
-        """Samples the probabilite distribution multiple times.
+        """Takes multiple samples from the sampling distribution.
 
         Args:
             n_samples: Number of samples to return.
 
         Returns:
-            Sample distribution of bitstrings corresponding to
-            measured quantum states.
+            Samples of bitstrings corresponding to measured quantum states.
         """
         dist = np.random.multinomial(n_samples, self._weights())
         return Counter(
@@ -76,24 +84,24 @@ class Result(ABC):
 
     def plot_histogram(
         self,
-        min_probability: float = 0.001,
+        min_rate: float = 0.001,
         max_n_bitstrings: int | None = None,
         show: bool = True,
     ) -> None:
         """Plots the result in an histogram.
 
         Args:
-            min_probability: The minimum measurement probability a bitstring
-                must have to be displayed.
+            min_rate: The minimum sampling rate a bitstring must have to be
+                displayed.
             max_n_bitstrings: An optional limit on the number of bitrstrings
                 displayed.
             show: Whether or not to call `plt.show()` before returning.
         """
         probs = np.array(
-            Counter(self.probability_dist).most_common(max_n_bitstrings),
+            Counter(self.sampling_dist).most_common(max_n_bitstrings),
             dtype=object,
         )
-        probs = probs[probs[:, 1] >= min_probability]
+        probs = probs[probs[:, 1] >= min_rate]
         plt.bar(probs[:, 0], probs[:, 1])
         plt.xticks(rotation="vertical")
         plt.ylabel("Probabilites")
@@ -120,10 +128,13 @@ class SampledResult(Result):
 
     @property
     def sampling_errors(self) -> dict[str, float]:
-        """The sampling error associated to each bitstring probability."""
+        """The sampling error associated to each bitstring's sampling rate.
+
+        Uses the standard error of the mean as a quantifier for sampling error.
+        """
         return {
             bitstr: np.sqrt(p * (1 - p) / self.n_samples)
-            for bitstr, p in self.probability_dist.items()
+            for bitstr, p in self.sampling_dist.items()
         }
 
     def _weights(self) -> np.ndarray:
