@@ -1160,13 +1160,6 @@ class Sequence(Generic[DeviceType]):
                     "'qubits' must be specified when the sequence is created "
                     "with a MappableRegister."
                 )
-            elif not self.is_parametrized() and qubits.keys() != set(
-                self._register.qubit_ids[: len(qubits.keys())]
-            ):
-                raise ValueError(
-                    f"'qubits' should contain the {len(qubits.keys())} first "
-                    "elements of the 'qubit_ids' of the MappableRegister."
-                )
 
         elif qubits is not None:
             raise ValueError(

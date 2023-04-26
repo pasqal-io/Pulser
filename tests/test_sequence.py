@@ -1213,7 +1213,7 @@ def test_mappable_register(patch_plt_show):
         seq.build(qubits={"q2": 20, "q0": 10, "q1": 0}, a=5)
 
     with pytest.raises(ValueError, match="'qubits' should contain the 3"):
-        seq.build(qubits={"q2": 20, "q0": 10, "q3": 0}, a=5)
+        seq.build(qubits={"q2": 20, "q0": 10, "q3": 0})
 
     seq_ = seq.build(qubits={"q2": 20, "q0": 10, "q1": 0})
     assert seq_._last("ryd_glob").targets == {"q0", "q1", "q2"}
@@ -1259,9 +1259,9 @@ index_function_non_mappable_register_values: Any = [
 index_function_mappable_register_values = [
     (
         TriangularLatticeLayout(100, 5).make_mappable_register(10),
-        dict(qubits=dict(q0=1, q4=2, q3=0)),
-        2,
-        "q4",
+        dict(qubits=dict(q0=1, q2=2, q1=0)),
+        1,
+        "q1",
     ),
 ]
 

@@ -237,6 +237,10 @@ def test_mappable_register_creation():
         ValueError, match="labeled with pre-declared qubit IDs"
     ):
         mapp_reg.build_register({"q0": 0, "q5": 2})
+    with pytest.raises(
+        ValueError, match="'qubits' should contain the 2 first elements"
+    ):
+        mapp_reg.build_register({"q0": 0, "q2": 2})
 
     qubit_map = {"q0": 10, "q1": 49}
     reg = mapp_reg.build_register(qubit_map)
