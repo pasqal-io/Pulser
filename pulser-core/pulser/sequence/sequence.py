@@ -50,10 +50,8 @@ from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
-from pulser.register import Register
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.register.register_layout import RegisterLayout
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
@@ -122,26 +120,15 @@ class Sequence(Generic[DeviceType]):
             raise TypeError(
                 f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
-        self._is_register_mappable: bool = isinstance(
-            register, MappableRegister
-        )
-        self._register: BaseRegister
-        if self._is_register_mappable:
-            # Checks if register is compatible with the device
-            map_reg = cast(MappableRegister, register)
-            n_ids = len(map_reg.qubit_ids)
-            device.validate_layout(map_reg.layout)
-            device.validate_layout_filling(map_reg)
-            self.initial_layout = map_reg.layout
-            self._register = Register(
-                dict(zip(map_reg.qubit_ids, map_reg.layout.coords[:n_ids])),
-                layout=map_reg.layout,
-                trap_ids=range(n_ids),
-            )
-        else:
-            self._register = cast(BaseRegister, register)
-            device.validate_register(self.register)
 
+        # Checks if register is compatible with the device
+        if isinstance(register, MappableRegister):
+            device.validate_layout(register.layout)
+            device.validate_layout_filling(register)
+        else:
+            device.validate_register(register)
+
+        self._register: Union[BaseRegister, MappableRegister] = register
         self._device = device
         self._in_xy: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
@@ -177,12 +164,11 @@ class Sequence(Generic[DeviceType]):
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
         """Dictionary with the qubit's IDs and positions."""
         if self.is_register_mappable():
-            warnings.warn(
-                "Accessing the qubit information whereas the register can "
-                "still be modified in build.",
-                UserWarning,
+            raise RuntimeError(
+                "Can't access the qubit information when the register is "
+                "mappable."
             )
-        return self._register.qubits
+        return cast(BaseRegister, self._register).qubits
 
     @property
     def device(self) -> DeviceType:
@@ -193,12 +179,11 @@ class Sequence(Generic[DeviceType]):
     def register(self) -> BaseRegister:
         """Register with the qubit's IDs and positions."""
         if self.is_register_mappable():
-            warnings.warn(
-                "Accessing the sequence's register whereas the register can"
-                "still be modified in build.",
-                UserWarning,
+            raise RuntimeError(
+                "Can't access the sequence's register because the register "
+                "is mappable."
             )
-        return self._register
+        return cast(BaseRegister, self._register)
 
     @property
     def declared_channels(self) -> dict[str, Channel]:
@@ -296,7 +281,7 @@ class Sequence(Generic[DeviceType]):
         Returns:
             Whether the register is a MappableRegister.
         """
-        return self._is_register_mappable
+        return isinstance(self._register, MappableRegister)
 
     def is_measured(self) -> bool:
         """States whether the sequence has been measured."""
@@ -406,6 +391,11 @@ class Sequence(Generic[DeviceType]):
         if not self._device.supports_slm_mask:
             raise ValueError(
                 f"The '{self._device}' device does not have an SLM mask."
+            )
+
+        if self.is_register_mappable():
+            raise RuntimeError(
+                "The SLM mask can't be combined with a mappable register."
             )
 
         try:
@@ -553,15 +543,7 @@ class Sequence(Generic[DeviceType]):
             else:
                 raise TypeError(ch_match_err)
         # Initialize the new sequence (works for Sequence subclasses too)
-        new_seq = type(self)(
-            register=self._register
-            if not self.is_register_mappable()
-            else MappableRegister(
-                cast(RegisterLayout, self._register.layout),
-                *self._register._ids,
-            ),
-            device=new_device,
-        )
+        new_seq = type(self)(register=self._register, device=new_device)
 
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
@@ -977,6 +959,7 @@ class Sequence(Generic[DeviceType]):
         self._target(qubits, channel)
 
     @seq_decorators.store
+    @seq_decorators.check_allow_qubit_index
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -1072,6 +1055,7 @@ class Sequence(Generic[DeviceType]):
         self._phase_shift(phi, *targets, basis=basis)
 
     @seq_decorators.store
+    @seq_decorators.check_allow_qubit_index
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
@@ -1174,12 +1158,10 @@ class Sequence(Generic[DeviceType]):
         """
         if self.is_register_mappable():
             if qubits is None:
-                warnings.warn(
-                    "'qubits' not specified while sequence was created with a "
-                    "MappableRegister. Joining Trap coordinates with qubit ids"
-                    " using indices of register._ids.",
-                ),
-                self._is_register_mappable = False
+                raise ValueError(
+                    "'qubits' must be specified when the sequence is created "
+                    "with a MappableRegister."
+                )
 
         elif qubits is not None:
             raise ValueError(
@@ -1214,11 +1196,7 @@ class Sequence(Generic[DeviceType]):
             self._variables[name]._assign(value)
 
         if qubits:
-            map_reg = MappableRegister(
-                cast(RegisterLayout, self._register.layout),
-                *self._register._ids,
-            )
-            reg = map_reg.build_register(qubits)
+            reg = cast(MappableRegister, self._register).build_register(qubits)
             self._set_register(seq, reg)
 
         for call in self._to_build_calls:
@@ -1391,9 +1369,9 @@ class Sequence(Generic[DeviceType]):
                 )
                 draw_interp_pts = False
         if draw_register and self.is_register_mappable():
-            warnings.warn(
-                "Drawing the register of a sequence with a mappable register.",
-                UserWarning,
+            raise ValueError(
+                "Can't draw the register for a sequence without a defined "
+                "register."
             )
         fig_reg, fig = self._plot(
             draw_phase_area=draw_phase_area,
@@ -1527,9 +1505,7 @@ class Sequence(Generic[DeviceType]):
             else:
                 qubits = cast(Tuple[int, ...], qubits)
                 try:
-                    return {
-                        self._register.qubit_ids[index] for index in qubits
-                    }
+                    return {self.register.qubit_ids[index] for index in qubits}
                 except IndexError:
                     raise IndexError("Indices must exist for the register.")
         ids = set(cast(Tuple[QubitId, ...], qubits))
@@ -1666,7 +1642,6 @@ class Sequence(Generic[DeviceType]):
                 " have not been assigned a trap."
             )
         seq._register = reg
-        seq._is_register_mappable = False
         seq._qids = qids
         seq._calls[0] = _Call("__init__", (seq._register, seq._device), {})
 
