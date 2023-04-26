@@ -959,7 +959,6 @@ class Sequence(Generic[DeviceType]):
         self._target(qubits, channel)
 
     @seq_decorators.store
-    @seq_decorators.check_allow_qubit_index
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -1055,7 +1054,6 @@ class Sequence(Generic[DeviceType]):
         self._phase_shift(phi, *targets, basis=basis)
 
     @seq_decorators.store
-    @seq_decorators.check_allow_qubit_index
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
@@ -1161,6 +1159,13 @@ class Sequence(Generic[DeviceType]):
                 raise ValueError(
                     "'qubits' must be specified when the sequence is created "
                     "with a MappableRegister."
+                )
+            elif not self.is_parametrized() and qubits.keys() != set(
+                self._register.qubit_ids[: len(qubits.keys())]
+            ):
+                raise ValueError(
+                    f"'qubits' should contain the {len(qubits.keys())} first "
+                    "elements of the 'qubit_ids' of the MappableRegister."
                 )
 
         elif qubits is not None:
@@ -1505,7 +1510,9 @@ class Sequence(Generic[DeviceType]):
             else:
                 qubits = cast(Tuple[int, ...], qubits)
                 try:
-                    return {self.register.qubit_ids[index] for index in qubits}
+                    return {
+                        self._register.qubit_ids[index] for index in qubits
+                    }
                 except IndexError:
                     raise IndexError("Indices must exist for the register.")
         ids = set(cast(Tuple[QubitId, ...], qubits))

@@ -27,7 +27,6 @@ from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
-from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
@@ -926,19 +925,11 @@ def test_sequence(reg, device, patch_plt_show):
     assert str(seq) == str(seq_)
 
 
-@pytest.mark.parametrize("is_register_mappable", [False, True])
 @pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
-def test_config_slm_mask(is_register_mappable, qubit_ids, device):
+def test_config_slm_mask(qubit_ids, device):
     reg: Register | MappableRegister
     trap_ids = [(0, 0), (10, 10), (-10, -10)]
-    if not is_register_mappable:
-        reg = Register(dict(zip(qubit_ids, trap_ids)))
-    else:
-        reg = MappableRegister(
-            RegisterLayout(trap_ids + [(0, 10), (0, 20), (0, -10)]), *qubit_ids
-        )
-        print(reg.qubit_ids)
-        print(reg.layout.coords)
+    reg = Register(dict(zip(qubit_ids, trap_ids)))
     is_str_qubit_id = isinstance(qubit_ids[0], str)
     seq = Sequence(reg, device)
     with pytest.raises(ValueError, match="does not have an SLM mask."):
@@ -973,6 +964,15 @@ def test_config_slm_mask(is_register_mappable, qubit_ids, device):
 
     with pytest.raises(ValueError, match="configured only once"):
         seq.config_slm_mask(targets)
+    mapp_reg = MappableRegister(
+        RegisterLayout(trap_ids + [(0, 10), (0, 20), (0, -10)]), *qubit_ids
+    )
+    fail_seq = Sequence(mapp_reg, device)
+    with pytest.raises(
+        RuntimeError,
+        match="The SLM mask can't be combined with a mappable register.",
+    ):
+        fail_seq.config_slm_mask({trap_ids[0], trap_ids[2]})
 
 
 def test_slm_mask(reg, patch_plt_show):
@@ -1165,16 +1165,16 @@ def test_mappable_register(patch_plt_show):
     mapp_reg = layout.make_mappable_register(10)
     seq = Sequence(mapp_reg, Chadoq2)
     assert seq.is_register_mappable()
-    assert isinstance(seq._register, BaseRegister)
     reserved_qids = tuple([f"q{i}" for i in range(10)])
     assert seq._qids == set(reserved_qids)
-    assert np.all(seq._register._coords == layout.coords[:10])
-    with pytest.warns(UserWarning, match="Accessing the qubit information"):
+    with pytest.raises(RuntimeError, match="Can't access the qubit info"):
         seq.qubit_info
-    with pytest.warns(UserWarning, match="Accessing the sequence's register"):
+    with pytest.raises(
+        RuntimeError, match="Can't access the sequence's register"
+    ):
         seq.register
 
-    seq.declare_channel("ram", "raman_local", initial_target="q2")
+    seq.declare_channel("ram", "raman_local", initial_target="q0")
     seq.declare_channel("ryd_loc", "rydberg_local")
     # No Global channel shown, sequence can be printed without warnings
     seq.__str__()
@@ -1187,34 +1187,36 @@ def test_mappable_register(patch_plt_show):
     with pytest.warns(UserWarning, match=warn_message_global):
         seq.__str__()
     # Index of mappable register can be accessed
-    seq.phase_shift_index(np.pi / 4, 2, basis="digital")  # 2->"q2"
-    seq.target_index(8, "ryd_loc")  # 8->"q8"
+    seq.phase_shift_index(np.pi / 4, 0, basis="digital")  # 0 -> q0
+    seq.target_index(2, "ryd_loc")  # 2 -> q2
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_glob")
     seq.add(Pulse.ConstantPulse(200, 1, 0, 0), "ram")
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_loc")
     assert seq._last("ryd_glob").targets == set(reserved_qids)
-    assert seq._last("ram").targets == {"q2"}
-    assert seq._last("ryd_loc").targets == {"q8"}
+    assert seq._last("ram").targets == {"q0"}
+    assert seq._last("ryd_loc").targets == {"q2"}
 
-    with pytest.warns(
-        UserWarning,
-        match="Drawing the register of a sequence with a mappable register",
-    ):
+    with pytest.raises(ValueError, match="Can't draw the register"):
         seq.draw(draw_register=True)
 
     # Can draw if 'draw_register=False'
     seq.draw()
+    with pytest.raises(ValueError, match="'qubits' must be specified"):
+        seq.build()
 
     with pytest.raises(
         ValueError, match="targeted but have not been assigned"
     ):
-        seq.build(qubits={"q0": 1, "q1": 10})
+        seq.build(qubits={"q1": 1, "q0": 10})
 
     with pytest.warns(UserWarning, match="No declared variables named: a"):
-        seq.build(qubits={"q2": 20, "q0": 10, "q8": 0}, a=5)
+        seq.build(qubits={"q2": 20, "q0": 10, "q1": 0}, a=5)
 
-    seq_ = seq.build(qubits={"q2": 20, "q0": 10, "q8": 0})
-    assert seq_._last("ryd_glob").targets == {"q0", "q2", "q8"}
+    with pytest.raises(ValueError, match="'qubits' should contain the 3"):
+        seq.build(qubits={"q2": 20, "q0": 10, "q3": 0}, a=5)
+
+    seq_ = seq.build(qubits={"q2": 20, "q0": 10, "q1": 0})
+    assert seq_._last("ryd_glob").targets == {"q0", "q1", "q2"}
     # Check the original sequence is unchanged
     assert seq.is_register_mappable()
     init_call = seq._calls[0]
@@ -1224,20 +1226,16 @@ def test_mappable_register(patch_plt_show):
     assert seq_.register == Register(
         {
             "q0": layout.traps_dict[10],
+            "q1": layout.traps_dict[0],
             "q2": layout.traps_dict[20],
-            "q8": layout.traps_dict[0],
         }
     )
     with pytest.raises(ValueError, match="already has a concrete register"):
-        seq_.build(qubits={"q2": 20, "q0": 10, "q8": 0})
+        seq_.build(qubits={"q2": 20, "q0": 10, "q1": 0})
 
     # Also possible to build the default register
-    with pytest.warns(UserWarning, match="'qubits' not specified"):
+    with pytest.raises(ValueError, match="'qubits' must be specified"):
         seq.build()
-    # This time the register of the sequence is modified
-    assert not seq.is_register_mappable()
-    assert np.all(seq.register.qubit_ids == reserved_qids)
-    assert np.all(seq.register._coords == layout.coords[:10])
 
 
 index_function_non_mappable_register_values: Any = [
