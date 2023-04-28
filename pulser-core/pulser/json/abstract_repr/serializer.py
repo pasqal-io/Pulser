@@ -153,7 +153,7 @@ def serialize_abstract_sequence(
         og_dim = target_array.ndim
         if og_dim == 0:
             target_array = target_array[np.newaxis]
-        indices = seq._register.find_indices(target_array.tolist())
+        indices = seq.get_register().find_indices(target_array.tolist())
         return indices[0] if og_dim == 0 else indices
 
     def get_kwarg_default(call_name: str, kwarg_name: str) -> Any:

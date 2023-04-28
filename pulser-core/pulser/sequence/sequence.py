@@ -185,6 +185,10 @@ class Sequence(Generic[DeviceType]):
             )
         return cast(BaseRegister, self._register)
 
+    def get_register(self) -> BaseRegister | MappableRegister:
+        """The atom register on which to apply the pulses."""
+        return self._register
+
     @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""

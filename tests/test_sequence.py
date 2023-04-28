@@ -27,6 +27,7 @@ from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
+from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
@@ -1165,6 +1166,7 @@ def test_mappable_register(patch_plt_show):
     mapp_reg = layout.make_mappable_register(10)
     seq = Sequence(mapp_reg, Chadoq2)
     assert seq.is_register_mappable()
+    assert isinstance(seq.get_register(), MappableRegister)
     reserved_qids = tuple([f"q{i}" for i in range(10)])
     assert seq._qids == set(reserved_qids)
     with pytest.raises(RuntimeError, match="Can't access the qubit info"):
@@ -1223,6 +1225,7 @@ def test_mappable_register(patch_plt_show):
     assert init_call.name == "__init__"
     assert isinstance(init_call.kwargs["register"], MappableRegister)
     assert not seq_.is_register_mappable()
+    assert isinstance(seq_.get_register(), BaseRegister)
     assert seq_.register == Register(
         {
             "q0": layout.traps_dict[10],
@@ -1341,30 +1344,6 @@ def test_non_parametrized_non_mappable_register_index_functions(
     seq.phase_shift_index(phi, index)
     assert seq._last("ch0").targets == {expected_target}
     assert seq.current_phase_ref(expected_target, "digital") == phi
-
-
-# @pytest.mark.parametrize(
-#     index_function_params, index_function_mappable_register_values
-# )
-# def test_non_parametrized_mappable_register_index_functions_failure(
-#     register, build_params, index, expected_target
-# ):
-#     seq = Sequence(register, Chadoq2)
-#     seq.declare_channel("ch0", "rydberg_local")
-#     seq.declare_channel("ch1", "raman_local")
-#     phi = np.pi / 4
-#     with pytest.raises(
-#         RuntimeError,
-#         match="Sequence.target_index cannot be called in"
-#         " non-parametrized sequences",
-#     ):
-#         seq.target_index(index, channel="ch0")
-#     with pytest.raises(
-#         RuntimeError,
-#         match="Sequence.phase_shift_index cannot be called in"
-#         " non-parametrized sequences",
-#     ):
-#         seq.phase_shift_index(phi, index)
 
 
 def test_multiple_index_targets(reg):
