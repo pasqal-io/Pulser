@@ -18,8 +18,7 @@ import json
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field, fields
-from sys import version_info
-from typing import Any, cast
+from typing import Any, Literal, cast, get_args
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -31,18 +30,6 @@ from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
-
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal, get_args
-else:  # pragma: no cover
-    try:
-        from typing_extensions import Literal, get_args  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `typing_extensions` module. Install it by running"
-            " `pip install typing-extensions`."
-        )
 
 DIMENSIONS = Literal[2, 3]
 
