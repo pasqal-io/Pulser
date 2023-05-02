@@ -804,7 +804,7 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
         seq_name=serialized_seq["name"],
         qubits=qubits_default or None,
         json_dumps_options={"indent": None},
-        ** defaults,
+        **defaults,
     )
     assert s == json.loads(rs)
 
