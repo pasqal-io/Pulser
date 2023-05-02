@@ -21,7 +21,7 @@ import itertools
 import sys
 import warnings
 from abc import ABC, abstractmethod
-from sys import version_info
+from functools import cached_property
 from types import FunctionType
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
@@ -39,18 +39,6 @@ from pulser.parametrized.decorators import parametrize
 
 if TYPE_CHECKING:
     from pulser.channels.base_channel import Channel
-
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from functools import cached_property
-else:  # pragma: no cover
-    try:
-        from backports.cached_property import cached_property  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `backports.cached-property` module. Install it by running"
-            " `pip install backports.cached-property`."
-        )
 
 
 class Waveform(ABC):
