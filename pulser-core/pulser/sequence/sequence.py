@@ -715,7 +715,7 @@ class Sequence(Generic[DeviceType]):
             To avoid confusion, it is recommended to store the returned
             Variable instance in a Python variable with the same name.
         """
-        if name in ("qubits", "seq_name"):
+        if name in ("qubits", "seq_name", "json_dumps_options"):
             raise ValueError(
                 f"'{name}' is a protected name. Please choose a different name"
                 " for the variable."
@@ -1229,13 +1229,19 @@ class Sequence(Generic[DeviceType]):
         return json.dumps(self, cls=PulserEncoder, **kwargs)
 
     def to_abstract_repr(
-        self, seq_name: str = "pulser-exported", **defaults: Any
+        self,
+        seq_name: str = "pulser-exported",
+        json_dumps_options: dict[str, Any] = {},
+        **defaults: Any,
     ) -> str:
         """Serializes the Sequence into an abstract JSON object.
 
         Keyword Args:
             seq_name (str): A name for the sequence. If not defined, defaults
                 to "pulser-exported".
+            json_dumps_options: A mapping between optional parameters of
+                ``json.dumps()`` (as string) and their value (parameter cannot
+                be "cls").
             defaults: The default values for all the variables declared in this
                 Sequence instance, indexed by the name given upon declaration.
                 Check ``Sequence.declared_variables`` to see all the variables.
@@ -1252,7 +1258,9 @@ class Sequence(Generic[DeviceType]):
         See Also:
             ``serialize``
         """
-        return serialize_abstract_sequence(self, seq_name, **defaults)
+        return serialize_abstract_sequence(
+            self, seq_name, json_dumps_options, **defaults
+        )
 
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:
