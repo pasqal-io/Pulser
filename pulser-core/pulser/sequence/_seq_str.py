@@ -14,6 +14,7 @@
 """Function for representing the sequence in a string."""
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 from pulser.pulse import Pulse
@@ -30,6 +31,15 @@ def seq_to_str(sequence: Sequence) -> str:
     delay_line = "t: {}->{} | Delay \n"
     det_delay_line = "t: {}->{} | Detuned Delay | Detuning: {:.3g} rad/µs\n"
     for ch, seq in sequence._schedule.items():
+        if (
+            seq.channel_obj.addressing == "Global"
+            and sequence.is_register_mappable()
+        ):
+            warnings.warn(
+                "Showing the register for a sequence with a mappable register."
+                f"Target qubits of channel {ch} will be defined in build.",
+                UserWarning,
+            )
         basis = sequence.declared_channels[ch].basis
         full += f"Channel: {ch}\n"
         first_slot = True
