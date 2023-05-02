@@ -74,8 +74,9 @@ class MappableRegister:
             )
         elif set(chosen_ids) != set(self.qubit_ids[: len(chosen_ids)]):
             raise ValueError(
-                f"'qubits' should contain the {len(qubits.keys())} first "
-                "elements of the 'qubit_ids'."
+                f"To declare {len(qubits.keys())} qubits, 'qubits' should "
+                f"contain the first {len(qubits.keys())} elements of the "
+                "'qubit_ids'."
             )
         register_ordered_qubits = {
             id: qubits[id] for id in self._qubit_ids if id in chosen_ids

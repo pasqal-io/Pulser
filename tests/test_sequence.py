@@ -1167,6 +1167,10 @@ def test_mappable_register(patch_plt_show):
     seq = Sequence(mapp_reg, Chadoq2)
     assert seq.is_register_mappable()
     assert isinstance(seq.get_register(), MappableRegister)
+    with pytest.raises(
+        RuntimeError, match="Can't access the sequence's register"
+    ):
+        seq.get_register(include_mappable=False)
     reserved_qids = tuple([f"q{i}" for i in range(10)])
     assert seq._qids == set(reserved_qids)
     with pytest.raises(RuntimeError, match="Can't access the qubit info"):
@@ -1214,7 +1218,7 @@ def test_mappable_register(patch_plt_show):
     with pytest.warns(UserWarning, match="No declared variables named: a"):
         seq.build(qubits={"q2": 20, "q0": 10, "q1": 0}, a=5)
 
-    with pytest.raises(ValueError, match="'qubits' should contain the 3"):
+    with pytest.raises(ValueError, match="To declare 3 qubits"):
         seq.build(qubits={"q2": 20, "q0": 10, "q3": 0})
 
     seq_ = seq.build(qubits={"q2": 20, "q0": 10, "q1": 0})
@@ -1226,6 +1230,7 @@ def test_mappable_register(patch_plt_show):
     assert isinstance(init_call.kwargs["register"], MappableRegister)
     assert not seq_.is_register_mappable()
     assert isinstance(seq_.get_register(), BaseRegister)
+    assert isinstance(seq_.get_register(include_mappable=False), BaseRegister)
     assert seq_.register == Register(
         {
             "q0": layout.traps_dict[10],

@@ -185,9 +185,21 @@ class Sequence(Generic[DeviceType]):
             )
         return cast(BaseRegister, self._register)
 
-    def get_register(self) -> BaseRegister | MappableRegister:
+    @overload
+    def get_register(self, include_mappable: Literal[False]) -> BaseRegister:
+        pass
+
+    @overload
+    def get_register(
+        self, include_mappable: Literal[True]
+    ) -> BaseRegister | MappableRegister:
+        pass
+
+    def get_register(
+        self, include_mappable: bool = True
+    ) -> BaseRegister | MappableRegister:
         """The atom register on which to apply the pulses."""
-        return self._register
+        return self._register if include_mappable else self.register
 
     @property
     def declared_channels(self) -> dict[str, Channel]:
