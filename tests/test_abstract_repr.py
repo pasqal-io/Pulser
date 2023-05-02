@@ -625,13 +625,21 @@ class TestSerialization:
         ):
             seq.to_abstract_repr(var=0)
 
-        with pytest.raises(TypeError, match="Did not receive values"):
-            seq.to_abstract_repr(qubits={"q1": 0})
+        with pytest.raises(
+            ValueError,
+            match="The given 'defaults' produce an invalid sequence.",
+        ):
+            seq.to_abstract_repr(var=0, qubits={"q1": 0})
 
-        abstract = json.loads(seq.to_abstract_repr(var=0, qubits={"q1": 0}))
+        with pytest.raises(TypeError, match="Did not receive values"):
+            seq.to_abstract_repr(qubits={"q0": 0})
+
+        assert not seq.is_parametrized()
+
+        abstract = json.loads(seq.to_abstract_repr(var=0, qubits={"q0": 0}))
         assert abstract["register"] == [
-            {"qid": "q0"},
-            {"qid": "q1", "default_trap": 0},
+            {"qid": "q0", "default_trap": 0},
+            {"qid": "q1"},
         ]
         assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
@@ -722,7 +730,6 @@ class TestSerialization:
             "basis", "ground-rydberg"
         )
 
-    @pytest.mark.xfail(reason="Can't get index of mappable register qubits.")
     @pytest.mark.parametrize(
         "op,args",
         [
@@ -876,7 +883,7 @@ class TestDeserialization:
     def test_deserialize_mappable_register(self):
         layout_coords = (5 * np.arange(8)).reshape((4, 2))
         s = _get_serialized_seq(
-            register=[{"qid": "q0"}, {"qid": "q1", "default_trap": 2}],
+            register=[{"qid": "q0", "default_trap": 2}, {"qid": "q1"}],
             layout={
                 "coordinates": layout_coords.tolist(),
                 "slug": "test_layout",

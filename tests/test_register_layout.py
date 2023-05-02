@@ -226,28 +226,19 @@ def test_mappable_register_creation():
     mapp_reg = tri.make_mappable_register(5)
     assert mapp_reg.qubit_ids == ("q0", "q1", "q2", "q3", "q4")
 
-    assert mapp_reg.find_indices(
-        {"q2", "q4", "q1"}, ["q4", "q2", "q1", "q2"]
-    ) == [2, 1, 0, 1]
+    assert mapp_reg.find_indices(["q4", "q2", "q1", "q2"]) == [4, 2, 1, 2]
 
     with pytest.raises(
         ValueError, match="must be selected among pre-declared qubit IDs"
     ):
-        mapp_reg.find_indices(
-            {"q2", "q4", "q1", "q5"}, ["q4", "q2", "q1", "q2"]
-        )
-
-    with pytest.raises(
-        ValueError, match="must be selected among the chosen IDs"
-    ):
-        mapp_reg.find_indices(
-            {"q2", "q4", "q1"}, ["q4", "q2", "q1", "q2", "q3"]
-        )
+        mapp_reg.find_indices(["q4", "q2", "q1", "q5"])
 
     with pytest.raises(
         ValueError, match="labeled with pre-declared qubit IDs"
     ):
         mapp_reg.build_register({"q0": 0, "q5": 2})
+    with pytest.raises(ValueError, match="To declare 2 qubits"):
+        mapp_reg.build_register({"q0": 0, "q2": 2})
 
     qubit_map = {"q0": 10, "q1": 49}
     reg = mapp_reg.build_register(qubit_map)
@@ -255,6 +246,4 @@ def test_mappable_register_creation():
         {"q0": tri.traps_dict[10], "q1": tri.traps_dict[49]}
     )
     names = ["q1", "q0", "q0"]
-    assert mapp_reg.find_indices(qubit_map.keys(), names) == reg.find_indices(
-        names
-    )
+    assert mapp_reg.find_indices(names) == reg.find_indices(names)
