@@ -1228,6 +1228,113 @@ class TestDeserialization:
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
 
+    @pytest.mark.parametrize(
+        "op, pulse_cls",
+        [
+            (
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": var1,
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 3.14,
+                    },
+                    "detuning": {
+                        "kind": "ramp",
+                        "duration": var2,
+                        "start": 1,
+                        "stop": 5,
+                    },
+                },
+                "Pulse",
+            ),
+            (
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": var1,
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": 0,
+                        "value": 3.14,
+                    },
+                    "detuning": {
+                        "kind": "ramp",
+                        "duration": var2,
+                        "start": 1,
+                        "stop": 5,
+                    },
+                },
+                "ConstantAmplitude",
+            ),
+            (
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": var1,
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 3.14,
+                    },
+                    "detuning": {
+                        "kind": "constant",
+                        "duration": 0,
+                        "value": 1,
+                    },
+                },
+                "ConstantDetuning",
+            ),
+        ],
+    )
+    def test_deserialize_parametrized_pulse(self, op, pulse_cls):
+        s = _get_serialized_seq(
+            operations=[op],
+            variables={
+                "var1": {"type": "int", "value": [0]},
+                "var2": {"type": "int", "value": [42]},
+            },
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # init + declare channels + 1 operation
+        offset = 1 + len(s["channels"])
+        assert len(seq._calls) == offset
+        # No parametrized call
+        assert len(seq._to_build_calls) == 1
+
+        c = seq._to_build_calls[0]
+
+        assert c.name == "add"
+        assert c.kwargs["channel"] == op["channel"]
+        assert c.kwargs["protocol"] == op["protocol"]
+        pulse = c.kwargs["pulse"]
+        assert isinstance(pulse, ParamObj)
+        assert pulse.cls.__name__ == pulse_cls
+        assert isinstance(pulse.kwargs["phase"], VariableItem)
+        assert isinstance(pulse.kwargs["post_phase_shift"], VariableItem)
+
+        if pulse_cls != "ConstantAmplitude":
+            assert isinstance(pulse.kwargs["amplitude"], ParamObj)
+            assert issubclass(pulse.kwargs["amplitude"].cls, Waveform)
+        else:
+            assert pulse.kwargs["amplitude"] == 3.14
+
+        if pulse_cls != "ConstantDetuning":
+            assert isinstance(pulse.kwargs["detuning"], ParamObj)
+            assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
+        else:
+            assert pulse.kwargs["detuning"] == 1
+
     def test_deserialize_eom_ops(self):
         s = _get_serialized_seq(
             operations=[
