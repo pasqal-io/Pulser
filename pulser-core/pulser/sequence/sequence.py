@@ -174,6 +174,22 @@ class Sequence(Generic[DeviceType]):
             )
         return cast(BaseRegister, self._register)
 
+    @overload
+    def get_register(self, include_mappable: Literal[False]) -> BaseRegister:
+        pass
+
+    @overload
+    def get_register(
+        self, include_mappable: Literal[True]
+    ) -> BaseRegister | MappableRegister:
+        pass
+
+    def get_register(
+        self, include_mappable: bool = True
+    ) -> BaseRegister | MappableRegister:
+        """The atom register on which to apply the pulses."""
+        return self._register if include_mappable else self.register
+
     @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
@@ -948,7 +964,6 @@ class Sequence(Generic[DeviceType]):
         self._target(qubits, channel)
 
     @seq_decorators.store
-    @seq_decorators.check_allow_qubit_index
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -1044,7 +1059,6 @@ class Sequence(Generic[DeviceType]):
         self._phase_shift(phi, *targets, basis=basis)
 
     @seq_decorators.store
-    @seq_decorators.check_allow_qubit_index
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
@@ -1494,7 +1508,9 @@ class Sequence(Generic[DeviceType]):
             else:
                 qubits = cast(Tuple[int, ...], qubits)
                 try:
-                    return {self.register.qubit_ids[index] for index in qubits}
+                    return {
+                        self._register.qubit_ids[index] for index in qubits
+                    }
                 except IndexError:
                     raise IndexError("Indices must exist for the register.")
         ids = set(cast(Tuple[QubitId, ...], qubits))
