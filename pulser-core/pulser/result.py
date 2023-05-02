@@ -24,7 +24,7 @@ import numpy as np
 from pulser.register import QubitId
 
 
-@dataclass  # type: ignore
+@dataclass
 class Result(ABC):
     """Base class for storing the result of a sequence run."""
 
