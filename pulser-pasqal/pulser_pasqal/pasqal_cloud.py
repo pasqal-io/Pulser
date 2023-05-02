@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-import sdk
+import pasqal_cloud
 
 from pulser import Sequence
 from pulser.devices import Device
@@ -33,7 +33,7 @@ class PasqalCloud:
         username: your username in the PASQAL cloud platform.
         password: the password for your PASQAL cloud platform account.
         group_id: the group_id associated to the account.
-        kwargs: Additional arguments to provide to SDK
+        kwargs: Additional arguments to provide to the pasqal_cloud.SDK()
     """
 
     def __init__(
@@ -44,7 +44,7 @@ class PasqalCloud:
         **kwargs: Any,
     ):
         """Initializes a connection to the Pasqal cloud platform."""
-        self._sdk_connection = sdk.SDK(
+        self._sdk_connection = pasqal_cloud.SDK(
             username=username,
             password=password,
             group_id=group_id,
@@ -55,11 +55,11 @@ class PasqalCloud:
         self,
         seq: Sequence,
         jobs: list[JobParameters],
-        device_type: sdk.DeviceType = sdk.DeviceType.QPU,
-        configuration: Optional[sdk.BaseConfig] = None,
+        emulator: pasqal_cloud.EmulatorType | None = None,
+        configuration: Optional[pasqal_cloud.BaseConfig] = None,
         wait: bool = False,
         fetch_results: bool = False,
-    ) -> sdk.Batch:
+    ) -> pasqal_cloud.Batch:
         """Create a new batch and send it to the API.
 
         For Iroise MVP, the batch must contain at least one job and will be
@@ -68,9 +68,8 @@ class PasqalCloud:
         Args:
             seq: Pulser sequence.
             jobs: List of jobs to be added to the batch at creation.
-            device_type: The type of device to use, either an emulator or a QPU
-                If set to QPU, the device_type will be set to the one
-                stored in the serialized sequence.
+            emulator: TThe type of emulator to use. If set to None, the device
+                will be set to the one stored in the serialized sequence.
             configuration: Optional extra configuration for emulators.
             wait: Whether to wait for the batch to be done.
             fetch_results: Whether to download the results. Implies waiting for the batch. # noqa: 501
@@ -78,9 +77,7 @@ class PasqalCloud:
         Returns:
             Batch: The new batch that has been created in the database.
         """
-        if device_type == sdk.DeviceType.QPU and not isinstance(
-            seq.device, Device
-        ):
+        if emulator is None and not isinstance(seq.device, Device):
             raise TypeError(
                 "To be sent to a real QPU, the device of the sequence "
                 "must be a real device, instance of 'Device'."
@@ -92,13 +89,15 @@ class PasqalCloud:
         return self._sdk_connection.create_batch(
             serialized_sequence=seq.to_abstract_repr(),
             jobs=[j.get_dict() for j in jobs],
-            device_type=device_type,
+            emulator=emulator,
             configuration=configuration,
             wait=wait,
             fetch_results=fetch_results,
         )
 
-    def get_batch(self, id: str, fetch_results: bool = False) -> sdk.Batch:
+    def get_batch(
+        self, id: str, fetch_results: bool = False
+    ) -> pasqal_cloud.Batch:
         """Retrieve a batch's data and all its jobs.
 
         Args:

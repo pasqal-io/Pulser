@@ -18,8 +18,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
-from sys import version_info
-from typing import Any, Optional, Type, TypeVar, cast
+from typing import Any, Literal, Optional, Type, TypeVar, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -29,25 +28,13 @@ from pulser.channels.eom import MODBW_TO_TR, BaseEOM
 from pulser.json.utils import obj_to_dict
 from pulser.pulse import Pulse
 
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal
-else:  # pragma: no cover
-    try:
-        from typing_extensions import Literal  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `typing_extensions` module. Install it by running"
-            " `pip install typing-extensions`."
-        )
-
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
 
-@dataclass(init=True, repr=False, frozen=True)  # type: ignore[misc]
+@dataclass(init=True, repr=False, frozen=True)
 class Channel(ABC):
     """Base class of a hardware channel.
 

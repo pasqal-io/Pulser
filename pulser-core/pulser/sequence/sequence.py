@@ -20,15 +20,16 @@ import json
 import os
 import warnings
 from collections.abc import Iterable, Mapping
-from sys import version_info
 from typing import (
     Any,
     Generic,
+    Literal,
     Optional,
     Tuple,
     TypeVar,
     Union,
     cast,
+    get_args,
     overload,
 )
 
@@ -57,18 +58,6 @@ from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import Figure, draw_sequence
 from pulser.sequence._seq_str import seq_to_str
-
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal, get_args
-else:  # pragma: no cover
-    try:
-        from typing_extensions import Literal, get_args  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `typing_extensions` module. Install it by running"
-            " `pip install typing-extensions`."
-        )
 
 DeviceType = TypeVar("DeviceType", bound=BaseDevice)
 
@@ -184,6 +173,22 @@ class Sequence(Generic[DeviceType]):
                 "is mappable."
             )
         return cast(BaseRegister, self._register)
+
+    @overload
+    def get_register(self, include_mappable: Literal[False]) -> BaseRegister:
+        pass
+
+    @overload
+    def get_register(
+        self, include_mappable: Literal[True]
+    ) -> BaseRegister | MappableRegister:
+        pass
+
+    def get_register(
+        self, include_mappable: bool = True
+    ) -> BaseRegister | MappableRegister:
+        """The atom register on which to apply the pulses."""
+        return self._register if include_mappable else self.register
 
     @property
     def declared_channels(self) -> dict[str, Channel]:
@@ -959,7 +964,6 @@ class Sequence(Generic[DeviceType]):
         self._target(qubits, channel)
 
     @seq_decorators.store
-    @seq_decorators.check_allow_qubit_index
     def target_index(
         self,
         qubits: Union[int, Iterable[int], Parametrized],
@@ -1055,7 +1059,6 @@ class Sequence(Generic[DeviceType]):
         self._phase_shift(phi, *targets, basis=basis)
 
     @seq_decorators.store
-    @seq_decorators.check_allow_qubit_index
     def phase_shift_index(
         self,
         phi: Union[float, Parametrized],
@@ -1303,8 +1306,9 @@ class Sequence(Generic[DeviceType]):
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
         draw_phase_curve: bool = False,
-        fig_name: str = None,
+        fig_name: str | None = None,
         kwargs_savefig: dict = {},
+        show: bool = True,
     ) -> None:
         """Draws the sequence in its current state.
 
@@ -1339,6 +1343,9 @@ class Sequence(Generic[DeviceType]):
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
+            show: Whether or not to call `plt.show()` before returning. When
+                combining this plot with other ones in a single figure, one may
+                need to set this flag to False.
 
         See Also:
             Simulation.draw(): Draws the provided sequence and the one used by
@@ -1384,7 +1391,9 @@ class Sequence(Generic[DeviceType]):
             fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
         elif fig_name:
             fig.savefig(fig_name, **kwargs_savefig)
-        plt.show()
+
+        if show:
+            plt.show()
 
     def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
         return draw_sequence(self, **draw_options)
@@ -1499,7 +1508,9 @@ class Sequence(Generic[DeviceType]):
             else:
                 qubits = cast(Tuple[int, ...], qubits)
                 try:
-                    return {self.register.qubit_ids[index] for index in qubits}
+                    return {
+                        self._register.qubit_ids[index] for index in qubits
+                    }
                 except IndexError:
                     raise IndexError("Indices must exist for the register.")
         ids = set(cast(Tuple[QubitId, ...], qubits))

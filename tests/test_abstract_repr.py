@@ -625,13 +625,21 @@ class TestSerialization:
         ):
             seq.to_abstract_repr(var=0)
 
-        with pytest.raises(TypeError, match="Did not receive values"):
-            seq.to_abstract_repr(qubits={"q1": 0})
+        with pytest.raises(
+            ValueError,
+            match="The given 'defaults' produce an invalid sequence.",
+        ):
+            seq.to_abstract_repr(var=0, qubits={"q1": 0})
 
-        abstract = json.loads(seq.to_abstract_repr(var=0, qubits={"q1": 0}))
+        with pytest.raises(TypeError, match="Did not receive values"):
+            seq.to_abstract_repr(qubits={"q0": 0})
+
+        assert not seq.is_parametrized()
+
+        abstract = json.loads(seq.to_abstract_repr(var=0, qubits={"q0": 0}))
         assert abstract["register"] == [
-            {"qid": "q0"},
-            {"qid": "q1", "default_trap": 0},
+            {"qid": "q0", "default_trap": 0},
+            {"qid": "q1"},
         ]
         assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
@@ -722,7 +730,6 @@ class TestSerialization:
             "basis", "ground-rydberg"
         )
 
-    @pytest.mark.xfail(reason="Can't get index of mappable register qubits.")
     @pytest.mark.parametrize(
         "op,args",
         [
@@ -742,8 +749,8 @@ class TestSerialization:
 
 
 def _get_serialized_seq(
-    operations: list[dict] = None,
-    variables: dict[str, dict] = None,
+    operations: list[dict] = [],
+    variables: dict[str, dict] = {},
     **override_kwargs: Any,
 ) -> dict[str, Any]:
     seq_dict = {
@@ -756,8 +763,8 @@ def _get_serialized_seq(
             {"name": "q666", "x": 12.0, "y": 0.0},
         ],
         "channels": {"digital": "raman_local", "global": "rydberg_global"},
-        "operations": operations or [],
-        "variables": variables or {},
+        "operations": operations,
+        "variables": variables,
         "measurement": None,
     }
     seq_dict.update(override_kwargs)
@@ -875,7 +882,7 @@ class TestDeserialization:
     def test_deserialize_mappable_register(self):
         layout_coords = (5 * np.arange(8)).reshape((4, 2))
         s = _get_serialized_seq(
-            register=[{"qid": "q0"}, {"qid": "q1", "default_trap": 2}],
+            register=[{"qid": "q0", "default_trap": 2}, {"qid": "q1"}],
             layout={
                 "coordinates": layout_coords.tolist(),
                 "slug": "test_layout",
@@ -1220,6 +1227,113 @@ class TestDeserialization:
             assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
+
+    @pytest.mark.parametrize(
+        "op, pulse_cls",
+        [
+            (
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": var1,
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 3.14,
+                    },
+                    "detuning": {
+                        "kind": "ramp",
+                        "duration": var2,
+                        "start": 1,
+                        "stop": 5,
+                    },
+                },
+                "Pulse",
+            ),
+            (
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": var1,
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": 0,
+                        "value": 3.14,
+                    },
+                    "detuning": {
+                        "kind": "ramp",
+                        "duration": var2,
+                        "start": 1,
+                        "stop": 5,
+                    },
+                },
+                "ConstantAmplitude",
+            ),
+            (
+                {
+                    "op": "pulse",
+                    "channel": "global",
+                    "phase": var1,
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 3.14,
+                    },
+                    "detuning": {
+                        "kind": "constant",
+                        "duration": 0,
+                        "value": 1,
+                    },
+                },
+                "ConstantDetuning",
+            ),
+        ],
+    )
+    def test_deserialize_parametrized_pulse(self, op, pulse_cls):
+        s = _get_serialized_seq(
+            operations=[op],
+            variables={
+                "var1": {"type": "int", "value": [0]},
+                "var2": {"type": "int", "value": [42]},
+            },
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # init + declare channels + 1 operation
+        offset = 1 + len(s["channels"])
+        assert len(seq._calls) == offset
+        # No parametrized call
+        assert len(seq._to_build_calls) == 1
+
+        c = seq._to_build_calls[0]
+
+        assert c.name == "add"
+        assert c.kwargs["channel"] == op["channel"]
+        assert c.kwargs["protocol"] == op["protocol"]
+        pulse = c.kwargs["pulse"]
+        assert isinstance(pulse, ParamObj)
+        assert pulse.cls.__name__ == pulse_cls
+        assert isinstance(pulse.kwargs["phase"], VariableItem)
+        assert isinstance(pulse.kwargs["post_phase_shift"], VariableItem)
+
+        if pulse_cls != "ConstantAmplitude":
+            assert isinstance(pulse.kwargs["amplitude"], ParamObj)
+            assert issubclass(pulse.kwargs["amplitude"].cls, Waveform)
+        else:
+            assert pulse.kwargs["amplitude"] == 3.14
+
+        if pulse_cls != "ConstantDetuning":
+            assert isinstance(pulse.kwargs["detuning"], ParamObj)
+            assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
+        else:
+            assert pulse.kwargs["detuning"] == 1
 
     def test_deserialize_eom_ops(self):
         s = _get_serialized_seq(

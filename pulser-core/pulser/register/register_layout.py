@@ -17,8 +17,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
+from functools import cached_property
 from hashlib import sha256
-from sys import version_info
 from typing import Any, Optional, cast
 
 import matplotlib.pyplot as plt
@@ -31,18 +31,6 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
-
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from functools import cached_property
-else:  # pragma: no cover
-    try:
-        from backports.cached_property import cached_property  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `backports.cached-property` module. Install it by running"
-            " `pip install backports.cached-property`."
-        )
 
 COORD_PRECISION = 6
 
@@ -203,7 +191,7 @@ class RegisterLayout(RegDrawer):
         draw_graph: bool = False,
         draw_half_radius: bool = False,
         projection: bool = True,
-        fig_name: str = None,
+        fig_name: str | None = None,
         kwargs_savefig: dict = {},
     ) -> None:
         """Draws the entire register layout.

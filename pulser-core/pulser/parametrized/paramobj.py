@@ -42,7 +42,6 @@ if TYPE_CHECKING:
 class OpSupport:
     """Methods for supporting operators on parametrized objects."""
 
-    # TODO: Make operator methods' args pos-only when python 3.7 is dropped
     # Unary operators
     def __neg__(self) -> ParamObj:
         return ParamObj(operator.neg, self)
@@ -93,46 +92,46 @@ class OpSupport:
         return ParamObj(np.tan, self)
 
     # Binary operators
-    def __add__(self, other: Union[int, float]) -> ParamObj:
+    def __add__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.add, self, other)
 
-    def __radd__(self, other: Union[int, float]) -> ParamObj:
+    def __radd__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.add, other, self)
 
-    def __sub__(self, other: Union[int, float]) -> ParamObj:
+    def __sub__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.sub, self, other)
 
-    def __rsub__(self, other: Union[int, float]) -> ParamObj:
+    def __rsub__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.sub, other, self)
 
-    def __mul__(self, other: Union[int, float]) -> ParamObj:
+    def __mul__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.mul, self, other)
 
-    def __rmul__(self, other: Union[int, float]) -> ParamObj:
+    def __rmul__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.mul, other, self)
 
-    def __truediv__(self, other: Union[int, float]) -> ParamObj:
+    def __truediv__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.truediv, self, other)
 
-    def __rtruediv__(self, other: Union[int, float]) -> ParamObj:
+    def __rtruediv__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.truediv, other, self)
 
-    def __floordiv__(self, other: Union[int, float]) -> ParamObj:
+    def __floordiv__(self, other: Union[int, float], /) -> ParamObj:
         return (self / other).__floor__()
 
-    def __rfloordiv__(self, other: Union[int, float]) -> ParamObj:
+    def __rfloordiv__(self, other: Union[int, float], /) -> ParamObj:
         return (other / self).__floor__()
 
-    def __pow__(self, other: Union[int, float]) -> ParamObj:
+    def __pow__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.pow, self, other)
 
-    def __rpow__(self, other: Union[int, float]) -> ParamObj:
+    def __rpow__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.pow, other, self)
 
-    def __mod__(self, other: Union[int, float]) -> ParamObj:
+    def __mod__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.mod, self, other)
 
-    def __rmod__(self, other: Union[int, float]) -> ParamObj:
+    def __rmod__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.mod, other, self)
 
 

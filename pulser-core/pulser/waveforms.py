@@ -21,7 +21,7 @@ import itertools
 import sys
 import warnings
 from abc import ABC, abstractmethod
-from sys import version_info
+from functools import cached_property
 from types import FunctionType
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
@@ -39,18 +39,6 @@ from pulser.parametrized.decorators import parametrize
 
 if TYPE_CHECKING:
     from pulser.channels.base_channel import Channel
-
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from functools import cached_property
-else:  # pragma: no cover
-    try:
-        from backports.cached_property import cached_property  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `backports.cached-property` module. Install it by running"
-            " `pip install backports.cached-property`."
-        )
 
 
 class Waveform(ABC):
@@ -433,7 +421,7 @@ class CustomWaveform(Waveform):
     def __init__(self, samples: ArrayLike):
         """Initializes a custom waveform."""
         samples_arr = np.array(samples, dtype=float)
-        self._samples: np.ndarray = samples_arr
+        self._samples_arr: np.ndarray = samples_arr
         super().__init__(len(samples_arr))
 
     @property
@@ -448,8 +436,7 @@ class CustomWaveform(Waveform):
         Returns:
             A numpy array with a value for each time step.
         """
-        # self._samples is already cached when initialized in __init__
-        pass
+        return self._samples_arr
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._samples)

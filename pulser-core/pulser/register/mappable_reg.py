@@ -72,6 +72,12 @@ class MappableRegister:
             raise ValueError(
                 "All qubits must be labeled with pre-declared qubit IDs."
             )
+        elif set(chosen_ids) != set(self.qubit_ids[: len(chosen_ids)]):
+            raise ValueError(
+                f"To declare {len(qubits.keys())} qubits, 'qubits' should "
+                f"contain the first {len(qubits.keys())} elements of the "
+                "'qubit_ids'."
+            )
         register_ordered_qubits = {
             id: qubits[id] for id in self._qubit_ids if id in chosen_ids
         }
@@ -80,10 +86,8 @@ class MappableRegister:
             qubit_ids=tuple(register_ordered_qubits.keys()),
         )
 
-    def find_indices(
-        self, chosen_ids: set[QubitId], id_list: abcSequence[QubitId]
-    ) -> list[int]:
-        """Computes indices of qubits according to a register mapping.
+    def find_indices(self, id_list: abcSequence[QubitId]) -> list[int]:
+        """Computes indices of qubits.
 
         This can especially be useful when building a Pulser Sequence
         with a parameter denoting qubits.
@@ -92,41 +96,31 @@ class MappableRegister:
             Let ``reg`` be a mappable register with qubit Ids "a", "b", "c"
             and "d".
 
-            >>> qubit_map = dict(b=1, a=2, d=0)
-            >>> reg.find_indices(
-            >>>   qubit_map.keys(),
-            >>>   ["a", "b", "d", "a"])
+            >>> reg.find_indices(["a", "b", "d", "a"])
 
-            It returns ``[0, 1, 2, 0]``, following the qubits order of the
-            mappable register, but keeping only the chosen ones.
+            It returns ``[0, 1, 3, 0]``, following the qubits order of the
+            mappable register (defined by qubit_ids).
 
             Then, it is possible to use these indices when building a
             sequence, typically to instanciate an array of variables
             that can be provided as an argument to ``target_index``
             and ``phase_shift_index``.
 
-            ``qubit_map`` should be provided when building the sequence,
-            to tell how to instantiate the register from the mappable register.
+            When building a sequence and declaring N qubits, their ids should
+            refer to the first N elements of qubit_id.
 
         Args:
-            chosen_ids: IDs of the qubits that are chosen to
-                map the MappableRegister
             id_list: IDs of the qubits to denote.
 
         Returns:
             Indices of the qubits to denote, only valid for the
             given mapping.
         """
-        if not chosen_ids <= set(self._qubit_ids):
+        if not set(id_list) <= set(self._qubit_ids):
             raise ValueError(
-                "Chosen IDs must be selected among pre-declared qubit IDs."
+                "The IDs list must be selected among pre-declared qubit IDs."
             )
-        if not set(id_list) <= chosen_ids:
-            raise ValueError(
-                "The IDs list must be selected among the chosen IDs."
-            )
-        ordered_ids = [id for id in self.qubit_ids if id in chosen_ids]
-        return [ordered_ids.index(id) for id in id_list]
+        return [self.qubit_ids.index(id) for id in id_list]
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._layout, *self._qubit_ids)
