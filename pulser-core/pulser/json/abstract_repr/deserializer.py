@@ -219,14 +219,42 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             *[_deserialize_parameter(t, vars) for t in op["targets"]],
         )
     elif op["op"] == "pulse":
-        pulse = Pulse(
-            amplitude=_deserialize_waveform(op["amplitude"], vars),
-            detuning=_deserialize_waveform(op["detuning"], vars),
-            phase=_deserialize_parameter(op["phase"], vars),
-            post_phase_shift=_deserialize_parameter(
-                op["post_phase_shift"], vars
-            ),
-        )
+        phase = _deserialize_parameter(op["phase"], vars)
+        post_phase_shift = _deserialize_parameter(op["post_phase_shift"], vars)
+
+        # A waveform with a duration of 0 means the pulse was created with one
+        # of Pulse's class methods (ConstantAmplitude or ConstantDetuning) and
+        # the Pulse is parametrized
+        if (
+            op["amplitude"].get("duration") == 0
+            and op["amplitude"].get("kind") == "constant"
+        ):
+            pulse = Pulse.ConstantAmplitude(
+                amplitude=_deserialize_parameter(
+                    op["amplitude"]["value"], vars
+                ),
+                detuning=_deserialize_waveform(op["detuning"], vars),
+                phase=phase,
+                post_phase_shift=post_phase_shift,
+            )
+        elif (
+            op["detuning"].get("duration") == 0
+            and op["detuning"].get("kind") == "constant"
+        ):
+            pulse = Pulse.ConstantDetuning(
+                amplitude=_deserialize_waveform(op["amplitude"], vars),
+                detuning=_deserialize_parameter(op["detuning"]["value"], vars),
+                phase=phase,
+                post_phase_shift=post_phase_shift,
+            )
+        else:
+            pulse = Pulse(
+                amplitude=_deserialize_waveform(op["amplitude"], vars),
+                detuning=_deserialize_waveform(op["detuning"], vars),
+                phase=phase,
+                post_phase_shift=post_phase_shift,
+            )
+
         seq.add(
             pulse=pulse,
             channel=op["channel"],

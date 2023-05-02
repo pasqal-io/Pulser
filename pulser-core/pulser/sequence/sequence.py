@@ -20,15 +20,16 @@ import json
 import os
 import warnings
 from collections.abc import Iterable, Mapping
-from sys import version_info
 from typing import (
     Any,
     Generic,
+    Literal,
     Optional,
     Tuple,
     TypeVar,
     Union,
     cast,
+    get_args,
     overload,
 )
 
@@ -57,18 +58,6 @@ from pulser.sequence._call import _Call
 from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
 from pulser.sequence._seq_drawer import Figure, draw_sequence
 from pulser.sequence._seq_str import seq_to_str
-
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal, get_args
-else:  # pragma: no cover
-    try:
-        from typing_extensions import Literal, get_args  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `typing_extensions` module. Install it by running"
-            " `pip install typing-extensions`."
-        )
 
 DeviceType = TypeVar("DeviceType", bound=BaseDevice)
 
