@@ -16,23 +16,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from sys import version_info
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union, get_args
 
 import numpy as np
 import qutip
-
-if version_info[:2] >= (3, 8):  # pragma: no cover
-    from typing import Literal, get_args
-else:  # pragma: no cover
-    try:
-        from typing_extensions import Literal, get_args  # type: ignore
-    except ImportError:
-        raise ImportError(
-            "Using pulser with Python version 3.7 requires the"
-            " `typing_extensions` module. Install it by running"
-            " `pip install typing-extensions`."
-        )
 
 NOISE_TYPES = Literal[
     "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"

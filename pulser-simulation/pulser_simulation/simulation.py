@@ -553,8 +553,8 @@ class Simulation:
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
-                addr = self._seq.declared_channels[ch].addressing
-                basis = self._seq.declared_channels[ch].basis
+                addr = self.samples_obj._ch_objs[ch].addressing
+                basis = self.samples_obj._ch_objs[ch].basis
                 samples_dict = samples["Local"][basis]
                 for slot in ch_samples.slots:
                     add_noise(slot, samples_dict, addr == "Global")
