@@ -65,7 +65,7 @@ class Result(ABC):
         """The sampling rate for every state in an ordered array."""
         pass
 
-    def sample(self, n_samples: int) -> Counter[str]:
+    def get_samples(self, n_samples: int) -> Counter[str]:
         """Takes multiple samples from the sampling distribution.
 
         Args:
