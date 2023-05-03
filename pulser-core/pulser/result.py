@@ -17,6 +17,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -80,6 +81,17 @@ class Result(ABC):
                 np.binary_repr(i, self._size): dist[i]
                 for i in np.nonzero(dist)[0]
             }
+        )
+
+    def get_state(self) -> Any:
+        """Gets the quantum state associated with the result.
+
+        Can only be defined for emulation results that don't resort to
+        sampling a quantum state (which is the case for certain types of
+        noise).
+        """
+        raise NotImplementedError(
+            f"`{self.__class__.__name__}.get_state()` is not implemented."
         )
 
     def plot_histogram(

@@ -133,8 +133,7 @@ class QutipResult(Result):
             ignore_global_phase: If True and if the final state is a vector,
                 changes the final state's global phase such that the largest
                 term (in absolute value) is real.
-            tol: Maximum allowed population of each
-                eliminated state.
+            tol: Maximum allowed population of each eliminated state.
             normalize: Whether to normalize the reduced state.
 
         Returns:
