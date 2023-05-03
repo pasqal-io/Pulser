@@ -109,6 +109,7 @@ class Result(ABC):
                 displayed.
             show: Whether or not to call `plt.show()` before returning.
         """
+        # TODO: Add error bars
         probs = np.array(
             Counter(self.sampling_dist).most_common(max_n_bitstrings),
             dtype=object,

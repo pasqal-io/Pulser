@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
+from typing import cast
 
 import numpy as np
 import pytest
@@ -112,7 +113,9 @@ def test_get_final_state(
     if noisychannel:
         sim.add_config(SimConfig(noise="dephasing", dephasing_prob=0.01))
     _results = sim.run()
-    assert _results.get_final_state().isoper or not noisychannel
+    assert isinstance(_results, CoherentResults)
+    final_state = _results.get_final_state()
+    assert final_state.isoper if noisychannel else final_state.isket
     with pytest.raises(TypeError, match="Can't reduce"):
         _results.get_final_state(reduce_to_basis="digital")
     assert (
@@ -146,6 +149,7 @@ def test_get_final_state(
 
     sim_ = Simulation(seq_)
     results_ = sim_.run()
+    results_ = cast(CoherentResults, results_)
 
     with pytest.raises(ValueError, match="'reduce_to_basis' must be"):
         results_.get_final_state(reduce_to_basis="all")

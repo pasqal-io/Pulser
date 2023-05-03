@@ -50,7 +50,12 @@ class QutipResult(Result):
 
     @property
     def _dim(self) -> int:
-        return int(self.state.dims[0][0])
+        full_state_size = np.prod(self.state.shape)
+        if not self.state.isket:
+            full_state_size = np.sqrt(full_state_size)
+        return cast(
+            int, np.rint(full_state_size ** (1 / self._size)).astype(int)
+        )
 
     @property
     def _basis_name(self) -> str:
@@ -68,7 +73,7 @@ class QutipResult(Result):
 
     def _weights(self) -> np.ndarray:
         n = self._size
-        if self.state.type != "ket":
+        if not self.state.isket:
             probs = np.abs(self.state.diag())
         else:
             probs = (np.abs(self.state.full()) ** 2).flatten()
@@ -94,6 +99,11 @@ class QutipResult(Result):
             elif self.meas_basis == "digital":
                 one_state = 2  # 1 = |h>
                 ex_one = slice(0, 2)
+            else:
+                raise RuntimeError(
+                    f"Unknown measurement basis '{self.meas_basis}' "
+                    "for a three-level system.'"
+                )
             probs = probs.reshape([3] * n)
             weights = np.zeros(2**n)
             for dec_val in range(2**n):
