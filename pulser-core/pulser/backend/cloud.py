@@ -11,18 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base classes for backend execution."""
+"""Base classes for backend execution through the cloud."""
 from __future__ import annotations
 
-import typing
 from abc import ABC, abstractmethod
 from typing import Any
 
-from pulser.result import Result
+from pulser.backend.abc import Backend, Results
 from pulser.sequence import Sequence
 
 JobId = str
-Results = typing.Sequence[Result]
 
 
 class CloudConnection(ABC):
@@ -48,20 +46,6 @@ class CloudConnection(ABC):
     @abstractmethod
     def fetch_result(self, job_id: JobId) -> Results | list[Results]:
         """Fetch the results of a completed job."""
-        pass
-
-
-class Backend(ABC):
-    """The backend abstract base class."""
-
-    @abstractmethod
-    def __init__(self, sequence: Sequence) -> None:
-        """Starts a new backend instance."""
-        pass
-
-    @abstractmethod
-    def run(self) -> Results | list[Results]:
-        """Executes the sequence on the backend."""
         pass
 
 
