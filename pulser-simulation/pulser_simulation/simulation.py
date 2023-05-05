@@ -64,7 +64,7 @@ class Simulation:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
-        with_modulation: Whether to simulated the sequence with the programmed
+        with_modulation: Whether to simulate the sequence with the programmed
             input or the expected output.
     """
 
@@ -894,7 +894,7 @@ class Simulation:
     # Run Simulation Evolution using Qutip
     def run(
         self,
-        progress_bar: Optional[bool] = False,
+        progress_bar: bool = False,
         **options: Any,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.

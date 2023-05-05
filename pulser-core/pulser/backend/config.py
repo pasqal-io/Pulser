@@ -17,6 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+import numpy
+
 
 @dataclass
 class BackendConfig:
@@ -48,11 +50,20 @@ class EmulatorConfig(BackendConfig):
               times.
 
             - A float to act as a sampling rate for the resulting state.
+        initial_state: The initial state from which emulation starts.
+            Choose between:
+
+            - "all-ground" for all atoms in the ground state
+            - An array of floats with a shape compatible with the system
+        with_modulation: Whether to emulate the sequence with the programmed
+            input or the expected output.
+        noise_model: An optional noise model to emulate the sequence with.
     """
 
     sampling_rate: float = 1.0
     evaluation_times: float | list[float] | Literal[
         "Full", "Minimal"
     ] = "Minimal"
+    initial_state: Literal["all-ground"] | numpy.ndarray = "all-ground"
     with_modulation: bool = False
     noise_model: Any = None  # TODO: Define NoiseModel class
