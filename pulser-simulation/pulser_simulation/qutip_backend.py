@@ -30,14 +30,13 @@ class QutipBackend(Backend):
     def __init__(
         self, sequence: Sequence, config: EmulatorConfig = EmulatorConfig()
     ):
+        super().__init__(sequence)
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
                 "'config' must be of type 'EmulatorConfig', "
                 f"not {type(config)}."
             )
         self._config = config
-        # sequence type checking happens inside Simulation
-        self._sequence = sequence
         self._sim_obj = Simulation(
             sequence,
             sampling_rate=self._config.sampling_rate,

@@ -27,16 +27,6 @@ class CloudConnection(ABC):
     """The abstract base class for a cloud connection."""
 
     @abstractmethod
-    def validate_sequence(self, sequence: Sequence) -> None:
-        """Validates a sequence prior to submission."""
-        if not isinstance(sequence, Sequence):
-            raise TypeError(
-                "'sequence' should be a `Sequence` instance"
-                f", not {type(sequence)}."
-            )
-        # Checks specific to each cloud provider should be added
-
-    @abstractmethod
     def submit(
         self, sequence: Sequence | list[Sequence], **kwargs: Any
     ) -> JobId:
@@ -61,23 +51,22 @@ class CloudBackend(Backend):
 
     def __init__(
         self,
-        sequence: Sequence | list[Sequence],
+        sequence: Sequence,
         cloud_connection: CloudConnection,
     ) -> None:
         """Starts a new cloud backend instance."""
+        super().__init__(sequence)
+        if not isinstance(cloud_connection, CloudConnection):
+            raise TypeError(
+                "'cloud_connection' must be a valid CloudConnection instance."
+            )
         self.cloud_connection = cloud_connection
-        self.sequence = sequence
         # Extra arguments to add to pass to CloudConnection.submit()
         self._submit_kwargs: dict[str, Any] = {}
-        sequence_list = (
-            [sequence] if isinstance(sequence, Sequence) else sequence
-        )
-        for seq in sequence_list:
-            self.cloud_connection.validate_sequence(seq)
 
     def run(self) -> Results | list[Results]:
         """Runs on the backend via the cloud and returns the result."""
         job_id = self.cloud_connection.submit(
-            self.sequence, **self._submit_kwargs
+            self._sequence, **self._submit_kwargs
         )
         return self.cloud_connection.fetch_result(job_id)

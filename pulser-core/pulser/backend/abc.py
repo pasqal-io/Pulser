@@ -26,12 +26,20 @@ Results = typing.Sequence[Result]
 class Backend(ABC):
     """The backend abstract base class."""
 
-    @abstractmethod
     def __init__(self, sequence: Sequence) -> None:
         """Starts a new backend instance."""
-        pass
+        self.validate_sequence(sequence)
+        self._sequence = sequence
 
     @abstractmethod
     def run(self) -> Results | list[Results]:
         """Executes the sequence on the backend."""
         pass
+
+    def validate_sequence(self, sequence: Sequence) -> None:
+        """Validates a sequence prior to submission."""
+        if not isinstance(sequence, Sequence):
+            raise TypeError(
+                "'sequence' should be a `Sequence` instance"
+                f", not {type(sequence)}."
+            )
