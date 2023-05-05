@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base classes for backend execution through the cloud."""
+"""Base classes for remote backend execution."""
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -23,8 +23,8 @@ from pulser.sequence import Sequence
 JobId = str
 
 
-class CloudConnection(ABC):
-    """The abstract base class for a cloud connection."""
+class RemoteConnection(ABC):
+    """The abstract base class for a remote connection."""
 
     @abstractmethod
     def submit(
@@ -39,34 +39,32 @@ class CloudConnection(ABC):
         pass
 
 
-class CloudBackend(Backend):
-    """A backend for sequence execution through a cloud connection.
+class RemoteBackend(Backend):
+    """A backend for sequence execution through a remote connection.
 
     Args:
         sequence: A Sequence or a list of Sequences to execute on a
-            backed accessible via a cloud connection.
-        cloud_connection: The cloud connection through which the jobs
+            backed accessible via a remote connection.
+        connection: The remote connection through which the jobs
             are executed.
     """
 
     def __init__(
         self,
         sequence: Sequence,
-        cloud_connection: CloudConnection,
+        connection: RemoteConnection,
     ) -> None:
-        """Starts a new cloud backend instance."""
+        """Starts a new remote backend instance."""
         super().__init__(sequence)
-        if not isinstance(cloud_connection, CloudConnection):
+        if not isinstance(connection, RemoteConnection):
             raise TypeError(
-                "'cloud_connection' must be a valid CloudConnection instance."
+                "'connection' must be a valid RemoteConnection instance."
             )
-        self.cloud_connection = cloud_connection
-        # Extra arguments to add to pass to CloudConnection.submit()
+        self._connection = connection
+        # Extra arguments to add to pass to RemoteConnection.submit()
         self._submit_kwargs: dict[str, Any] = {}
 
     def run(self) -> Results | list[Results]:
-        """Runs on the backend via the cloud and returns the result."""
-        job_id = self.cloud_connection.submit(
-            self._sequence, **self._submit_kwargs
-        )
-        return self.cloud_connection.fetch_result(job_id)
+        """Runs on the remote backend and returns the result."""
+        job_id = self._connection.submit(self._sequence, **self._submit_kwargs)
+        return self._connection.fetch_result(job_id)
