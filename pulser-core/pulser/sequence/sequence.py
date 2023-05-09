@@ -291,9 +291,23 @@ class Sequence(Generic[DeviceType]):
     def is_measured(self) -> bool:
         """States whether the sequence has been measured."""
         return (
-            self._is_measured
+            bool(self._param_measurement)
             if self.is_parametrized()
             else hasattr(self, "_measurement")
+        )
+
+    def get_measurement_basis(self) -> str:
+        """Gets the sequence's measurement basis.
+
+        Raises:
+            RuntimeError: When the sequence has not been measured.
+        """
+        if not self.is_measured():
+            raise RuntimeError("The sequence has not been measured.")
+        return (
+            self._param_measurement
+            if self.is_parametrized()
+            else self._measurement
         )
 
     @seq_decorators.screen
@@ -316,6 +330,10 @@ class Sequence(Generic[DeviceType]):
             self._validate_channel(channel)
 
         return self._schedule.get_duration(channel, include_fall_time)
+
+    def get_addressed_bases(self) -> tuple[str, ...]:
+        """Returns the bases addressed by the declared channels."""
+        return tuple(self._basis_ref)
 
     @seq_decorators.screen
     def current_phase_ref(
@@ -1019,11 +1037,7 @@ class Sequence(Generic[DeviceType]):
                 ``supported_bases`` attribute of the selected device for
                 the available options).
         """
-        available = (
-            self._device.supported_bases - {"XY"}
-            if not self._in_xy
-            else {"XY"}
-        )
+        available = self.get_addressed_bases()
         if basis not in available:
             raise ValueError(
                 f"The basis '{basis}' is not supported by the "
@@ -1032,7 +1046,7 @@ class Sequence(Generic[DeviceType]):
             )
 
         if self.is_parametrized():
-            self._is_measured = True
+            self._param_measurement = basis
         else:
             self._measurement = basis
 
@@ -1628,7 +1642,7 @@ class Sequence(Generic[DeviceType]):
         """Resets all attributes related to parametrization."""
         # Signals the sequence as actively "building" ie not parametrized
         self._building = True
-        self._is_measured = False
+        self._param_measurement = ""
         self._variables = {}
         self._to_build_calls = []
 
