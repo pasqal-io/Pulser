@@ -17,10 +17,8 @@ from __future__ import annotations
 import typing
 from abc import ABC, abstractmethod
 
-from pulser.result import Result
+from pulser.result import Results
 from pulser.sequence import Sequence
-
-Results = typing.Sequence[Result]
 
 
 class Backend(ABC):
@@ -32,7 +30,7 @@ class Backend(ABC):
         self._sequence = sequence
 
     @abstractmethod
-    def run(self) -> Results | list[Results]:
+    def run(self) -> Results | typing.Sequence[Results]:
         """Executes the sequence on the backend."""
         pass
 
