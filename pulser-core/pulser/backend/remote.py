@@ -14,13 +14,73 @@
 """Base classes for remote backend execution."""
 from __future__ import annotations
 
+import typing
 from abc import ABC, abstractmethod
+from enum import Enum, auto
 from typing import Any
 
-from pulser.backend.abc import Backend, Results
+from pulser.backend.abc import Backend
+from pulser.devices import Device
+from pulser.result import Result, Results
 from pulser.sequence import Sequence
 
-JobId = str
+
+class SubmissionStatus(Enum):
+    """Status of a remote submission."""
+
+    PENDING = auto()
+    RUNNING = auto()
+    DONE = auto()
+    CANCELED = auto()
+    TIMED_OUT = auto()
+    ERROR = auto()
+    PAUSED = auto()
+
+
+class RemoteResultsError(Exception):
+    """Error raised when fetching remote results fails."""
+
+    pass
+
+
+class RemoteResults(Results):
+    """A collection of results obtained through a remote connection.
+
+    Args:
+        submission_id: The ID that identifies the submission linked to
+            the results.
+        connection: The remote connection over which to get the submission's
+            status and fetch the results.
+    """
+
+    def __init__(self, submission_id: str, connection: RemoteConnection):
+        """Instantiates a new collection of remote results."""
+        self._submission_id = submission_id
+        self._connection = connection
+
+    @property
+    def results(self) -> tuple[Result, ...]:
+        """The actual results, obtained after execution is done."""
+        return self._results
+
+    def get_status(self) -> SubmissionStatus:
+        """Gets the status of the remote submission."""
+        return self._connection._get_submission_status(self._submission_id)
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "_results":
+            if self.get_status() == SubmissionStatus.DONE:
+                self._results = tuple(
+                    self._connection._fetch_result(self._submission_id)
+                )
+                return self._results
+            raise RemoteResultsError(
+                "The results are not available. The submission's status is "
+                f"{str(self.get_status())}."
+            )
+        raise AttributeError(
+            f"'RemoteResults' object has no attribute '{name}'."
+        )
 
 
 class RemoteConnection(ABC):
@@ -28,15 +88,31 @@ class RemoteConnection(ABC):
 
     @abstractmethod
     def submit(
-        self, sequence: Sequence | list[Sequence], **kwargs: Any
-    ) -> JobId:
+        self, sequence: Sequence, **kwargs: Any
+    ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
         pass
 
     @abstractmethod
-    def fetch_result(self, job_id: JobId) -> Results | list[Results]:
-        """Fetch the results of a completed job."""
+    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+        """Fetches the results of a completed submission."""
         pass
+
+    @abstractmethod
+    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
+        """Gets the status of a submission from its ID.
+
+        Not all SubmissionStatus values must be covered, but at least
+        SubmissionStatus.DONE is expected.
+        """
+        pass
+
+    def fetch_available_devices(self) -> dict[str, Device]:
+        """Fetches the available devices through this connection."""
+        raise NotImplementedError(
+            "Unable to fetch the available devices through this "
+            "remote connection."
+        )
 
 
 class RemoteBackend(Backend):
@@ -61,10 +137,3 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
-        # Extra arguments to add to pass to RemoteConnection.submit()
-        self._submit_kwargs: dict[str, Any] = {}
-
-    def run(self) -> Results | list[Results]:
-        """Runs on the remote backend and returns the result."""
-        job_id = self._connection.submit(self._sequence, **self._submit_kwargs)
-        return self._connection.fetch_result(job_id)
