@@ -14,16 +14,23 @@
 """Allows to connect to PASQAL's cloud platform to run sequences."""
 from __future__ import annotations
 
-from typing import Any, Optional
+import copy
+from typing import Any, Dict, Optional, cast
 
 import pasqal_cloud
 
 from pulser import Sequence
+from pulser.backend.remote import (
+    RemoteConnection,
+    RemoteResults,
+    SubmissionStatus,
+)
 from pulser.devices import Device
+from pulser.result import Result, SampledResult
 from pulser_pasqal.job_parameters import JobParameters
 
 
-class PasqalCloud:
+class PasqalCloud(RemoteConnection):
     """Manager of the connection to PASQAL's cloud platform.
 
     The cloud connection enables to run sequences on simulators or on real
@@ -51,6 +58,82 @@ class PasqalCloud:
             **kwargs,
         )
 
+    def submit(self, sequence: Sequence, **kwargs: Any) -> RemoteResults:
+        """Submits the sequence for execution on a remote Pasqal backend."""
+        if not sequence.is_measured():
+            bases = sequence.get_addressed_bases()
+            if len(bases) != 1:
+                raise ValueError(
+                    "The measurement basis can't be implicitly determined "
+                    "for a sequence not addressing a single basis."
+                )
+            # The copy prevents changing the input sequence
+            sequence = copy.copy(sequence)
+            sequence.measure(bases[0])
+
+        emulator = kwargs.get("emulator", None)
+        job_params: list[dict[str, int | dict]] = kwargs.get("job_params", [])
+        if emulator is None:
+            suffix = " when executing a sequence on a real QPU."
+            if not job_params:
+                raise ValueError("'job_params' must be specified" + suffix)
+            if any("runs" not in j for j in job_params):
+                raise ValueError(
+                    "All elements of 'job_params' must specify 'runs'" + suffix
+                )
+        if sequence.is_parametrized() or sequence.is_register_mappable():
+            for params in job_params:
+                vars = cast(Dict[str, Any], params.get("variables", {}))
+                sequence.build(**vars)
+
+        # TODO: Parse configuration parameters
+        configuration = None
+
+        batch = self._sdk_connection.create_batch(
+            serialized_sequence=sequence.to_abstract_repr(),
+            jobs=job_params,
+            emulator=emulator,
+            configuration=configuration,
+            wait=False,
+            fetch_results=False,
+        )
+        return RemoteResults(batch.id, self)
+
+    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
+        # For now, the results are always sampled results
+        batch = self._sdk_connection.get_batch(
+            id=submission_id, fetch_results=True
+        )
+        seq_builder = Sequence.from_abstract_repr(batch.sequence_builder)
+        reg = seq_builder.get_register(include_mappable=True)
+        all_qubit_ids = reg.qubit_ids
+        meas_basis = seq_builder.get_measurement_basis()
+
+        results = []
+        for job in batch.jobs.values():
+            vars = job.variables
+            size: int | None = None
+            if vars and "qubits" in vars:
+                size = len(vars["qubits"])
+            counts = job.result
+            assert counts is not None, "Failed to fetch the results."
+            results.append(
+                SampledResult(
+                    atom_order=all_qubit_ids[slice(size)],
+                    meas_basis=meas_basis,
+                    bitstring_counts=counts,
+                )
+            )
+        return tuple(results)
+
+    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
+        """Gets the status of a submission from its ID."""
+        batch = self._sdk_connection.get_batch(
+            id=submission_id, fetch_results=False
+        )
+        return SubmissionStatus[batch.status]
+
+    # TODO: Deprecate
     def create_batch(
         self,
         seq: Sequence,
@@ -95,6 +178,7 @@ class PasqalCloud:
             fetch_results=fetch_results,
         )
 
+    # TODO: Deprecate
     def get_batch(
         self, id: str, fetch_results: bool = False
     ) -> pasqal_cloud.Batch:
