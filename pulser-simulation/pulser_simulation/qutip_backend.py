@@ -18,18 +18,22 @@ from typing import Any
 from pulser import Sequence
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
-
-from pulser_simulation.simulation import Simulation
 from pulser_simulation.simresults import SimulationResults
+from pulser_simulation.simulation import Simulation
 
 
 class QutipBackend(Backend):
-    """A backend for emulating the sequences using qutip."""
+    """A backend for emulating the sequences using qutip.
 
-    # TODO: Doc properly
+    Args:
+        sequence: The sequence to emulate.
+        config: The configuration for the Qutip emulator.
+    """
+
     def __init__(
         self, sequence: Sequence, config: EmulatorConfig = EmulatorConfig()
     ):
+        """Initializes a new QutipBackend."""
         super().__init__(sequence)
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
