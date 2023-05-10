@@ -94,13 +94,19 @@ def abstract_repr(name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
 
 
 def serialize_abstract_sequence(
-    seq: Sequence, seq_name: str = "pulser-exported", **defaults: Any
+    seq: Sequence,
+    seq_name: str = "pulser-exported",
+    json_dumps_options: dict[str, Any] = {},
+    **defaults: Any,
 ) -> str:
     """Serializes the Sequence into an abstract JSON object.
 
     Keyword Args:
         seq_name (str): A name for the sequence. If not defined, defaults
             to "pulser-exported".
+        json_dumps_options: A mapping between optional parameters of
+            ``json.dumps()`` (as string) and their value (parameter cannot
+            be "cls").
         defaults: The default values for all the variables declared in this
             Sequence instance, indexed by the name given upon declaration.
             Check ``Sequence.declared_variables`` to see all the variables.
@@ -286,4 +292,4 @@ def serialize_abstract_sequence(
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 
-    return json.dumps(res, cls=AbstractReprEncoder)
+    return json.dumps(res, cls=AbstractReprEncoder, **json_dumps_options)
