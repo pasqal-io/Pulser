@@ -21,7 +21,6 @@ import pasqal_cloud
 import pulser
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import RemoteBackend, RemoteResults
-
 from pulser_pasqal.pasqal_cloud import PasqalCloud
 
 
