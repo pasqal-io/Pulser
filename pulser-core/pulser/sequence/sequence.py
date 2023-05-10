@@ -1037,12 +1037,22 @@ class Sequence(Generic[DeviceType]):
                 ``supported_bases`` attribute of the selected device for
                 the available options).
         """
-        available = self.get_addressed_bases()
+        available = (
+            self._device.supported_bases - {"XY"}
+            if not self._in_xy
+            else {"XY"}
+        )
         if basis not in available:
             raise ValueError(
                 f"The basis '{basis}' is not supported by the "
                 "selected device and operation mode. The "
                 "available options are: " + ", ".join(list(available))
+            )
+        elif basis not in self.get_addressed_bases():
+            warnings.warn(
+                f"The desired measurement basis '{basis}' is not being "
+                "addressed by any channel in the sequence.",
+                stacklevel=2,
             )
 
         if self.is_parametrized():
