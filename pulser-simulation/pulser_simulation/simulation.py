@@ -30,8 +30,10 @@ from numpy.typing import ArrayLike
 import pulser.sampler as sampler
 from pulser import Pulse, Sequence
 from pulser.register import QubitId
+from pulser.result import SampledResult
 from pulser.sampler.samples import _TargetSlot
 from pulser.sequence._seq_drawer import draw_sequence
+from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
     CoherentResults,
@@ -970,8 +972,17 @@ class Simulation:
                     progress_bar=p_bar,
                     options=solv_ops,
                 )
+            results = [
+                QutipResult(
+                    tuple(self._qdict),
+                    self._meas_basis,
+                    state,
+                    self._meas_basis == self.basis_name,
+                )
+                for state in result.states
+            ]
             return CoherentResults(
-                result.states,
+                results,
                 self._size,
                 self.basis_name,
                 self._eval_times_array,
@@ -1036,12 +1047,12 @@ class Simulation:
                 ]
             )
         n_measures = self.config.runs * self.config.samples_per_run
-        total_run_prob = [
-            Counter({k: v / n_measures for k, v in total_count[t].items()})
+        results = [
+            SampledResult(tuple(self._qdict), self._meas_basis, total_count[t])
             for t in time_indices
         ]
         return NoisyResults(
-            total_run_prob,
+            results,
             self._size,
             self.basis_name,
             self._eval_times_array,
