@@ -183,6 +183,23 @@ class _ChannelSchedule:
 
         return ChannelSamples(amp, det, phase, slots, self.eom_blocks)
 
+    @property
+    def zero_atol(self) -> float:
+        channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
+        atol = 1e-2
+        for slot in channel_slots:
+            pulse = cast(Pulse, slot.type)
+            modulated_amp = pulse.amplitude.modulated_samples(
+                self.channel_obj, eom=self.in_eom_mode(time_slot=slot)
+            )
+            buffer_start, buffer_end = pulse.amplitude.modulation_buffers(
+                self.channel_obj
+            )
+            atol = max(
+                atol, modulated_amp[buffer_start], modulated_amp[-buffer_end]
+            )
+        return atol
+
     @overload
     def __getitem__(self, key: int) -> _TimeSlot:
         pass

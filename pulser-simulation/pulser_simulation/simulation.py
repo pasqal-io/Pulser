@@ -28,10 +28,10 @@ import qutip
 from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
-from pulser import Pulse, Sequence
+from pulser import Pulse, Register, Sequence, Device
 from pulser.register import QubitId
 from pulser.result import SampledResult
-from pulser.sampler.samples import _TargetSlot
+from pulser.sampler.samples import _TargetSlot, SequenceSamples
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
@@ -41,12 +41,14 @@ from pulser_simulation.simresults import (
     SimulationResults,
 )
 
-
-class Simulation:
-    r"""Simulation of a pulse sequence using QuTiP.
+class QutipEmulator:
+    r"""Simulation of a Pulser SequenceSamples using QuTiP.
+    
+    Warning: The duration of the samples are extended by 1 ns
+        to improve the ODE solver convergence.
 
     Args:
-        sequence: An instance of a Pulser Sequence that we
+        sampled_seq: An instance of a Pulser SequenceSamples that we
             want to simulate.
         sampling_rate: The fraction of samples that we wish to
             extract from the pulse sequence to simulate. Has to be a
@@ -64,58 +66,34 @@ class Simulation:
               those specific times.
 
             - A float to act as a sampling rate for the resulting state.
-        with_modulation: Whether to simulated the sequence with the programmed
-            input or the expected output.
     """
 
     def __init__(
         self,
-        sequence: Sequence,
+        sampled_seq: SequenceSamples,
+        register: Register,
         sampling_rate: float = 1.0,
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
-        with_modulation: bool = False,
     ) -> None:
         """Instantiates a Simulation object."""
-        if not isinstance(sequence, Sequence):
+        # Initializing the samples obj
+        if not isinstance(sampled_seq, SequenceSamples):
             raise TypeError(
                 "The provided sequence has to be a valid "
-                "pulser.Sequence instance."
+                "pulser.SequenceSamples instance."
             )
-        if sequence.is_parametrized() or sequence.is_register_mappable():
-            raise ValueError(
-                "The provided sequence needs to be built to be simulated. Call"
-                " `Sequence.build()` with the necessary parameters."
-            )
-        if not sequence._schedule:
-            raise ValueError("The provided sequence has no declared channels.")
-        if all(
-            sequence._schedule[x][-1].tf == 0
-            for x in sequence.declared_channels
-        ):
-            raise ValueError(
-                "No instructions given for the channels in the sequence."
-            )
-        self._seq = sequence
-        self._interaction = "XY" if self._seq._in_xy else "ising"
-        self._qdict = self._seq.qubit_info
+        if sampled_seq.max_duration == 0:
+            raise ValueError("SequenceSamples is empty.")
+        self._interaction = "XY" if sampled_seq._in_xy else "ising"
+        self._tot_duration = sampled_seq.max_duration
+        sampled_seq.extend_duration(sampled_seq.max_duration + 1)
+        self.samples_obj = sampled_seq
+
+        # Initializing qubit infos
+        self._qdict = register.qubit_info
         self._size = len(self._qdict)
-        self._modulated = with_modulation
-        if self._modulated and sequence._slm_mask_targets:
-            raise NotImplementedError(
-                "Simulation of sequences combining an SLM mask and output "
-                "modulation is not supported."
-            )
-        self._tot_duration = self._seq.get_duration(
-            include_fall_time=self._modulated
-        )
-        self.samples_obj = sampler.sample(
-            self._seq,
-            modulation=self._modulated,
-            # The samples are extended by 1 to improve the ODE
-            # solver convergence
-            extended_duration=self._tot_duration + 1,
-        )
+        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
@@ -124,7 +102,10 @@ class Simulation:
         self.basis: dict[str, qutip.Qobj]
         self.dim: int
         self._eval_times_array: np.ndarray
+        self._bad_atoms: dict[Union[str, int], bool] = {}
+        self._doppler_detune: dict[Union[str, int], float] = {}
 
+        # Initializing sampling and evalutaion times
         if not (0 < sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "
@@ -136,9 +117,6 @@ class Simulation:
                 "`sampling_rate` is too small, less than 4 data points."
             )
         self._sampling_rate = sampling_rate
-        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
-        self._collapse_ops: list[qutip.Qobj] = []
-
         self.sampling_times = self._adapt_to_sampling_rate(
             # Include extra time step for final instruction from samples:
             np.arange(self._tot_duration + 1, dtype=np.double)
@@ -146,16 +124,17 @@ class Simulation:
         )
         self.evaluation_times = evaluation_times  # type: ignore
 
-        self._bad_atoms: dict[Union[str, int], bool] = {}
-        self._doppler_detune: dict[Union[str, int], float] = {}
         # Stores the qutip operators used in building the Hamiltonian
         self.operators: dict[str, defaultdict[str, dict]] = {
             addr: defaultdict(dict) for addr in ["Global", "Local"]
         }
+        self._collapse_ops: list[qutip.Qobj] = []
+
         # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
-        if hasattr(self._seq, "_measurement"):
-            self._meas_basis = self._seq._measurement
+        
+        if self.samples_obj._measurement:
+            self._meas_basis = self.samples_obj._measurement
         else:
             if self.basis_name in {"digital", "all"}:
                 self._meas_basis = "digital"
@@ -497,11 +476,6 @@ class Simulation:
         See Also:
             Sequence.draw(): Draws the sequence in its current state.
         """
-        if draw_interp_pts and self._modulated:
-            raise ValueError(
-                "Can't draw the interpolation points when the sequence is "
-                "modulated; `draw_interp_pts` must be `False`."
-            )
         draw_sequence(
             self._seq,
             self._sampling_rate,
@@ -654,13 +628,12 @@ class Simulation:
             basis = ["u", "d"]
             projectors = ["uu", "du", "ud", "dd"]
         else:
-            used_bases = self.samples_obj.used_bases()
-            if "digital" not in used_bases:
+            if "digital" not in self.samples_obj.used_bases:
                 self.basis_name = "ground-rydberg"
                 self.dim = 2
                 basis = ["r", "g"]
                 projectors = ["gr", "rr", "gg"]
-            elif "ground-rydberg" not in used_bases:
+            elif "ground-rydberg" not in self.samples_obj.used_bases:
                 self.basis_name = "digital"
                 self.dim = 2
                 basis = ["g", "h"]
@@ -703,7 +676,7 @@ class Simulation:
             1/hbar factor.
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            U = 0.5 * self._seq._device.interaction_coeff / dist**6
+            U = 0.5 * self.samples_obj.interaction_coeff / dist**6
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
         def make_xy_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
@@ -716,17 +689,17 @@ class Simulation:
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
             coords_dim = len(self._qdict[q1])
-            mag_norm = np.linalg.norm(self._seq.magnetic_field[:coords_dim])
+            mag_norm = np.linalg.norm(self.samples_obj.magnetic_field[:coords_dim])
             if mag_norm < 1e-8:
                 cosine = 0.0
             else:
                 cosine = np.dot(
                     (self._qdict[q1] - self._qdict[q2]),
-                    self._seq.magnetic_field[:coords_dim],
+                    self.samples_obj.magnetic_field[:coords_dim],
                 ) / (dist * mag_norm)
             U = (
                 0.5
-                * cast(float, self._seq._device.interaction_coeff_xy)
+                * cast(float, self.samples_obj.interaction_coeff_xy)
                 * (1 - 3 * cosine**2)
                 / dist**3
             )
@@ -738,7 +711,7 @@ class Simulation:
             if masked:
                 # Calculate the total number of good, unmasked qubits
                 effective_size = self._size - sum(self._bad_atoms.values())
-                for q in self._seq._slm_mask_targets:
+                for q in self.samples_obj._slm_mask.targets:
                     if not self._bad_atoms[q]:
                         effective_size -= 1
                 if effective_size < 2:
@@ -753,8 +726,8 @@ class Simulation:
                     or (
                         masked
                         and (
-                            q1 in self._seq._slm_mask_targets
-                            or q2 in self._seq._slm_mask_targets
+                            q1 in self.samples_obj._slm_mask.targets
+                            or q2 in self.samples_obj._slm_mask.targets
                         )
                     )
                 ):
@@ -828,11 +801,11 @@ class Simulation:
         if self.basis_name != "digital" and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
-            if self._seq._slm_mask_time:
+            if self.samples_obj._slm_mask.end > 0:
                 # Build an array of binary coefficients for the interaction
                 # term of unmasked qubits
                 coeff = np.ones(self._tot_duration)
-                coeff[0 : self._seq._slm_mask_time[1]] = 0
+                coeff[0 : self.samples_obj._slm_mask.end] = 0
                 # Build the interaction term for unmasked qubits
                 qobj_list = [
                     [
@@ -919,9 +892,9 @@ class Simulation:
         else:
             min_pulse_duration = min(
                 slot.tf - slot.ti
-                for ch_schedule in self._seq._schedule.values()
-                for slot in ch_schedule
-                if isinstance(slot.type, Pulse)
+                for ch_sample in self.samples_obj.samples_list
+                for slot in ch_sample.slots 
+                if not (np.all(np.isclose(ch_sample.amp[slot.ti: slot.tf], 0)) and np.all(np.isclose(ch_sample.det[slot.ti: slot.tf], 0)))
             )
             auto_max_step = 0.5 * (min_pulse_duration / 1000)
             solv_ops = qutip.Options(max_step=auto_max_step, **options)
@@ -1058,3 +1031,106 @@ class Simulation:
             self._eval_times_array,
             n_measures,
         )
+    @classmethod
+    def from_sequence(
+        cls,
+        sequence: Sequence,
+        sampling_rate: float = 1.0,
+        config: Optional[SimConfig] = None,
+        evaluation_times: Union[float, str, ArrayLike] = "Full",
+        with_modulation: bool = False,
+        ) -> QutipEmulator:
+        r"""Simulation of a pulse sequence using QuTiP.
+
+        Args:
+            sequence: An instance of a Pulser Sequence that we
+                want to simulate.
+            sampling_rate: The fraction of samples that we wish to
+                extract from the pulse sequence to simulate. Has to be a
+                value between 0.05 and 1.0.
+            config: Configuration to be used for this simulation.
+            evaluation_times: Choose between:
+
+                - "Full": The times are set to be the ones used to define the
+                Hamiltonian to the solver.
+
+                - "Minimal": The times are set to only include initial and final
+                times.
+
+                - An ArrayLike object of times in µs if you wish to only include
+                those specific times.
+
+                - A float to act as a sampling rate for the resulting state.
+            with_modulation: Whether to simulated the sequence with the programmed
+                input or the expected output.
+        """
+        if not isinstance(sequence, Sequence):
+            raise TypeError(
+                "The provided sequence has to be a valid "
+                "pulser.Sequence instance."
+            )
+        if sequence.is_parametrized() or sequence.is_register_mappable():
+            raise ValueError(
+                "The provided sequence needs to be built to be simulated. Call"
+                " `Sequence.build()` with the necessary parameters."
+            )
+        if not sequence._schedule:
+            raise ValueError("The provided sequence has no declared channels.")
+        if all(
+            sequence._schedule[x][-1].tf == 0
+            for x in sequence.declared_channels
+        ):
+            raise ValueError(
+                "No instructions given for the channels in the sequence."
+            )
+        if with_modulation and sequence._slm_mask_targets:
+            raise NotImplementedError(
+                "Simulation of sequences combining an SLM mask and output "
+                "modulation is not supported."
+            )
+        return Simulation(sampler.sample(
+            sequence,
+            modulation=with_modulation,
+            # The samples are extended by 1 to improve the ODE
+            # solver convergence
+            extended_duration=sequence.get_duration(include_fall_time=with_modulation) + 1,
+        ))
+
+
+
+class Simulation:
+    r"""Simulation of a pulse sequence using QuTiP.
+
+    Args:
+        sequence: An instance of a Pulser Sequence that we
+            want to simulate.
+        sampling_rate: The fraction of samples that we wish to
+            extract from the pulse sequence to simulate. Has to be a
+            value between 0.05 and 1.0.
+        config: Configuration to be used for this simulation.
+        evaluation_times: Choose between:
+
+            - "Full": The times are set to be the ones used to define the
+              Hamiltonian to the solver.
+
+            - "Minimal": The times are set to only include initial and final
+              times.
+
+            - An ArrayLike object of times in µs if you wish to only include
+              those specific times.
+
+            - A float to act as a sampling rate for the resulting state.
+        with_modulation: Whether to simulated the sequence with the programmed
+            input or the expected output.
+    """
+
+    def __init__(
+        self,
+        sequence: Sequence,
+        sampling_rate: float = 1.0,
+        config: Optional[SimConfig] = None,
+        evaluation_times: Union[float, str, ArrayLike] = "Full",
+        with_modulation: bool = False,
+    ) -> None:
+        """Instantiates a Simulation object."""
+        self = QutipEmulator.from_sequence(sequence, sampling_rate, config, evaluation_times, with_modulation)

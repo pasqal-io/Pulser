@@ -46,6 +46,13 @@ def sample(
             seq._slm_mask_targets,
             seq._slm_mask_time[1],
         )
+    optionals["_interaction_coeff_xy"] = seq.device.interaction_coeff_xy
+    optionals["_interaction_coeff"] = seq.device.interaction_coeff
+    optionals["_mag_field"] = seq.magnetic_field()
+    if seq.is_measured:
+        # Has attribute measurement because sequence can't be parametrized
+        optionals["_measurement"] = seq._measurement
+
     return SequenceSamples(
         list(seq.declared_channels.keys()),
         samples_list,
