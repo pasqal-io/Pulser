@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Defines the QutipBackend class."""
 from __future__ import annotations
 
 from typing import Any
@@ -18,6 +19,7 @@ from typing import Any
 from pulser import Sequence
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
+from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import SimulationResults
 from pulser_simulation.simulation import Simulation
 
@@ -44,7 +46,7 @@ class QutipBackend(Backend):
         self._sim_obj = Simulation(
             sequence,
             sampling_rate=self._config.sampling_rate,
-            config=self._config.noise_model,
+            config=SimConfig.from_noise_model(self._config.noise_model),
             evaluation_times=self._config.evaluation_times,
             with_modulation=self._config.with_modulation,
         )

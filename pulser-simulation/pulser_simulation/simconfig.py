@@ -16,10 +16,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal, Optional, Union, get_args
+from math import sqrt
+from typing import Any, Literal, Optional, Tuple, Type, TypeVar, Union, cast
 
-import numpy as np
 import qutip
+
+from pulser.backend.noise_model import NoiseModel
 
 NOISE_TYPES = Literal[
     "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"
@@ -27,6 +29,8 @@ NOISE_TYPES = Literal[
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
+
+T = TypeVar("T", bound="SimConfig")
 
 
 @dataclass(frozen=True)
@@ -86,33 +90,77 @@ class SimConfig:
     eff_noise_probs: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
-    spam_dict: dict[str, float] = field(
-        init=False, default_factory=dict, repr=False
-    )
-    doppler_sigma: float = field(
-        init=False, default=KEFF * np.sqrt(KB * 50.0e-6 / MASS)
-    )
+
+    @classmethod
+    def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
+        """Creates a SimConfig from a NoiseModel."""
+        return cls(
+            noise=noise_model.noise_types,
+            runs=noise_model.runs,
+            samples_per_run=noise_model.samples_per_run,
+            temperature=noise_model.temperature,
+            laser_waist=noise_model.laser_waist,
+            amp_sigma=noise_model.amp_sigma,
+            eta=noise_model.state_prep_error,
+            epsilon=noise_model.p_false_pos,
+            epsilon_prime=noise_model.p_false_neg,
+            dephasing_prob=noise_model.dephasing_prob,
+            depolarizing_prob=noise_model.depolarizing_prob,
+            eff_noise_probs=noise_model.eff_noise_probs,
+            eff_noise_opers=list(map(qutip.Qobj, noise_model.eff_noise_opers)),
+        )
+
+    def to_noise_model(self) -> NoiseModel:
+        """Creates a NoiseModel from the SimConfig."""
+        return NoiseModel(
+            noise_types=cast(Tuple[NOISE_TYPES, ...], self.noise),
+            runs=self.runs,
+            samples_per_run=self.samples_per_run,
+            state_prep_error=self.eta,
+            p_false_pos=self.epsilon,
+            p_false_neg=self.epsilon_prime,
+            temperature=self.temperature * 1e6,  # Converts back to µK
+            laser_waist=self.laser_waist,
+            amp_sigma=self.amp_sigma,
+            dephasing_prob=self.dephasing_prob,
+            depolarizing_prob=self.depolarizing_prob,
+            eff_noise_probs=self.eff_noise_probs,
+            eff_noise_opers=[op.full() for op in self.eff_noise_opers],
+        )
 
     def __post_init__(self) -> None:
-        if not 0.0 <= self.amp_sigma < 1.0:
-            raise ValueError(
-                "The standard deviation in amplitude (amp_sigma="
-                f"{self.amp_sigma}) must be greater than or equal"
-                " to 0. and smaller than 1."
+        # only one noise was given as argument : convert it to a tuple
+        if isinstance(self.noise, str):
+            self._change_attribute("noise", (self.noise,))
+
+        # Converts temperature from µK to K
+        if not isinstance(self.temperature, (int, float)):
+            raise TypeError(
+                f"'temperature' must be a float, not {type(self.temperature)}."
             )
-        self._process_temperature()
-        self._change_attribute(
-            "spam_dict",
-            {
-                "eta": self.eta,
-                "epsilon": self.epsilon,
-                "epsilon_prime": self.epsilon_prime,
-            },
-        )
-        self._check_noise_types()
+        self._change_attribute("temperature", self.temperature * 1e-6)
+
+        # Kept to show error messages with the right parameter names
         self._check_spam_dict()
-        self._calc_sigma_doppler()
-        self._check_eff_noise()
+
+        self._check_eff_noise_opers_type()
+
+        # Runs the noise model checks
+        self.to_noise_model()
+
+    @property
+    def spam_dict(self) -> dict[str, float]:
+        """A dictionary combining the SPAM error parameters."""
+        return {
+            "eta": self.eta,
+            "epsilon": self.epsilon,
+            "epsilon_prime": self.epsilon_prime,
+        }
+
+    @property
+    def doppler_sigma(self) -> float:
+        """Standard deviation for Doppler shifting due to thermal motion."""
+        return KEFF * sqrt(KB * self.temperature / MASS)
 
     def __str__(self, solver_options: bool = False) -> str:
         lines = [
@@ -155,113 +203,18 @@ class SimConfig:
                     + " greater than 0 and less than 1."
                 )
 
-    def _process_temperature(self) -> None:
-        # checks value of temperature field and converts it to K from muK
-        if self.temperature <= 0:
-            raise ValueError(
-                "Temperature field"
-                + f" (`temperature` = {self.temperature}) must be"
-                + " greater than 0."
-            )
-        self._change_attribute("temperature", self.temperature * 1.0e-6)
-
-    def _check_noise_types(self) -> None:
-        # only one noise was given as argument : convert it to a tuple
-        if isinstance(self.noise, str):
-            self._change_attribute("noise", (self.noise,))
-        for noise_type in self.noise:
-            if noise_type not in get_args(NOISE_TYPES):
-                raise ValueError(
-                    f"{noise_type} is not a valid noise type. "
-                    + "Valid noise types: "
-                    + ", ".join(get_args(NOISE_TYPES))
-                )
-        dephasing_on = "dephasing" in self.noise
-        depolarizing_on = "depolarizing" in self.noise
-        eff_noise_on = "eff_noise" in self.noise
-        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
-        if eff_noise_conflict:
-            raise NotImplementedError(
-                "Depolarizing, dephasing and eff_noise channels"
-                "cannot be activated at the same time in"
-                " one simulation."
-            )
-
-    def _calc_sigma_doppler(self) -> None:
-        # sigma = keff Deltav, keff = 8.7mum^-1, Deltav = sqrt(kB T / m)
-        self._change_attribute(
-            "doppler_sigma", KEFF * np.sqrt(KB * self.temperature / MASS)
-        )
-
     def _change_attribute(self, attr_name: str, new_value: Any) -> None:
         object.__setattr__(self, attr_name, new_value)
 
-    def _check_eff_noise(self) -> None:
-        # Check the validity of the distribution of probability
-        if "eff_noise" in self.noise:
-            if len(self.eff_noise_opers) != len(self.eff_noise_probs):
-                raise ValueError(
-                    f"The operators list length({len(self.eff_noise_opers)}) "
-                    "and probabilities list length"
-                    f"({len(self.eff_noise_probs)}) must be equal."
-                )
-            if self.eff_noise_opers == [] or self.eff_noise_probs == []:
-                raise ValueError(
-                    "The general noise parameters have not been filled."
-                )
-
-            for prob in self.eff_noise_probs:
-                if not isinstance(prob, float):
-                    raise TypeError(
-                        "eff_noise_probs is a list of floats,"
-                        f" it must not contain a {type(prob)}."
-                    )
-
-            prob_distr = np.array(self.eff_noise_probs)
-            lower_bound = np.any(prob_distr < 0.0)
-            upper_bound = np.any(prob_distr > 1.0)
-            sum_p = not np.isclose(sum(prob_distr), 1.0)
-
-            if sum_p or lower_bound or upper_bound:
-                raise ValueError(
-                    "The distribution given is not a probability distribution."
-                )
-            # Check the validity of operators
-            for operator in self.eff_noise_opers:
-                # type checking
-
-                if type(operator) != qutip.qobj.Qobj:
-                    raise TypeError(f"{operator} is not a Qobj.")
-                if operator.type != "oper":
-                    raise TypeError(
-                        "Operators are supposed to be of type oper."
-                    )
-                if operator.shape != (2, 2):
-                    raise NotImplementedError(
-                        "Operator's shape must be (2,2) "
-                        f"not {operator.shape}."
-                    )
-            # Identity position
-            identity = qutip.qeye(2)
-            if self.eff_noise_opers[0] != identity:
-                raise NotImplementedError(
-                    "You must put the identity matrix at the "
-                    "beginning of the operator list."
-                )
-            # Completeness relation checking
-            sum_op = qutip.Qobj(shape=(2, 2))
-            length = len(self.eff_noise_probs)
-            for i in range(length):
-                sum_op += (
-                    self.eff_noise_probs[i]
-                    * self.eff_noise_opers[i]
-                    * self.eff_noise_opers[i].dag()
-                )
-
-            if sum_op != identity:
-                raise ValueError(
-                    "The completeness relation is not verified."
-                    f" Ended up with {sum_op} instead of {identity}."
+    def _check_eff_noise_opers_type(self) -> None:
+        # Check the validity of operators
+        for operator in self.eff_noise_opers:
+            # type checking
+            if not isinstance(operator, qutip.Qobj):
+                raise TypeError(f"{operator} is not a Qobj.")
+            if operator.type != "oper":
+                raise TypeError(
+                    "Operators are supposed to be of Qutip type 'oper'."
                 )
 
     @property

@@ -321,10 +321,6 @@ class Simulation:
         diff_noise_set = new_noise_set - old_noise_set
         # Create temporary param_dict to add noise parameters:
         param_dict: dict[str, Any] = asdict(self._config)
-        # remove redundant `spam_dict`:
-        del param_dict["spam_dict"]
-        # `doppler_sigma` will be recalculated from temperature if needed:
-        del param_dict["doppler_sigma"]
         # Begin populating with added noise parameters:
         param_dict["noise"] = tuple(new_noise_set)
         if "SPAM" in diff_noise_set:

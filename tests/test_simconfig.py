@@ -62,12 +62,14 @@ def test_init(matrices):
     )
     with pytest.raises(ValueError, match="is not a valid noise type."):
         SimConfig(noise="bad_noise")
-    with pytest.raises(ValueError, match="Temperature field"):
-        SimConfig(temperature=-1.0)
+    with pytest.raises(
+        ValueError, match="'temperature' must be greater than zero"
+    ):
+        SimConfig(temperature=0.0)
     with pytest.raises(ValueError, match="SPAM parameter"):
         SimConfig(eta=-1.0)
     with pytest.raises(
-        ValueError, match="The standard deviation in amplitude"
+        ValueError, match="'amp_sigma' must be greater than or equal to zero"
     ):
         SimConfig(amp_sigma=-0.001)
 
@@ -84,7 +86,7 @@ def test_init(matrices):
 def test_eff_noise_init(noise_sample):
     with pytest.raises(
         NotImplementedError,
-        match="Depolarizing, dephasing and eff_noise channels",
+        match="Depolarizing, dephasing and effective noise channels",
     ):
         SimConfig(noise=noise_sample)
 
@@ -111,7 +113,9 @@ def test_eff_noise_opers(matrices):
         SimConfig(noise=("eff_noise"), eff_noise_probs=[1.0])
     with pytest.raises(TypeError, match="eff_noise_probs is a list of floats"):
         SimConfig(
-            noise=("eff_noise"), eff_noise_probs=[""], eff_noise_opers=[""]
+            noise=("eff_noise"),
+            eff_noise_probs=["0.1"],
+            eff_noise_opers=[qeye(2)],
         )
     with pytest.raises(
         ValueError, match="The general noise parameters have not been filled."
@@ -121,7 +125,7 @@ def test_eff_noise_opers(matrices):
         SimConfig(
             noise=("eff_noise"), eff_noise_opers=[2.0], eff_noise_probs=[1.0]
         )
-    with pytest.raises(TypeError, match="to be of type oper."):
+    with pytest.raises(TypeError, match="to be of Qutip type 'oper'."):
         SimConfig(
             noise=("eff_noise"),
             eff_noise_opers=[matrices["ket"]],

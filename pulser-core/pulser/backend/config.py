@@ -19,6 +19,8 @@ from typing import Any, Literal
 
 import numpy
 
+from pulser.backend.noise_model import NoiseModel
+
 
 @dataclass
 class BackendConfig:
@@ -66,4 +68,4 @@ class EmulatorConfig(BackendConfig):
     ] = "Minimal"
     initial_state: Literal["all-ground"] | numpy.ndarray = "all-ground"
     with_modulation: bool = False
-    noise_model: Any = None  # TODO: Define NoiseModel class
+    noise_model: NoiseModel = NoiseModel()
