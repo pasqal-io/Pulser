@@ -58,12 +58,3 @@ class QPUBackend(RemoteBackend):
                 "To be sent to a QPU, the device of the sequence "
                 "must be a real device, instance of 'Device'."
             )
-        available_devices = self._connection.fetch_available_devices()
-        # TODO: Could be better to check if the devices are
-        # compatible, even if not exactly equal
-        if sequence.device not in available_devices.values():
-            raise ValueError(
-                "The device used in the sequence does not match any "
-                "of the devices currently avaialble through the remote "
-                "connection."
-            )

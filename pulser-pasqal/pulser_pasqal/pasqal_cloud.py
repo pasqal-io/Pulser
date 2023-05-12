@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import copy
+import warnings
 from dataclasses import fields
 from typing import Any, Dict, Optional, cast
 
@@ -89,6 +90,17 @@ class PasqalCloud(RemoteConnection):
                 raise ValueError(
                     "All elements of 'job_params' must specify 'runs'" + suffix
                 )
+
+            available_devices = self.fetch_available_devices()
+            # TODO: Could be better to check if the devices are
+            # compatible, even if not exactly equal
+            if sequence.device not in available_devices.values():
+                raise ValueError(
+                    "The device used in the sequence does not match any "
+                    "of the devices currently avaialble through the remote "
+                    "connection."
+                )
+
         if sequence.is_parametrized() or sequence.is_register_mappable():
             for params in job_params:
                 vars = cast(Dict[str, Any], params.get("variables", {}))
@@ -164,7 +176,6 @@ class PasqalCloud(RemoteConnection):
 
         return emu_cls(**pasqal_config_kwargs)
 
-    # TODO: Deprecate
     def create_batch(
         self,
         seq: Sequence,
@@ -191,6 +202,17 @@ class PasqalCloud(RemoteConnection):
         Returns:
             Batch: The new batch that has been created in the database.
         """
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "'PasqalCloud.create_batch()' is deprecated and will be removed "
+            "after v0.13. To submit jobs to the Pasqal Cloud, use one of the "
+            "remote backends (eg QPUBackend, EmuTNBacked, EmuFreeBackend) "
+            "with an open PasqalCloud() connection.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        warnings.simplefilter("default", DeprecationWarning)
+
         if emulator is None and not isinstance(seq.device, Device):
             raise TypeError(
                 "To be sent to a real QPU, the device of the sequence "
@@ -209,7 +231,6 @@ class PasqalCloud(RemoteConnection):
             fetch_results=fetch_results,
         )
 
-    # TODO: Deprecate
     def get_batch(
         self, id: str, fetch_results: bool = False
     ) -> pasqal_cloud.Batch:
@@ -222,6 +243,18 @@ class PasqalCloud(RemoteConnection):
         Returns:
             Batch: The batch stored in the database.
         """
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "'PasqalCloud.get_batch()' is deprecated and will be removed "
+            "after v0.13. To retrieve the results from a job executed through"
+            " the Pasqal Cloud, use the RemoteResults instance returned after"
+            " calling run() on one of the remote backends (eg QPUBackend, "
+            "EmuTNBacked, EmuFreeBackend) with an open PasqalCloud() "
+            "connection.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        warnings.simplefilter("default", DeprecationWarning)
         return self._sdk_connection.get_batch(
             id=id, fetch_results=fetch_results
         )
