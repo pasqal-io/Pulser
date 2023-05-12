@@ -39,6 +39,8 @@ class EmulatorConfig(BackendConfig):
 
     Attributes:
         backend_options: A dictionary of backend-specific options.
+        sampling_rate: The fraction of samples to extract from the pulse
+            sequence for emulation.
         evaluation_times: The times at which results are returned. Choose
             between:
 
@@ -63,6 +65,7 @@ class EmulatorConfig(BackendConfig):
     """
 
     sampling_rate: float = 1.0
+    # TODO: Add "Final" option for backends that only return the final state
     evaluation_times: float | list[float] | Literal[
         "Full", "Minimal"
     ] = "Minimal"

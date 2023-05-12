@@ -14,6 +14,7 @@
 """Defines Pasqal specific backends."""
 from __future__ import annotations
 
+from dataclasses import fields
 from typing import Any, ClassVar
 
 import pasqal_cloud
@@ -23,11 +24,15 @@ from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import RemoteBackend, RemoteResults
 from pulser_pasqal.pasqal_cloud import PasqalCloud
 
+DEFAULT_CONFIG_EMU_TN = EmulatorConfig(sampling_rate=0.1)
+
 
 class PasqalEmulator(RemoteBackend):
     """The base class for a Pasqal emulator backend."""
 
     emulator: ClassVar[pasqal_cloud.EmulatorType]
+    default_config: ClassVar[EmulatorConfig] = EmulatorConfig()
+    configurable_fields: ClassVar[tuple[str, ...]] = ("backend_options",)
 
     def __init__(
         self,
@@ -37,11 +42,7 @@ class PasqalEmulator(RemoteBackend):
     ) -> None:
         """Initializes a new Pasqal emulator backend."""
         super().__init__(sequence, connection)
-        if not isinstance(config, EmulatorConfig):
-            raise TypeError(
-                "'config' must be of type 'EmulatorConfig', "
-                f"not {type(config)}."
-            )
+        self._validate_config(config)
         self._config = config
         if not isinstance(self._connection, PasqalCloud):
             raise TypeError(
@@ -87,14 +88,71 @@ class PasqalEmulator(RemoteBackend):
             job_params=job_params,
         )
 
+    def _validate_config(self, config: EmulatorConfig):
+        if not isinstance(config, EmulatorConfig):
+            raise TypeError(
+                "'config' must be of type 'EmulatorConfig', "
+                f"not {type(config)}."
+            )
+        for field in fields(config):
+            if field.name in self.configurable_fields:
+                continue
+            default_value = getattr(self.default_config, field.name)
+            if getattr(config, field.name) != default_value:
+                raise NotImplementedError(
+                    f"'EmulatorConfig.{field.name}' is not configurable in "
+                    "this backend. It should not be changed from its default "
+                    f"value of '{default_value}'."
+                )
+
 
 class EmuTNBackend(PasqalEmulator):
-    """An emulator backend using tensor network simulation."""
+    """An emulator backend using tensor network simulation.
+
+    Configurable fields in EmulatorConfig:
+        - sampling_rate
+        - backend_options:
+            - precision (str): The precision of the simulation. Can be "low",
+                "normal" or "high". Defaults to "normal".
+            - max_bond_dim (int): The maximum bond dimension of the Matrix
+                Product State (MPS). Defaults to 500.
+
+    All other parameters should not be changed from their default values.
+
+    Args:
+        sequence: The sequence to send to the backend.
+        connection: An open PasqalCloud connection.
+        config: An EmulatorConfig to configure the backend.
+    """
 
     emulator = pasqal_cloud.EmulatorType.EMU_TN
+    default_config = DEFAULT_CONFIG_EMU_TN
+    configurable_fields = ("backend_options", "sampling_rate")
+
+    def __init__(
+        self,
+        sequence: pulser.Sequence,
+        connection: PasqalCloud,
+        config: EmulatorConfig = DEFAULT_CONFIG_EMU_TN,
+    ) -> None:
+        """Initializes a new EmuTNBackend."""
+        super().__init__(sequence, connection, config)
 
 
 class EmuFreeBackend(PasqalEmulator):
-    """An emulator backend using free Hamiltonian time evolution."""
+    """An emulator backend using free Hamiltonian time evolution.
+
+    Configurable fields in EmulatorConfig:
+        - backend_options:
+            -  with_noise (bool): Whether to add noise to the simulation.
+                Defaults to False.
+
+    All other parameters should not be changed from their default values.
+
+    Args:
+        sequence: The sequence to send to the backend.
+        connection: An open PasqalCloud connection.
+        config: An EmulatorConfig to configure the backend.
+    """
 
     emulator = pasqal_cloud.EmulatorType.EMU_FREE

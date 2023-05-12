@@ -15,11 +15,14 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import fields
 from typing import Any, Dict, Optional, cast
 
 import pasqal_cloud
+from pasqal_cloud.device.configuration import EmuFreeConfig, EmuTNConfig
 
 from pulser import Sequence
+from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
     RemoteConnection,
     RemoteResults,
@@ -28,6 +31,11 @@ from pulser.backend.remote import (
 from pulser.devices import Device
 from pulser.result import Result, SampledResult
 from pulser_pasqal.job_parameters import JobParameters
+
+EMU_TYPE_TO_CONFIG = {
+    pasqal_cloud.EmulatorType.EMU_FREE: EmuFreeConfig,
+    pasqal_cloud.EmulatorType.EMU_TN: EmuTNConfig,
+}
 
 
 class PasqalCloud(RemoteConnection):
@@ -86,8 +94,9 @@ class PasqalCloud(RemoteConnection):
                 vars = cast(Dict[str, Any], params.get("variables", {}))
                 sequence.build(**vars)
 
-        # TODO: Parse configuration parameters
-        configuration = None
+        configuration = self._convert_configuration(
+            config=kwargs.get("config", None), emulator=emulator
+        )
 
         batch = self._sdk_connection.create_batch(
             serialized_sequence=sequence.to_abstract_repr(),
@@ -132,6 +141,28 @@ class PasqalCloud(RemoteConnection):
             id=submission_id, fetch_results=False
         )
         return SubmissionStatus[batch.status]
+
+    def _convert_configuration(
+        self,
+        config: EmulatorConfig | None,
+        emulator: pasqal_cloud.EmulatorType | None,
+    ) -> pasqal_cloud.BaseConfig | None:
+        """Converts a backend configuration into a pasqal_cloud.BaseConfig."""
+        if emulator is None or config is None:
+            return None
+        emu_cls = EMU_TYPE_TO_CONFIG[emulator]
+        backend_options = config.backend_options.copy()
+        pasqal_config_kwargs = {}
+        for field in fields(EmuTNConfig):
+            pasqal_config_kwargs[field.name] = backend_options.pop(
+                field.name, field.default
+            )
+        # We pass the remaining backend options to "extra_config"
+        pasqal_config_kwargs["extra_config"] = backend_options
+        if emulator == pasqal_cloud.EmulatorType.EMU_TN:
+            pasqal_config_kwargs["dt"] = 1.0 / config.sampling_rate
+
+        return emu_cls(**pasqal_config_kwargs)
 
     # TODO: Deprecate
     def create_batch(
