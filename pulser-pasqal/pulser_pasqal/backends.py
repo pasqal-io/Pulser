@@ -88,7 +88,7 @@ class PasqalEmulator(RemoteBackend):
             job_params=job_params,
         )
 
-    def _validate_config(self, config: EmulatorConfig):
+    def _validate_config(self, config: EmulatorConfig) -> None:
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
                 "'config' must be of type 'EmulatorConfig', "

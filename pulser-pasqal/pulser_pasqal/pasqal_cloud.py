@@ -17,10 +17,14 @@ from __future__ import annotations
 import copy
 import warnings
 from dataclasses import fields
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, Type, cast
 
 import pasqal_cloud
-from pasqal_cloud.device.configuration import EmuFreeConfig, EmuTNConfig
+from pasqal_cloud.device.configuration import (
+    BaseConfig,
+    EmuFreeConfig,
+    EmuTNConfig,
+)
 
 from pulser import Sequence
 from pulser.backend.config import EmulatorConfig
@@ -33,7 +37,7 @@ from pulser.devices import Device
 from pulser.result import Result, SampledResult
 from pulser_pasqal.job_parameters import JobParameters
 
-EMU_TYPE_TO_CONFIG = {
+EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {
     pasqal_cloud.EmulatorType.EMU_FREE: EmuFreeConfig,
     pasqal_cloud.EmulatorType.EMU_TN: EmuTNConfig,
 }
