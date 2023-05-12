@@ -208,7 +208,11 @@ class BaseDevice(ABC):
 
     @property
     def interaction_coeff(self) -> float:
-        r""":math:`C_6/\hbar` coefficient of chosen Rydberg level."""
+        r"""The interaction coefficient for the chosen Rydberg level.
+
+        Corresponds to :math:`C_6/\hbar` (in units of :math:`\mu m^6/ \mus`)
+        for the interaction term of the Ising hamiltonian.
+        """
         return float(c6_dict[self.rydberg_level])
 
     def __repr__(self) -> str:

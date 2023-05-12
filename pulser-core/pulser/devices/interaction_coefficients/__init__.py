@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""C_6/hbar (in  um^6 / us`), coeffs for Rydberg levels between 50 and 100."""
+"""C_6/hbar (in  µm^6 / µs), coeffs for Rydberg levels between 50 and 100."""
 
 import json
 from pathlib import PurePath
