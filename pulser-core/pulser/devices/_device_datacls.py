@@ -53,7 +53,8 @@ class BaseDevice(ABC):
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`2\pi \cdot MHz \cdot \mu m^3`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states. Needed only if there is a Microwave
             channel in the device. If unsure, 3700.0 is a good default value.
@@ -210,7 +211,8 @@ class BaseDevice(ABC):
     def interaction_coeff(self) -> float:
         r"""The interaction coefficient for the chosen Rydberg level.
 
-        Corresponds to :math:`C_6/\hbar` (in units of :math:`\mu m^6/ \mus`)
+        Corresponds to :math:`C_6/\hbar` (in units of
+        :math:`2\pi \cdot MHz \cdot \mu m^6`)
         for the interaction term of the Ising hamiltonian.
         """
         return float(c6_dict[self.rydberg_level])
@@ -436,9 +438,11 @@ class Device(BaseDevice):
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`2\pi \cdot MHz \cdot \mu m^3`),
             which sets the van der Waals interaction strength between atoms in
-            different Rydberg states.
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
@@ -571,9 +575,11 @@ class VirtualDevice(BaseDevice):
         max_radial_distance: The furthest away an atom can be from the center
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
-        interaction_coeff_xy: :math:`C_3/\hbar` (in :math:`\mu m^3 / \mu s`),
+        interaction_coeff_xy: :math:`C_3/\hbar`
+            (in :math:`2\pi \cdot MHz \cdot \mu m^3`),
             which sets the van der Waals interaction strength between atoms in
-            different Rydberg states.
+            different Rydberg states. Needed only if there is a Microwave
+            channel in the device. If unsure, 3700.0 is a good default value.
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
@@ -591,9 +597,9 @@ class VirtualDevice(BaseDevice):
         return ("max_atom_num", "max_radial_distance")
 
     def change_rydberg_level(self, ryd_lvl: int) -> None:
-        """Changes the Rydberg level used in the Device.
+        r"""Changes the Rydberg level used in the Device.
 
-        Find the :math:`C_6` coefficient matching the Rydberg level on
+        Find the :math:`C_6/\hbar` coefficient matching the Rydberg level on
         `this page <https://github.com/pasqal-io/Pulser/blob/develop/
         pulser-core/pulser/devices/interaction_coefficients/C6_coeffs.json>`_
 
