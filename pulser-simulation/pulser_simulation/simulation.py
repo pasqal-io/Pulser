@@ -19,7 +19,7 @@ import itertools
 import warnings
 from collections import Counter, defaultdict
 from collections.abc import Mapping
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
@@ -28,10 +28,11 @@ import qutip
 from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
-from pulser import Pulse, Register, Sequence, Device
-from pulser.register import QubitId
+from pulser import Sequence
+from pulser.devices._device_datacls import BaseDevice
+from pulser.register.base_register import BaseRegister, QubitId
 from pulser.result import SampledResult
-from pulser.sampler.samples import _TargetSlot, SequenceSamples
+from pulser.sampler.samples import SequenceSamples, _TargetSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
@@ -41,18 +42,18 @@ from pulser_simulation.simresults import (
     SimulationResults,
 )
 
+
 class QutipEmulator:
     r"""Simulation of a Pulser SequenceSamples using QuTiP.
-    
-    Warning: The duration of the samples are extended by 1 ns
-        to improve the ODE solver convergence.
 
     Args:
-        sampled_seq: An instance of a Pulser SequenceSamples that we
-            want to simulate.
-        sampling_rate: The fraction of samples that we wish to
-            extract from the pulse sequence to simulate. Has to be a
-            value between 0.05 and 1.0.
+        sampled_seq: An Pulser SequenceSamples that we want to simulate.
+        register: The register associating coordinates to the qubits targeted
+            in the SequenceSamples.
+        device: The BaseDevice used to simulate the samples. register and
+            samples has to match its properties.
+        sampling_rate: The fraction of samples that we wish to extract from
+            the samples to simulate. Has to be a value between 0.05 and 1.0.
         config: Configuration to be used for this simulation.
         evaluation_times: Choose between:
 
@@ -71,7 +72,8 @@ class QutipEmulator:
     def __init__(
         self,
         sampled_seq: SequenceSamples,
-        register: Register,
+        register: BaseRegister,
+        device: BaseDevice,
         sampling_rate: float = 1.0,
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
@@ -85,13 +87,54 @@ class QutipEmulator:
             )
         if sampled_seq.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
-        self._interaction = "XY" if sampled_seq._in_xy else "ising"
-        self._tot_duration = sampled_seq.max_duration
-        sampled_seq.extend_duration(sampled_seq.max_duration + 1)
-        self.samples_obj = sampled_seq
+        # Check compatibility of register and device
+        self.device = device
+        self.device.validate_register(register)
+        self.register = register
+        # Check compatibility of samples and device:
+        if sampled_seq._slm_mask.end > 0 and not self.device.supports_slm_mask:
+            raise ValueError(
+                "Samples use SLM mask but device does not have one."
+            )
+        if not sampled_seq.used_bases <= device.supported_bases:
+            raise ValueError(
+                "Bases used in samples should be supported by device."
+            )
+        # Check compatibility of samples and register
+        samples_list = []
+        for ch, ch_samples in sampled_seq.channel_samples.items():
+            targets_slots: set[QubitId] = set()
+            slots = []
+            for slot in ch_samples.slots:
+                if sampled_seq._ch_objs[ch].addressing == "Local":
+                    # Check that register defines targets of Local Channels
+                    targets_slots = targets_slots.union(
+                        *[slot.targets for slot in ch_samples.slots]
+                    )
+                    slots = ch_samples.slots
+                    break
+                elif slot.tf <= sampled_seq._slm_mask.end:
+                    # Check that targets of SLM mask are defined in register
+                    slots.append(slot)
+                    targets_slots = targets_slots.union(slot.targets)
+                else:
+                    # Replace targets of Global channels by qubits of register
+                    slots.append(
+                        replace(slot, targets=set(register.qubit_ids))
+                    )
+            samples_list.append(replace(ch_samples, slots=slots))
+            if not targets_slots <= set(register.qubit_ids):
+                raise ValueError(
+                    "The ids of qubits targeted in Local channels and SLM mask"
+                    " should be defined in register"
+                )
+        _sampled_seq = replace(sampled_seq, samples_list=samples_list)
+        self._interaction = "XY" if _sampled_seq._in_xy else "ising"
+        self._tot_duration = _sampled_seq.max_duration
+        self.samples_obj = _sampled_seq.extend_duration(self._tot_duration + 1)
 
         # Initializing qubit infos
-        self._qdict = register.qubit_info
+        self._qdict = self.register.qubits
         self._size = len(self._qdict)
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
@@ -122,7 +165,7 @@ class QutipEmulator:
             np.arange(self._tot_duration + 1, dtype=np.double)
             / 1000
         )
-        self.evaluation_times = evaluation_times  # type: ignore
+        self.set_evaluation_times(evaluation_times)
 
         # Stores the qutip operators used in building the Hamiltonian
         self.operators: dict[str, defaultdict[str, dict]] = {
@@ -132,7 +175,6 @@ class QutipEmulator:
 
         # Sets the config as well as builds the hamiltonian
         self.set_config(config) if config else self.set_config(SimConfig())
-        
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
@@ -140,7 +182,7 @@ class QutipEmulator:
                 self._meas_basis = "digital"
             else:
                 self._meas_basis = self.basis_name
-        self.initial_state = "all-ground"
+        self.set_initial_state("all-ground")
 
     @property
     def config(self) -> SimConfig:
@@ -351,8 +393,9 @@ class QutipEmulator:
         """
         return self._initial_state
 
-    @initial_state.setter
-    def initial_state(self, state: Union[str, np.ndarray, qutip.Qobj]) -> None:
+    def set_initial_state(
+        self, state: Union[str, np.ndarray, qutip.Qobj]
+    ) -> None:
         """Sets the initial state of the simulation."""
         self._initial_state: qutip.Qobj
         if isinstance(state, str) and state == "all-ground":
@@ -394,8 +437,9 @@ class QutipEmulator:
         """
         return np.array(self._eval_times_array)
 
-    @evaluation_times.setter
-    def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
+    def set_evaluation_times(
+        self, value: Union[str, ArrayLike, float]
+    ) -> None:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
@@ -444,51 +488,6 @@ class QutipEmulator:
             eval_times, [0.0, self._tot_duration / 1000]
         )
         self._eval_times_instruction = value
-
-    def draw(
-        self,
-        draw_phase_area: bool = False,
-        draw_interp_pts: bool = False,
-        draw_phase_shifts: bool = False,
-        draw_phase_curve: bool = False,
-        fig_name: str | None = None,
-        kwargs_savefig: dict = {},
-    ) -> None:
-        """Draws the input sequence and the one used by the solver.
-
-        Args:
-            draw_phase_area: Whether phase and area values need
-                to be shown as text on the plot, defaults to False.
-            draw_interp_pts: When the sequence has pulses with waveforms
-                of type InterpolatedWaveform, draws the points of interpolation
-                on top of the respective waveforms (defaults to False). Can't
-                be used if the sequence is modulated.
-            draw_phase_shifts: Whether phase shift and reference
-                information should be added to the plot, defaults to False.
-            draw_phase_curve: Draws the changes in phase in its own curve
-                (ignored if the phase doesn't change throughout the channel).
-            fig_name: The name on which to save the figure.
-                If None the figure will not be saved.
-            kwargs_savefig: Keywords arguments for
-                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
-                is ``None``.
-
-        See Also:
-            Sequence.draw(): Draws the sequence in its current state.
-        """
-        draw_sequence(
-            self._seq,
-            self._sampling_rate,
-            draw_input=not self._modulated,
-            draw_modulation=self._modulated,
-            draw_phase_area=draw_phase_area,
-            draw_interp_pts=draw_interp_pts,
-            draw_phase_shifts=draw_phase_shifts,
-            draw_phase_curve=draw_phase_curve,
-        )
-        if fig_name is not None:
-            plt.savefig(fig_name, **kwargs_savefig)
-        plt.show()
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
@@ -676,7 +675,7 @@ class QutipEmulator:
             1/hbar factor.
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            U = 0.5 * self.samples_obj.interaction_coeff / dist**6
+            U = 0.5 * self.device.interaction_coeff / dist**6
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
         def make_xy_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
@@ -689,17 +688,24 @@ class QutipEmulator:
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
             coords_dim = len(self._qdict[q1])
-            mag_norm = np.linalg.norm(self.samples_obj.magnetic_field[:coords_dim])
+            mag_norm = np.linalg.norm(
+                cast(
+                    np.ndarray,
+                    self.samples_obj._magnetic_field,
+                )[:coords_dim]
+            )
             if mag_norm < 1e-8:
                 cosine = 0.0
             else:
                 cosine = np.dot(
                     (self._qdict[q1] - self._qdict[q2]),
-                    self.samples_obj.magnetic_field[:coords_dim],
+                    cast(np.ndarray, self.samples_obj._magnetic_field)[
+                        :coords_dim
+                    ],
                 ) / (dist * mag_norm)
             U = (
                 0.5
-                * cast(float, self.samples_obj.interaction_coeff_xy)
+                * cast(float, self.device.interaction_coeff_xy)
                 * (1 - 3 * cosine**2)
                 / dist**3
             )
@@ -893,8 +899,11 @@ class QutipEmulator:
             min_pulse_duration = min(
                 slot.tf - slot.ti
                 for ch_sample in self.samples_obj.samples_list
-                for slot in ch_sample.slots 
-                if not (np.all(np.isclose(ch_sample.amp[slot.ti: slot.tf], 0)) and np.all(np.isclose(ch_sample.det[slot.ti: slot.tf], 0)))
+                for slot in ch_sample.slots
+                if not (
+                    np.all(np.isclose(ch_sample.amp[slot.ti : slot.tf], 0))
+                    and np.all(np.isclose(ch_sample.det[slot.ti : slot.tf], 0))
+                )
             )
             auto_max_step = 0.5 * (min_pulse_duration / 1000)
             solv_ops = qutip.Options(max_step=auto_max_step, **options)
@@ -1031,6 +1040,7 @@ class QutipEmulator:
             self._eval_times_array,
             n_measures,
         )
+
     @classmethod
     def from_sequence(
         cls,
@@ -1039,7 +1049,7 @@ class QutipEmulator:
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
         with_modulation: bool = False,
-        ) -> QutipEmulator:
+    ) -> QutipEmulator:
         r"""Simulation of a pulse sequence using QuTiP.
 
         Args:
@@ -1054,15 +1064,15 @@ class QutipEmulator:
                 - "Full": The times are set to be the ones used to define the
                 Hamiltonian to the solver.
 
-                - "Minimal": The times are set to only include initial and final
-                times.
+                - "Minimal": The times are set to only include initial and
+                final times.
 
-                - An ArrayLike object of times in µs if you wish to only include
-                those specific times.
+                - An ArrayLike object of times in µs if you wish to only
+                include those specific times.
 
                 - A float to act as a sampling rate for the resulting state.
-            with_modulation: Whether to simulated the sequence with the programmed
-                input or the expected output.
+            with_modulation: Whether to simulate the sequence with the
+                programmed input or the expected output.
         """
         if not isinstance(sequence, Sequence):
             raise TypeError(
@@ -1088,14 +1098,20 @@ class QutipEmulator:
                 "Simulation of sequences combining an SLM mask and output "
                 "modulation is not supported."
             )
-        return Simulation(sampler.sample(
-            sequence,
-            modulation=with_modulation,
-            # The samples are extended by 1 to improve the ODE
-            # solver convergence
-            extended_duration=sequence.get_duration(include_fall_time=with_modulation) + 1,
-        ))
-
+        return cls(
+            sampler.sample(
+                sequence,
+                modulation=with_modulation,
+                extended_duration=sequence.get_duration(
+                    include_fall_time=with_modulation
+                ),
+            ),
+            sequence.register,
+            sequence.device,
+            sampling_rate,
+            config,
+            evaluation_times,
+        )
 
 
 class Simulation:
@@ -1133,4 +1149,122 @@ class Simulation:
         with_modulation: bool = False,
     ) -> None:
         """Instantiates a Simulation object."""
-        self = QutipEmulator.from_sequence(sequence, sampling_rate, config, evaluation_times, with_modulation)
+        self._seq = sequence
+        self._modulated = with_modulation
+        self._emulator = QutipEmulator.from_sequence(
+            self._seq, sampling_rate, config, evaluation_times, self._modulated
+        )
+
+    @property
+    def evaluation_times(self) -> np.ndarray:
+        """The times at which the results of this simulation are returned.
+
+        Args:
+            value: Choose between:
+
+                - "Full": The times are set to be the ones used to define the
+                  Hamiltonian to the solver.
+
+                - "Minimal": The times are set to only include initial and
+                  final times.
+
+                - An ArrayLike object of times in µs if you wish to only
+                  include those specific times.
+
+                - A float to act as a sampling rate for the resulting state.
+        """
+        return self._emulator.evaluation_times
+
+    @evaluation_times.setter
+    def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
+        """Sets times at which the results of this simulation are returned."""
+        warnings.warn(
+            DeprecationWarning(
+                "Setting `evaluation_times` is deprecated,"
+                " use `set_evaluation_times` instead."
+            ),
+        )
+        self._emulator.set_evaluation_times(value)
+
+    @property
+    def initial_state(self) -> qutip.Qobj:
+        """The initial state of the simulation.
+
+        Args:
+            state: The initial state.
+                Choose between:
+
+                - "all-ground" for all atoms in ground state
+                - An ArrayLike with a shape compatible with the system
+                - A Qobj object
+        """
+        return self._emulator.initial_state
+
+    @initial_state.setter
+    def initial_state(self, value: Union[str, np.ndarray, qutip.Qobj]) -> None:
+        """Sets the initial state of the simulation."""
+        warnings.warn(
+            DeprecationWarning(
+                "Setting `initial_state` is deprecated,"
+                " use `set_initial_state` instead."
+            ),
+        )
+        self._emulator.set_initial_state(value)
+
+    def draw(
+        self,
+        draw_phase_area: bool = False,
+        draw_interp_pts: bool = False,
+        draw_phase_shifts: bool = False,
+        draw_phase_curve: bool = False,
+        fig_name: str | None = None,
+        kwargs_savefig: dict = {},
+    ) -> None:
+        """Draws the input sequence and the one used by the solver.
+
+        Args:
+            draw_phase_area: Whether phase and area values need
+                to be shown as text on the plot, defaults to False.
+            draw_interp_pts: When the sequence has pulses with waveforms
+                of type InterpolatedWaveform, draws the points of interpolation
+                on top of the respective waveforms (defaults to False). Can't
+                be used if the sequence is modulated.
+            draw_phase_shifts: Whether phase shift and reference
+                information should be added to the plot, defaults to False.
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
+            fig_name: The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig: Keywords arguments for
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
+
+        See Also:
+            Sequence.draw(): Draws the sequence in its current state.
+        """
+        if draw_interp_pts and self._modulated:
+            raise ValueError(
+                "Can't draw the interpolation points when the sequence is "
+                "modulated; `draw_interp_pts` must be `False`."
+            )
+        draw_sequence(
+            self._seq,
+            self._emulator._sampling_rate,
+            draw_input=not self._modulated,
+            draw_modulation=self._modulated,
+            draw_phase_area=draw_phase_area,
+            draw_interp_pts=draw_interp_pts,
+            draw_phase_shifts=draw_phase_shifts,
+            draw_phase_curve=draw_phase_curve,
+        )
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
+        plt.show()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._emulator, name)
+
+    # def __setattr__(self, name: str, value: Any) -> Any:
+    #     if hasattr(self, name):
+    #         return super().__setattr__(name, value)
+    #     return setattr(self._emulator, name, value)
