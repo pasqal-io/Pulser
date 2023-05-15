@@ -846,7 +846,11 @@ class QutipEmulator:
         self._hamiltonian = ham
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
-        """Get the Hamiltonian created from the sequence at a fixed time.
+        r"""Get the Hamiltonian created from the sequence at a fixed time.
+
+        Note:
+            The whole Hamiltonian is divided by :math:`\hbar`, so its
+            units are rad/µs.
 
         Args:
             time: The specific time at which we want to extract the
