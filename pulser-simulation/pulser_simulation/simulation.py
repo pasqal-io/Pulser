@@ -44,14 +44,14 @@ from pulser_simulation.simresults import (
 
 
 class QutipEmulator:
-    r"""Simulation of a Pulser SequenceSamples using QuTiP.
+    r"""Emulator of a Pulser SequenceSamples using QuTiP.
 
     Args:
-        sampled_seq: An Pulser SequenceSamples that we want to simulate.
+        sampled_seq: A Pulser SequenceSamples that we want to simulate.
         register: The register associating coordinates to the qubits targeted
             in the SequenceSamples.
-        device: The BaseDevice used to simulate the samples. register and
-            samples has to match its properties.
+        device: The BaseDevice used to simulate the samples. Register and
+            samples have to match its properties.
         sampling_rate: The fraction of samples that we wish to extract from
             the samples to simulate. Has to be a value between 0.05 and 1.0.
         config: Configuration to be used for this simulation.
@@ -1066,13 +1066,13 @@ class QutipEmulator:
             evaluation_times: Choose between:
 
                 - "Full": The times are set to be the ones used to define the
-                Hamiltonian to the solver.
+                  Hamiltonian to the solver.
 
                 - "Minimal": The times are set to only include initial and
-                final times.
+                  final times.
 
                 - An ArrayLike object of times in µs if you wish to only
-                include those specific times.
+                  include those specific times.
 
                 - A float to act as a sampling rate for the resulting state.
             with_modulation: Whether to simulate the sequence with the
