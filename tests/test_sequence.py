@@ -750,8 +750,13 @@ def test_measure(reg, parametrized):
         RuntimeError, match="The sequence has not been measured"
     ):
         seq.get_measurement_basis()
-    seq.measure()
-    assert seq.get_measurement_basis() == "ground-rydberg"
+    with pytest.warns(
+        UserWarning,
+        match="'digital' is not being addressed by "
+        "any channel in the sequence",
+    ):
+        seq.measure(basis="digital")
+    assert seq.get_measurement_basis() == "digital"
     with pytest.raises(
         RuntimeError,
         match="sequence has been measured, no further changes are allowed.",
