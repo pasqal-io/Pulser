@@ -50,6 +50,8 @@ class EmulatorConfig(BackendConfig):
             - "Minimal": The times are set to only include initial and final
               times.
 
+            - "Final": Returns only the result at the end of the sequence.
+
             - A list of times in µs if you wish to only include those specific
               times.
 
@@ -65,10 +67,9 @@ class EmulatorConfig(BackendConfig):
     """
 
     sampling_rate: float = 1.0
-    # TODO: Add "Final" option for backends that only return the final state
     evaluation_times: float | list[float] | Literal[
-        "Full", "Minimal"
-    ] = "Minimal"
+        "Full", "Minimal", "Final"
+    ] = "Full"
     initial_state: Literal["all-ground"] | numpy.ndarray = "all-ground"
     with_modulation: bool = False
     noise_model: NoiseModel = NoiseModel()
