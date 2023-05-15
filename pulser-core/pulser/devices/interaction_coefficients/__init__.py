@@ -11,7 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""C_6/hbar (in  um^6 / us`), coeffs for Rydberg levels between 50 and 100."""
+"""C_6/hbar (in  rad/µs x µm^6), for Rydberg levels between 50 and 100.
+
+The values were calculated using ARC_ and double checked with
+PairInteraction_.
+
+.. _ARC: https://arc-alkali-rydberg-calculator.readthedocs.io/
+.. _PairInteraction: https://www.pairinteraction.org/
+"""
 
 import json
 from pathlib import PurePath
