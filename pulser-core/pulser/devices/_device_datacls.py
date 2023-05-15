@@ -54,7 +54,7 @@ class BaseDevice(ABC):
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
         interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`2\pi \cdot MHz \cdot \mu m^3`),
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states. Needed only if there is a Microwave
             channel in the device. If unsure, 3700.0 is a good default value.
@@ -212,7 +212,7 @@ class BaseDevice(ABC):
         r"""The interaction coefficient for the chosen Rydberg level.
 
         Corresponds to :math:`C_6/\hbar` (in units of
-        :math:`2\pi \cdot MHz \cdot \mu m^6`)
+        :math:`rad \cdot \mu s^{-1} \cdot \mu m^6`)
         for the interaction term of the Ising hamiltonian.
         """
         return float(c6_dict[self.rydberg_level])
@@ -439,7 +439,7 @@ class Device(BaseDevice):
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
         interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`2\pi \cdot MHz \cdot \mu m^3`),
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states. Needed only if there is a Microwave
             channel in the device. If unsure, 3700.0 is a good default value.
@@ -576,7 +576,7 @@ class VirtualDevice(BaseDevice):
             of the array (in μm).
         min_atom_distance: The closest together two atoms can be (in μm).
         interaction_coeff_xy: :math:`C_3/\hbar`
-            (in :math:`2\pi \cdot MHz \cdot \mu m^3`),
+            (in :math:`rad \cdot \mu s^{-1} \cdot \mu m^3`),
             which sets the van der Waals interaction strength between atoms in
             different Rydberg states. Needed only if there is a Microwave
             channel in the device. If unsure, 3700.0 is a good default value.
