@@ -122,18 +122,6 @@ class NoiseModel:
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
-        if self.temperature <= 0:
-            raise ValueError(
-                "Temperature field"
-                + f" (`temperature` = {self.temperature}) must be"
-                + " greater than 0."
-            )
-        if not 0.0 <= self.amp_sigma < 1.0:
-            raise ValueError(
-                "The standard deviation in amplitude (amp_sigma="
-                f"{self.amp_sigma}) must be greater than or equal"
-                " to 0. and smaller than 1."
-            )
         self._check_noise_types()
         self._check_eff_noise()
 
@@ -141,7 +129,7 @@ class NoiseModel:
         for noise_type in self.noise_types:
             if noise_type not in get_args(NOISE_TYPES):
                 raise ValueError(
-                    f"{noise_type} is not a valid noise type. "
+                    f"'{noise_type}' is not a valid noise type. "
                     + "Valid noise types: "
                     + ", ".join(get_args(NOISE_TYPES))
                 )

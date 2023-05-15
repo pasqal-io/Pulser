@@ -73,3 +73,5 @@ class EmulatorConfig(BackendConfig):
     initial_state: Literal["all-ground"] | numpy.ndarray = "all-ground"
     with_modulation: bool = False
     noise_model: NoiseModel = NoiseModel()
+
+    # TODO: Add some type and value validation
