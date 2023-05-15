@@ -65,8 +65,12 @@ def test_init(reg, device):
 def test_channel_declaration(reg, device):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
+    assert seq.get_addressed_bases() == ()
+
     seq.declare_channel("ch0", "rydberg_global")
+    assert seq.get_addressed_bases() == ("ground-rydberg",)
     seq.declare_channel("ch1", "raman_local")
+    assert seq.get_addressed_bases() == ("ground-rydberg", "digital")
     with pytest.raises(ValueError, match="No channel"):
         seq.declare_channel("ch2", "raman")
     with pytest.raises(ValueError, match="not available"):
@@ -730,14 +734,24 @@ def test_align(reg, device):
         seq.align("ch1")
 
 
-def test_measure(reg, device):
+@pytest.mark.parametrize("parametrized", [True, False])
+def test_measure(reg, parametrized):
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "rydberg_global")
+    t = seq.declare_variable("t", dtype=int)
+    seq.delay(t if parametrized else 100, "ch0")
+    assert seq.is_parametrized() == parametrized
+
     assert "XY" in MockDevice.supported_bases
     with pytest.raises(ValueError, match="not supported"):
         seq.measure(basis="XY")
+    with pytest.raises(
+        RuntimeError, match="The sequence has not been measured"
+    ):
+        seq.get_measurement_basis()
     seq.measure()
+    assert seq.get_measurement_basis() == "ground-rydberg"
     with pytest.raises(
         RuntimeError,
         match="sequence has been measured, no further changes are allowed.",
