@@ -428,7 +428,7 @@ class Simulation:
         elif isinstance(value, float):
             if value > 1 or value <= 0:
                 raise ValueError(
-                    "evaluation_times float must be between 0 " "and 1."
+                    "evaluation_times float must be between 0 and 1."
                 )
             indices = np.linspace(
                 0,

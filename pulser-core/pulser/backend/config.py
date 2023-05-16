@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, Sequence, get_args
 
-import numpy
+import numpy as np
 
 from pulser.backend.noise_model import NoiseModel
+
+EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 
 @dataclass
@@ -67,11 +69,57 @@ class EmulatorConfig(BackendConfig):
     """
 
     sampling_rate: float = 1.0
-    evaluation_times: float | list[float] | Literal[
-        "Full", "Minimal", "Final"
-    ] = "Full"
-    initial_state: Literal["all-ground"] | numpy.ndarray = "all-ground"
+    evaluation_times: float | Sequence[float] | EVAL_TIMES_LITERAL = "Full"
+    initial_state: Literal["all-ground"] | Sequence[complex] = "all-ground"
     with_modulation: bool = False
-    noise_model: NoiseModel = NoiseModel()
+    noise_model: NoiseModel = field(default_factory=NoiseModel)
 
-    # TODO: Add some type and value validation
+    def __post_init__(self) -> None:
+        if not (0 < self.sampling_rate <= 1.0):
+            raise ValueError(
+                "The sampling rate (`sampling_rate` = "
+                f"{self.sampling_rate}) must be greater than 0 and "
+                "less than or equal to 1."
+            )
+
+        if isinstance(self.evaluation_times, str):
+            if self.evaluation_times not in get_args(EVAL_TIMES_LITERAL):
+                raise ValueError(
+                    "If provided as a string, 'evaluation_times' must be one "
+                    f"of the following options: {get_args(EVAL_TIMES_LITERAL)}"
+                )
+        elif isinstance(self.evaluation_times, float):
+            if not (0 < self.evaluation_times <= 1.0):
+                raise ValueError(
+                    "If provided as a float, 'evaluation_times' must be"
+                    " greater than 0 and less than or equal to 1."
+                )
+        elif isinstance(self.evaluation_times, (list, tuple, np.ndarray)):
+            if np.min(self.evaluation_times, initial=0) < 0:
+                raise ValueError(
+                    "If provided as a sequence of values, "
+                    "'evaluation_times' must not contain negative values."
+                )
+        else:
+            raise TypeError(
+                f"'{type(self.evaluation_times)}' is not a valid"
+                " type for 'evaluation_times'."
+            )
+
+        if isinstance(self.initial_state, str):
+            if self.initial_state != "all-ground":
+                raise ValueError(
+                    "If provided as a string, 'initial_state' must be"
+                    " 'all-ground'."
+                )
+        elif not isinstance(self.initial_state, (tuple, list, np.ndarray)):
+            raise TypeError(
+                f"'{type(self.initial_state)}' is not a valid type for"
+                " 'initial_state'."
+            )
+
+        if not isinstance(self.noise_model, NoiseModel):
+            raise TypeError(
+                "'noise_model' must be a NoiseModel instance,"
+                f" not {type(self.noise_model)}."
+            )

@@ -20,6 +20,7 @@ import pytest
 
 import pulser
 from pulser.backend.abc import Backend
+from pulser.backend.config import EmulatorConfig
 from pulser.backend.noise_model import NoiseModel
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
@@ -55,6 +56,34 @@ def test_abc_backend(sequence):
         TypeError, match="'sequence' should be a `Sequence` instance"
     ):
         ConcreteBackend(sequence.to_abstract_repr())
+
+
+@pytest.mark.parametrize(
+    "param, value, msg",
+    [
+        ("sampling_rate", 0, "must be greater than 0"),
+        ("evaluation_times", "full", "one of the following"),
+        ("evaluation_times", 1.001, "less than or equal to 1"),
+        ("evaluation_times", [-1e9, 1], "must not contain negative values"),
+        ("initial_state", "all_ground", "must be 'all-ground'"),
+    ],
+)
+def test_emulator_config_value_errors(param, value, msg):
+    with pytest.raises(ValueError, match=msg):
+        EmulatorConfig(**{param: value})
+
+
+@pytest.mark.parametrize(
+    "param, msg",
+    [
+        ("evaluation_times", "not a valid type for 'evaluation_times'"),
+        ("initial_state", "not a valid type for 'initial_state'"),
+        ("noise_model", "must be a NoiseModel instance"),
+    ],
+)
+def test_emulator_config_type_errors(param, msg):
+    with pytest.raises(TypeError, match=msg):
+        EmulatorConfig(**{param: None})
 
 
 class TestNoiseModel:
