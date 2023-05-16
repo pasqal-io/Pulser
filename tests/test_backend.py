@@ -12,14 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+import typing
+from pulser.result import Result
 
 import pytest
 import numpy as np
 
 import pulser
-from pulser.devices import MockDevice
+from pulser.devices import MockDevice, Chadoq2
 from pulser.backend.abc import Backend
 from pulser.backend.noise_model import NoiseModel
+from pulser.backend.qpu import QPUBackend
+from pulser.backend.remote import (
+    RemoteConnection,
+    RemoteResults,
+    RemoteResultsError,
+    SubmissionStatus,
+)
+from pulser.result import SampledResult
 
 
 @pytest.fixture
@@ -172,3 +182,53 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I"], matrices["Zh"]],
                 eff_noise_probs=[0.5, 0.5],
             )
+
+
+class _MockConnection(RemoteConnection):
+    def __init__(self):
+        self._status_calls = 0
+
+    def submit(self, sequence, **kwargs) -> RemoteResults:
+        return RemoteResults("abcd", self)
+
+    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+        return (
+            SampledResult(
+                ("q0", "q1"),
+                meas_basis="ground-rydberg",
+                bitstring_counts={"00": 100},
+            ),
+        )
+
+    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
+        self._status_calls += 1
+        if self._status_calls == 1:
+            return SubmissionStatus.RUNNING
+        return SubmissionStatus.DONE
+
+
+def test_qpu_backend(sequence):
+    connection = _MockConnection()
+
+    with pytest.raises(
+        TypeError, match="must be a real device, instance of 'Device'"
+    ):
+        QPUBackend(sequence, connection)
+
+    seq = sequence.switch_device(Chadoq2)
+    qpu_backend = QPUBackend(seq, connection)
+    remote_results = qpu_backend.run()
+
+    with pytest.raises(AttributeError, match="no attribute 'result'"):
+        # Cover the custom '__getattr__' default behavior
+        remote_results.result
+
+    with pytest.raises(
+        RemoteResultsError,
+        match="The results are not available. The submission's status is"
+        " SubmissionStatus.RUNNING",
+    ):
+        remote_results.results
+
+    results = remote_results.results
+    assert results[0].sampling_dist == {"00": 1.0}

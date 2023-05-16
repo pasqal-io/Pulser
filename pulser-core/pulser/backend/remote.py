@@ -69,14 +69,15 @@ class RemoteResults(Results):
 
     def __getattr__(self, name: str) -> Any:
         if name == "_results":
-            if self.get_status() == SubmissionStatus.DONE:
+            status = self.get_status()
+            if status == SubmissionStatus.DONE:
                 self._results = tuple(
                     self._connection._fetch_result(self._submission_id)
                 )
                 return self._results
             raise RemoteResultsError(
                 "The results are not available. The submission's status is "
-                f"{str(self.get_status())}."
+                f"{str(status)}."
             )
         raise AttributeError(
             f"'RemoteResults' object has no attribute '{name}'."
