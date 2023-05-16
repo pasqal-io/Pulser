@@ -43,12 +43,13 @@ class PasqalEmulator(RemoteBackend):
         self,
         sequence: pulser.Sequence,
         connection: PasqalCloud,
-        config: EmulatorConfig = EmulatorConfig(),
+        config: EmulatorConfig | None = None,
     ) -> None:
         """Initializes a new Pasqal emulator backend."""
         super().__init__(sequence, connection)
-        self._validate_config(config)
-        self._config = config
+        config_ = config or self.default_config
+        self._validate_config(config_)
+        self._config = config_
         if not isinstance(self._connection, PasqalCloud):
             raise TypeError(
                 "The connection to the remote backend must be done"
@@ -88,9 +89,9 @@ class PasqalEmulator(RemoteBackend):
 
         return self._connection.submit(
             self._sequence,
+            job_params=job_params,
             emulator=self.emulator,
             config=self._config,
-            job_params=job_params,
         )
 
     def _validate_config(self, config: EmulatorConfig) -> None:
@@ -127,21 +128,13 @@ class EmuTNBackend(PasqalEmulator):
     Args:
         sequence: The sequence to send to the backend.
         connection: An open PasqalCloud connection.
-        config: An EmulatorConfig to configure the backend.
+        config: An EmulatorConfig to configure the backend. If not provided,
+            the default configuration is used.
     """
 
     emulator = pasqal_cloud.EmulatorType.EMU_TN
     default_config = DEFAULT_CONFIG_EMU_TN
     configurable_fields = ("backend_options", "sampling_rate")
-
-    def __init__(
-        self,
-        sequence: pulser.Sequence,
-        connection: PasqalCloud,
-        config: EmulatorConfig = DEFAULT_CONFIG_EMU_TN,
-    ) -> None:
-        """Initializes a new EmuTNBackend."""
-        super().__init__(sequence, connection, config)
 
 
 class EmuFreeBackend(PasqalEmulator):
@@ -157,7 +150,8 @@ class EmuFreeBackend(PasqalEmulator):
     Args:
         sequence: The sequence to send to the backend.
         connection: An open PasqalCloud connection.
-        config: An EmulatorConfig to configure the backend.
+        config: An EmulatorConfig to configure the backend. If not provided,
+            the default configuration is used.
     """
 
     emulator = pasqal_cloud.EmulatorType.EMU_FREE

@@ -116,7 +116,7 @@ class PasqalCloud(RemoteConnection):
 
         batch = self._sdk_connection.create_batch(
             serialized_sequence=sequence.to_abstract_repr(),
-            jobs=job_params,
+            jobs=job_params or [],  # jobs is a required argument
             emulator=emulator,
             configuration=configuration,
             wait=False,
@@ -174,7 +174,8 @@ class PasqalCloud(RemoteConnection):
                 field.name, field.default
             )
         # We pass the remaining backend options to "extra_config"
-        pasqal_config_kwargs["extra_config"] = backend_options
+        if backend_options:
+            pasqal_config_kwargs["extra_config"] = backend_options
         if emulator == pasqal_cloud.EmulatorType.EMU_TN:
             pasqal_config_kwargs["dt"] = 1.0 / config.sampling_rate
 
