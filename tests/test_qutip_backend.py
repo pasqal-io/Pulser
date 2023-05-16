@@ -20,11 +20,10 @@ import qutip
 import pulser
 from pulser.devices import MockDevice
 from pulser.waveforms import BlackmanWaveform
-
 from pulser_simulation import SimConfig
-from pulser_simulation.simresults import CoherentResults
 from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.qutip_result import QutipResult
+from pulser_simulation.simresults import CoherentResults
 
 
 @pytest.fixture

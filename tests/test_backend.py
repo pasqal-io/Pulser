@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-import typing
-from pulser.result import Result
 
-import pytest
+import typing
+
 import numpy as np
+import pytest
 
 import pulser
-from pulser.devices import MockDevice, Chadoq2
 from pulser.backend.abc import Backend
 from pulser.backend.noise_model import NoiseModel
 from pulser.backend.qpu import QPUBackend
@@ -29,7 +28,8 @@ from pulser.backend.remote import (
     RemoteResultsError,
     SubmissionStatus,
 )
-from pulser.result import SampledResult
+from pulser.devices import Chadoq2, MockDevice
+from pulser.result import Result, SampledResult
 
 
 @pytest.fixture

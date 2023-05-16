@@ -15,16 +15,14 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-import typing
-from typing import Any, Type
-from unittest.mock import patch, MagicMock
+from typing import Any
+from unittest.mock import MagicMock, patch
 
-from pasqal_cloud.device.configuration import EmuFreeConfig, EmuTNConfig
 import pytest
+from pasqal_cloud.device.configuration import EmuFreeConfig, EmuTNConfig
 
 import pulser
 import pulser_pasqal
-from pulser_pasqal.backends import EmuFreeBackend, EmuTNBackend, PasqalEmulator
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
     RemoteConnection,
@@ -33,9 +31,10 @@ from pulser.backend.remote import (
 )
 from pulser.devices import Chadoq2
 from pulser.register import Register
-from pulser.result import Result, SampledResult
+from pulser.result import SampledResult
 from pulser.sequence import Sequence
 from pulser_pasqal import BaseConfig, EmulatorType, Endpoints, PasqalCloud
+from pulser_pasqal.backends import EmuFreeBackend, EmuTNBackend
 from pulser_pasqal.job_parameters import JobParameters, JobVariables
 
 root = Path(__file__).parent.parent
@@ -229,7 +228,7 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
 
 
 @pytest.mark.parametrize("emu_cls", [EmuTNBackend, EmuFreeBackend])
-def test_emulators_init(fixt, seq, emu_cls: Type[PasqalEmulator]):
+def test_emulators_init(fixt, seq, emu_cls, monkeypatch):
     with pytest.raises(
         TypeError,
         match="'connection' must be a valid RemoteConnection instance.",
@@ -255,34 +254,18 @@ def test_emulators_init(fixt, seq, emu_cls: Type[PasqalEmulator]):
             ),
         )
 
-    class NotPasqalConnection(RemoteConnection):
-        # Methods defined below because RemoteConnection is an ABC
-        def submit(
-            self, sequence: Sequence, **kwargs: Any
-        ) -> RemoteResults | tuple[RemoteResults, ...]:
-            return super().submit(sequence, **kwargs)
-
-        def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
-            return super()._fetch_result(submission_id)
-
-        def _get_submission_status(
-            self, submission_id: str
-        ) -> SubmissionStatus:
-            return super()._get_submission_status(submission_id)
-
+    monkeypatch.setattr(RemoteConnection, "__abstractmethods__", set())
     with pytest.raises(
         TypeError,
         match="connection to the remote backend must be done"
         " through a 'PasqalCloud' instance.",
     ):
-        emu_cls(seq, NotPasqalConnection())
+        emu_cls(seq, RemoteConnection())
 
 
 @pytest.mark.parametrize("parametrized", [True, False])
 @pytest.mark.parametrize("emu_cls", [EmuTNBackend, EmuFreeBackend])
-def test_emulators_run(
-    fixt, seq, emu_cls: Type[PasqalEmulator], parametrized: bool
-):
+def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
     seq.declare_channel("rydberg_global", "rydberg_global")
     t = seq.declare_variable("t", dtype=int)
     seq.delay(t if parametrized else 100, "rydberg_global")
@@ -306,6 +289,7 @@ def test_emulators_run(
     remote_results = emu.run(**good_kwargs)
     assert isinstance(remote_results, RemoteResults)
 
+    sdk_config: EmuTNConfig | EmuFreeConfig
     if isinstance(emu, EmuTNBackend):
         emulator_type = EmulatorType.EMU_TN
         sdk_config = EmuTNConfig()
