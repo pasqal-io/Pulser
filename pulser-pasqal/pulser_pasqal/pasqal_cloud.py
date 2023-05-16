@@ -81,7 +81,7 @@ class PasqalCloud(RemoteConnection):
                     "for a sequence not addressing a single basis."
                 )
             # The copy prevents changing the input sequence
-            sequence = copy.copy(sequence)
+            sequence = copy.deepcopy(sequence)
             sequence.measure(bases[0])
 
         emulator = kwargs.get("emulator", None)
@@ -169,7 +169,7 @@ class PasqalCloud(RemoteConnection):
         emu_cls = EMU_TYPE_TO_CONFIG[emulator]
         backend_options = config.backend_options.copy()
         pasqal_config_kwargs = {}
-        for field in fields(EmuTNConfig):
+        for field in fields(emu_cls):
             pasqal_config_kwargs[field.name] = backend_options.pop(
                 field.name, field.default
             )
@@ -206,16 +206,16 @@ class PasqalCloud(RemoteConnection):
         Returns:
             Batch: The new batch that has been created in the database.
         """
-        warnings.simplefilter("always", DeprecationWarning)
-        warnings.warn(
-            "'PasqalCloud.create_batch()' is deprecated and will be removed "
-            "after v0.13. To submit jobs to the Pasqal Cloud, use one of the "
-            "remote backends (eg QPUBackend, EmuTNBacked, EmuFreeBackend) "
-            "with an open PasqalCloud() connection.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        warnings.simplefilter("default", DeprecationWarning)
+        with warnings.catch_warnings():
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                "'PasqalCloud.create_batch()' is deprecated and will be "
+                "removed after v0.13. To submit jobs to the Pasqal Cloud, "
+                "use one of the remote backends (eg QPUBackend, EmuTNBacked,"
+                " EmuFreeBackend) with an open PasqalCloud() connection.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
 
         if emulator is None and not isinstance(seq.device, Device):
             raise TypeError(
@@ -247,18 +247,18 @@ class PasqalCloud(RemoteConnection):
         Returns:
             Batch: The batch stored in the database.
         """
-        warnings.simplefilter("always", DeprecationWarning)
-        warnings.warn(
-            "'PasqalCloud.get_batch()' is deprecated and will be removed "
-            "after v0.13. To retrieve the results from a job executed through"
-            " the Pasqal Cloud, use the RemoteResults instance returned after"
-            " calling run() on one of the remote backends (eg QPUBackend, "
-            "EmuTNBacked, EmuFreeBackend) with an open PasqalCloud() "
-            "connection.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        warnings.simplefilter("default", DeprecationWarning)
+        with warnings.catch_warnings():
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                "'PasqalCloud.get_batch()' is deprecated and will be removed "
+                "after v0.13. To retrieve the results from a job executed "
+                "through the Pasqal Cloud, use the RemoteResults instance "
+                "returned after calling run() on one of the remote backends"
+                " (eg QPUBackend, EmuTNBacked, EmuFreeBackend) with an open "
+                "PasqalCloud() connection.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
         return self._sdk_connection.get_batch(
             id=id, fetch_results=fetch_results
         )
