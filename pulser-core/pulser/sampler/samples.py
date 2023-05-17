@@ -292,7 +292,7 @@ class SequenceSamples:
     samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
     _slm_mask: _SlmMask = field(default_factory=_SlmMask)
-    _magnetic_field: Optional[np.ndarray] = None
+    _magnetic_field: np.ndarray | None = None
     _measurement: str | None = None
 
     @property

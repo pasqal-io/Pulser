@@ -44,14 +44,14 @@ from pulser_simulation.simresults import (
 
 
 class QutipEmulator:
-    r"""Emulator of a Pulser SequenceSamples using QuTiP.
+    r"""Emulator of a pulse sequence using QuTiP.
 
     Args:
-        sampled_seq: A Pulser SequenceSamples that we want to simulate.
+        sampled_seq: A pulse sequence samples used in the emulation.
         register: The register associating coordinates to the qubits targeted
-            in the SequenceSamples.
-        device: The BaseDevice used to simulate the samples. Register and
-            samples have to match its properties.
+            by the pulses within the samples.
+        device: The device specifications used in the emulation. Register and
+            samples have to satisfy its constraints.
         sampling_rate: The fraction of samples that we wish to extract from
             the samples to simulate. Has to be a value between 0.05 and 1.0.
         config: Configuration to be used for this simulation.
@@ -83,16 +83,19 @@ class QutipEmulator:
         if not isinstance(sampled_seq, SequenceSamples):
             raise TypeError(
                 "The provided sequence has to be a valid "
-                "pulser.SequenceSamples instance."
+                "SequenceSamples instance."
             )
         if sampled_seq.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
         # Check compatibility of register and device
-        self.device = device
-        self.device.validate_register(register)
-        self.register = register
+        self.__device = device
+        self.__device.validate_register(register)
+        self.__register = register
         # Check compatibility of samples and device:
-        if sampled_seq._slm_mask.end > 0 and not self.device.supports_slm_mask:
+        if (
+            sampled_seq._slm_mask.end > 0
+            and not self.__device.supports_slm_mask
+        ):
             raise ValueError(
                 "Samples use SLM mask but device does not have one."
             )
@@ -100,33 +103,35 @@ class QutipEmulator:
             raise ValueError(
                 "Bases used in samples should be supported by device."
             )
-        # Check compatibility of samples and register
+        # Check compatibility of masked samples and register
+        if not sampled_seq._slm_mask.targets <= set(register.qubit_ids):
+            raise ValueError(
+                "The ids of qubits targeted in SLM mask"
+                " should be defined in register"
+            )
         samples_list = []
         for ch, ch_samples in sampled_seq.channel_samples.items():
-            targets_slots: set[QubitId] = set()
-            slots = []
-            for slot in ch_samples.slots:
-                if sampled_seq._ch_objs[ch].addressing == "Local":
-                    # Check that register defines targets of Local Channels
-                    targets_slots = targets_slots.union(
-                        *[slot.targets for slot in ch_samples.slots]
+            if sampled_seq._ch_objs[ch].addressing == "Local":
+                # Check that targets of Local Channels are defined
+                # in register
+                if not set().union(
+                    *[slot.targets for slot in ch_samples.slots]
+                ) <= set(register.qubit_ids):
+                    raise ValueError(
+                        "The ids of qubits targeted in Local channels"
+                        " should be defined in register"
                     )
-                    slots = ch_samples.slots
-                    break
-                elif slot.tf <= sampled_seq._slm_mask.end:
-                    # Check that targets of SLM mask are defined in register
-                    slots.append(slot)
-                    targets_slots = targets_slots.union(slot.targets)
-                else:
-                    # Replace targets of Global channels by qubits of register
-                    slots.append(
-                        replace(slot, targets=set(register.qubit_ids))
+                samples_list.append(ch_samples)
+            else:
+                # Replace targets of Global channels by qubits of register
+                samples_list.append(
+                    replace(
+                        ch_samples,
+                        slots=[
+                            replace(slot, targets=set(register.qubit_ids))
+                            for slot in ch_samples.slots
+                        ],
                     )
-            samples_list.append(replace(ch_samples, slots=slots))
-            if not targets_slots <= set(register.qubit_ids):
-                raise ValueError(
-                    "The ids of qubits targeted in Local channels and SLM mask"
-                    " should be defined in register"
                 )
         _sampled_seq = replace(sampled_seq, samples_list=samples_list)
         self._interaction = "XY" if _sampled_seq._in_xy else "ising"
@@ -134,7 +139,7 @@ class QutipEmulator:
         self.samples_obj = _sampled_seq.extend_duration(self._tot_duration + 1)
 
         # Initializing qubit infos
-        self._qdict = self.register.qubits
+        self._qdict = self.__register.qubits
         self._size = len(self._qdict)
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
@@ -675,7 +680,7 @@ class QutipEmulator:
             1/hbar factor.
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            U = 0.5 * self.device.interaction_coeff / dist**6
+            U = 0.5 * self.__device.interaction_coeff / dist**6
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
         def make_xy_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
@@ -688,24 +693,20 @@ class QutipEmulator:
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
             coords_dim = len(self._qdict[q1])
-            mag_norm = np.linalg.norm(
-                cast(
-                    np.ndarray,
-                    self.samples_obj._magnetic_field,
-                )[:coords_dim]
-            )
+            mag_field = cast(np.ndarray, self.samples_obj._magnetic_field)[
+                :coords_dim
+            ]
+            mag_norm = np.linalg.norm(mag_field)
             if mag_norm < 1e-8:
                 cosine = 0.0
             else:
                 cosine = np.dot(
                     (self._qdict[q1] - self._qdict[q2]),
-                    cast(np.ndarray, self.samples_obj._magnetic_field)[
-                        :coords_dim
-                    ],
+                    mag_field,
                 ) / (dist * mag_norm)
             U = (
                 0.5
-                * cast(float, self.device.interaction_coeff_xy)
+                * cast(float, self.__device.interaction_coeff_xy)
                 * (1 - 3 * cosine**2)
                 / dist**3
             )
@@ -1182,12 +1183,14 @@ class Simulation:
     @evaluation_times.setter
     def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
         """Sets times at which the results of this simulation are returned."""
-        warnings.warn(
-            DeprecationWarning(
-                "Setting `evaluation_times` is deprecated,"
-                " use `set_evaluation_times` instead."
-            ),
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "Setting `evaluation_times` is deprecated,"
+                    " use `set_evaluation_times` instead."
+                )
+            )
         self._emulator.set_evaluation_times(value)
 
     @property
@@ -1207,12 +1210,14 @@ class Simulation:
     @initial_state.setter
     def initial_state(self, value: Union[str, np.ndarray, qutip.Qobj]) -> None:
         """Sets the initial state of the simulation."""
-        warnings.warn(
-            DeprecationWarning(
-                "Setting `initial_state` is deprecated,"
-                " use `set_initial_state` instead."
-            ),
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "Setting `initial_state` is deprecated,"
+                    " use `set_initial_state` instead."
+                )
+            )
         self._emulator.set_initial_state(value)
 
     def draw(
@@ -1267,8 +1272,3 @@ class Simulation:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._emulator, name)
-
-    # def __setattr__(self, name: str, value: Any) -> Any:
-    #     if hasattr(self, name):
-    #         return super().__setattr__(name, value)
-    #     return setattr(self._emulator, name, value)

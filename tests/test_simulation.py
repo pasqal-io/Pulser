@@ -105,7 +105,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     # Simulation cannot be run on a register not defining "control1"
     with pytest.raises(
         ValueError,
-        match="The ids of qubits targeted in Local channels and SLM mask",
+        match="The ids of qubits targeted in Local channels",
     ):
         QutipEmulator(
             sampler.sample(seq),
@@ -505,7 +505,7 @@ def test_eval_times(seq):
         sim.set_evaluation_times([0, sim.sampling_times[-1] + 10])
 
     sim = Simulation(seq, sampling_rate=1.0)
-    with pytest.raises(
+    with pytest.warns(
         DeprecationWarning, match="Setting `evaluation_times` is deprecated"
     ):
         sim.evaluation_times = "Full"
@@ -954,7 +954,7 @@ def test_mask_equals_remove():
         # Simulation cannot be run on a register not defining "q2"
         with pytest.raises(
             ValueError,
-            match="The ids of qubits targeted in Local channels and SLM mask",
+            match="The ids of qubits targeted in SLM mask",
         ):
             QutipEmulator(sampler.sample(seq_masked), reg_two, MockDevice)
         # Simulation on reduced register
