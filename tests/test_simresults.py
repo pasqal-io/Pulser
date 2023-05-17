@@ -242,7 +242,11 @@ def test_expect(results, pi_pulse, reg):
 
     config = SimConfig(noise="SPAM", eta=0)
     sim_single.set_config(config)
-    sim_single.evaluation_times = "Minimal"
+    with pytest.warns(
+        DeprecationWarning, match="Setting `evaluation_times` is deprecated"
+    ):
+        sim_single.evaluation_times = "Minimal"
+    sim_single.set_evaluation_times("Minimal")
     results_single = sim_single.run()
     exp = results_single.expect(op)[0]
     assert len(exp) == 2

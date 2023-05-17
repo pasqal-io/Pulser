@@ -40,12 +40,18 @@ def sample(
             )
         samples_list.append(samples)
 
-    optionals = {}
+    optionals: dict = dict()
     if seq._slm_mask_targets and seq._slm_mask_time:
         optionals["_slm_mask"] = _SlmMask(
             seq._slm_mask_targets,
             seq._slm_mask_time[1],
         )
+    if seq._in_xy:
+        optionals["_magnetic_field"] = seq.magnetic_field
+    if hasattr(seq, "_measurement"):
+        # Has attribute measurement because sequence can't be parametrized
+        optionals["_measurement"] = seq._measurement
+
     return SequenceSamples(
         list(seq.declared_channels.keys()),
         samples_list,
