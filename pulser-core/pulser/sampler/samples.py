@@ -292,6 +292,8 @@ class SequenceSamples:
     samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
     _slm_mask: _SlmMask = field(default_factory=_SlmMask)
+    _magnetic_field: np.ndarray | None = None
+    _measurement: str | None = None
 
     @property
     def channel_samples(self) -> dict[str, ChannelSamples]:
@@ -303,6 +305,7 @@ class SequenceSamples:
         """The maximum duration among the channel samples."""
         return max(samples.duration for samples in self.samples_list)
 
+    @property
     def used_bases(self) -> set[str]:
         """The bases with non-zero pulses."""
         return {
@@ -312,6 +315,26 @@ class SequenceSamples:
             )
             if not ch_samples.is_empty()
         }
+
+    @property
+    def _in_xy(self) -> bool:
+        """Checks if the sequence is in XY mode."""
+        bases = {ch_obj.basis for ch_obj in self._ch_objs.values()}
+        in_xy = False
+        if "XY" in bases:
+            assert bases == {"XY"}
+            in_xy = True
+        return in_xy
+
+    def extend_duration(self, new_duration: int) -> SequenceSamples:
+        """Extend the duration of each samples to a new duration."""
+        return replace(
+            self,
+            samples_list=[
+                sample.extend_duration(new_duration)
+                for sample in self.samples_list
+            ],
+        )
 
     def to_nested_dict(self, all_local: bool = False) -> dict:
         """Format in the nested dictionary form.
@@ -327,12 +350,7 @@ class SequenceSamples:
             addressing ('Global' or 'Local'), the targeted basis
             and, in the 'Local' case, the targeted qubit.
         """
-        bases = {ch_obj.basis for ch_obj in self._ch_objs.values()}
-        in_xy = False
-        if "XY" in bases:
-            assert bases == {"XY"}
-            in_xy = True
-        d = _prepare_dict(self.max_duration, in_xy=in_xy)
+        d = _prepare_dict(self.max_duration, in_xy=self._in_xy)
         for chname, samples in zip(self.channels, self.samples_list):
             cs = (
                 samples.extend_duration(self.max_duration)
