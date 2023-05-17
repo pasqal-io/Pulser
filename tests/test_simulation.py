@@ -20,10 +20,11 @@ import pytest
 import qutip
 
 from pulser import Pulse, Register, Sequence
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.register.register_layout import RegisterLayout
+from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
-from pulser_simulation import SimConfig, Simulation
+from pulser_simulation import QutipEmulator, SimConfig, Simulation
 
 
 @pytest.fixture
@@ -95,10 +96,27 @@ def test_bad_import():
     assert pulser.simulation.SimConfig is SimConfig
 
 
-def test_initialization_and_construction_of_hamiltonian(seq):
+def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
     with pytest.raises(TypeError, match="sequence has to be a valid"):
         Simulation(fake_sequence)
+    with pytest.raises(TypeError, match="sequence has to be a valid"):
+        QutipEmulator(fake_sequence, Register.square(2), mod_device)
+    # Simulation cannot be run on a register not defining "control1"
+    with pytest.raises(
+        ValueError,
+        match="The ids of qubits targeted in Local channels",
+    ):
+        QutipEmulator(
+            sampler.sample(seq),
+            Register(
+                {
+                    "target": np.array([0.0, 0.0]),
+                    "control2": np.array([1.0, 0.0]),
+                }
+            ),
+            MockDevice,
+        )
     sim = Simulation(seq, sampling_rate=0.011)
     assert sim._seq == seq
     assert sim._qdict == seq.qubit_info
@@ -275,6 +293,12 @@ def test_building_basis_and_projection_operators(seq, reg):
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("global", "mw_global")
     seq2.add(pi_pls, "global")
+    # seq2 cannot be run on Chadoq2 because it does not support mw
+    with pytest.raises(
+        ValueError,
+        match="Bases used in samples should be supported by device.",
+    ):
+        QutipEmulator(sampler.sample(seq2), seq2.register, Chadoq2)
     sim2 = Simulation(seq2, sampling_rate=0.01)
     assert sim2.basis_name == "XY"
     assert sim2.dim == 2
@@ -300,6 +324,8 @@ def test_empty_sequences(reg):
     seq.declare_channel("ch0", "mw_global")
     with pytest.raises(ValueError, match="No instructions given"):
         Simulation(seq)
+    with pytest.raises(ValueError, match="SequenceSamples is empty"):
+        QutipEmulator(sampler.sample(seq), seq.register, seq.device)
 
     seq = Sequence(reg, MockDevice)
     seq.declare_channel("test", "rydberg_local", "target")
@@ -410,18 +436,23 @@ def test_run(seq, patch_plt_show):
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
     ):
-        sim.initial_state = bad_initial
+        sim.set_initial_state(bad_initial)
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
     ):
-        sim.initial_state = qutip.Qobj(bad_initial)
+        sim.set_initial_state(qutip.Qobj(bad_initial))
 
-    sim.initial_state = good_initial_array
+    with pytest.warns(
+        DeprecationWarning, match="Setting `initial_state` is deprecated"
+    ):
+        sim.initial_state = good_initial_array
+
+    sim.set_initial_state(good_initial_array)
     sim.run()
-    sim.initial_state = good_initial_qobj
+    sim.set_initial_state(good_initial_qobj)
     sim.run()
-    sim.initial_state = good_initial_qobj_no_dims
+    sim.set_initial_state(good_initial_qobj_no_dims)
     sim.run()
     seq.measure("ground-rydberg")
     sim.run()
@@ -450,20 +481,20 @@ def test_eval_times(seq):
         ValueError, match="evaluation_times float must be between 0 " "and 1."
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = 3.0
+        sim.set_evaluation_times(3.0)
     with pytest.raises(ValueError, match="Wrong evaluation time label."):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = 123
+        sim.set_evaluation_times(123)
     with pytest.raises(ValueError, match="Wrong evaluation time label."):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = "Best"
+        sim.set_evaluation_times("Best")
 
     with pytest.raises(
         ValueError,
         match="Provided evaluation-time list contains " "negative values.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [-1, 0, sim.sampling_times[-2]]
+        sim.set_evaluation_times([-1, 0, sim.sampling_times[-2]])
 
     with pytest.raises(
         ValueError,
@@ -471,10 +502,14 @@ def test_eval_times(seq):
         "further than sequence duration.",
     ):
         sim = Simulation(seq, sampling_rate=1.0)
-        sim.evaluation_times = [0, sim.sampling_times[-1] + 10]
+        sim.set_evaluation_times([0, sim.sampling_times[-1] + 10])
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = "Full"
+    with pytest.warns(
+        DeprecationWarning, match="Setting `evaluation_times` is deprecated"
+    ):
+        sim.evaluation_times = "Full"
+    sim.set_evaluation_times("Full")
     assert sim._eval_times_instruction == "Full"
     np.testing.assert_almost_equal(
         sim._eval_times_array,
@@ -482,37 +517,39 @@ def test_eval_times(seq):
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = "Minimal"
+    sim.set_evaluation_times("Minimal")
     np.testing.assert_almost_equal(
         sim._eval_times_array,
         np.array([sim.sampling_times[0], sim._tot_duration / 1000]),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [
-        0,
-        sim.sampling_times[-3],
-        sim._tot_duration / 1000,
-    ]
+    sim.set_evaluation_times(
+        [
+            0,
+            sim.sampling_times[-3],
+            sim._tot_duration / 1000,
+        ]
+    )
     np.testing.assert_almost_equal(
         sim._eval_times_array,
         np.array([0, sim.sampling_times[-3], sim._tot_duration / 1000]),
     )
 
-    sim.evaluation_times = []
+    sim.set_evaluation_times([])
     np.testing.assert_almost_equal(
         sim._eval_times_array,
         np.array([0, sim._tot_duration / 1000]),
     )
 
-    sim.evaluation_times = 0.0001
+    sim.set_evaluation_times(0.0001)
     np.testing.assert_almost_equal(
         sim._eval_times_array,
         np.array([0, sim._tot_duration / 1000]),
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = [sim.sampling_times[-10], sim.sampling_times[-3]]
+    sim.set_evaluation_times([sim.sampling_times[-10], sim.sampling_times[-3]])
     np.testing.assert_almost_equal(
         sim._eval_times_array,
         np.array(
@@ -526,7 +563,7 @@ def test_eval_times(seq):
     )
 
     sim = Simulation(seq, sampling_rate=1.0)
-    sim.evaluation_times = 0.4
+    sim.set_evaluation_times(0.4)
     np.testing.assert_almost_equal(
         sim.sampling_times[
             np.linspace(
@@ -821,10 +858,10 @@ def test_run_xy():
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._size)]
     )
-
-    sim.initial_state = good_initial_array
+    sim.set_initial_state(good_initial_array)
+    assert sim.initial_state == good_initial_qobj
     sim.run()
-    sim.initial_state = good_initial_qobj
+    sim.set_initial_state(good_initial_qobj)
     sim.run()
 
     assert not hasattr(sim._seq, "_measurement")
@@ -908,7 +945,18 @@ def test_mask_equals_remove():
         seq_masked.config_slm_mask(masked_qubits)
         seq_masked.add(pulse, "ch_masked")
         sim_masked = Simulation(seq_masked)
-
+        # Simulation cannot be run on a device not having an SLM mask
+        with pytest.raises(
+            ValueError,
+            match="Samples use SLM mask but device does not have one.",
+        ):
+            QutipEmulator(sampler.sample(seq_masked), reg_three, IroiseMVP)
+        # Simulation cannot be run on a register not defining "q2"
+        with pytest.raises(
+            ValueError,
+            match="The ids of qubits targeted in SLM mask",
+        ):
+            QutipEmulator(sampler.sample(seq_masked), reg_two, MockDevice)
         # Simulation on reduced register
         seq_two = Sequence(reg_two, MockDevice)
         if channel_type == "mw_global":
