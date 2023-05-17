@@ -115,7 +115,7 @@ class QutipEmulator:
                 # Check that targets of Local Channels are defined
                 # in register
                 if not set().union(
-                    *[slot.targets for slot in ch_samples.slots]
+                    *(slot.targets for slot in ch_samples.slots)
                 ) <= set(register.qubit_ids):
                     raise ValueError(
                         "The ids of qubits targeted in Local channels"
