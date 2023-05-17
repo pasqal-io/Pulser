@@ -21,7 +21,7 @@ from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import SimulationResults
-from pulser_simulation.simulation import Simulation
+from pulser_simulation.simulation import QutipEmulator
 
 
 class QutipBackend(Backend):
@@ -43,14 +43,14 @@ class QutipBackend(Backend):
                 f"not {type(config)}."
             )
         self._config = config
-        self._sim_obj = Simulation(
+        self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
             config=SimConfig.from_noise_model(self._config.noise_model),
             evaluation_times=self._config.evaluation_times,
             with_modulation=self._config.with_modulation,
         )
-        self._sim_obj.initial_state = self._config.initial_state
+        self._sim_obj.set_initial_state(self._config.initial_state)
 
     def run(
         self, progress_bar: bool = False, **qutip_options: Any
