@@ -88,13 +88,13 @@ class QutipEmulator:
         if sampled_seq.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
         # Check compatibility of register and device
-        self.__device = device
-        self.__device.validate_register(register)
-        self.__register = register
+        self._device = device
+        self._device.validate_register(register)
+        self._register = register
         # Check compatibility of samples and device:
         if (
             sampled_seq._slm_mask.end > 0
-            and not self.__device.supports_slm_mask
+            and not self._device.supports_slm_mask
         ):
             raise ValueError(
                 "Samples use SLM mask but device does not have one."
@@ -107,7 +107,7 @@ class QutipEmulator:
         if not sampled_seq._slm_mask.targets <= set(register.qubit_ids):
             raise ValueError(
                 "The ids of qubits targeted in SLM mask"
-                " should be defined in register"
+                " should be defined in register."
             )
         samples_list = []
         for ch, ch_samples in sampled_seq.channel_samples.items():
@@ -119,7 +119,7 @@ class QutipEmulator:
                 ) <= set(register.qubit_ids):
                     raise ValueError(
                         "The ids of qubits targeted in Local channels"
-                        " should be defined in register"
+                        " should be defined in register."
                     )
                 samples_list.append(ch_samples)
             else:
@@ -139,7 +139,7 @@ class QutipEmulator:
         self.samples_obj = _sampled_seq.extend_duration(self._tot_duration + 1)
 
         # Initializing qubit infos
-        self._qdict = self.__register.qubits
+        self._qdict = self._register.qubits
         self._size = len(self._qdict)
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
@@ -680,7 +680,7 @@ class QutipEmulator:
             1/hbar factor.
             """
             dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            U = 0.5 * self.__device.interaction_coeff / dist**6
+            U = 0.5 * self._device.interaction_coeff / dist**6
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
         def make_xy_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
@@ -706,7 +706,7 @@ class QutipEmulator:
                 ) / (dist * mag_norm)
             U = (
                 0.5
-                * cast(float, self.__device.interaction_coeff_xy)
+                * cast(float, self._device.interaction_coeff_xy)
                 * (1 - 3 * cosine**2)
                 / dist**3
             )
