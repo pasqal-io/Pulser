@@ -235,13 +235,13 @@ class ParamObj(Parametrized, OpSupport):
         return obj_to_dict(self, cls_dict, *args, **self.kwargs)
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        op_name = self.cls.__name__
         if isinstance(self.cls, Parametrized):
             raise ValueError(
                 "Serialization of calls to parametrized objects is not "
                 "supported."
             )
-        elif (
+        op_name = self.cls.__name__
+        if (
             self.args  # If it is a classmethod the first arg will be the class
             and hasattr(self.args[0], op_name)
             and inspect.isfunction(self.cls)
@@ -343,17 +343,6 @@ class ParamObj(Parametrized, OpSupport):
             stacklevel=2,
         )
         return obj
-
-    def __getattr__(self, name: str) -> ParamObj:
-        if hasattr(self.cls, name):
-            warnings.warn(
-                "Serialization of 'getattr' calls to parametrized objects "
-                "is not supported, so this object can't be serialized.",
-                stacklevel=2,
-            )
-            return ParamObj(getattr, self, name)
-        else:
-            raise AttributeError(f"No attribute named '{name}' in {self}.")
 
     def __str__(self) -> str:
         args = [str(a) for a in self.args]
