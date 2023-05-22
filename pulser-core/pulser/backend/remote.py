@@ -17,12 +17,19 @@ from __future__ import annotations
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any
+from typing import Any, TypedDict
 
 from pulser.backend.abc import Backend
 from pulser.devices import Device
 from pulser.result import Result, Results
 from pulser.sequence import Sequence
+
+
+class JobParams(TypedDict, total=False):
+    """The parameters for an individual job running on a backend."""
+
+    runs: int
+    variables: dict[str, Any]
 
 
 class SubmissionStatus(Enum):

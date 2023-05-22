@@ -14,19 +14,17 @@
 """Defines the backend class for QPU execution."""
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
 from pulser import Sequence
-from pulser.backend.remote import RemoteBackend, RemoteResults
+from pulser.backend.remote import JobParams, RemoteBackend, RemoteResults
 from pulser.devices import Device
 
 
 class QPUBackend(RemoteBackend):
     """Backend for sequence execution on a QPU."""
 
-    def run(
-        self, job_params: list[dict[str, int | dict[str, Any]]] = []
-    ) -> RemoteResults:
+    def run(self, job_params: list[JobParams] = []) -> RemoteResults:
         """Runs the sequence on the remote QPU and returns the result.
 
         Args:

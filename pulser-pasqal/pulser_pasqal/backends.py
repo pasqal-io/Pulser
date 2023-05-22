@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 from dataclasses import fields
-from typing import Any, ClassVar
+from typing import ClassVar
 
 import pasqal_cloud
 
 import pulser
 from pulser.backend.config import EmulatorConfig
-from pulser.backend.remote import RemoteBackend, RemoteResults
+from pulser.backend.remote import JobParams, RemoteBackend, RemoteResults
 from pulser_pasqal.pasqal_cloud import PasqalCloud
 
 DEFAULT_CONFIG_EMU_TN = EmulatorConfig(
@@ -57,7 +57,7 @@ class PasqalEmulator(RemoteBackend):
             )
 
     def run(
-        self, job_params: list[dict[str, int | dict[str, Any]]] | None = None
+        self, job_params: list[JobParams] | None = None
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Executes on the emulator backend through the Pasqal Cloud.
 
