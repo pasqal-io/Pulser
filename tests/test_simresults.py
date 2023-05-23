@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from copy import deepcopy
+from typing import cast
 
 import numpy as np
 import pytest
@@ -25,79 +25,97 @@ from pulser.waveforms import BlackmanWaveform
 from pulser_simulation import SimConfig, Simulation
 from pulser_simulation.simresults import CoherentResults, NoisyResults
 
-np.random.seed(123)
-q_dict = {
-    "A": np.array([0.0, 0.0]),
-    "B": np.array([0.0, 10.0]),
-}
-reg = Register(q_dict)
 
-duration = 1000
-pi_pulse = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
-
-seq = Sequence(reg, Chadoq2)
-
-# Declare Channels
-seq.declare_channel("ryd", "rydberg_global")
-seq.add(pi_pulse, "ryd")
-seq_no_meas = deepcopy(seq)
-seq_no_meas_noisy = deepcopy(seq)
-seq.measure("ground-rydberg")
-
-cfg_noisy = SimConfig(noise=("SPAM", "doppler", "amplitude"), amp_sigma=1e-3)
-cfg_noisych = SimConfig(noise="dephasing", dephasing_prob=0.01)
-
-sim = Simulation(seq)
-sim_noisy = Simulation(seq, config=cfg_noisy)
-sim_noisych = Simulation(seq, config=cfg_noisych)
-
-results = sim.run()
-results_noisy = sim_noisy.run()
-results_noisych = sim_noisych.run()
-
-state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
-ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
+@pytest.fixture
+def reg():
+    q_dict = {
+        "A": np.array([0.0, 0.0]),
+        "B": np.array([0.0, 10.0]),
+    }
+    return Register(q_dict)
 
 
-def test_initialization():
+@pytest.fixture
+def pi_pulse():
+    return Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0.0, 0)
+
+
+@pytest.fixture
+def seq_no_meas(reg, pi_pulse):
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(pi_pulse, "ryd")
+    return seq
+
+
+@pytest.fixture
+def sim(seq_no_meas):
+    seq_no_meas.measure("ground-rydberg")
+    np.random.seed(123)
+    return Simulation(seq_no_meas)
+
+
+@pytest.fixture
+def results_noisy(sim):
+    sim.add_config(
+        SimConfig(noise=("SPAM", "doppler", "amplitude"), amp_sigma=1e-3)
+    )
+    return sim.run()
+
+
+@pytest.fixture
+def results(sim):
+    return sim.run()
+
+
+def test_initialization(results):
+    rr_state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
     with pytest.raises(ValueError, match="`basis_name` must be"):
-        CoherentResults(state, 2, "bad_basis", None, [0])
+        CoherentResults(rr_state, 2, "bad_basis", None, [0])
     with pytest.raises(
         ValueError, match="`meas_basis` must be 'ground-rydberg' or 'digital'."
     ):
-        CoherentResults(state, 1, "all", None, "XY")
+        CoherentResults(rr_state, 1, "all", None, "XY")
     with pytest.raises(
         ValueError,
         match="`meas_basis` and `basis_name` must have the same value.",
     ):
         CoherentResults(
-            state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
+            rr_state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
         )
     with pytest.raises(ValueError, match="`basis_name` must be"):
-        NoisyResults(state, 2, "bad_basis", [0], 123)
+        NoisyResults(rr_state, 2, "bad_basis", [0], 123)
     with pytest.raises(
         ValueError, match="only values of 'epsilon' and 'epsilon_prime'"
     ):
         CoherentResults(
-            state,
+            rr_state,
             1,
             "ground-rydberg",
             [0],
             "ground-rydberg",
-            cfg_noisy.spam_dict,
+            {"eta": 0.1, "epsilon": 0.0, "epsilon_prime": 0.4},
         )
 
     assert results._dim == 2
     assert results._size == 2
     assert results._basis_name == "ground-rydberg"
     assert results._meas_basis == "ground-rydberg"
-    assert results.states[0] == ground
+    assert results.states[0] == qutip.tensor(
+        [qutip.basis(2, 1), qutip.basis(2, 1)]
+    )
 
 
 @pytest.mark.parametrize("noisychannel", [True, False])
-def test_get_final_state(noisychannel):
-    _results = results_noisych if noisychannel else results
-    assert _results.get_final_state().isoper or not noisychannel
+def test_get_final_state(
+    noisychannel, sim: Simulation, results, reg, pi_pulse
+):
+    if noisychannel:
+        sim.add_config(SimConfig(noise="dephasing", dephasing_prob=0.01))
+    _results = sim.run()
+    assert isinstance(_results, CoherentResults)
+    final_state = _results.get_final_state()
+    assert final_state.isoper if noisychannel else final_state.isket
     with pytest.raises(TypeError, match="Can't reduce"):
         _results.get_final_state(reduce_to_basis="digital")
     assert (
@@ -131,6 +149,7 @@ def test_get_final_state(noisychannel):
 
     sim_ = Simulation(seq_)
     results_ = sim_.run()
+    results_ = cast(CoherentResults, results_)
 
     with pytest.raises(ValueError, match="'reduce_to_basis' must be"):
         results_.get_final_state(reduce_to_basis="all")
@@ -155,7 +174,7 @@ def test_get_final_state(noisychannel):
     )
 
 
-def test_get_final_state_noisy():
+def test_get_final_state_noisy(reg, pi_pulse):
     np.random.seed(123)
     seq_ = Sequence(reg, Chadoq2)
     seq_.declare_channel("ram", "raman_local", initial_target="A")
@@ -177,7 +196,7 @@ def test_get_final_state_noisy():
     )
 
 
-def test_get_state_float_time():
+def test_get_state_float_time(results):
     with pytest.raises(IndexError, match="is absent from"):
         results.get_state(-1.0)
     with pytest.raises(IndexError, match="is absent from"):
@@ -199,7 +218,7 @@ def test_get_state_float_time():
     ).all()
 
 
-def test_expect():
+def test_expect(results, pi_pulse, reg):
     with pytest.raises(TypeError, match="must be a list"):
         results.expect("bad_observable")
     with pytest.raises(TypeError, match="Incompatible type"):
@@ -215,7 +234,7 @@ def test_expect():
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
     assert np.isclose(exp[-1], 1)
-    assert len(exp) == duration + 1  # +1 for the final instant
+    assert len(exp) == pi_pulse.duration + 1  # +1 for the final instant
     np.testing.assert_almost_equal(
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1, 0], [0, 0]]),
@@ -223,7 +242,11 @@ def test_expect():
 
     config = SimConfig(noise="SPAM", eta=0)
     sim_single.set_config(config)
-    sim_single.evaluation_times = "Minimal"
+    with pytest.warns(
+        DeprecationWarning, match="Setting `evaluation_times` is deprecated"
+    ):
+        sim_single.evaluation_times = "Minimal"
+    sim_single.set_evaluation_times("Minimal")
     results_single = sim_single.run()
     exp = results_single.expect(op)[0]
     assert len(exp) == 2
@@ -252,59 +275,63 @@ def test_expect():
     assert np.isclose(exp3dim[0][-1], 1.89690200e-14)
 
 
-def test_expect_noisy():
+def test_expect_noisy(results_noisy):
     np.random.seed(123)
     bad_op = qutip.tensor([qutip.qeye(2), qutip.sigmap()])
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7333333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7466666666666666)
 
 
-def test_plot():
+def test_plot(results_noisy, results):
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
     results_noisy.plot(op)
     results_noisy.plot(op, error_bars=False)
     results.plot(op)
 
 
-def test_sample_final_state():
-    np.random.seed(123)
+def test_sim_without_measurement(seq_no_meas):
+    assert not seq_no_meas.is_measured()
     sim_no_meas = Simulation(seq_no_meas, config=SimConfig(runs=1))
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
-        {"00": 88, "01": 156, "10": 188, "11": 568}
+        {"00": 80, "01": 164, "10": 164, "11": 592}
     )
-    with pytest.raises(NotImplementedError, match="dimension > 3"):
-        results_large_dim = deepcopy(results)
-        results_large_dim._dim = 7
-        results_large_dim.sample_final_state()
 
+
+def test_sample_final_state(results):
     sampling = results.sample_final_state(1234)
     assert len(sampling) == 4  # Check that all states were observed.
 
-    results._meas_basis = "digital"
+    # Switch the measurement basis in the result
+    results[-1].matching_meas_basis = False
     sampling0 = results.sample_final_state(N_samples=911)
     assert sampling0 == {"00": 911}
+
+
+def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
     seq_no_meas.declare_channel("raman", "raman_local", "B")
     seq_no_meas.add(pi_pulse, "raman")
     res_3level = Simulation(seq_no_meas).run()
     # Raman pi pulse on one atom will not affect other,
     # even with global pi on rydberg
     assert len(res_3level.sample_final_state()) == 2
-    res_3level._meas_basis = "ground-rydberg"
-    sampling_three_levelB = res_3level.sample_final_state()
+
+    seq_no_meas.measure("ground-rydberg")
+    res_3level_gb = Simulation(seq_no_meas).run()
+    sampling_three_levelB = res_3level_gb.sample_final_state()
     # Rydberg will affect both:
     assert len(sampling_three_levelB) == 4
 
 
-def test_sample_final_state_noisy():
+def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 725, "10": 265, "01": 192, "00": 52}
+        {"11": 772, "10": 190, "01": 161, "00": 111}
     )
     res_3level = Simulation(
-        seq_no_meas_noisy, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
+        seq_no_meas, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
     )
     final_state = res_3level.run().states[-1]
     assert np.isclose(
@@ -320,51 +347,42 @@ def test_sample_final_state_noisy():
     ).all()
 
 
-def test_results_xy():
-    q_dict = {
-        "A": np.array([0.0, 0.0]),
-        "B": np.array([0.0, 10.0]),
-    }
-    reg = Register(q_dict)
-    duration = 1000
-    pi_pulse = Pulse.ConstantDetuning(
-        BlackmanWaveform(duration, np.pi), 0.0, 0
-    )
-    seq = Sequence(reg, MockDevice)
+def test_results_xy(reg, pi_pulse):
+    seq_ = Sequence(reg, MockDevice)
 
     # Declare Channels
-    seq.declare_channel("ch0", "mw_global")
-    seq.add(pi_pulse, "ch0")
-    seq.measure("XY")
+    seq_.declare_channel("ch0", "mw_global")
+    seq_.add(pi_pulse, "ch0")
+    seq_.measure("XY")
 
-    sim = Simulation(seq)
-    results = sim.run()
+    sim_ = Simulation(seq_)
+    results_ = sim_.run()
 
-    ground = qutip.tensor([qutip.basis(2, 1), qutip.basis(2, 1)])
-
-    assert results._dim == 2
-    assert results._size == 2
-    assert results._basis_name == "XY"
-    assert results._meas_basis == "XY"
-    assert results.states[0] == ground
-
-    with pytest.raises(TypeError, match="Can't reduce a system in"):
-        results.get_final_state(reduce_to_basis="all")
+    assert results_._dim == 2
+    assert results_._size == 2
+    assert results_._basis_name == "XY"
+    assert results_._meas_basis == "XY"
+    assert results_.states[0] == qutip.tensor(
+        [qutip.basis(2, 1), qutip.basis(2, 1)]
+    )
 
     with pytest.raises(TypeError, match="Can't reduce a system in"):
-        results.get_final_state(reduce_to_basis="ground-rydberg")
+        results_.get_final_state(reduce_to_basis="all")
 
     with pytest.raises(TypeError, match="Can't reduce a system in"):
-        results.get_final_state(reduce_to_basis="digital")
+        results_.get_final_state(reduce_to_basis="ground-rydberg")
 
-    state = results.get_final_state(reduce_to_basis="XY")
+    with pytest.raises(TypeError, match="Can't reduce a system in"):
+        results_.get_final_state(reduce_to_basis="digital")
+
+    state = results_.get_final_state(reduce_to_basis="XY")
 
     assert np.all(
         np.isclose(
-            np.abs(state.full()), np.abs(results.states[-1].full()), atol=1e-5
+            np.abs(state.full()), np.abs(results_.states[-1].full()), atol=1e-5
         )
     )
 
     # Check that measurement projectors are correct
-    assert results._meas_projector(0) == qutip.basis(2, 1).proj()
-    assert results._meas_projector(1) == qutip.basis(2, 0).proj()
+    assert results_._meas_projector(0) == qutip.basis(2, 1).proj()
+    assert results_._meas_projector(1) == qutip.basis(2, 0).proj()

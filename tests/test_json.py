@@ -137,11 +137,11 @@ def test_rare_cases(patch_plt_show):
 
     wf = BlackmanWaveform(var * 100 // 10, var)
     with pytest.warns(
-        UserWarning, match="Serialization of 'getattr'"
+        UserWarning, match="Calls to methods of parametrized objects"
     ), pytest.raises(
         ValueError, match="Serialization of calls to parametrized objects"
     ):
-        s = encode(wf.draw())
+        s = encode(wf())
     s = encode(wf)
 
     with pytest.raises(ValueError, match="not encode a Sequence"):
@@ -155,12 +155,6 @@ def test_rare_cases(patch_plt_show):
     var_ = wf_._variables["var"]
     var_._assign(10)
     assert wf_.build() == BlackmanWaveform(100, 10)
-    with pytest.warns(UserWarning, match="Serialization of 'getattr'"):
-        draw_func = wf_.draw
-    with pytest.warns(
-        UserWarning, match="Calls to methods of parametrized objects"
-    ):
-        draw_func().build()
 
     rotated_reg = parametrize(Register.rotate)(reg, var)
     with pytest.raises(NotImplementedError):
