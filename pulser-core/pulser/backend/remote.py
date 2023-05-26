@@ -128,7 +128,7 @@ class RemoteBackend(Backend):
 
     Args:
         sequence: A Sequence or a list of Sequences to execute on a
-            backed accessible via a remote connection.
+            backend accessible via a remote connection.
         connection: The remote connection through which the jobs
             are executed.
     """

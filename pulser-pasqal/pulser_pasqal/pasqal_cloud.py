@@ -17,7 +17,7 @@ from __future__ import annotations
 import copy
 import warnings
 from dataclasses import fields
-from typing import Any, Dict, Optional, Type, cast
+from typing import Any, Optional, Type
 
 import pasqal_cloud
 from pasqal_cloud.device.configuration import (
@@ -29,6 +29,7 @@ from pasqal_cloud.device.configuration import (
 from pulser import Sequence
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
+    JobParams,
     RemoteConnection,
     RemoteResults,
     SubmissionStatus,
@@ -85,29 +86,21 @@ class PasqalCloud(RemoteConnection):
             sequence.measure(bases[0])
 
         emulator = kwargs.get("emulator", None)
-        job_params: list[dict[str, int | dict]] = kwargs.get("job_params", [])
+        job_params: list[JobParams] = kwargs.get("job_params", [])
         if emulator is None:
-            suffix = " when executing a sequence on a real QPU."
-            if not job_params:
-                raise ValueError("'job_params' must be specified" + suffix)
-            if any("runs" not in j for j in job_params):
-                raise ValueError(
-                    "All elements of 'job_params' must specify 'runs'" + suffix
-                )
-
             available_devices = self.fetch_available_devices()
             # TODO: Could be better to check if the devices are
             # compatible, even if not exactly equal
             if sequence.device not in available_devices.values():
                 raise ValueError(
                     "The device used in the sequence does not match any "
-                    "of the devices currently avaialble through the remote "
+                    "of the devices currently available through the remote "
                     "connection."
                 )
 
         if sequence.is_parametrized() or sequence.is_register_mappable():
             for params in job_params:
-                vars = cast(Dict[str, Any], params.get("variables", {}))
+                vars = params.get("variables", {})
                 sequence.build(**vars)
 
         configuration = self._convert_configuration(
@@ -116,7 +109,7 @@ class PasqalCloud(RemoteConnection):
 
         batch = self._sdk_connection.create_batch(
             serialized_sequence=sequence.to_abstract_repr(),
-            jobs=job_params or [],  # jobs is a required argument
+            jobs=job_params or [],  # type: ignore[arg-type]
             emulator=emulator,
             configuration=configuration,
             wait=False,

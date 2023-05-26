@@ -39,6 +39,13 @@ class QPUBackend(RemoteBackend):
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
+        suffix = " when executing a sequence on a real QPU."
+        if not job_params:
+            raise ValueError("'job_params' must be specified" + suffix)
+        if any("runs" not in j for j in job_params):
+            raise ValueError(
+                "All elements of 'job_params' must specify 'runs'" + suffix
+            )
         results = self._connection.submit(
             self._sequence, job_params=job_params
         )

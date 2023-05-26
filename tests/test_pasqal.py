@@ -143,21 +143,11 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
     assert seq.is_parametrized() == parametrized
 
     if not emulator:
-        with pytest.raises(ValueError, match="'job_params' must be specified"):
-            fixt.pasqal_cloud.submit(seq)
-        with pytest.raises(
-            ValueError,
-            match="All elements of 'job_params' must specify 'runs'",
-        ):
-            fixt.pasqal_cloud.submit(
-                seq, job_params=[{"n_runs": 10}, {"runs": 1}]
-            )
-
         seq2 = seq.switch_device(virtual_device)
         with pytest.raises(
             ValueError,
             match="The device used in the sequence does not match any "
-            "of the devices currently avaialble through the remote "
+            "of the devices currently available through the remote "
             "connection.",
         ):
             fixt.pasqal_cloud.submit(seq2, job_params=[dict(runs=10)])

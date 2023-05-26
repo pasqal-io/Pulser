@@ -246,7 +246,15 @@ def test_qpu_backend(sequence):
 
     seq = sequence.switch_device(Chadoq2)
     qpu_backend = QPUBackend(seq, connection)
-    remote_results = qpu_backend.run()
+    with pytest.raises(ValueError, match="'job_params' must be specified"):
+        qpu_backend.run()
+    with pytest.raises(
+        ValueError,
+        match="All elements of 'job_params' must specify 'runs'",
+    ):
+        qpu_backend.run(job_params=[{"n_runs": 10}, {"runs": 1}])
+
+    remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
     with pytest.raises(AttributeError, match="no attribute 'result'"):
         # Cover the custom '__getattr__' default behavior

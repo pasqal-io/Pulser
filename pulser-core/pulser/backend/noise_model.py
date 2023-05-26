@@ -71,7 +71,8 @@ class NoiseModel:
         depolarizing_prob: The probability of a depolarizing error occuring.
         eff_noise_probs: The probability associated to each effective noise
             operator.
-        eff_noise_opers: The operators for the effective noise model.
+        eff_noise_opers: The operators for the effective noise model. The
+            first operator must be the identity.
     """
 
     noise_types: tuple[NOISE_TYPES, ...] = ()
