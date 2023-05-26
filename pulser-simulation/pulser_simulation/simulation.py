@@ -347,10 +347,6 @@ class QutipEmulator:
         diff_noise_set = new_noise_set - old_noise_set
         # Create temporary param_dict to add noise parameters:
         param_dict: dict[str, Any] = asdict(self._config)
-        # remove redundant `spam_dict`:
-        del param_dict["spam_dict"]
-        # `doppler_sigma` will be recalculated from temperature if needed:
-        del param_dict["doppler_sigma"]
         # Begin populating with added noise parameters:
         param_dict["noise"] = tuple(new_noise_set)
         if "SPAM" in diff_noise_set:
@@ -460,7 +456,7 @@ class QutipEmulator:
         elif isinstance(value, float):
             if value > 1 or value <= 0:
                 raise ValueError(
-                    "evaluation_times float must be between 0 " "and 1."
+                    "evaluation_times float must be between 0 and 1."
                 )
             indices = np.linspace(
                 0,
@@ -878,7 +874,7 @@ class QutipEmulator:
     # Run Simulation Evolution using Qutip
     def run(
         self,
-        progress_bar: Optional[bool] = False,
+        progress_bar: bool = False,
         **options: Any,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.

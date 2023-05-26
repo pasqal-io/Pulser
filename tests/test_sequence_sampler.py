@@ -390,7 +390,7 @@ def seqs(seq_rydberg) -> list[pulser.Sequence]:
     seq = pulser.Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "raman_global")
     seq.add(pulse, "ch0")
-    seq.measure()
+    seq.measure(basis="digital")
     seqs.append(deepcopy(seq))
 
     seqs.append(seq_rydberg)

@@ -15,6 +15,7 @@
 import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
+from pulser.backend.noise_model import NoiseModel
 from pulser_simulation import SimConfig
 
 
@@ -29,7 +30,7 @@ def matrices():
     return pauli
 
 
-def test_init(matrices):
+def test_init():
     config = SimConfig(
         noise=(
             "SPAM",
@@ -52,7 +53,7 @@ def test_init(matrices):
     assert "depolarizing" in str_config
     config = SimConfig(
         noise="eff_noise",
-        eff_noise_opers=[matrices["I"], matrices["X"]],
+        eff_noise_opers=[qeye(2), sigmax()],
         eff_noise_probs=[0.3, 0.7],
     )
     str_config = config.__str__(True)
@@ -60,58 +61,26 @@ def test_init(matrices):
         "Effective noise distribution" in str_config
         and "Effective noise operators" in str_config
     )
-    with pytest.raises(ValueError, match="is not a valid noise type."):
-        SimConfig(noise="bad_noise")
-    with pytest.raises(ValueError, match="Temperature field"):
-        SimConfig(temperature=-1.0)
+
+    with pytest.raises(TypeError, match="'temperature' must be a float"):
+        SimConfig(temperature="0.0")
     with pytest.raises(ValueError, match="SPAM parameter"):
         SimConfig(eta=-1.0)
     with pytest.raises(
-        ValueError, match="The standard deviation in amplitude"
+        ValueError, match="'amp_sigma' must be greater than or equal to zero"
     ):
         SimConfig(amp_sigma=-0.001)
 
 
-@pytest.mark.parametrize(
-    "noise_sample,",
-    [
-        ("dephasing", "depolarizing"),
-        ("eff_noise", "depolarizing"),
-        ("eff_noise", "dephasing"),
-        ("depolarizing", "eff_noise", "dephasing"),
-    ],
-)
-def test_eff_noise_init(noise_sample):
-    with pytest.raises(
-        NotImplementedError,
-        match="Depolarizing, dephasing and eff_noise channels",
-    ):
-        SimConfig(noise=noise_sample)
-
-
-@pytest.mark.parametrize(
-    "prob_distr",
-    [
-        [-1.0, 0.5],
-        [0.5, 2.0],
-        [0.3, 0.2],
-    ],
-)
-def test_eff_noise_probs(prob_distr):
-    with pytest.raises(ValueError, match="is not a probability distribution."):
-        SimConfig(
-            noise=("eff_noise"),
-            eff_noise_opers=[qeye(2), sigmax()],
-            eff_noise_probs=prob_distr,
-        )
-
-
 def test_eff_noise_opers(matrices):
+    # Some of these checks are repeated in the NoiseModel UTs
     with pytest.raises(ValueError, match="The operators list length"):
         SimConfig(noise=("eff_noise"), eff_noise_probs=[1.0])
     with pytest.raises(TypeError, match="eff_noise_probs is a list of floats"):
         SimConfig(
-            noise=("eff_noise"), eff_noise_probs=[""], eff_noise_opers=[""]
+            noise=("eff_noise"),
+            eff_noise_probs=["0.1"],
+            eff_noise_opers=[qeye(2)],
         )
     with pytest.raises(
         ValueError, match="The general noise parameters have not been filled."
@@ -121,7 +90,7 @@ def test_eff_noise_opers(matrices):
         SimConfig(
             noise=("eff_noise"), eff_noise_opers=[2.0], eff_noise_probs=[1.0]
         )
-    with pytest.raises(TypeError, match="to be of type oper."):
+    with pytest.raises(TypeError, match="to be of Qutip type 'oper'."):
         SimConfig(
             noise=("eff_noise"),
             eff_noise_opers=[matrices["ket"]],
@@ -147,3 +116,15 @@ def test_eff_noise_opers(matrices):
             eff_noise_opers=[matrices["I"], matrices["Zh"]],
             eff_noise_probs=[0.5, 0.5],
         )
+
+
+def test_from_noise_model():
+    noise_model = NoiseModel(
+        noise_types=("SPAM",),
+        p_false_neg=0.4,
+        p_false_pos=0.1,
+        state_prep_error=0.05,
+    )
+    assert SimConfig.from_noise_model(noise_model) == SimConfig(
+        noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.05
+    )
