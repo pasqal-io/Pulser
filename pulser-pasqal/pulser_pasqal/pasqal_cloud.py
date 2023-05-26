@@ -204,7 +204,7 @@ class PasqalCloud(RemoteConnection):
             warnings.simplefilter("always", DeprecationWarning)
             warnings.warn(
                 "'PasqalCloud.create_batch()' is deprecated and will be "
-                "removed after v0.13. To submit jobs to the Pasqal Cloud, "
+                "removed after v0.14. To submit jobs to the Pasqal Cloud, "
                 "use one of the remote backends (eg QPUBackend, EmuTNBacked,"
                 " EmuFreeBackend) with an open PasqalCloud() connection.",
                 category=DeprecationWarning,
@@ -245,7 +245,7 @@ class PasqalCloud(RemoteConnection):
             warnings.simplefilter("always", DeprecationWarning)
             warnings.warn(
                 "'PasqalCloud.get_batch()' is deprecated and will be removed "
-                "after v0.13. To retrieve the results from a job executed "
+                "after v0.14. To retrieve the results from a job executed "
                 "through the Pasqal Cloud, use the RemoteResults instance "
                 "returned after calling run() on one of the remote backends"
                 " (eg QPUBackend, EmuTNBacked, EmuFreeBackend) with an open "

@@ -324,7 +324,7 @@ def check_pasqal_cloud(fixt, seq, emulator, expected_seq_representation):
             seq,
             **create_batch_kwargs,
         )
-        assert pulser_pasqal.__version__ < "0.14"
+        assert pulser_pasqal.__version__ < "0.15"
 
     fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
         serialized_sequence=expected_seq_representation,
@@ -337,7 +337,7 @@ def check_pasqal_cloud(fixt, seq, emulator, expected_seq_representation):
     )
     with pytest.deprecated_call():
         fixt.pasqal_cloud.get_batch(**get_batch_kwargs)
-        assert pulser_pasqal.__version__ < "0.14"
+        assert pulser_pasqal.__version__ < "0.15"
 
     fixt.mock_cloud_sdk.get_batch.assert_called_once_with(**get_batch_kwargs)
 
