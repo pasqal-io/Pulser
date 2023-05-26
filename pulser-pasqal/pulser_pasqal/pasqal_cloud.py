@@ -133,13 +133,12 @@ class PasqalCloud(RemoteConnection):
             size: int | None = None
             if vars and "qubits" in vars:
                 size = len(vars["qubits"])
-            counts = job.result
-            assert counts is not None, "Failed to fetch the results."
+            assert job.result is not None, "Failed to fetch the results."
             results.append(
                 SampledResult(
                     atom_order=all_qubit_ids[slice(size)],
                     meas_basis=meas_basis,
-                    bitstring_counts=counts,
+                    bitstring_counts=job.result,
                 )
             )
         return tuple(results)
