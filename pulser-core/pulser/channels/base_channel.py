@@ -169,6 +169,13 @@ class Channel(ABC):
                 " greater than or equal to 'min_duration'"
                 f"({self.min_duration})."
             )
+
+        if self.eom_config is not None and self.mod_bandwidth is None:
+            raise ValueError(
+                "'eom_config' can't be defined in a Channel without a "
+                "modulation bandwidth."
+            )
+
         if (
             self.mod_bandwidth is not None
             and self.mod_bandwidth > MODBW_TO_TR * 1e3
