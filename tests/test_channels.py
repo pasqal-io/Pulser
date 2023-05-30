@@ -190,17 +190,17 @@ _eom_config = RydbergEOM(
 
 def test_eom_channel():
     with pytest.raises(
-        TypeError,
-        match="When defined, 'eom_config' must be a valid 'RydbergEOM'",
-    ):
-        Rydberg.Global(None, None, mod_bandwidth=3, eom_config=BaseEOM(50))
-
-    with pytest.raises(
         ValueError,
         match="'eom_config' can't be defined in a Channel without a"
         " modulation bandwidth",
     ):
         Rydberg.Global(None, None, eom_config=_eom_config)
+
+    with pytest.raises(
+        TypeError,
+        match="When defined, 'eom_config' must be a valid 'RydbergEOM'",
+    ):
+        Rydberg.Global(None, None, mod_bandwidth=3, eom_config=BaseEOM(50))
 
     assert not Rydberg.Global(None, None).supports_eom()
     assert Rydberg.Global(
