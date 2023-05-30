@@ -48,9 +48,8 @@ class Rydberg(Channel):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if (
-            self.eom_config is not None 
-            and not isinstance(self.eom_config, RydbergEOM)
+        if self.eom_config is not None and not isinstance(
+            self.eom_config, RydbergEOM
         ):
             raise TypeError(
                 "When defined, 'eom_config' must be a valid 'RydbergEOM'"

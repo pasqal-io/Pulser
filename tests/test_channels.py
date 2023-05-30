@@ -193,7 +193,7 @@ def test_eom_channel():
         TypeError,
         match="When defined, 'eom_config' must be a valid 'RydbergEOM'",
     ):
-        Rydberg.Global(None, None, eom_config=BaseEOM(50))
+        Rydberg.Global(None, None, mod_bandwidth=3, eom_config=BaseEOM(50))
 
     with pytest.raises(
         ValueError,
