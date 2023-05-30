@@ -525,21 +525,29 @@ class CoherentResults(SimulationResults):
             return sampled_state
 
         detected_sample_dict: Counter = Counter()
+        eps = self._meas_errors["epsilon"]
+        eps_p = self._meas_errors["epsilon_prime"]
+
         for shot, n_detects in sampled_state.items():
-            eps = self._meas_errors["epsilon"]
-            eps_p = self._meas_errors["epsilon_prime"]
             # Shot as an array of 1s and 0s
             shot_arr = np.array(list(shot), dtype=int)
-            # Probability of flipping each bit
-            flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
-            # 1 if it flips, 0 if it stays the same
-            flips = (
-                np.random.uniform(size=(n_detects, len(flip_probs)))
-                < flip_probs
-            ).astype(int)
-            # XOR betwen the original array and the flips
-            # Gives an array of n_detects individual shots
-            new_shots = shot_arr ^ flips
+
+            if eps_p != 0.0 and eps != 0.0:
+                # Probability of flipping each bit
+                flip_probs = np.array(
+                    [eps_p if x == "1" else eps for x in shot]
+                )
+                # 1 if it flips, 0 if it stays the same
+                flips = (
+                    np.random.uniform(size=(n_detects, len(flip_probs)))
+                    < flip_probs
+                ).astype(int)
+                # XOR betwen the original array and the flips
+                # Gives an array of n_detects individual shots
+                new_shots = shot_arr ^ flips
+            else:
+                new_shots = shot_arr
+
             # Count all the new_shots
             detected_sample_dict += Counter(
                 "".join(map(str, measured)) for measured in new_shots
