@@ -330,7 +330,7 @@ class RegDrawer:
         big_side = max(diffs)
         proportions = diffs / big_side
         Ls = proportions * min(
-            big_side / 4, 10
+            big_side / 1.9, 10
         )  # Figsize is, at most, (10,10)
         fig, axes = plt.subplots(figsize=Ls)
 

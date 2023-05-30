@@ -361,6 +361,9 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
             qubit_colors=qubit_colors,
         )
+
+        plt.tight_layout()
+
         if fig_name is not None:
             plt.savefig(fig_name, **kwargs_savefig)
 
