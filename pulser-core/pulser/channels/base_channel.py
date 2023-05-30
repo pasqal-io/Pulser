@@ -177,6 +177,12 @@ class Channel(ABC):
                 f"'mod_bandwidth' must be lower than {MODBW_TO_TR*1e3} MHz"
             )
 
+        if self.eom_config is not None and self.mod_bandwidth is None:
+            raise ValueError(
+                "'eom_config' can't be defined in a Channel without a "
+                "modulation bandwidth."
+            )
+
     @property
     def rise_time(self) -> int:
         """The rise time (in ns).
