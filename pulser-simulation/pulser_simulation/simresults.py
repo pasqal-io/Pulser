@@ -18,7 +18,7 @@ from __future__ import annotations
 import collections.abc
 import typing
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import lru_cache
 from typing import Mapping, Optional, Tuple, Union, cast
 
@@ -524,7 +524,7 @@ class CoherentResults(SimulationResults):
         if self._meas_errors is None:
             return sampled_state
 
-        detected_sample_dict: Counter = Counter()
+        detected_sample_dict: defaultdict = defaultdict(int)
         eps = self._meas_errors["epsilon"]
         eps_p = self._meas_errors["epsilon_prime"]
 
@@ -536,20 +536,22 @@ class CoherentResults(SimulationResults):
             shot_arr = np.array(list(shot), dtype=int)
 
             # Probability of flipping each bit
-            flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
+            flip_probs = np.where(shot_arr == 1, eps_p, eps)
+
             # 1 if it flips, 0 if it stays the same
             flips = (
                 np.random.uniform(size=(n_detects, len(flip_probs)))
                 < flip_probs
-            ).astype(int)
+            )
+
             # XOR betwen the original array and the flips
             # Gives an array of n_detects individual shots
             new_shots = shot_arr ^ flips
 
             # Count all the new_shots
-            new_shots_count = [
-                "".join(map(str, measured)) for measured in new_shots
-            ]
-            detected_sample_dict.update(new_shots_count)
+            for x in new_shots:
+                detected_sample_dict[tuple(x)] += 1
 
-        return detected_sample_dict
+        return Counter(
+            {"".join(map(str, k)): v for k, v in detected_sample_dict.items()}
+        )
