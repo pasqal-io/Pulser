@@ -528,29 +528,28 @@ class CoherentResults(SimulationResults):
         eps = self._meas_errors["epsilon"]
         eps_p = self._meas_errors["epsilon_prime"]
 
+        if eps_p == 0.0 and eps == 0.0:
+            return sampled_state
+
         for shot, n_detects in sampled_state.items():
             # Shot as an array of 1s and 0s
             shot_arr = np.array(list(shot), dtype=int)
 
-            if eps_p != 0.0 and eps != 0.0:
-                # Probability of flipping each bit
-                flip_probs = np.array(
-                    [eps_p if x == "1" else eps for x in shot]
-                )
-                # 1 if it flips, 0 if it stays the same
-                flips = (
-                    np.random.uniform(size=(n_detects, len(flip_probs)))
-                    < flip_probs
-                ).astype(int)
-                # XOR betwen the original array and the flips
-                # Gives an array of n_detects individual shots
-                new_shots = shot_arr ^ flips
-            else:
-                new_shots = shot_arr
+            # Probability of flipping each bit
+            flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
+            # 1 if it flips, 0 if it stays the same
+            flips = (
+                np.random.uniform(size=(n_detects, len(flip_probs)))
+                < flip_probs
+            ).astype(int)
+            # XOR betwen the original array and the flips
+            # Gives an array of n_detects individual shots
+            new_shots = shot_arr ^ flips
 
             # Count all the new_shots
-            detected_sample_dict += Counter(
+            new_shots_count = [
                 "".join(map(str, measured)) for measured in new_shots
-            )
+            ]
+            detected_sample_dict.update(new_shots_count)
 
         return detected_sample_dict
