@@ -547,8 +547,8 @@ class CoherentResults(SimulationResults):
         # Perform XOR between original array and flips
         new_shots = shot_arr.repeat(n_detects_list, axis=0) ^ flips
         # Count all the new_shots
+        # We are not converting to str before because tuple indexing is faster
         detected_sample_dict: Counter = Counter(map(tuple, new_shots))
-
         return Counter(
             {"".join(map(str, k)): v for k, v in detected_sample_dict.items()}
         )
