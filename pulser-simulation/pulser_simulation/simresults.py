@@ -18,7 +18,7 @@ from __future__ import annotations
 import collections.abc
 import typing
 from abc import ABC, abstractmethod
-from collections import Counter, defaultdict
+from collections import Counter
 from functools import lru_cache
 from typing import Mapping, Optional, Tuple, Union, cast
 
@@ -524,33 +524,31 @@ class CoherentResults(SimulationResults):
         if self._meas_errors is None:
             return sampled_state
 
-        detected_sample_dict: defaultdict = defaultdict(int)
         eps = self._meas_errors["epsilon"]
         eps_p = self._meas_errors["epsilon_prime"]
 
         if eps_p == 0.0 and eps == 0.0:
             return sampled_state
 
-        for shot, n_detects in sampled_state.items():
-            # Shot as an array of 1s and 0s
-            shot_arr = np.array(list(shot), dtype=int)
+        shots = list(sampled_state.keys())
+        n_detects_list = list(sampled_state.values())
 
-            # Probability of flipping each bit
-            flip_probs = np.where(shot_arr == 1, eps_p, eps)
-
-            # 1 if it flips, 0 if it stays the same
-            flips = (
-                np.random.uniform(size=(n_detects, len(flip_probs)))
-                < flip_probs
-            )
-
-            # XOR betwen the original array and the flips
-            # Gives an array of n_detects individual shots
-            new_shots = shot_arr ^ flips
-
-            # Count all the new_shots
-            for x in new_shots:
-                detected_sample_dict[tuple(x)] += 1
+        # Convert shots to a 2D array
+        shot_arr = np.array([list(shot) for shot in shots], dtype=int)
+        # Compute flip probabilities
+        flip_probs = np.where(shot_arr == 1, eps_p, eps)
+        # Repeat flip_probs based on n_detects_list
+        flip_probs_repeated = np.repeat(flip_probs, n_detects_list, axis=0)
+        # Generate random matrix of shape (sum(n_detects_list), len(shot))
+        random_matrix = np.random.uniform(
+            size=(np.sum(n_detects_list), len(shot_arr[0]))
+        )
+        # Compare random matrix with flip probabilities
+        flips = random_matrix < flip_probs_repeated
+        # Perform XOR between original array and flips
+        new_shots = shot_arr.repeat(n_detects_list, axis=0) ^ flips
+        # Count all the new_shots
+        detected_sample_dict: Counter = Counter(map(tuple, new_shots))
 
         return Counter(
             {"".join(map(str, k)): v for k, v in detected_sample_dict.items()}
