@@ -504,21 +504,6 @@ class QutipEmulator:
                     w0 = self.config.laser_waist
                     noise_amp = noise_amp_base * np.exp(-((r / w0) ** 2))
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= noise_amp
-                if "dephasing" in self.config.noise:
-                    # Add dephasing noise
-                    dephasing_noise = self._dephasing_noise[qid]
-                    samples_dict[qid]["phase"][
-                        slot.ti : slot.tf
-                    ] *= dephasing_noise
-                if "depolarizing" in self.config.noise:
-                    # Add depolarizing noise
-                    depolarizing_noise = self._depolarizing_noise[qid]
-                    samples_dict[qid]["amp"][
-                        slot.ti : slot.tf
-                    ] *= depolarizing_noise
-                    samples_dict[qid]["det"][
-                        slot.ti : slot.tf
-                    ] *= depolarizing_noise
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
@@ -614,43 +599,6 @@ class QutipEmulator:
                 0, self.config.doppler_sigma, size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
-
-        idx_depolarizing = idx_dephasing = -1
-        for idx, collapse_op in enumerate(self._collapse_ops):
-            if "depolarizing" in self.config.noise and "X" in str(collapse_op):
-                idx_depolarizing = idx
-            if "dephasing" in self.config.noise and "Z" in str(collapse_op):
-                idx_dephasing = idx
-
-        if "depolarizing" in self.config.noise and idx_depolarizing != -1:
-            prob = self.config.depolarizing_prob / 4
-            n = self._size
-            if prob > 0.1 and n > 1:
-                warnings.warn(
-                    "The depolarizing model is a first-order approximation"
-                    f" in the depolarizing probability. p = {4*prob}"
-                    " is too large for realistic results.",
-                    stacklevel=2,
-                )
-            k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
-            for idx in range(idx_depolarizing, idx_depolarizing + 3):
-                self._collapse_ops[
-                    idx
-                ] *= k  # Update X, Y, Z collapse operators
-        if "dephasing" in self.config.noise and idx_dephasing != -1:
-            prob = self.config.dephasing_prob / 2
-            n = self._size
-            if prob > 0.1 and n > 1:
-                warnings.warn(
-                    "The dephasing model is a first-order approximation in the"
-                    f" dephasing probability. p = {2*prob} is too large for "
-                    "realistic results.",
-                    stacklevel=2,
-                )
-            k = np.sqrt(prob * (1 - prob) ** (n - 1))
-            self._collapse_ops[
-                idx_dephasing
-            ] *= k  # Update Z collapse operator
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
