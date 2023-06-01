@@ -521,15 +521,14 @@ class CoherentResults(SimulationResults):
             quantum states at time t.
         """
         sampled_state = super().sample_state(t, n_samples, t_tol)
-        if self._meas_errors is None:
+        if self._meas_errors is None or (
+            self._meas_errors["epsilon"] == 0.0
+            and self._meas_errors["epsilon_prime"] == 0
+        ):
             return sampled_state
 
         eps = self._meas_errors["epsilon"]
         eps_p = self._meas_errors["epsilon_prime"]
-
-        if eps_p == 0.0 and eps == 0.0:
-            return sampled_state
-
         shots = list(sampled_state.keys())
         n_detects_list = list(sampled_state.values())
 
