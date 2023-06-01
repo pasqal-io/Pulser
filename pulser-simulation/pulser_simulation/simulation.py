@@ -516,13 +516,18 @@ class QutipEmulator:
                 if "dephasing" in self.config.noise:
                     # Add dephasing noise
                     dephasing_noise = self._dephasing_noise[qid]
-                    samples_dict[qid]["phase"][slot.ti : slot.tf] *= dephasing_noise
+                    samples_dict[qid]["phase"][
+                        slot.ti : slot.tf
+                    ] *= dephasing_noise
                 if "depolarizing" in self.config.noise:
                     # Add depolarizing noise
                     depolarizing_noise = self._depolarizing_noise[qid]
-                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= depolarizing_noise
-                    samples_dict[qid]["det"][slot.ti : slot.tf] *= depolarizing_noise
-
+                    samples_dict[qid]["amp"][
+                        slot.ti : slot.tf
+                    ] *= depolarizing_noise
+                    samples_dict[qid]["det"][
+                        slot.ti : slot.tf
+                    ] *= depolarizing_noise
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
@@ -622,7 +627,9 @@ class QutipEmulator:
             depolarizing_error = np.random.normal(
                 0, self.config.depolarizing_prob, size=len(self._qid_index)
             )
-            self._depolarizing_noise = dict(zip(self._qid_index, depolarizing_error))
+            self._depolarizing_noise = dict(
+                zip(self._qid_index, depolarizing_error)
+            )
         if "dephasing" in self.config.noise:
             dephasing_error = np.random.normal(
                 0, self.config.dephasing_prob, size=len(self._qid_index)
