@@ -152,8 +152,6 @@ class QutipEmulator:
         self._eval_times_array: np.ndarray
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
-        self._depolarizing_noise: dict[Union[str, int], float] = {}
-        self._dephasing_noise: dict[Union[str, int], float] = {}
 
         # Initializing sampling and evalutaion times
         if not (0 < sampling_rate <= 1.0):
@@ -266,13 +264,6 @@ class QutipEmulator:
             kraus_ops.append(k * qutip.sigmaz())
 
         if "eff_noise" in self.config.noise:
-            if self.basis_name == "digital" or self.basis_name == "all":
-                # Go back to previous config
-                self.set_config(prev_config)
-                raise NotImplementedError(
-                    "Cannot include general "
-                    + "noise in digital- or all-basis."
-                )
             # Probability distribution of error occurences
             n = self._size
             m = len(self.config.eff_noise_opers)
@@ -623,18 +614,43 @@ class QutipEmulator:
                 0, self.config.doppler_sigma, size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
-        if "depolarizing" in self.config.noise:
-            depolarizing_error = np.random.normal(
-                0, self.config.depolarizing_prob, size=len(self._qid_index)
-            )
-            self._depolarizing_noise = dict(
-                zip(self._qid_index, depolarizing_error)
-            )
-        if "dephasing" in self.config.noise:
-            dephasing_error = np.random.normal(
-                0, self.config.dephasing_prob, size=len(self._qid_index)
-            )
-            self._dephasing_noise = dict(zip(self._qid_index, dephasing_error))
+
+        idx_depolarizing = idx_dephasing = -1
+        for idx, collapse_op in enumerate(self._collapse_ops):
+            if "depolarizing" in self.config.noise and "X" in str(collapse_op):
+                idx_depolarizing = idx
+            if "dephasing" in self.config.noise and "Z" in str(collapse_op):
+                idx_dephasing = idx
+
+        if "depolarizing" in self.config.noise and idx_depolarizing != -1:
+            prob = self.config.depolarizing_prob / 4
+            n = self._size
+            if prob > 0.1 and n > 1:
+                warnings.warn(
+                    "The depolarizing model is a first-order approximation"
+                    f" in the depolarizing probability. p = {4*prob}"
+                    " is too large for realistic results.",
+                    stacklevel=2,
+                )
+            k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
+            for idx in range(idx_depolarizing, idx_depolarizing + 3):
+                self._collapse_ops[
+                    idx
+                ] *= k  # Update X, Y, Z collapse operators
+        if "dephasing" in self.config.noise and idx_dephasing != -1:
+            prob = self.config.dephasing_prob / 2
+            n = self._size
+            if prob > 0.1 and n > 1:
+                warnings.warn(
+                    "The dephasing model is a first-order approximation in the"
+                    f" dephasing probability. p = {2*prob} is too large for "
+                    "realistic results.",
+                    stacklevel=2,
+                )
+            k = np.sqrt(prob * (1 - prob) ** (n - 1))
+            self._collapse_ops[
+                idx_dephasing
+            ] *= k  # Update Z collapse operator
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""

@@ -162,7 +162,7 @@ class QutipResult(Result):
 
         return ex_inds
 
-    def _reduce_state_vector_to_basis(
+    def _reduce_to_basis(
         self, ex_inds: List[int], normalize: bool
     ) -> qutip.Qobj:
         """Reduces the state vector by eliminating the states at given indices.
@@ -176,26 +176,6 @@ class QutipResult(Result):
         state = self.state.copy()
         state = state.eliminate_states(ex_inds, normalize=normalize)
         return state
-
-    def _reduce_density_matrix_to_basis(
-        self, ex_inds: List[int], normalize: bool
-    ) -> qutip.Qobj:
-        """Reduces the density matrix by tracing out the subsystems at given indices.
-
-        Args:
-            ex_inds: The indices of the subsystems to trace out.
-
-        Returns:
-            The subsystem state, reduced by tracing out the subsystems at given indices.
-        """
-        state = self.state.copy()
-        reduced_state = state.ptrace(ex_inds)
-
-        # Normalize the density matrix by ensuring that its trace equals 1.
-        if normalize:
-            reduced_state = reduced_state / reduced_state.tr()
-
-        return reduced_state
 
     def get_state(
         self,
@@ -220,10 +200,5 @@ class QutipResult(Result):
             ex_inds = self._get_relevant_subsystem_indices(
                 reduce_to_basis, tol
             )
-            if is_density_matrix:
-                state = self._reduce_density_matrix_to_basis(
-                    ex_inds, normalize
-                )
-            else:
-                state = self._reduce_state_vector_to_basis(ex_inds, normalize)
+            state = self._reduce_to_basis(ex_inds, normalize)
         return state.tidyup()
