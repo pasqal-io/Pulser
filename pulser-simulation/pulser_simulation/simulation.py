@@ -152,6 +152,8 @@ class QutipEmulator:
         self._eval_times_array: np.ndarray
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
+        self._depolarizing_noise: dict[Union[str, int], float] = {}
+        self._dephasing_noise: dict[Union[str, int], float] = {}
 
         # Initializing sampling and evalutaion times
         if not (0 < sampling_rate <= 1.0):
@@ -222,12 +224,6 @@ class QutipEmulator:
         kraus_ops = []
         self._collapse_ops = []
         if "dephasing" in self.config.noise:
-            if self.basis_name == "digital" or self.basis_name == "all":
-                # Go back to previous config
-                self.set_config(prev_config)
-                raise NotImplementedError(
-                    "Cannot include dephasing noise in digital- or all-basis."
-                )
             # Probability of phase (Z) flip:
             # First order in prob
             prob = self.config.dephasing_prob / 2
@@ -248,13 +244,6 @@ class QutipEmulator:
             kraus_ops.append(k * qutip.sigmaz())
 
         if "depolarizing" in self.config.noise:
-            if self.basis_name == "digital" or self.basis_name == "all":
-                # Go back to previous config
-                self.set_config(prev_config)
-                raise NotImplementedError(
-                    "Cannot include depolarizing "
-                    + "noise in digital- or all-basis."
-                )
             # Probability of error occurrence
 
             prob = self.config.depolarizing_prob / 4
@@ -524,6 +513,16 @@ class QutipEmulator:
                     w0 = self.config.laser_waist
                     noise_amp = noise_amp_base * np.exp(-((r / w0) ** 2))
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= noise_amp
+                if "dephasing" in self.config.noise:
+                    # Add dephasing noise
+                    dephasing_noise = self._dephasing_noise[qid]
+                    samples_dict[qid]["phase"][slot.ti : slot.tf] *= dephasing_noise
+                if "depolarizing" in self.config.noise:
+                    # Add depolarizing noise
+                    depolarizing_noise = self._depolarizing_noise[qid]
+                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= depolarizing_noise
+                    samples_dict[qid]["det"][slot.ti : slot.tf] *= depolarizing_noise
+
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
@@ -619,6 +618,16 @@ class QutipEmulator:
                 0, self.config.doppler_sigma, size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
+        if "depolarizing" in self.config.noise:
+            depolarizing_error = np.random.normal(
+                0, self.config.depolarizing_prob, size=len(self._qid_index)
+            )
+            self._depolarizing_noise = dict(zip(self._qid_index, depolarizing_error))
+        if "dephasing" in self.config.noise:
+            dephasing_error = np.random.normal(
+                0, self.config.dephasing_prob, size=len(self._qid_index)
+            )
+            self._dephasing_noise = dict(zip(self._qid_index, dephasing_error))
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""

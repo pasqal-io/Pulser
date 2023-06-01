@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Union, cast, List
 
 import numpy as np
 import qutip
@@ -125,6 +125,69 @@ class QutipResult(Result):
             )
         # Takes care of numerical artefacts in case sum(weights) != 1
         return cast(np.ndarray, weights / sum(weights))
+    
+    def _get_relevant_subsystem_indices(self, to_basis: str, tol: float) -> List[int]:
+        """Finds the subsystems to keep based on the target basis.
+
+        Args:
+            to_basis: The basis to which the state should be transformed.
+
+        Returns:
+            A list of indices representing the relevant subsystems.
+        """
+        if to_basis == "ground-rydberg":
+            ex_state = "2"
+        elif to_basis == "digital":
+            ex_state = "0"
+        else:
+            raise ValueError("'to_basis' must be 'ground-rydberg' or 'digital'.")
+
+        # Find the subsystems to keep.
+        ex_inds = [
+            i
+            for i in range(3**self._size)
+            if ex_state in np.base_repr(i, base=3).zfill(self._size)
+        ]
+
+        ex_probs = np.abs(self.state.extract_states(ex_inds).full()) ** 2
+        if not np.all(np.isclose(ex_probs, 0, atol=tol)):
+            raise TypeError(
+                "Can't reduce to chosen basis because the population of a "
+                "state to eliminate is above the allowed tolerance."
+            )
+
+        return ex_inds
+
+    def _reduce_state_vector_to_basis(self, ex_inds: List[int], normalize: bool) -> qutip.Qobj:
+        """Reduces the state vector by eliminating the states at given indices.
+
+        Args:
+            ex_inds: The indices of the states to eliminate.
+
+        Returns:
+            A Qobj instance representing the state vector with the states eliminated.
+        """
+        state = self.state.copy()
+        state = state.eliminate_states(ex_inds, normalize=normalize)
+        return state
+    
+    def _reduce_density_matrix_to_basis(self, ex_inds: List[int], normalize: bool) -> qutip.Qobj:
+        """Reduces the density matrix by tracing out the subsystems at given indices.
+
+        Args:
+            ex_inds: The indices of the subsystems to trace out.
+
+        Returns:
+            The subsystem state, reduced by tracing out the subsystems at given indices.
+        """
+        state = self.state.copy()
+        reduced_state = state.ptrace(ex_inds)
+        
+        # Normalize the density matrix by ensuring that its trace equals 1.
+        if normalize:
+            reduced_state = reduced_state / reduced_state.tr()
+
+        return reduced_state
 
     def get_state(
         self,
@@ -133,26 +196,6 @@ class QutipResult(Result):
         tol: float = 1e-6,
         normalize: bool = True,
     ) -> qutip.Qobj:
-        """Gets the state with some optional post-processing.
-
-        Args:
-            reduce_to_basis: Reduces the full state vector
-                to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible. Doesn't
-                apply to XY mode.
-            ignore_global_phase: If True and if the final state is a vector,
-                changes the final state's global phase such that the largest
-                term (in absolute value) is real.
-            tol: Maximum allowed population of each eliminated state.
-            normalize: Whether to normalize the reduced state.
-
-        Returns:
-            The resulting state.
-
-        Raises:
-            TypeError: If trying to reduce to a basis that would eliminate
-                states with significant occupation probabilites.
-        """
         state = self.state.copy()
         is_density_matrix = state.isoper
         if ignore_global_phase and not is_density_matrix:
@@ -166,31 +209,9 @@ class QutipResult(Result):
                     + f" to the {reduce_to_basis} basis."
                 )
         elif reduce_to_basis is not None:
-            if is_density_matrix:  # pragma: no cover
-                # Not tested as noise in digital or all basis not implemented
-                raise NotImplementedError(
-                    "Reduce to basis not implemented for density matrix"
-                    " states."
-                )
-            if reduce_to_basis == "ground-rydberg":
-                ex_state = "2"
-            elif reduce_to_basis == "digital":
-                ex_state = "0"
+            ex_inds = self._get_relevant_subsystem_indices(reduce_to_basis, tol)
+            if is_density_matrix:
+                state = self._reduce_density_matrix_to_basis(ex_inds, normalize)
             else:
-                raise ValueError(
-                    "'reduce_to_basis' must be 'ground-rydberg' "
-                    + f"or 'digital', not '{reduce_to_basis}'."
-                )
-            ex_inds = [
-                i
-                for i in range(3**self._size)
-                if ex_state in np.base_repr(i, base=3).zfill(self._size)
-            ]
-            ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
-            if not np.all(np.isclose(ex_probs, 0, atol=tol)):
-                raise TypeError(
-                    "Can't reduce to chosen basis because the population of a "
-                    "state to eliminate is above the allowed tolerance."
-                )
-            state = state.eliminate_states(ex_inds, normalize=normalize)
+                state = self._reduce_state_vector_to_basis(ex_inds, normalize)
         return state.tidyup()
