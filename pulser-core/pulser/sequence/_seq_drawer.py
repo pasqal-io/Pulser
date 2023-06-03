@@ -331,7 +331,7 @@ def draw_sequence(
                 blockade_radius=35,
                 draw_half_radius=True,
             )
-            fig_reg.tight_layout(w_pad=6.5)
+            fig_reg.get_layout_engine().set(w_pad=6.5)
 
             for ax_reg, (ix, iy) in zip(
                 axes_reg, combinations(np.arange(3), 2)

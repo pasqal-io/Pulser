@@ -212,7 +212,7 @@ class RegDrawer:
                 blockade_radius=blockade_radius,
                 draw_half_radius=draw_half_radius,
             )
-            fig.tight_layout(w_pad=6.5)
+            fig.get_layout_engine().set(w_pad=6.5)
 
             for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
                 RegDrawer._draw_2D(
