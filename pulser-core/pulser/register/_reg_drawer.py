@@ -329,11 +329,12 @@ class RegDrawer:
         )
         big_side = max(diffs)
         proportions = diffs / big_side
-        Ls = proportions * min(
-            big_side / 1.9, 10
-        )  # Figsize is, at most, (10,10)
-        fig, axes = plt.subplots(figsize=Ls)
 
+        Ls = proportions * max(
+            min(big_side / 4, 10), 4
+        )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
+
+        fig, axes = plt.subplots(figsize=Ls, layout="constrained")
         return (fig, axes)
 
     @staticmethod
@@ -374,6 +375,7 @@ class RegDrawer:
             ncols=3,
             figsize=figsize,
             gridspec_kw=dict(width_ratios=widths),
+            layout="constrained",
         )
 
         return (fig, axes)
