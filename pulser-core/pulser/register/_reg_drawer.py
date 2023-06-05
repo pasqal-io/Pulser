@@ -333,7 +333,7 @@ class RegDrawer:
         Ls = proportions * max(
             min(big_side / 4, 10), 4
         )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
-
+        Ls[1] = max(Ls[1], 1.0)  # Figsize height is at least 1
         fig, axes = plt.subplots(figsize=Ls, layout="constrained")
         return (fig, axes)
 
@@ -357,6 +357,7 @@ class RegDrawer:
             Ls *= max(
                 min(big_side / 4, 10), 4
             )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
+            Ls[1] = max(Ls[1], 1.0)  # Figsize height is at least 1
             proportions.append(Ls)
 
         fig_height = np.max([Ls[1] for Ls in proportions])
