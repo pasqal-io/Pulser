@@ -138,6 +138,7 @@ class _ChannelSchedule:
         dt = self.get_duration()
         amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
         slots: list[_TargetSlot] = []
+        initial_targets = self.slots[0].targets if self.slots else set()
 
         for ind, s in enumerate(channel_slots):
             pulse = cast(Pulse, s.type)
@@ -181,7 +182,9 @@ class _ChannelSchedule:
             # the same, so the last phase is automatically kept till the end
             phase[t_start:] = pulse.phase
 
-        return ChannelSamples(amp, det, phase, slots, self.eom_blocks)
+        return ChannelSamples(
+            amp, det, phase, slots, self.eom_blocks, initial_targets
+        )
 
     @overload
     def __getitem__(self, key: int) -> _TimeSlot:
