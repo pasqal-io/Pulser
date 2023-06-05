@@ -74,6 +74,32 @@ def test_init_error(seq_rydberg):
         sample(seq_rydberg)
 
 
+@pytest.mark.parametrize("local_only", [True, False])
+def test_delay_only(local_only):
+    seq_ = pulser.Sequence(pulser.Register({"q0": (0, 0)}), MockDevice)
+    seq_.declare_channel("ch0", "rydberg_global")
+    seq_.delay(16, "ch0")
+    samples = sample(seq_)
+    assert samples.channel_samples["ch0"].initial_targets == {"q0"}
+
+    qty_dict = {
+        "amp": np.zeros(16),
+        "det": np.zeros(16),
+        "phase": np.zeros(16),
+    }
+    if local_only:
+        expected = {
+            "Local": {"ground-rydberg": {"q0": qty_dict}},
+            "Global": dict(),
+        }
+    else:
+        expected = {"Global": {"ground-rydberg": qty_dict}, "Local": dict()}
+
+    assert_nested_dict_equality(
+        samples.to_nested_dict(all_local=local_only), expected
+    )
+
+
 def test_one_pulse_sampling():
     """Test the sample function on a one-pulse sequence."""
     reg = pulser.Register.square(1, prefix="q")
