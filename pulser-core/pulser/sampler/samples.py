@@ -161,6 +161,7 @@ class ChannelSamples:
         return replace(self, **new_samples)
 
     def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
+        """Returns OEM mode intervals."""
         return [
             (
                 block.ti,
@@ -169,12 +170,12 @@ class ChannelSamples:
             for block in self.eom_blocks
         ]
 
-    def in_eom_mode(self, time_slot: Optional[_TimeSlot] = None) -> bool:
-        """States if a time slot is inside an EOM mode block."""
-        if time_slot is None:
+    def in_eom_mode(self, target_slot: Optional[_TargetSlot] = None) -> bool:
+        """States if a target slot is inside an EOM mode block."""
+        if target_slot is None:
             return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
         return any(
-            start <= time_slot.ti < end
+            start <= target_slot.ti < end
             for start, end in self.get_eom_mode_intervals()
         )
 

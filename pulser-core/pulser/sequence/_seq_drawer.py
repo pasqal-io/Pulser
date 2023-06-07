@@ -31,7 +31,8 @@ from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.sampler.sampler import sample
 from pulser.sampler.samples import ChannelSamples
-from pulser.waveforms import InterpolatedWaveform
+
+# from pulser.waveforms import InterpolatedWaveform
 
 # Color scheme
 COLORS = ["darkgreen", "indigo", "#c75000"]
@@ -162,7 +163,9 @@ class ChannelDrawContent:
         ]
 
 
-def gather_data(seqsamples: pulser.samples.SequenceSamples, gather_output: bool) -> dict:
+def gather_data(
+    seqsamples: pulser.sampler.samples.SequenceSamples, gather_output: bool
+) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
@@ -173,9 +176,7 @@ def gather_data(seqsamples: pulser.samples.SequenceSamples, gather_output: bool)
         The data to plot.
     """
     # The minimum time axis length is 100 ns
-    total_duration = max(
-        seqsamples.max_duration, 100
-    )
+    total_duration = max(seqsamples.max_duration, 100)
     data: dict[str, Any] = {}
 
     for ch, ch_samples in seqsamples.channel_samples.items():
@@ -193,15 +194,16 @@ def gather_data(seqsamples: pulser.samples.SequenceSamples, gather_output: bool)
         in_eom_mode = False
         eom_block_n = -1
         # Last eom interval is extended if eom mode not disabled at the end
-        if nb_eom_intervals > 0 and ch_samples.duration == eom_intervals[-1].tf:
+        if (
+            nb_eom_intervals > 0
+            and ch_samples.duration == eom_intervals[-1].tf
+        ):
             eom_intervals[-1].tf = total_duration
         # sampling the channel schedule
         extended_samples = ch_samples.extend_duration(total_duration)
 
-
-        # TODO: move this to draw_sequence, since we are unable to create targets
         # TODO: but eom_ buffers are set here
-        target['initial'] = ch_samples.initial_targets
+        target["initial"] = ch_samples.initial_targets
         for slot in ch_samples.slots:
             # if slot.ti == -1:
             #     target["initial"] = slot.targets
@@ -217,9 +219,7 @@ def gather_data(seqsamples: pulser.samples.SequenceSamples, gather_output: bool)
                 # Buffer when EOM mode is disabled and next slot has 0 amp
                 in_eom_mode = False
                 if extended_samples.amp[slot.ti] == 0:
-                    eom_end_buffers[eom_block_n] = EOMSegment(
-                        slot.ti, slot.tf
-                    )
+                    eom_end_buffers[eom_block_n] = EOMSegment(slot.ti, slot.tf)
             if (
                 eom_block_n + 1 < nb_eom_intervals
                 and slot.tf == eom_intervals[eom_block_n + 1].ti
@@ -265,11 +265,8 @@ def gather_data(seqsamples: pulser.samples.SequenceSamples, gather_output: bool)
     return data
 
 
-
-
-
 def draw_samples(
-    seqsamples: pulser.samples.SequenceSamples,
+    seqsamples: pulser.sampler.samples.SequenceSamples,
     sampling_rate: Optional[float] = None,
     draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
@@ -277,7 +274,7 @@ def draw_samples(
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
 ) -> tuple[Figure | None, Figure]:
-    """Draws a SequenceSamples
+    """Draws a SequenceSamples.
 
     Args:
         seqsamples: The input sequence of operations on a device.
@@ -297,7 +294,6 @@ def draw_samples(
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
     """
-
     n_channels = len(seqsamples.channels)
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
@@ -313,13 +309,11 @@ def draw_samples(
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
-    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
+    # ph_box = dict(boxstyle="round", facecolor="ghostwhite")
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    ratios = [
-        SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in seqsamples.channels
-    ]
+    ratios = [SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in seqsamples.channels]
     fig = plt.figure(
         constrained_layout=False,
         figsize=(20, sum(ratios)),
@@ -370,7 +364,7 @@ def draw_samples(
         ch_eom_intervals = data[ch].eom_intervals
         ch_eom_start_buffers = data[ch].eom_start_buffers
         ch_eom_end_buffers = data[ch].eom_end_buffers
-        basis = ch_obj.basis
+        # basis = ch_obj.basis
         ys = ch_data.get_input_curves()
         ys_mod = [()] * 3
         yseff = [()] * 3
@@ -439,7 +433,6 @@ def draw_samples(
                     )
             special_kwargs = dict(labelpad=10) if i == 0 else {}
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
-
 
         # TODO: fix phase drawing
         target_regions = []  # [[start1, [targets1], end1],...]
@@ -524,23 +517,25 @@ def draw_samples(
             targets_ = cast(list, targets_)
             end = cast(float, end)
             # All targets have the same ref, so we pick
-            q = targets_[0]
-            ref = seq._basis_ref[basis][q].phase
-            if end != total_duration - 1 or "measurement" in data:
-                end += 1 / time_scale
-            for t_, delta in ref.changes(start, end, time_scale=time_scale):
-                conf = dict(linestyle="--", linewidth=1.5, color="black")
-                for ax in axes:
-                    ax.axvline(t_, **conf)
-                msg = "\u27F2 " + phase_str(delta)
-                axes[0].text(
-                    t_ - final_t * 8e-3,
-                    max_amp * 1.1,
-                    msg,
-                    ha="right",
-                    fontsize=14,
-                    bbox=ph_box,
-                )
+            # TODO: fix ref
+            # q = targets_[0]
+
+            # ref = seq._basis_ref[basis][q].phase
+            # if end != total_duration - 1 or "measurement" in data:
+            #     end += 1 / time_scale
+            # for t_, delta in ref.changes(start, end, time_scale=time_scale):
+            #     conf = dict(linestyle="--", linewidth=1.5, color="black")
+            #     for ax in axes:
+            #         ax.axvline(t_, **conf)
+            #     msg = "\u27F2 " + phase_str(delta)
+            #     axes[0].text(
+            #         t_ - final_t * 8e-3,
+            #         max_amp * 1.1,
+            #         msg,
+            #         ha="right",
+            #         fontsize=14,
+            #         bbox=ph_box,
+            #     )
 
         # Draw the EOM intervals
         for ch_eom_start_buffer, ch_eom_interval, ch_eom_end_buffer in zip(
@@ -624,8 +619,6 @@ def draw_samples(
                     axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
 
     return (fig, ch_axes)
-
-
 
 
 def draw_sequence(
@@ -725,10 +718,21 @@ def draw_sequence(
             )
             ax_reg.set_title("Masked register", pad=10)
 
-    (fig, ch_axes) = draw_samples(seqsamples, sampling_rate, draw_interp_pts, draw_phase_shifts, draw_input, draw_modulation, draw_phase_curve)
-
+    (fig, ch_axes) = draw_samples(
+        seqsamples,
+        sampling_rate,
+        draw_interp_pts,
+        draw_phase_shifts,
+        draw_input,
+        draw_modulation,
+        draw_phase_curve,
+    )
 
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
+
+    # TODO: fix these missing value
+    yseff = [()] * 3
+    time_scale = 1
 
     for ch, axes in ch_axes.items():
         if draw_phase_area:
@@ -777,6 +781,5 @@ def draw_sequence(
                         va="center",
                         bbox=area_ph_box,
                     )
-
 
     return (fig_reg if draw_register else None, fig)
