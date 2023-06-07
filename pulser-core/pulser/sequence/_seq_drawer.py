@@ -201,47 +201,51 @@ def gather_data(seqsamples: pulser.samples.SequenceSamples, gather_output: bool)
 
         # TODO: move this to draw_sequence, since we are unable to create targets
         # TODO: but eom_ buffers are set here
-        # for slot in sch:
-        #     if slot.ti == -1:
-        #         target["initial"] = slot.targets
-        #         continue
-        #     else:
-        #         # If slot is not the first element in schedule
-        #         if sch.in_eom_mode(slot):
-        #             # EOM mode starts
-        #             if not in_eom_mode:
-        #                 in_eom_mode = True
-        #                 eom_block_n += 1
-        #         elif in_eom_mode:
-        #             # Buffer when EOM mode is disabled and next slot has 0 amp
-        #             in_eom_mode = False
-        #             if extended_samples.amp[slot.ti] == 0:
-        #                 eom_end_buffers[eom_block_n] = EOMSegment(
-        #                     slot.ti, slot.tf
-        #                 )
-        #         if (
-        #             eom_block_n + 1 < nb_eom_intervals
-        #             and slot.tf == eom_intervals[eom_block_n + 1].ti
-        #             and extended_samples.det[slot.tf - 1]
-        #             == sch.eom_blocks[eom_block_n + 1].detuning_off
-        #         ):
-        #             # Buffer if next is eom and final det matches det_off
-        #             eom_start_buffers[eom_block_n + 1] = EOMSegment(
-        #                 slot.ti, slot.tf
-        #             )
+        target['initial'] = ch_samples.initial_targets
+        for slot in ch_samples.slots:
+            # if slot.ti == -1:
+            #     target["initial"] = slot.targets
+            #     continue
+            # else:
+            # If slot is not the first element in schedule
+            if ch_samples.in_eom_mode(slot):
+                # EOM mode starts
+                if not in_eom_mode:
+                    in_eom_mode = True
+                    eom_block_n += 1
+            elif in_eom_mode:
+                # Buffer when EOM mode is disabled and next slot has 0 amp
+                in_eom_mode = False
+                if extended_samples.amp[slot.ti] == 0:
+                    eom_end_buffers[eom_block_n] = EOMSegment(
+                        slot.ti, slot.tf
+                    )
+            if (
+                eom_block_n + 1 < nb_eom_intervals
+                and slot.tf == eom_intervals[eom_block_n + 1].ti
+                and extended_samples.det[slot.tf - 1]
+                == ch_samples.eom_blocks[eom_block_n + 1].detuning_off
+            ):
+                # Buffer if next is eom and final det matches det_off
+                eom_start_buffers[eom_block_n + 1] = EOMSegment(
+                    slot.ti, slot.tf
+                )
 
-        #     if slot.type == "target":
-        #         target[(slot.ti, slot.tf - 1)] = slot.targets
-        #         continue
-        #     if slot.type == "delay":
-        #         continue
-        #     pulse = cast(Pulse, slot.type)
-        #     for wf_type in ["amplitude", "detuning"]:
-        #         wf = getattr(pulse, wf_type)
-        #         if isinstance(wf, InterpolatedWaveform):
-        #             pts = wf.data_points
-        #             pts[:, 0] += slot.ti
-        #             interp_pts[wf_type] += pts.tolist()
+            # TODO: these are Pulse in origin
+            # target[(slot.ti, slot.tf - 1)] = slot.targets
+
+            # if slot.type == "target":
+            #     target[(slot.ti, slot.tf - 1)] = slot.targets
+            #     continue
+            # if slot.type == "delay":
+            #     continue
+            # pulse = cast(Pulse, slot.type)
+            # for wf_type in ["amplitude", "detuning"]:
+            #     wf = getattr(pulse, wf_type)
+            #     if isinstance(wf, InterpolatedWaveform):
+            #         pts = wf.data_points
+            #         pts[:, 0] += slot.ti
+            #         interp_pts[wf_type] += pts.tolist()
 
         # Store everything
         data[ch] = ChannelDrawContent(
@@ -437,105 +441,106 @@ def draw_samples(
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
 
-        # TODO: fix regions
-        # target_regions = []  # [[start1, [targets1], end1],...]
-        # for coords in ch_data.target:
-        #     targets = list(ch_data.target[coords])
-        #     tgt_strs = [str(q) for q in targets]
-        #     tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
-        #     tgt_str = "\n".join(tgt_strs)
-        #     if coords == "initial":
-        #         x = t_min + final_t * 0.005
-        #         target_regions.append([0, targets])
-        #         if seq.declared_channels[ch].addressing == "Global":
-        #             axes[0].text(
-        #                 x,
-        #                 amp_top * 0.98,
-        #                 "GLOBAL",
-        #                 fontsize=13,
-        #                 rotation=90,
-        #                 ha="left",
-        #                 va="top",
-        #                 bbox=q_box,
-        #             )
-        #         else:
-        #             axes[0].text(
-        #                 x,
-        #                 tgt_txt_y,
-        #                 tgt_str,
-        #                 fontsize=12,
-        #                 ha="left",
-        #                 bbox=q_box,
-        #             )
-        #             phase = seq._basis_ref[basis][targets[0]].phase[0]
-        #             if phase and draw_phase_shifts:
-        #                 msg = r"$\phi=$" + phase_str(phase)
-        #                 axes[0].text(
-        #                     0,
-        #                     max_amp * 1.1,
-        #                     msg,
-        #                     ha="left",
-        #                     fontsize=12,
-        #                     bbox=ph_box,
-        #                 )
-        #     else:
-        #         ti, tf = np.array(coords) / time_scale
-        #         target_regions[-1].append(ti)  # Closing previous regions
-        #         target_regions.append(
-        #             [tf + 1 / time_scale, targets]
-        #         )  # New one
-        #         phase = seq._basis_ref[basis][targets[0]].phase[
-        #             tf * time_scale + 1
-        #         ]
-        #         for ax in axes:
-        #             ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
-        #         axes[0].text(
-        #             tf + final_t * 5e-3,
-        #             tgt_txt_y,
-        #             tgt_str,
-        #             ha="left",
-        #             fontsize=12,
-        #             bbox=q_box,
-        #         )
-        #         if phase and draw_phase_shifts:
-        #             msg = r"$\phi=$" + phase_str(phase)
-        #             wrd_len = len(max(tgt_strs, key=len))
-        #             x = tf + final_t * 0.01 * (wrd_len + 1)
-        #             axes[0].text(
-        #                 x,
-        #                 max_amp * 1.1,
-        #                 msg,
-        #                 ha="left",
-        #                 fontsize=12,
-        #                 bbox=ph_box,
-        #             )
-        # # Terminate the last open regions
-        # if target_regions:
-        #     target_regions[-1].append(final_t)
-        # for start, targets_, end in (
-        #     target_regions if draw_phase_shifts else []
-        # ):
-        #     start = cast(float, start)
-        #     targets_ = cast(list, targets_)
-        #     end = cast(float, end)
-        #     # All targets have the same ref, so we pick
-        #     q = targets_[0]
-        #     ref = seq._basis_ref[basis][q].phase
-        #     if end != total_duration - 1 or "measurement" in data:
-        #         end += 1 / time_scale
-        #     for t_, delta in ref.changes(start, end, time_scale=time_scale):
-        #         conf = dict(linestyle="--", linewidth=1.5, color="black")
-        #         for ax in axes:
-        #             ax.axvline(t_, **conf)
-        #         msg = "\u27F2 " + phase_str(delta)
-        #         axes[0].text(
-        #             t_ - final_t * 8e-3,
-        #             max_amp * 1.1,
-        #             msg,
-        #             ha="right",
-        #             fontsize=14,
-        #             bbox=ph_box,
-        #         )
+        # TODO: fix phase drawing
+        target_regions = []  # [[start1, [targets1], end1],...]
+        for coords in ch_data.target:
+            targets = list(ch_data.target[coords])
+            tgt_strs = [str(q) for q in targets]
+            tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
+            tgt_str = "\n".join(tgt_strs)
+            if coords == "initial":
+                x = t_min + final_t * 0.005
+                target_regions.append([0, targets])
+                if seqsamples._ch_objs[ch].addressing == "Global":
+                    axes[0].text(
+                        x,
+                        amp_top * 0.98,
+                        "GLOBAL",
+                        fontsize=13,
+                        rotation=90,
+                        ha="left",
+                        va="top",
+                        bbox=q_box,
+                    )
+                else:
+                    axes[0].text(
+                        x,
+                        tgt_txt_y,
+                        tgt_str,
+                        fontsize=12,
+                        ha="left",
+                        bbox=q_box,
+                    )
+                    # phase = seq._basis_ref[basis][targets[0]].phase[0]
+                    # if phase and draw_phase_shifts:
+                    #     msg = r"$\phi=$" + phase_str(phase)
+                    #     axes[0].text(
+                    #         0,
+                    #         max_amp * 1.1,
+                    #         msg,
+                    #         ha="left",
+                    #         fontsize=12,
+                    #         bbox=ph_box,
+                    #     )
+            else:
+                ti, tf = np.array(coords) / time_scale
+                target_regions[-1].append(ti)  # Closing previous regions
+                target_regions.append(
+                    [tf + 1 / time_scale, targets]
+                )  # New one
+                # phase = seq._basis_ref[basis][targets[0]].phase[
+                #     tf * time_scale + 1
+                # ]
+                for ax in axes:
+                    ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
+                axes[0].text(
+                    tf + final_t * 5e-3,
+                    tgt_txt_y,
+                    tgt_str,
+                    ha="left",
+                    fontsize=12,
+                    bbox=q_box,
+                )
+                # if phase and draw_phase_shifts:
+                #     msg = r"$\phi=$" + phase_str(phase)
+                #     wrd_len = len(max(tgt_strs, key=len))
+                #     x = tf + final_t * 0.01 * (wrd_len + 1)
+                #     axes[0].text(
+                #         x,
+                #         max_amp * 1.1,
+                #         msg,
+                #         ha="left",
+                #         fontsize=12,
+                #         bbox=ph_box,
+                #     )
+
+        # Terminate the last open regions
+        if target_regions:
+            target_regions[-1].append(final_t)
+        for start, targets_, end in (
+            target_regions if draw_phase_shifts else []
+        ):
+            start = cast(float, start)
+            targets_ = cast(list, targets_)
+            end = cast(float, end)
+            # All targets have the same ref, so we pick
+            q = targets_[0]
+            ref = seq._basis_ref[basis][q].phase
+            if end != total_duration - 1 or "measurement" in data:
+                end += 1 / time_scale
+            for t_, delta in ref.changes(start, end, time_scale=time_scale):
+                conf = dict(linestyle="--", linewidth=1.5, color="black")
+                for ax in axes:
+                    ax.axvline(t_, **conf)
+                msg = "\u27F2 " + phase_str(delta)
+                axes[0].text(
+                    t_ - final_t * 8e-3,
+                    max_amp * 1.1,
+                    msg,
+                    ha="right",
+                    fontsize=14,
+                    bbox=ph_box,
+                )
 
         # Draw the EOM intervals
         for ch_eom_start_buffer, ch_eom_interval, ch_eom_end_buffer in zip(
