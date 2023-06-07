@@ -91,24 +91,7 @@ class ChannelSamples:
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
-
-    def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
-        return [
-            (
-                block.ti,
-                block.tf if block.tf is not None else self.duration,
-            )
-            for block in self.eom_blocks
-        ]
-
-    def in_eom_mode(self, time_slot: Optional[_TimeSlot] = None) -> bool:
-        """States if a time slot is inside an EOM mode block."""
-        if time_slot is None:
-            return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
-        return any(
-            start <= time_slot.ti < end
-            for start, end in self.get_eom_mode_intervals()
-        )
+    initial_targets: set[QubitId] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -176,6 +159,24 @@ class ChannelSamples:
             new_samples["det"][region] = block.detuning_off
 
         return replace(self, **new_samples)
+
+    def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
+        return [
+            (
+                block.ti,
+                block.tf if block.tf is not None else self.duration,
+            )
+            for block in self.eom_blocks
+        ]
+
+    def in_eom_mode(self, time_slot: Optional[_TimeSlot] = None) -> bool:
+        """States if a time slot is inside an EOM mode block."""
+        if time_slot is None:
+            return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
+        return any(
+            start <= time_slot.ti < end
+            for start, end in self.get_eom_mode_intervals()
+        )
 
     def modulate(
         self, channel_obj: Channel, max_duration: Optional[int] = None
@@ -391,6 +392,10 @@ class SequenceSamples:
                     d[_LOCAL][basis][t][_DET][:start_t] += cs.det[:start_t]
                     d[_LOCAL][basis][t][_PHASE][:start_t] += cs.phase[:start_t]
             else:
+                if not cs.slots:
+                    # Fill the defaultdict entries to not return an empty dict
+                    for t in cs.initial_targets:
+                        d[_LOCAL][basis][t]
                 for s in cs.slots:
                     for t in s.targets:
                         ti = s.ti
