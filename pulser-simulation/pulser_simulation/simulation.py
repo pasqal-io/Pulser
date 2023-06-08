@@ -924,10 +924,8 @@ class QutipEmulator:
 
                 .. _docs: https://bit.ly/3il9A2u
         """
-        if "max_step" in options.keys():
-            solv_ops = qutip.Options(**options)
-        else:
-            min_pulse_duration = min(
+        if "max_step" not in options:
+            pulse_durations = [
                 slot.tf - slot.ti
                 for ch_sample in self.samples_obj.samples_list
                 for slot in ch_sample.slots
@@ -935,9 +933,11 @@ class QutipEmulator:
                     np.all(np.isclose(ch_sample.amp[slot.ti : slot.tf], 0))
                     and np.all(np.isclose(ch_sample.det[slot.ti : slot.tf], 0))
                 )
-            )
-            auto_max_step = 0.5 * (min_pulse_duration / 1000)
-            solv_ops = qutip.Options(max_step=auto_max_step, **options)
+            ]
+            if pulse_durations:
+                options["max_step"] = 0.5 * min(pulse_durations) / 1000
+
+        solv_ops = qutip.Options(**options)
 
         meas_errors: Optional[Mapping[str, float]] = None
         if "SPAM" in self.config.noise:

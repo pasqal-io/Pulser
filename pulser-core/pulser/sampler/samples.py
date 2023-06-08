@@ -91,6 +91,7 @@ class ChannelSamples:
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
+    initial_targets: set[QubitId] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -373,6 +374,10 @@ class SequenceSamples:
                     d[_LOCAL][basis][t][_DET][:start_t] += cs.det[:start_t]
                     d[_LOCAL][basis][t][_PHASE][:start_t] += cs.phase[:start_t]
             else:
+                if not cs.slots:
+                    # Fill the defaultdict entries to not return an empty dict
+                    for t in cs.initial_targets:
+                        d[_LOCAL][basis][t]
                 for s in cs.slots:
                     for t in s.targets:
                         ti = s.ti

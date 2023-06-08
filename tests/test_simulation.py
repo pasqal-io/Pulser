@@ -328,10 +328,18 @@ def test_empty_sequences(reg):
         QutipEmulator(sampler.sample(seq), seq.register, seq.device)
 
     seq = Sequence(reg, MockDevice)
-    seq.declare_channel("test", "rydberg_local", "target")
+    seq.declare_channel("test", "raman_local", "target")
     seq.declare_channel("test2", "rydberg_global")
     with pytest.raises(ValueError, match="No instructions given"):
         Simulation(seq)
+
+    seq.delay(100, "test")
+    emu = QutipEmulator.from_sequence(seq, config=SimConfig(noise="SPAM"))
+    assert not emu.samples["Global"]
+    for basis in emu.samples["Local"]:
+        for q in emu.samples["Local"][basis]:
+            for qty_values in emu.samples["Local"][basis][q].values():
+                np.testing.assert_equal(qty_values, 0)
 
 
 def test_get_hamiltonian():
@@ -641,6 +649,26 @@ def test_noise(seq, matrices):
                 continue
             for qty in ("amp", "det", "phase"):
                 assert np.all(sim2.samples["Local"][basis][t][qty] == 0.0)
+
+
+def test_noise_with_zero_epsilons(seq, matrices):
+    np.random.seed(3)
+    sim = Simulation(seq, sampling_rate=0.01)
+
+    sim2 = Simulation(
+        seq,
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
+        ),
+    )
+    assert sim2.config.spam_dict == {
+        "eta": 0,
+        "epsilon": 0.0,
+        "epsilon_prime": 0.0,
+    }
+
+    assert sim.run().sample_final_state() == sim2.run().sample_final_state()
 
 
 def test_dephasing():
