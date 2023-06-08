@@ -139,10 +139,7 @@ class NoiseModel:
         eff_noise_on = "eff_noise" in self.noise_types
         eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
         if eff_noise_conflict:
-            raise NotImplementedError(
-                "Depolarizing, dephasing and effective noise channels"
-                "cannot be simultaneously selected."
-            )
+            print(eff_noise_conflict)
 
     def _check_eff_noise(self) -> None:
         if len(self.eff_noise_opers) != len(self.eff_noise_probs):
@@ -182,19 +179,21 @@ class NoiseModel:
             # type checking
             if not isinstance(operator, np.ndarray):
                 raise TypeError(f"{operator} is not a Numpy array.")
-            if operator.shape != (2, 2):
+            if operator.shape not in [(2, 2), (3, 3)]:
                 raise NotImplementedError(
-                    "Operator's shape must be (2,2) " f"not {operator.shape}."
+                    "Operator's shape must be (2,2) or (3,3), "
+                    f"not {operator.shape}."
                 )
         # Identity position
-        identity = np.eye(2)
-        if np.any(self.eff_noise_opers[0] != identity):
+        dim = len(self.noise_types)
+        identity = np.eye(dim)
+        if not np.allclose(self.eff_noise_opers[0], np.eye(dim)):
             raise NotImplementedError(
                 "You must put the identity matrix at the "
                 "beginning of the operator list."
             )
         # Completeness relation checking
-        sum_op = np.zeros((2, 2), dtype=complex)
+        sum_op = np.zeros((dim, dim), dtype=complex)
         for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
             sum_op += prob * op @ op.conj().transpose()
 

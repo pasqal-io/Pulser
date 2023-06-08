@@ -210,7 +210,6 @@ class QutipEmulator:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        prev_config = self.config if hasattr(self, "_config") else SimConfig()
         self._config = cfg
         if not ("SPAM" in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -239,29 +238,71 @@ class QutipEmulator:
                 np.sqrt((1 - prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            kraus_ops.append(k * qutip.sigmaz())
+            if (
+                self.basis_name == "all" and self.dim == 3
+            ):  # three-level system
+                gamma = 1 - np.exp(-self.config.dephasing_prob)
+                M = qutip.Qobj(np.diag([1, np.sqrt(1 - gamma), np.sqrt(1 - gamma)]))
+                N = qutip.Qobj(np.diag([0, np.sqrt(gamma), 0]))
+                T = qutip.Qobj(np.diag([0, 0, np.sqrt(gamma)]))
+                kraus_ops.append(M)
+                kraus_ops.append(N)
+                kraus_ops.append(T)
+            else:  # two-level system
+                kraus_ops.append(k * qutip.sigmaz())
 
         if "depolarizing" in self.config.noise:
-            # Probability of error occurrence
-
-            prob = self.config.depolarizing_prob / 4
+            prob = self.config.depolarizing_prob
             n = self._size
-            if prob > 0.1 and n > 1:
-                warnings.warn(
-                    "The depolarizing model is a first-order approximation"
-                    f" in the depolarizing probability. p = {4*prob}"
-                    " is too large for realistic results.",
-                    stacklevel=2,
-                )
+            if (
+                self.basis_name == "all" and self.dim == 3
+            ):  # three-level system
+                prob = prob / 9
 
-            k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
+                if prob > 0.1 and n > 1:
+                    warnings.warn(
+                        "The depolarizing model is a first-order approximation"
+                        f" in the depolarizing probability. p = {9*prob}"
+                        " is too large for realistic results.",
+                        stacklevel=2,
+                    )
+                prob = self.config.depolarizing_prob / 9
+                alpha = np.sqrt(1 - 8 * prob)
+                beta = np.sqrt(prob / 3)
+                Y = qutip.Qobj(np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]))
+                Z = qutip.Qobj(np.array(
+                    [
+                        [0, 1, 0],
+                        [0, np.exp(1j * 2 * np.pi / 3), 0],
+                        [1, 0, np.exp(-1j * 2 * np.pi / 3)],
+                    ]
+                ))
+                kraus_ops.append(alpha * np.eye(3))
+                kraus_ops.append(beta * np.eye(3))
+                kraus_ops.append(beta * Z)
+                kraus_ops.append(beta * Y**2)
+                kraus_ops.append(beta * Y @ Z)
+                kraus_ops.append(beta * Y**2 @ Z)
+                kraus_ops.append(beta * Y @ Z**2)
+                kraus_ops.append(beta * Y**2 @ Z**2)
+                kraus_ops.append(beta * Z**2)
+            else:  # two-level system
+                prob = prob / 4
+                if prob > 0.1 and n > 1:
+                    warnings.warn(
+                        "The depolarizing model is a first-order approximation"
+                        f" in the depolarizing probability. p = {4*prob}"
+                        " is too large for realistic results.",
+                        stacklevel=2,
+                    )
+                k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
+                kraus_ops.append(k * qutip.sigmax())
+                kraus_ops.append(k * qutip.sigmay())
+                kraus_ops.append(k * qutip.sigmaz())
             self._collapse_ops += [
                 np.sqrt((1 - 3 * prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            kraus_ops.append(k * qutip.sigmax())
-            kraus_ops.append(k * qutip.sigmay())
-            kraus_ops.append(k * qutip.sigmaz())
 
         if "eff_noise" in self.config.noise:
             # Probability distribution of error occurences
@@ -622,7 +663,7 @@ class QutipEmulator:
                 self.basis_name = "all"  # All three states
                 self.dim = 3
                 basis = ["r", "g", "h"]
-                projectors = ["gr", "hg", "rr", "gg", "hh"]
+                projectors = ["gr", "hg", "hr", "gg", "hh", "rr"]
 
         self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
         self.op_matrix = {"I": qutip.qeye(self.dim)}
@@ -733,6 +774,15 @@ class QutipEmulator:
                 op_ids = ["sigma_hg", "sigma_gg"]
             elif basis == "XY":
                 op_ids = ["sigma_du", "sigma_dd"]
+            elif basis == "all":
+                op_ids = [
+                    "sigma_rg",
+                    "sigma_rh",
+                    "sigma_gr",
+                    "sigma_gh",
+                    "sigma_hr",
+                    "sigma_hg",
+                ]
 
             terms = []
             if addr == "Global":
