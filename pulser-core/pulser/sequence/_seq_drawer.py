@@ -180,10 +180,10 @@ def gather_data(
     data: dict[str, Any] = {}
 
     for ch, ch_samples in seqsamples.channel_samples.items():
-        # # List of interpolation points
+        # List of interpolation points
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
         target: dict[Union[str, tuple[int, int]], Any] = {}
-        # # Extracting the EOM Buffers
+        # Extracting the EOM Buffers
         eom_intervals = [
             EOMSegment(eom_interval[0], eom_interval[1])
             for eom_interval in ch_samples.get_eom_mode_intervals()
@@ -202,8 +202,8 @@ def gather_data(
         # sampling the channel schedule
         extended_samples = ch_samples.extend_duration(total_duration)
 
-        # TODO: but eom_ buffers are set here
         target["initial"] = ch_samples.initial_targets
+
         for slot in ch_samples.slots:
             # if slot.ti == -1:
             #     target["initial"] = slot.targets
@@ -268,7 +268,6 @@ def gather_data(
 def draw_samples(
     seqsamples: pulser.sampler.samples.SequenceSamples,
     sampling_rate: Optional[float] = None,
-    draw_interp_pts: bool = True,
     draw_phase_shifts: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
@@ -281,9 +280,6 @@ def draw_samples(
         sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
-        draw_interp_pts: When the sequence has pulses with waveforms of
-            type InterpolatedWaveform, draws the points of interpolation on
-            top of the respective waveforms (defaults to True).
         draw_phase_shifts: Whether phase shift and reference information
             should be added to the plot, defaults to False.
         draw_input: Draws the programmed pulses on the channels, defaults
@@ -574,50 +570,6 @@ def draw_samples(
                 bbox=slm_box,
             )
 
-        hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
-        if "measurement" in data:
-            msg = f"Basis: {data['measurement']}"
-            if len(axes) == 1:
-                mid_ax = axes[0]
-                mid_point = (amp_top + amp_bottom) / 2
-                fontsize = 12
-            else:
-                mid_ax = axes[-1]
-                mid_point = (
-                    ax_lims[-1][1]
-                    if len(axes) == 2
-                    else ax_lims[-1][0] + sum(ax_lims[-1]) * 1.5
-                )
-                fontsize = 14
-
-            for ax in axes:
-                ax.axvspan(final_t, t_max, color="midnightblue", alpha=1)
-
-            mid_ax.text(
-                final_t * 1.025,
-                mid_point,
-                msg,
-                ha="center",
-                va="center",
-                fontsize=fontsize,
-                color="white",
-                rotation=90,
-            )
-            hline_kwargs["xmax"] = 0.95
-
-        for i, ax in enumerate(axes):
-            if i > 0:
-                ax.axhline(ax_lims[i][1], **hline_kwargs)
-            if ax_lims[i][0] < 0:
-                ax.axhline(0, **hline_kwargs)
-
-        if draw_interp_pts:
-            for qty in ("amplitude", "detuning"):
-                if qty in ch_data.interp_pts and ch_data.curves_on[qty]:
-                    ind = CURVES_ORDER.index(qty)
-                    pts = np.array(ch_data.interp_pts[qty])
-                    axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
-
     return (fig, ch_axes)
 
 
@@ -685,7 +637,7 @@ def draw_sequence(
                 blockade_radius=35,
                 draw_half_radius=True,
             )
-            fig_reg.tight_layout(w_pad=6.5)
+            fig_reg.get_layout_engine().set(w_pad=6.5)
 
             for ax_reg, (ix, iy) in zip(
                 axes_reg, combinations(np.arange(3), 2)
@@ -721,7 +673,6 @@ def draw_sequence(
     (fig, ch_axes) = draw_samples(
         seqsamples,
         sampling_rate,
-        draw_interp_pts,
         draw_phase_shifts,
         draw_input,
         draw_modulation,
@@ -781,5 +732,51 @@ def draw_sequence(
                         va="center",
                         bbox=area_ph_box,
                     )
+
+
+        # TODO: data is not available here
+        # hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
+        # if "measurement" in data:
+        #     msg = f"Basis: {data['measurement']}"
+        #     if len(axes) == 1:
+        #         mid_ax = axes[0]
+        #         mid_point = (amp_top + amp_bottom) / 2
+        #         fontsize = 12
+        #     else:
+        #         mid_ax = axes[-1]
+        #         mid_point = (
+        #             ax_lims[-1][1]
+        #             if len(axes) == 2
+        #             else ax_lims[-1][0] + sum(ax_lims[-1]) * 1.5
+        #         )
+        #         fontsize = 14
+
+        #     for ax in axes:
+        #         ax.axvspan(final_t, t_max, color="midnightblue", alpha=1)
+
+        #     mid_ax.text(
+        #         final_t * 1.025,
+        #         mid_point,
+        #         msg,
+        #         ha="center",
+        #         va="center",
+        #         fontsize=fontsize,
+        #         color="white",
+        #         rotation=90,
+        #     )
+        #     hline_kwargs["xmax"] = 0.95
+
+        # for i, ax in enumerate(axes):
+        #     if i > 0:
+        #         ax.axhline(ax_lims[i][1], **hline_kwargs)
+        #     if ax_lims[i][0] < 0:
+        #         ax.axhline(0, **hline_kwargs)
+
+        # if draw_interp_pts:
+        #     for qty in ("amplitude", "detuning"):
+        #         if qty in ch_data.interp_pts and ch_data.curves_on[qty]:
+        #             ind = CURVES_ORDER.index(qty)
+        #             pts = np.array(ch_data.interp_pts[qty])
+        #             axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
 
     return (fig_reg if draw_register else None, fig)
