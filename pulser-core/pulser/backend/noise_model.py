@@ -178,35 +178,26 @@ class NoiseModel:
                     "Operator's shape must be (2,2) or (3,3), "
                     f"not {operator.shape}."
                 )
-        # Identity position
-        identity2 = np.eye(2)
-        identity3 = np.eye(3)
-        if not (
-            np.array_equal(self.eff_noise_opers[0], identity2)
-            or np.array_equal(self.eff_noise_opers[0], identity3)
-        ):
+        # Identity matrices
+        identity = {2: np.eye(2), 3: np.eye(3)}
+
+        # Check if the first operator is an identity matrix
+        if not any(np.array_equal(self.eff_noise_opers[0], identity[i]) for i in identity):
             raise NotImplementedError(
                 "You must put the identity matrix at the "
                 "beginning of the operator list."
             )
+
+        # Determine the size of the identity matrix
+        size = len(self.eff_noise_opers[0])
+
         # Completeness relation checking
-        elif not np.array_equal(self.eff_noise_opers[0], identity2):
-            sum_op = np.zeros((2, 2), dtype=complex)
-            for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
-                sum_op += prob * op @ op.conj().transpose()
+        sum_op = np.zeros((size, size), dtype=complex)
+        for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
+            sum_op += prob * op @ op.conj().transpose()
 
-            if not np.all(np.isclose(sum_op, identity2)):
-                raise ValueError(
-                    "The completeness relation is not verified."
-                    f" Ended up with {sum_op} instead of {identity2}."
-                )
-        else:
-            sum_op = np.zeros((3, 3), dtype=complex)
-            for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
-                sum_op += prob * op @ op.conj().transpose()
-
-            if not np.all(np.isclose(sum_op, identity3)):
-                raise ValueError(
-                    "The completeness relation is not verified."
-                    f" Ended up with {sum_op} instead of {identity2}."
-                )
+        if not np.all(np.isclose(sum_op, identity[size])):
+            raise ValueError(
+                "The completeness relation is not verified."
+                f" Ended up with {sum_op} instead of {identity[size]}."
+            )
