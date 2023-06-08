@@ -123,22 +123,6 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: value})
 
-    # @pytest.mark.parametrize(
-    #     "noise_sample,",
-    #     [
-    #         ("dephasing", "depolarizing"),
-    #         ("eff_noise", "depolarizing"),
-    #         ("eff_noise", "dephasing"),
-    #         ("depolarizing", "eff_noise", "dephasing"),
-    #     ],
-    # )
-    # def test_eff_noise_init(self, noise_sample):
-    #     with pytest.raises(
-    #         NotImplementedError,
-    #         match="Depolarizing, dephasing and effective noise channels",
-    #     ):
-    #         NoiseModel(noise_types=noise_sample)
-
     @pytest.fixture
     def matrices(self):
         matrices = {}
@@ -148,6 +132,21 @@ class TestNoiseModel:
         matrices["ket"] = np.array([[1.0], [2.0]])
         matrices["I3"] = np.eye(3)
         return matrices
+
+    @pytest.mark.parametrize(
+        "noise_sample,",
+        [
+            ("depolarizing", "eff_noise", "dephasing"),
+        ],
+    )
+    def test_eff_noise_init(self, noise_sample, matrices):
+        print(
+            NoiseModel(
+                noise_types=(noise_sample),
+                eff_noise_opers=[matrices["I3"]],
+                eff_noise_probs=[1.0],
+            )
+        )
 
     @pytest.mark.parametrize(
         "prob_distr",
@@ -187,12 +186,6 @@ class TestNoiseModel:
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[2.0],
-                eff_noise_probs=[1.0],
-            )
-        with pytest.raises(NotImplementedError, match="Operator's shape"):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I3"]],
                 eff_noise_probs=[1.0],
             )
         with pytest.raises(

@@ -242,7 +242,9 @@ class QutipEmulator:
                 self.basis_name == "all" and self.dim == 3
             ):  # three-level system
                 gamma = 1 - np.exp(-self.config.dephasing_prob)
-                M = qutip.Qobj(np.diag([1, np.sqrt(1 - gamma), np.sqrt(1 - gamma)]))
+                M = qutip.Qobj(
+                    np.diag([1, np.sqrt(1 - gamma), np.sqrt(1 - gamma)])
+                )
                 N = qutip.Qobj(np.diag([0, np.sqrt(gamma), 0]))
                 T = qutip.Qobj(np.diag([0, 0, np.sqrt(gamma)]))
                 kraus_ops.append(M)
@@ -270,13 +272,15 @@ class QutipEmulator:
                 alpha = np.sqrt(1 - 8 * prob)
                 beta = np.sqrt(prob / 3)
                 Y = qutip.Qobj(np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]))
-                Z = qutip.Qobj(np.array(
-                    [
-                        [0, 1, 0],
-                        [0, np.exp(1j * 2 * np.pi / 3), 0],
-                        [1, 0, np.exp(-1j * 2 * np.pi / 3)],
-                    ]
-                ))
+                Z = qutip.Qobj(
+                    np.array(
+                        [
+                            [0, 1, 0],
+                            [0, np.exp(1j * 2 * np.pi / 3), 0],
+                            [1, 0, np.exp(-1j * 2 * np.pi / 3)],
+                        ]
+                    )
+                )
                 kraus_ops.append(alpha * np.eye(3))
                 kraus_ops.append(beta * np.eye(3))
                 kraus_ops.append(beta * Z)

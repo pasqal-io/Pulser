@@ -181,7 +181,10 @@ class NoiseModel:
         # Identity position
         identity2 = np.eye(2)
         identity3 = np.eye(3)
-        if not (np.array_equal(self.eff_noise_opers[0], identity2) or np.array_equal(self.eff_noise_opers[0], identity3)):
+        if not (
+            np.array_equal(self.eff_noise_opers[0], identity2)
+            or np.array_equal(self.eff_noise_opers[0], identity3)
+        ):
             raise NotImplementedError(
                 "You must put the identity matrix at the "
                 "beginning of the operator list."
