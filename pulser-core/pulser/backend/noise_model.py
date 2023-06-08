@@ -134,12 +134,6 @@ class NoiseModel:
                     + "Valid noise types: "
                     + ", ".join(get_args(NOISE_TYPES))
                 )
-        dephasing_on = "dephasing" in self.noise_types
-        depolarizing_on = "depolarizing" in self.noise_types
-        eff_noise_on = "eff_noise" in self.noise_types
-        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
-        if eff_noise_conflict:
-            print(eff_noise_conflict)
 
     def _check_eff_noise(self) -> None:
         if len(self.eff_noise_opers) != len(self.eff_noise_probs):
@@ -185,20 +179,31 @@ class NoiseModel:
                     f"not {operator.shape}."
                 )
         # Identity position
-        dim = len(self.noise_types)
-        identity = np.eye(dim)
-        if not np.allclose(self.eff_noise_opers[0], np.eye(dim)):
+        identity2 = np.eye(2)
+        identity3 = np.eye(3)
+        if not (np.array_equal(self.eff_noise_opers[0], identity2) or np.array_equal(self.eff_noise_opers[0], identity3)):
             raise NotImplementedError(
                 "You must put the identity matrix at the "
                 "beginning of the operator list."
             )
         # Completeness relation checking
-        sum_op = np.zeros((dim, dim), dtype=complex)
-        for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
-            sum_op += prob * op @ op.conj().transpose()
+        elif not np.array_equal(self.eff_noise_opers[0], identity2):
+            sum_op = np.zeros((2, 2), dtype=complex)
+            for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
+                sum_op += prob * op @ op.conj().transpose()
 
-        if not np.all(np.isclose(sum_op, identity)):
-            raise ValueError(
-                "The completeness relation is not verified."
-                f" Ended up with {sum_op} instead of {identity}."
-            )
+            if not np.all(np.isclose(sum_op, identity2)):
+                raise ValueError(
+                    "The completeness relation is not verified."
+                    f" Ended up with {sum_op} instead of {identity2}."
+                )
+        else:
+            sum_op = np.zeros((3, 3), dtype=complex)
+            for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
+                sum_op += prob * op @ op.conj().transpose()
+
+            if not np.all(np.isclose(sum_op, identity3)):
+                raise ValueError(
+                    "The completeness relation is not verified."
+                    f" Ended up with {sum_op} instead of {identity2}."
+                )
