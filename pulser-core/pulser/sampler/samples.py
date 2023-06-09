@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import numpy as np
 
+# from pulser.sequence._schedule import _TimeSlot
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
@@ -90,8 +91,8 @@ class ChannelSamples:
     det: np.ndarray
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
+    time_slots: list[Any] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
-    initial_targets: set[QubitId] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -101,6 +102,11 @@ class ChannelSamples:
             assert t.ti < t.tf  # well ordered slots
         for t1, t2 in zip(self.slots, self.slots[1:]):
             assert t1.tf <= t2.ti  # no overlaps on a given channel
+
+    @property
+    def initial_targets(self) -> set[QubitId]:
+        """Returns the initial targets."""
+        return self.time_slots[0].targets if self.time_slots else set()
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
@@ -170,12 +176,12 @@ class ChannelSamples:
             for block in self.eom_blocks
         ]
 
-    def in_eom_mode(self, target_slot: Optional[_TargetSlot] = None) -> bool:
-        """States if a target slot is inside an EOM mode block."""
-        if target_slot is None:
+    def in_eom_mode(self, time_slot: Optional[Any] = None) -> bool:
+        """States if a time slot is inside an EOM mode block."""
+        if time_slot is None:
             return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
         return any(
-            start <= target_slot.ti < end
+            start <= time_slot.ti < end
             for start, end in self.get_eom_mode_intervals()
         )
 

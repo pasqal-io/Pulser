@@ -138,7 +138,9 @@ class _ChannelSchedule:
         dt = self.get_duration()
         amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
         slots: list[_TargetSlot] = []
-        initial_targets = self.slots[0].targets if self.slots else set()
+        time_slots: list[_TimeSlot] = [
+            s for s in self.slots if s.type == "target"
+        ]
 
         for ind, s in enumerate(channel_slots):
             pulse = cast(Pulse, s.type)
@@ -183,7 +185,7 @@ class _ChannelSchedule:
             phase[t_start:] = pulse.phase
 
         return ChannelSamples(
-            amp, det, phase, slots, self.eom_blocks, initial_targets
+            amp, det, phase, slots, time_slots, self.eom_blocks
         )
 
     @overload
