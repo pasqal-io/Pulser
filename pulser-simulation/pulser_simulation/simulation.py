@@ -271,25 +271,23 @@ class QutipEmulator:
                 prob = self.config.depolarizing_prob / 9
                 alpha = np.sqrt(1 - 8 * prob)
                 beta = np.sqrt(prob / 3)
-                Y = qutip.Qobj(np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]))
-                Z = qutip.Qobj(
-                    np.array(
-                        [
-                            [0, 1, 0],
-                            [0, np.exp(1j * 2 * np.pi / 3), 0],
-                            [1, 0, np.exp(-1j * 2 * np.pi / 3)],
-                        ]
-                    )
+                Y = np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]])
+                Z = np.array(
+                    [
+                        [0, 1, 0],
+                        [0, np.exp(1j * 2 * np.pi / 3), 0],
+                        [1, 0, np.exp(-1j * 2 * np.pi / 3)],
+                    ]
                 )
-                kraus_ops.append(alpha * np.eye(3))
-                kraus_ops.append(beta * np.eye(3))
-                kraus_ops.append(beta * Z)
-                kraus_ops.append(beta * Y**2)
-                kraus_ops.append(beta * Y @ Z)
-                kraus_ops.append(beta * Y**2 @ Z)
-                kraus_ops.append(beta * Y @ Z**2)
-                kraus_ops.append(beta * Y**2 @ Z**2)
-                kraus_ops.append(beta * Z**2)
+                kraus_ops.append(qutip.Qobj(alpha * np.eye(3)))
+                kraus_ops.append(qutip.Qobj(beta * np.eye(3)))
+                kraus_ops.append(qutip.Qobj(beta * Z))
+                kraus_ops.append(qutip.Qobj(beta * Y**2))
+                kraus_ops.append(qutip.Qobj(beta * Y @ Z))
+                kraus_ops.append(qutip.Qobj(beta * Y**2 @ Z))
+                kraus_ops.append(qutip.Qobj(beta * Y @ Z**2))
+                kraus_ops.append(qutip.Qobj(beta * Y**2 @ Z**2))
+                kraus_ops.append(qutip.Qobj(beta * Z**2))
             else:  # two-level system
                 prob = prob / 4
                 if prob > 0.1 and n > 1:

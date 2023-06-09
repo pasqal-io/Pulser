@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import qutip
 
-from pulser import Pulse, Register, Sequence
+from pulser import Pulse, Register, Sequence, Register3D
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
@@ -82,6 +82,8 @@ def matrices():
     pauli["X"] = qutip.sigmax()
     pauli["Y"] = qutip.sigmay()
     pauli["Z"] = qutip.sigmaz()
+    pauli["I3"] = qutip.qeye(3)
+    pauli["Z3"] = qutip.jmat(1, "z")
     return pauli
 
 
@@ -624,18 +626,6 @@ def test_noise(seq, matrices):
     assert sim2.run().sample_final_state() == Counter(
         {"000": 857, "110": 73, "100": 70}
     )
-    with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(SimConfig(noise="dephasing"))
-    with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(SimConfig(noise="depolarizing"))
-    with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(
-            SimConfig(
-                noise="eff_noise",
-                eff_noise_opers=[matrices["I"]],
-                eff_noise_probs=[1.0],
-            )
-        )
     assert sim2.config.spam_dict == {
         "eta": 0.9,
         "epsilon": 0.01,
@@ -762,6 +752,30 @@ def test_eff_noise(matrices):
                 eff_noise_probs=[0.5, 0.5],
             ),
         )
+
+
+def test_all_noise(matrices):
+    np.random.seed(123)
+    reg = Register3D.from_coordinates([(0, 0, 0), (0, 0, 1)], prefix="q")
+    seq = Sequence(reg, MockDevice)
+    seq.declare_channel("ryd", "rydberg_local", "q0")
+    seq.declare_channel("raman", "raman_local", "q1")
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
+    seq.add(pulse, "ryd")
+    seq.add(pulse, "raman")
+    sim = QutipEmulator(
+        sampler.sample(seq),
+        reg,
+        MockDevice,
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise=("eff_noise", "dephasing", "depolarizing"),
+            eff_noise_opers=[matrices["I3"], matrices["I3"]],
+            eff_noise_probs=[0.5, 0.5],
+        ),
+    )
+    assert all([op.shape == (9, 9) for op in sim._collapse_ops])
 
 
 def test_add_config(matrices):
