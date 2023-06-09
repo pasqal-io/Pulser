@@ -3,17 +3,17 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 import numpy as np
 
-# from pulser.sequence._schedule import _TimeSlot
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
 
 if TYPE_CHECKING:
     from pulser.sequence._schedule import _EOMSettings
+    from pulser.sequence._schedule import _TimeSlot
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
@@ -91,7 +91,7 @@ class ChannelSamples:
     det: np.ndarray
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
-    time_slots: list[Any] = field(default_factory=list)
+    time_slots: list[_TimeSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -176,7 +176,7 @@ class ChannelSamples:
             for block in self.eom_blocks
         ]
 
-    def in_eom_mode(self, time_slot: Optional[Any] = None) -> bool:
+    def in_eom_mode(self, time_slot: Optional[_TimeSlot] = None) -> bool:
         """States if a time slot is inside an EOM mode block."""
         if time_slot is None:
             return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
