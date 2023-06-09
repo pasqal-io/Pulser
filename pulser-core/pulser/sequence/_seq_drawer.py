@@ -412,8 +412,6 @@ def draw_samples(
             special_kwargs = dict(labelpad=10) if i == 0 else {}
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
-        # Here was draw_phase_area
-
         if draw_target_regions:
             target_regions = []  # [[start1, [targets1], end1],...]
             for coords in ch_data.target:
@@ -497,8 +495,6 @@ def draw_samples(
                 ha="left",
                 bbox=slm_box,
             )
-
-        # Here was draw measurements, axline and draw_interp
 
     return (fig, ch_axes, data)
 

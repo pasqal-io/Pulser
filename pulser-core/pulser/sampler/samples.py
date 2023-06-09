@@ -12,8 +12,7 @@ from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
 
 if TYPE_CHECKING:
-    from pulser.sequence._schedule import _EOMSettings
-    from pulser.sequence._schedule import _TimeSlot
+    from pulser.sequence._schedule import _EOMSettings, _TimeSlot
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
