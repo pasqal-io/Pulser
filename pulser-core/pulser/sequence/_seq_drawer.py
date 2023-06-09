@@ -29,6 +29,7 @@ import pulser
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
+from pulser.register.base_register import BaseRegister
 from pulser.sampler.sampler import sample
 from pulser.sampler.samples import ChannelSamples, SequenceSamples
 from pulser.waveforms import InterpolatedWaveform
@@ -245,16 +246,20 @@ def gather_data(sampled_seq: SequenceSamples) -> dict:
 
 def draw_samples(
     sampled_seq: SequenceSamples,
+    register: Optional[BaseRegister] = None,
     sampling_rate: Optional[float] = None,
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
     draw_target_regions: bool = True,
-) -> tuple[Figure | None, Figure, dict]:
+) -> tuple[Figure | None, Figure, Any, dict]:
     """Draws a SequenceSamples.
 
     Args:
         sampled_seq: The input sequence of operations on a device.
+        register: If present, draw the register before the pulse
+            sequence, with a visual indication (square halo) around the qubits
+            masked by the SLM, defaults to False.
         sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
@@ -285,6 +290,49 @@ def draw_samples(
     q_box = dict(boxstyle="round", facecolor="orange")
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
+
+    # Draw masked register
+    if register:
+        pos = np.array(register._coords)
+        if isinstance(register, Register3D):
+            labels = "xyz"
+            fig_reg, axes_reg = register._initialize_fig_axes_projection(
+                pos,
+                blockade_radius=35,
+                draw_half_radius=True,
+            )
+            fig_reg.get_layout_engine().set(w_pad=6.5)
+
+            for ax_reg, (ix, iy) in zip(
+                axes_reg, combinations(np.arange(3), 2)
+            ):
+                register._draw_2D(
+                    ax=ax_reg,
+                    pos=pos,
+                    ids=register._ids,
+                    plane=(ix, iy),
+                    masked_qubits=sampled_seq._slm_mask.targets,
+                )
+                ax_reg.set_title(
+                    "Masked register projected onto\n the "
+                    + labels[ix]
+                    + labels[iy]
+                    + "-plane"
+                )
+
+        elif isinstance(register, Register):
+            fig_reg, ax_reg = register._initialize_fig_axes(
+                pos,
+                blockade_radius=35,
+                draw_half_radius=True,
+            )
+            register._draw_2D(
+                ax=ax_reg,
+                pos=pos,
+                ids=register._ids,
+                masked_qubits=sampled_seq._slm_mask.targets,
+            )
+            ax_reg.set_title("Masked register", pad=10)
 
     ratios = [
         SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels
@@ -492,7 +540,7 @@ def draw_samples(
                 bbox=slm_box,
             )
 
-    return (fig, ch_axes, data)
+    return (fig_reg if register else None, fig, ch_axes, data)
 
 
 def draw_sequence(
@@ -555,51 +603,9 @@ def draw_sequence(
     # Sample the sequence
     sampled_seq = sample(seq)
 
-    # Draw masked register
-    if draw_register:
-        pos = np.array(seq.register._coords)
-        if isinstance(seq.register, Register3D):
-            labels = "xyz"
-            fig_reg, axes_reg = seq.register._initialize_fig_axes_projection(
-                pos,
-                blockade_radius=35,
-                draw_half_radius=True,
-            )
-            fig_reg.get_layout_engine().set(w_pad=6.5)
-
-            for ax_reg, (ix, iy) in zip(
-                axes_reg, combinations(np.arange(3), 2)
-            ):
-                seq.register._draw_2D(
-                    ax=ax_reg,
-                    pos=pos,
-                    ids=seq.register._ids,
-                    plane=(ix, iy),
-                    masked_qubits=seq._slm_mask_targets,
-                )
-                ax_reg.set_title(
-                    "Masked register projected onto\n the "
-                    + labels[ix]
-                    + labels[iy]
-                    + "-plane"
-                )
-
-        elif isinstance(seq.register, Register):
-            fig_reg, ax_reg = seq.register._initialize_fig_axes(
-                pos,
-                blockade_radius=35,
-                draw_half_radius=True,
-            )
-            seq.register._draw_2D(
-                ax=ax_reg,
-                pos=pos,
-                ids=seq.register._ids,
-                masked_qubits=seq._slm_mask_targets,
-            )
-            ax_reg.set_title("Masked register", pad=10)
-
-    (fig, ch_axes, data) = draw_samples(
+    (fig_reg, fig, ch_axes, data) = draw_samples(
         sampled_seq,
+        seq.register if draw_register else None,
         sampling_rate,
         draw_input,
         draw_modulation,
@@ -871,4 +877,4 @@ def draw_sequence(
                     pts = np.array(ch_data.interp_pts[qty])
                     axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
 
-    return (fig_reg if draw_register else None, fig)
+    return (fig_reg, fig)
