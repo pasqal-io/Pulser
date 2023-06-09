@@ -162,23 +162,19 @@ class ChannelDrawContent:
         ]
 
 
-def gather_data(seqsamples: SequenceSamples, gather_output: bool) -> dict:
+def gather_data(sampled_seq: SequenceSamples) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
         seq: The input sequence of operations on a device.
-        gather_output: Whether to gather the modulated output curves.
 
     Returns:
         The data to plot.
     """
     # The minimum time axis length is 100 ns
-    total_duration = max(seqsamples.max_duration, 100)
+    total_duration = max(sampled_seq.max_duration, 100)
     data: dict[str, Any] = {}
-
-    for ch, ch_samples in seqsamples.channel_samples.items():
-        # List of interpolation points
-        interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
+    for ch, ch_samples in sampled_seq.channel_samples.items():
         target: dict[Union[str, tuple[int, int]], Any] = {}
         # Extracting the EOM Buffers
         eom_intervals = [
@@ -199,7 +195,7 @@ def gather_data(seqsamples: SequenceSamples, gather_output: bool) -> dict:
         # sampling the channel schedule
         extended_samples = ch_samples.extend_duration(total_duration)
 
-        for slot in ch_samples.time_slots:
+        for slot in ch_samples.target_time_slots:
             if slot.ti == -1:
                 target["initial"] = slot.targets
                 continue
@@ -242,15 +238,13 @@ def gather_data(seqsamples: SequenceSamples, gather_output: bool) -> dict:
             eom_start_buffers,
             eom_end_buffers,
         )
-        if interp_pts:
-            data[ch].interp_pts = dict(interp_pts)
 
     data["total_duration"] = total_duration
     return data
 
 
 def draw_samples(
-    seqsamples: pulser.sampler.samples.SequenceSamples,
+    sampled_seq: pulser.sampler.samples.SequenceSamples,
     sampling_rate: Optional[float] = None,
     draw_input: bool = True,
     draw_modulation: bool = False,
@@ -260,7 +254,7 @@ def draw_samples(
     """Draws a SequenceSamples.
 
     Args:
-        seqsamples: The input sequence of operations on a device.
+        sampled_seq: The input sequence of operations on a device.
         sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
@@ -273,15 +267,15 @@ def draw_samples(
             if the phase doesn't change throughout the channel).
         draw_target_regions: Draws the target regions.
     """
-    n_channels = len(seqsamples.channels)
+    n_channels = len(sampled_seq.channels)
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
 
-    data = gather_data(seqsamples, gather_output=draw_modulation)
+    data = gather_data(sampled_seq)
     total_duration = data["total_duration"]
 
     time_scale = 1e3 if total_duration > 1e4 else 1
-    for ch in seqsamples.channels:
+    for ch in sampled_seq.channels:
         if np.count_nonzero(data[ch].samples.det) > 0:
             data[ch].curves_on["detuning"] = True
         if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
@@ -292,7 +286,7 @@ def draw_samples(
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    ratios = [SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in seqsamples.channels]
+    ratios = [SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels]
     fig = plt.figure(
         constrained_layout=False,
         figsize=(20, sum(ratios)),
@@ -300,7 +294,7 @@ def draw_samples(
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075, height_ratios=ratios)
 
     ch_axes = {}
-    for i, (ch, gs_) in enumerate(zip(seqsamples.channels, gs)):
+    for i, (ch, gs_) in enumerate(zip(sampled_seq.channels, gs)):
         ax = fig.add_subplot(gs_)
         for side in ("top", "bottom", "left", "right"):
             ax.spines[side].set_color("none")
@@ -339,7 +333,7 @@ def draw_samples(
 
     for ch, axes in ch_axes.items():
         ch_data = data[ch]
-        ch_obj = seqsamples._ch_objs[ch]
+        ch_obj = sampled_seq._ch_objs[ch]
         ch_eom_intervals = data[ch].eom_intervals
         ch_eom_start_buffers = data[ch].eom_start_buffers
         ch_eom_end_buffers = data[ch].eom_end_buffers
@@ -422,7 +416,7 @@ def draw_samples(
                 if coords == "initial":
                     x = t_min + final_t * 0.005
                     target_regions.append([0, targets])
-                    if seqsamples._ch_objs[ch].addressing == "Global":
+                    if ch_obj.addressing == "Global":
                         axes[0].text(
                             x,
                             amp_top * 0.98,
@@ -479,11 +473,11 @@ def draw_samples(
                 bbox=eom_box,
             )
         # Draw the SLM mask
-        if seqsamples._slm_mask.targets and seqsamples._slm_mask.end:
-            tf_m = seqsamples._slm_mask.end
+        if sampled_seq._slm_mask.targets and sampled_seq._slm_mask.end:
+            tf_m = sampled_seq._slm_mask.end
             for ax in axes:
                 ax.axvspan(0, tf_m, color="black", alpha=0.1, zorder=-100)
-            tgt_strs = [str(q) for q in seqsamples._slm_mask.targets]
+            tgt_strs = [str(q) for q in sampled_seq._slm_mask.targets]
             tgt_txt_x = final_t * 0.005
             tgt_txt_y = axes[-1].get_ylim()[0]
             tgt_str = "\n".join(tgt_strs)
@@ -551,7 +545,13 @@ def draw_sequence(
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
 
-    seqsamples = sample(seq)
+    # Boxes for qubit and phase text
+    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
+    q_box = dict(boxstyle="round", facecolor="orange")
+    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
+
+    # Sample the sequence
+    sampled_seq = sample(seq)
 
     # Draw masked register
     if draw_register:
@@ -597,7 +597,7 @@ def draw_sequence(
             ax_reg.set_title("Masked register", pad=10)
 
     (fig, ch_axes, data) = draw_samples(
-        seqsamples,
+        sampled_seq,
         sampling_rate,
         draw_input,
         draw_modulation,
@@ -633,10 +633,6 @@ def draw_sequence(
 
     if hasattr(seq, "_measurement"):
         data["measurement"] = seq._measurement
-
-    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
-    q_box = dict(boxstyle="round", facecolor="orange")
-    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
 
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1

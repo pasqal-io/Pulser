@@ -90,8 +90,8 @@ class ChannelSamples:
     det: np.ndarray
     phase: np.ndarray
     slots: list[_TargetSlot] = field(default_factory=list)
-    time_slots: list[_TimeSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
+    target_time_slots: list[_TimeSlot] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -105,7 +105,7 @@ class ChannelSamples:
     @property
     def initial_targets(self) -> set[QubitId]:
         """Returns the initial targets."""
-        return self.time_slots[0].targets if self.time_slots else set()
+        return self.target_time_slots[0].targets if self.target_time_slots else set()
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
@@ -166,7 +166,7 @@ class ChannelSamples:
         return replace(self, **new_samples)
 
     def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
-        """Returns OEM mode intervals."""
+        """Returns EOM mode intervals."""
         return [
             (
                 block.ti,
