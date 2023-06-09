@@ -244,7 +244,7 @@ def gather_data(sampled_seq: SequenceSamples) -> dict:
 
 
 def draw_samples(
-    sampled_seq: pulser.sampler.samples.SequenceSamples,
+    sampled_seq: SequenceSamples,
     sampling_rate: Optional[float] = None,
     draw_input: bool = True,
     draw_modulation: bool = False,
@@ -286,7 +286,9 @@ def draw_samples(
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
-    ratios = [SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels]
+    ratios = [
+        SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels
+    ]
     fig = plt.figure(
         constrained_layout=False,
         figsize=(20, sum(ratios)),

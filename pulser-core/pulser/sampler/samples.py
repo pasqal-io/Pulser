@@ -105,7 +105,11 @@ class ChannelSamples:
     @property
     def initial_targets(self) -> set[QubitId]:
         """Returns the initial targets."""
-        return self.target_time_slots[0].targets if self.target_time_slots else set()
+        return (
+            self.target_time_slots[0].targets
+            if self.target_time_slots
+            else set()
+        )
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
