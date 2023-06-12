@@ -252,7 +252,7 @@ def draw_channel_content(
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
 ) -> tuple[Figure | None, Figure, Any, dict]:
-    """Draws a SequenceSamples.
+    """Draws the computed data for a SequenceSamples.
 
     Args:
         data: The data to plot.
@@ -273,6 +273,11 @@ def draw_channel_content(
     """
     n_channels = len(sampled_seq.channels)
     total_duration = data["total_duration"]
+
+    # Boxes for qubit and phase text
+    q_box = dict(boxstyle="round", facecolor="orange")
+    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
+    slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
     # Draw masked register
     if register:
@@ -323,11 +328,6 @@ def draw_channel_content(
             data[ch].curves_on["detuning"] = True
         if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
             data[ch].curves_on["phase"] = True
-
-    # Boxes for qubit and phase text
-    q_box = dict(boxstyle="round", facecolor="orange")
-    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
-    slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
     ratios = [
         SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels
