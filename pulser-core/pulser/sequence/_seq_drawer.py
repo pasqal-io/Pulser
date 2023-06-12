@@ -163,7 +163,9 @@ class ChannelDrawContent:
         ]
 
 
-def gather_data(sampled_seq: SequenceSamples) -> dict:
+def gather_data(
+    sampled_seq: SequenceSamples, shown_duration: Optional[int] = None
+) -> dict:
     """Collects the whole sequence data for plotting.
 
     Args:
@@ -172,8 +174,15 @@ def gather_data(sampled_seq: SequenceSamples) -> dict:
     Returns:
         The data to plot.
     """
+    n_channels = len(sampled_seq.channels)
+    if not n_channels:
+        raise RuntimeError("Can't draw an empty sequence.")
+
     # The minimum time axis length is 100 ns
-    total_duration = max(sampled_seq.max_duration, 100)
+    if shown_duration is not None:
+        total_duration = shown_duration
+    else:
+        total_duration = max(sampled_seq.max_duration, 100)
     data: dict[str, Any] = {}
     for ch, ch_samples in sampled_seq.channel_samples.items():
         target: dict[Union[str, tuple[int, int]], Any] = {}
@@ -239,11 +248,13 @@ def gather_data(sampled_seq: SequenceSamples) -> dict:
             eom_end_buffers,
         )
 
+    if sampled_seq._measurement is not None:
+        data["measurement"] = sampled_seq._measurement
     data["total_duration"] = total_duration
     return data
 
 
-def draw_channel_content(
+def _draw_channel_content(
     data: dict,
     sampled_seq: SequenceSamples,
     register: Optional[BaseRegister] = None,
@@ -563,12 +574,8 @@ def draw_samples(
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
     """
-    n_channels = len(sampled_seq.channels)
-    if not n_channels:
-        raise RuntimeError("Can't draw an empty sequence.")
-
     data = gather_data(sampled_seq)
-    (fig_reg, fig, ch_axes, data) = draw_channel_content(
+    (fig_reg, fig, ch_axes, data) = _draw_channel_content(
         data,
         sampled_seq,
         register,
@@ -629,13 +636,10 @@ def draw_sequence(
         else:
             return rf"{value:.2g}$\pi$"
 
-    n_channels = len(seq.declared_channels)
-    if not n_channels:
-        raise RuntimeError("Can't draw an empty sequence.")
-
     # Sample the sequence and get the data to plot
-    sampled_seq = sample(seq)
-    data = gather_data(sampled_seq)
+    sampled_seq = sample(seq, modulation=draw_modulation)
+    shown_duration = seq.get_duration(include_fall_time=draw_modulation)
+    data = gather_data(sampled_seq, shown_duration)
 
     # Gather additional data for sequence specific drawing
     for ch, sch in seq._schedule.items():
@@ -656,14 +660,11 @@ def draw_sequence(
         if interp_pts:
             data[ch].interp_pts = dict(interp_pts)
 
-    if hasattr(seq, "_measurement"):
-        data["measurement"] = seq._measurement
-
     # Boxes for qubit and phase text
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     ph_box = dict(boxstyle="round", facecolor="ghostwhite")
 
-    (fig_reg, fig, ch_axes, data) = draw_channel_content(
+    (fig_reg, fig, ch_axes, data) = _draw_channel_content(
         data,
         sampled_seq,
         seq.register if draw_register else None,
@@ -732,7 +733,15 @@ def draw_sequence(
                             np.sum(yseff[0][seq_.ti : seq_.tf]) * 1e-3 / np.pi
                         )
                     else:
-                        area_val = seq_.type.amplitude.integral / np.pi
+                        area_val = (
+                            np.sum(
+                                sampled_seq.channel_samples[ch].amp[
+                                    slot.ti : slot.tf
+                                ]
+                            )
+                            * 1e-3
+                            / np.pi
+                        )
                     phase_val = seq_.type.phase
                     x_plot = (seq_.ti + seq_.tf) / 2 / time_scale
                     if (
