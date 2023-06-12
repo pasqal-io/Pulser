@@ -594,7 +594,6 @@ def draw_sequence(
 
     # Boxes for qubit and phase text
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
-    q_box = dict(boxstyle="round", facecolor="orange")
     ph_box = dict(boxstyle="round", facecolor="ghostwhite")
 
     # Sample the sequence
@@ -606,7 +605,7 @@ def draw_sequence(
         sampling_rate,
         draw_input,
         draw_modulation,
-        draw_phase_curve
+        draw_phase_curve,
     )
 
     # Gather additional data
@@ -734,8 +733,6 @@ def draw_sequence(
         for coords in ch_data.target:
             targets = list(ch_data.target[coords])
             tgt_strs = [str(q) for q in targets]
-            tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
-            tgt_str = "\n".join(tgt_strs)
             if coords == "initial":
                 x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
