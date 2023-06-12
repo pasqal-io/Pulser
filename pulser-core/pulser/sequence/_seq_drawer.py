@@ -728,74 +728,75 @@ def draw_sequence(
                         bbox=area_ph_box,
                     )
 
-        # Draw target regions
-        target_regions = []  # [[start1, [targets1], end1],...]
-        for coords in ch_data.target:
-            targets = list(ch_data.target[coords])
-            tgt_strs = [str(q) for q in targets]
-            if coords == "initial":
-                x = t_min + final_t * 0.005
-                target_regions.append([0, targets])
-                if seq.declared_channels[ch].addressing != "Global":
-                    phase = seq._basis_ref[basis][targets[0]].phase[0]
-                    if phase and draw_phase_shifts:
+        # Draw target regions phase_shifts
+        if draw_phase_shifts:
+            target_regions = []  # [[start1, [targets1], end1],...]
+            for coords in ch_data.target:
+                targets = list(ch_data.target[coords])
+                tgt_strs = [str(q) for q in targets]
+                if coords == "initial":
+                    x = t_min + final_t * 0.005
+                    target_regions.append([0, targets])
+                    if seq.declared_channels[ch].addressing != "Global":
+                        phase = seq._basis_ref[basis][targets[0]].phase[0]
+                        if phase and draw_phase_shifts:
+                            msg = r"$\phi=$" + phase_str(phase)
+                            axes[0].text(
+                                0,
+                                max_amp * 1.1,
+                                msg,
+                                ha="left",
+                                fontsize=12,
+                                bbox=ph_box,
+                            )
+                else:
+                    ti, tf = np.array(coords) / time_scale
+                    target_regions[-1].append(ti)  # Closing previous regions
+                    target_regions.append(
+                        [tf + 1 / time_scale, targets]
+                    )  # New one
+                    phase = seq._basis_ref[basis][targets[0]].phase[
+                        tf * time_scale + 1
+                    ]
+                    if phase:
                         msg = r"$\phi=$" + phase_str(phase)
+                        wrd_len = len(max(tgt_strs, key=len))
+                        x = tf + final_t * 0.01 * (wrd_len + 1)
                         axes[0].text(
-                            0,
+                            x,
                             max_amp * 1.1,
                             msg,
                             ha="left",
                             fontsize=12,
                             bbox=ph_box,
                         )
-            else:
-                ti, tf = np.array(coords) / time_scale
-                target_regions[-1].append(ti)  # Closing previous regions
-                target_regions.append(
-                    [tf + 1 / time_scale, targets]
-                )  # New one
-                phase = seq._basis_ref[basis][targets[0]].phase[
-                    tf * time_scale + 1
-                ]
-                if phase and draw_phase_shifts:
-                    msg = r"$\phi=$" + phase_str(phase)
-                    wrd_len = len(max(tgt_strs, key=len))
-                    x = tf + final_t * 0.01 * (wrd_len + 1)
+            # Terminate the last open regions
+            if target_regions:
+                target_regions[-1].append(final_t)
+            for start, targets_, end in target_regions:
+                start = cast(float, start)
+                targets_ = cast(list, targets_)
+                end = cast(float, end)
+                # All targets have the same ref, so we pick
+                q = targets_[0]
+                ref = seq._basis_ref[basis][q].phase
+                if end != total_duration - 1 or "measurement" in data:
+                    end += 1 / time_scale
+                for t_, delta in ref.changes(
+                    start, end, time_scale=time_scale
+                ):
+                    conf = dict(linestyle="--", linewidth=1.5, color="black")
+                    for ax in axes:
+                        ax.axvline(t_, **conf)
+                    msg = "\u27F2 " + phase_str(delta)
                     axes[0].text(
-                        x,
+                        t_ - final_t * 8e-3,
                         max_amp * 1.1,
                         msg,
-                        ha="left",
-                        fontsize=12,
+                        ha="right",
+                        fontsize=14,
                         bbox=ph_box,
                     )
-        # Terminate the last open regions
-        if target_regions:
-            target_regions[-1].append(final_t)
-        for start, targets_, end in (
-            target_regions if draw_phase_shifts else []
-        ):
-            start = cast(float, start)
-            targets_ = cast(list, targets_)
-            end = cast(float, end)
-            # All targets have the same ref, so we pick
-            q = targets_[0]
-            ref = seq._basis_ref[basis][q].phase
-            if end != total_duration - 1 or "measurement" in data:
-                end += 1 / time_scale
-            for t_, delta in ref.changes(start, end, time_scale=time_scale):
-                conf = dict(linestyle="--", linewidth=1.5, color="black")
-                for ax in axes:
-                    ax.axvline(t_, **conf)
-                msg = "\u27F2 " + phase_str(delta)
-                axes[0].text(
-                    t_ - final_t * 8e-3,
-                    max_amp * 1.1,
-                    msg,
-                    ha="right",
-                    fontsize=14,
-                    bbox=ph_box,
-                )
 
         hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
         if "measurement" in data:
