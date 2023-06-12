@@ -229,7 +229,6 @@ def gather_data(sampled_seq: SequenceSamples) -> dict:
 
             if slot.type == "target":
                 target[(slot.ti, slot.tf - 1)] = slot.targets
-                continue
 
         # Store everything
         data[ch] = ChannelDrawContent(
@@ -611,17 +610,11 @@ def draw_sequence(
     # Gather additional data
     for ch, sch in seq._schedule.items():
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
-        target: dict[Union[str, tuple[int, int]], Any] = {}
 
         for slot in sch:
-            if slot.ti == -1:
-                target["initial"] = slot.targets
+            if slot.ti == -1 or slot.type in ["target", "delay"]:
                 continue
-            if slot.type == "target":
-                target[(slot.ti, slot.tf - 1)] = slot.targets
-                continue
-            if slot.type == "delay":
-                continue
+
             pulse = cast(Pulse, slot.type)
             for wf_type in ["amplitude", "detuning"]:
                 wf = getattr(pulse, wf_type)
@@ -630,7 +623,6 @@ def draw_sequence(
                     pts[:, 0] += slot.ti
                     interp_pts[wf_type] += pts.tolist()
 
-        data[ch].target = target
         if interp_pts:
             data[ch].interp_pts = dict(interp_pts)
 
