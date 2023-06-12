@@ -251,7 +251,6 @@ def draw_samples(
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
-    draw_target_regions: bool = True,
 ) -> tuple[Figure | None, Figure, Any, dict]:
     """Draws a SequenceSamples.
 
@@ -270,7 +269,6 @@ def draw_samples(
             is skipped unless 'draw_input=False'.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
-        draw_target_regions: Draws the target regions.
     """
     n_channels = len(sampled_seq.channels)
     if not n_channels:
@@ -456,52 +454,51 @@ def draw_samples(
             special_kwargs = dict(labelpad=10) if i == 0 else {}
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
-        if draw_target_regions:
-            target_regions = []  # [[start1, [targets1], end1],...]
-            for coords in ch_data.target:
-                targets = list(ch_data.target[coords])
-                tgt_strs = [str(q) for q in targets]
-                tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
-                tgt_str = "\n".join(tgt_strs)
-                if coords == "initial":
-                    x = t_min + final_t * 0.005
-                    target_regions.append([0, targets])
-                    if ch_obj.addressing == "Global":
-                        axes[0].text(
-                            x,
-                            amp_top * 0.98,
-                            "GLOBAL",
-                            fontsize=13,
-                            rotation=90,
-                            ha="left",
-                            va="top",
-                            bbox=q_box,
-                        )
-                    else:
-                        axes[0].text(
-                            x,
-                            tgt_txt_y,
-                            tgt_str,
-                            fontsize=12,
-                            ha="left",
-                            bbox=q_box,
-                        )
-                else:
-                    ti, tf = np.array(coords) / time_scale
-                    target_regions[-1].append(ti)  # Closing previous regions
-                    target_regions.append(
-                        [tf + 1 / time_scale, targets]
-                    )  # New one
-                    for ax in axes:
-                        ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
+        target_regions = []  # [[start1, [targets1], end1],...]
+        for coords in ch_data.target:
+            targets = list(ch_data.target[coords])
+            tgt_strs = [str(q) for q in targets]
+            tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
+            tgt_str = "\n".join(tgt_strs)
+            if coords == "initial":
+                x = t_min + final_t * 0.005
+                target_regions.append([0, targets])
+                if ch_obj.addressing == "Global":
                     axes[0].text(
-                        tf + final_t * 5e-3,
-                        tgt_txt_y,
-                        tgt_str,
+                        x,
+                        amp_top * 0.98,
+                        "GLOBAL",
+                        fontsize=13,
+                        rotation=90,
                         ha="left",
-                        fontsize=12,
+                        va="top",
                         bbox=q_box,
                     )
+                else:
+                    axes[0].text(
+                        x,
+                        tgt_txt_y,
+                        tgt_str,
+                        fontsize=12,
+                        ha="left",
+                        bbox=q_box,
+                    )
+            else:
+                ti, tf = np.array(coords) / time_scale
+                target_regions[-1].append(ti)  # Closing previous regions
+                target_regions.append(
+                    [tf + 1 / time_scale, targets]
+                )  # New one
+                for ax in axes:
+                    ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
+                axes[0].text(
+                    tf + final_t * 5e-3,
+                    tgt_txt_y,
+                    tgt_str,
+                    ha="left",
+                    fontsize=12,
+                    bbox=q_box,
+                )
 
         # Draw the EOM intervals
         for ch_eom_start_buffer, ch_eom_interval, ch_eom_end_buffer in zip(
@@ -609,8 +606,7 @@ def draw_sequence(
         sampling_rate,
         draw_input,
         draw_modulation,
-        draw_phase_curve,
-        draw_target_regions=False,
+        draw_phase_curve
     )
 
     # Gather additional data
@@ -743,26 +739,7 @@ def draw_sequence(
             if coords == "initial":
                 x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
-                if seq.declared_channels[ch].addressing == "Global":
-                    axes[0].text(
-                        x,
-                        amp_top * 0.98,
-                        "GLOBAL",
-                        fontsize=13,
-                        rotation=90,
-                        ha="left",
-                        va="top",
-                        bbox=q_box,
-                    )
-                else:
-                    axes[0].text(
-                        x,
-                        tgt_txt_y,
-                        tgt_str,
-                        fontsize=12,
-                        ha="left",
-                        bbox=q_box,
-                    )
+                if seq.declared_channels[ch].addressing != "Global":
                     phase = seq._basis_ref[basis][targets[0]].phase[0]
                     if phase and draw_phase_shifts:
                         msg = r"$\phi=$" + phase_str(phase)
@@ -783,16 +760,6 @@ def draw_sequence(
                 phase = seq._basis_ref[basis][targets[0]].phase[
                     tf * time_scale + 1
                 ]
-                for ax in axes:
-                    ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
-                axes[0].text(
-                    tf + final_t * 5e-3,
-                    tgt_txt_y,
-                    tgt_str,
-                    ha="left",
-                    fontsize=12,
-                    bbox=q_box,
-                )
                 if phase and draw_phase_shifts:
                     msg = r"$\phi=$" + phase_str(phase)
                     wrd_len = len(max(tgt_strs, key=len))
