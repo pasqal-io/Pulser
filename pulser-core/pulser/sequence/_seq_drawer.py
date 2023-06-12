@@ -243,7 +243,8 @@ def gather_data(sampled_seq: SequenceSamples) -> dict:
     return data
 
 
-def draw_samples(
+def draw_channel_content(
+    data: dict,
     sampled_seq: SequenceSamples,
     register: Optional[BaseRegister] = None,
     sampling_rate: Optional[float] = None,
@@ -254,6 +255,7 @@ def draw_samples(
     """Draws a SequenceSamples.
 
     Args:
+        data: The data to plot.
         sampled_seq: The input sequence of operations on a device.
         register: If present, draw the register before the pulse
             sequence, with a visual indication (square halo) around the qubits
@@ -270,23 +272,7 @@ def draw_samples(
             if the phase doesn't change throughout the channel).
     """
     n_channels = len(sampled_seq.channels)
-    if not n_channels:
-        raise RuntimeError("Can't draw an empty sequence.")
-
-    data = gather_data(sampled_seq)
     total_duration = data["total_duration"]
-
-    time_scale = 1e3 if total_duration > 1e4 else 1
-    for ch in sampled_seq.channels:
-        if np.count_nonzero(data[ch].samples.det) > 0:
-            data[ch].curves_on["detuning"] = True
-        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
-            data[ch].curves_on["phase"] = True
-
-    # Boxes for qubit and phase text
-    q_box = dict(boxstyle="round", facecolor="orange")
-    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
-    slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
     # Draw masked register
     if register:
@@ -330,6 +316,18 @@ def draw_samples(
                 masked_qubits=sampled_seq._slm_mask.targets,
             )
             ax_reg.set_title("Masked register", pad=10)
+
+    time_scale = 1e3 if total_duration > 1e4 else 1
+    for ch in sampled_seq.channels:
+        if np.count_nonzero(data[ch].samples.det) > 0:
+            data[ch].curves_on["detuning"] = True
+        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
+            data[ch].curves_on["phase"] = True
+
+    # Boxes for qubit and phase text
+    q_box = dict(boxstyle="round", facecolor="orange")
+    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
+    slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
     ratios = [
         SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels
@@ -539,6 +537,50 @@ def draw_samples(
     return (fig_reg if register else None, fig, ch_axes, data)
 
 
+def draw_samples(
+    sampled_seq: SequenceSamples,
+    register: Optional[BaseRegister] = None,
+    sampling_rate: Optional[float] = None,
+    draw_input: bool = True,
+    draw_modulation: bool = False,
+    draw_phase_curve: bool = False,
+) -> tuple[Figure | None, Figure]:
+    """Draws a SequenceSamples.
+
+    Args:
+        sampled_seq: The input sequence of operations on a device.
+        register: If present, draw the register before the pulse
+            sequence, with a visual indication (square halo) around the qubits
+            masked by the SLM, defaults to False.
+        sampling_rate: Sampling rate of the effective pulse used by
+            the solver. If present, plots the effective pulse alongside the
+            input pulse.
+        draw_input: Draws the programmed pulses on the channels, defaults
+            to True.
+        draw_modulation: Draws the expected channel output, defaults to
+            False. If the channel does not have a defined 'mod_bandwidth', this
+            is skipped unless 'draw_input=False'.
+        draw_phase_curve: Draws the changes in phase in its own curve (ignored
+            if the phase doesn't change throughout the channel).
+    """
+    n_channels = len(sampled_seq.channels)
+    if not n_channels:
+        raise RuntimeError("Can't draw an empty sequence.")
+
+    data = gather_data(sampled_seq)
+    (fig_reg, fig, ch_axes, data) = draw_channel_content(
+        data,
+        sampled_seq,
+        register,
+        sampling_rate,
+        draw_input,
+        draw_modulation,
+        draw_phase_curve,
+    )
+
+    return (fig_reg, fig)
+
+
 def draw_sequence(
     seq: pulser.sequence.Sequence,
     sampling_rate: Optional[float] = None,
@@ -591,23 +633,11 @@ def draw_sequence(
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
 
-    # Boxes for qubit and phase text
-    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
-    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
-
-    # Sample the sequence
+    # Sample the sequence and get the data to plot
     sampled_seq = sample(seq)
+    data = gather_data(sampled_seq)
 
-    (fig_reg, fig, ch_axes, data) = draw_samples(
-        sampled_seq,
-        seq.register if draw_register else None,
-        sampling_rate,
-        draw_input,
-        draw_modulation,
-        draw_phase_curve,
-    )
-
-    # Gather additional data
+    # Gather additional data for sequence specific drawing
     for ch, sch in seq._schedule.items():
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
 
@@ -628,6 +658,20 @@ def draw_sequence(
 
     if hasattr(seq, "_measurement"):
         data["measurement"] = seq._measurement
+
+    # Boxes for qubit and phase text
+    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
+    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
+
+    (fig_reg, fig, ch_axes, data) = draw_channel_content(
+        data,
+        sampled_seq,
+        seq.register if draw_register else None,
+        sampling_rate,
+        draw_input,
+        draw_modulation,
+        draw_phase_curve,
+    )
 
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
