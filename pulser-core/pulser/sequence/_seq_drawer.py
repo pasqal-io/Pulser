@@ -249,17 +249,6 @@ def gather_data(
     return data
 
 
-def _phase_str(phi: float) -> str:
-    """Formats a phase value for printing."""
-    value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
-    if value == -1:
-        return r"$\pi$"
-    elif value == 0:
-        return "0"  # pragma: no cover - just for safety
-    else:
-        return rf"{value:.2g}$\pi$"
-
-
 def _draw_channel_content(
     sampled_seq: SequenceSamples,
     register: Optional[BaseRegister] = None,
@@ -296,8 +285,18 @@ def _draw_channel_content(
         shown_duration: If present, is the total duration to be shown in
             the X axis.
     """
-    n_channels = len(sampled_seq.channels)
 
+    def phase_str(phi: float) -> str:
+        """Formats a phase value for printing."""
+        value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
+        if value == -1:
+            return r"$\pi$"
+        elif value == 0:
+            return "0"  # pragma: no cover - just for safety
+        else:
+            return rf"{value:.2g}$\pi$"
+
+    n_channels = len(sampled_seq.channels)
     if not n_channels:
         raise RuntimeError("Can't draw an empty sequence.")
 
@@ -543,7 +542,7 @@ def _draw_channel_content(
                 if not print_phase:
                     txt = area_fmt
                 else:
-                    phase_fmt = rf"$\phi$: {_phase_str(phase_val)}"
+                    phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
                     txt = "\n".join([phase_fmt, area_fmt])
                 axes[0].text(
                     x_plot,
@@ -586,7 +585,7 @@ def _draw_channel_content(
                     )
                     phase = sampled_seq._basis_ref[basis][targets[0]].phase[0]
                     if phase and draw_phase_shifts:
-                        msg = r"$\phi=$" + _phase_str(phase)
+                        msg = r"$\phi=$" + phase_str(phase)
                         axes[0].text(
                             0,
                             max_amp * 1.1,
@@ -615,7 +614,7 @@ def _draw_channel_content(
                     bbox=q_box,
                 )
                 if phase and draw_phase_shifts:
-                    msg = r"$\phi=$" + _phase_str(phase)
+                    msg = r"$\phi=$" + phase_str(phase)
                     wrd_len = len(max(tgt_strs, key=len))
                     x = tf + final_t * 0.01 * (wrd_len + 1)
                     axes[0].text(
@@ -643,7 +642,7 @@ def _draw_channel_content(
                 conf = dict(linestyle="--", linewidth=1.5, color="black")
                 for ax in axes:
                     ax.axvline(t_, **conf)
-                msg = "\u27F2 " + _phase_str(delta)
+                msg = "\u27F2 " + phase_str(delta)
                 axes[0].text(
                     t_ - final_t * 8e-3,
                     max_amp * 1.1,
