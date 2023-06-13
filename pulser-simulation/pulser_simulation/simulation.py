@@ -639,7 +639,7 @@ class QutipEmulator:
                 self.basis_name = "all"  # All three states
                 self.dim = 3
                 basis = ["r", "g", "h"]
-                projectors = ["gr", "hg", "hr", "gg", "hh", "rr"]
+                projectors = ["gr", "hg", "gg", "hh", "rr"]
 
         self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
         self.op_matrix = {"I": qutip.qeye(self.dim)}
