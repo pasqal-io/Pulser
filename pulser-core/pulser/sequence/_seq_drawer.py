@@ -169,7 +169,7 @@ def gather_data(
     """Collects the whole sequence data for plotting.
 
     Args:
-        sampled_seq: The samples of a sequence of opeations on a device.
+        sampled_seq: The samples of a sequence of operations on a device.
         shown_duration: If present, is the total duration to be shown in
             the X axis.
 
