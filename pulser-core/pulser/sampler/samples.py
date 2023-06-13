@@ -180,12 +180,14 @@ class ChannelSamples:
             for block in self.eom_blocks
         ]
 
-    def in_eom_mode(self, time_slot: Optional[_TimeSlot] = None) -> bool:
+    def in_eom_mode(
+        self, slot: Optional[_TimeSlot | _TargetSlot] = None
+    ) -> bool:
         """States if a time slot is inside an EOM mode block."""
-        if time_slot is None:
+        if slot is None:
             return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
         return any(
-            start <= time_slot.ti < end
+            start <= slot.ti < end
             for start, end in self.get_eom_mode_intervals()
         )
 

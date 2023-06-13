@@ -200,11 +200,8 @@ def gather_data(
         # sampling the channel schedule
         extended_samples = ch_samples.extend_duration(total_duration)
 
-        for slot in ch_samples.target_time_slots:
-            if slot.ti == -1:
-                target["initial"] = slot.targets
-                continue
-            else:
+        for slot in ch_samples.slots:
+            if slot.ti != -1:
                 # If slot is not the first element in schedule
                 if ch_samples.in_eom_mode(slot):
                     # EOM mode starts
@@ -229,8 +226,12 @@ def gather_data(
                         slot.ti, slot.tf
                     )
 
-            if slot.type == "target":
-                target[(slot.ti, slot.tf - 1)] = slot.targets
+        for time_slot in ch_samples.target_time_slots:
+            if time_slot.ti == -1:
+                target["initial"] = time_slot.targets
+                continue
+            if time_slot.type == "target":
+                target[(time_slot.ti, time_slot.tf - 1)] = time_slot.targets
 
         # Store everything
         data[ch] = ChannelDrawContent(
