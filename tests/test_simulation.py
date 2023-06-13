@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import qutip
 
-from pulser import Pulse, Register, Register3D, Sequence
+from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
@@ -33,6 +33,15 @@ def reg():
         "control1": np.array([-4.0, 0.0]),
         "target": np.array([0.0, 4.0]),
         "control2": np.array([4.0, 0.0]),
+    }
+    return Register(q_dict)
+
+@pytest.fixture
+def reg2():
+    q_dict = {
+        "control1": np.array([-10.0, 0.0]),
+        "target": np.array([0.0, 5.0]),
+        "control2": np.array([10.0, 0.0]),
     }
     return Register(q_dict)
 
@@ -75,6 +84,70 @@ def seq(reg):
     return seq
 
 
+def seq1():
+    reg = Register.from_coordinates([(0, 0)], prefix="q")
+    seq = Sequence(reg, Chadoq2)
+    seq.declare_channel("ch0", "rydberg_global")
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
+    seq.add(pulse, "ch0")
+    return seq
+
+def seq2():
+    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
+    seq2 = Sequence(reg, Chadoq2)
+    seq2.declare_channel("ch0", "rydberg_global")
+    duration = 2500
+    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
+    seq2.add(pulse, "ch0")
+    return seq2
+
+@pytest.fixture
+def seq3(reg2):
+    duration = 1000
+    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+    twopi = Pulse.ConstantDetuning(
+        BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
+    )
+    pi_Y = Pulse.ConstantDetuning(
+        BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
+    )
+    seq = Sequence(reg2, Chadoq2)
+    # Declare Channels
+    seq.declare_channel("ryd", "rydberg_local", "control1")
+    seq.declare_channel("raman", "raman_local", "control1")
+
+    # Prepare state 'hhh':
+    seq.add(pi_Y, "raman")
+    seq.target("target", "raman")
+    seq.add(pi_Y, "raman")
+    seq.target("control2", "raman")
+    seq.add(pi_Y, "raman")
+
+    # Write CCZ sequence:
+    seq.add(pi, "ryd", protocol="wait-for-all")
+    seq.target("control2", "ryd")
+    seq.add(pi, "ryd")
+    seq.target("target", "ryd")
+    seq.add(twopi, "ryd")
+    seq.target("control2", "ryd")
+    seq.add(pi, "ryd")
+    seq.target("control1", "ryd")
+    seq.add(pi, "ryd")
+
+    # Add a ConstantWaveform part to testout the drawing procedure
+    seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
+    return seq
+
+@pytest.fixture
+def sequences(seq, seq3):
+    sequences = {}
+    sequences[0] = seq
+    sequences[1] = seq1()
+    sequences[2] = seq2()
+    sequences[3] = seq3
+    return sequences
+
 @pytest.fixture
 def matrices():
     pauli = {}
@@ -83,11 +156,17 @@ def matrices():
     pauli["Y"] = qutip.sigmay()
     pauli["Z"] = qutip.sigmaz()
     pauli["I3"] = qutip.qeye(3)
-    pauli["Z3"] = qutip.jmat(1, "z")
-    pauli["X3"] = qutip.jmat(1, "x")
-    pauli["Y3"] = qutip.jmat(1, "y")
+    pauli["P23-1"] = qutip.ket2dm(qutip.basis(3, 1)) + qutip.ket2dm(qutip.basis(3, 2)) - qutip.ket2dm(qutip.basis(3, 0))
     return pauli
 
+@pytest.fixture
+def counters():
+    counters = {}
+    counters[0] = Counter({"0": 595, "1": 405})
+    counters[1] = Counter({'111': 979, '110': 11, '011': 5, '101': 5})
+    counters[2] = Counter({"0": 587, "1": 413})
+    counters[3] = Counter({'111': 467,'011': 139,'110': 128,'101': 126,'100': 43,'001': 42,'010': 42,'000': 13})
+    return counters
 
 def test_bad_import():
     with pytest.warns(
@@ -662,78 +741,78 @@ def test_noise_with_zero_epsilons(seq, matrices):
 
     assert sim.run().sample_final_state() == sim2.run().sample_final_state()
 
-
-def test_dephasing():
+@pytest.mark.parametrize(
+    "sequence_index, counter_key",
+    [
+        ((1, 2), 0),
+        ((0, 3), 1)
+    ]
+)
+def test_dephasing(counter_key, sequence_index, sequences, counters):
     np.random.seed(123)
-    reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("ch0", "rydberg_global")
-    duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
-    seq.add(pulse, "ch0")
+    sequences = [sequences[i] for i in sequence_index]
+    seq = sequences[0]
+    seq2 = sequences[1]
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
+    assert sim.run().sample_final_state() == counters[counter_key]
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, Chadoq2)
-        seq2.declare_channel("ch0", "rydberg_global")
-        seq2.add(pulse, "ch0")
         sim = Simulation(
             seq2,
             sampling_rate=0.01,
             config=SimConfig(noise="dephasing", dephasing_prob=0.5),
         )
 
-
-def test_depolarizing():
+@pytest.mark.parametrize(
+    "sequence_index, counter_key",
+    [
+        ((1, 2), 2),
+        ((0, 3), 3)
+    ]
+)
+def test_depolarizing(counter_key, sequence_index, sequences, counters):
     np.random.seed(123)
-    reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("ch0", "rydberg_global")
-    duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
-    seq.add(pulse, "ch0")
+    sequences = [sequences[i] for i in sequence_index]
+    seq = sequences[0]
+    seq2 = sequences[1]
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
     )
-    assert sim.run().sample_final_state() == Counter({"0": 587, "1": 413})
+    assert sim.run().sample_final_state() == counters[counter_key]
     trace_2 = sim.run().states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, Chadoq2)
-        seq2.declare_channel("ch0", "rydberg_global")
-        seq2.add(pulse, "ch0")
         sim = Simulation(
             seq2,
             sampling_rate=0.01,
             config=SimConfig(noise="depolarizing", depolarizing_prob=0.5),
         )
 
-
-def test_eff_noise(matrices):
+@pytest.mark.parametrize(
+    "sequence_index, eff_noise_opers",
+    [
+        ((1, 2,), ["I", "Z"]),
+        ((0, 3,),  ["I3", "P23-1"])
+    ]
+)
+def test_eff_noise(sequence_index, eff_noise_opers, matrices, sequences):
+    eff_noise_opers = [matrices[op] for op in eff_noise_opers]
     np.random.seed(123)
-    reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("ch0", "rydberg_global")
-    duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
-    seq.add(pulse, "ch0")
+    sequences = [sequences[i] for i in sequence_index]
     sim = Simulation(
-        seq,
+        sequences[0],
         sampling_rate=0.01,
         config=SimConfig(
             noise="eff_noise",
-            eff_noise_opers=[matrices["I"], matrices["Z"]],
-            eff_noise_probs=[0.975, 0.025],
+            eff_noise_opers=eff_noise_opers,
+            eff_noise_probs=[1-0.025*(len(eff_noise_opers)-1)] + [0.025 for _ in range(len(eff_noise_opers)-1)],
         ),
     )
     sim_dph = Simulation(
-        seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
+        sequences[0], sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
     assert (
         sim._collapse_ops == sim_dph._collapse_ops
@@ -741,57 +820,28 @@ def test_eff_noise(matrices):
     )
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, Chadoq2)
-        seq2.declare_channel("ch0", "rydberg_global")
-        seq2.add(pulse, "ch0")
         sim = Simulation(
-            seq2,
+            sequences[1],
             sampling_rate=0.01,
             config=SimConfig(
                 noise="eff_noise",
-                eff_noise_opers=[matrices["I"], matrices["Z"]],
-                eff_noise_probs=[0.5, 0.5],
+                eff_noise_opers=eff_noise_opers,
+                eff_noise_probs=[1/len(eff_noise_opers) for _ in eff_noise_opers],
             ),
         )
 
 
 @pytest.mark.parametrize(
-    "noise_sample,",
+    "sequence_index, eff_noise_opers",
     [
-        ("depolarizing"),
-        ("dephasing"),
-    ],
+        ((1,), ["I", "Z"]),
+        ((0,),  ["I3", "P23-1"])
+    ]
 )
-def test_three_level_noise(noise_sample, matrices):
-    np.random.seed(123)
-    reg = Register3D.from_coordinates([(0, 0, 0), (0, 0, 1)], prefix="q")
-    seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ryd", "rydberg_local", "q0")
-    seq.declare_channel("raman", "raman_local", "q1")
-    duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
-    seq.add(pulse, "ryd")
-    seq.add(pulse, "raman")
-    sim = QutipEmulator(
-        sampler.sample(seq),
-        reg,
-        MockDevice,
-        sampling_rate=0.01,
-        config=SimConfig(
-            noise=noise_sample,
-        ),
-    )
-    assert all([op.shape == (9, 9) for op in sim._collapse_ops])
-
-
-def test_add_config(matrices):
-    reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
-    seq.declare_channel("ch0", "rydberg_global")
-    duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
-    seq.add(pulse, "ch0")
+def test_add_config(sequence_index, eff_noise_opers, matrices, sequences):
+    sequences = [sequences[i] for i in sequence_index]
+    seq = sequences[0]
+    eff_noise_opers = [matrices[op] for op in eff_noise_opers]
     sim = Simulation(
         seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
     )
@@ -804,7 +854,7 @@ def test_add_config(matrices):
                 "doppler",
                 "eff_noise",
             ),
-            eff_noise_opers=[matrices["I"], matrices["X"]],
+            eff_noise_opers=eff_noise_opers,
             eff_noise_probs=[0.4, 0.6],
             temperature=20000,
         )

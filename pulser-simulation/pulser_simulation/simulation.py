@@ -210,6 +210,7 @@ class QutipEmulator:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
+        prev_config = self.config if hasattr(self, "_config") else SimConfig()
         self._config = cfg
         if not ("SPAM" in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -234,7 +235,6 @@ class QutipEmulator:
                 self.basis_name == "all" and self.dim == 3
             ):  # three-level system
                 k = np.sqrt(prob * (1 - prob) ** (n - 1))
-                # m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
                 for i in range(3):
                     ket_ = qutip.basis(3, i)
                     kraus_ops.append(k * ket_ * ket_.dag())
@@ -280,7 +280,14 @@ class QutipEmulator:
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
 
+
         if "eff_noise" in self.config.noise:
+            if not np.all(op.shape == (self.dim, self.dim) for op in self.config.eff_noise_opers):
+                # Go back to previous config
+                self.set_config(prev_config)
+                raise NotImplementedError(
+                    "Cannot mix noise operator dimensions."
+                )
             # Probability distribution of error occurences
             n = self._size
             m = len(self.config.eff_noise_opers)

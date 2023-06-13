@@ -150,15 +150,6 @@ class TestNoiseModel:
         matrices["I4"] = np.eye(4)
         return matrices
 
-    def test_eff_noise_three_init(self, matrices):
-        print(
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I3"]],
-                eff_noise_probs=[1.0],
-            )
-        )
-
     @pytest.mark.parametrize(
         "prob_distr",
         [
