@@ -265,6 +265,7 @@ def _draw_channel_content(
     register: Optional[BaseRegister] = None,
     sampling_rate: Optional[float] = None,
     draw_phase_area: bool = False,
+    draw_phase_shifts: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
@@ -283,6 +284,8 @@ def _draw_channel_content(
         draw_phase_area: Whether phase and area values need to be shown
             as text on the plot, defaults to False. If `draw_phase_curve=True`,
             phase values are ommited.
+        draw_phase_shifts: Whether phase shift and reference information
+            should be added to the plot, defaults to False.
         draw_input: Draws the programmed pulses on the channels, defaults
             to True.
         draw_modulation: Draws the expected channel output, defaults to
@@ -303,6 +306,7 @@ def _draw_channel_content(
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
+    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
@@ -410,6 +414,7 @@ def _draw_channel_content(
         ch_eom_intervals = data[ch].eom_intervals
         ch_eom_start_buffers = data[ch].eom_start_buffers
         ch_eom_end_buffers = data[ch].eom_end_buffers
+        basis = ch_obj.basis
         ys = ch_data.get_input_curves()
         ys_mod = [()] * 3
         yseff = [()] * 3
@@ -579,12 +584,26 @@ def _draw_channel_content(
                         ha="left",
                         bbox=q_box,
                     )
+                    phase = sampled_seq._basis_ref[basis][targets[0]].phase[0]
+                    if phase and draw_phase_shifts:
+                        msg = r"$\phi=$" + _phase_str(phase)
+                        axes[0].text(
+                            0,
+                            max_amp * 1.1,
+                            msg,
+                            ha="left",
+                            fontsize=12,
+                            bbox=ph_box,
+                        )
             else:
                 ti, tf = np.array(coords) / time_scale
                 target_regions[-1].append(ti)  # Closing previous regions
                 target_regions.append(
                     [tf + 1 / time_scale, targets]
                 )  # New one
+                phase = sampled_seq._basis_ref[basis][targets[0]].phase[
+                    tf * time_scale + 1
+                ]
                 for ax in axes:
                     ax.axvspan(ti, tf, alpha=0.4, color="grey", hatch="//")
                 axes[0].text(
@@ -594,6 +613,44 @@ def _draw_channel_content(
                     ha="left",
                     fontsize=12,
                     bbox=q_box,
+                )
+                if phase and draw_phase_shifts:
+                    msg = r"$\phi=$" + _phase_str(phase)
+                    wrd_len = len(max(tgt_strs, key=len))
+                    x = tf + final_t * 0.01 * (wrd_len + 1)
+                    axes[0].text(
+                        x,
+                        max_amp * 1.1,
+                        msg,
+                        ha="left",
+                        fontsize=12,
+                        bbox=ph_box,
+                    )
+
+        # Terminate the last open regions
+        if target_regions:
+            target_regions[-1].append(final_t)
+        for start, targets_, end in target_regions:
+            start = cast(float, start)
+            targets_ = cast(list, targets_)
+            end = cast(float, end)
+            # All targets have the same ref, so we pick
+            q = targets_[0]
+            ref = sampled_seq._basis_ref[basis][q].phase
+            if end != total_duration - 1 or "measurement" in data:
+                end += 1 / time_scale
+            for t_, delta in ref.changes(start, end, time_scale=time_scale):
+                conf = dict(linestyle="--", linewidth=1.5, color="black")
+                for ax in axes:
+                    ax.axvline(t_, **conf)
+                msg = "\u27F2 " + _phase_str(delta)
+                axes[0].text(
+                    t_ - final_t * 8e-3,
+                    max_amp * 1.1,
+                    msg,
+                    ha="right",
+                    fontsize=14,
+                    bbox=ph_box,
                 )
 
         # Draw the EOM intervals
@@ -678,6 +735,7 @@ def draw_samples(
     register: Optional[BaseRegister] = None,
     sampling_rate: Optional[float] = None,
     draw_phase_area: bool = False,
+    draw_phase_shifts: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
@@ -695,6 +753,8 @@ def draw_samples(
         draw_phase_area: Whether phase and area values need to be shown
             as text on the plot, defaults to False. If `draw_phase_curve=True`,
             phase values are ommited.
+        draw_phase_shifts: Whether phase shift and reference information
+            should be added to the plot, defaults to False.
         draw_input: Draws the programmed pulses on the channels, defaults
             to True.
         draw_modulation: Draws the expected channel output, defaults to
@@ -708,6 +768,7 @@ def draw_samples(
         register,
         sampling_rate,
         draw_phase_area,
+        draw_phase_shifts,
         draw_input,
         draw_modulation,
         draw_phase_curve,
@@ -762,6 +823,7 @@ def draw_sequence(
         seq.register if draw_register else None,
         sampling_rate,
         draw_phase_area,
+        draw_phase_shifts,
         draw_input,
         draw_modulation,
         draw_phase_curve,
@@ -787,119 +849,8 @@ def draw_sequence(
         if interp_pts:
             data[ch].interp_pts = dict(interp_pts)
 
-    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
-    total_duration = data["total_duration"]
-    time_scale = 1e3 if total_duration > 1e4 else 1
-    t = np.arange(total_duration) / time_scale
-    final_t = t[-1]
-    t_min = -final_t * 0.03
-
     for ch, axes in ch_axes.items():
-        ch_obj = seq.declared_channels[ch]
         ch_data = data[ch]
-        basis = ch_obj.basis
-        ys = ch_data.get_input_curves()
-        ys_mod = [()] * 3
-        yseff = [()] * 3
-        draw_output = draw_modulation and (
-            ch_obj.mod_bandwidth or not draw_input
-        )
-        if draw_output:
-            ys_mod = ch_data.get_output_curves(ch_obj)
-
-        if sampling_rate:
-            curves = ys_mod if draw_output else ys
-            yseff = ch_data.interpolate_curves(curves, sampling_rate)
-        ref_ys = [
-            list(chain.from_iterable(all_ys))
-            for all_ys in zip(ys, ys_mod, yseff)
-        ]
-        max_amp = np.max(ref_ys[0])
-        max_amp = 1 if max_amp == 0 else max_amp
-        amp_top = max_amp * 1.2
-        amp_bottom = min(0.0, *ref_ys[0])
-        # Makes sure that [-1, 1] range is always represented
-        det_max = max(*ref_ys[1], 1)
-        det_min = min(*ref_ys[1], -1)
-        det_range = det_max - det_min
-        det_top = det_max + det_range * 0.15
-        det_bottom = det_min - det_range * 0.05
-        ax_lims = [
-            (amp_bottom, amp_top),
-            (det_bottom, det_top),
-            (min(0.0, *ref_ys[2]), max(1.1, *ref_ys[2])),
-        ]
-        ax_lims = [ax_lims[i] for i in ch_data.curves_on_indices()]
-
-        # Draw target regions phase_shifts
-        if draw_phase_shifts:
-            target_regions = []  # [[start1, [targets1], end1],...]
-            for coords in ch_data.target:
-                targets = list(ch_data.target[coords])
-                tgt_strs = [str(q) for q in targets]
-                if coords == "initial":
-                    x = t_min + final_t * 0.005
-                    target_regions.append([0, targets])
-                    if seq.declared_channels[ch].addressing != "Global":
-                        phase = seq._basis_ref[basis][targets[0]].phase[0]
-                        if phase and draw_phase_shifts:
-                            msg = r"$\phi=$" + _phase_str(phase)
-                            axes[0].text(
-                                0,
-                                max_amp * 1.1,
-                                msg,
-                                ha="left",
-                                fontsize=12,
-                                bbox=ph_box,
-                            )
-                else:
-                    ti, tf = np.array(coords) / time_scale
-                    target_regions[-1].append(ti)  # Closing previous regions
-                    target_regions.append(
-                        [tf + 1 / time_scale, targets]
-                    )  # New one
-                    phase = seq._basis_ref[basis][targets[0]].phase[
-                        tf * time_scale + 1
-                    ]
-                    if phase:
-                        msg = r"$\phi=$" + _phase_str(phase)
-                        wrd_len = len(max(tgt_strs, key=len))
-                        x = tf + final_t * 0.01 * (wrd_len + 1)
-                        axes[0].text(
-                            x,
-                            max_amp * 1.1,
-                            msg,
-                            ha="left",
-                            fontsize=12,
-                            bbox=ph_box,
-                        )
-            # Terminate the last open regions
-            if target_regions:
-                target_regions[-1].append(final_t)
-            for start, targets_, end in target_regions:
-                start = cast(float, start)
-                targets_ = cast(list, targets_)
-                end = cast(float, end)
-                # All targets have the same ref, so we pick
-                q = targets_[0]
-                ref = seq._basis_ref[basis][q].phase
-                if end != total_duration - 1 or "measurement" in data:
-                    end += 1 / time_scale
-                for t_, delta in ref.changes(
-                    start, end, time_scale=time_scale
-                ):
-                    conf = dict(linestyle="--", linewidth=1.5, color="black")
-                    for ax in axes:
-                        ax.axvline(t_, **conf)
-                    msg = "\u27F2 " + _phase_str(delta)
-                    axes[0].text(
-                        t_ - final_t * 8e-3,
-                        max_amp * 1.1,
-                        msg,
-                        ha="right",
-                        fontsize=14,
-                        bbox=ph_box,
-                    )
 
         if draw_interp_pts:
             for qty in ("amplitude", "detuning"):

@@ -10,6 +10,7 @@ import numpy as np
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
+from pulser.sequence._basis_ref import _QubitRef
 
 if TYPE_CHECKING:
     from pulser.sequence._schedule import _EOMSettings, _TimeSlot
@@ -320,6 +321,9 @@ class SequenceSamples:
     channels: list[str]
     samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
+    _basis_ref: dict[str, dict[QubitId, _QubitRef]] = field(
+        default_factory=dict
+    )
     _slm_mask: _SlmMask = field(default_factory=_SlmMask)
     _magnetic_field: np.ndarray | None = None
     _measurement: str | None = None
