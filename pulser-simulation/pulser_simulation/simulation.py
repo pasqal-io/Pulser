@@ -221,37 +221,35 @@ class QutipEmulator:
         kraus_ops = []
         self._collapse_ops = []
         if "dephasing" in self.config.noise:
-            # Probability of phase (Z) flip:
-            # First order in prob
-            prob = self.config.dephasing_prob / 2
             n = self._size
-            if prob > 0.1 and n > 1:
-                warnings.warn(
-                    "The dephasing model is a first-order approximation in the"
-                    f" dephasing probability. p = {2*prob} is too large for "
-                    "realistic results.",
-                    stacklevel=2,
-                )
-            k = np.sqrt(prob * (1 - prob) ** (n - 1))
-
+            if self.basis_name == "all" and self.dim == 3:  # three-level system
+                prob = self.config.dephasing_prob / 3
+                if prob > 0.1 and n > 1:
+                    warnings.warn(
+                        "The dephasing model is a first-order approximation in the"
+                        f" dephasing probability. p = {3*prob} is too large for "
+                        "realistic results.",
+                        stacklevel=2,
+                    )
+                M_0 = np.sqrt(prob/(1-prob)) * qutip.qeye(3)
+                M_i = [np.sqrt(prob) * qutip.ket(str(i), 3) * qutip.bra(str(i), 3) for i in range(3)]
+                kraus_ops.append(M_0)
+                kraus_ops.append(M_i)
+            else:  # two-level system
+                prob = self.config.dephasing_prob / 2
+                if prob > 0.1 and n > 1:
+                    warnings.warn(
+                        "The dephasing model is a first-order approximation in the"
+                        f" dephasing probability. p = {2*prob} is too large for "
+                        "realistic results.",
+                        stacklevel=2,
+                    )
+                k = np.sqrt(prob * (1 - prob) ** (n - 1))
+                kraus_ops.append(k * qutip.sigmaz())
             self._collapse_ops += [
                 np.sqrt((1 - prob) ** n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
-            if (
-                self.basis_name == "all" and self.dim == 3
-            ):  # three-level system
-                gamma = 1 - np.exp(-self.config.dephasing_prob)
-                M = qutip.Qobj(
-                    np.diag([1, np.sqrt(1 - gamma), np.sqrt(1 - gamma)])
-                )
-                N = qutip.Qobj(np.diag([0, np.sqrt(gamma), 0]))
-                T = qutip.Qobj(np.diag([0, 0, np.sqrt(gamma)]))
-                kraus_ops.append(M)
-                kraus_ops.append(N)
-                kraus_ops.append(T)
-            else:  # two-level system
-                kraus_ops.append(k * qutip.sigmaz())
 
         if "depolarizing" in self.config.noise:
             prob = self.config.depolarizing_prob
@@ -268,26 +266,11 @@ class QutipEmulator:
                         " is too large for realistic results.",
                         stacklevel=2,
                     )
-                prob = self.config.depolarizing_prob / 9
-                alpha = np.sqrt(1 - 8 * prob)
-                beta = np.sqrt(prob / 3)
-                Y = np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]])
-                Z = np.array(
-                    [
-                        [0, 1, 0],
-                        [0, np.exp(1j * 2 * np.pi / 3), 0],
-                        [1, 0, np.exp(-1j * 2 * np.pi / 3)],
-                    ]
-                )
-                kraus_ops.append(qutip.Qobj(alpha * np.eye(3)))
-                kraus_ops.append(qutip.Qobj(beta * np.eye(3)))
-                kraus_ops.append(qutip.Qobj(beta * Z))
-                kraus_ops.append(qutip.Qobj(beta * Y**2))
-                kraus_ops.append(qutip.Qobj(beta * Y @ Z))
-                kraus_ops.append(qutip.Qobj(beta * Y**2 @ Z))
-                kraus_ops.append(qutip.Qobj(beta * Y @ Z**2))
-                kraus_ops.append(qutip.Qobj(beta * Y**2 @ Z**2))
-                kraus_ops.append(qutip.Qobj(beta * Z**2))
+                M_0 = np.sqrt(prob/(1-prob)) * qutip.qeye(3)
+                M_ij = [np.sqrt(prob/3) * qutip.ket(str(i), 3) * qutip.bra(str(j), 3) for i in range(3) for j in range(3)]
+                kraus_ops.append(M_0)
+                kraus_ops.append(M_ij)
+
             else:  # two-level system
                 prob = prob / 4
                 if prob > 0.1 and n > 1:
@@ -776,15 +759,6 @@ class QutipEmulator:
                 op_ids = ["sigma_hg", "sigma_gg"]
             elif basis == "XY":
                 op_ids = ["sigma_du", "sigma_dd"]
-            elif basis == "all":
-                op_ids = [
-                    "sigma_rg",
-                    "sigma_rh",
-                    "sigma_gr",
-                    "sigma_gh",
-                    "sigma_hr",
-                    "sigma_hg",
-                ]
 
             terms = []
             if addr == "Global":

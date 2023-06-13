@@ -84,6 +84,8 @@ def matrices():
     pauli["Z"] = qutip.sigmaz()
     pauli["I3"] = qutip.qeye(3)
     pauli["Z3"] = qutip.jmat(1, "z")
+    pauli["X3"] = qutip.jmat(1, "x")
+    pauli["Y3"] = qutip.jmat(1, "y")
     return pauli
 
 
@@ -753,8 +755,14 @@ def test_eff_noise(matrices):
             ),
         )
 
-
-def test_all_noise(matrices):
+@pytest.mark.parametrize(
+    "noise_sample,",
+    [
+        ("eff_noise", "depolarizing"),
+        ("eff_noise", "dephasing"),
+    ],
+)
+def test_three_level_noise(noise_sample, matrices):
     np.random.seed(123)
     reg = Register3D.from_coordinates([(0, 0, 0), (0, 0, 1)], prefix="q")
     seq = Sequence(reg, MockDevice)
@@ -770,9 +778,9 @@ def test_all_noise(matrices):
         MockDevice,
         sampling_rate=0.01,
         config=SimConfig(
-            noise=("eff_noise", "dephasing", "depolarizing"),
-            eff_noise_opers=[matrices["I3"], matrices["I3"]],
-            eff_noise_probs=[0.5, 0.5],
+            noise=noise_sample,
+            eff_noise_opers=[matrices["I3"], matrices["Y3"]],
+            eff_noise_probs=[0.75, 0.25],
         ),
     )
     assert all([op.shape == (9, 9) for op in sim._collapse_ops])
