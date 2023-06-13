@@ -236,7 +236,7 @@ class QutipEmulator:
                 k = np.sqrt(prob * (1 - prob) ** (n - 1))
                 m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
                 for i in range(3):
-                    ket_ = qutip.ket(str(i), 3)
+                    ket_ = qutip.basis(3, i)
                     kraus_ops.append(k * ket_ * ket_.dag())
                 kraus_ops.append(m_0)
             else:  # two-level system
@@ -266,7 +266,7 @@ class QutipEmulator:
                 k = np.sqrt((prob) * (1 - 8 * prob) ** (n - 1))
                 m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
                 for i in range(3):
-                    ket_ = qutip.ket(str(i), 3)
+                    ket_ = qutip.basis(3, i)
                     kraus_ops.append(k * ket_ * ket_.dag())
                 kraus_ops.append(m_0)
                 self._collapse_ops += [
