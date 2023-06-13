@@ -280,9 +280,11 @@ class QutipEmulator:
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
 
-
         if "eff_noise" in self.config.noise:
-            if not np.all(op.shape == (self.dim, self.dim) for op in self.config.eff_noise_opers):
+            if not np.all(
+                op.shape == (self.dim, self.dim)
+                for op in self.config.eff_noise_opers
+            ):
                 # Go back to previous config
                 self.set_config(prev_config)
                 raise NotImplementedError(

@@ -36,6 +36,7 @@ def reg():
     }
     return Register(q_dict)
 
+
 @pytest.fixture
 def reg2():
     q_dict = {
@@ -93,6 +94,7 @@ def seq1():
     seq.add(pulse, "ch0")
     return seq
 
+
 def seq2():
     reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
     seq2 = Sequence(reg, Chadoq2)
@@ -101,6 +103,7 @@ def seq2():
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq2.add(pulse, "ch0")
     return seq2
+
 
 @pytest.fixture
 def seq3(reg2):
@@ -139,6 +142,7 @@ def seq3(reg2):
     seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
     return seq
 
+
 @pytest.fixture
 def sequences(seq, seq3):
     sequences = {}
@@ -148,6 +152,7 @@ def sequences(seq, seq3):
     sequences[3] = seq3
     return sequences
 
+
 @pytest.fixture
 def matrices():
     pauli = {}
@@ -156,17 +161,34 @@ def matrices():
     pauli["Y"] = qutip.sigmay()
     pauli["Z"] = qutip.sigmaz()
     pauli["I3"] = qutip.qeye(3)
-    pauli["P23-1"] = qutip.ket2dm(qutip.basis(3, 1)) + qutip.ket2dm(qutip.basis(3, 2)) - qutip.ket2dm(qutip.basis(3, 0))
+    pauli["P23-1"] = (
+        qutip.ket2dm(qutip.basis(3, 1))
+        + qutip.ket2dm(qutip.basis(3, 2))
+        - qutip.ket2dm(qutip.basis(3, 0))
+    )
     return pauli
+
 
 @pytest.fixture
 def counters():
     counters = {}
     counters[0] = Counter({"0": 595, "1": 405})
-    counters[1] = Counter({'111': 979, '110': 11, '011': 5, '101': 5})
+    counters[1] = Counter({"111": 979, "110": 11, "011": 5, "101": 5})
     counters[2] = Counter({"0": 587, "1": 413})
-    counters[3] = Counter({'111': 467,'011': 139,'110': 128,'101': 126,'100': 43,'001': 42,'010': 42,'000': 13})
+    counters[3] = Counter(
+        {
+            "111": 467,
+            "011": 139,
+            "110": 128,
+            "101": 126,
+            "100": 43,
+            "001": 42,
+            "010": 42,
+            "000": 13,
+        }
+    )
     return counters
+
 
 def test_bad_import():
     with pytest.warns(
@@ -741,12 +763,9 @@ def test_noise_with_zero_epsilons(seq, matrices):
 
     assert sim.run().sample_final_state() == sim2.run().sample_final_state()
 
+
 @pytest.mark.parametrize(
-    "sequence_index, counter_key",
-    [
-        ((1, 2), 0),
-        ((0, 3), 1)
-    ]
+    "sequence_index, counter_key", [((1, 2), 0), ((0, 3), 1)]
 )
 def test_dephasing(counter_key, sequence_index, sequences, counters):
     np.random.seed(123)
@@ -765,12 +784,9 @@ def test_dephasing(counter_key, sequence_index, sequences, counters):
             config=SimConfig(noise="dephasing", dephasing_prob=0.5),
         )
 
+
 @pytest.mark.parametrize(
-    "sequence_index, counter_key",
-    [
-        ((1, 2), 2),
-        ((0, 3), 3)
-    ]
+    "sequence_index, counter_key", [((1, 2), 2), ((0, 3), 3)]
 )
 def test_depolarizing(counter_key, sequence_index, sequences, counters):
     np.random.seed(123)
@@ -791,12 +807,25 @@ def test_depolarizing(counter_key, sequence_index, sequences, counters):
             config=SimConfig(noise="depolarizing", depolarizing_prob=0.5),
         )
 
+
 @pytest.mark.parametrize(
     "sequence_index, eff_noise_opers",
     [
-        ((1, 2,), ["I", "Z"]),
-        ((0, 3,),  ["I3", "P23-1"])
-    ]
+        (
+            (
+                1,
+                2,
+            ),
+            ["I", "Z"],
+        ),
+        (
+            (
+                0,
+                3,
+            ),
+            ["I3", "P23-1"],
+        ),
+    ],
 )
 def test_eff_noise(sequence_index, eff_noise_opers, matrices, sequences):
     eff_noise_opers = [matrices[op] for op in eff_noise_opers]
@@ -808,7 +837,8 @@ def test_eff_noise(sequence_index, eff_noise_opers, matrices, sequences):
         config=SimConfig(
             noise="eff_noise",
             eff_noise_opers=eff_noise_opers,
-            eff_noise_probs=[1-0.025*(len(eff_noise_opers)-1)] + [0.025 for _ in range(len(eff_noise_opers)-1)],
+            eff_noise_probs=[1 - 0.025 * (len(eff_noise_opers) - 1)]
+            + [0.025 for _ in range(len(eff_noise_opers) - 1)],
         ),
     )
     sim_dph = Simulation(
@@ -826,17 +856,16 @@ def test_eff_noise(sequence_index, eff_noise_opers, matrices, sequences):
             config=SimConfig(
                 noise="eff_noise",
                 eff_noise_opers=eff_noise_opers,
-                eff_noise_probs=[1/len(eff_noise_opers) for _ in eff_noise_opers],
+                eff_noise_probs=[
+                    1 / len(eff_noise_opers) for _ in eff_noise_opers
+                ],
             ),
         )
 
 
 @pytest.mark.parametrize(
     "sequence_index, eff_noise_opers",
-    [
-        ((1,), ["I", "Z"]),
-        ((0,),  ["I3", "P23-1"])
-    ]
+    [((1,), ["I", "Z"]), ((0,), ["I3", "P23-1"])],
 )
 def test_add_config(sequence_index, eff_noise_opers, matrices, sequences):
     sequences = [sequences[i] for i in sequence_index]
