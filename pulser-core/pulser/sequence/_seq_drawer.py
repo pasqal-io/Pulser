@@ -169,7 +169,7 @@ def gather_data(
     """Collects the whole sequence data for plotting.
 
     Args:
-        seq: The input sequence of operations on a device.
+        sampled_seq: The samples of a sequence of opeations on a device.
         shown_duration: If present, is the total duration to be shown in
             the X axis.
 
@@ -206,7 +206,7 @@ def gather_data(
                 continue
             else:
                 # If slot is not the first element in schedule
-                if extended_samples.in_eom_mode(slot):
+                if ch_samples.in_eom_mode(slot):
                     # EOM mode starts
                     if not in_eom_mode:
                         in_eom_mode = True
@@ -222,9 +222,7 @@ def gather_data(
                     eom_block_n + 1 < nb_eom_intervals
                     and slot.tf == eom_intervals[eom_block_n + 1].ti
                     and extended_samples.det[slot.tf - 1]
-                    == extended_samples.eom_blocks[
-                        eom_block_n + 1
-                    ].detuning_off
+                    == ch_samples.eom_blocks[eom_block_n + 1].detuning_off
                 ):
                     # Buffer if next is eom and final det matches det_off
                     eom_start_buffers[eom_block_n + 1] = EOMSegment(
@@ -260,13 +258,13 @@ def _draw_channel_content(
     draw_phase_curve: bool = False,
     shown_duration: Optional[int] = None,
 ) -> tuple[Figure | None, Figure, Any, dict]:
-    """Draws the computed data for a SequenceSamples.
+    """Draws samples of a sequence.
 
     Args:
-        sampled_seq: The input sequence of operations on a device.
+        sampled_seq: The input samples of a sequence of operations.
         register: If present, draw the register before the pulse
             sequence, with a visual indication (square halo) around the qubits
-            masked by the SLM, defaults to False.
+            masked by the SLM.
         sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
@@ -282,8 +280,7 @@ def _draw_channel_content(
             is skipped unless 'draw_input=False'.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
-        shown_duration: If present, is the total duration to be shown in
-            the X axis.
+        shown_duration: Total duration to be shown in the X axis.
     """
 
     def phase_str(phi: float) -> str:
@@ -302,13 +299,19 @@ def _draw_channel_content(
 
     data = gather_data(sampled_seq, shown_duration)
     total_duration = data["total_duration"]
+    time_scale = 1e3 if total_duration > 1e4 else 1
+    for ch in sampled_seq.channels:
+        if np.count_nonzero(data[ch].samples.det) > 0:
+            data[ch].curves_on["detuning"] = True
+        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
+            data[ch].curves_on["phase"] = True
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
     ph_box = dict(boxstyle="round", facecolor="ghostwhite")
     area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
-    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
+    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
 
     # Draw masked register
     if register:
@@ -352,13 +355,6 @@ def _draw_channel_content(
                 masked_qubits=sampled_seq._slm_mask.targets,
             )
             ax_reg.set_title("Masked register", pad=10)
-
-    time_scale = 1e3 if total_duration > 1e4 else 1
-    for ch in sampled_seq.channels:
-        if np.count_nonzero(data[ch].samples.det) > 0:
-            data[ch].curves_on["detuning"] = True
-        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
-            data[ch].curves_on["phase"] = True
 
     ratios = [
         SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels
@@ -629,7 +625,9 @@ def _draw_channel_content(
         # Terminate the last open regions
         if target_regions:
             target_regions[-1].append(final_t)
-        for start, targets_, end in target_regions:
+        for start, targets_, end in (
+            target_regions if draw_phase_shifts else []
+        ):
             start = cast(float, start)
             targets_ = cast(list, targets_)
             end = cast(float, end)
@@ -735,17 +733,15 @@ def draw_samples(
     sampling_rate: Optional[float] = None,
     draw_phase_area: bool = False,
     draw_phase_shifts: bool = False,
-    draw_input: bool = True,
-    draw_modulation: bool = False,
     draw_phase_curve: bool = False,
 ) -> tuple[Figure | None, Figure]:
     """Draws a SequenceSamples.
 
     Args:
-        sampled_seq: The input sequence of operations on a device.
+        sampled_seq: The input samples of a sequence of operations.
         register: If present, draw the register before the pulse
-            sequence, with a visual indication (square halo) around the qubits
-            masked by the SLM, defaults to False.
+            sequence samples, with a visual indication (square halo)
+            around the qubits masked by the SLM.
         sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
@@ -754,11 +750,6 @@ def draw_samples(
             phase values are ommited.
         draw_phase_shifts: Whether phase shift and reference information
             should be added to the plot, defaults to False.
-        draw_input: Draws the programmed pulses on the channels, defaults
-            to True.
-        draw_modulation: Draws the expected channel output, defaults to
-            False. If the channel does not have a defined 'mod_bandwidth', this
-            is skipped unless 'draw_input=False'.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
     """
@@ -768,9 +759,9 @@ def draw_samples(
         sampling_rate,
         draw_phase_area,
         draw_phase_shifts,
-        draw_input,
-        draw_modulation,
-        draw_phase_curve,
+        draw_input=True,
+        draw_modulation=False,
+        draw_phase_curve=draw_phase_curve,
     )
 
     return (fig_reg, fig)
@@ -815,7 +806,7 @@ def draw_sequence(
     """
     # Sample the sequence and get the data to plot
     shown_duration = seq.get_duration(include_fall_time=draw_modulation)
-    sampled_seq = sample(seq, extended_duration=shown_duration)
+    sampled_seq = sample(seq)
 
     (fig_reg, fig, ch_axes, data) = _draw_channel_content(
         sampled_seq,
