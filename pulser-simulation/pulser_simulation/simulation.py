@@ -234,11 +234,10 @@ class QutipEmulator:
                 self.basis_name == "all" and self.dim == 3
             ):  # three-level system
                 k = np.sqrt(prob * (1 - prob) ** (n - 1))
-                m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
+                # m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
                 for i in range(3):
                     ket_ = qutip.basis(3, i)
                     kraus_ops.append(k * ket_ * ket_.dag())
-                kraus_ops.append(m_0)
             else:  # two-level system
                 prob = prob / 2
                 k = np.sqrt(prob * (1 - prob) ** (n - 1))
@@ -261,18 +260,14 @@ class QutipEmulator:
             if (
                 self.basis_name == "all" and self.dim == 3
             ):  # three-level system
-                prob = prob / 9
+                prob = prob / 3
 
-                k = np.sqrt((prob) * (1 - 8 * prob) ** (n - 1))
-                m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
+                k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
                 for i in range(3):
-                    ket_ = qutip.basis(3, i)
-                    kraus_ops.append(k * ket_ * ket_.dag())
-                kraus_ops.append(m_0)
-                self._collapse_ops += [
-                    np.sqrt((1 - 8 * prob) ** n)
-                    * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-                ]
+                    for j in range(3):
+                        ket_ = qutip.basis(3, i)
+                        bra_ = qutip.basis(3, j).dag()
+                        kraus_ops.append(k * ket_ * bra_)
 
             else:  # two-level system
                 prob = prob / 4
@@ -280,10 +275,10 @@ class QutipEmulator:
                 kraus_ops.append(k * qutip.sigmax())
                 kraus_ops.append(k * qutip.sigmay())
                 kraus_ops.append(k * qutip.sigmaz())
-                self._collapse_ops += [
-                    np.sqrt((1 - 3 * prob) ** n)
-                    * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-                ]
+            self._collapse_ops += [
+                np.sqrt((1 - 3 * prob) ** n)
+                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+            ]
 
         if "eff_noise" in self.config.noise:
             # Probability distribution of error occurences
