@@ -23,6 +23,7 @@ import pulser_simulation
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
+from pulser.sequence._seq_drawer import draw_samples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
 
 # Helpers
@@ -357,6 +358,8 @@ def test_extend_duration(seq_rydberg):
             old_qty_samples[-1] if qty == "phase" else 0.0,
         )
     assert extended_short.slots == short.slots
+
+    draw_samples(samples)
 
 
 def test_phase_sampling(mod_device):
