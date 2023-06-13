@@ -182,7 +182,8 @@ def gather_data(
     if shown_duration is not None:
         total_duration = shown_duration
     else:
-        total_duration = max(sampled_seq.max_duration, 100)
+        total_duration = sampled_seq.max_duration
+    total_duration = max(total_duration, 100)
     data: dict[str, Any] = {}
     for ch, ch_samples in sampled_seq.channel_samples.items():
         target: dict[Union[str, tuple[int, int]], Any] = {}
@@ -254,11 +255,23 @@ def gather_data(
     return data
 
 
+def _phase_str(phi: float) -> str:
+    """Formats a phase value for printing."""
+    value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
+    if value == -1:
+        return r"$\pi$"
+    elif value == 0:
+        return "0"  # pragma: no cover - just for safety
+    else:
+        return rf"{value:.2g}$\pi$"
+
+
 def _draw_channel_content(
     data: dict,
     sampled_seq: SequenceSamples,
     register: Optional[BaseRegister] = None,
     sampling_rate: Optional[float] = None,
+    draw_phase_area: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
@@ -274,6 +287,9 @@ def _draw_channel_content(
         sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
+        draw_phase_area: Whether phase and area values need to be shown
+            as text on the plot, defaults to False. If `draw_phase_curve=True`,
+            phase values are ommited.
         draw_input: Draws the programmed pulses on the channels, defaults
             to True.
         draw_modulation: Draws the expected channel output, defaults to
@@ -287,6 +303,7 @@ def _draw_channel_content(
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
+    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
 
@@ -462,6 +479,79 @@ def _draw_channel_content(
             special_kwargs = dict(labelpad=10) if i == 0 else {}
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
+        if draw_phase_area:
+            top = False  # Variable to track position of box, top or center.
+            print_phase = not draw_phase_curve and any(
+                any(
+                    sampled_seq.channel_samples[ch].phase[slot.ti : slot.tf]
+                    == 0
+                )
+                for slot in sampled_seq.channel_samples[ch].slots
+            )
+
+            for slot in sampled_seq.channel_samples[ch].slots:
+                if sampling_rate:
+                    area_val = (
+                        np.sum(yseff[0][slot.ti : slot.tf]) * 1e-3 / np.pi
+                    )
+                else:
+                    area_val = (
+                        np.sum(
+                            sampled_seq.channel_samples[ch].amp[
+                                slot.ti : slot.tf
+                            ]
+                        )
+                        * 1e-3
+                        / np.pi
+                    )
+                phase_val = sampled_seq.channel_samples[ch].phase[
+                    slot.ti : slot.tf
+                ][-1]
+                x_plot = (slot.ti + slot.tf) / 2 / time_scale
+                if (
+                    slot.ti
+                    in [
+                        target_slot.tf
+                        for target_slot in sampled_seq.channel_samples[
+                            ch
+                        ].target_time_slots
+                    ]
+                    or not top
+                ):
+                    y_plot = (
+                        np.max(
+                            sampled_seq.channel_samples[ch].amp[
+                                slot.ti : slot.tf
+                            ]
+                        )
+                        / 2
+                    )
+                    top = True  # Next box at the top.
+                elif top:
+                    y_plot = np.max(
+                        sampled_seq.channel_samples[ch].amp[slot.ti : slot.tf]
+                    )
+                    top = False  # Next box at the center.
+                area_fmt = (
+                    r"A: $\pi$"
+                    if round(area_val, 2) == 1
+                    else rf"A: {area_val:.2g}$\pi$"
+                )
+                if not print_phase:
+                    txt = area_fmt
+                else:
+                    phase_fmt = rf"$\phi$: {_phase_str(phase_val)}"
+                    txt = "\n".join([phase_fmt, area_fmt])
+                axes[0].text(
+                    x_plot,
+                    y_plot,
+                    txt,
+                    fontsize=10,
+                    ha="center",
+                    va="center",
+                    bbox=area_ph_box,
+                )
+
         target_regions = []  # [[start1, [targets1], end1],...]
         for coords in ch_data.target:
             targets = list(ch_data.target[coords])
@@ -545,6 +635,43 @@ def _draw_channel_content(
                 bbox=slm_box,
             )
 
+        hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
+        if "measurement" in data:
+            msg = f"Basis: {data['measurement']}"
+            if len(axes) == 1:
+                mid_ax = axes[0]
+                mid_point = (amp_top + amp_bottom) / 2
+                fontsize = 12
+            else:
+                mid_ax = axes[-1]
+                mid_point = (
+                    ax_lims[-1][1]
+                    if len(axes) == 2
+                    else ax_lims[-1][0] + sum(ax_lims[-1]) * 1.5
+                )
+                fontsize = 14
+
+            for ax in axes:
+                ax.axvspan(final_t, t_max, color="midnightblue", alpha=1)
+
+            mid_ax.text(
+                final_t * 1.025,
+                mid_point,
+                msg,
+                ha="center",
+                va="center",
+                fontsize=fontsize,
+                color="white",
+                rotation=90,
+            )
+            hline_kwargs["xmax"] = 0.95
+
+        for i, ax in enumerate(axes):
+            if i > 0:
+                ax.axhline(ax_lims[i][1], **hline_kwargs)
+            if ax_lims[i][0] < 0:
+                ax.axhline(0, **hline_kwargs)
+
     return (fig_reg if register else None, fig, ch_axes, data)
 
 
@@ -552,6 +679,7 @@ def draw_samples(
     sampled_seq: SequenceSamples,
     register: Optional[BaseRegister] = None,
     sampling_rate: Optional[float] = None,
+    draw_phase_area: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
@@ -566,6 +694,9 @@ def draw_samples(
         sampling_rate: Sampling rate of the effective pulse used by
             the solver. If present, plots the effective pulse alongside the
             input pulse.
+        draw_phase_area: Whether phase and area values need to be shown
+            as text on the plot, defaults to False. If `draw_phase_curve=True`,
+            phase values are ommited.
         draw_input: Draws the programmed pulses on the channels, defaults
             to True.
         draw_modulation: Draws the expected channel output, defaults to
@@ -625,19 +756,8 @@ def draw_sequence(
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
     """
-
-    def phase_str(phi: float) -> str:
-        """Formats a phase value for printing."""
-        value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
-        if value == -1:
-            return r"$\pi$"
-        elif value == 0:
-            return "0"  # pragma: no cover - just for safety
-        else:
-            return rf"{value:.2g}$\pi$"
-
     # Sample the sequence and get the data to plot
-    sampled_seq = sample(seq, modulation=draw_modulation)
+    sampled_seq = sample(seq)
     shown_duration = seq.get_duration(include_fall_time=draw_modulation)
     data = gather_data(sampled_seq, shown_duration)
 
@@ -661,7 +781,6 @@ def draw_sequence(
             data[ch].interp_pts = dict(interp_pts)
 
     # Boxes for qubit and phase text
-    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
     ph_box = dict(boxstyle="round", facecolor="ghostwhite")
 
     (fig_reg, fig, ch_axes, data) = _draw_channel_content(
@@ -669,6 +788,7 @@ def draw_sequence(
         sampled_seq,
         seq.register if draw_register else None,
         sampling_rate,
+        draw_phase_area,
         draw_input,
         draw_modulation,
         draw_phase_curve,
@@ -679,7 +799,6 @@ def draw_sequence(
     t = np.arange(total_duration) / time_scale
     final_t = t[-1]
     t_min = -final_t * 0.03
-    t_max = final_t * 1.05
 
     for ch, axes in ch_axes.items():
         ch_obj = seq.declared_channels[ch]
@@ -718,61 +837,6 @@ def draw_sequence(
         ]
         ax_lims = [ax_lims[i] for i in ch_data.curves_on_indices()]
 
-        if draw_phase_area:
-            top = False  # Variable to track position of box, top or center.
-            print_phase = not draw_phase_curve and any(
-                seq_.type.phase != 0
-                for seq_ in seq._schedule[ch]
-                if isinstance(seq_.type, Pulse)
-            )
-            for pulse_num, seq_ in enumerate(seq._schedule[ch]):
-                # Select only `Pulse` objects
-                if isinstance(seq_.type, Pulse):
-                    if sampling_rate:
-                        area_val = (
-                            np.sum(yseff[0][seq_.ti : seq_.tf]) * 1e-3 / np.pi
-                        )
-                    else:
-                        area_val = (
-                            np.sum(
-                                sampled_seq.channel_samples[ch].amp[
-                                    slot.ti : slot.tf
-                                ]
-                            )
-                            * 1e-3
-                            / np.pi
-                        )
-                    phase_val = seq_.type.phase
-                    x_plot = (seq_.ti + seq_.tf) / 2 / time_scale
-                    if (
-                        seq._schedule[ch][pulse_num - 1].type == "target"
-                        or not top
-                    ):
-                        y_plot = np.max(seq_.type.amplitude.samples) / 2
-                        top = True  # Next box at the top.
-                    elif top:
-                        y_plot = np.max(seq_.type.amplitude.samples)
-                        top = False  # Next box at the center.
-                    area_fmt = (
-                        r"A: $\pi$"
-                        if round(area_val, 2) == 1
-                        else rf"A: {area_val:.2g}$\pi$"
-                    )
-                    if not print_phase:
-                        txt = area_fmt
-                    else:
-                        phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
-                        txt = "\n".join([phase_fmt, area_fmt])
-                    axes[0].text(
-                        x_plot,
-                        y_plot,
-                        txt,
-                        fontsize=10,
-                        ha="center",
-                        va="center",
-                        bbox=area_ph_box,
-                    )
-
         # Draw target regions phase_shifts
         if draw_phase_shifts:
             target_regions = []  # [[start1, [targets1], end1],...]
@@ -785,7 +849,7 @@ def draw_sequence(
                     if seq.declared_channels[ch].addressing != "Global":
                         phase = seq._basis_ref[basis][targets[0]].phase[0]
                         if phase and draw_phase_shifts:
-                            msg = r"$\phi=$" + phase_str(phase)
+                            msg = r"$\phi=$" + _phase_str(phase)
                             axes[0].text(
                                 0,
                                 max_amp * 1.1,
@@ -804,7 +868,7 @@ def draw_sequence(
                         tf * time_scale + 1
                     ]
                     if phase:
-                        msg = r"$\phi=$" + phase_str(phase)
+                        msg = r"$\phi=$" + _phase_str(phase)
                         wrd_len = len(max(tgt_strs, key=len))
                         x = tf + final_t * 0.01 * (wrd_len + 1)
                         axes[0].text(
@@ -833,7 +897,7 @@ def draw_sequence(
                     conf = dict(linestyle="--", linewidth=1.5, color="black")
                     for ax in axes:
                         ax.axvline(t_, **conf)
-                    msg = "\u27F2 " + phase_str(delta)
+                    msg = "\u27F2 " + _phase_str(delta)
                     axes[0].text(
                         t_ - final_t * 8e-3,
                         max_amp * 1.1,
@@ -842,43 +906,6 @@ def draw_sequence(
                         fontsize=14,
                         bbox=ph_box,
                     )
-
-        hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
-        if "measurement" in data:
-            msg = f"Basis: {data['measurement']}"
-            if len(axes) == 1:
-                mid_ax = axes[0]
-                mid_point = (amp_top + amp_bottom) / 2
-                fontsize = 12
-            else:
-                mid_ax = axes[-1]
-                mid_point = (
-                    ax_lims[-1][1]
-                    if len(axes) == 2
-                    else ax_lims[-1][0] + sum(ax_lims[-1]) * 1.5
-                )
-                fontsize = 14
-
-            for ax in axes:
-                ax.axvspan(final_t, t_max, color="midnightblue", alpha=1)
-
-            mid_ax.text(
-                final_t * 1.025,
-                mid_point,
-                msg,
-                ha="center",
-                va="center",
-                fontsize=fontsize,
-                color="white",
-                rotation=90,
-            )
-            hline_kwargs["xmax"] = 0.95
-
-        for i, ax in enumerate(axes):
-            if i > 0:
-                ax.axhline(ax_lims[i][1], **hline_kwargs)
-            if ax_lims[i][0] < 0:
-                ax.axhline(0, **hline_kwargs)
 
         if draw_interp_pts:
             for qty in ("amplitude", "detuning"):
