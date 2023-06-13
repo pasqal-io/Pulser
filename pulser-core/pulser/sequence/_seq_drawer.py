@@ -230,8 +230,7 @@ def gather_data(
             if time_slot.ti == -1:
                 target["initial"] = time_slot.targets
                 continue
-            if time_slot.type == "target":
-                target[(time_slot.ti, time_slot.tf - 1)] = time_slot.targets
+            target[(time_slot.ti, time_slot.tf - 1)] = time_slot.targets
 
         # Store everything
         data[ch] = ChannelDrawContent(
