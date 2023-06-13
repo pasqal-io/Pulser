@@ -147,6 +147,7 @@ class TestNoiseModel:
         matrices["Zh"] = 0.5 * np.array([[1, 0], [0, -1]])
         matrices["ket"] = np.array([[1.0], [2.0]])
         matrices["I3"] = np.eye(3)
+        matrices["I4"] = np.eye(4)
         return matrices
 
     def test_eff_noise_three_init(self, matrices):
@@ -196,6 +197,12 @@ class TestNoiseModel:
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[2.0],
+                eff_noise_probs=[1.0],
+            )
+        with pytest.raises(NotImplementedError, match="Operator's shape"):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_opers=[matrices["I4"]],
                 eff_noise_probs=[1.0],
             )
         with pytest.raises(

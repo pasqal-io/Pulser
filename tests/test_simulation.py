@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import qutip
 
-from pulser import Pulse, Register, Sequence, Register3D
+from pulser import Pulse, Register, Register3D, Sequence
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
