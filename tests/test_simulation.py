@@ -755,11 +755,12 @@ def test_eff_noise(matrices):
             ),
         )
 
+
 @pytest.mark.parametrize(
     "noise_sample,",
     [
-        ("eff_noise", "depolarizing"),
-        ("eff_noise", "dephasing"),
+        ("depolarizing"),
+        ("dephasing"),
     ],
 )
 def test_three_level_noise(noise_sample, matrices):
@@ -779,8 +780,6 @@ def test_three_level_noise(noise_sample, matrices):
         sampling_rate=0.01,
         config=SimConfig(
             noise=noise_sample,
-            eff_noise_opers=[matrices["I3"], matrices["Y3"]],
-            eff_noise_probs=[0.75, 0.25],
         ),
     )
     assert all([op.shape == (9, 9) for op in sim._collapse_ops])

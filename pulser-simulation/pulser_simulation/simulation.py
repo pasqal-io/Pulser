@@ -221,29 +221,26 @@ class QutipEmulator:
         kraus_ops = []
         self._collapse_ops = []
         if "dephasing" in self.config.noise:
+            prob = self.config.dephasing_prob
             n = self._size
-            if self.basis_name == "all" and self.dim == 3:  # three-level system
-                prob = self.config.dephasing_prob / 3
-                if prob > 0.1 and n > 1:
-                    warnings.warn(
-                        "The dephasing model is a first-order approximation in the"
-                        f" dephasing probability. p = {3*prob} is too large for "
-                        "realistic results.",
-                        stacklevel=2,
-                    )
-                M_0 = np.sqrt(prob/(1-prob)) * qutip.qeye(3)
-                M_i = [np.sqrt(prob) * qutip.ket(str(i), 3) * qutip.bra(str(i), 3) for i in range(3)]
-                kraus_ops.append(M_0)
-                kraus_ops.append(M_i)
+            if prob > 0.1 and n > 1:
+                warnings.warn(
+                    "The dephasing model is a first-order approximation in the"
+                    f" dephasing probability. p = {prob} is too large for "
+                    "realistic results.",
+                    stacklevel=2,
+                )
+            if (
+                self.basis_name == "all" and self.dim == 3
+            ):  # three-level system
+                k = np.sqrt(prob * (1 - prob) ** (n - 1))
+                m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
+                for i in range(3):
+                    ket_ = qutip.ket(str(i), 3)
+                    kraus_ops.append(k * ket_ * ket_.dag())
+                kraus_ops.append(m_0)
             else:  # two-level system
-                prob = self.config.dephasing_prob / 2
-                if prob > 0.1 and n > 1:
-                    warnings.warn(
-                        "The dephasing model is a first-order approximation in the"
-                        f" dephasing probability. p = {2*prob} is too large for "
-                        "realistic results.",
-                        stacklevel=2,
-                    )
+                prob = prob / 2
                 k = np.sqrt(prob * (1 - prob) ** (n - 1))
                 kraus_ops.append(k * qutip.sigmaz())
             self._collapse_ops += [
@@ -254,40 +251,39 @@ class QutipEmulator:
         if "depolarizing" in self.config.noise:
             prob = self.config.depolarizing_prob
             n = self._size
+            if prob > 0.1 and n > 1:
+                warnings.warn(
+                    "The depolarizing model is a first-order approximation"
+                    f" in the depolarizing probability. p = {prob}"
+                    " is too large for realistic results.",
+                    stacklevel=2,
+                )
             if (
                 self.basis_name == "all" and self.dim == 3
             ):  # three-level system
                 prob = prob / 9
 
-                if prob > 0.1 and n > 1:
-                    warnings.warn(
-                        "The depolarizing model is a first-order approximation"
-                        f" in the depolarizing probability. p = {9*prob}"
-                        " is too large for realistic results.",
-                        stacklevel=2,
-                    )
-                M_0 = np.sqrt(prob/(1-prob)) * qutip.qeye(3)
-                M_ij = [np.sqrt(prob/3) * qutip.ket(str(i), 3) * qutip.bra(str(j), 3) for i in range(3) for j in range(3)]
-                kraus_ops.append(M_0)
-                kraus_ops.append(M_ij)
+                k = np.sqrt((prob) * (1 - 8 * prob) ** (n - 1))
+                m_0 = np.sqrt(1 - prob) * qutip.qeye(3)
+                for i in range(3):
+                    ket_ = qutip.ket(str(i), 3)
+                    kraus_ops.append(k * ket_ * ket_.dag())
+                kraus_ops.append(m_0)
+                self._collapse_ops += [
+                    np.sqrt((1 - 8 * prob) ** n)
+                    * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+                ]
 
             else:  # two-level system
                 prob = prob / 4
-                if prob > 0.1 and n > 1:
-                    warnings.warn(
-                        "The depolarizing model is a first-order approximation"
-                        f" in the depolarizing probability. p = {4*prob}"
-                        " is too large for realistic results.",
-                        stacklevel=2,
-                    )
                 k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
                 kraus_ops.append(k * qutip.sigmax())
                 kraus_ops.append(k * qutip.sigmay())
                 kraus_ops.append(k * qutip.sigmaz())
-            self._collapse_ops += [
-                np.sqrt((1 - 3 * prob) ** n)
-                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-            ]
+                self._collapse_ops += [
+                    np.sqrt((1 - 3 * prob) ** n)
+                    * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
+                ]
 
         if "eff_noise" in self.config.noise:
             # Probability distribution of error occurences

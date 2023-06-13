@@ -126,6 +126,8 @@ class TestNoiseModel:
     @pytest.mark.parametrize(
         "noise_sample,",
         [
+            ("eff_noise", "depolarizing"),
+            ("eff_noise", "dephasing"),
             ("dephasing", "depolarizing"),
             ("depolarizing", "eff_noise", "dephasing"),
         ],
@@ -147,17 +149,10 @@ class TestNoiseModel:
         matrices["I3"] = np.eye(3)
         return matrices
 
-    @pytest.mark.parametrize(
-        "noise_sample,",
-        [
-            ("depolarizing", "eff_noise"),
-            ("eff_noise", "dephasing"),
-        ],
-    )
-    def test_eff_noise_init(self, noise_sample, matrices):
+    def test_eff_noise_three_init(self, matrices):
         print(
             NoiseModel(
-                noise_types=(noise_sample),
+                noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I3"]],
                 eff_noise_probs=[1.0],
             )

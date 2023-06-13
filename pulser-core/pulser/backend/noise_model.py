@@ -137,7 +137,7 @@ class NoiseModel:
         dephasing_on = "dephasing" in self.noise_types
         depolarizing_on = "depolarizing" in self.noise_types
         eff_noise_on = "eff_noise" in self.noise_types
-        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 2
+        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
         if eff_noise_conflict:
             raise NotImplementedError(
                 "Depolarizing, dephasing and effective noise channels "
