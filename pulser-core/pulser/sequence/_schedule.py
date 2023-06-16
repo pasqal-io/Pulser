@@ -24,7 +24,7 @@ import numpy as np
 from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
-from pulser.sampler.samples import ChannelSamples, _TargetSlot
+from pulser.sampler.samples import ChannelSamples, _PulseTargetSlot
 from pulser.waveforms import ConstantWaveform
 
 
@@ -137,7 +137,7 @@ class _ChannelSchedule:
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
         dt = self.get_duration()
         amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
-        slots: list[_TargetSlot] = []
+        slots: list[_PulseTargetSlot] = []
         target_time_slots: list[_TimeSlot] = [
             s for s in self.slots if s.type == "target"
         ]
@@ -158,7 +158,7 @@ class _ChannelSchedule:
                 if ind < len(channel_slots) - 1
                 else fall_time
             )
-            slots.append(_TargetSlot(s.ti, tf, s.targets))
+            slots.append(_PulseTargetSlot(s.ti, tf, s.targets))
 
             if ignore_detuned_delay_phase and self.is_detuned_delay(pulse):
                 # The phase of detuned delays is not considered

@@ -556,7 +556,7 @@ def test_switch_device_up(
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_eom(reg, mappable_reg, parametrized):
+def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
@@ -601,6 +601,9 @@ def test_switch_device_eom(reg, mappable_reg, parametrized):
     assert og_eom_block.detuning_on == mod_eom_block.detuning_on
     assert og_eom_block.rabi_freq == mod_eom_block.rabi_freq
     assert og_eom_block.detuning_off != mod_eom_block.detuning_off
+
+    # Test drawing in eom mode
+    seq.draw()
 
 
 def test_target(reg, device):

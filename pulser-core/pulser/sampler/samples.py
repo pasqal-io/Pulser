@@ -59,7 +59,7 @@ def _default_to_regular(d: dict | defaultdict) -> dict:
 
 
 @dataclass
-class _TargetSlot:
+class _PulseTargetSlot:
     """Auxiliary class to store target information.
 
     Recopy of the sequence._TimeSlot but without the unrelevant `type` field,
@@ -90,7 +90,7 @@ class ChannelSamples:
     amp: np.ndarray
     det: np.ndarray
     phase: np.ndarray
-    slots: list[_TargetSlot] = field(default_factory=list)
+    slots: list[_PulseTargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
     target_time_slots: list[_TimeSlot] = field(default_factory=list)
 
@@ -180,12 +180,8 @@ class ChannelSamples:
             for block in self.eom_blocks
         ]
 
-    def in_eom_mode(
-        self, slot: Optional[_TimeSlot | _TargetSlot] = None
-    ) -> bool:
+    def in_eom_mode(self, slot: _TimeSlot | _PulseTargetSlot) -> bool:
         """States if a time slot is inside an EOM mode block."""
-        if slot is None:
-            return bool(self.eom_blocks) and (self.eom_blocks[-1].tf is None)
         return any(
             start <= slot.ti < end
             for start, end in self.get_eom_mode_intervals()

@@ -359,8 +359,6 @@ def test_extend_duration(seq_rydberg):
         )
     assert extended_short.slots == short.slots
 
-    draw_samples(samples)
-
 
 def test_phase_sampling(mod_device):
     reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
@@ -400,6 +398,22 @@ def test_phase_sampling(mod_device):
 
     got_phase = sample(seq).channel_samples["ch0"].phase
     np.testing.assert_array_equal(expected_phase, got_phase)
+
+
+@pytest.mark.parametrize("modulation", [True, False])
+@pytest.mark.parametrize("draw_phase_area", [True, False])
+@pytest.mark.parametrize("draw_phase_shifts", [True, False])
+@pytest.mark.parametrize("draw_phase_curve", [True, False])
+def test_draw_samples(
+    mod_seq, modulation, draw_phase_area, draw_phase_curve, draw_phase_shifts
+):
+    sampled_seq = sample(mod_seq, modulation=modulation)
+    draw_samples(
+        sampled_seq,
+        draw_phase_area=draw_phase_area,
+        draw_phase_shifts=draw_phase_shifts,
+        draw_phase_curve=draw_phase_curve,
+    )
 
 
 # Fixtures

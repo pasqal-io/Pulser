@@ -28,6 +28,7 @@ from scipy.interpolate import CubicSpline
 import pulser
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
+from pulser.channels.eom import BaseEOM
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
 from pulser.sampler.sampler import sample
@@ -201,30 +202,43 @@ def gather_data(
         extended_samples = ch_samples.extend_duration(total_duration)
 
         for slot in ch_samples.slots:
-            if slot.ti != -1:
-                # If slot is not the first element in schedule
-                if ch_samples.in_eom_mode(slot):
-                    # EOM mode starts
-                    if not in_eom_mode:
-                        in_eom_mode = True
-                        eom_block_n += 1
-                elif in_eom_mode:
-                    # Buffer when EOM mode is disabled and next slot has 0 amp
-                    in_eom_mode = False
-                    if extended_samples.amp[slot.ti] == 0:
-                        eom_end_buffers[eom_block_n] = EOMSegment(
-                            slot.ti, slot.tf
-                        )
-                if (
-                    eom_block_n + 1 < nb_eom_intervals
-                    and slot.tf == eom_intervals[eom_block_n + 1].ti
-                    and extended_samples.det[slot.tf - 1]
-                    == ch_samples.eom_blocks[eom_block_n + 1].detuning_off
-                ):
-                    # Buffer if next is eom and final det matches det_off
-                    eom_start_buffers[eom_block_n + 1] = EOMSegment(
-                        slot.ti, slot.tf
-                    )
+            # If slot is not the first element in schedule
+            if ch_samples.in_eom_mode(slot):
+                # EOM mode starts
+                if not in_eom_mode:
+                    in_eom_mode = True
+                    eom_block_n += 1
+            elif in_eom_mode:
+                # Buffer when EOM mode is disabled and next slot has 0 amp
+                in_eom_mode = False
+
+                tf = eom_intervals[eom_block_n].tf
+                if tf is not None and slot.ti != eom_intervals[eom_block_n].tf:
+                    if np.isclose(
+                        extended_samples.amp[
+                            tf
+                            + 2
+                            * cast(
+                                BaseEOM, sampled_seq._ch_objs[ch].eom_config
+                            ).rise_time
+                        ],
+                        0,
+                    ):
+                        eom_end_buffers[eom_block_n] = EOMSegment(tf, slot.ti)
+
+            if (
+                eom_block_n + 1 < nb_eom_intervals
+                and slot.tf == eom_intervals[eom_block_n + 1].ti
+                and np.isclose(
+                    extended_samples.det[slot.tf - 1],
+                    ch_samples.eom_blocks[eom_block_n + 1].detuning_off,
+                    0.006,
+                )
+            ):
+                # Buffer if next is eom and final det matches det_off
+                eom_start_buffers[eom_block_n + 1] = EOMSegment(
+                    slot.ti, slot.tf
+                )
 
         for time_slot in ch_samples.target_time_slots:
             if time_slot.ti == -1:
@@ -482,53 +496,34 @@ def _draw_channel_content(
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
             print_phase = not draw_phase_curve and any(
-                any(
-                    sampled_seq.channel_samples[ch].phase[slot.ti : slot.tf]
-                    != 0
-                )
-                for slot in sampled_seq.channel_samples[ch].slots
+                np.any(ch_data.samples.phase[slot.ti : slot.tf] != 0)
+                for slot in ch_data.samples.slots
             )
 
-            for slot in sampled_seq.channel_samples[ch].slots:
+            for slot in ch_data.samples.slots:
                 if sampling_rate:
                     area_val = (
                         np.sum(yseff[0][slot.ti : slot.tf]) * 1e-3 / np.pi
                     )
                 else:
                     area_val = (
-                        np.sum(
-                            sampled_seq.channel_samples[ch].amp[
-                                slot.ti : slot.tf
-                            ]
-                        )
+                        np.sum(ch_data.samples.amp[slot.ti : slot.tf])
                         * 1e-3
                         / np.pi
                     )
-                phase_val = sampled_seq.channel_samples[ch].phase[slot.tf - 1]
+                phase_val = ch_data.samples.phase[slot.tf - 1]
                 x_plot = (slot.ti + slot.tf) / 2 / time_scale
-                if (
-                    slot.ti
-                    in [
-                        target_slot.tf
-                        for target_slot in sampled_seq.channel_samples[
-                            ch
-                        ].target_time_slots
-                    ]
-                    or not top
-                ):
-                    y_plot = (
-                        np.max(
-                            sampled_seq.channel_samples[ch].amp[
-                                slot.ti : slot.tf
-                            ]
-                        )
-                        / 2
-                    )
+                target_slot_tf_list = [
+                    target_slot.tf
+                    for target_slot in sampled_seq.channel_samples[
+                        ch
+                    ].target_time_slots
+                ]
+                if slot.ti in target_slot_tf_list or not top:
+                    y_plot = np.max(ch_data.samples.amp[slot.ti : slot.tf]) / 2
                     top = True  # Next box at the top.
                 elif top:
-                    y_plot = np.max(
-                        sampled_seq.channel_samples[ch].amp[slot.ti : slot.tf]
-                    )
+                    y_plot = np.max(ch_data.samples.amp[slot.ti : slot.tf])
                     top = False  # Next box at the center.
                 area_fmt = (
                     r"A: $\pi$"
@@ -753,6 +748,11 @@ def draw_samples(
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
     """
+    slot_tfs = [
+        ch_samples.slots[-1].tf
+        for ch_samples in sampled_seq.channel_samples.values()
+    ]
+    max_slot_tf = max(slot_tfs) if len(slot_tfs) > 0 else None
     (fig_reg, fig, ch_axes, data) = _draw_channel_content(
         sampled_seq,
         register,
@@ -762,6 +762,7 @@ def draw_samples(
         draw_input=True,
         draw_modulation=False,
         draw_phase_curve=draw_phase_curve,
+        shown_duration=max_slot_tf,
     )
 
     return (fig_reg, fig)
