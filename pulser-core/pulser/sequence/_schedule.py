@@ -142,9 +142,7 @@ class _ChannelSchedule:
             s for s in self.slots if s.type == "target"
         ]
         # Extracting the EOM Buffers
-        eom_intervals_ti = [
-            eom_interval[0] for eom_interval in self.get_eom_mode_intervals()
-        ]
+        eom_intervals_ti = [block.ti for block in self.eom_blocks]
         nb_eom_intervals = len(eom_intervals_ti)
         eom_start_buffers = [(0, 0) for _ in range(nb_eom_intervals)]
         eom_end_buffers = [(0, 0) for _ in range(nb_eom_intervals)]
