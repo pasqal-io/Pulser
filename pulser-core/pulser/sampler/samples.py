@@ -10,9 +10,10 @@ import numpy as np
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
+from pulser.sequence._basis_ref import _QubitRef
 
 if TYPE_CHECKING:
-    from pulser.sequence._schedule import _EOMSettings
+    from pulser.sequence._schedule import _EOMSettings, _TimeSlot
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
@@ -58,7 +59,7 @@ def _default_to_regular(d: dict | defaultdict) -> dict:
 
 
 @dataclass
-class _TargetSlot:
+class _PulseTargetSlot:
     """Auxiliary class to store target information.
 
     Recopy of the sequence._TimeSlot but without the unrelevant `type` field,
@@ -89,9 +90,11 @@ class ChannelSamples:
     amp: np.ndarray
     det: np.ndarray
     phase: np.ndarray
-    slots: list[_TargetSlot] = field(default_factory=list)
+    slots: list[_PulseTargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
-    initial_targets: set[QubitId] = field(default_factory=set)
+    eom_start_buffers: list[tuple[int, int]] = field(default_factory=list)
+    eom_end_buffers: list[tuple[int, int]] = field(default_factory=list)
+    target_time_slots: list[_TimeSlot] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -101,6 +104,15 @@ class ChannelSamples:
             assert t.ti < t.tf  # well ordered slots
         for t1, t2 in zip(self.slots, self.slots[1:]):
             assert t1.tf <= t2.ti  # no overlaps on a given channel
+
+    @property
+    def initial_targets(self) -> set[QubitId]:
+        """Returns the initial targets."""
+        return (
+            self.target_time_slots[0].targets
+            if self.target_time_slots
+            else set()
+        )
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
@@ -159,6 +171,23 @@ class ChannelSamples:
             new_samples["det"][region] = block.detuning_off
 
         return replace(self, **new_samples)
+
+    def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
+        """Returns EOM mode intervals."""
+        return [
+            (
+                block.ti,
+                block.tf if block.tf is not None else self.duration,
+            )
+            for block in self.eom_blocks
+        ]
+
+    def in_eom_mode(self, slot: _TimeSlot | _PulseTargetSlot) -> bool:
+        """States if a time slot is inside an EOM mode block."""
+        return any(
+            start <= slot.ti < end
+            for start, end in self.get_eom_mode_intervals()
+        )
 
     def modulate(
         self, channel_obj: Channel, max_duration: Optional[int] = None
@@ -292,6 +321,9 @@ class SequenceSamples:
     channels: list[str]
     samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
+    _basis_ref: dict[str, dict[QubitId, _QubitRef]] = field(
+        default_factory=dict
+    )
     _slm_mask: _SlmMask = field(default_factory=_SlmMask)
     _magnetic_field: np.ndarray | None = None
     _measurement: str | None = None
@@ -396,3 +428,8 @@ class SequenceSamples:
             for chname, cs in zip(self.channels, self.samples_list)
         ]
         return "\n\n".join(blocks)
+
+
+# This is just to preserve backwards compatibility after the renaming of
+# _TargetSlot to _PulseTarget slot
+_TargetSlot = _PulseTargetSlot

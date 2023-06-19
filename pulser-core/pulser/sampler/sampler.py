@@ -56,5 +56,6 @@ def sample(
         list(seq.declared_channels.keys()),
         samples_list,
         seq.declared_channels,
+        seq._basis_ref,
         **optionals,
     )

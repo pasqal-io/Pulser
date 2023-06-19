@@ -32,7 +32,7 @@ from pulser import Sequence
 from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.result import SampledResult
-from pulser.sampler.samples import SequenceSamples, _TargetSlot
+from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser.sequence._seq_drawer import draw_sequence
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
@@ -500,7 +500,7 @@ class QutipEmulator:
         samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
         def add_noise(
-            slot: _TargetSlot,
+            slot: _PulseTargetSlot,
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
         ) -> None:

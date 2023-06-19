@@ -23,6 +23,7 @@ import pulser_simulation
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
+from pulser.sequence._seq_drawer import draw_samples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
 
 # Helpers
@@ -239,6 +240,9 @@ def test_eom_modulation(mod_device, disable_eom):
     input_samples = sample(
         seq, extended_duration=full_duration
     ).channel_samples["ch0"]
+    assert input_samples.in_eom_mode(input_samples.slots[-1]) == (
+        not disable_eom
+    )
     mod_samples = sample(seq, modulation=True, extended_duration=full_duration)
     chan = seq.declared_channels["ch0"]
     for qty in ("amp", "det"):
@@ -397,6 +401,22 @@ def test_phase_sampling(mod_device):
 
     got_phase = sample(seq).channel_samples["ch0"].phase
     np.testing.assert_array_equal(expected_phase, got_phase)
+
+
+@pytest.mark.parametrize("modulation", [True, False])
+@pytest.mark.parametrize("draw_phase_area", [True, False])
+@pytest.mark.parametrize("draw_phase_shifts", [True, False])
+@pytest.mark.parametrize("draw_phase_curve", [True, False])
+def test_draw_samples(
+    mod_seq, modulation, draw_phase_area, draw_phase_curve, draw_phase_shifts
+):
+    sampled_seq = sample(mod_seq, modulation=modulation)
+    draw_samples(
+        sampled_seq,
+        draw_phase_area=draw_phase_area,
+        draw_phase_shifts=draw_phase_shifts,
+        draw_phase_curve=draw_phase_curve,
+    )
 
 
 # Fixtures
