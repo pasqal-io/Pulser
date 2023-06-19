@@ -428,3 +428,8 @@ class SequenceSamples:
             for chname, cs in zip(self.channels, self.samples_list)
         ]
         return "\n\n".join(blocks)
+
+
+# This is just to preserve backwards compatibility after the renaming of
+# _TargetSlot to _PulseTarget slot
+_TargetSlot = _PulseTargetSlot
