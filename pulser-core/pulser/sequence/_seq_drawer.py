@@ -28,7 +28,6 @@ from scipy.interpolate import CubicSpline
 import pulser
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
-from pulser.channels.eom import BaseEOM
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
 from pulser.sampler.sampler import sample
@@ -187,58 +186,23 @@ def gather_data(
             EOMSegment(eom_interval[0], eom_interval[1])
             for eom_interval in ch_samples.get_eom_mode_intervals()
         ]
-        nb_eom_intervals = len(eom_intervals)
-        eom_start_buffers = [EOMSegment() for _ in range(nb_eom_intervals)]
-        eom_end_buffers = [EOMSegment() for _ in range(nb_eom_intervals)]
-        in_eom_mode = False
-        eom_block_n = -1
         # Last eom interval is extended if eom mode not disabled at the end
         if (
-            nb_eom_intervals > 0
+            len(eom_intervals) > 0
             and ch_samples.duration == eom_intervals[-1].tf
         ):
             eom_intervals[-1].tf = total_duration
         # sampling the channel schedule
         extended_samples = ch_samples.extend_duration(total_duration)
 
-        for slot in ch_samples.slots:
-            # If slot is not the first element in schedule
-            if ch_samples.in_eom_mode(slot):
-                # EOM mode starts
-                if not in_eom_mode:
-                    in_eom_mode = True
-                    eom_block_n += 1
-            elif in_eom_mode:
-                # Buffer when EOM mode is disabled and next slot has 0 amp
-                in_eom_mode = False
-
-                tf = eom_intervals[eom_block_n].tf
-                if tf is not None and slot.ti != eom_intervals[eom_block_n].tf:
-                    if np.isclose(
-                        extended_samples.amp[
-                            tf
-                            + 2
-                            * cast(
-                                BaseEOM, sampled_seq._ch_objs[ch].eom_config
-                            ).rise_time
-                        ],
-                        0,
-                    ):
-                        eom_end_buffers[eom_block_n] = EOMSegment(tf, slot.ti)
-
-            if (
-                eom_block_n + 1 < nb_eom_intervals
-                and slot.tf == eom_intervals[eom_block_n + 1].ti
-                and np.isclose(
-                    extended_samples.det[slot.tf - 1],
-                    ch_samples.eom_blocks[eom_block_n + 1].detuning_off,
-                    0.006,
-                )
-            ):
-                # Buffer if next is eom and final det matches det_off
-                eom_start_buffers[eom_block_n + 1] = EOMSegment(
-                    slot.ti, slot.tf
-                )
+        eom_start_buffers = [
+            EOMSegment(eom_interval[0], eom_interval[1])
+            for eom_interval in ch_samples.eom_start_buffers
+        ]
+        eom_end_buffers = [
+            EOMSegment(eom_interval[0], eom_interval[1])
+            for eom_interval in ch_samples.eom_end_buffers
+        ]
 
         for time_slot in ch_samples.target_time_slots:
             if time_slot.ti == -1:

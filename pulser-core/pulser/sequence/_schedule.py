@@ -141,6 +141,15 @@ class _ChannelSchedule:
         target_time_slots: list[_TimeSlot] = [
             s for s in self.slots if s.type == "target"
         ]
+        # Extracting the EOM Buffers
+        eom_intervals_ti = [
+            eom_interval[0] for eom_interval in self.get_eom_mode_intervals()
+        ]
+        nb_eom_intervals = len(eom_intervals_ti)
+        eom_start_buffers = [(0, 0) for _ in range(nb_eom_intervals)]
+        eom_end_buffers = [(0, 0) for _ in range(nb_eom_intervals)]
+        in_eom_mode = False
+        eom_block_n = -1
 
         for ind, s in enumerate(channel_slots):
             pulse = cast(Pulse, s.type)
@@ -184,8 +193,40 @@ class _ChannelSchedule:
             # the same, so the last phase is automatically kept till the end
             phase[t_start:] = pulse.phase
 
+        # Create EOM start and end buffers
+        for s in self.slots:
+            if s.ti == -1:
+                continue
+
+            # If slot is not the first element in schedule
+            if self.in_eom_mode(s):
+                # EOM mode starts
+                if not in_eom_mode:
+                    in_eom_mode = True
+                    eom_block_n += 1
+            elif in_eom_mode:
+                # Buffer when EOM mode is disabled and next slot has 0 amp
+                in_eom_mode = False
+                if amp[s.ti] == 0:
+                    eom_end_buffers[eom_block_n] = (s.ti, s.tf)
+            if (
+                eom_block_n + 1 < nb_eom_intervals
+                and s.tf == eom_intervals_ti[eom_block_n + 1]
+                and det[s.tf - 1]
+                == self.eom_blocks[eom_block_n + 1].detuning_off
+            ):
+                # Buffer if next is eom and final det matches det_off
+                eom_start_buffers[eom_block_n + 1] = (s.ti, s.tf)
+
         return ChannelSamples(
-            amp, det, phase, slots, self.eom_blocks, target_time_slots
+            amp,
+            det,
+            phase,
+            slots,
+            self.eom_blocks,
+            eom_start_buffers,
+            eom_end_buffers,
+            target_time_slots,
         )
 
     @overload

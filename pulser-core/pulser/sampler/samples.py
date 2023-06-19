@@ -92,6 +92,8 @@ class ChannelSamples:
     phase: np.ndarray
     slots: list[_PulseTargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
+    eom_start_buffers: list[tuple[int, int]] = field(default_factory=list)
+    eom_end_buffers: list[tuple[int, int]] = field(default_factory=list)
     target_time_slots: list[_TimeSlot] = field(default_factory=list)
 
     def __post_init__(self) -> None:

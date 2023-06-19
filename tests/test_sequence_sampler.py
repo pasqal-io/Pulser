@@ -240,6 +240,9 @@ def test_eom_modulation(mod_device, disable_eom):
     input_samples = sample(
         seq, extended_duration=full_duration
     ).channel_samples["ch0"]
+    assert input_samples.in_eom_mode(input_samples.slots[-1]) == (
+        not disable_eom
+    )
     mod_samples = sample(seq, modulation=True, extended_duration=full_duration)
     chan = seq.declared_channels["ch0"]
     for qty in ("amp", "det"):
