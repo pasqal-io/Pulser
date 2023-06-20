@@ -1583,7 +1583,11 @@ class TestDeserialization:
                 "var1": {"type": "float", "value": [1.5]},
             },
         )
-        _check_roundtrip(s)
+        # Note: If built, some of these sequences will be invalid
+        # since they are giving an array of size 1 to a parameter
+        # where a single value is expected. Still, all we want to
+        # see is whether the parametrization of the operations
+        # works as expected
         seq = Sequence.from_abstract_repr(json.dumps(s))
         seq_var1 = seq._variables["var1"]
 

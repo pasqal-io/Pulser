@@ -36,7 +36,8 @@ SUPPORTED_OPERATORS = (
 
 SUPPORTED_NUMPY = (
     "array",
-    "round_",
+    "round",  # numpy >= 1.25
+    "round_",  # numpy < 1.25
     "ceil",
     "floor",
     "sqrt",
