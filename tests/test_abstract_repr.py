@@ -1588,6 +1588,12 @@ class TestDeserialization:
         # where a single value is expected. Still, all we want to
         # see is whether the parametrization of the operations
         # works as expected
+        if (
+            json_param["lhs"] != {"variable": "var1"}
+            and json_param["expression"] != "index"
+        ):
+            _check_roundtrip(s)
+
         seq = Sequence.from_abstract_repr(json.dumps(s))
         seq_var1 = seq._variables["var1"]
 
