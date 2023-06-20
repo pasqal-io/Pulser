@@ -157,7 +157,7 @@ class QutipResult(Result):
         is_density_matrix = state.isoper
         if ignore_global_phase and not is_density_matrix:
             full = state.full()
-            global_ph = float(np.angle(full[np.argmax(np.abs(full))]))
+            global_ph = float(np.angle(full[np.argmax(np.abs(full))])[0])
             state *= np.exp(-1j * global_ph)
         if self._dim != 3:
             if reduce_to_basis not in [None, self._basis_name]:
