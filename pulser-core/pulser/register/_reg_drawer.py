@@ -58,6 +58,7 @@ class RegDrawer:
         qubit_colors: Mapping[QubitId, str] = dict(),
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
+        dmm_qubits: Mapping[QubitId, float] = {},
     ) -> None:
         ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(
             ids, qubit_colors
@@ -73,21 +74,34 @@ class RegDrawer:
         ax.scatter(pos[:, ix], pos[:, iy], alpha=0.7, **params)
 
         # Draw square halo around masked qubits
-        if masked_qubits:
-            mask_pos = []
+        if (
+            masked_qubits
+            and dmm_qubits
+            and masked_qubits != set(dmm_qubits.keys())
+        ):
+            raise ValueError("masked qubits and dmm qubits must be the same.")
+        elif masked_qubits:
+            dmm_qubits = {
+                masked_qubit: 1.0 / len(masked_qubits)
+                for masked_qubit in masked_qubits
+            }
+
+        if dmm_qubits:
+            dmm_pos = []
             for i, c in zip(ids, pos):
-                if i in masked_qubits:
-                    mask_pos.append(c)
-            mask_arr = np.array(mask_pos)
+                if i in dmm_qubits.keys():
+                    dmm_pos.append(c)
+            dmm_arr = np.array(dmm_pos)
             ax.scatter(
-                mask_arr[:, ix],
-                mask_arr[:, iy],
+                dmm_arr[:, ix],
+                dmm_arr[:, iy],
                 marker="s",
                 s=1200,
-                alpha=0.2,
+                alpha=0.2
+                * np.array(dmm_qubits.values())
+                / max(dmm_qubits.values()),
                 c="black",
             )
-
         axes = "xyz"
 
         ax.set_xlabel(axes[ix] + " (µm)")
@@ -120,19 +134,38 @@ class RegDrawer:
                     else:
                         j += 1
                 # Sort qubits in plot_ids[i] according to masked status
+                det_map = [
+                    str(q) for q, weight in dmm_qubits.items() if weight > 0.0
+                ]
                 plot_ids[i] = sorted(
                     plot_ids[i],
-                    key=lambda s: s in [str(q) for q in masked_qubits],
+                    key=lambda s: s in det_map,
                 )
-                # Merge all masked qubits
-                has_masked = False
+                # Merge all masked qubits with their detuning
+                # if the detunings are not all the same (masked qubits then)
+                has_det_map = False
+                is_mask = len(set([dmm_qubits[q] for q in det_map])) == 1
                 for j in range(len(plot_ids[i])):
-                    if plot_ids[i][j] in [str(q) for q in masked_qubits]:
-                        plot_ids[i][j:] = [", ".join(plot_ids[i][j:])]
-                        has_masked = True
+                    if plot_ids[i][j] in det_map:
+                        plot_ids[i][j:] = [
+                            ", ".join(
+                                [
+                                    (
+                                        q
+                                        + (
+                                            f": {dmm_qubits[q]:.2f}"
+                                            if is_mask
+                                            else ""
+                                        )
+                                    )
+                                    for q in plot_ids[i][j:]
+                                ]
+                            )
+                        ]
+                        has_det_map = True
                         break
                 # Add a square bracket that encloses all masked qubits
-                if has_masked:
+                if has_det_map:
                     plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
                 # Merge what remains
                 final_plot_ids.append(", ".join(plot_ids[i]))

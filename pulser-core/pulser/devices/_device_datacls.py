@@ -25,6 +25,7 @@ from scipy.spatial.distance import pdist, squareform
 
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
+from pulser.dmm import DMM
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
@@ -46,6 +47,9 @@ class BaseDevice(ABC):
         channel_ids: Custom IDs for each channel object. When defined,
             an ID must be given for each channel. If not defined, the IDs are
             generated internally based on the channels' names and addressing.
+        dmm_objects: The DMM subclass instances specifying each channel in the
+            device. They are referenced by their order in the list, with the ID
+            "dmm_[index in dmm_objects]".
         rybderg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
@@ -74,6 +78,7 @@ class BaseDevice(ABC):
     reusable_channels: bool = field(default=False, init=False)
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
+    dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         def type_check(
@@ -141,6 +146,10 @@ class BaseDevice(ABC):
         for ch_obj in self.channel_objects:
             type_check("All channels", Channel, value_override=ch_obj)
 
+        for dmm_obj in self.dmm_objects:
+            type_check("All dmm channels", DMM, value_override=dmm_obj)
+        # self.supports_slm_mask = True if self.dmm_objects else False
+
         if self.channel_ids is not None:
             if not (
                 isinstance(self.channel_ids, (tuple, list))
@@ -160,6 +169,12 @@ class BaseDevice(ABC):
                     "When defined, the number of channel IDs must"
                     " match the number of channel objects."
                 )
+            if set(self.channel_ids) & set(self.dmm_channels.keys()):
+                raise ValueError(
+                    "When defined, the names of channel IDs must be different"
+                    "than the names of dmm channels 'dmm_0', 'dmm_1', ... ."
+                )
+
         else:
             # Make the channel IDs from the default IDs
             ids_counter: Counter = Counter()
@@ -201,6 +216,13 @@ class BaseDevice(ABC):
     def channels(self) -> dict[str, Channel]:
         """Dictionary of available channels on this device."""
         return dict(zip(cast(tuple, self.channel_ids), self.channel_objects))
+
+    @property
+    def dmm_channels(self) -> dict[str, DMM]:
+        """Dictionary of available dmm channels on this device."""
+        return {
+            f"dmm_{i}": dmm_obj for (i, dmm_obj) in enumerate(self.dmm_objects)
+        }
 
     @property
     def supported_bases(self) -> set[str]:
@@ -406,14 +428,22 @@ class BaseDevice(ABC):
 
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
-        ex_params = ("channel_objects", "channel_ids")
+        ex_params = ("channel_objects", "channel_ids", "dmm_objects")
         params = self._params()
         for p in ex_params:
             params.pop(p, None)
         ch_list = []
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
-        return {"version": "1", "channels": ch_list, **params}
+        dmm_list = []
+        for dmm_name, dmm_obj in self.dmm_channels.items():
+            dmm_list.append(dmm_obj._to_abstract_repr(dmm_name))
+        return {
+            "version": "1",
+            "channels": ch_list,
+            "dmm_channels": dmm_list,
+            **params,
+        }
 
     def to_abstract_repr(self) -> str:
         """Serializes the Sequence into an abstract JSON object."""
@@ -512,7 +542,7 @@ class Device(BaseDevice):
         ]
 
         ch_lines = []
-        for name, ch in self.channels.items():
+        for name, ch in {**self.channels, **self.dmm_channels}.items():
             if for_docs:
                 ch_lines += [
                     f" - ID: '{name}'",
@@ -527,6 +557,12 @@ class Device(BaseDevice):
                         "\t"
                         + r"- Maximum :math:`|\delta|`:"
                         + f" {ch.max_abs_detuning:.4g} rad/µs"
+                    )
+                    if not isinstance(ch, DMM)
+                    else (
+                        "\t"
+                        + r"- Bottom :math:`|\delta|`:"
+                        + f" {ch.bottom_detuning:.4g} rad/µs"
                     ),
                 ]
                 if ch.addressing == "Local":

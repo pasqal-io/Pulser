@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
 from functools import cached_property
@@ -25,6 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.dmm import DetuningMap
 from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
@@ -184,6 +186,30 @@ class RegisterLayout(RegDrawer):
         reg_class = Register3D if self.dimensionality == 3 else Register
         reg = reg_class(qubits, layout=self, trap_ids=trap_ids)
         return reg
+
+    def define_detuning_map(
+        self, detuning_weights: Mapping[int, float]
+    ) -> DetuningMap:
+        """Defines a DetuningMap for some trap ids of the register layout.
+
+        Args:
+            detuning_weights: A mapping between the IDs of the targeted traps
+                and detuning weights (between 0 and 1, their sum must be equal
+                to 1).
+
+        Returns:
+            A DetuningMap associating detuning weights to the trap coordinates
+                of the targeted traps.
+        """
+        if not set(detuning_weights.keys()) <= set(self.traps_dict):
+            raise ValueError(
+                "The trap ids of detuning weights have to be integers"
+                f" between 0 and {self.number_of_traps}."
+            )
+        return DetuningMap(
+            self.traps_dict[detuning_weights.keys()],
+            list(detuning_weights.values()),
+        )
 
     def draw(
         self,

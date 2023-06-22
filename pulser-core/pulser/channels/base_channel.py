@@ -90,7 +90,7 @@ class Channel(ABC):
     def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
         """Internal parameters and their valid options."""
         return dict(
-            name=("Rydberg", "Raman", "Microwave"),
+            name=("Rydberg", "Raman", "Microwave", "DMM"),
             basis=("ground-rydberg", "digital", "XY"),
             addressing=("Local", "Global"),
         )

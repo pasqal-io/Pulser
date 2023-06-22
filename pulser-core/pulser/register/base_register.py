@@ -32,6 +32,7 @@ from typing import (
 import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.dmm import DetuningMap
 from pulser.json.utils import obj_to_dict
 
 if TYPE_CHECKING:
@@ -203,6 +204,30 @@ class BaseRegister(ABC):
                     "The chosen traps from the RegisterLayout don't match this"
                     " register's coordinates."
                 )
+
+    def define_detuning_map(
+        self, detuning_weights: Mapping[QubitId, float]
+    ) -> DetuningMap:
+        """Defines a DetuningMap for some qubits of the register.
+
+        Args:
+            detuning_weights: A mapping between the IDs of the targeted qubits
+                and detuning weights (between 0 and 1, their sum must be equal
+                to 1).
+
+        Returns:
+            A DetuningMap associating detuning weights to the trap coordinates
+                of the targeted qubits.
+        """
+        if not set(detuning_weights.keys()) <= set(self.qubit_ids):
+            raise ValueError(
+                "The qubit ids of detuning weights have to be defined in the"
+                " register."
+            )
+        return DetuningMap(
+            [self.qubits[qubit_id] for qubit_id in detuning_weights],
+            list(detuning_weights.values()),
+        )
 
     @abstractmethod
     def _to_dict(self) -> dict[str, Any]:
