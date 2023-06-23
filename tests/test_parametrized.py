@@ -51,7 +51,7 @@ def t():
 
 @pytest.fixture
 def bwf(t, a):
-    return BlackmanWaveform(t, a)
+    return BlackmanWaveform(t[0], a[0])
 
 
 def test_var(a, b):
@@ -113,7 +113,7 @@ def test_paramobj(bwf, t, a, b):
     assert set(bwf.variables.keys()) == {"t", "a"}
     pulse = Pulse.ConstantDetuning(bwf, b[0], b[1])
     assert set(pulse.variables.keys()) == {"t", "a", "b"}
-    assert str(bwf) == "BlackmanWaveform(t, a)"
+    assert str(bwf) == "BlackmanWaveform(t[0], a[0])"
     assert str(pulse) == f"Pulse.ConstantDetuning({str(bwf)}, b[0], b[1])"
     pulse2 = Pulse(bwf, bwf, 1)
     assert str(pulse2) == f"Pulse({str(bwf)}, {str(bwf)}, 1)"

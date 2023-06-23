@@ -171,7 +171,7 @@ def test_blackman():
     wf = BlackmanWaveform(100, -2)
     assert np.isclose(wf.integral, -2)
     assert np.all(wf.samples <= 0)
-    assert wf == BlackmanWaveform(100, np.array([-2]))
+    assert wf == BlackmanWaveform(100, np.array(-2))
 
     with pytest.raises(ValueError, match="matching signs"):
         BlackmanWaveform.from_max_val(-10, np.pi)
@@ -185,7 +185,7 @@ def test_blackman():
     assert np.min(wf.samples) > -10
 
     var = Variable("var", float)
-    wf_var = BlackmanWaveform.from_max_val(-10, var)
+    wf_var = BlackmanWaveform.from_max_val(-10, var[0])
     assert isinstance(wf_var, ParamObj)
     var._assign(-np.pi)
     assert wf_var.build() == wf
