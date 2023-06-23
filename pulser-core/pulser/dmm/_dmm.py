@@ -22,12 +22,10 @@ import numpy as np
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
-from pulser.channels.base_channel import Channel
-from pulser.register._reg_drawer import RegDrawer
-
+import pulser
 
 @dataclass
-class DetuningMap(RegDrawer):
+class DetuningMap(pulser.register._reg_drawer.RegDrawer):
     """Defines a DetuningMap.
 
     A DetuningMap associates a detuning weight to the coordinates of a trap.
@@ -97,7 +95,7 @@ class DetuningMap(RegDrawer):
 
 
 @dataclass(init=True, repr=False, frozen=True)
-class DMM(Channel):
+class DMM(pulser.channels.base_channel.Channel):
     """Defines a Detuning Map Modulator (DMM) Channel.
 
     A Detuning Map Modulator can be used to define `Global` detuning Pulses

@@ -18,14 +18,15 @@ from collections import defaultdict
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import collections as mc
 from scipy.spatial import KDTree
 
-from pulser.register.base_register import QubitId
+if TYPE_CHECKING:
+    from pulser.register.base_register import QubitId
 
 
 class RegDrawer:
