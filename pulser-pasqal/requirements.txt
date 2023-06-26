@@ -1,1 +1,1 @@
-pasqal-cloud ~= 0.2.3
+pasqal-cloud ~= 0.3.0
