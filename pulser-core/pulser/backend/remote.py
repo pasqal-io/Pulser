@@ -58,6 +58,8 @@ class RemoteResults(Results):
             the results.
         connection: The remote connection over which to get the submission's
             status and fetch the results.
+        jobs_order: An optional list of job IDs (as stored by the connection)
+            used to order the results.
     """
 
     def __init__(
@@ -127,7 +129,7 @@ class RemoteConnection(ABC):
 
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
-        raise NotImplementedError(
+        raise NotImplementedError(  # pragma: no cover
             "Unable to fetch the available devices through this "
             "remote connection."
         )
