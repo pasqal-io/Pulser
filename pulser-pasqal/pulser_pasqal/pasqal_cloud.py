@@ -15,10 +15,12 @@
 from __future__ import annotations
 
 import copy
+import json
 import warnings
 from dataclasses import fields
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, cast
 
+import numpy as np
 import pasqal_cloud
 from pasqal_cloud.device.configuration import (
     BaseConfig,
@@ -35,6 +37,7 @@ from pulser.backend.remote import (
     SubmissionStatus,
 )
 from pulser.devices import Device
+from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser.result import Result, SampledResult
 from pulser_pasqal.job_parameters import JobParameters
 
@@ -42,6 +45,23 @@ EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {
     pasqal_cloud.EmulatorType.EMU_FREE: EmuFreeConfig,
     pasqal_cloud.EmulatorType.EMU_TN: EmuTNConfig,
 }
+
+
+def _make_json_compatible(obj: Any):
+    """Makes an object compatible with JSON serialization.
+
+    For now, simply converts Numpy arrays to lists, but more can be added
+    as needed.
+    """
+
+    class NumpyEncoder(json.JSONEncoder):
+        def default(self, o: Any) -> dict[str, Any]:
+            if isinstance(o, np.ndarray):
+                return o.tolist()
+            return cast(dict, json.JSONEncoder.default(self, o))
+
+    # Serializes with the custom encoder and then deserializes back
+    return json.loads(json.dumps(obj, cls=NumpyEncoder))
 
 
 class PasqalCloud(RemoteConnection):
@@ -86,7 +106,9 @@ class PasqalCloud(RemoteConnection):
             sequence.measure(bases[0])
 
         emulator = kwargs.get("emulator", None)
-        job_params: list[JobParams] = kwargs.get("job_params", [])
+        job_params: list[JobParams] = _make_json_compatible(
+            kwargs.get("job_params", [])
+        )
         if emulator is None:
             available_devices = self.fetch_available_devices()
             # TODO: Could be better to check if the devices are
@@ -115,9 +137,27 @@ class PasqalCloud(RemoteConnection):
             wait=False,
             fetch_results=False,
         )
-        return RemoteResults(batch.id, self)
+        jobs_order = []
+        if job_params:
+            for job_dict in job_params:
+                for job in batch.jobs.values():
+                    if (
+                        job.id not in jobs_order
+                        and job_dict["runs"] == job.runs
+                        and job_dict.get("variables", None) == job.variables
+                    ):
+                        jobs_order.append(job.id)
+                        break
+                else:
+                    raise RuntimeError(
+                        f"Failed to find job ID for {job_dict}."
+                    )
 
-    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
+        return RemoteResults(batch.id, self, jobs_order or None)
+
+    def _fetch_result(
+        self, submission_id: str, jobs_order: list[str] | None
+    ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
         batch = self._sdk_connection.get_batch(
             id=submission_id, fetch_results=True
@@ -128,7 +168,13 @@ class PasqalCloud(RemoteConnection):
         meas_basis = seq_builder.get_measurement_basis()
 
         results = []
-        for job in batch.jobs.values():
+
+        jobs = (
+            (batch.jobs[job_id] for job_id in jobs_order)
+            if jobs_order
+            else batch.jobs.values()
+        )
+        for job in jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:

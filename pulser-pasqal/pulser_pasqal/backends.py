@@ -57,34 +57,29 @@ class PasqalEmulator(RemoteBackend):
             )
 
     def run(
-        self, job_params: list[JobParams] | None = None
+        self, job_params: list[JobParams] = []
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Executes on the emulator backend through the Pasqal Cloud.
 
         Args:
-            job_params: An optional list of parameters for each job to execute.
-                Must be provided only when the sequence is parametrized as
-                a list of mappings, where each mapping contains one mapping
-                of variable names to values under the 'variables' field.
+            job_params: A list of parameters for each job to execute. Each
+                mapping must contain a defined 'runs' field specifying
+                the number of times to run the same sequence. If the sequence
+                is parametrized, the values for all the variables necessary
+                to build the sequence must be given in it's own mapping, for
+                each job, under the 'variables' field.
 
         Returns:
             The results, which can be accessed once all sequences have been
             successfully executed.
 
         """
-        needs_build = (
-            self._sequence.is_parametrized()
-            or self._sequence.is_register_mappable()
-        )
-        if job_params is None and needs_build:
+        suffix = f" when executing a sequence on {self.__class__.__name__}."
+        if not job_params:
+            raise ValueError("'job_params' must be specified" + suffix)
+        if any("runs" not in j for j in job_params):
             raise ValueError(
-                "When running a sequence that requires building, "
-                "'job_params' must be provided."
-            )
-        elif job_params and not needs_build:
-            raise ValueError(
-                "'job_params' cannot be provided when running built "
-                "sequences on an emulator backend."
+                "All elements of 'job_params' must specify 'runs'" + suffix
             )
 
         return self._connection.submit(
