@@ -155,6 +155,14 @@ class PasqalCloud(RemoteConnection):
 
         return RemoteResults(batch.id, self, jobs_order or None)
 
+    def fetch_available_devices(self) -> dict[str, Device]:
+        """Fetches the devices available through this connection."""
+        abstract_devices = self._sdk_connection.get_device_specs_dict()
+        return {
+            name: cast(Device, deserialize_device(dev_str))
+            for name, dev_str in abstract_devices.items()
+        }
+
     def _fetch_result(
         self, submission_id: str, jobs_order: list[str] | None
     ) -> tuple[Result, ...]:
