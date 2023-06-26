@@ -47,7 +47,7 @@ EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {
 }
 
 
-def _make_json_compatible(obj: Any):
+def _make_json_compatible(obj: Any) -> Any:
     """Makes an object compatible with JSON serialization.
 
     For now, simply converts Numpy arrays to lists, but more can be added
@@ -55,10 +55,10 @@ def _make_json_compatible(obj: Any):
     """
 
     class NumpyEncoder(json.JSONEncoder):
-        def default(self, o: Any) -> dict[str, Any]:
+        def default(self, o: Any) -> Any:
             if isinstance(o, np.ndarray):
                 return o.tolist()
-            return cast(dict, json.JSONEncoder.default(self, o))
+            return json.JSONEncoder.default(self, o)
 
     # Serializes with the custom encoder and then deserializes back
     return json.loads(json.dumps(obj, cls=NumpyEncoder))
