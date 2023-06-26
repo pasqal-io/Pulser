@@ -71,9 +71,9 @@ class PasqalCloud(RemoteConnection):
     QPUs.
 
     Args:
-        username: your username in the PASQAL cloud platform.
-        password: the password for your PASQAL cloud platform account.
-        group_id: the group_id associated to the account.
+        username: Your username in the PASQAL cloud platform.
+        password: The password for your PASQAL cloud platform account.
+        project_id: The project ID associated to the account.
         kwargs: Additional arguments to provide to the pasqal_cloud.SDK()
     """
 
@@ -81,14 +81,15 @@ class PasqalCloud(RemoteConnection):
         self,
         username: str = "",
         password: str = "",
-        group_id: str = "",
+        project_id: str = "",
         **kwargs: Any,
     ):
         """Initializes a connection to the Pasqal cloud platform."""
+        project_id_ = project_id or kwargs.pop("group_id", "")
         self._sdk_connection = pasqal_cloud.SDK(
             username=username,
             password=password,
-            group_id=group_id,
+            project_id=project_id_,
             **kwargs,
         )
 
@@ -119,6 +120,7 @@ class PasqalCloud(RemoteConnection):
                     "of the devices currently available through the remote "
                     "connection."
                 )
+            # TODO: Validate the register layout
 
         if sequence.is_parametrized() or sequence.is_register_mappable():
             for params in job_params:
@@ -135,7 +137,6 @@ class PasqalCloud(RemoteConnection):
             emulator=emulator,
             configuration=configuration,
             wait=False,
-            fetch_results=False,
         )
         jobs_order = []
         if job_params:
@@ -167,9 +168,7 @@ class PasqalCloud(RemoteConnection):
         self, submission_id: str, jobs_order: list[str] | None
     ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
-        batch = self._sdk_connection.get_batch(
-            id=submission_id, fetch_results=True
-        )
+        batch = self._sdk_connection.get_batch(id=submission_id)
         seq_builder = Sequence.from_abstract_repr(batch.sequence_builder)
         reg = seq_builder.get_register(include_mappable=True)
         all_qubit_ids = reg.qubit_ids
@@ -199,9 +198,7 @@ class PasqalCloud(RemoteConnection):
 
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
         """Gets the status of a submission from its ID."""
-        batch = self._sdk_connection.get_batch(
-            id=submission_id, fetch_results=False
-        )
+        batch = self._sdk_connection.get_batch(id=submission_id)
         return SubmissionStatus[batch.status]
 
     def _convert_configuration(
