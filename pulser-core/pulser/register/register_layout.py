@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
-from pulser.dmm import DetuningMap
+from pulser.register.weight_maps import DetuningMap
 from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId

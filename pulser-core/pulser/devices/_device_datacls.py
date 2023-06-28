@@ -25,7 +25,7 @@ from scipy.spatial.distance import pdist, squareform
 
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
-from pulser.dmm import DMM
+from pulser.channels.dmm import DMM
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId

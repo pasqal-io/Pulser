@@ -32,7 +32,7 @@ from typing import (
 import numpy as np
 from numpy.typing import ArrayLike
 
-from pulser.dmm import DetuningMap
+from pulser.register.weight_maps import DetuningMap
 from pulser.json.utils import obj_to_dict
 
 if TYPE_CHECKING:
