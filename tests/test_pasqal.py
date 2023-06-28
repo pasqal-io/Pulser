@@ -220,6 +220,18 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
             config=config,
         )
 
+    job_params[0]["runs"] = {10}
+    with pytest.raises(
+        TypeError, match="Object of type set is not JSON serializable"
+    ):
+        # Check that the decoder still fails on unsupported types
+        fixt.pasqal_cloud.submit(
+            seq,
+            job_params=job_params,
+            emulator=emulator,
+            config=config,
+        )
+
     assert isinstance(remote_results, RemoteResults)
     assert remote_results.get_status() == SubmissionStatus.DONE
     fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
@@ -311,7 +323,7 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
     sdk_config: EmuTNConfig | EmuFreeConfig
     if isinstance(emu, EmuTNBackend):
         emulator_type = EmulatorType.EMU_TN
-        sdk_config = EmuTNConfig()
+        sdk_config = EmuTNConfig(dt=1.0)
     else:
         emulator_type = EmulatorType.EMU_FREE
         sdk_config = EmuFreeConfig()
