@@ -204,7 +204,7 @@ class BaseDevice(ABC):
 
         # Turns mutable lists into immutable tuples
         for param in self._params():
-            if "channel" in param:
+            if "channel" in param or param == "dmm_objects":
                 object.__setattr__(self, param, to_tuple(getattr(self, param)))
 
     @property
@@ -441,7 +441,8 @@ class BaseDevice(ABC):
         return {
             "version": "1",
             "channels": ch_list,
-            "dmm_channels": dmm_list,
+            # TODO: Update JSON schema first
+            # "dmm_channels": dmm_list,
             **params,
         }
 

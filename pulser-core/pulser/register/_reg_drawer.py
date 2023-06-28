@@ -99,7 +99,7 @@ class RegDrawer:
                 marker="s",
                 s=1200,
                 alpha=0.2
-                * np.array(dmm_qubits.values())
+                * np.array(list(dmm_qubits.values()))
                 / max(dmm_qubits.values()),
                 c="black",
             )
@@ -136,7 +136,7 @@ class RegDrawer:
                         j += 1
                 # Sort qubits in plot_ids[i] according to masked status
                 det_map = [
-                    str(q) for q, weight in dmm_qubits.items() if weight > 0.0
+                    q for q, weight in dmm_qubits.items() if weight > 0.0
                 ]
                 plot_ids[i] = sorted(
                     plot_ids[i],
