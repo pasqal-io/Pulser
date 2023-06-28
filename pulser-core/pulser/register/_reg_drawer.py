@@ -18,7 +18,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np

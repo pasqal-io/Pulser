@@ -26,13 +26,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
-from pulser.register.weight_maps import DetuningMap
 from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
+from pulser.register.weight_maps import DetuningMap
 
 COORD_PRECISION = 6
 
