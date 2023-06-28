@@ -15,7 +15,8 @@
 """A pulse-level composer for neutral-atom quantum devices."""
 
 from pulser._version import __version__
-from pulser.backend import QPUBackend
 from pulser.pulse import Pulse
 from pulser.register import Register, Register3D
 from pulser.sequence import Sequence
+
+from pulser.backend import QPUBackend  # isort: skip

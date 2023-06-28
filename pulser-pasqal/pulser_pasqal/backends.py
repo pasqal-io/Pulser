@@ -112,9 +112,9 @@ class EmuTNBackend(PasqalEmulator):
         - sampling_rate
         - backend_options:
             - precision (str): The precision of the simulation. Can be "low",
-                "normal" or "high". Defaults to "normal".
+              "normal" or "high". Defaults to "normal".
             - max_bond_dim (int): The maximum bond dimension of the Matrix
-                Product State (MPS). Defaults to 500.
+              Product State (MPS). Defaults to 500.
 
     All other parameters should not be changed from their default values.
 
@@ -135,8 +135,8 @@ class EmuFreeBackend(PasqalEmulator):
 
     Configurable fields in EmulatorConfig:
         - backend_options:
-            -  with_noise (bool): Whether to add noise to the simulation.
-                Defaults to False.
+            - with_noise (bool): Whether to add noise to the simulation.
+              Defaults to False.
 
     All other parameters should not be changed from their default values.
 
