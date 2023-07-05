@@ -33,6 +33,7 @@ from pulser.json.abstract_repr.signatures import (
     UNARY_OPERATORS,
 )
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
+from pulser.json.utils import get_dataclass_defaults
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
@@ -292,6 +293,10 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
             try:
+                optional_keys = ("multiple_beam_control",)
+                optional = {
+                    key: data[key] for key in optional_keys if key in data
+                }
                 params["eom_config"] = RydbergEOM(
                     mod_bandwidth=data["mod_bandwidth"],
                     limiting_beam=RydbergBeam[data["limiting_beam"]],
@@ -300,6 +305,7 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
                     controlled_beams=tuple(
                         RydbergBeam[beam] for beam in data["controlled_beams"]
                     ),
+                    **optional,
                 )
             except ValueError as e:
                 raise AbstractReprError(
@@ -344,8 +350,11 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
     ex_params = ("channel_objects", "channel_ids")
-    for param in dataclasses.fields(device_cls):
-        if not param.init or param.name in ex_params:
+    device_fields = dataclasses.fields(device_cls)
+    device_defaults = get_dataclass_defaults(device_fields)
+    for param in device_fields:
+        use_default = param.name not in obj and param.name in device_defaults
+        if not param.init or param.name in ex_params or use_default:
             continue
         if param.name == "pre_calibrated_layouts":
             key = "pre_calibrated_layouts"

@@ -26,7 +26,7 @@ from scipy.spatial.distance import pdist, squareform
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
-from pulser.json.utils import obj_to_dict
+from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
@@ -61,6 +61,8 @@ class BaseDevice(ABC):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        max_sequence_duration: The maximum allowed duration for a sequence
+            (in ns).
     """
     name: str
     dimensions: DIMENSIONS
@@ -71,6 +73,7 @@ class BaseDevice(ABC):
     interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
     max_layout_filling: float = 0.5
+    max_sequence_duration: float | None = None
     reusable_channels: bool = field(default=False, init=False)
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
@@ -102,6 +105,7 @@ class BaseDevice(ABC):
             "min_atom_distance",
             "max_atom_num",
             "max_radial_distance",
+            "max_sequence_duration",
         ):
             value = getattr(self, param)
             if param in self._optional_parameters:
@@ -195,7 +199,7 @@ class BaseDevice(ABC):
     @property
     @abstractmethod
     def _optional_parameters(self) -> tuple[str, ...]:
-        pass
+        return ("max_sequence_duration",)
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -407,9 +411,14 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
         ex_params = ("channel_objects", "channel_ids")
+        optional_fields = ("max_sequence_duration",)
+        defaults = get_dataclass_defaults(fields(self))
         params = self._params()
         for p in ex_params:
             params.pop(p, None)
+        for p in optional_fields:
+            if params[p] == defaults[p]:
+                params.pop(p, None)
         ch_list = []
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
@@ -472,7 +481,7 @@ class Device(BaseDevice):
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
-        return ()
+        return super()._optional_parameters
 
     @property
     def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
@@ -594,7 +603,10 @@ class VirtualDevice(BaseDevice):
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
-        return ("max_atom_num", "max_radial_distance")
+        return tuple(
+            list(super()._optional_parameters)
+            + ["max_atom_num", "max_radial_distance"]
+        )
 
     def change_rydberg_level(self, ryd_lvl: int) -> None:
         r"""Changes the Rydberg level used in the Device.

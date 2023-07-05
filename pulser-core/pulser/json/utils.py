@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import Field, MISSING
+from dataclasses import MISSING, Field
 from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 import pulser

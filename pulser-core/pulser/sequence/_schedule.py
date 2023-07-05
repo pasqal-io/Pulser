@@ -248,6 +248,10 @@ class _ChannelSchedule:
 
 
 class _Schedule(Dict[str, _ChannelSchedule]):
+    def __init__(self, max_duration: int | None = None):
+        self.max_duration = max_duration
+        super().__init__()
+
     def get_duration(
         self, channel: Optional[str] = None, include_fall_time: bool = False
     ) -> int:
@@ -373,12 +377,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         ti = t0 + delay_duration
         tf = ti + pulse.duration
+        self._check_duration(tf)
         self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
 
     def add_delay(self, duration: int, channel: str) -> None:
         last = self[channel][-1]
         ti = last.tf
         tf = ti + self[channel].channel_obj.validate_duration(duration)
+        self._check_duration(tf)
         if (
             self[channel].in_eom_mode()
             and self[channel].eom_blocks[-1].detuning_off != 0
@@ -416,7 +422,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         else:
             ti = -1
             tf = 0
-
+        self._check_duration(tf)
         self[channel].slots.append(
             _TimeSlot("target", ti, tf, set(qubits_set))
         )
@@ -468,3 +474,10 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         except RuntimeError:
             phase = 0.0
         return phase
+
+    def _check_duration(self, t: int) -> None:
+        if self.max_duration is not None and t > self.max_duration:
+            raise RuntimeError(
+                "The sequence's duration exceeded the maximum duration allowed"
+                f" by the device ({self.max_duration} ns)."
+            )

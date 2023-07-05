@@ -124,7 +124,9 @@ class Sequence(Generic[DeviceType]):
         self._calls: list[_Call] = [
             _Call("__init__", (), {"register": register, "device": device})
         ]
-        self._schedule: _Schedule = _Schedule()
+        self._schedule: _Schedule = _Schedule(
+            max_duration=device.max_sequence_duration
+        )
         self._basis_ref: dict[str, dict[QubitId, _QubitRef]] = {}
         # IDs of all qubits in device
         self._qids: set[QubitId] = set(self._register.qubit_ids)
