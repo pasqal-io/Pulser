@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import warnings
+from dataclasses import Field, MISSING
 from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 import pulser
@@ -23,6 +24,17 @@ from pulser.json.exceptions import AbstractReprError
 
 if TYPE_CHECKING:  # pragma: no cover
     from pulser.register import QubitId
+
+
+def get_dataclass_defaults(fields: tuple[Field, ...]) -> dict[str, Any]:
+    """Gets the defaults for the fields that have them."""
+    defaults = {}
+    for field in fields:
+        if field.default is not MISSING:
+            defaults[field.name] = field.default
+        elif field.default_factory is not MISSING:
+            defaults[field.name] = field.default_factory()
+    return defaults
 
 
 def obj_to_dict(

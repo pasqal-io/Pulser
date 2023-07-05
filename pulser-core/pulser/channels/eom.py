@@ -21,7 +21,7 @@ from typing import Any, cast
 
 import numpy as np
 
-from pulser.json.utils import obj_to_dict
+from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 
 # Conversion factor from modulation bandwith to rise time
 # For more info, see https://tinyurl.com/bdeumc8k
@@ -79,7 +79,15 @@ class BaseEOM:
         return obj_to_dict(self, **params)
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        return {f.name: getattr(self, f.name) for f in fields(self)}
+        all_fields = fields(self)
+        params = {}
+        defaults = get_dataclass_defaults(all_fields)
+        for f in all_fields:
+            value = getattr(self, f.name)
+            if f.name in defaults and value == defaults[f.name]:
+                continue
+            params[f.name] = value
+        return params
 
 
 @dataclass(frozen=True)
@@ -94,12 +102,15 @@ class RydbergEOM(BaseEOM):
             in rad/µs.
         intermediate_detuning: The detuning between the two beams, in rad/µs.
         controlled_beams: The beams that can be switched on/off with an EOM.
+        multiple_beam_control: Whether both EOMs can be used simulatenously.
+            Ignored when only one beam can be controlled.
     """
 
     limiting_beam: RydbergBeam
     max_limiting_amp: float  # rad/µs
     intermediate_detuning: float  # rad/µs
     controlled_beams: tuple[RydbergBeam, ...]
+    multiple_beam_control: bool = True
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -163,8 +174,9 @@ class RydbergEOM(BaseEOM):
                 self._lightshift(rabi_frequency, beam)
                 for beam in self.controlled_beams
             ]
-            # Case where both beams are off ie (OFF, OFF) -> no lightshift
-            lightshifts.append(0.0)
+            if self.multiple_beam_control:
+                # Case where both beams are off ie (OFF, OFF) -> no lightshift
+                lightshifts.append(0.0)
 
         # We sum the offset to all lightshifts to get the effective detuning
         return np.array(lightshifts) + offset
