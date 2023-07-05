@@ -317,8 +317,11 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         channel_cls = Microwave
     # No other basis allowed by the schema
 
-    for param in dataclasses.fields(channel_cls):
-        if param.init and param.name != "eom_config":
+    channel_fields = dataclasses.fields(channel_cls)
+    channel_defaults = get_dataclass_defaults(channel_fields)
+    for param in channel_fields:
+        use_default = param.name not in obj and param.name in channel_defaults
+        if param.init and param.name != "eom_config" and not use_default:
             params[param.name] = obj[param.name]
     try:
         return channel_cls(**params)

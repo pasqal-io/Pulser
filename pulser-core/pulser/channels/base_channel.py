@@ -25,7 +25,7 @@ from numpy.typing import ArrayLike
 from scipy.fft import fft, fftfreq, ifft
 
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM
-from pulser.json.utils import obj_to_dict
+from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.pulse import Pulse
 
 # Warnings of adjusted waveform duration appear just once
@@ -55,6 +55,8 @@ class Channel(ABC):
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
+        min_amp_area: The minimum area of a pulse's amplitude waveform
+            (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
 
@@ -72,6 +74,7 @@ class Channel(ABC):
     clock_period: int = 1  # ns
     min_duration: int = 1  # ns
     max_duration: Optional[int] = int(1e8)  # ns
+    min_amp_area: int = 0
     mod_bandwidth: Optional[float] = None  # MHz
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
 
@@ -356,6 +359,12 @@ class Channel(ABC):
                 "The pulse's detuning values go out of the range "
                 "allowed for the chosen channel."
             )
+        amp_area = pulse.amplitude.integral
+        if 0 < amp_area < self.min_amp_area:
+            raise ValueError(
+                "The pulse's amplitude area is below the chosen "
+                f"channel's limit ({self.min_amp_area})."
+            )
 
     @property
     def _modulation_padding(self) -> int:
@@ -524,5 +533,11 @@ class Channel(ABC):
         return obj_to_dict(self, _module=_module, **params)
 
     def _to_abstract_repr(self, id: str) -> dict[str, Any]:
-        params = {f.name: getattr(self, f.name) for f in fields(self)}
+        all_fields = fields(self)
+        optional_fields = ("min_amp_area",)
+        defaults = get_dataclass_defaults(all_fields)
+        params = {f.name: getattr(self, f.name) for f in all_fields}
+        for p in optional_fields:
+            if params[p] == defaults[p]:
+                params.pop(p, None)
         return {"id": id, "basis": self.basis, **params}
