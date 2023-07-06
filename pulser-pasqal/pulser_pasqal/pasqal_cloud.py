@@ -20,6 +20,7 @@ import warnings
 from dataclasses import fields
 from typing import Any, Optional, Type, cast
 
+import backoff
 import numpy as np
 import pasqal_cloud
 from pasqal_cloud.device.configuration import (
@@ -45,6 +46,12 @@ EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {
     pasqal_cloud.EmulatorType.EMU_FREE: EmuFreeConfig,
     pasqal_cloud.EmulatorType.EMU_TN: EmuTNConfig,
 }
+
+MAX_CLOUD_ATTEMPTS = 5
+
+backoff_decorator = backoff.on_exception(
+    backoff.fibo, Exception, max_tries=MAX_CLOUD_ATTEMPTS, max_value=60
+)
 
 
 def _make_json_compatible(obj: Any) -> Any:
@@ -130,8 +137,8 @@ class PasqalCloud(RemoteConnection):
         configuration = self._convert_configuration(
             config=kwargs.get("config", None), emulator=emulator
         )
-
-        batch = self._sdk_connection.create_batch(
+        create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
+        batch = create_batch_fn(
             serialized_sequence=sequence.to_abstract_repr(),
             jobs=job_params or [],  # type: ignore[arg-type]
             emulator=emulator,
@@ -156,6 +163,7 @@ class PasqalCloud(RemoteConnection):
 
         return RemoteResults(batch.id, self, jobs_order or None)
 
+    @backoff_decorator
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
         abstract_devices = self._sdk_connection.get_device_specs_dict()
@@ -168,7 +176,8 @@ class PasqalCloud(RemoteConnection):
         self, submission_id: str, jobs_order: list[str] | None
     ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
-        batch = self._sdk_connection.get_batch(id=submission_id)
+        get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
+        batch = get_batch_fn(id=submission_id)
         seq_builder = Sequence.from_abstract_repr(batch.sequence_builder)
         reg = seq_builder.get_register(include_mappable=True)
         all_qubit_ids = reg.qubit_ids
@@ -196,6 +205,7 @@ class PasqalCloud(RemoteConnection):
             )
         return tuple(results)
 
+    @backoff_decorator
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
         """Gets the status of a submission from its ID."""
         batch = self._sdk_connection.get_batch(id=submission_id)
