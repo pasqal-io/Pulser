@@ -113,11 +113,13 @@ class Channel(ABC):
             "min_duration",
             "max_duration",
             "mod_bandwidth",
+            "min_amp_area",
         ]
         non_negative = [
             "max_abs_detuning",
             "min_retarget_interval",
             "fixed_retarget_t",
+            "min_amp_area",
         ]
         local_only = [
             "min_retarget_interval",

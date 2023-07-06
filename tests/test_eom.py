@@ -91,8 +91,10 @@ def test_bad_controlled_beam(params):
     assert RydbergEOM(**params).controlled_beams == tuple(RydbergBeam)
 
 
+@pytest.mark.parametrize("multiple_beam_control", [True, False])
 @pytest.mark.parametrize("limit_amp_fraction", [0.5, 2])
-def test_detuning_off(limit_amp_fraction, params):
+def test_detuning_off(multiple_beam_control, limit_amp_fraction, params):
+    params["multiple_beam_control"] = multiple_beam_control
     eom = RydbergEOM(**params)
     limit_amp = params["max_limiting_amp"] ** 2 / (
         2 * params["intermediate_detuning"]
@@ -119,14 +121,18 @@ def test_detuning_off(limit_amp_fraction, params):
     assert eom._lightshift(amp, *RydbergBeam) == -zero_det
     assert eom._lightshift(amp) == 0.0
     det_off_options = eom.detuning_off_options(amp, detuning_on)
+    assert len(det_off_options) == 2 + multiple_beam_control
     det_off_options.sort()
     assert det_off_options[0] < zero_det  # RED on
-    assert det_off_options[1] == zero_det  # All off
-    assert det_off_options[2] > zero_det  # BLUE on
+    next_ = 1
+    if multiple_beam_control:
+        assert det_off_options[next_] == zero_det  # All off
+        next_ += 1
+    assert det_off_options[next_] > zero_det  # BLUE on
 
     # Case where the EOM pulses are off-resonant
     detuning_on = 1.0
-    for beam, ind in [(RydbergBeam.RED, 2), (RydbergBeam.BLUE, 0)]:
+    for beam, ind in [(RydbergBeam.RED, next_), (RydbergBeam.BLUE, 0)]:
         # When only one beam is controlled, there is a single
         # detuning_off option
         params["controlled_beams"] = (beam,)
