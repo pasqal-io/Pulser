@@ -55,7 +55,7 @@ class PasqalEmulator(RemoteBackend):
             )
 
     def run(
-        self, job_params: list[JobParams] = []
+        self, job_params: list[JobParams] | None = None
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Executes on the emulator backend through the Pasqal Cloud.
 
