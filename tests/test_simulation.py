@@ -119,31 +119,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
         )
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.011)
     sampled_seq = sampler.sample(seq)
-    print(
-        [
-            len(sim.samples_obj.channel_samples[ch].amp)
-            for ch in sampled_seq.channels
-        ]
-    )
-    print(
-        [
-            len(sampled_seq.channel_samples[ch].amp)
-            for ch in sampled_seq.channels
-        ]
-    )
     ext_sampled_seq = sampled_seq.extend_duration(sampled_seq.max_duration + 1)
-    print(
-        [
-            len(sim.samples_obj.channel_samples[ch].amp)
-            for ch in sampled_seq.channels
-        ]
-    )
-    print(
-        [
-            len(ext_sampled_seq.channel_samples[ch].amp)
-            for ch in sampled_seq.channels
-        ]
-    )
     assert np.all(
         [
             np.equal(
@@ -510,8 +486,8 @@ def test_run(seq, patch_plt_show):
             DeprecationWarning, match="The `Simulation` class is deprecated"
         ):
             _sim = Simulation(seq, sampling_rate=0.01)
-        _sim.initial_state = good_initial_array
-        _sim.initial_state
+        _sim.initial_state = good_initial_qobj
+        assert _sim.initial_state == good_initial_qobj
 
     sim.set_initial_state(good_initial_array)
     sim.run()
@@ -581,7 +557,11 @@ def test_eval_times(seq):
         ):
             _sim = Simulation(seq, sampling_rate=1.0)
         _sim.evaluation_times = "Full"
-        _sim.evaluation_times
+        assert np.array_equal(
+            _sim.evaluation_times,
+            np.union1d(_sim.sampling_times, [0.0, _sim._tot_duration / 1000]),
+        )
+        assert _sim._eval_times_instruction == "Full"
 
     sim.set_evaluation_times("Full")
     assert sim._eval_times_instruction == "Full"
@@ -1261,7 +1241,6 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
         DeprecationWarning, match="The `Simulation` class is deprecated"
     ):
         _sim = Simulation(seq, with_modulation=True, config=sim_config)
-        _sim.run()
 
     with pytest.raises(
         ValueError,

@@ -22,7 +22,7 @@ from qutip.piqs import isdiagonal
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.waveforms import BlackmanWaveform
-from pulser_simulation import QutipEmulator, SimConfig, Simulation
+from pulser_simulation import QutipEmulator, SimConfig
 from pulser_simulation.simresults import CoherentResults, NoisyResults
 
 
@@ -108,7 +108,7 @@ def test_initialization(results):
 
 @pytest.mark.parametrize("noisychannel", [True, False])
 def test_get_final_state(
-    noisychannel, sim: Simulation, results, reg, pi_pulse
+    noisychannel, sim: QutipEmulator, results, reg, pi_pulse
 ):
     if noisychannel:
         sim.add_config(SimConfig(noise="dephasing", dephasing_prob=0.01))
