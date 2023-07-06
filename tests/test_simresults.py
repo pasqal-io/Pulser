@@ -22,7 +22,7 @@ from qutip.piqs import isdiagonal
 from pulser import Pulse, Register, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.waveforms import BlackmanWaveform
-from pulser_simulation import SimConfig, Simulation
+from pulser_simulation import QutipEmulator, SimConfig, Simulation
 from pulser_simulation.simresults import CoherentResults, NoisyResults
 
 
@@ -52,7 +52,7 @@ def seq_no_meas(reg, pi_pulse):
 def sim(seq_no_meas):
     seq_no_meas.measure("ground-rydberg")
     np.random.seed(123)
-    return Simulation(seq_no_meas)
+    return QutipEmulator.from_sequence(seq_no_meas)
 
 
 @pytest.fixture
@@ -147,7 +147,7 @@ def test_get_final_state(
     seq_.add(pi_pulse, "ram")
     seq_.add(pi_pulse, "ryd")
 
-    sim_ = Simulation(seq_)
+    sim_ = QutipEmulator.from_sequence(seq_)
     results_ = sim_.run()
     results_ = cast(CoherentResults, results_)
 
@@ -180,7 +180,7 @@ def test_get_final_state_noisy(reg, pi_pulse):
     seq_.declare_channel("ram", "raman_local", initial_target="A")
     seq_.add(pi_pulse, "ram")
     noisy_config = SimConfig(noise=("SPAM", "doppler"))
-    sim_noisy = Simulation(seq_, config=noisy_config)
+    sim_noisy = QutipEmulator.from_sequence(seq_, config=noisy_config)
     res3 = sim_noisy.run()
     res3._meas_basis = "digital"
     final_state = res3.get_final_state()
@@ -229,7 +229,7 @@ def test_expect(results, pi_pulse, reg):
     seq_single = Sequence(reg_single, Chadoq2)
     seq_single.declare_channel("ryd", "rydberg_global")
     seq_single.add(pi_pulse, "ryd")
-    sim_single = Simulation(seq_single)
+    sim_single = QutipEmulator.from_sequence(seq_single)
     results_single = sim_single.run()
     op = [qutip.basis(2, 0).proj()]
     exp = results_single.expect(op)[0]
@@ -242,10 +242,6 @@ def test_expect(results, pi_pulse, reg):
 
     config = SimConfig(noise="SPAM", eta=0)
     sim_single.set_config(config)
-    with pytest.warns(
-        DeprecationWarning, match="Setting `evaluation_times` is deprecated"
-    ):
-        sim_single.evaluation_times = "Minimal"
     sim_single.set_evaluation_times("Minimal")
     results_single = sim_single.run()
     exp = results_single.expect(op)[0]
@@ -268,7 +264,7 @@ def test_expect(results, pi_pulse, reg):
     seq3dim.declare_channel("ram", "raman_local", initial_target="A")
     seq3dim.add(pi_pulse, "ram")
     seq3dim.add(pi_pulse, "ryd")
-    sim3dim = Simulation(seq3dim)
+    sim3dim = QutipEmulator.from_sequence(seq3dim)
     exp3dim = sim3dim.run().expect(
         [qutip.tensor(qutip.basis(3, 0).proj(), qutip.qeye(3))]
     )
@@ -293,7 +289,9 @@ def test_plot(results_noisy, results):
 
 def test_sim_without_measurement(seq_no_meas):
     assert not seq_no_meas.is_measured()
-    sim_no_meas = Simulation(seq_no_meas, config=SimConfig(runs=1))
+    sim_no_meas = QutipEmulator.from_sequence(
+        seq_no_meas, config=SimConfig(runs=1)
+    )
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
         {"00": 80, "01": 164, "10": 164, "11": 592}
@@ -313,13 +311,13 @@ def test_sample_final_state(results):
 def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
     seq_no_meas.declare_channel("raman", "raman_local", "B")
     seq_no_meas.add(pi_pulse, "raman")
-    res_3level = Simulation(seq_no_meas).run()
+    res_3level = QutipEmulator.from_sequence(seq_no_meas).run()
     # Raman pi pulse on one atom will not affect other,
     # even with global pi on rydberg
     assert len(res_3level.sample_final_state()) == 2
 
     seq_no_meas.measure("ground-rydberg")
-    res_3level_gb = Simulation(seq_no_meas).run()
+    res_3level_gb = QutipEmulator.from_sequence(seq_no_meas).run()
     sampling_three_levelB = res_3level_gb.sample_final_state()
     # Rydberg will affect both:
     assert len(sampling_three_levelB) == 4
@@ -330,7 +328,7 @@ def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
         {"11": 772, "10": 190, "01": 161, "00": 111}
     )
-    res_3level = Simulation(
+    res_3level = QutipEmulator.from_sequence(
         seq_no_meas, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
     )
     final_state = res_3level.run().states[-1]
@@ -355,7 +353,7 @@ def test_results_xy(reg, pi_pulse):
     seq_.add(pi_pulse, "ch0")
     seq_.measure("XY")
 
-    sim_ = Simulation(seq_)
+    sim_ = QutipEmulator.from_sequence(seq_)
     results_ = sim_.run()
 
     assert results_._dim == 2

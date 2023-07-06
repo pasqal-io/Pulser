@@ -118,7 +118,59 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
             MockDevice,
         )
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.011)
-    assert sim._seq == seq
+    sampled_seq = sampler.sample(seq)
+    print(
+        [
+            len(sim.samples_obj.channel_samples[ch].amp)
+            for ch in sampled_seq.channels
+        ]
+    )
+    print(
+        [
+            len(sampled_seq.channel_samples[ch].amp)
+            for ch in sampled_seq.channels
+        ]
+    )
+    ext_sampled_seq = sampled_seq.extend_duration(sampled_seq.max_duration + 1)
+    print(
+        [
+            len(sim.samples_obj.channel_samples[ch].amp)
+            for ch in sampled_seq.channels
+        ]
+    )
+    print(
+        [
+            len(ext_sampled_seq.channel_samples[ch].amp)
+            for ch in sampled_seq.channels
+        ]
+    )
+    assert np.all(
+        [
+            np.equal(
+                sim.samples_obj.channel_samples[ch].amp,
+                ext_sampled_seq.channel_samples[ch].amp,
+            )
+            for ch in sampled_seq.channels
+        ]
+    )
+    assert np.all(
+        [
+            np.equal(
+                sim.samples_obj.channel_samples[ch].det,
+                ext_sampled_seq.channel_samples[ch].det,
+            )
+            for ch in sampled_seq.channels
+        ]
+    )
+    assert np.all(
+        [
+            np.equal(
+                sim.samples_obj.channel_samples[ch].phase,
+                ext_sampled_seq.channel_samples[ch].phase,
+            )
+            for ch in sampled_seq.channels
+        ]
+    )
     assert sim._qdict == seq.qubit_info
     assert sim._size == len(seq.qubit_info)
     assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
@@ -161,10 +213,6 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
 
 
 def test_extraction_of_sequences(seq):
-    with pytest.warns(
-        DeprecationWarning, match="The `Simulation` class is deprecated"
-    ):
-        sim = Simulation(seq)
     sim = QutipEmulator.from_sequence(seq)
     for channel in seq.declared_channels:
         addr = seq.declared_channels[channel].addressing
@@ -458,7 +506,12 @@ def test_run(seq, patch_plt_show):
     with pytest.warns(
         DeprecationWarning, match="Setting `initial_state` is deprecated"
     ):
-        sim.initial_state = good_initial_array
+        with pytest.warns(
+            DeprecationWarning, match="The `Simulation` class is deprecated"
+        ):
+            _sim = Simulation(seq, sampling_rate=0.01)
+        _sim.initial_state = good_initial_array
+        _sim.initial_state
 
     sim.set_initial_state(good_initial_array)
     sim.run()
@@ -467,8 +520,11 @@ def test_run(seq, patch_plt_show):
     sim.set_initial_state(good_initial_qobj_no_dims)
     sim.run()
     seq.measure("ground-rydberg")
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
+    sim.set_initial_state(good_initial_qobj_no_dims)
+
     sim.run()
-    assert sim._seq._measurement == "ground-rydberg"
+    assert sim.samples_obj._measurement == "ground-rydberg"
 
     sim.run(progress_bar=True)
     sim.run(progress_bar=False)
@@ -520,7 +576,13 @@ def test_eval_times(seq):
     with pytest.warns(
         DeprecationWarning, match="Setting `evaluation_times` is deprecated"
     ):
-        sim.evaluation_times = "Full"
+        with pytest.warns(
+            DeprecationWarning, match="The `Simulation` class is deprecated"
+        ):
+            _sim = Simulation(seq, sampling_rate=1.0)
+        _sim.evaluation_times = "Full"
+        _sim.evaluation_times
+
     sim.set_evaluation_times("Full")
     assert sim._eval_times_instruction == "Full"
     np.testing.assert_almost_equal(
@@ -896,10 +958,11 @@ def test_run_xy():
     sim.set_initial_state(good_initial_qobj)
     sim.run()
 
-    assert not hasattr(sim._seq, "_measurement")
+    assert not sim.samples_obj._measurement
     simple_seq.measure(basis="XY")
+    sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
     sim.run()
-    assert sim._seq._measurement == "XY"
+    assert sim.samples_obj._measurement == "XY"
 
 
 def test_noisy_xy():
@@ -945,7 +1008,8 @@ def test_mask_nopulses():
         sim_empty = QutipEmulator.from_sequence(seq_empty)
 
         assert seq_empty._slm_mask_time == []
-        assert sim_empty._seq._slm_mask_time == []
+        assert sampler.sample(seq_empty)._slm_mask.end == 0
+        assert sim_empty.samples_obj._slm_mask.end == 0
 
 
 def test_mask_equals_remove():
@@ -1193,13 +1257,20 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
         np.testing.assert_allclose(
             rydberg_samples[qid]["phase"][time_slice], pulse1.phase
         )
+    with pytest.warns(
+        DeprecationWarning, match="The `Simulation` class is deprecated"
+    ):
+        _sim = Simulation(seq, with_modulation=True, config=sim_config)
+        _sim.run()
 
     with pytest.raises(
         ValueError,
         match="Can't draw the interpolation points when the sequence "
         "is modulated",
     ):
-        sim.draw(draw_interp_pts=True)
+        _sim.draw(draw_interp_pts=True)
 
+    with patch("matplotlib.pyplot.savefig"):
+        _sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     # Drawing with modulation
     sim.draw()
