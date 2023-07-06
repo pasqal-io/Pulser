@@ -63,6 +63,8 @@ class BaseDevice(ABC):
             with atoms.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
+        max_runs: The maximum number of runs allowed on the device. Only used
+            for backend execution.
     """
     name: str
     dimensions: DIMENSIONS
@@ -73,7 +75,8 @@ class BaseDevice(ABC):
     interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
     max_layout_filling: float = 0.5
-    max_sequence_duration: float | None = None
+    max_sequence_duration: int | None = None
+    max_runs: int | None = None
     reusable_channels: bool = field(default=False, init=False)
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
@@ -106,6 +109,7 @@ class BaseDevice(ABC):
             "max_atom_num",
             "max_radial_distance",
             "max_sequence_duration",
+            "max_runs",
         ):
             value = getattr(self, param)
             if param in self._optional_parameters:
@@ -199,7 +203,7 @@ class BaseDevice(ABC):
     @property
     @abstractmethod
     def _optional_parameters(self) -> tuple[str, ...]:
-        return ("max_sequence_duration",)
+        return ("max_sequence_duration", "max_runs")
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -411,7 +415,7 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
         ex_params = ("channel_objects", "channel_ids")
-        optional_fields = ("max_sequence_duration",)
+        optional_fields = ("max_sequence_duration", "max_runs")
         defaults = get_dataclass_defaults(fields(self))
         params = self._params()
         for p in ex_params:
