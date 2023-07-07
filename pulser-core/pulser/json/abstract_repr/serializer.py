@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import inspect
 import json
-from pathlib import Path
 from itertools import chain
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from typing import Sequence as abcSequence
 from typing import Union, cast
