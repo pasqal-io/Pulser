@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type, Union, cast, overload
 
 import jsonschema
@@ -28,6 +27,7 @@ from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import Device, VirtualDevice
+from pulser.json.abstract_repr.serializer import resolver, schemas
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
@@ -57,17 +57,6 @@ if TYPE_CHECKING:
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 ExpReturnType = Union[int, float, ParamObj]
-
-schemas_path = Path(__file__).parent / "schemas"
-schemas = {}
-for obj_type in ("device", "sequence"):
-    with open(schemas_path / f"{obj_type}-schema.json") as f:
-        schemas[obj_type] = json.load(f)
-
-resolver = jsonschema.validators.RefResolver(
-    base_uri=f"{schemas_path.resolve().as_uri()}/",
-    referrer=schemas["sequence"],
-)
 
 
 @overload
