@@ -12,3 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Serialization and deserialization tools for the abstract representation."""
+import json
+from pathlib import Path
+
+import jsonschema
+
+SCHEMAS_PATH = Path(__file__).parent / "schemas"
+SCHEMAS = {}
+for obj_type in ("device", "sequence"):
+    with open(SCHEMAS_PATH / f"{obj_type}-schema.json") as f:
+        SCHEMAS[obj_type] = json.load(f)
+
+RESOLVER = jsonschema.validators.RefResolver(
+    base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
+    referrer=SCHEMAS["sequence"],
+)

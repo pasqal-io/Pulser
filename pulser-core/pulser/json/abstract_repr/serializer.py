@@ -17,32 +17,20 @@ from __future__ import annotations
 import inspect
 import json
 from itertools import chain
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from typing import Sequence as abcSequence
 from typing import Union, cast
 
-import jsonschema
 import numpy as np
 
 from pulser.json.abstract_repr.signatures import SIGNATURES
+from pulser.json.abstract_repr.validation import validate
 from pulser.json.exceptions import AbstractReprError
 from pulser.register.base_register import QubitId
 
 if TYPE_CHECKING:
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
-
-schemas_path = Path(__file__).parent / "schemas"
-schemas = {}
-for obj_type in ("device", "sequence"):
-    with open(schemas_path / f"{obj_type}-schema.json") as f:
-        schemas[obj_type] = json.load(f)
-
-resolver = jsonschema.validators.RefResolver(
-    base_uri=f"{schemas_path.resolve().as_uri()}/",
-    referrer=schemas["sequence"],
-)
 
 
 class AbstractReprEncoder(json.JSONEncoder):
@@ -305,11 +293,8 @@ def serialize_abstract_sequence(
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 
-    abstr_seq_txt = json.dumps(
+    abstr_seq_str = json.dumps(
         res, cls=AbstractReprEncoder, **json_dumps_options
     )
-    abstr_seq_dict = json.loads(abstr_seq_txt)
-    jsonschema.validate(
-        instance=abstr_seq_dict, schema=schemas["sequence"], resolver=resolver
-    )
-    return abstr_seq_txt
+    validate(abstr_seq_str, "sequence")
+    return abstr_seq_str

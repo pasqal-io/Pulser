@@ -20,13 +20,13 @@ from collections import Counter
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, cast, get_args
 
-import jsonschema
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
-from pulser.json.abstract_repr.serializer import AbstractReprEncoder, schemas
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
@@ -418,11 +418,9 @@ class BaseDevice(ABC):
 
     def to_abstract_repr(self) -> str:
         """Serializes the Sequence into an abstract JSON object."""
-        abstr_dev_txt = json.dumps(self, cls=AbstractReprEncoder)
-        abstr_dev_dict = json.loads(abstr_dev_txt)
-        # Validate the format of the data against the JSON schema.
-        jsonschema.validate(instance=abstr_dev_dict, schema=schemas["device"])
-        return abstr_dev_txt
+        abstr_dev_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate(abstr_dev_str, "device")
+        return abstr_dev_str
 
 
 @dataclass(frozen=True, repr=False)

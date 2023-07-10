@@ -27,11 +27,11 @@ from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import Device, VirtualDevice
-from pulser.json.abstract_repr.serializer import resolver, schemas
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
 )
+from pulser.json.abstract_repr.validation import validate
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
@@ -359,13 +359,9 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     Returns:
         Sequence: The Pulser sequence.
     """
-    obj = json.loads(obj_str)
-
     # Validate the format of the data against the JSON schema.
-    jsonschema.validate(
-        instance=obj, schema=schemas["sequence"], resolver=resolver
-    )
-
+    validate(obj_str, "sequence")
+    obj = json.loads(obj_str)
     # Device
     if isinstance(obj["device"], str):
         device_name = obj["device"]
@@ -451,10 +447,9 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
         raise DeserializeDeviceError from type_error
 
     try:
-        obj = json.loads(obj_str)
         # Validate the format of the data against the JSON schema.
-        jsonschema.validate(instance=obj, schema=schemas["device"])
-        return _deserialize_device_object(obj)
+        validate(obj_str, "device")
+        return _deserialize_device_object(json.loads(obj_str))
     except (
         json.JSONDecodeError,  # From json.loads
         jsonschema.exceptions.ValidationError,  # From jsonschema.validate

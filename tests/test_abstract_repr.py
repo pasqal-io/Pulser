@@ -26,10 +26,10 @@ import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.devices import Chadoq2, Device, IroiseMVP, MockDevice
+from pulser.json.abstract_repr import RESOLVER
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_device,
-    resolver,
 )
 from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
@@ -193,7 +193,7 @@ def validate_schema(instance):
         "pulser-core/pulser/json/abstract_repr/schemas/" "sequence-schema.json"
     ) as f:
         schema = json.load(f)
-    jsonschema.validate(instance=instance, schema=schema, resolver=resolver)
+    jsonschema.validate(instance=instance, schema=schema, resolver=RESOLVER)
 
 
 class TestSerialization:
