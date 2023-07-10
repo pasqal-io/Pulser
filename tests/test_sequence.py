@@ -1547,3 +1547,17 @@ def test_eom_buffer(
             if non_zero_detuning_off
             else "delay"
         )
+
+
+def test_max_duration(reg, mod_device):
+    dev_ = dataclasses.replace(mod_device, max_sequence_duration=100)
+    seq = Sequence(reg, dev_)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.delay(100, "ch0")
+    catch_statement = pytest.raises(
+        RuntimeError, match="duration exceeded the maximum duration allowed"
+    )
+    with catch_statement:
+        seq.delay(16, "ch0")
+    with catch_statement:
+        seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
