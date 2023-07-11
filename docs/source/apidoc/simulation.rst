@@ -16,6 +16,8 @@ in favour of :class:`QutipEmulator`.
 .. autoclass:: pulser_simulation.simulation.QutipEmulator
    :members:
 
+.. autoclass:: pulser_simulation.simulation.Simulation
+
 SimConfig
 ----------------------
 
