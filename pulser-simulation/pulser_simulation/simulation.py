@@ -1156,6 +1156,8 @@ class QutipEmulator:
 class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
 
+    Note: This class is deprecated in favour of `QutipEmulator.from_sequence`.
+
     Args:
         sequence: An instance of a Pulser Sequence that we
             want to simulate.
