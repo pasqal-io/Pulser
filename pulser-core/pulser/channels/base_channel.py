@@ -33,6 +33,8 @@ warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
+OPTIONAL_ABSTR_CH_FIELDS = ("min_amp_area",)
+
 
 @dataclass(init=True, repr=False, frozen=True)
 class Channel(ABC):
@@ -536,10 +538,9 @@ class Channel(ABC):
 
     def _to_abstract_repr(self, id: str) -> dict[str, Any]:
         all_fields = fields(self)
-        optional_fields = ("min_amp_area",)
         defaults = get_dataclass_defaults(all_fields)
         params = {f.name: getattr(self, f.name) for f in all_fields}
-        for p in optional_fields:
+        for p in OPTIONAL_ABSTR_CH_FIELDS:
             if params[p] == defaults[p]:
                 params.pop(p, None)
         return {"id": id, "basis": self.basis, **params}

@@ -315,7 +315,7 @@ def test_validate_pulse_success():
     pulse = Pulse.ConstantPulse(100, 0, ch_obj.max_abs_detuning, 0)
     ch_obj.validate_pulse(pulse)
 
-    # Pulse with the minimum are is also fine
+    # Pulse with the minimum area is also fine
     amp_waveform = ConstantWaveform(1, 1)
     pulse = Pulse.ConstantDetuning(amp_waveform, -ch_obj.max_abs_detuning, 0)
     assert amp_waveform.integral == ch_obj.min_amp_area

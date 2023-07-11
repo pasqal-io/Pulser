@@ -26,7 +26,11 @@ import pulser
 import pulser.devices as devices
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
-from pulser.channels.eom import RydbergBeam, RydbergEOM
+from pulser.channels.eom import (
+    OPTIONAL_ABSTR_EOM_FIELDS,
+    RydbergBeam,
+    RydbergEOM,
+)
 from pulser.devices import Device, VirtualDevice
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
@@ -293,9 +297,10 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
             try:
-                optional_keys = ("multiple_beam_control",)
                 optional = {
-                    key: data[key] for key in optional_keys if key in data
+                    key: data[key]
+                    for key in OPTIONAL_ABSTR_EOM_FIELDS
+                    if key in data
                 }
                 params["eom_config"] = RydbergEOM(
                     mod_bandwidth=data["mod_bandwidth"],

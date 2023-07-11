@@ -26,6 +26,7 @@ from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 # Conversion factor from modulation bandwith to rise time
 # For more info, see https://tinyurl.com/bdeumc8k
 MODBW_TO_TR = 0.48
+OPTIONAL_ABSTR_EOM_FIELDS = ("multiple_beam_control",)
 
 
 class RydbergBeam(Flag):
@@ -82,9 +83,13 @@ class BaseEOM:
         all_fields = fields(self)
         params = {}
         defaults = get_dataclass_defaults(all_fields)
+        assert set(OPTIONAL_ABSTR_EOM_FIELDS) <= defaults.keys()
         for f in all_fields:
             value = getattr(self, f.name)
-            if f.name in defaults and value == defaults[f.name]:
+            if (
+                f.name in OPTIONAL_ABSTR_EOM_FIELDS
+                and value == defaults[f.name]
+            ):
                 continue
             params[f.name] = value
         return params
@@ -102,7 +107,7 @@ class RydbergEOM(BaseEOM):
             in rad/µs.
         intermediate_detuning: The detuning between the two beams, in rad/µs.
         controlled_beams: The beams that can be switched on/off with an EOM.
-        multiple_beam_control: Whether both EOMs can be used simulatenously.
+        multiple_beam_control: Whether both EOMs can be used simultaneously.
             Ignored when only one beam can be controlled.
     """
 
