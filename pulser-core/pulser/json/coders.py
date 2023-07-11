@@ -101,6 +101,18 @@ class PulserDecoder(JSONDecoder):
         if not build:
             return cls
 
+        if "Device" in obj_name:
+            # Handle the removal of _channels for backwards compatibility
+            _channels = obj["__kwargs__"].pop("_channels", None)
+            channel_objs = obj["__kwargs__"].get("channel_objects", None)
+            channel_ids = obj["__kwargs__"].get("channel_ids", None)
+            if _channels and not (channel_ids or channel_objs):
+                _channels_dict = dict(_channels)
+                obj["__kwargs__"]["channel_ids"] = tuple(_channels_dict.keys())
+                obj["__kwargs__"]["channel_objects"] = tuple(
+                    _channels_dict.values()
+                )
+
         if "Sequence" in obj_name:
             seq = cls(*obj["__args__"], **obj["__kwargs__"])
             for name, args, kwargs in obj["calls"]:
