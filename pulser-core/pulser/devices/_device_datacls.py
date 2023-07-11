@@ -26,7 +26,7 @@ from scipy.spatial.distance import pdist, squareform
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
-from pulser.json.abstract_repr.validation import validate
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
@@ -419,7 +419,7 @@ class BaseDevice(ABC):
     def to_abstract_repr(self) -> str:
         """Serializes the Sequence into an abstract JSON object."""
         abstr_dev_str = json.dumps(self, cls=AbstractReprEncoder)
-        validate(abstr_dev_str, "device")
+        validate_abstract_repr(abstr_dev_str, "device")
         return abstr_dev_str
 
 

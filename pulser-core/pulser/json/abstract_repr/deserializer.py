@@ -31,7 +31,7 @@ from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
 )
-from pulser.json.abstract_repr.validation import validate
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
@@ -360,7 +360,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
         Sequence: The Pulser sequence.
     """
     # Validate the format of the data against the JSON schema.
-    validate(obj_str, "sequence")
+    validate_abstract_repr(obj_str, "sequence")
     obj = json.loads(obj_str)
     # Device
     if isinstance(obj["device"], str):
@@ -448,7 +448,7 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
 
     try:
         # Validate the format of the data against the JSON schema.
-        validate(obj_str, "device")
+        validate_abstract_repr(obj_str, "device")
         return _deserialize_device_object(json.loads(obj_str))
     except (
         json.JSONDecodeError,  # From json.loads

@@ -26,7 +26,6 @@ import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.devices import Chadoq2, Device, IroiseMVP, MockDevice
-from pulser.json.abstract_repr import RESOLVER
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_device,
@@ -35,6 +34,7 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
+from pulser.json.abstract_repr.validation import RESOLVER
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj

@@ -24,7 +24,7 @@ from typing import Union, cast
 import numpy as np
 
 from pulser.json.abstract_repr.signatures import SIGNATURES
-from pulser.json.abstract_repr.validation import validate
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.register.base_register import QubitId
 
@@ -296,5 +296,5 @@ def serialize_abstract_sequence(
     abstr_seq_str = json.dumps(
         res, cls=AbstractReprEncoder, **json_dumps_options
     )
-    validate(abstr_seq_str, "sequence")
+    validate_abstract_repr(abstr_seq_str, "sequence")
     return abstr_seq_str
