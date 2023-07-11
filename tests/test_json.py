@@ -210,3 +210,26 @@ def test_sequence_module():
     # Check that it also works
     s = json.dumps(obj_dict)
     Sequence.deserialize(s)
+
+
+def test_deprecation():
+    seq = Sequence(Register.square(1), MockDevice)
+
+    seq_dict = json.loads(seq.serialize())
+    dev_dict = seq_dict["__kwargs__"]["device"]
+
+    assert "_channels" not in dev_dict["__kwargs__"]
+    dev_dict["__kwargs__"]["_channels"] = []
+
+    s = json.dumps(seq_dict)
+    new_seq = Sequence.deserialize(s)
+    assert new_seq.device == MockDevice
+
+    ids = dev_dict["__kwargs__"].pop("channel_ids")
+    ch_objs = dev_dict["__kwargs__"].pop("channel_objects")
+    dev_dict["__kwargs__"]["_channels"] = tuple(zip(ids, ch_objs))
+
+    assert seq_dict["__kwargs__"]["device"] == dev_dict
+    s = json.dumps(seq_dict)
+    new_seq = Sequence.deserialize(s)
+    assert new_seq.device == MockDevice

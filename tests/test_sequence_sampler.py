@@ -32,7 +32,7 @@ from pulser.waveforms import BlackmanWaveform, RampWaveform
 def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     """Check against the legacy sample extraction in the simulation module."""
     got = sample(seq).to_nested_dict()
-    want = pulser_simulation.Simulation(seq).samples.copy()
+    want = pulser_simulation.QutipEmulator.from_sequence(seq).samples.copy()
 
     def truncate_samples(samples_dict):
         for key, value in samples_dict.items():
