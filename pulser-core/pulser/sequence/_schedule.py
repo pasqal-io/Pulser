@@ -297,13 +297,13 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         if not _skip_buffer and self.get_duration(channel_id):
             # Wait for the last pulse to ramp down (if needed)
             self.wait_for_fall(channel_id)
-            # Account for time needed to ramp to desired amplitude
-            # By definition, rise_time goes from 10% to 90%
-            # Roughly 2*rise_time is enough to go from 0% to 100%
+            eom_buffer = self[channel_id].adjust_duration(
+                channel_obj._eom_buffer_time
+            )
             if detuning_off != 0:
                 self.add_pulse(
                     Pulse.ConstantPulse(
-                        2 * channel_obj.rise_time,
+                        eom_buffer,
                         0.0,
                         detuning_off,
                         self._get_last_pulse_phase(channel_id),
@@ -313,7 +313,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     protocol="no-delay",
                 )
             else:
-                self.add_delay(2 * channel_obj.rise_time, channel_id)
+                self.add_delay(eom_buffer, channel_id)
 
         # Set up the EOM
         eom_settings = _EOMSettings(
@@ -327,8 +327,16 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
     def disable_eom(self, channel_id: str, _skip_buffer: bool = False) -> None:
         self[channel_id].eom_blocks[-1].tf = self[channel_id][-1].tf
+        channel_obj = self[channel_id].channel_obj
+        eom_config = channel_obj.eom_config
         if not _skip_buffer:
-            self.wait_for_fall(channel_id)
+            if eom_config and eom_config.custom_buffer_time:
+                eom_buffer = self[channel_id].adjust_duration(
+                    channel_obj._eom_buffer_time
+                )
+                self.add_delay(eom_buffer, channel_id)
+            else:
+                self.wait_for_fall(channel_id)
 
     def add_pulse(
         self,

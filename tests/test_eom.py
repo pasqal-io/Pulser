@@ -37,6 +37,8 @@ def params():
         ("max_limiting_amp", 0),
         ("intermediate_detuning", -500),
         ("intermediate_detuning", 0),
+        ("custom_buffer_time", 0.1),
+        ("custom_buffer_time", 0),
     ],
 )
 def test_bad_value_init_eom(bad_param, bad_value, params):

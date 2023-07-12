@@ -1,6 +1,7 @@
 """Dataclasses for storing and processing the samples."""
 from __future__ import annotations
 
+import itertools
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional, cast
@@ -239,6 +240,17 @@ class ChannelSamples:
             # to the 'eom_mask'
             eom_mask = eom_mask + eom_mask_ext
 
+            eom_buffers_mask = np.zeros_like(eom_mask, dtype=bool)
+            for start, end in itertools.chain(
+                self.eom_start_buffers, self.eom_end_buffers
+            ):
+                eom_buffers_mask[start:end] = True
+            eom_buffers_mask = eom_buffers_mask & ~eom_mask_ext
+            buffer_ch_obj = replace(
+                channel_obj,
+                mod_bandwidth=channel_obj._eom_buffer_mod_bandwidth,
+            )
+
             if block.tf is None:
                 # The sequence finishes in EOM mode, so 'end' was already
                 # including the fall time (unlike when it is disabled).
@@ -250,10 +262,24 @@ class ChannelSamples:
                 # First, we modulated the pre-filtered standard samples, then
                 # we mask them to include only the parts outside the EOM mask
                 # This ensures smooth transitions between EOM and STD samples
+                key_samples = getattr(std_samples, key)
                 modulated_std = channel_obj.modulate(
-                    getattr(std_samples, key), keep_ends=key == "det"
+                    key_samples, keep_ends=key == "det"
                 )
-                std = masked(modulated_std, ~eom_mask)
+                if key == "det":
+                    std_mask = ~(eom_mask + eom_buffers_mask)
+                    # Adjusted detuning modulation during EOM buffers
+                    modulated_buffer = buffer_ch_obj.modulate(
+                        key_samples, keep_ends=True
+                    )
+                else:
+                    std_mask = ~eom_mask
+                    modulated_buffer = np.zeros_like(modulated_std)
+
+                std = masked(modulated_std, std_mask)
+                buffers = masked(
+                    modulated_buffer[: len(std)], eom_buffers_mask
+                )
 
                 # At the end of an EOM block, the EOM(s) are switched back
                 # to the OFF configuration, so the detuning should go quickly
@@ -293,16 +319,18 @@ class ChannelSamples:
                 # filtered to include only the parts inside the EOM mask
                 eom = masked(modulated_eom, eom_mask)
 
-                # 'std' and 'eom' are then summed, but before the shortest
-                # array is extended so that they are of the same length
-                sample_arrs = [std, eom]
+                # 'std', 'eom' and 'buffers' are then summed, but before the
+                # short arrays are extended so that they are of the same length
+                sample_arrs = [std, eom, buffers]
                 sample_arrs.sort(key=len)
-                # Extend shortest array to match the longest
-                sample_arrs[0] = np.pad(
-                    sample_arrs[0],
-                    (0, sample_arrs[1].size - sample_arrs[0].size),
-                )
-                new_samples[key] = sample_arrs[0] + sample_arrs[1]
+                # Extend shortest arrays to match the longest before summing
+                new_samples[key] = sample_arrs[-1]
+                for arr in sample_arrs[:-1]:
+                    arr = np.pad(
+                        arr,
+                        (0, sample_arrs[-1].size - arr.size),
+                    )
+                    new_samples[key] = new_samples[key] + arr
 
         else:
             new_samples["amp"] = channel_obj.modulate(self.amp)

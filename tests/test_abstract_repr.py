@@ -214,6 +214,19 @@ class TestDevice:
                     multiple_beam_control=False,
                 ),
             ),
+            Rydberg.Global(
+                None,
+                None,
+                mod_bandwidth=5,
+                eom_config=RydbergEOM(
+                    max_limiting_amp=10,
+                    mod_bandwidth=20,
+                    limiting_beam=RydbergBeam.RED,
+                    intermediate_detuning=1000,
+                    controlled_beams=tuple(RydbergBeam),
+                    custom_buffer_time=500,
+                ),
+            ),
         ],
     )
     @pytest.mark.xfail

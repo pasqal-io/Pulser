@@ -26,7 +26,7 @@ from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 # Conversion factor from modulation bandwith to rise time
 # For more info, see https://tinyurl.com/bdeumc8k
 MODBW_TO_TR = 0.48
-OPTIONAL_ABSTR_EOM_FIELDS = ("multiple_beam_control",)
+OPTIONAL_ABSTR_EOM_FIELDS = ("multiple_beam_control", "custom_buffer_time")
 
 
 class RydbergBeam(Flag):
@@ -42,16 +42,33 @@ class RydbergBeam(Flag):
         return cast(str, self.name)
 
 
+# These tricks dividing the dataclass fields into those with
+# and without defaults are necessary due to how dataclass
+# inheritance works. Without this, we would have the keyword
+# arguments of BaseEOM coming before the positional arguments
+# of RydbergEOM, which simply fails. It's nasty but necessary
+# until we can use the KW_ONLY option introduced in python 3.10
+
+
 @dataclass(frozen=True)
-class BaseEOM:
+class _BaseEOM:
+    mod_bandwidth: float  # MHz
+
+
+@dataclass(frozen=True)
+class _BaseEOMDefaults:
+    custom_buffer_time: int | None = None  # ns
+
+
+@dataclass(frozen=True)
+class BaseEOM(_BaseEOMDefaults, _BaseEOM):
     """A base class for the EOM configuration.
 
     Attributes:
         mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
             in MHz.
+        custom_buffer_time: A custom wait time to enforce during EOM buffers.
     """
-
-    mod_bandwidth: float  # MHz
 
     def __post_init__(self) -> None:
         if self.mod_bandwidth <= 0.0:
@@ -62,6 +79,15 @@ class BaseEOM:
         elif self.mod_bandwidth > MODBW_TO_TR * 1e3:
             raise NotImplementedError(
                 f"'mod_bandwidth' must be lower than {MODBW_TO_TR*1e3} MHz"
+            )
+
+        if (
+            self.custom_buffer_time is not None
+            and int(self.custom_buffer_time) <= 0
+        ):
+            raise ValueError(
+                "'custom_buffer_time' must be greater than zero, not"
+                f" {self.custom_buffer_time}."
             )
 
     @property
@@ -96,26 +122,34 @@ class BaseEOM:
 
 
 @dataclass(frozen=True)
-class RydbergEOM(BaseEOM):
+class _RydbergEOM:
+    limiting_beam: RydbergBeam
+    max_limiting_amp: float  # rad/µs
+    intermediate_detuning: float  # rad/µs
+    controlled_beams: tuple[RydbergBeam, ...]
+
+
+@dataclass(frozen=True)
+class _RydbergEOMDefaults:
+    multiple_beam_control: bool = True
+
+
+@dataclass(frozen=True)
+class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     """The EOM configuration for a Rydberg channel.
 
     Attributes:
-        mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
-            in MHz.
         limiting_beam: The beam with the smallest amplitude range.
         max_limiting_amp: The maximum amplitude the limiting beam can reach,
             in rad/µs.
         intermediate_detuning: The detuning between the two beams, in rad/µs.
         controlled_beams: The beams that can be switched on/off with an EOM.
+        mod_bandwidth: The EOM modulation bandwidth at -3dB (50% reduction),
+            in MHz.
+        custom_buffer_time: A custom wait time to enforce during EOM buffers.
         multiple_beam_control: Whether both EOMs can be used simultaneously.
             Ignored when only one beam can be controlled.
     """
-
-    limiting_beam: RydbergBeam
-    max_limiting_amp: float  # rad/µs
-    intermediate_detuning: float  # rad/µs
-    controlled_beams: tuple[RydbergBeam, ...]
-    multiple_beam_control: bool = True
 
     def __post_init__(self) -> None:
         super().__post_init__()

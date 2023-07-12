@@ -499,6 +499,23 @@ class Channel(ABC):
 
         return start, end
 
+    @property
+    def _eom_buffer_time(self) -> int:
+        # By definition, rise_time goes from 10% to 90%
+        # Roughly 2*rise_time is enough to go from 0% to 100%
+        # so we use that by default
+        assert self.supports_eom(), "Can't define the EOM buffer time."
+        return int(
+            cast(BaseEOM, self.eom_config).custom_buffer_time
+            or 2 * self.rise_time
+        )
+
+    @property
+    def _eom_buffer_mod_bandwidth(self) -> float:
+        # Takes half of the buffer time as the rise time
+        rise_time_us = self._eom_buffer_time / 2 * 1e-3
+        return MODBW_TO_TR / rise_time_us
+
     def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
