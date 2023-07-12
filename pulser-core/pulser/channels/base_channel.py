@@ -33,7 +33,7 @@ warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
-OPTIONAL_ABSTR_CH_FIELDS = ("min_amp_area",)
+OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -57,8 +57,7 @@ class Channel(ABC):
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
-        min_amp_area: The minimum area of a pulse's amplitude waveform
-            (when not zero).
+        min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
 
@@ -76,7 +75,7 @@ class Channel(ABC):
     clock_period: int = 1  # ns
     min_duration: int = 1  # ns
     max_duration: Optional[int] = int(1e8)  # ns
-    min_amp_area: int = 0
+    min_avg_amp: int = 0
     mod_bandwidth: Optional[float] = None  # MHz
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
 
@@ -115,13 +114,13 @@ class Channel(ABC):
             "min_duration",
             "max_duration",
             "mod_bandwidth",
-            "min_amp_area",
+            "min_avg_amp",
         ]
         non_negative = [
             "max_abs_detuning",
             "min_retarget_interval",
             "fixed_retarget_t",
-            "min_amp_area",
+            "min_avg_amp",
         ]
         local_only = [
             "min_retarget_interval",
@@ -363,11 +362,11 @@ class Channel(ABC):
                 "The pulse's detuning values go out of the range "
                 "allowed for the chosen channel."
             )
-        amp_area = pulse.amplitude.integral
-        if 0 < amp_area < self.min_amp_area:
+        avg_amp = np.average(pulse.amplitude.samples)
+        if 0 < avg_amp < self.min_avg_amp:
             raise ValueError(
-                "The pulse's amplitude area is below the chosen "
-                f"channel's limit ({self.min_amp_area})."
+                "The pulse's average amplitude is below the chosen "
+                f"channel's limit ({self.min_avg_amp})."
             )
 
     @property

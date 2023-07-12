@@ -34,7 +34,7 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
         ("max_duration", 0),
         ("mod_bandwidth", 0),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
-        ("min_amp_area", -1e-3),
+        ("min_avg_amp", -1e-3),
     ],
 )
 def test_bad_init_global_channel(bad_param, bad_value):
@@ -61,7 +61,7 @@ def test_bad_init_global_channel(bad_param, bad_value):
         ("max_duration", -1),
         ("mod_bandwidth", -1e4),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
-        ("min_amp_area", -1e-3),
+        ("min_avg_amp", -1e-3),
     ],
 )
 def test_bad_init_local_channel(bad_param, bad_value):
@@ -244,7 +244,7 @@ _eom_rydberg = Rydberg.Global(
     max_abs_detuning=30,
     mod_bandwidth=10,
     eom_config=_eom_config,
-    min_amp_area=1e-3,
+    min_avg_amp=1e-3,
 )
 
 
@@ -288,11 +288,11 @@ def test_modulation(channel, tr, eom, side_buffer_len):
             "detuning values go out of the range",
         ),
         (
-            Pulse.ConstantPulse(100, 9.99e-3, 0, 0),
+            Pulse.ConstantPulse(100, 0.99e-3, 0, 0),
             ValueError,
             re.escape(
-                "area is below the chosen channel's limit "
-                f"({_eom_rydberg.min_amp_area})"
+                "average amplitude is below the chosen channel's"
+                f" limit ({_eom_rydberg.min_avg_amp})"
             ),
         ),
     ],
@@ -308,15 +308,14 @@ def test_validate_pulse_success():
     pulse = Pulse.ConstantPulse(
         100, ch_obj.max_amp, ch_obj.max_abs_detuning, 0
     )
-    assert pulse.amplitude.integral > ch_obj.min_amp_area
+    assert ch_obj.max_amp > ch_obj.min_avg_amp
     ch_obj.validate_pulse(pulse)
 
     # Pulse with zero amplitude is fine
     pulse = Pulse.ConstantPulse(100, 0, ch_obj.max_abs_detuning, 0)
     ch_obj.validate_pulse(pulse)
 
-    # Pulse with the minimum area is also fine
-    amp_waveform = ConstantWaveform(1, 1)
+    # Pulse with the minimum average amplitude is also fine
+    amp_waveform = ConstantWaveform(100, ch_obj.min_avg_amp)
     pulse = Pulse.ConstantDetuning(amp_waveform, -ch_obj.max_abs_detuning, 0)
-    assert amp_waveform.integral == ch_obj.min_amp_area
     ch_obj.validate_pulse(pulse)

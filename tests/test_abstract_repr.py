@@ -200,7 +200,7 @@ class TestDevice:
     @pytest.mark.parametrize(
         "ch_obj",
         [
-            Rydberg.Global(None, None, min_amp_area=1),
+            Rydberg.Global(None, None, min_avg_amp=1),
             Rydberg.Global(
                 None,
                 None,
