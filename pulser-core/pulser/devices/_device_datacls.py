@@ -34,6 +34,8 @@ from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 
 DIMENSIONS = Literal[2, 3]
 
+ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs")
+
 
 @dataclass(frozen=True, repr=False)
 class BaseDevice(ABC):
@@ -113,7 +115,10 @@ class BaseDevice(ABC):
             "max_runs",
         ):
             value = getattr(self, param)
-            if param in self._optional_parameters:
+            if (
+                param in self._optional_parameters
+                or param in ALWAYS_OPTIONAL_PARAMS
+            ):
                 prelude = "When defined, "
                 is_none = value is None
             elif value is None:
@@ -204,7 +209,7 @@ class BaseDevice(ABC):
     @property
     @abstractmethod
     def _optional_parameters(self) -> tuple[str, ...]:
-        return ("max_sequence_duration", "max_runs")
+        pass
 
     @property
     def channels(self) -> dict[str, Channel]:
@@ -416,12 +421,11 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
         ex_params = ("channel_objects", "channel_ids")
-        optional_fields = ("max_sequence_duration", "max_runs")
         defaults = get_dataclass_defaults(fields(self))
         params = self._params()
         for p in ex_params:
             params.pop(p, None)
-        for p in optional_fields:
+        for p in ALWAYS_OPTIONAL_PARAMS:
             if params[p] == defaults[p]:
                 params.pop(p, None)
         ch_list = []
@@ -488,7 +492,7 @@ class Device(BaseDevice):
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
-        return super()._optional_parameters
+        return ()
 
     @property
     def calibrated_register_layouts(self) -> dict[str, RegisterLayout]:
@@ -610,10 +614,7 @@ class VirtualDevice(BaseDevice):
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
-        return tuple(
-            list(super()._optional_parameters)
-            + ["max_atom_num", "max_radial_distance"]
-        )
+        return ("max_atom_num", "max_radial_distance")
 
     def change_rydberg_level(self, ryd_lvl: int) -> None:
         r"""Changes the Rydberg level used in the Device.
