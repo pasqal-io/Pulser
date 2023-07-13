@@ -191,7 +191,6 @@ class TestDevice:
         assert isinstance(prev_err.__cause__, ValueError)
 
     @pytest.mark.parametrize("field", ["max_sequence_duration", "max_runs"])
-    @pytest.mark.xfail
     def test_optional_device_fields(self, field):
         device = replace(MockDevice, **{field: 1000})
         dev_str = device.to_abstract_repr()
@@ -229,7 +228,6 @@ class TestDevice:
             ),
         ],
     )
-    @pytest.mark.xfail
     def test_optional_channel_fields(self, ch_obj):
         device = replace(
             MockDevice, channel_objects=(ch_obj,), channel_ids=None
