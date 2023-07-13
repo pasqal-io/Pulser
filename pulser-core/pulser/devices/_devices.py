@@ -106,6 +106,7 @@ AnalogDevice = Device(
                 intermediate_detuning=450 * 2 * np.pi,
                 mod_bandwidth=40,
                 controlled_beams=(RydbergBeam.BLUE,),
+                custom_buffer_time=240,
             ),
         ),
     ),
