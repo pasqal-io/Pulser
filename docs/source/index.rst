@@ -63,6 +63,12 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Backend Execution
+   
+   tutorials/backends
+
+.. toctree::
+   :maxdepth: 2
    :caption: Classical Simulation
 
    tutorials/noisy_sim

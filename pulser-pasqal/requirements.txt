@@ -1,2 +1,2 @@
-pasqal-cloud ~= 0.2.3
-pydantic < 2.0
+pasqal-cloud ~= 0.3.3
+backoff ~= 2.2

@@ -24,7 +24,7 @@ NOISE_TYPES = Literal[
 ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class NoiseModel:
     """Specifies the noise model parameters for emulation.
 
