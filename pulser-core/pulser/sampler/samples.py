@@ -1,6 +1,7 @@
 """Dataclasses for storing and processing the samples."""
 from __future__ import annotations
 
+import itertools
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional, cast
@@ -10,9 +11,10 @@ import numpy as np
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
+from pulser.sequence._basis_ref import _QubitRef
 
 if TYPE_CHECKING:
-    from pulser.sequence._schedule import _EOMSettings
+    from pulser.sequence._schedule import _EOMSettings, _TimeSlot
 
 """Literal constants for addressing."""
 _GLOBAL = "Global"
@@ -58,7 +60,7 @@ def _default_to_regular(d: dict | defaultdict) -> dict:
 
 
 @dataclass
-class _TargetSlot:
+class _PulseTargetSlot:
     """Auxiliary class to store target information.
 
     Recopy of the sequence._TimeSlot but without the unrelevant `type` field,
@@ -89,8 +91,11 @@ class ChannelSamples:
     amp: np.ndarray
     det: np.ndarray
     phase: np.ndarray
-    slots: list[_TargetSlot] = field(default_factory=list)
+    slots: list[_PulseTargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
+    eom_start_buffers: list[tuple[int, int]] = field(default_factory=list)
+    eom_end_buffers: list[tuple[int, int]] = field(default_factory=list)
+    target_time_slots: list[_TimeSlot] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert len(self.amp) == len(self.det) == len(self.phase)
@@ -100,6 +105,15 @@ class ChannelSamples:
             assert t.ti < t.tf  # well ordered slots
         for t1, t2 in zip(self.slots, self.slots[1:]):
             assert t1.tf <= t2.ti  # no overlaps on a given channel
+
+    @property
+    def initial_targets(self) -> set[QubitId]:
+        """Returns the initial targets."""
+        return (
+            self.target_time_slots[0].targets
+            if self.target_time_slots
+            else set()
+        )
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
@@ -159,6 +173,23 @@ class ChannelSamples:
 
         return replace(self, **new_samples)
 
+    def get_eom_mode_intervals(self) -> list[tuple[int, int]]:
+        """Returns EOM mode intervals."""
+        return [
+            (
+                block.ti,
+                block.tf if block.tf is not None else self.duration,
+            )
+            for block in self.eom_blocks
+        ]
+
+    def in_eom_mode(self, slot: _TimeSlot | _PulseTargetSlot) -> bool:
+        """States if a time slot is inside an EOM mode block."""
+        return any(
+            start <= slot.ti < end
+            for start, end in self.get_eom_mode_intervals()
+        )
+
     def modulate(
         self, channel_obj: Channel, max_duration: Optional[int] = None
     ) -> ChannelSamples:
@@ -209,6 +240,17 @@ class ChannelSamples:
             # to the 'eom_mask'
             eom_mask = eom_mask + eom_mask_ext
 
+            eom_buffers_mask = np.zeros_like(eom_mask, dtype=bool)
+            for start, end in itertools.chain(
+                self.eom_start_buffers, self.eom_end_buffers
+            ):
+                eom_buffers_mask[start:end] = True
+            eom_buffers_mask = eom_buffers_mask & ~eom_mask_ext
+            buffer_ch_obj = replace(
+                channel_obj,
+                mod_bandwidth=channel_obj._eom_buffer_mod_bandwidth,
+            )
+
             if block.tf is None:
                 # The sequence finishes in EOM mode, so 'end' was already
                 # including the fall time (unlike when it is disabled).
@@ -220,10 +262,24 @@ class ChannelSamples:
                 # First, we modulated the pre-filtered standard samples, then
                 # we mask them to include only the parts outside the EOM mask
                 # This ensures smooth transitions between EOM and STD samples
+                key_samples = getattr(std_samples, key)
                 modulated_std = channel_obj.modulate(
-                    getattr(std_samples, key), keep_ends=key == "det"
+                    key_samples, keep_ends=key == "det"
                 )
-                std = masked(modulated_std, ~eom_mask)
+                if key == "det":
+                    std_mask = ~(eom_mask + eom_buffers_mask)
+                    # Adjusted detuning modulation during EOM buffers
+                    modulated_buffer = buffer_ch_obj.modulate(
+                        key_samples, keep_ends=True
+                    )
+                else:
+                    std_mask = ~eom_mask
+                    modulated_buffer = np.zeros_like(modulated_std)
+
+                std = masked(modulated_std, std_mask)
+                buffers = masked(
+                    modulated_buffer[: len(std)], eom_buffers_mask
+                )
 
                 # At the end of an EOM block, the EOM(s) are switched back
                 # to the OFF configuration, so the detuning should go quickly
@@ -263,16 +319,18 @@ class ChannelSamples:
                 # filtered to include only the parts inside the EOM mask
                 eom = masked(modulated_eom, eom_mask)
 
-                # 'std' and 'eom' are then summed, but before the shortest
-                # array is extended so that they are of the same length
-                sample_arrs = [std, eom]
+                # 'std', 'eom' and 'buffers' are then summed, but before the
+                # short arrays are extended so that they are of the same length
+                sample_arrs = [std, eom, buffers]
                 sample_arrs.sort(key=len)
-                # Extend shortest array to match the longest
-                sample_arrs[0] = np.pad(
-                    sample_arrs[0],
-                    (0, sample_arrs[1].size - sample_arrs[0].size),
-                )
-                new_samples[key] = sample_arrs[0] + sample_arrs[1]
+                # Extend shortest arrays to match the longest before summing
+                new_samples[key] = sample_arrs[-1]
+                for arr in sample_arrs[:-1]:
+                    arr = np.pad(
+                        arr,
+                        (0, sample_arrs[-1].size - arr.size),
+                    )
+                    new_samples[key] = new_samples[key] + arr
 
         else:
             new_samples["amp"] = channel_obj.modulate(self.amp)
@@ -291,6 +349,9 @@ class SequenceSamples:
     channels: list[str]
     samples_list: list[ChannelSamples]
     _ch_objs: dict[str, Channel]
+    _basis_ref: dict[str, dict[QubitId, _QubitRef]] = field(
+        default_factory=dict
+    )
     _slm_mask: _SlmMask = field(default_factory=_SlmMask)
     _magnetic_field: np.ndarray | None = None
     _measurement: str | None = None
@@ -373,6 +434,10 @@ class SequenceSamples:
                     d[_LOCAL][basis][t][_DET][:start_t] += cs.det[:start_t]
                     d[_LOCAL][basis][t][_PHASE][:start_t] += cs.phase[:start_t]
             else:
+                if not cs.slots:
+                    # Fill the defaultdict entries to not return an empty dict
+                    for t in cs.initial_targets:
+                        d[_LOCAL][basis][t]
                 for s in cs.slots:
                     for t in s.targets:
                         ti = s.ti
@@ -391,3 +456,8 @@ class SequenceSamples:
             for chname, cs in zip(self.channels, self.samples_list)
         ]
         return "\n\n".join(blocks)
+
+
+# This is just to preserve backwards compatibility after the renaming of
+# _TargetSlot to _PulseTarget slot
+_TargetSlot = _PulseTargetSlot

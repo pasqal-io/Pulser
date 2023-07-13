@@ -14,10 +14,12 @@
 """Classes to store measurement results."""
 from __future__ import annotations
 
+import collections.abc
+import typing
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -155,3 +157,32 @@ class SampledResult(Result):
         for bitstr, counts in self.bitstring_counts.items():
             weights[int(bitstr, base=2)] = counts / self.n_samples
         return weights / sum(weights)
+
+
+ResultType = TypeVar("ResultType", bound=Result)
+
+
+class Results(typing.Sequence[ResultType]):
+    """An immutable sequence of results."""
+
+    _results: tuple[ResultType, ...]
+
+    @overload
+    def __getitem__(self, key: int) -> ResultType:
+        pass
+
+    @overload
+    def __getitem__(self, key: slice) -> tuple[ResultType, ...]:
+        pass
+
+    def __getitem__(
+        self, key: int | slice
+    ) -> ResultType | tuple[ResultType, ...]:
+        return self._results[key]
+
+    def __len__(self) -> int:
+        return len(self._results)
+
+    def __iter__(self) -> collections.abc.Iterator[ResultType]:
+        for res in self._results:
+            yield res

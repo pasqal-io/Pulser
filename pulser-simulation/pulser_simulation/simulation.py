@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the Simulation class, used for simulation of a Sequence."""
+"""Defines the QutipEmulator, used to simulate a Sequence or its samples."""
 
 from __future__ import annotations
 
@@ -32,8 +32,8 @@ from pulser import Sequence
 from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.result import SampledResult
-from pulser.sampler.samples import SequenceSamples, _TargetSlot
-from pulser.sequence._seq_drawer import draw_sequence
+from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
+from pulser.sequence._seq_drawer import draw_samples, draw_sequence
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
@@ -347,10 +347,6 @@ class QutipEmulator:
         diff_noise_set = new_noise_set - old_noise_set
         # Create temporary param_dict to add noise parameters:
         param_dict: dict[str, Any] = asdict(self._config)
-        # remove redundant `spam_dict`:
-        del param_dict["spam_dict"]
-        # `doppler_sigma` will be recalculated from temperature if needed:
-        del param_dict["doppler_sigma"]
         # Begin populating with added noise parameters:
         param_dict["noise"] = tuple(new_noise_set)
         if "SPAM" in diff_noise_set:
@@ -460,7 +456,7 @@ class QutipEmulator:
         elif isinstance(value, float):
             if value > 1 or value <= 0:
                 raise ValueError(
-                    "evaluation_times float must be between 0 " "and 1."
+                    "evaluation_times float must be between 0 and 1."
                 )
             indices = np.linspace(
                 0,
@@ -504,7 +500,7 @@ class QutipEmulator:
         samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
         def add_noise(
-            slot: _TargetSlot,
+            slot: _PulseTargetSlot,
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
         ) -> None:
@@ -878,7 +874,7 @@ class QutipEmulator:
     # Run Simulation Evolution using Qutip
     def run(
         self,
-        progress_bar: Optional[bool] = False,
+        progress_bar: bool = False,
         **options: Any,
     ) -> SimulationResults:
         """Simulates the sequence using QuTiP's solvers.
@@ -898,10 +894,8 @@ class QutipEmulator:
 
                 .. _docs: https://bit.ly/3il9A2u
         """
-        if "max_step" in options.keys():
-            solv_ops = qutip.Options(**options)
-        else:
-            min_pulse_duration = min(
+        if "max_step" not in options:
+            pulse_durations = [
                 slot.tf - slot.ti
                 for ch_sample in self.samples_obj.samples_list
                 for slot in ch_sample.slots
@@ -909,9 +903,11 @@ class QutipEmulator:
                     np.all(np.isclose(ch_sample.amp[slot.ti : slot.tf], 0))
                     and np.all(np.isclose(ch_sample.det[slot.ti : slot.tf], 0))
                 )
-            )
-            auto_max_step = 0.5 * (min_pulse_duration / 1000)
-            solv_ops = qutip.Options(max_step=auto_max_step, **options)
+            ]
+            if pulse_durations:
+                options["max_step"] = 0.5 * min(pulse_durations) / 1000
+
+        solv_ops = qutip.Options(**options)
 
         meas_errors: Optional[Mapping[str, float]] = None
         if "SPAM" in self.config.noise:
@@ -1046,6 +1042,44 @@ class QutipEmulator:
             n_measures,
         )
 
+    def draw(
+        self,
+        draw_phase_area: bool = False,
+        draw_phase_shifts: bool = False,
+        draw_phase_curve: bool = False,
+        fig_name: str | None = None,
+        kwargs_savefig: dict = {},
+    ) -> None:
+        """Draws the samples of a sequence of operations used for simulation.
+
+        Args:
+            draw_phase_area: Whether phase and area values need
+                to be shown as text on the plot, defaults to False.
+            draw_phase_shifts: Whether phase shift and reference
+                information should be added to the plot, defaults to False.
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
+            fig_name: The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig: Keywords arguments for
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
+
+        See Also:
+            Sequence.draw(): Draws the sequence in its current state.
+        """
+        draw_samples(
+            self.samples_obj,
+            self._register,
+            self._sampling_rate,
+            draw_phase_area=draw_phase_area,
+            draw_phase_shifts=draw_phase_shifts,
+            draw_phase_curve=draw_phase_curve,
+        )
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
+        plt.show()
+
     @classmethod
     def from_sequence(
         cls,
@@ -1122,6 +1156,9 @@ class QutipEmulator:
 class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
 
+    Warning:
+        This class is deprecated in favour of ``QutipEmulator.from_sequence``.
+
     Args:
         sequence: An instance of a Pulser Sequence that we
             want to simulate.
@@ -1154,6 +1191,14 @@ class Simulation:
         with_modulation: bool = False,
     ) -> None:
         """Instantiates a Simulation object."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "The `Simulation` class is deprecated,"
+                    " use `QutipEmulator.from_sequence` instead."
+                )
+            )
         self._seq = sequence
         self._modulated = with_modulation
         self._emulator = QutipEmulator.from_sequence(

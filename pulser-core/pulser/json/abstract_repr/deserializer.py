@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type, Union, cast, overload
 
 import jsonschema
@@ -26,13 +25,19 @@ import pulser
 import pulser.devices as devices
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
-from pulser.channels.eom import RydbergBeam, RydbergEOM
+from pulser.channels.eom import (
+    OPTIONAL_ABSTR_EOM_FIELDS,
+    RydbergBeam,
+    RydbergEOM,
+)
 from pulser.devices import Device, VirtualDevice
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
 )
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
+from pulser.json.utils import get_dataclass_defaults
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
@@ -57,17 +62,6 @@ if TYPE_CHECKING:
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 ExpReturnType = Union[int, float, ParamObj]
-
-schemas_path = Path(__file__).parent / "schemas"
-schemas = {}
-for obj_type in ("device", "sequence"):
-    with open(schemas_path / f"{obj_type}-schema.json") as f:
-        schemas[obj_type] = json.load(f)
-
-resolver = jsonschema.validators.RefResolver(
-    base_uri=f"{schemas_path.resolve().as_uri()}/",
-    referrer=schemas["sequence"],
-)
 
 
 @overload
@@ -292,6 +286,11 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
             try:
+                optional = {
+                    key: data[key]
+                    for key in OPTIONAL_ABSTR_EOM_FIELDS
+                    if key in data
+                }
                 params["eom_config"] = RydbergEOM(
                     mod_bandwidth=data["mod_bandwidth"],
                     limiting_beam=RydbergBeam[data["limiting_beam"]],
@@ -300,6 +299,7 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
                     controlled_beams=tuple(
                         RydbergBeam[beam] for beam in data["controlled_beams"]
                     ),
+                    **optional,
                 )
             except ValueError as e:
                 raise AbstractReprError(
@@ -311,8 +311,11 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         channel_cls = Microwave
     # No other basis allowed by the schema
 
-    for param in dataclasses.fields(channel_cls):
-        if param.init and param.name != "eom_config":
+    channel_fields = dataclasses.fields(channel_cls)
+    channel_defaults = get_dataclass_defaults(channel_fields)
+    for param in channel_fields:
+        use_default = param.name not in obj and param.name in channel_defaults
+        if param.init and param.name != "eom_config" and not use_default:
             params[param.name] = obj[param.name]
     try:
         return channel_cls(**params)
@@ -344,8 +347,11 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
     ex_params = ("channel_objects", "channel_ids")
-    for param in dataclasses.fields(device_cls):
-        if not param.init or param.name in ex_params:
+    device_fields = dataclasses.fields(device_cls)
+    device_defaults = get_dataclass_defaults(device_fields)
+    for param in device_fields:
+        use_default = param.name not in obj and param.name in device_defaults
+        if not param.init or param.name in ex_params or use_default:
             continue
         if param.name == "pre_calibrated_layouts":
             key = "pre_calibrated_layouts"
@@ -370,13 +376,9 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     Returns:
         Sequence: The Pulser sequence.
     """
-    obj = json.loads(obj_str)
-
     # Validate the format of the data against the JSON schema.
-    jsonschema.validate(
-        instance=obj, schema=schemas["sequence"], resolver=resolver
-    )
-
+    validate_abstract_repr(obj_str, "sequence")
+    obj = json.loads(obj_str)
     # Device
     if isinstance(obj["device"], str):
         device_name = obj["device"]
@@ -462,10 +464,9 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
         raise DeserializeDeviceError from type_error
 
     try:
-        obj = json.loads(obj_str)
         # Validate the format of the data against the JSON schema.
-        jsonschema.validate(instance=obj, schema=schemas["device"])
-        return _deserialize_device_object(obj)
+        validate_abstract_repr(obj_str, "device")
+        return _deserialize_device_object(json.loads(obj_str))
     except (
         json.JSONDecodeError,  # From json.loads
         jsonschema.exceptions.ValidationError,  # From jsonschema.validate

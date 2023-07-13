@@ -23,6 +23,7 @@ import pulser_simulation
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
+from pulser.sequence._seq_drawer import draw_samples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
 
 # Helpers
@@ -31,7 +32,7 @@ from pulser.waveforms import BlackmanWaveform, RampWaveform
 def assert_same_samples_as_sim(seq: pulser.Sequence) -> None:
     """Check against the legacy sample extraction in the simulation module."""
     got = sample(seq).to_nested_dict()
-    want = pulser_simulation.Simulation(seq).samples.copy()
+    want = pulser_simulation.QutipEmulator.from_sequence(seq).samples.copy()
 
     def truncate_samples(samples_dict):
         for key, value in samples_dict.items():
@@ -72,6 +73,32 @@ def test_init_error(seq_rydberg):
         NotImplementedError, match="Parametrized sequences can't be sampled."
     ):
         sample(seq_rydberg)
+
+
+@pytest.mark.parametrize("local_only", [True, False])
+def test_delay_only(local_only):
+    seq_ = pulser.Sequence(pulser.Register({"q0": (0, 0)}), MockDevice)
+    seq_.declare_channel("ch0", "rydberg_global")
+    seq_.delay(16, "ch0")
+    samples = sample(seq_)
+    assert samples.channel_samples["ch0"].initial_targets == {"q0"}
+
+    qty_dict = {
+        "amp": np.zeros(16),
+        "det": np.zeros(16),
+        "phase": np.zeros(16),
+    }
+    if local_only:
+        expected = {
+            "Local": {"ground-rydberg": {"q0": qty_dict}},
+            "Global": dict(),
+        }
+    else:
+        expected = {"Global": {"ground-rydberg": qty_dict}, "Local": dict()}
+
+    assert_nested_dict_equality(
+        samples.to_nested_dict(all_local=local_only), expected
+    )
 
 
 def test_one_pulse_sampling():
@@ -213,6 +240,9 @@ def test_eom_modulation(mod_device, disable_eom):
     input_samples = sample(
         seq, extended_duration=full_duration
     ).channel_samples["ch0"]
+    assert input_samples.in_eom_mode(input_samples.slots[-1]) == (
+        not disable_eom
+    )
     mod_samples = sample(seq, modulation=True, extended_duration=full_duration)
     chan = seq.declared_channels["ch0"]
     for qty in ("amp", "det"):
@@ -373,6 +403,22 @@ def test_phase_sampling(mod_device):
     np.testing.assert_array_equal(expected_phase, got_phase)
 
 
+@pytest.mark.parametrize("modulation", [True, False])
+@pytest.mark.parametrize("draw_phase_area", [True, False])
+@pytest.mark.parametrize("draw_phase_shifts", [True, False])
+@pytest.mark.parametrize("draw_phase_curve", [True, False])
+def test_draw_samples(
+    mod_seq, modulation, draw_phase_area, draw_phase_curve, draw_phase_shifts
+):
+    sampled_seq = sample(mod_seq, modulation=modulation)
+    draw_samples(
+        sampled_seq,
+        draw_phase_area=draw_phase_area,
+        draw_phase_shifts=draw_phase_shifts,
+        draw_phase_curve=draw_phase_curve,
+    )
+
+
 # Fixtures
 
 
@@ -390,7 +436,7 @@ def seqs(seq_rydberg) -> list[pulser.Sequence]:
     seq = pulser.Sequence(reg, MockDevice)
     seq.declare_channel("ch0", "raman_global")
     seq.add(pulse, "ch0")
-    seq.measure()
+    seq.measure(basis="digital")
     seqs.append(deepcopy(seq))
 
     seqs.append(seq_rydberg)

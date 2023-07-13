@@ -48,17 +48,13 @@ class Rydberg(Channel):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if self.eom_config is not None:
-            if not isinstance(self.eom_config, RydbergEOM):
-                raise TypeError(
-                    "When defined, 'eom_config' must be a valid 'RydbergEOM'"
-                    f" instance, not {type(self.eom_config)}."
-                )
-            if self.mod_bandwidth is None:
-                raise ValueError(
-                    "'eom_config' can't be defined in a Channel without a "
-                    "modulation bandwidth."
-                )
+        if self.eom_config is not None and not isinstance(
+            self.eom_config, RydbergEOM
+        ):
+            raise TypeError(
+                "When defined, 'eom_config' must be a valid 'RydbergEOM'"
+                f" instance, not {type(self.eom_config)}."
+            )
 
     @property
     def basis(self) -> Literal["ground-rydberg"]:

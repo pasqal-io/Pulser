@@ -1,4 +1,4 @@
-# Copyright 2022 Pulser Development Team
+# Copyright 2023 Pulser Development Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,12 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Serialization and deserialization tools for the abstract representation."""
-import json
-from pathlib import Path
+"""Classes for backend execution."""
 
-SCHEMAS_PATH = Path(__file__).parent / "schemas"
-SCHEMAS = {}
-for obj_type in ("device", "sequence"):
-    with open(SCHEMAS_PATH / f"{obj_type}-schema.json") as f:
-        SCHEMAS[obj_type] = json.load(f)
+from pulser.backend.config import EmulatorConfig
+from pulser.backend.noise_model import NoiseModel
+from pulser.backend.qpu import QPUBackend

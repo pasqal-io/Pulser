@@ -212,7 +212,7 @@ class RegDrawer:
                 blockade_radius=blockade_radius,
                 draw_half_radius=draw_half_radius,
             )
-            fig.tight_layout(w_pad=6.5)
+            fig.get_layout_engine().set(w_pad=6.5)
 
             for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
                 RegDrawer._draw_2D(
@@ -329,11 +329,12 @@ class RegDrawer:
         )
         big_side = max(diffs)
         proportions = diffs / big_side
-        Ls = proportions * min(
-            big_side / 4, 10
-        )  # Figsize is, at most, (10,10)
-        fig, axes = plt.subplots(figsize=Ls)
 
+        Ls = proportions * max(
+            min(big_side / 4, 10), 4
+        )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
+        Ls[1] = max(Ls[1], 1.0)  # Figsize height is at least 1
+        fig, axes = plt.subplots(figsize=Ls, layout="constrained")
         return (fig, axes)
 
     @staticmethod
@@ -356,6 +357,7 @@ class RegDrawer:
             Ls *= max(
                 min(big_side / 4, 10), 4
             )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
+            Ls[1] = max(Ls[1], 1.0)  # Figsize height is at least 1
             proportions.append(Ls)
 
         fig_height = np.max([Ls[1] for Ls in proportions])
@@ -374,6 +376,7 @@ class RegDrawer:
             ncols=3,
             figsize=figsize,
             gridspec_kw=dict(width_ratios=widths),
+            layout="constrained",
         )
 
         return (fig, axes)

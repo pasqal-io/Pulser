@@ -74,6 +74,8 @@ def test_params():
             "'interaction_coeff_xy' must be a 'float',"
             " not '<class 'NoneType'>'.",
         ),
+        ("max_sequence_duration", 1.02, None),
+        ("max_runs", 1e8, None),
     ],
 )
 def test_post_init_type_checks(test_params, param, value, msg):
@@ -117,6 +119,8 @@ def test_post_init_type_checks(test_params, param, value, msg):
             "When defined, the number of channel IDs must"
             " match the number of channel objects.",
         ),
+        ("max_sequence_duration", 0, None),
+        ("max_runs", 0, None),
     ],
 )
 def test_post_init_value_errors(test_params, param, value, msg):
@@ -126,17 +130,21 @@ def test_post_init_value_errors(test_params, param, value, msg):
         VirtualDevice(**test_params)
 
 
-potential_params = ("max_atom_num", "max_radial_distance")
+potential_params = ["max_atom_num", "max_radial_distance"]
+always_none_allowed = ["max_sequence_duration", "max_runs"]
 
 
-@pytest.mark.parametrize("none_param", potential_params)
+@pytest.mark.parametrize("none_param", potential_params + always_none_allowed)
 def test_optional_parameters(test_params, none_param):
     test_params.update({p: 10 for p in potential_params})
     test_params[none_param] = None
-    with pytest.raises(
-        TypeError,
-        match=f"'{none_param}' can't be None in a 'Device' instance.",
-    ):
+    if none_param not in always_none_allowed:
+        with pytest.raises(
+            TypeError,
+            match=f"'{none_param}' can't be None in a 'Device' instance.",
+        ):
+            Device(**test_params)
+    else:
         Device(**test_params)
     VirtualDevice(**test_params)  # Valid as None on a VirtualDevice
 

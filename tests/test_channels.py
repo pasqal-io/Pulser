@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 
 import pulser
+from pulser import Pulse
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
@@ -33,6 +34,7 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
         ("max_duration", 0),
         ("mod_bandwidth", 0),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
+        ("min_avg_amp", -1e-3),
     ],
 )
 def test_bad_init_global_channel(bad_param, bad_value):
@@ -59,6 +61,7 @@ def test_bad_init_global_channel(bad_param, bad_value):
         ("max_duration", -1),
         ("mod_bandwidth", -1e4),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
+        ("min_avg_amp", -1e-3),
     ],
 )
 def test_bad_init_local_channel(bad_param, bad_value):
@@ -190,17 +193,17 @@ _eom_config = RydbergEOM(
 
 def test_eom_channel():
     with pytest.raises(
-        TypeError,
-        match="When defined, 'eom_config' must be a valid 'RydbergEOM'",
-    ):
-        Rydberg.Global(None, None, eom_config=BaseEOM(50))
-
-    with pytest.raises(
         ValueError,
         match="'eom_config' can't be defined in a Channel without a"
         " modulation bandwidth",
     ):
         Rydberg.Global(None, None, eom_config=_eom_config)
+
+    with pytest.raises(
+        TypeError,
+        match="When defined, 'eom_config' must be a valid 'RydbergEOM'",
+    ):
+        Rydberg.Global(None, None, mod_bandwidth=3, eom_config=BaseEOM(50))
 
     assert not Rydberg.Global(None, None).supports_eom()
     assert Rydberg.Global(
@@ -238,9 +241,10 @@ _raman_local = Raman.Local(
 )
 _eom_rydberg = Rydberg.Global(
     max_amp=2 * np.pi * 10,
-    max_abs_detuning=2 * np.pi * 5,
+    max_abs_detuning=30,
     mod_bandwidth=10,
     eom_config=_eom_config,
+    min_avg_amp=1e-3,
 )
 
 
@@ -267,3 +271,51 @@ def test_modulation(channel, tr, eom, side_buffer_len):
         side_buffer_len,
         side_buffer_len,
     )
+
+
+@pytest.mark.parametrize(
+    "pulse, error, msg",
+    [
+        ("π-pulse", TypeError, "must be of type Pulse"),
+        (
+            Pulse.ConstantPulse(100, 1e6, 0, 0),
+            ValueError,
+            "amplitude goes over the maximum",
+        ),
+        (
+            Pulse.ConstantPulse(100, 0, -1e4, 0),
+            ValueError,
+            "detuning values go out of the range",
+        ),
+        (
+            Pulse.ConstantPulse(100, 0.99e-3, 0, 0),
+            ValueError,
+            re.escape(
+                "average amplitude is below the chosen channel's"
+                f" limit ({_eom_rydberg.min_avg_amp})"
+            ),
+        ),
+    ],
+)
+def test_validate_pulse_fail(pulse, error, msg):
+    with pytest.raises(error, match=msg):
+        _eom_rydberg.validate_pulse(pulse)
+
+
+def test_validate_pulse_success():
+    ch_obj = _eom_rydberg
+    # Pulse at max values still passes
+    pulse = Pulse.ConstantPulse(
+        100, ch_obj.max_amp, ch_obj.max_abs_detuning, 0
+    )
+    assert ch_obj.max_amp > ch_obj.min_avg_amp
+    ch_obj.validate_pulse(pulse)
+
+    # Pulse with zero amplitude is fine
+    pulse = Pulse.ConstantPulse(100, 0, ch_obj.max_abs_detuning, 0)
+    ch_obj.validate_pulse(pulse)
+
+    # Pulse with the minimum average amplitude is also fine
+    amp_waveform = ConstantWaveform(100, ch_obj.min_avg_amp)
+    pulse = Pulse.ConstantDetuning(amp_waveform, -ch_obj.max_abs_detuning, 0)
+    ch_obj.validate_pulse(pulse)

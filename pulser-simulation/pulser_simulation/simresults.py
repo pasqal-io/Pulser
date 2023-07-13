@@ -20,7 +20,7 @@ import typing
 from abc import ABC, abstractmethod
 from collections import Counter
 from functools import lru_cache
-from typing import Mapping, Optional, Tuple, TypeVar, Union, cast, overload
+from typing import Mapping, Optional, Tuple, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,13 +28,11 @@ import qutip
 from numpy.typing import ArrayLike
 from qutip.piqs import isdiagonal
 
-from pulser.result import Result, SampledResult
+from pulser.result import Results, ResultType, SampledResult
 from pulser_simulation.qutip_result import QutipResult
 
-ResultType = TypeVar("ResultType", bound=Result)
 
-
-class SimulationResults(ABC, typing.Sequence[ResultType]):
+class SimulationResults(ABC, Results[ResultType]):
     """Results of a simulation run of a pulse sequence.
 
     Parent class for NoisyResults and CoherentResults.
@@ -66,7 +64,6 @@ class SimulationResults(ABC, typing.Sequence[ResultType]):
             )
         self._basis_name = basis_name
         self._sim_times = sim_times
-        self._results: list[ResultType]
 
     @property
     @abstractmethod
@@ -226,24 +223,6 @@ class SimulationResults(ABC, typing.Sequence[ResultType]):
         # 0 = |g or d> = |1>; 1 = |r or u> = |0>
         return qutip.basis(2, 1 - state_n).proj()
 
-    @overload
-    def __getitem__(self, key: int) -> ResultType:
-        pass
-
-    @overload
-    def __getitem__(self, key: slice) -> list[ResultType]:
-        pass
-
-    def __getitem__(self, key: int | slice) -> ResultType | list[ResultType]:
-        return self._results[key]
-
-    def __len__(self) -> int:
-        return len(self._results)
-
-    def __iter__(self) -> collections.abc.Iterator[ResultType]:
-        for res in self._results:
-            yield res
-
 
 class NoisyResults(SimulationResults):
     """Results of a noisy simulation run of a pulse sequence.
@@ -259,7 +238,7 @@ class NoisyResults(SimulationResults):
 
     def __init__(
         self,
-        run_output: list[SampledResult],
+        run_output: typing.Sequence[SampledResult],
         size: int,
         basis_name: str,
         sim_times: np.ndarray,
@@ -292,7 +271,7 @@ class NoisyResults(SimulationResults):
         basis_name_ = "digital" if basis_name == "all" else basis_name
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
-        self._results: list[SampledResult] = run_output
+        self._results = tuple(run_output)
 
     @property
     def states(self) -> list[qutip.Qobj]:
@@ -381,7 +360,7 @@ class CoherentResults(SimulationResults):
 
     def __init__(
         self,
-        run_output: list[QutipResult],
+        run_output: typing.Sequence[QutipResult],
         size: int,
         basis_name: str,
         sim_times: np.ndarray,
@@ -417,7 +396,7 @@ class CoherentResults(SimulationResults):
                     "`meas_basis` and `basis_name` must have the same value."
                 )
         self._meas_basis = meas_basis
-        self._results = run_output
+        self._results = tuple(run_output)
         if meas_errors is not None:
             if set(meas_errors) != {"epsilon", "epsilon_prime"}:
                 raise ValueError(
@@ -542,28 +521,34 @@ class CoherentResults(SimulationResults):
             quantum states at time t.
         """
         sampled_state = super().sample_state(t, n_samples, t_tol)
-        if self._meas_errors is None:
+        if self._meas_errors is None or (
+            self._meas_errors["epsilon"] == 0.0
+            and self._meas_errors["epsilon_prime"] == 0
+        ):
             return sampled_state
 
-        detected_sample_dict: Counter = Counter()
-        for shot, n_detects in sampled_state.items():
-            eps = self._meas_errors["epsilon"]
-            eps_p = self._meas_errors["epsilon_prime"]
-            # Shot as an array of 1s and 0s
-            shot_arr = np.array(list(shot), dtype=int)
-            # Probability of flipping each bit
-            flip_probs = np.array([eps_p if x == "1" else eps for x in shot])
-            # 1 if it flips, 0 if it stays the same
-            flips = (
-                np.random.uniform(size=(n_detects, len(flip_probs)))
-                < flip_probs
-            ).astype(int)
-            # XOR betwen the original array and the flips
-            # Gives an array of n_detects individual shots
-            new_shots = shot_arr ^ flips
-            # Count all the new_shots
-            detected_sample_dict += Counter(
-                "".join(map(str, measured)) for measured in new_shots
-            )
+        eps = self._meas_errors["epsilon"]
+        eps_p = self._meas_errors["epsilon_prime"]
+        shots = list(sampled_state.keys())
+        n_detects_list = list(sampled_state.values())
 
-        return detected_sample_dict
+        # Convert shots to a 2D array
+        shot_arr = np.array([list(shot) for shot in shots], dtype=int)
+        # Compute flip probabilities
+        flip_probs = np.where(shot_arr == 1, eps_p, eps)
+        # Repeat flip_probs based on n_detects_list
+        flip_probs_repeated = np.repeat(flip_probs, n_detects_list, axis=0)
+        # Generate random matrix of shape (sum(n_detects_list), len(shot))
+        random_matrix = np.random.uniform(
+            size=(np.sum(n_detects_list), len(shot_arr[0]))
+        )
+        # Compare random matrix with flip probabilities
+        flips = random_matrix < flip_probs_repeated
+        # Perform XOR between original array and flips
+        new_shots = shot_arr.repeat(n_detects_list, axis=0) ^ flips
+        # Count all the new_shots
+        # We are not converting to str before because tuple indexing is faster
+        detected_sample_dict: Counter = Counter(map(tuple, new_shots))
+        return Counter(
+            {"".join(map(str, k)): v for k, v in detected_sample_dict.items()}
+        )

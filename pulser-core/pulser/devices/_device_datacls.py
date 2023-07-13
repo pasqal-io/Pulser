@@ -26,12 +26,15 @@ from scipy.spatial.distance import pdist, squareform
 from pulser.channels.base_channel import Channel
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
-from pulser.json.utils import obj_to_dict
+from pulser.json.abstract_repr.validation import validate_abstract_repr
+from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 
 DIMENSIONS = Literal[2, 3]
+
+ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs")
 
 
 @dataclass(frozen=True, repr=False)
@@ -61,6 +64,10 @@ class BaseDevice(ABC):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        max_sequence_duration: The maximum allowed duration for a sequence
+            (in ns).
+        max_runs: The maximum number of runs allowed on the device. Only used
+            for backend execution.
     """
     name: str
     dimensions: DIMENSIONS
@@ -71,6 +78,8 @@ class BaseDevice(ABC):
     interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
     max_layout_filling: float = 0.5
+    max_sequence_duration: int | None = None
+    max_runs: int | None = None
     reusable_channels: bool = field(default=False, init=False)
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
@@ -102,9 +111,14 @@ class BaseDevice(ABC):
             "min_atom_distance",
             "max_atom_num",
             "max_radial_distance",
+            "max_sequence_duration",
+            "max_runs",
         ):
             value = getattr(self, param)
-            if param in self._optional_parameters:
+            if (
+                param in self._optional_parameters
+                or param in ALWAYS_OPTIONAL_PARAMS
+            ):
                 prelude = "When defined, "
                 is_none = value is None
             elif value is None:
@@ -407,9 +421,13 @@ class BaseDevice(ABC):
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
         ex_params = ("channel_objects", "channel_ids")
+        defaults = get_dataclass_defaults(fields(self))
         params = self._params()
         for p in ex_params:
             params.pop(p, None)
+        for p in ALWAYS_OPTIONAL_PARAMS:
+            if params[p] == defaults[p]:
+                params.pop(p, None)
         ch_list = []
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
@@ -417,7 +435,9 @@ class BaseDevice(ABC):
 
     def to_abstract_repr(self) -> str:
         """Serializes the Sequence into an abstract JSON object."""
-        return json.dumps(self, cls=AbstractReprEncoder)
+        abstr_dev_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_dev_str, "device")
+        return abstr_dev_str
 
 
 @dataclass(frozen=True, repr=False)
@@ -446,6 +466,10 @@ class Device(BaseDevice):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        max_sequence_duration: The maximum allowed duration for a sequence
+            (in ns).
+        max_runs: The maximum number of runs allowed on the device. Only used
+            for backend execution.
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
@@ -508,10 +532,15 @@ class Device(BaseDevice):
             ),
             f" - Maximum layout filling fraction: {self.max_layout_filling}",
             f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
-            "\nChannels:",
         ]
 
-        ch_lines = []
+        if self.max_sequence_duration is not None:
+            lines.append(
+                " - Maximum sequence duration: "
+                f"{self.max_sequence_duration} ns"
+            )
+
+        ch_lines = ["\nChannels:"]
         for name, ch in self.channels.items():
             if for_docs:
                 ch_lines += [
@@ -528,6 +557,7 @@ class Device(BaseDevice):
                         + r"- Maximum :math:`|\delta|`:"
                         + f" {ch.max_abs_detuning:.4g} rad/µs"
                     ),
+                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [
@@ -583,6 +613,10 @@ class VirtualDevice(BaseDevice):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        max_sequence_duration: The maximum allowed duration for a sequence
+            (in ns).
+        max_runs: The maximum number of runs allowed on the device. Only used
+            for backend execution.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """
