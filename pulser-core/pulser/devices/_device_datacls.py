@@ -466,6 +466,10 @@ class Device(BaseDevice):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        max_sequence_duration: The maximum allowed duration for a sequence
+            (in ns).
+        max_runs: The maximum number of runs allowed on the device. Only used
+            for backend execution.
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
@@ -603,6 +607,10 @@ class VirtualDevice(BaseDevice):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        max_sequence_duration: The maximum allowed duration for a sequence
+            (in ns).
+        max_runs: The maximum number of runs allowed on the device. Only used
+            for backend execution.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """

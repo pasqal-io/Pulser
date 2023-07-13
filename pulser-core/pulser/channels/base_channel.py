@@ -259,6 +259,8 @@ class Channel(ABC):
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
                 bandwidth at -3dB (50% reduction), in MHz.
+            min_avg_amp: The minimum average amplitude of a pulse (when not
+                zero).
         """
         return cls(
             "Local",
@@ -294,6 +296,8 @@ class Channel(ABC):
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
                 bandwidth at -3dB (50% reduction), in MHz.
+            min_avg_amp: The minimum average amplitude of a pulse (when not
+                zero).
         """
         return cls("Global", max_abs_detuning, max_amp, **kwargs)
 
