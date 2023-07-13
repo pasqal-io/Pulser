@@ -25,13 +25,15 @@ from numpy.typing import ArrayLike
 from scipy.fft import fft, fftfreq, ifft
 
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM
-from pulser.json.utils import obj_to_dict
+from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.pulse import Pulse
 
 # Warnings of adjusted waveform duration appear just once
 warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
+
+OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -55,6 +57,7 @@ class Channel(ABC):
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
+        min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
 
@@ -72,6 +75,7 @@ class Channel(ABC):
     clock_period: int = 1  # ns
     min_duration: int = 1  # ns
     max_duration: Optional[int] = int(1e8)  # ns
+    min_avg_amp: int = 0
     mod_bandwidth: Optional[float] = None  # MHz
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
 
@@ -110,11 +114,13 @@ class Channel(ABC):
             "min_duration",
             "max_duration",
             "mod_bandwidth",
+            "min_avg_amp",
         ]
         non_negative = [
             "max_abs_detuning",
             "min_retarget_interval",
             "fixed_retarget_t",
+            "min_avg_amp",
         ]
         local_only = [
             "min_retarget_interval",
@@ -253,6 +259,8 @@ class Channel(ABC):
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
                 bandwidth at -3dB (50% reduction), in MHz.
+            min_avg_amp: The minimum average amplitude of a pulse (when not
+                zero).
         """
         return cls(
             "Local",
@@ -288,6 +296,8 @@ class Channel(ABC):
                 duration an instruction can take.
             mod_bandwidth(Optional[float], default=None): The modulation
                 bandwidth at -3dB (50% reduction), in MHz.
+            min_avg_amp: The minimum average amplitude of a pulse (when not
+                zero).
         """
         return cls("Global", max_abs_detuning, max_amp, **kwargs)
 
@@ -355,6 +365,12 @@ class Channel(ABC):
             raise ValueError(
                 "The pulse's detuning values go out of the range "
                 "allowed for the chosen channel."
+            )
+        avg_amp = np.average(pulse.amplitude.samples)
+        if 0 < avg_amp < self.min_avg_amp:
+            raise ValueError(
+                "The pulse's average amplitude is below the chosen "
+                f"channel's limit ({self.min_avg_amp})."
             )
 
     @property
@@ -487,6 +503,23 @@ class Channel(ABC):
 
         return start, end
 
+    @property
+    def _eom_buffer_time(self) -> int:
+        # By definition, rise_time goes from 10% to 90%
+        # Roughly 2*rise_time is enough to go from 0% to 100%
+        # so we use that by default
+        assert self.supports_eom(), "Can't define the EOM buffer time."
+        return int(
+            cast(BaseEOM, self.eom_config).custom_buffer_time
+            or 2 * self.rise_time
+        )
+
+    @property
+    def _eom_buffer_mod_bandwidth(self) -> float:
+        # Takes half of the buffer time as the rise time
+        rise_time_us = self._eom_buffer_time / 2 * 1e-3
+        return MODBW_TO_TR / rise_time_us
+
     def __repr__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
@@ -524,5 +557,10 @@ class Channel(ABC):
         return obj_to_dict(self, _module=_module, **params)
 
     def _to_abstract_repr(self, id: str) -> dict[str, Any]:
-        params = {f.name: getattr(self, f.name) for f in fields(self)}
+        all_fields = fields(self)
+        defaults = get_dataclass_defaults(all_fields)
+        params = {f.name: getattr(self, f.name) for f in all_fields}
+        for p in OPTIONAL_ABSTR_CH_FIELDS:
+            if params[p] == defaults[p]:
+                params.pop(p, None)
         return {"id": id, "basis": self.basis, **params}

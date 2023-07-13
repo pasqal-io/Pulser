@@ -248,6 +248,10 @@ class _ChannelSchedule:
 
 
 class _Schedule(Dict[str, _ChannelSchedule]):
+    def __init__(self, max_duration: int | None = None):
+        self.max_duration = max_duration
+        super().__init__()
+
     def get_duration(
         self, channel: Optional[str] = None, include_fall_time: bool = False
     ) -> int:
@@ -293,13 +297,13 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         if not _skip_buffer and self.get_duration(channel_id):
             # Wait for the last pulse to ramp down (if needed)
             self.wait_for_fall(channel_id)
-            # Account for time needed to ramp to desired amplitude
-            # By definition, rise_time goes from 10% to 90%
-            # Roughly 2*rise_time is enough to go from 0% to 100%
+            eom_buffer_time = self[channel_id].adjust_duration(
+                channel_obj._eom_buffer_time
+            )
             if detuning_off != 0:
                 self.add_pulse(
                     Pulse.ConstantPulse(
-                        2 * channel_obj.rise_time,
+                        eom_buffer_time,
                         0.0,
                         detuning_off,
                         self._get_last_pulse_phase(channel_id),
@@ -309,7 +313,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     protocol="no-delay",
                 )
             else:
-                self.add_delay(2 * channel_obj.rise_time, channel_id)
+                self.add_delay(eom_buffer_time, channel_id)
 
         # Set up the EOM
         eom_settings = _EOMSettings(
@@ -323,8 +327,16 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
     def disable_eom(self, channel_id: str, _skip_buffer: bool = False) -> None:
         self[channel_id].eom_blocks[-1].tf = self[channel_id][-1].tf
+        channel_obj = self[channel_id].channel_obj
+        eom_config = channel_obj.eom_config
         if not _skip_buffer:
-            self.wait_for_fall(channel_id)
+            if eom_config and eom_config.custom_buffer_time:
+                eom_buffer_time = self[channel_id].adjust_duration(
+                    channel_obj._eom_buffer_time
+                )
+                self.add_delay(eom_buffer_time, channel_id)
+            else:
+                self.wait_for_fall(channel_id)
 
     def add_pulse(
         self,
@@ -373,12 +385,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         ti = t0 + delay_duration
         tf = ti + pulse.duration
+        self._check_duration(tf)
         self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
 
     def add_delay(self, duration: int, channel: str) -> None:
         last = self[channel][-1]
         ti = last.tf
         tf = ti + self[channel].channel_obj.validate_duration(duration)
+        self._check_duration(tf)
         if (
             self[channel].in_eom_mode()
             and self[channel].eom_blocks[-1].detuning_off != 0
@@ -416,7 +430,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         else:
             ti = -1
             tf = 0
-
+        self._check_duration(tf)
         self[channel].slots.append(
             _TimeSlot("target", ti, tf, set(qubits_set))
         )
@@ -468,3 +482,10 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         except RuntimeError:
             phase = 0.0
         return phase
+
+    def _check_duration(self, t: int) -> None:
+        if self.max_duration is not None and t > self.max_duration:
+            raise RuntimeError(
+                "The sequence's duration exceeded the maximum duration allowed"
+                f" by the device ({self.max_duration} ns)."
+            )

@@ -17,6 +17,7 @@ import json
 import re
 from collections.abc import Callable
 from copy import deepcopy
+from dataclasses import replace
 from typing import Any, Type
 from unittest.mock import patch
 
@@ -25,6 +26,8 @@ import numpy as np
 import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
+from pulser.channels import Rydberg
+from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import Chadoq2, Device, IroiseMVP, MockDevice
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
@@ -186,6 +189,51 @@ class TestDevice:
             "Device deserialization failed.",
         )
         assert isinstance(prev_err.__cause__, ValueError)
+
+    @pytest.mark.parametrize("field", ["max_sequence_duration", "max_runs"])
+    def test_optional_device_fields(self, field):
+        device = replace(MockDevice, **{field: 1000})
+        dev_str = device.to_abstract_repr()
+        assert device == deserialize_device(dev_str)
+
+    @pytest.mark.parametrize(
+        "ch_obj",
+        [
+            Rydberg.Global(None, None, min_avg_amp=1),
+            Rydberg.Global(
+                None,
+                None,
+                mod_bandwidth=5,
+                eom_config=RydbergEOM(
+                    max_limiting_amp=10,
+                    mod_bandwidth=20,
+                    limiting_beam=RydbergBeam.RED,
+                    intermediate_detuning=1000,
+                    controlled_beams=tuple(RydbergBeam),
+                    multiple_beam_control=False,
+                ),
+            ),
+            Rydberg.Global(
+                None,
+                None,
+                mod_bandwidth=5,
+                eom_config=RydbergEOM(
+                    max_limiting_amp=10,
+                    mod_bandwidth=20,
+                    limiting_beam=RydbergBeam.RED,
+                    intermediate_detuning=1000,
+                    controlled_beams=tuple(RydbergBeam),
+                    custom_buffer_time=500,
+                ),
+            ),
+        ],
+    )
+    def test_optional_channel_fields(self, ch_obj):
+        device = replace(
+            MockDevice, channel_objects=(ch_obj,), channel_ids=None
+        )
+        dev_str = device.to_abstract_repr()
+        assert device == deserialize_device(dev_str)
 
 
 def validate_schema(instance):
