@@ -12,3 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Classes for backend execution."""
+
+from pulser.backend.config import EmulatorConfig
+from pulser.backend.noise_model import NoiseModel
+from pulser.backend.qpu import QPUBackend

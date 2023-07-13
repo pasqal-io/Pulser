@@ -15,10 +15,13 @@
 from __future__ import annotations
 
 import copy
+import json
 import warnings
 from dataclasses import fields
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, cast
 
+import backoff
+import numpy as np
 import pasqal_cloud
 from pasqal_cloud.device.configuration import (
     BaseConfig,
@@ -35,6 +38,7 @@ from pulser.backend.remote import (
     SubmissionStatus,
 )
 from pulser.devices import Device
+from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser.result import Result, SampledResult
 from pulser_pasqal.job_parameters import JobParameters
 
@@ -42,6 +46,29 @@ EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {
     pasqal_cloud.EmulatorType.EMU_FREE: EmuFreeConfig,
     pasqal_cloud.EmulatorType.EMU_TN: EmuTNConfig,
 }
+
+MAX_CLOUD_ATTEMPTS = 5
+
+backoff_decorator = backoff.on_exception(
+    backoff.fibo, Exception, max_tries=MAX_CLOUD_ATTEMPTS, max_value=60
+)
+
+
+def _make_json_compatible(obj: Any) -> Any:
+    """Makes an object compatible with JSON serialization.
+
+    For now, simply converts Numpy arrays to lists, but more can be added
+    as needed.
+    """
+
+    class NumpyEncoder(json.JSONEncoder):
+        def default(self, o: Any) -> Any:
+            if isinstance(o, np.ndarray):
+                return o.tolist()
+            return json.JSONEncoder.default(self, o)
+
+    # Serializes with the custom encoder and then deserializes back
+    return json.loads(json.dumps(obj, cls=NumpyEncoder))
 
 
 class PasqalCloud(RemoteConnection):
@@ -51,9 +78,9 @@ class PasqalCloud(RemoteConnection):
     QPUs.
 
     Args:
-        username: your username in the PASQAL cloud platform.
-        password: the password for your PASQAL cloud platform account.
-        group_id: the group_id associated to the account.
+        username: Your username in the PASQAL cloud platform.
+        password: The password for your PASQAL cloud platform account.
+        project_id: The project ID associated to the account.
         kwargs: Additional arguments to provide to the pasqal_cloud.SDK()
     """
 
@@ -61,14 +88,15 @@ class PasqalCloud(RemoteConnection):
         self,
         username: str = "",
         password: str = "",
-        group_id: str = "",
+        project_id: str = "",
         **kwargs: Any,
     ):
         """Initializes a connection to the Pasqal cloud platform."""
+        project_id_ = project_id or kwargs.pop("group_id", "")
         self._sdk_connection = pasqal_cloud.SDK(
             username=username,
             password=password,
-            group_id=group_id,
+            project_id=project_id_,
             **kwargs,
         )
 
@@ -86,7 +114,9 @@ class PasqalCloud(RemoteConnection):
             sequence.measure(bases[0])
 
         emulator = kwargs.get("emulator", None)
-        job_params: list[JobParams] = kwargs.get("job_params", [])
+        job_params: list[JobParams] = _make_json_compatible(
+            kwargs.get("job_params", [])
+        )
         if emulator is None:
             available_devices = self.fetch_available_devices()
             # TODO: Could be better to check if the devices are
@@ -97,6 +127,7 @@ class PasqalCloud(RemoteConnection):
                     "of the devices currently available through the remote "
                     "connection."
                 )
+            # TODO: Validate the register layout
 
         if sequence.is_parametrized() or sequence.is_register_mappable():
             for params in job_params:
@@ -106,29 +137,60 @@ class PasqalCloud(RemoteConnection):
         configuration = self._convert_configuration(
             config=kwargs.get("config", None), emulator=emulator
         )
-
-        batch = self._sdk_connection.create_batch(
+        create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
+        batch = create_batch_fn(
             serialized_sequence=sequence.to_abstract_repr(),
             jobs=job_params or [],  # type: ignore[arg-type]
             emulator=emulator,
             configuration=configuration,
             wait=False,
-            fetch_results=False,
         )
-        return RemoteResults(batch.id, self)
+        jobs_order = []
+        if job_params:
+            for job_dict in job_params:
+                for job in batch.jobs.values():
+                    if (
+                        job.id not in jobs_order
+                        and job_dict["runs"] == job.runs
+                        and job_dict.get("variables", None) == job.variables
+                    ):
+                        jobs_order.append(job.id)
+                        break
+                else:
+                    raise RuntimeError(
+                        f"Failed to find job ID for {job_dict}."
+                    )
 
-    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
+        return RemoteResults(batch.id, self, jobs_order or None)
+
+    @backoff_decorator
+    def fetch_available_devices(self) -> dict[str, Device]:
+        """Fetches the devices available through this connection."""
+        abstract_devices = self._sdk_connection.get_device_specs_dict()
+        return {
+            name: cast(Device, deserialize_device(dev_str))
+            for name, dev_str in abstract_devices.items()
+        }
+
+    def _fetch_result(
+        self, submission_id: str, jobs_order: list[str] | None
+    ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
-        batch = self._sdk_connection.get_batch(
-            id=submission_id, fetch_results=True
-        )
+        get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
+        batch = get_batch_fn(id=submission_id)
         seq_builder = Sequence.from_abstract_repr(batch.sequence_builder)
         reg = seq_builder.get_register(include_mappable=True)
         all_qubit_ids = reg.qubit_ids
         meas_basis = seq_builder.get_measurement_basis()
 
         results = []
-        for job in batch.jobs.values():
+
+        jobs = (
+            (batch.jobs[job_id] for job_id in jobs_order)
+            if jobs_order
+            else batch.jobs.values()
+        )
+        for job in jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:
@@ -143,11 +205,10 @@ class PasqalCloud(RemoteConnection):
             )
         return tuple(results)
 
+    @backoff_decorator
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
         """Gets the status of a submission from its ID."""
-        batch = self._sdk_connection.get_batch(
-            id=submission_id, fetch_results=False
-        )
+        batch = self._sdk_connection.get_batch(id=submission_id)
         return SubmissionStatus[batch.status]
 
     def _convert_configuration(

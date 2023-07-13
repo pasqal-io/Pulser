@@ -6,4 +6,4 @@ API Reference
 
    core
    simulation
-   cloud
+   backend

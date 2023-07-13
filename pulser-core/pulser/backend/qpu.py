@@ -24,7 +24,7 @@ from pulser.devices import Device
 class QPUBackend(RemoteBackend):
     """Backend for sequence execution on a QPU."""
 
-    def run(self, job_params: list[JobParams] = []) -> RemoteResults:
+    def run(self, job_params: list[JobParams] | None = None) -> RemoteResults:
         """Runs the sequence on the remote QPU and returns the result.
 
         Args:
