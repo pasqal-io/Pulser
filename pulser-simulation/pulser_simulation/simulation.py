@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the Simulation class, used for simulation of a Sequence."""
+"""Defines the QutipEmulator, used to simulate a Sequence or its samples."""
 
 from __future__ import annotations
 
@@ -1155,6 +1155,9 @@ class QutipEmulator:
 
 class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
+
+    Warning:
+        This class is deprecated in favour of ``QutipEmulator.from_sequence``.
 
     Args:
         sequence: An instance of a Pulser Sequence that we
