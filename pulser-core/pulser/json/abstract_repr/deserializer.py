@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type, Union, cast, overload
 
 import jsonschema
@@ -32,6 +31,7 @@ from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
 )
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
@@ -57,17 +57,6 @@ if TYPE_CHECKING:
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
 ExpReturnType = Union[int, float, ParamObj]
-
-schemas_path = Path(__file__).parent / "schemas"
-schemas = {}
-for obj_type in ("device", "sequence"):
-    with open(schemas_path / f"{obj_type}-schema.json") as f:
-        schemas[obj_type] = json.load(f)
-
-resolver = jsonschema.validators.RefResolver(
-    base_uri=f"{schemas_path.resolve().as_uri()}/",
-    referrer=schemas["sequence"],
-)
 
 
 @overload
@@ -370,13 +359,9 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     Returns:
         Sequence: The Pulser sequence.
     """
-    obj = json.loads(obj_str)
-
     # Validate the format of the data against the JSON schema.
-    jsonschema.validate(
-        instance=obj, schema=schemas["sequence"], resolver=resolver
-    )
-
+    validate_abstract_repr(obj_str, "sequence")
+    obj = json.loads(obj_str)
     # Device
     if isinstance(obj["device"], str):
         device_name = obj["device"]
@@ -462,10 +447,9 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
         raise DeserializeDeviceError from type_error
 
     try:
-        obj = json.loads(obj_str)
         # Validate the format of the data against the JSON schema.
-        jsonschema.validate(instance=obj, schema=schemas["device"])
-        return _deserialize_device_object(obj)
+        validate_abstract_repr(obj_str, "device")
+        return _deserialize_device_object(json.loads(obj_str))
     except (
         json.JSONDecodeError,  # From json.loads
         jsonschema.exceptions.ValidationError,  # From jsonschema.validate
