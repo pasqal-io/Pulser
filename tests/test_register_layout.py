@@ -153,6 +153,44 @@ def test_eq(layout, layout3d):
     assert hash(layout1) == hash(layout2)
 
 
+def test_ineq(layout, layout3d):
+    layout1 = RegisterLayout([[0, 0], [1, 1]])
+    layout2 = RegisterLayout([[1, 0, 1], [0, 0, 0]])
+    zero_layout = RegisterLayout([[0, 0]])
+    zero_3Dlayout = RegisterLayout([[0, 0, 0]])
+
+    with pytest.raises(
+        TypeError, match="Right operand should be of type RegisterLayout."
+    ):
+        zero_layout < Register.from_coordinates([[1, 0], [0, 0]])
+
+    with pytest.raises(
+        TypeError, match="Right operand should be of type RegisterLayout."
+    ):
+        zero_layout > Register.from_coordinates([[1, 0], [0, 0]])
+
+    assert layout >= layout1
+    assert not layout1 >= layout
+    assert layout1 <= layout
+    assert not layout <= layout1
+
+    assert layout3d >= layout2
+    assert not layout2 >= layout3d
+    assert layout2 <= layout3d
+    assert not layout3d <= layout2
+
+    # Returns False if dimensionality issues
+    assert zero_layout < layout1
+    assert not zero_layout < layout2
+    assert layout1 > zero_layout
+    assert not layout2 > zero_layout
+
+    assert zero_3Dlayout < layout2
+    assert not zero_3Dlayout < layout1
+    assert layout2 > zero_3Dlayout
+    assert not layout1 > zero_3Dlayout
+
+
 def test_traps_from_coordinates(layout):
     assert layout._coords_to_traps == {
         (0, 0): 0,

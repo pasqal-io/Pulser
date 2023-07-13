@@ -13,12 +13,19 @@
 # limitations under the License.
 
 import re
+from dataclasses import replace
+from operator import gt
 
 import numpy as np
 import pytest
 
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.comparison_tools import (
+    _compare_with_None,
+    validate_channel_from_best,
+    validate_eom_from_best,
+)
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
@@ -267,3 +274,119 @@ def test_modulation(channel, tr, eom, side_buffer_len):
         side_buffer_len,
         side_buffer_len,
     )
+
+
+def test_compare_with_None():
+    comp_ops = {"max_amp": gt, "max_duration": gt}
+    left_values = {"max_amp": 1, "clock_period": 1, "max_duration": None}
+    right_values = {"max_amp": None, "clock_period": 2}
+    with pytest.raises(
+        ValueError,
+        match="Keys in comparison_ops should be in left values and right",
+    ):
+        _compare_with_None(comp_ops, left_values, right_values)
+    right_values["max_duration"] = None
+    comp_ops["clock_period"] = gt
+    assert _compare_with_None(comp_ops, left_values, right_values) == {
+        "max_amp": True,
+        "clock_period": False,
+        "max_duration": None,
+    }
+    assert _compare_with_None(comp_ops, right_values, left_values) == {
+        "max_amp": False,
+        "clock_period": True,
+        "max_duration": None,
+    }
+
+
+@pytest.mark.parametrize(
+    "param, value, comparison",
+    [
+        ("mod_bandwidth", 10, None),
+        ("mod_bandwidth", 20, None),
+        ("mod_bandwidth", 40, "above"),
+        ("limiting_beam", RydbergBeam.RED, None),
+        ("limiting_beam", RydbergBeam.BLUE, "different"),
+        ("max_limiting_amp", 2 * np.pi * 100, None),
+        ("max_limiting_amp", 2 * np.pi * 150, "above"),
+        ("controlled_beams", (RydbergBeam.RED,), None),
+        ("controlled_beams", tuple(RydbergBeam), "above"),
+        ("intermediate_detuning", 500 * 2 * np.pi, None),
+        ("intermediate_detuning", 200 * 2 * np.pi, "different"),
+    ],
+)
+def test_compare_eom(param, value, comparison):
+    print(param, value)
+    best_eom_config = replace(_eom_config, controlled_beams=(RydbergBeam.RED,))
+
+    with pytest.raises(
+        ValueError,
+        match="EOM config is RydbergEOM whereas best EOM config is not.",
+    ):
+        validate_eom_from_best(best_eom_config, BaseEOM(20))
+
+    eom_config = replace(best_eom_config, **{param: value})
+    if comparison is None:
+        assert validate_eom_from_best(eom_config, best_eom_config)
+        if param == "mod_bandwidth":
+            # Works because BaseEOM can be implemented by RydbergEOM
+            validate_eom_from_best(BaseEOM(value), best_eom_config)
+    else:
+        with pytest.raises(
+            ValueError, match=f"{param} cannot be {comparison} "
+        ):
+            validate_eom_from_best(eom_config, best_eom_config)
+        if param == "mod_bandwidth":
+            with pytest.raises(
+                ValueError, match=f"{param} cannot be {comparison} "
+            ):
+                validate_eom_from_best(BaseEOM(value), best_eom_config)
+
+
+@pytest.mark.parametrize(
+    "param, value, comparison",
+    [
+        ("max_abs_detuning", 300, "above"),
+        ("max_amp", 100, "above"),
+        ("mod_bandwidth", 10, "above"),
+        ("clock_period", 2, "below"),
+        ("max_duration", 2e8, "above"),
+        ("min_duration", 1, None),
+        ("max_targets", 4, "above"),
+        ("fixed_retarget_t", 0, None),
+        ("min_retarget_interval", 180, "below"),
+    ],
+)
+def test_compare_channels(mod_device, param, value, comparison):
+    # Error if channel types are different
+    with pytest.raises(
+        ValueError,
+        match=f"Channels do not have the same types, {Raman} and {Rydberg}",
+    ):
+        validate_channel_from_best(_raman_local, _eom_rydberg)
+    # Error if the best channel does not have an EOM
+    rydberg_no_eom = Rydberg.Global(
+        max_amp=2 * np.pi * 10,
+        max_abs_detuning=2 * np.pi * 5,
+        mod_bandwidth=10,
+    )
+    with pytest.raises(
+        ValueError, match="eom_config cannot be defined in channel"
+    ):
+        validate_channel_from_best(_eom_rydberg, rydberg_no_eom)
+    assert validate_eom_from_best(rydberg_no_eom, _eom_rydberg)
+    # Error if addressing is not the same
+    best_channel = mod_device.channels["rydberg_local"]
+    with pytest.raises(
+        ValueError, match="addressing cannot be different than Local."
+    ):
+        validate_channel_from_best(rydberg_no_eom, best_channel)
+    # Changing parameters of a Local channel.
+    channel = replace(best_channel, **{param: value})
+    if comparison is None:
+        assert validate_channel_from_best(channel, best_channel)
+    else:
+        with pytest.raises(
+            ValueError, match=f"{param} cannot be {comparison} "
+        ):
+            validate_channel_from_best(channel, best_channel)

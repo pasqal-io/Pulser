@@ -311,6 +311,34 @@ class RegisterLayout(RegDrawer):
             return False
         return self._safe_hash() == other._safe_hash()
 
+    def __gt__(self, other: RegisterLayout) -> bool:
+        if not isinstance(other, RegisterLayout):
+            raise TypeError("Right operand should be of type RegisterLayout.")
+        return (
+            set(tuple(self._coords[i]) for i in range(self.number_of_traps))
+            > set(
+                tuple(other._coords[i]) for i in range(other.number_of_traps)
+            )
+            and self.dimensionality == other.dimensionality
+        )
+
+    def __ge__(self, other: Any) -> bool:
+        return self.__eq__(other) or self.__gt__(other)
+
+    def __lt__(self, other: RegisterLayout) -> bool:
+        if not isinstance(other, RegisterLayout):
+            raise TypeError("Right operand should be of type RegisterLayout.")
+        return (
+            set(tuple(self._coords[i]) for i in range(self.number_of_traps))
+            < set(
+                tuple(other._coords[i]) for i in range(other.number_of_traps)
+            )
+            and self.dimensionality == other.dimensionality
+        )
+
+    def __le__(self, other: Any) -> bool:
+        return self.__eq__(other) or self.__lt__(other)
+
     def __hash__(self) -> int:
         return hash(self._safe_hash())
 

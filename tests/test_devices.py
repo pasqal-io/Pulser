@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from unittest.mock import patch
 
 import numpy as np
@@ -21,7 +21,18 @@ import pytest
 
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
-from pulser.devices import Chadoq2, Device, VirtualDevice
+from pulser.devices import (
+    Chadoq2,
+    Device,
+    IroiseMVP,
+    MockDevice,
+    VirtualDevice,
+)
+from pulser.devices.comparison_tools import (
+    _exist_good_configuration,
+    validate_channel_from_best,
+    validate_device_from_best,
+)
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
@@ -376,3 +387,134 @@ def test_device_params():
     assert set(all_params) - set(all_virtual_params) == {
         "pre_calibrated_layouts"
     }
+
+
+def test_exist_good_config():
+    good_config = {
+        "chA": {
+            "ch1",
+        },
+        "chB": {"ch1", "ch2"},
+        "chC": {
+            "ch3",
+        },
+    }
+    another_good_config = {
+        "chA": {"ch1", "ch2"},
+        "chB": {"ch1", "ch2"},
+        "chC": {
+            "ch3",
+        },
+    }
+    bad_config = {
+        "chA": {
+            "ch1",
+        },
+        "chB": {
+            "ch1",
+        },
+        "chC": {
+            "ch2",
+        },
+    }
+    assert _exist_good_configuration(good_config)
+    assert _exist_good_configuration(another_good_config)
+    assert not _exist_good_configuration(bad_config)
+
+
+@pytest.mark.parametrize(
+    "param, value, comparison",
+    [
+        ("dimensions", 3, "above"),
+        ("rydberg_level", 69, "different"),
+        ("max_atom_num", 200, "above"),
+        ("max_radial_distance", 60, "above"),
+        ("min_atom_distance", 2, "below"),
+        ("supports_slm_mask", False, None),
+        ("max_layout_filling", 0.9, "above"),
+        ("interaction_coeff_xy", 1, "different"),
+    ],
+)
+def test_compare_channels(mod_device, param, value, comparison):
+    # Checking the defined devices
+    assert validate_device_from_best(Chadoq2, mod_device)
+    Iroise_eom = replace(
+        IroiseMVP.channels["rydberg_global"].eom_config,
+        intermediate_detuning=800 * 2 * np.pi,
+    )
+    Iroise_global = replace(
+        IroiseMVP.channels["rydberg_global"], eom_config=Iroise_eom
+    )
+    assert validate_channel_from_best(
+        Iroise_global, mod_device.channels["rydberg_global"]
+    )
+    assert validate_device_from_best(
+        replace(IroiseMVP, channel_objects=(Iroise_global,), rydberg_level=70),
+        mod_device,
+    )
+    # Error if channel types are different
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Devices do not have the same types, "
+            + f"{VirtualDevice} and {Device}"
+        ),
+    ):
+        validate_device_from_best(MockDevice, mod_device)
+    # Error if the channels don't match
+    with pytest.raises(ValueError, match="No configuration could be found"):
+        validate_device_from_best(IroiseMVP, mod_device)
+
+    best_device = Chadoq2.to_virtual()
+    channel_with_locals = replace(
+        best_device,
+        channel_ids=(
+            "rydberg_global",
+            "rydberg_local1",
+            "raman_local",
+            "rydberg_local2",
+        ),
+        channel_objects=(
+            best_device.channels["rydberg_global"],
+            best_device.channels["rydberg_local"],
+            best_device.channels["raman_local"],
+            replace(best_device.channels["rydberg_local"], max_amp=100),
+        ),
+    )
+    assert validate_device_from_best(best_device, channel_with_locals)
+    assert validate_device_from_best(channel_with_locals, channel_with_locals)
+    with pytest.raises(ValueError, match="No configuration could be found"):
+        validate_device_from_best(channel_with_locals, best_device)
+    # Error if pre-calibrated layouts don't match
+    zero_layout = RegisterLayout([[0, 0]])
+    assert validate_device_from_best(
+        Chadoq2, replace(Chadoq2, pre_calibrated_layouts=[zero_layout])
+    )
+    with pytest.raises(ValueError, match="No configuration could be found "):
+        validate_device_from_best(
+            replace(Chadoq2, pre_calibrated_layouts=[zero_layout]),
+            Chadoq2,
+        )
+    pre_calibrated_layouts = [RegisterLayout([[0, 0], [4, 0]])]
+    assert validate_device_from_best(
+        replace(Chadoq2, pre_calibrated_layouts=[zero_layout]),
+        replace(Chadoq2, pre_calibrated_layouts=pre_calibrated_layouts),
+    )
+    with pytest.raises(ValueError, match="No configuration could be found "):
+        validate_device_from_best(
+            replace(
+                Chadoq2,
+                pre_calibrated_layouts=[zero_layout] + pre_calibrated_layouts,
+            ),
+            replace(Chadoq2, pre_calibrated_layouts=pre_calibrated_layouts),
+        )
+
+    # Changing parameters of a Local channel.
+    device = replace(best_device, **{param: value})
+    if comparison is None:
+        assert validate_device_from_best(device, best_device)
+    else:
+        with pytest.raises(
+            ValueError, match=f"{param} cannot be {comparison} "
+        ):
+            validate_device_from_best(device, best_device)
