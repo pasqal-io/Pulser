@@ -24,7 +24,7 @@ from pulser.backend.noise_model import NoiseModel
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class BackendConfig:
     """The base backend configuration.
 
@@ -35,7 +35,7 @@ class BackendConfig:
     backend_options: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
+@dataclass(frozen=True)
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
 
