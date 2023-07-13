@@ -532,10 +532,15 @@ class Device(BaseDevice):
             ),
             f" - Maximum layout filling fraction: {self.max_layout_filling}",
             f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
-            "\nChannels:",
         ]
 
-        ch_lines = []
+        if self.max_sequence_duration is not None:
+            lines.append(
+                " - Maximum sequence duration: "
+                f"{self.max_sequence_duration} ns"
+            )
+
+        ch_lines = ["\nChannels:"]
         for name, ch in self.channels.items():
             if for_docs:
                 ch_lines += [
@@ -552,6 +557,7 @@ class Device(BaseDevice):
                         + r"- Maximum :math:`|\delta|`:"
                         + f" {ch.max_abs_detuning:.4g} rad/µs"
                     ),
+                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
                 ]
                 if ch.addressing == "Local":
                     ch_lines += [

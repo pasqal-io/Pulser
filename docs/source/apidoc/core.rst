@@ -96,7 +96,7 @@ which when associated with a :class:`pulser.Sequence` condition its development.
 
 .. autodata:: pulser.devices.Chadoq2
 
-.. autodata:: pulser.devices.IroiseMVP
+.. autodata:: pulser.devices.AnalogDevice
 
 
 Channels

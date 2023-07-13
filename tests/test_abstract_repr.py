@@ -28,7 +28,7 @@ import pytest
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
-from pulser.devices import Chadoq2, Device, IroiseMVP, MockDevice
+from pulser.devices import AnalogDevice, Chadoq2, Device, IroiseMVP, MockDevice
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_device,
@@ -63,7 +63,7 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 
 
 class TestDevice:
-    @pytest.fixture(params=[Chadoq2, IroiseMVP, MockDevice])
+    @pytest.fixture(params=[Chadoq2, IroiseMVP, MockDevice, AnalogDevice])
     def abstract_device(self, request):
         device = request.param
         return json.loads(device.to_abstract_repr())
