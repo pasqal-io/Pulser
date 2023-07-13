@@ -10,7 +10,7 @@ QutipEmulator
 
 :class:`QutipEmulator` is the class to simulate :class:`SequenceSamples`, that are samples of a :class:`Sequence`.
 It is possible to simulate directly a :class:`Sequence` object by using the class method 
-``SequenceSamples.from_sequence``. Since version 0.14.0, the :class:`Simulation` class is deprecated 
+``QutipEmulator.from_sequence``. Since version 0.14.0, the :class:`Simulation` class is deprecated 
 in favour of :class:`QutipEmulator`.
 
 .. autoclass:: pulser_simulation.simulation.QutipEmulator
