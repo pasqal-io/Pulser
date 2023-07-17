@@ -14,5 +14,6 @@
 """Classes for classical emulation of a Sequence."""
 
 from pulser_simulation._version import __version__
+from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simulation import QutipEmulator, Simulation

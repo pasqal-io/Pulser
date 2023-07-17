@@ -99,7 +99,7 @@ def test_bad_import():
 def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     fake_sequence = {"pulse1": "fake", "pulse2": "fake"}
     with pytest.raises(TypeError, match="sequence has to be a valid"):
-        Simulation(fake_sequence)
+        QutipEmulator.from_sequence(fake_sequence)
     with pytest.raises(TypeError, match="sequence has to be a valid"):
         QutipEmulator(fake_sequence, Register.square(2), mod_device)
     # Simulation cannot be run on a register not defining "control1"
@@ -117,19 +117,47 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
             ),
             MockDevice,
         )
-    sim = Simulation(seq, sampling_rate=0.011)
-    assert sim._seq == seq
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.011)
+    sampled_seq = sampler.sample(seq)
+    ext_sampled_seq = sampled_seq.extend_duration(sampled_seq.max_duration + 1)
+    assert np.all(
+        [
+            np.equal(
+                sim.samples_obj.channel_samples[ch].amp,
+                ext_sampled_seq.channel_samples[ch].amp,
+            )
+            for ch in sampled_seq.channels
+        ]
+    )
+    assert np.all(
+        [
+            np.equal(
+                sim.samples_obj.channel_samples[ch].det,
+                ext_sampled_seq.channel_samples[ch].det,
+            )
+            for ch in sampled_seq.channels
+        ]
+    )
+    assert np.all(
+        [
+            np.equal(
+                sim.samples_obj.channel_samples[ch].phase,
+                ext_sampled_seq.channel_samples[ch].phase,
+            )
+            for ch in sampled_seq.channels
+        ]
+    )
     assert sim._qdict == seq.qubit_info
     assert sim._size == len(seq.qubit_info)
     assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
     assert sim._qid_index == {"control1": 0, "target": 1, "control2": 2}
 
     with pytest.raises(ValueError, match="too small, less than"):
-        Simulation(seq, sampling_rate=0.0001)
+        QutipEmulator.from_sequence(seq, sampling_rate=0.0001)
     with pytest.raises(ValueError, match="`sampling_rate`"):
-        Simulation(seq, sampling_rate=5)
+        QutipEmulator.from_sequence(seq, sampling_rate=5)
     with pytest.raises(ValueError, match="`sampling_rate`"):
-        Simulation(seq, sampling_rate=-1)
+        QutipEmulator.from_sequence(seq, sampling_rate=-1)
 
     assert sim._sampling_rate == 0.011
     assert len(sim.sampling_times) == int(
@@ -150,18 +178,18 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     seq_copy.add(Pulse.ConstantPulse(x, 1, 0, 0), "ryd")
     assert seq_copy.is_parametrized()
     with pytest.raises(ValueError, match="needs to be built"):
-        Simulation(seq_copy)
+        QutipEmulator.from_sequence(seq_copy)
 
     layout = RegisterLayout([[0, 0], [10, 10]])
     mapp_reg = layout.make_mappable_register(1)
     seq_ = Sequence(mapp_reg, Chadoq2)
     assert seq_.is_register_mappable() and not seq_.is_parametrized()
     with pytest.raises(ValueError, match="needs to be built"):
-        Simulation(seq_)
+        QutipEmulator.from_sequence(seq_)
 
 
 def test_extraction_of_sequences(seq):
-    sim = Simulation(seq)
+    sim = QutipEmulator.from_sequence(seq)
     for channel in seq.declared_channels:
         addr = seq.declared_channels[channel].addressing
         basis = seq.declared_channels[channel].basis
@@ -203,7 +231,7 @@ def test_extraction_of_sequences(seq):
 
 def test_building_basis_and_projection_operators(seq, reg):
     # All three levels:
-    sim = Simulation(seq, sampling_rate=0.01)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
     assert sim.basis_name == "all"
     assert sim.dim == 3
     assert sim.basis == {
@@ -242,7 +270,7 @@ def test_building_basis_and_projection_operators(seq, reg):
     seq2.declare_channel("global", "rydberg_global")
     pi_pls = Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0.0, 0)
     seq2.add(pi_pls, "global")
-    sim2 = Simulation(seq2, sampling_rate=0.01)
+    sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01)
     assert sim2.basis_name == "ground-rydberg"
     assert sim2.dim == 2
     assert sim2.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
@@ -259,7 +287,7 @@ def test_building_basis_and_projection_operators(seq, reg):
     seq2b = Sequence(reg, Chadoq2)
     seq2b.declare_channel("local", "raman_local", "target")
     seq2b.add(pi_pls, "local")
-    sim2b = Simulation(seq2b, sampling_rate=0.01)
+    sim2b = QutipEmulator.from_sequence(seq2b, sampling_rate=0.01)
     assert sim2b.basis_name == "digital"
     assert sim2b.dim == 2
     assert sim2b.basis == {"g": qutip.basis(2, 0), "h": qutip.basis(2, 1)}
@@ -276,7 +304,7 @@ def test_building_basis_and_projection_operators(seq, reg):
     seq2c = Sequence(reg, Chadoq2)
     seq2c.declare_channel("local_ryd", "rydberg_local", "target")
     seq2c.add(pi_pls, "local_ryd")
-    sim2c = Simulation(seq2c, sampling_rate=0.01)
+    sim2c = QutipEmulator.from_sequence(seq2c, sampling_rate=0.01)
     assert sim2c.basis_name == "ground-rydberg"
     assert sim2c.dim == 2
     assert sim2c.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
@@ -299,7 +327,7 @@ def test_building_basis_and_projection_operators(seq, reg):
         match="Bases used in samples should be supported by device.",
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, Chadoq2)
-    sim2 = Simulation(seq2, sampling_rate=0.01)
+    sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01)
     assert sim2.basis_name == "XY"
     assert sim2.dim == 2
     assert sim2.basis == {"u": qutip.basis(2, 0), "d": qutip.basis(2, 1)}
@@ -320,10 +348,10 @@ def test_building_basis_and_projection_operators(seq, reg):
 def test_empty_sequences(reg):
     seq = Sequence(reg, MockDevice)
     with pytest.raises(ValueError, match="no declared channels"):
-        Simulation(seq)
+        QutipEmulator.from_sequence(seq)
     seq.declare_channel("ch0", "mw_global")
     with pytest.raises(ValueError, match="No instructions given"):
-        Simulation(seq)
+        QutipEmulator.from_sequence(seq)
     with pytest.raises(ValueError, match="SequenceSamples is empty"):
         QutipEmulator(sampler.sample(seq), seq.register, seq.device)
 
@@ -331,7 +359,7 @@ def test_empty_sequences(reg):
     seq.declare_channel("test", "raman_local", "target")
     seq.declare_channel("test2", "rydberg_global")
     with pytest.raises(ValueError, match="No instructions given"):
-        Simulation(seq)
+        QutipEmulator.from_sequence(seq)
 
     seq.delay(100, "test")
     emu = QutipEmulator.from_sequence(seq, config=SimConfig(noise="SPAM"))
@@ -350,7 +378,7 @@ def test_get_hamiltonian():
     simple_seq.declare_channel("ising", "rydberg_global")
     simple_seq.add(rise, "ising")
 
-    simple_sim = Simulation(simple_seq, sampling_rate=0.01)
+    simple_sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
     with pytest.raises(ValueError, match="less than or equal to"):
         simple_sim.get_hamiltonian(1650)
     with pytest.raises(ValueError, match="greater than or equal to"):
@@ -362,7 +390,7 @@ def test_get_hamiltonian():
     )
 
     np.random.seed(123)
-    simple_sim_noise = Simulation(
+    simple_sim_noise = QutipEmulator.from_sequence(
         simple_seq, config=SimConfig(noise="doppler", temperature=20000)
     )
     simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
@@ -401,10 +429,10 @@ def test_single_atom_simulation():
     one_seq.add(
         Pulse.ConstantDetuning(ConstantWaveform(16, 1.0), 1.0, 0), "ch0"
     )
-    one_sim = Simulation(one_seq)
+    one_sim = QutipEmulator.from_sequence(one_seq)
     one_res = one_sim.run()
     assert one_res._size == one_sim._size
-    one_sim = Simulation(one_seq, evaluation_times="Minimal")
+    one_sim = QutipEmulator.from_sequence(one_seq, evaluation_times="Minimal")
     one_resb = one_sim.run()
     assert one_resb._size == one_sim._size
 
@@ -419,7 +447,7 @@ def test_add_max_step_and_delays():
     seq.add(
         Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi / 2), 0, 0), "ch"
     )
-    sim = Simulation(seq)
+    sim = QutipEmulator.from_sequence(seq)
     res_large_max_step = sim.run(max_step=1)
     res_auto_max_step = sim.run()
     r = qutip.basis(2, 0)
@@ -430,7 +458,7 @@ def test_add_max_step_and_delays():
 
 
 def test_run(seq, patch_plt_show):
-    sim = Simulation(seq, sampling_rate=0.01)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
     sim.set_config(SimConfig("SPAM", eta=0.0))
     with patch("matplotlib.pyplot.savefig"):
         sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
@@ -454,7 +482,12 @@ def test_run(seq, patch_plt_show):
     with pytest.warns(
         DeprecationWarning, match="Setting `initial_state` is deprecated"
     ):
-        sim.initial_state = good_initial_array
+        with pytest.warns(
+            DeprecationWarning, match="The `Simulation` class is deprecated"
+        ):
+            _sim = Simulation(seq, sampling_rate=0.01)
+        _sim.initial_state = good_initial_qobj
+        assert _sim.initial_state == good_initial_qobj
 
     sim.set_initial_state(good_initial_array)
     sim.run()
@@ -463,8 +496,11 @@ def test_run(seq, patch_plt_show):
     sim.set_initial_state(good_initial_qobj_no_dims)
     sim.run()
     seq.measure("ground-rydberg")
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
+    sim.set_initial_state(good_initial_qobj_no_dims)
+
     sim.run()
-    assert sim._seq._measurement == "ground-rydberg"
+    assert sim.samples_obj._measurement == "ground-rydberg"
 
     sim.run(progress_bar=True)
     sim.run(progress_bar=False)
@@ -488,20 +524,20 @@ def test_eval_times(seq):
     with pytest.raises(
         ValueError, match="evaluation_times float must be between 0 " "and 1."
     ):
-        sim = Simulation(seq, sampling_rate=1.0)
+        sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times(3.0)
     with pytest.raises(ValueError, match="Wrong evaluation time label."):
-        sim = Simulation(seq, sampling_rate=1.0)
+        sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times(123)
     with pytest.raises(ValueError, match="Wrong evaluation time label."):
-        sim = Simulation(seq, sampling_rate=1.0)
+        sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times("Best")
 
     with pytest.raises(
         ValueError,
         match="Provided evaluation-time list contains " "negative values.",
     ):
-        sim = Simulation(seq, sampling_rate=1.0)
+        sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times([-1, 0, sim.sampling_times[-2]])
 
     with pytest.raises(
@@ -509,14 +545,24 @@ def test_eval_times(seq):
         match="Provided evaluation-time list extends "
         "further than sequence duration.",
     ):
-        sim = Simulation(seq, sampling_rate=1.0)
+        sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
         sim.set_evaluation_times([0, sim.sampling_times[-1] + 10])
 
-    sim = Simulation(seq, sampling_rate=1.0)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
     with pytest.warns(
         DeprecationWarning, match="Setting `evaluation_times` is deprecated"
     ):
-        sim.evaluation_times = "Full"
+        with pytest.warns(
+            DeprecationWarning, match="The `Simulation` class is deprecated"
+        ):
+            _sim = Simulation(seq, sampling_rate=1.0)
+        _sim.evaluation_times = "Full"
+        assert np.array_equal(
+            _sim.evaluation_times,
+            np.union1d(_sim.sampling_times, [0.0, _sim._tot_duration / 1000]),
+        )
+        assert _sim._eval_times_instruction == "Full"
+
     sim.set_evaluation_times("Full")
     assert sim._eval_times_instruction == "Full"
     np.testing.assert_almost_equal(
@@ -524,14 +570,14 @@ def test_eval_times(seq):
         sim.sampling_times,
     )
 
-    sim = Simulation(seq, sampling_rate=1.0)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
     sim.set_evaluation_times("Minimal")
     np.testing.assert_almost_equal(
         sim._eval_times_array,
         np.array([sim.sampling_times[0], sim._tot_duration / 1000]),
     )
 
-    sim = Simulation(seq, sampling_rate=1.0)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
     sim.set_evaluation_times(
         [
             0,
@@ -556,7 +602,7 @@ def test_eval_times(seq):
         np.array([0, sim._tot_duration / 1000]),
     )
 
-    sim = Simulation(seq, sampling_rate=1.0)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
     sim.set_evaluation_times([sim.sampling_times[-10], sim.sampling_times[-3]])
     np.testing.assert_almost_equal(
         sim._eval_times_array,
@@ -570,7 +616,7 @@ def test_eval_times(seq):
         ),
     )
 
-    sim = Simulation(seq, sampling_rate=1.0)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
     sim.set_evaluation_times(0.4)
     np.testing.assert_almost_equal(
         sim.sampling_times[
@@ -593,7 +639,7 @@ def test_config():
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = Simulation(seq, config=SimConfig(noise="SPAM"))
+    sim = QutipEmulator.from_sequence(seq, config=SimConfig(noise="SPAM"))
     sim.reset_config()
     assert sim.config == SimConfig()
     sim.show_config()
@@ -618,7 +664,7 @@ def test_config():
 
 def test_noise(seq, matrices):
     np.random.seed(3)
-    sim2 = Simulation(
+    sim2 = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
     )
     assert sim2.run().sample_final_state() == Counter(
@@ -653,9 +699,9 @@ def test_noise(seq, matrices):
 
 def test_noise_with_zero_epsilons(seq, matrices):
     np.random.seed(3)
-    sim = Simulation(seq, sampling_rate=0.01)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
 
-    sim2 = Simulation(
+    sim2 = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
         config=SimConfig(
@@ -679,7 +725,7 @@ def test_dephasing():
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq.add(pulse, "ch0")
-    sim = Simulation(
+    sim = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
     assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
@@ -689,7 +735,7 @@ def test_dephasing():
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
-        sim = Simulation(
+        sim = QutipEmulator.from_sequence(
             seq2,
             sampling_rate=0.01,
             config=SimConfig(noise="dephasing", dephasing_prob=0.5),
@@ -704,7 +750,7 @@ def test_depolarizing():
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq.add(pulse, "ch0")
-    sim = Simulation(
+    sim = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
     )
     assert sim.run().sample_final_state() == Counter({"0": 587, "1": 413})
@@ -716,7 +762,7 @@ def test_depolarizing():
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
-        sim = Simulation(
+        sim = QutipEmulator.from_sequence(
             seq2,
             sampling_rate=0.01,
             config=SimConfig(noise="depolarizing", depolarizing_prob=0.5),
@@ -731,7 +777,7 @@ def test_eff_noise(matrices):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq.add(pulse, "ch0")
-    sim = Simulation(
+    sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
         config=SimConfig(
@@ -740,7 +786,7 @@ def test_eff_noise(matrices):
             eff_noise_probs=[0.975, 0.025],
         ),
     )
-    sim_dph = Simulation(
+    sim_dph = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
     )
     assert (
@@ -753,7 +799,7 @@ def test_eff_noise(matrices):
         seq2 = Sequence(reg, Chadoq2)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
-        sim = Simulation(
+        sim = QutipEmulator.from_sequence(
             seq2,
             sampling_rate=0.01,
             config=SimConfig(
@@ -771,7 +817,7 @@ def test_add_config(matrices):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
     seq.add(pulse, "ch0")
-    sim = Simulation(
+    sim = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise="SPAM", eta=0.5)
     )
     with pytest.raises(ValueError, match="is not a valid"):
@@ -823,10 +869,10 @@ def test_concurrent_pulses():
     seq.add(pulse, "ch_global", protocol="no-delay")
 
     # Clean simulation
-    sim_no_noise = Simulation(seq)
+    sim_no_noise = QutipEmulator.from_sequence(seq)
 
     # Noisy simulation
-    sim_with_noise = Simulation(seq)
+    sim_with_noise = QutipEmulator.from_sequence(seq)
     config_doppler = SimConfig(noise=("doppler"))
     sim_with_noise.set_config(config_doppler)
 
@@ -850,7 +896,7 @@ def test_get_xy_hamiltonian():
 
     assert np.isclose(np.linalg.norm(simple_seq.magnetic_field[0:2]), 1)
 
-    simple_sim = Simulation(simple_seq, sampling_rate=0.03)
+    simple_sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.03)
     with pytest.raises(
         ValueError, match="less than or equal to the sequence duration"
     ):
@@ -880,7 +926,7 @@ def test_run_xy():
     simple_seq.declare_channel("ch0", "mw_global")
     simple_seq.add(rise, "ch0")
 
-    sim = Simulation(simple_seq, sampling_rate=0.01)
+    sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
 
     good_initial_array = np.r_[1, np.zeros(sim.dim**sim._size - 1)]
     good_initial_qobj = qutip.tensor(
@@ -892,10 +938,11 @@ def test_run_xy():
     sim.set_initial_state(good_initial_qobj)
     sim.run()
 
-    assert not hasattr(sim._seq, "_measurement")
+    assert not sim.samples_obj._measurement
     simple_seq.measure(basis="XY")
+    sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
     sim.run()
-    assert sim._seq._measurement == "XY"
+    assert sim.samples_obj._measurement == "XY"
 
 
 def test_noisy_xy():
@@ -908,7 +955,7 @@ def test_noisy_xy():
     simple_seq.declare_channel("ch0", "mw_global")
     simple_seq.add(rise, "ch0")
 
-    sim = Simulation(simple_seq, sampling_rate=0.01)
+    sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
@@ -938,10 +985,11 @@ def test_mask_nopulses():
         seq_empty.delay(duration=100, channel="ch")
         masked_qubits = ["q2"]
         seq_empty.config_slm_mask(masked_qubits)
-        sim_empty = Simulation(seq_empty)
+        sim_empty = QutipEmulator.from_sequence(seq_empty)
 
         assert seq_empty._slm_mask_time == []
-        assert sim_empty._seq._slm_mask_time == []
+        assert sampler.sample(seq_empty)._slm_mask.end == 0
+        assert sim_empty.samples_obj._slm_mask.end == 0
 
 
 def test_mask_equals_remove():
@@ -972,7 +1020,7 @@ def test_mask_equals_remove():
         masked_qubits = ["q2"]
         seq_masked.config_slm_mask(masked_qubits)
         seq_masked.add(pulse, "ch_masked")
-        sim_masked = Simulation(seq_masked)
+        sim_masked = QutipEmulator.from_sequence(seq_masked)
         # Simulation cannot be run on a device not having an SLM mask
         with pytest.raises(
             ValueError,
@@ -993,7 +1041,7 @@ def test_mask_equals_remove():
         if channel_type != "mw_global":
             seq_two.delay(local_pulse.duration, "ch_two")
         seq_two.add(pulse, "ch_two")
-        sim_two = Simulation(seq_two)
+        sim_two = QutipEmulator.from_sequence(seq_two)
 
         # Check equality
         for t in sim_two.sampling_times:
@@ -1022,7 +1070,7 @@ def test_mask_two_pulses():
         seq_masked.add(pulse, "ch_masked")  # First pulse: masked
         seq_masked.add(pulse, "ch_masked")  # Second pulse: unmasked
         seq_masked.add(pulse, "ch_masked")  # Third pulse: unmasked
-        sim_masked = Simulation(seq_masked)
+        sim_masked = QutipEmulator.from_sequence(seq_masked)
 
         # Unmasked simulation on full register
         seq_three = Sequence(reg_three, MockDevice)
@@ -1030,7 +1078,7 @@ def test_mask_two_pulses():
         seq_three.add(no_pulse, "ch_three")
         seq_three.add(pulse, "ch_three")
         seq_three.add(pulse, "ch_three")
-        sim_three = Simulation(seq_three)
+        sim_three = QutipEmulator.from_sequence(seq_three)
 
         # Unmasked simulation on reduced register
         seq_two = Sequence(reg_two, MockDevice)
@@ -1038,7 +1086,7 @@ def test_mask_two_pulses():
         seq_two.add(pulse, "ch_two")
         seq_two.add(no_pulse, "ch_two")
         seq_two.add(no_pulse, "ch_two")
-        sim_two = Simulation(seq_two)
+        sim_two = QutipEmulator.from_sequence(seq_two)
 
         ti = seq_masked._slm_mask_time[0]
         tf = seq_masked._slm_mask_time[1]
@@ -1066,7 +1114,7 @@ def test_mask_local_channel():
     assert seq_._slm_mask_time == [0, 1000]
     assert seq_._slm_mask_targets == {"q0", "q3"}
 
-    sim = Simulation(seq_)
+    sim = QutipEmulator.from_sequence(seq_)
     for qty in ("amp", "det", "phase"):
         assert np.all(sim.samples["Local"]["digital"]["q0"][qty] == 0.0)
     assert "q3" not in sim.samples["Local"]["digital"]
@@ -1082,7 +1130,7 @@ def test_effective_size_intersection():
         seq.add(rise, "ch0")
         seq.config_slm_mask(["atom0"])
 
-        sim = Simulation(seq, sampling_rate=0.01)
+        sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
         sim.set_config(SimConfig("SPAM", eta=0.4))
         assert sim._bad_atoms == {
             "atom0": True,
@@ -1104,7 +1152,7 @@ def test_effective_size_disjoint():
         seq.declare_channel("ch0", channel_type)
         seq.add(rise, "ch0")
         seq.config_slm_mask(["atom1"])
-        sim = Simulation(seq, sampling_rate=0.01)
+        sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
         sim.set_config(SimConfig("SPAM", eta=0.4))
         assert sim._bad_atoms == {
             "atom0": True,
@@ -1129,7 +1177,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
         match="Simulation of sequences combining an SLM mask and output "
         "modulation is not supported.",
     ):
-        Simulation(seq, with_modulation=True)
+        QutipEmulator.from_sequence(seq, with_modulation=True)
 
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
@@ -1144,7 +1192,9 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
     assert pulse1_mod_samples.size == mod_dt
 
     sim_config = SimConfig(("amplitude", "doppler"))
-    sim = Simulation(seq, with_modulation=True, config=sim_config)
+    sim = QutipEmulator.from_sequence(
+        seq, with_modulation=True, config=sim_config
+    )
 
     assert sim.samples["Global"] == {}  # All samples stored in local
     raman_samples = sim.samples["Local"]["digital"]
@@ -1187,13 +1237,19 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
         np.testing.assert_allclose(
             rydberg_samples[qid]["phase"][time_slice], pulse1.phase
         )
+    with pytest.warns(
+        DeprecationWarning, match="The `Simulation` class is deprecated"
+    ):
+        _sim = Simulation(seq, with_modulation=True, config=sim_config)
 
     with pytest.raises(
         ValueError,
         match="Can't draw the interpolation points when the sequence "
         "is modulated",
     ):
-        sim.draw(draw_interp_pts=True)
+        _sim.draw(draw_interp_pts=True)
 
+    with patch("matplotlib.pyplot.savefig"):
+        _sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     # Drawing with modulation
     sim.draw()

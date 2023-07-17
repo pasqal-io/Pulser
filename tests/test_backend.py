@@ -13,7 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
+import re
 import typing
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -220,7 +222,9 @@ class _MockConnection(RemoteConnection):
     def submit(self, sequence, **kwargs) -> RemoteResults:
         return RemoteResults("abcd", self)
 
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(
+        self, submission_id: str, jobs_order: list[str] | None
+    ) -> typing.Sequence[Result]:
         return (
             SampledResult(
                 ("q0", "q1"),
@@ -244,7 +248,7 @@ def test_qpu_backend(sequence):
     ):
         QPUBackend(sequence, connection)
 
-    seq = sequence.switch_device(Chadoq2)
+    seq = sequence.switch_device(replace(Chadoq2, max_runs=10))
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
@@ -252,7 +256,15 @@ def test_qpu_backend(sequence):
         ValueError,
         match="All elements of 'job_params' must specify 'runs'",
     ):
-        qpu_backend.run(job_params=[{"n_runs": 10}, {"runs": 1}])
+        qpu_backend.run(job_params=[{"n_runs": 10}, {"runs": 11}])
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "All 'runs' must be below the maximum allowed by the device (10)"
+        ),
+    ):
+        qpu_backend.run(job_params=[{"runs": 11}])
 
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 

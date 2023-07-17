@@ -58,12 +58,20 @@ class RemoteResults(Results):
             the results.
         connection: The remote connection over which to get the submission's
             status and fetch the results.
+        jobs_order: An optional list of job IDs (as stored by the connection)
+            used to order the results.
     """
 
-    def __init__(self, submission_id: str, connection: RemoteConnection):
+    def __init__(
+        self,
+        submission_id: str,
+        connection: RemoteConnection,
+        jobs_order: list[str] | None = None,
+    ):
         """Instantiates a new collection of remote results."""
         self._submission_id = submission_id
         self._connection = connection
+        self._jobs_order = jobs_order
 
     @property
     def results(self) -> tuple[Result, ...]:
@@ -79,7 +87,9 @@ class RemoteResults(Results):
             status = self.get_status()
             if status == SubmissionStatus.DONE:
                 self._results = tuple(
-                    self._connection._fetch_result(self._submission_id)
+                    self._connection._fetch_result(
+                        self._submission_id, self._jobs_order
+                    )
                 )
                 return self._results
             raise RemoteResultsError(
@@ -102,7 +112,9 @@ class RemoteConnection(ABC):
         pass
 
     @abstractmethod
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(
+        self, submission_id: str, jobs_order: list[str] | None
+    ) -> typing.Sequence[Result]:
         """Fetches the results of a completed submission."""
         pass
 
@@ -116,8 +128,8 @@ class RemoteConnection(ABC):
         pass
 
     def fetch_available_devices(self) -> dict[str, Device]:
-        """Fetches the available devices through this connection."""
-        raise NotImplementedError(
+        """Fetches the devices available through this connection."""
+        raise NotImplementedError(  # pragma: no cover
             "Unable to fetch the available devices through this "
             "remote connection."
         )

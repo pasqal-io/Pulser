@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains the Simulation class, used for simulation of a Sequence."""
+"""Defines the QutipEmulator, used to simulate a Sequence or its samples."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.result import SampledResult
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
-from pulser.sequence._seq_drawer import draw_sequence
+from pulser.sequence._seq_drawer import draw_samples, draw_sequence
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
@@ -1042,6 +1042,44 @@ class QutipEmulator:
             n_measures,
         )
 
+    def draw(
+        self,
+        draw_phase_area: bool = False,
+        draw_phase_shifts: bool = False,
+        draw_phase_curve: bool = False,
+        fig_name: str | None = None,
+        kwargs_savefig: dict = {},
+    ) -> None:
+        """Draws the samples of a sequence of operations used for simulation.
+
+        Args:
+            draw_phase_area: Whether phase and area values need
+                to be shown as text on the plot, defaults to False.
+            draw_phase_shifts: Whether phase shift and reference
+                information should be added to the plot, defaults to False.
+            draw_phase_curve: Draws the changes in phase in its own curve
+                (ignored if the phase doesn't change throughout the channel).
+            fig_name: The name on which to save the figure.
+                If None the figure will not be saved.
+            kwargs_savefig: Keywords arguments for
+                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
+                is ``None``.
+
+        See Also:
+            Sequence.draw(): Draws the sequence in its current state.
+        """
+        draw_samples(
+            self.samples_obj,
+            self._register,
+            self._sampling_rate,
+            draw_phase_area=draw_phase_area,
+            draw_phase_shifts=draw_phase_shifts,
+            draw_phase_curve=draw_phase_curve,
+        )
+        if fig_name is not None:
+            plt.savefig(fig_name, **kwargs_savefig)
+        plt.show()
+
     @classmethod
     def from_sequence(
         cls,
@@ -1118,6 +1156,9 @@ class QutipEmulator:
 class Simulation:
     r"""Simulation of a pulse sequence using QuTiP.
 
+    Warning:
+        This class is deprecated in favour of ``QutipEmulator.from_sequence``.
+
     Args:
         sequence: An instance of a Pulser Sequence that we
             want to simulate.
@@ -1150,6 +1191,14 @@ class Simulation:
         with_modulation: bool = False,
     ) -> None:
         """Instantiates a Simulation object."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "The `Simulation` class is deprecated,"
+                    " use `QutipEmulator.from_sequence` instead."
+                )
+            )
         self._seq = sequence
         self._modulated = with_modulation
         self._emulator = QutipEmulator.from_sequence(

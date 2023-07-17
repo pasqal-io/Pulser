@@ -1402,8 +1402,21 @@ def test_multiple_index_targets(reg):
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
-def test_eom_mode(reg, mod_device, patch_plt_show):
-    seq = Sequence(reg, mod_device)
+@pytest.mark.parametrize("custom_buffer_time", (None, 400))
+def test_eom_mode(reg, mod_device, custom_buffer_time, patch_plt_show):
+    # Setting custom_buffer_time
+    channels = mod_device.channels
+    eom_config = dataclasses.replace(
+        channels["rydberg_global"].eom_config,
+        custom_buffer_time=custom_buffer_time,
+    )
+    channels["rydberg_global"] = dataclasses.replace(
+        channels["rydberg_global"], eom_config=eom_config
+    )
+    dev_ = dataclasses.replace(
+        mod_device, channel_ids=None, channel_objects=tuple(channels.values())
+    )
+    seq = Sequence(reg, dev_)
     seq.declare_channel("ch0", "rydberg_global")
     ch0_obj = seq.declared_channels["ch0"]
     assert not seq.is_in_eom_mode("ch0")
@@ -1477,7 +1490,9 @@ def test_eom_mode(reg, mod_device, patch_plt_show):
     assert seq._schedule["ch0"].get_eom_mode_intervals() == eom_intervals
     buffer_delay = seq._schedule["ch0"][-1]
     assert buffer_delay.ti == last_pulse_slot.tf
-    assert buffer_delay.tf == buffer_delay.ti + eom_pulse.fall_time(ch0_obj)
+    assert buffer_delay.tf == buffer_delay.ti + (
+        custom_buffer_time or eom_pulse.fall_time(ch0_obj)
+    )
     assert buffer_delay.type == "delay"
 
     # Check buffer when EOM is not enabled at the start of the sequence
@@ -1488,6 +1503,10 @@ def test_eom_mode(reg, mod_device, patch_plt_show):
     assert new_eom_block.detuning_off != 0
     assert last_slot.ti == buffer_delay.tf  # Nothing else was added
     duration = last_slot.tf - last_slot.ti
+    assert (
+        duration == custom_buffer_time
+        or 2 * seq.declared_channels["ch0"].rise_time
+    )
     # The buffer is a Pulse at 'detuning_off' and zero amplitude
     assert last_slot.type == Pulse.ConstantPulse(
         duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
@@ -1547,3 +1566,17 @@ def test_eom_buffer(
             if non_zero_detuning_off
             else "delay"
         )
+
+
+def test_max_duration(reg, mod_device):
+    dev_ = dataclasses.replace(mod_device, max_sequence_duration=100)
+    seq = Sequence(reg, dev_)
+    seq.declare_channel("ch0", "rydberg_global")
+    seq.delay(100, "ch0")
+    catch_statement = pytest.raises(
+        RuntimeError, match="duration exceeded the maximum duration allowed"
+    )
+    with catch_statement:
+        seq.delay(16, "ch0")
+    with catch_statement:
+        seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")

@@ -24,9 +24,7 @@ from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import JobParams, RemoteBackend, RemoteResults
 from pulser_pasqal.pasqal_cloud import PasqalCloud
 
-DEFAULT_CONFIG_EMU_TN = EmulatorConfig(
-    evaluation_times="Final", sampling_rate=0.1
-)
+DEFAULT_CONFIG_EMU_TN = EmulatorConfig(evaluation_times="Final")
 DEFAULT_CONFIG_EMU_FREE = EmulatorConfig(
     evaluation_times="Final", sampling_rate=0.25
 )
@@ -62,29 +60,24 @@ class PasqalEmulator(RemoteBackend):
         """Executes on the emulator backend through the Pasqal Cloud.
 
         Args:
-            job_params: An optional list of parameters for each job to execute.
-                Must be provided only when the sequence is parametrized as
-                a list of mappings, where each mapping contains one mapping
-                of variable names to values under the 'variables' field.
+            job_params: A list of parameters for each job to execute. Each
+                mapping must contain a defined 'runs' field specifying
+                the number of times to run the same sequence. If the sequence
+                is parametrized, the values for all the variables necessary
+                to build the sequence must be given in it's own mapping, for
+                each job, under the 'variables' field.
 
         Returns:
             The results, which can be accessed once all sequences have been
             successfully executed.
 
         """
-        needs_build = (
-            self._sequence.is_parametrized()
-            or self._sequence.is_register_mappable()
-        )
-        if job_params is None and needs_build:
+        suffix = f" when executing a sequence on {self.__class__.__name__}."
+        if not job_params:
+            raise ValueError("'job_params' must be specified" + suffix)
+        if any("runs" not in j for j in job_params):
             raise ValueError(
-                "When running a sequence that requires building, "
-                "'job_params' must be provided."
-            )
-        elif job_params and not needs_build:
-            raise ValueError(
-                "'job_params' cannot be provided when running built "
-                "sequences on an emulator backend."
+                "All elements of 'job_params' must specify 'runs'" + suffix
             )
 
         return self._connection.submit(
@@ -119,9 +112,9 @@ class EmuTNBackend(PasqalEmulator):
         - sampling_rate
         - backend_options:
             - precision (str): The precision of the simulation. Can be "low",
-                "normal" or "high". Defaults to "normal".
+              "normal" or "high". Defaults to "normal".
             - max_bond_dim (int): The maximum bond dimension of the Matrix
-                Product State (MPS). Defaults to 500.
+              Product State (MPS). Defaults to 500.
 
     All other parameters should not be changed from their default values.
 
@@ -142,8 +135,8 @@ class EmuFreeBackend(PasqalEmulator):
 
     Configurable fields in EmulatorConfig:
         - backend_options:
-            -  with_noise (bool): Whether to add noise to the simulation.
-                Defaults to False.
+            - with_noise (bool): Whether to add noise to the simulation.
+              Defaults to False.
 
     All other parameters should not be changed from their default values.
 

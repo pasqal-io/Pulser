@@ -54,6 +54,14 @@
               "description": "Maximum distance an atom can be from the center of the array (in µm).",
               "type": "number"
             },
+            "max_runs": {
+              "description": "The maximum number of runs allowed on the device. Only used for backend execution.",
+              "type": "number"
+            },
+            "max_sequence_duration": {
+              "description": "The maximum allowed duration for a sequence (in ns).",
+              "type": "number"
+            },
             "min_atom_distance": {
               "description": "The closest together two atoms can be (in μm).",
               "type": "number"
@@ -155,6 +163,14 @@
                 "number",
                 "null"
               ]
+            },
+            "max_runs": {
+              "description": "The maximum number of runs allowed on the device. Only used for backend execution.",
+              "type": "number"
+            },
+            "max_sequence_duration": {
+              "description": "The maximum allowed duration for a sequence (in ns).",
+              "type": "number"
             },
             "min_atom_distance": {
               "description": "The closest together two atoms can be (in μm).",
@@ -262,6 +278,10 @@
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "null"
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -348,6 +368,10 @@
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "null"
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -433,6 +457,10 @@
             "max_targets": {
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "null"
+            },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
             },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
@@ -530,6 +558,10 @@
                 "null"
               ]
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -619,6 +651,10 @@
                 "null"
               ]
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -707,6 +743,10 @@
                 "number",
                 "null"
               ]
+            },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
             },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
@@ -823,6 +863,10 @@
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "null"
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -900,6 +944,10 @@
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "null"
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -976,6 +1024,10 @@
             "max_targets": {
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "null"
+            },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
             },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
@@ -1061,6 +1113,10 @@
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "number"
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -1136,6 +1192,10 @@
             },
             "max_targets": {
               "description": "How many atoms can be locally addressed at once by the same beam.",
+              "type": "number"
+            },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
               "type": "number"
             },
             "min_duration": {
@@ -1215,6 +1275,10 @@
               "description": "How many atoms can be locally addressed at once by the same beam.",
               "type": "number"
             },
+            "min_avg_amp": {
+              "description": "The minimum average amplitude of a pulse (when not zero).",
+              "type": "number"
+            },
             "min_duration": {
               "description": "The shortest duration an instruction can take.",
               "type": "number"
@@ -1267,6 +1331,10 @@
           },
           "type": "array"
         },
+        "custom_buffer_time": {
+          "description": "A custom wait time to enforce during EOM buffers.",
+          "type": "number"
+        },
         "intermediate_detuning": {
           "description": "The detuning between the two beams, in rad/µs.",
           "type": "number"
@@ -1282,6 +1350,10 @@
         "mod_bandwidth": {
           "description": "The EOM modulation bandwidth at -3dB (50% reduction), in MHz.",
           "type": "number"
+        },
+        "multiple_beam_control": {
+          "description": "Whether both EOMs can be used simultaneously or not.",
+          "type": "boolean"
         }
       },
       "required": [

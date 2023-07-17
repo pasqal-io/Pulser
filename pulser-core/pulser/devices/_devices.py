@@ -17,6 +17,7 @@ import numpy as np
 from pulser.channels import Raman, Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import Device
+from pulser.register.special_layouts import TriangularLatticeLayout
 
 Chadoq2 = Device(
     name="Chadoq2",
@@ -81,4 +82,33 @@ IroiseMVP = Device(
             ),
         ),
     ),
+)
+
+AnalogDevice = Device(
+    name="AnalogDevice",
+    dimensions=2,
+    rydberg_level=60,
+    max_atom_num=25,
+    max_radial_distance=35,
+    min_atom_distance=5,
+    max_sequence_duration=4000,
+    # TODO: Define max_runs
+    channel_objects=(
+        Rydberg.Global(
+            max_abs_detuning=2 * np.pi * 20,
+            max_amp=2 * np.pi * 2,
+            clock_period=4,
+            min_duration=16,
+            mod_bandwidth=8,
+            eom_config=RydbergEOM(
+                limiting_beam=RydbergBeam.RED,
+                max_limiting_amp=30 * 2 * np.pi,
+                intermediate_detuning=450 * 2 * np.pi,
+                mod_bandwidth=40,
+                controlled_beams=(RydbergBeam.BLUE,),
+                custom_buffer_time=240,
+            ),
+        ),
+    ),
+    pre_calibrated_layouts=(TriangularLatticeLayout(61, 5),),
 )

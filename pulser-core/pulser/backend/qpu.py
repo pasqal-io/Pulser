@@ -24,7 +24,7 @@ from pulser.devices import Device
 class QPUBackend(RemoteBackend):
     """Backend for sequence execution on a QPU."""
 
-    def run(self, job_params: list[JobParams] = []) -> RemoteResults:
+    def run(self, job_params: list[JobParams] | None = None) -> RemoteResults:
         """Runs the sequence on the remote QPU and returns the result.
 
         Args:
@@ -42,10 +42,18 @@ class QPUBackend(RemoteBackend):
         suffix = " when executing a sequence on a real QPU."
         if not job_params:
             raise ValueError("'job_params' must be specified" + suffix)
-        if any("runs" not in j for j in job_params):
-            raise ValueError(
-                "All elements of 'job_params' must specify 'runs'" + suffix
-            )
+
+        max_runs = self._sequence.device.max_runs
+        for j in job_params:
+            if "runs" not in j:
+                raise ValueError(
+                    "All elements of 'job_params' must specify 'runs'" + suffix
+                )
+            if max_runs is not None and j["runs"] > max_runs:
+                raise ValueError(
+                    "All 'runs' must be below the maximum allowed by the "
+                    f"device ({max_runs})" + suffix
+                )
         results = self._connection.submit(
             self._sequence, job_params=job_params
         )
