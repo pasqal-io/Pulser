@@ -346,7 +346,8 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     params: dict[str, Any] = dict(
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
-    ex_params = ("channel_objects", "channel_ids")
+    # TODO: Handle dmm_objects once JSON schema is updated
+    ex_params = ("channel_objects", "channel_ids", "dmm_objects")
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
     for param in device_fields:

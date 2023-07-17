@@ -24,8 +24,8 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
-from pulser.dmm import DMM
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
@@ -218,7 +218,7 @@ class BaseDevice(ABC):
 
         # Turns mutable lists into immutable tuples
         for param in self._params():
-            if "channel" in param:
+            if "channel" in param or param == "dmm_objects":
                 object.__setattr__(self, param, to_tuple(getattr(self, param)))
 
     @property
@@ -459,7 +459,8 @@ class BaseDevice(ABC):
         return {
             "version": "1",
             "channels": ch_list,
-            "dmm_channels": dmm_list,
+            # TODO: Update JSON schema first
+            # "dmm_channels": dmm_list,
             **params,
         }
 

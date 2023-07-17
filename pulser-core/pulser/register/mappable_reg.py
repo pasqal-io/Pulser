@@ -21,9 +21,9 @@ from typing import Sequence as abcSequence
 from pulser.json.utils import obj_to_dict, stringify_qubit_ids
 
 if TYPE_CHECKING:
-    from pulser.dmm._dmm import DetuningMap
     from pulser.register.base_register import BaseRegister, QubitId
     from pulser.register.register_layout import RegisterLayout
+    from pulser.register.weight_maps import DetuningMap
 
 
 class MappableRegister:
