@@ -35,7 +35,8 @@ from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 
 DIMENSIONS = Literal[2, 3]
 
-ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs")
+ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs", "dmm_objects")
+EX_PARAMS = ("channel_objects", "channel_ids", "dmm_objects")
 
 
 @dataclass(frozen=True, repr=False)
@@ -442,27 +443,26 @@ class BaseDevice(ABC):
 
     @abstractmethod
     def _to_abstract_repr(self) -> dict[str, Any]:
-        ex_params = ("channel_objects", "channel_ids", "dmm_objects")
         defaults = get_dataclass_defaults(fields(self))
         params = self._params()
-        for p in ex_params:
-            params.pop(p, None)
         for p in ALWAYS_OPTIONAL_PARAMS:
             if params[p] == defaults[p]:
                 params.pop(p, None)
         ch_list = []
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
+        # Add version and channels to params
+        params.update({"version": "1", "channels": ch_list})
         dmm_list = []
         for dmm_name, dmm_obj in self.dmm_channels.items():
             dmm_list.append(dmm_obj._to_abstract_repr(dmm_name))
-        return {
-            "version": "1",
-            "channels": ch_list,
-            # TODO: Update JSON schema first
-            # "dmm_channels": dmm_list,
-            **params,
-        }
+        # Add dmm channels if different than default
+        if "dmm_objects" in params:
+            params["dmm_channels"] = dmm_list
+        # Delete parameters of EX_PARAMS in params
+        for p in EX_PARAMS:
+            params.pop(p, None)
+        return params
 
     def to_abstract_repr(self) -> str:
         """Serializes the Sequence into an abstract JSON object."""

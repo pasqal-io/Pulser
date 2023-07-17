@@ -43,6 +43,7 @@ class DMM(Channel):
             clock cycle.
         min_duration: The shortest duration an instruction can take.
         max_duration: The longest duration an instruction can take.
+        min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
     """
@@ -54,6 +55,7 @@ class DMM(Channel):
     min_retarget_interval: Optional[int] = field(init=False, default=None)
     fixed_retarget_t: Optional[int] = field(init=False, default=None)
     max_targets: Optional[int] = field(init=False, default=None)
+    _has_fixed_addressing: bool = field(init=False, default=True) 
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -64,5 +66,3 @@ class DMM(Channel):
     def basis(self) -> Literal["ground-rydberg"]:
         """The addressed basis name."""
         return "ground-rydberg"
-
-    # TODO: Block the use of .Global and .Local
