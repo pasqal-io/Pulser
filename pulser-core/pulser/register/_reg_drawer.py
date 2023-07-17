@@ -121,6 +121,7 @@ class RegDrawer:
             i = 0
             bbs = {}
             final_plot_ids: list[str] = []
+            final_plot_det_map: list = []
             while i < len(plot_ids):
                 r = plot_pos[i]
                 j = i + 1
@@ -147,33 +148,23 @@ class RegDrawer:
                 has_det_map = False
                 is_mask = len(set([dmm_qubits[q] for q in det_map])) == 1
                 for j in range(len(plot_ids[i])):
-                    if plot_ids[i][j] in det_map:
-                        plot_ids[i][j:] = [
-                            ", ".join(
-                                [
-                                    (
-                                        q
-                                        + (
-                                            f": {dmm_qubits[q]:.2f}"
-                                            if is_mask
-                                            else ""
-                                        )
-                                    )
-                                    for q in plot_ids[i][j:]
-                                ]
-                            )
+                    if plot_ids[i][j] in [str(q) for q in det_map]:
+                        qubit_det = [
+                            (q+ (f": {dmm_qubits[int(q)]:.2f}" if not is_mask else ""))
+                            for q in plot_ids[i][j:]
                         ]
+                        plot_ids[i][j:] = [", ".join(qubit_det)]
                         has_det_map = True
                         break
                 # Add a square bracket that encloses all masked qubits
                 if has_det_map:
                     plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
+                    final_plot_det_map.append(i)
                 # Merge what remains
                 final_plot_ids.append(", ".join(plot_ids[i]))
                 bbs[final_plot_ids[i]] = overlap
                 i += 1
-
-            for q, coords in zip(final_plot_ids, plot_pos):
+            for i, (q, coords) in enumerate(zip(final_plot_ids, plot_pos)):
                 bb = (
                     dict(boxstyle="square", fill=False, ec="gray", ls="--")
                     if bbs[q]
@@ -188,7 +179,7 @@ class RegDrawer:
                     va=v_al,
                     wrap=True,
                     bbox=bb,
-                    fontsize=12,
+                    fontsize=12 if i not in final_plot_det_map else 8.3,
                     multialignment="right",
                 )
                 txt._get_wrap_line_width = lambda: 50.0

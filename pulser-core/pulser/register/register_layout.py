@@ -20,6 +20,7 @@ from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
 from functools import cached_property
 from hashlib import sha256
+from operator import itemgetter
 from typing import Any, Optional, cast
 
 import matplotlib.pyplot as plt
@@ -207,7 +208,7 @@ class RegisterLayout(RegDrawer):
                 f" between 0 and {self.number_of_traps}."
             )
         return DetuningMap(
-            self.traps_dict[detuning_weights.keys()],
+            itemgetter(*detuning_weights.keys())(self.traps_dict),
             list(detuning_weights.values()),
         )
 
