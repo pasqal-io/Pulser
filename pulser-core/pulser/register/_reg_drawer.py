@@ -150,7 +150,14 @@ class RegDrawer:
                 for j in range(len(plot_ids[i])):
                     if plot_ids[i][j] in [str(q) for q in det_map]:
                         qubit_det = [
-                            (q+ (f": {dmm_qubits[int(q)]:.2f}" if not is_mask else ""))
+                            (
+                                q
+                                + (
+                                    f": {dmm_qubits[int(q)]:.2f}"
+                                    if not is_mask
+                                    else ""
+                                )
+                            )
                             for q in plot_ids[i][j:]
                         ]
                         plot_ids[i][j:] = [", ".join(qubit_det)]
@@ -159,7 +166,9 @@ class RegDrawer:
                 # Add a square bracket that encloses all masked qubits
                 if has_det_map:
                     plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
-                    final_plot_det_map.append(i)
+                    # Lower the fontsize if detuning is shown (not a mask)
+                    if not is_mask:
+                        final_plot_det_map.append(i)
                 # Merge what remains
                 final_plot_ids.append(", ".join(plot_ids[i]))
                 bbs[final_plot_ids[i]] = overlap

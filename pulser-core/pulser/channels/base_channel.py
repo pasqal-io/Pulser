@@ -266,7 +266,7 @@ class Channel(ABC):
         if cls._has_fixed_addressing:
             raise NotImplementedError(
                 f"{cls} cannot be initialized from `Local` method."
-                )
+            )
         return cls(
             "Local",
             max_abs_detuning,
@@ -307,7 +307,7 @@ class Channel(ABC):
         if cls._has_fixed_addressing:
             raise NotImplementedError(
                 f"{cls} cannot be initialized from `Global` method."
-                )
+            )
         return cls("Global", max_abs_detuning, max_amp, **kwargs)
 
     def validate_duration(self, duration: int) -> int:

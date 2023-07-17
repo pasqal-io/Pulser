@@ -348,7 +348,9 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
     if "dmm_channels" in obj:
-        params["dmm_objects"] = tuple(_deserialize_channel(dmm_ch) for dmm_ch in obj["dmm_channels"])
+        params["dmm_objects"] = tuple(
+            _deserialize_channel(dmm_ch) for dmm_ch in obj["dmm_channels"]
+        )
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
     for param in device_fields:

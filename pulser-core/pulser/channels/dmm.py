@@ -55,7 +55,7 @@ class DMM(Channel):
     min_retarget_interval: Optional[int] = field(init=False, default=None)
     fixed_retarget_t: Optional[int] = field(init=False, default=None)
     max_targets: Optional[int] = field(init=False, default=None)
-    _has_fixed_addressing: bool = field(init=False, default=True) 
+    _has_fixed_addressing: bool = field(init=False, default=True)
 
     def __post_init__(self) -> None:
         super().__post_init__()
