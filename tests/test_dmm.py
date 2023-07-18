@@ -18,8 +18,8 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from pulser import Register
 from pulser.channels.dmm import DMM
+from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.weight_maps import DetuningMap
@@ -36,7 +36,7 @@ def layout(trap_coordinates) -> RegisterLayout:
 
 
 @pytest.fixture
-def register(layout: RegisterLayout) -> Register:
+def register(layout: RegisterLayout) -> BaseRegister:
     return layout.define_register(0, 1, 2, 3, qubit_ids=(0, 1, 2, 3))
 
 
@@ -46,7 +46,7 @@ def map_reg(layout: RegisterLayout) -> MappableRegister:
 
 
 def test_init(
-    layout: RegisterLayout, register: Register, map_reg: MappableRegister
+    layout: RegisterLayout, register: BaseRegister, map_reg: MappableRegister
 ):
     str_key = {"1": 1.0}
     wrong_key = {4: 1.0}
@@ -55,9 +55,7 @@ def test_init(
     det_map = {0: 0.7, 1: 0.3, 2: 0}
     slm_map = {0: 1 / 3, 1: 1 / 3, 2: 1 / 3}
     for bad_key in (str_key, wrong_key):
-        print(bad_key)
         for reg in (layout, map_reg):
-            print(reg)
             with pytest.raises(
                 ValueError,
                 match=(
@@ -65,7 +63,7 @@ def test_init(
                     " between 0 and 4"
                 ),
             ):
-                reg.define_detuning_map(bad_key)
+                reg.define_detuning_map(bad_key)  # type: ignore
         with pytest.raises(
             ValueError,
             match=(
@@ -73,7 +71,7 @@ def test_init(
                 " register."
             ),
         ):
-            register.define_detuning_map(bad_key)
+            register.define_detuning_map(bad_key)  # type: ignore
     with pytest.raises(
         ValueError, match="Number of traps and weights don't match."
     ):
@@ -82,19 +80,24 @@ def test_init(
         with pytest.raises(
             ValueError, match="All weights must be non-negative."
         ):
-            reg.define_detuning_map(bad_weights)
+            reg.define_detuning_map(bad_weights)  # type: ignore
         with pytest.raises(
             ValueError, match="The sum of the weights should be 1."
         ):
-            reg.define_detuning_map(bad_sum)
+            reg.define_detuning_map(bad_sum)  # type: ignore
         for map in (det_map, slm_map):
-            detuning_map = reg.define_detuning_map(map)
-            assert np.all(
-                map[i] == detuning_map.weights[i] for i in range(len(map))
+            detuning_map = cast(
+                DetuningMap, reg.define_detuning_map(map)  # type: ignore
             )
             assert np.all(
-                layout.coords[i] == detuning_map.trap_coordinates[i]
-                for i in range(len(map))
+                [map[i] == detuning_map.weights[i] for i in range(len(map))]
+            )
+            assert np.all(
+                [
+                    layout.coords[i]
+                    == np.array(detuning_map.trap_coordinates)[i]
+                    for i in range(len(map))
+                ]
             )
 
 
