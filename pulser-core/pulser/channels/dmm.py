@@ -66,7 +66,7 @@ class DMM(Channel):
     def basis(self) -> Literal["ground-rydberg"]:
         """The addressed basis name."""
         return "ground-rydberg"
-    
+
     def _undefined_fields(self) -> list[str]:
         optional = [
             "bottom_detuning",

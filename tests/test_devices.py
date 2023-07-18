@@ -391,26 +391,31 @@ def test_device_params():
         "pre_calibrated_layouts"
     }
 
+
 def test_dmm_channels():
-    dmm = DMM(bottom_detuning=-1,
-            clock_period=1,
-            min_duration=1,
-            max_duration=1e6,
-            mod_bandwidth=20)
+    dmm = DMM(
+        bottom_detuning=-1,
+        clock_period=1,
+        min_duration=1,
+        max_duration=1e6,
+        mod_bandwidth=20,
+    )
     device = replace(Chadoq2, dmm_objects=(dmm,))
     assert len(device.dmm_channels) == 1
     assert device.dmm_channels["dmm_0"] == dmm
-    with pytest.raises(ValueError, 
+    with pytest.raises(
+        ValueError,
         match=(
             "When defined, the names of channel IDs must be different"
             "than the names of dmm channels 'dmm_0', 'dmm_1', ... ."
         ),
     ):
-        device = replace(Chadoq2,
-                    dmm_objects=(dmm,),
-                    channel_objects=(Rydberg.Global(None, None),),
-                    channel_ids=("dmm_0",)
-                    )
+        device = replace(
+            Chadoq2,
+            dmm_objects=(dmm,),
+            channel_objects=(Rydberg.Global(None, None),),
+            channel_ids=("dmm_0",),
+        )
     assert not dmm.is_virtual()
     assert DMM().is_virtual()
     device.to_abstract_repr()
