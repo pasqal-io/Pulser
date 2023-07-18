@@ -51,7 +51,7 @@ class DMM(Channel):
     bottom_detuning: Optional[float] = field(default=None, init=True)
     addressing: Literal["Global"] = field(default="Global", init=False)
     max_abs_detuning: Optional[float] = field(init=False, default=None)
-    max_amp: float = field(default=0, init=False)
+    max_amp: float = field(default=1e-16, init=False)  # can't be 0
     min_retarget_interval: Optional[int] = field(init=False, default=None)
     fixed_retarget_t: Optional[int] = field(init=False, default=None)
     max_targets: Optional[int] = field(init=False, default=None)
@@ -66,3 +66,10 @@ class DMM(Channel):
     def basis(self) -> Literal["ground-rydberg"]:
         """The addressed basis name."""
         return "ground-rydberg"
+    
+    def _undefined_fields(self) -> list[str]:
+        optional = [
+            "bottom_detuning",
+            "max_duration",
+        ]
+        return [field for field in optional if getattr(self, field) is None]

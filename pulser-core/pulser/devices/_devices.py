@@ -15,6 +15,7 @@
 import numpy as np
 
 from pulser.channels import Raman, Rydberg
+from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import Device
 from pulser.register.special_layouts import TriangularLatticeLayout
@@ -80,6 +81,15 @@ IroiseMVP = Device(
                 mod_bandwidth=24,
                 controlled_beams=(RydbergBeam.BLUE,),
             ),
+        ),
+    ),
+    dmm_objects=(
+        DMM(
+            clock_period=4,
+            min_duration=16,
+            max_duration=2**26,
+            mod_bandwidth=16,
+            bottom_detuning=-20,
         ),
     ),
 )

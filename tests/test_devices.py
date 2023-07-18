@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from unittest.mock import patch
 
 import numpy as np
@@ -21,6 +21,7 @@ import pytest
 
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.dmm import DMM
 from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
@@ -73,6 +74,11 @@ def test_params():
             "When the device has a 'Microwave' channel, "
             "'interaction_coeff_xy' must be a 'float',"
             " not '<class 'NoneType'>'.",
+        ),
+        (
+            "dmm_objects",
+            ("DMM(bottom_detuning=-1)",),
+            "All dmm channels must be of type 'DMM', not 'str'",
         ),
         ("max_sequence_duration", 1.02, None),
         ("max_runs", 1e8, None),
@@ -384,3 +390,27 @@ def test_device_params():
     assert set(all_params) - set(all_virtual_params) == {
         "pre_calibrated_layouts"
     }
+
+def test_dmm_channels():
+    dmm = DMM(bottom_detuning=-1,
+            clock_period=1,
+            min_duration=1,
+            max_duration=1e6,
+            mod_bandwidth=20)
+    device = replace(Chadoq2, dmm_objects=(dmm,))
+    assert len(device.dmm_channels) == 1
+    assert device.dmm_channels["dmm_0"] == dmm
+    with pytest.raises(ValueError, 
+        match=(
+            "When defined, the names of channel IDs must be different"
+            "than the names of dmm channels 'dmm_0', 'dmm_1', ... ."
+        ),
+    ):
+        device = replace(Chadoq2,
+                    dmm_objects=(dmm,),
+                    channel_objects=(Rydberg.Global(None, None),),
+                    channel_ids=("dmm_0",)
+                    )
+    assert not dmm.is_virtual()
+    assert DMM().is_virtual()
+    device.to_abstract_repr()
