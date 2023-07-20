@@ -418,16 +418,3 @@ def test_dmm_channels():
         )
     assert not dmm.is_virtual()
     assert DMM().is_virtual()
-
-
-@pytest.mark.xfail
-def test_abstract_repr_dmm():
-    dmm = DMM(
-        bottom_detuning=-1,
-        clock_period=1,
-        min_duration=1,
-        max_duration=1e6,
-        mod_bandwidth=20,
-    )
-    device = replace(Chadoq2, dmm_objects=(dmm,))
-    device.to_abstract_repr()
