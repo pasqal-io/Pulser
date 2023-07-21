@@ -36,7 +36,7 @@ from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
 DIMENSIONS = Literal[2, 3]
 
 ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs", "dmm_objects")
-EX_PARAMS = ("channel_objects", "channel_ids", "dmm_objects")
+PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 
 
 @dataclass(frozen=True, repr=False)
@@ -162,8 +162,14 @@ class BaseDevice(ABC):
             type_check("All channels", Channel, value_override=ch_obj)
 
         for dmm_obj in self.dmm_objects:
-            type_check("All dmm channels", DMM, value_override=dmm_obj)
-        # self.supports_slm_mask = True if self.dmm_objects else False
+            type_check("All DMM channels", DMM, value_override=dmm_obj)
+
+        # TODO: Check that device has dmm objects if it supports SLM mask
+        # once DMM is supported for serialization
+        # if self.supports_slm_mask and not self.dmm_objects:
+        #     raise ValueError(
+        #         "One DMM object should be defined to support SLM mask."
+        #     )
 
         if self.channel_ids is not None:
             if not (
@@ -187,7 +193,7 @@ class BaseDevice(ABC):
             if set(self.channel_ids) & set(self.dmm_channels.keys()):
                 raise ValueError(
                     "When defined, the names of channel IDs must be different"
-                    "than the names of dmm channels 'dmm_0', 'dmm_1', ... ."
+                    " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
                 )
 
         else:
@@ -234,7 +240,7 @@ class BaseDevice(ABC):
 
     @property
     def dmm_channels(self) -> dict[str, DMM]:
-        """Dictionary of available dmm channels on this device."""
+        """Dictionary of available DMM channels on this device."""
         return {
             f"dmm_{i}": dmm_obj for (i, dmm_obj) in enumerate(self.dmm_objects)
         }
@@ -459,8 +465,8 @@ class BaseDevice(ABC):
         # Add dmm channels if different than default
         if "dmm_objects" in params:
             params["dmm_channels"] = dmm_list
-        # Delete parameters of EX_PARAMS in params
-        for p in EX_PARAMS:
+        # Delete parameters of PARAMS_WITH_ABSTR_REPR in params
+        for p in PARAMS_WITH_ABSTR_REPR:
             params.pop(p, None)
         return params
 

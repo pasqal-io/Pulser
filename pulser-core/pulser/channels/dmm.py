@@ -1,4 +1,4 @@
-# Copyright 2020 Pulser Development Team
+# Copyright 2023 Pulser Development Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ class DMM(Channel):
     weights of a `DetuningMap`, thus providing a local control over the
     detuning. The detuning of the pulses added to a DMM has to be negative,
     between 0 and `bottom_detuning`. Channel targeting the transition between
-    the ground and rydberg states, thus enconding the 'ground-rydberg' basis.
+    the ground and rydberg states, thus encoding the 'ground-rydberg' basis.
 
     Note:
         The protocol to add pulses to the DMM Channel is by default
@@ -55,7 +55,6 @@ class DMM(Channel):
     min_retarget_interval: Optional[int] = field(init=False, default=None)
     fixed_retarget_t: Optional[int] = field(init=False, default=None)
     max_targets: Optional[int] = field(init=False, default=None)
-    _has_fixed_addressing: bool = field(init=False, default=True)
 
     def __post_init__(self) -> None:
         super().__post_init__()

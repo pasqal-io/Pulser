@@ -221,8 +221,8 @@ class BaseRegister(ABC):
         """
         if not set(detuning_weights.keys()) <= set(self.qubit_ids):
             raise ValueError(
-                "The qubit ids of detuning weights have to be defined in the"
-                " register."
+                "The qubit ids linked to detuning weights have to be defined"
+                " in the register."
             )
         return DetuningMap(
             [self.qubits[qubit_id] for qubit_id in detuning_weights],

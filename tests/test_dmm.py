@@ -26,13 +26,8 @@ from pulser.register.weight_maps import DetuningMap
 
 
 @pytest.fixture
-def trap_coordinates():
-    return [[0, 0], [1, 0], [0, 1], [1, 1]]
-
-
-@pytest.fixture
-def layout(trap_coordinates) -> RegisterLayout:
-    return RegisterLayout(trap_coordinates)
+def layout() -> RegisterLayout:
+    return RegisterLayout([[0, 0], [1, 0], [0, 1], [1, 1]])
 
 
 @pytest.fixture
@@ -45,37 +40,64 @@ def map_reg(layout: RegisterLayout) -> MappableRegister:
     return layout.make_mappable_register(4)
 
 
-def test_init(
-    layout: RegisterLayout, register: BaseRegister, map_reg: MappableRegister
+@pytest.fixture
+def det_dict() -> dict[int, float]:
+    return {0: 0.7, 1: 0.3, 2: 0}
+
+
+@pytest.fixture
+def det_map(layout: RegisterLayout, det_dict: dict[int, float]) -> DetuningMap:
+    return layout.define_detuning_map(det_dict)
+
+
+@pytest.fixture
+def slm_dict() -> dict[int, float]:
+    return {0: 1 / 3, 1: 1 / 3, 2: 1 / 3}
+
+
+@pytest.fixture
+def slm_map(layout: RegisterLayout, slm_dict: dict[int, float]) -> DetuningMap:
+    return layout.define_detuning_map(slm_dict)
+
+
+@pytest.mark.parametrize("bad_key", [{"1": 1.0}, {4: 1.0}])
+def test_define_detuning_att(
+    layout: RegisterLayout,
+    register: BaseRegister,
+    map_reg: MappableRegister,
+    bad_key: dict,
 ):
-    str_key = {"1": 1.0}
-    wrong_key = {4: 1.0}
-    bad_weights = {0: -1.0, 1: 1.0, 2: 1.0}
-    bad_sum = {0: 0.1, 2: 0.9, 3: 0.1}
-    det_map = {0: 0.7, 1: 0.3, 2: 0}
-    slm_map = {0: 1 / 3, 1: 1 / 3, 2: 1 / 3}
-    for bad_key in (str_key, wrong_key):
-        for reg in (layout, map_reg):
-            with pytest.raises(
-                ValueError,
-                match=(
-                    "The trap ids of detuning weights have to be integers"
-                    " between 0 and 4"
-                ),
-            ):
-                reg.define_detuning_map(bad_key)  # type: ignore
+    for reg in (layout, map_reg):
         with pytest.raises(
             ValueError,
             match=(
-                "The qubit ids of detuning weights have to be defined in the"
-                " register."
+                "The trap ids of detuning weights have to be integers"
+                " between 0 and 4"
             ),
         ):
-            register.define_detuning_map(bad_key)  # type: ignore
+            reg.define_detuning_map(bad_key)  # type: ignore
+    with pytest.raises(
+        ValueError,
+        match=(
+            "The qubit ids linked to detuning weights have to be defined in"
+            " the register."
+        ),
+    ):
+        register.define_detuning_map(bad_key)
+
+
+def test_bad_init(
+    layout: RegisterLayout,
+    register: BaseRegister,
+    map_reg: MappableRegister,
+):
     with pytest.raises(
         ValueError, match="Number of traps and weights don't match."
     ):
         DetuningMap([(0, 0), (1, 0)], [0])
+
+    bad_weights = {0: -1.0, 1: 1.0, 2: 1.0}
+    bad_sum = {0: 0.1, 2: 0.9, 3: 0.1}
     for reg in (layout, map_reg, register):
         with pytest.raises(
             ValueError, match="All weights must be non-negative."
@@ -85,30 +107,34 @@ def test_init(
             ValueError, match="The sum of the weights should be 1."
         ):
             reg.define_detuning_map(bad_sum)  # type: ignore
-        for map in (det_map, slm_map):
+
+
+def test_init(
+    layout: RegisterLayout,
+    register: BaseRegister,
+    map_reg: MappableRegister,
+    det_dict: dict[int, float],
+    slm_dict: dict[int, float],
+):
+    for reg in (layout, map_reg, register):
+        for detuning_map_dict in (det_dict, slm_dict):
             detuning_map = cast(
-                DetuningMap, reg.define_detuning_map(map)  # type: ignore
+                DetuningMap,
+                reg.define_detuning_map(detuning_map_dict),  # type: ignore
             )
             assert np.all(
-                [map[i] == detuning_map.weights[i] for i in range(len(map))]
+                [
+                    detuning_map_dict[i] == detuning_map.weights[i]
+                    for i in range(len(detuning_map_dict))
+                ]
             )
             assert np.all(
                 [
                     layout.coords[i]
                     == np.array(detuning_map.trap_coordinates)[i]
-                    for i in range(len(map))
+                    for i in range(len(detuning_map_dict))
                 ]
             )
-
-
-@pytest.fixture
-def det_map(layout: RegisterLayout) -> DetuningMap:
-    return layout.define_detuning_map({0: 0.7, 1: 0.3, 2: 0})
-
-
-@pytest.fixture
-def slm_map(layout: RegisterLayout) -> DetuningMap:
-    return layout.define_detuning_map({0: 1 / 3, 1: 1 / 3, 2: 1 / 3})
 
 
 def test_draw(det_map, slm_map, patch_plt_show):
@@ -154,7 +180,6 @@ def test_DMM():
         assert value is None
     with pytest.raises(ValueError, match="bottom_detuning must be negative."):
         DMM(bottom_detuning=1)
-    assert dmm._has_fixed_addressing
     with pytest.raises(
         NotImplementedError,
         match=f"{DMM} cannot be initialized from `Global` method.",

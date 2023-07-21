@@ -78,7 +78,7 @@ def test_params():
         (
             "dmm_objects",
             ("DMM(bottom_detuning=-1)",),
-            "All dmm channels must be of type 'DMM', not 'str'",
+            "All DMM channels must be of type 'DMM', not 'str'",
         ),
         ("max_sequence_duration", 1.02, None),
         ("max_runs", 1e8, None),
@@ -134,6 +134,16 @@ def test_post_init_value_errors(test_params, param, value, msg):
     error_msg = msg or f"When defined, '{param}' must be greater than zero"
     with pytest.raises(ValueError, match=error_msg):
         VirtualDevice(**test_params)
+
+
+# TODO: Add test of comptability SLM-DMM once DMM is added for serialization
+# def test_post_init_slm_dmm_compatibility(test_params):
+#     test_params["supports_slm_mask"] = True
+#     test_params["dmm_objects"] = ()
+#     with pytest.raises(ValueError,
+#       match="One DMM object should be defined to support SLM mask."
+#     ):
+#         VirtualDevice(**test_params)
 
 
 potential_params = ["max_atom_num", "max_radial_distance"]
@@ -407,7 +417,7 @@ def test_dmm_channels():
         ValueError,
         match=(
             "When defined, the names of channel IDs must be different"
-            "than the names of dmm channels 'dmm_0', 'dmm_1', ... ."
+            " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
         ),
     ):
         device = replace(

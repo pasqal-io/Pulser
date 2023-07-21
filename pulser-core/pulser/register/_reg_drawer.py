@@ -149,17 +149,14 @@ class RegDrawer:
                 is_mask = len(set([dmm_qubits[q] for q in det_map])) == 1
                 for j in range(len(plot_ids[i])):
                     if plot_ids[i][j] in [str(q) for q in det_map]:
-                        qubit_det = [
-                            (
-                                q
-                                + (
-                                    f": {dmm_qubits[int(q)]:.2f}"
-                                    if not is_mask
-                                    else ""
-                                )
+                        qubit_det = []
+                        for q in plot_ids[i][j:]:
+                            extra_label = (
+                                f": {dmm_qubits[int(q)]:.2f}"
+                                if not is_mask
+                                else ""
                             )
-                            for q in plot_ids[i][j:]
-                        ]
+                            qubit_det.append(q + extra_label)
                         plot_ids[i][j:] = [", ".join(qubit_det)]
                         has_det_map = True
                         break

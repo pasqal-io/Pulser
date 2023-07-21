@@ -18,7 +18,16 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, Optional, Type, TypeVar, cast
+from typing import (
+    Any,
+    Literal,
+    Optional,
+    Type,
+    TypeVar,
+    cast,
+    get_args,
+    get_type_hints,
+)
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -33,7 +42,7 @@ warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
-OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp", "_has_fixed_addressing")
+OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -78,7 +87,6 @@ class Channel(ABC):
     min_avg_amp: int = 0
     mod_bandwidth: Optional[float] = None  # MHz
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
-    _has_fixed_addressing: bool = field(init=False, default=False)
 
     @property
     def name(self) -> str:
@@ -263,7 +271,8 @@ class Channel(ABC):
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
         """
-        if cls._has_fixed_addressing:
+        print(get_type_hints(cls)["addressing"])
+        if len(get_args(get_type_hints(cls)["addressing"])) == 1:
             raise NotImplementedError(
                 f"{cls} cannot be initialized from `Local` method."
             )
@@ -304,7 +313,8 @@ class Channel(ABC):
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
         """
-        if cls._has_fixed_addressing:
+        print(get_args(get_type_hints(cls)["addressing"]))
+        if len(get_args(get_type_hints(cls)["addressing"])) == 1:
             raise NotImplementedError(
                 f"{cls} cannot be initialized from `Global` method."
             )
