@@ -347,7 +347,7 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
     with pytest.raises(
         TypeError,
         match="No match for channel global2 with the"
-        " right basis and addressing.",
+        " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd rydberg_global
         seq.switch_device(Chadoq2)
@@ -402,13 +402,13 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
         mappable_reg=mappable_reg,
     )
     for dev_ in (
-        Chadoq2,  # Different Channels basis
+        Chadoq2,  # Different Channels type / basis
         devices[1],  # Different addressing channels
     ):
         with pytest.raises(
             TypeError,
             match="No match for channel ising with the"
-            + " right basis and addressing.",
+            + " right type, basis and addressing.",
         ):
             seq.switch_device(dev_)
 
