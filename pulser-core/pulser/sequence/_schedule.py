@@ -24,6 +24,7 @@ import numpy as np
 from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
+from pulser.register.weight_maps import DetuningMap
 from pulser.sampler.samples import ChannelSamples, _PulseTargetSlot
 from pulser.waveforms import ConstantWaveform
 
@@ -245,6 +246,11 @@ class _ChannelSchedule:
     def __iter__(self) -> Iterator[_TimeSlot]:
         for slot in self.slots:
             yield slot
+
+
+@dataclass
+class _DMMSchedule(_ChannelSchedule):
+    detuning_map: DetuningMap
 
 
 class _Schedule(Dict[str, _ChannelSchedule]):

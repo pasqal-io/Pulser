@@ -41,7 +41,7 @@ class Rydberg(Channel):
     """Rydberg beam channel.
 
     Channel targeting the transition between the ground and rydberg states,
-    thus enconding the 'ground-rydberg' basis. See base class.
+    thus encoding the 'ground-rydberg' basis. See base class.
     """
 
     eom_config: Optional[RydbergEOM] = None

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, fields
+from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Literal, Optional, Type, TypeVar, cast
 
 import numpy as np
@@ -94,7 +94,7 @@ class Channel(ABC):
     def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
         """Internal parameters and their valid options."""
         return dict(
-            name=("Rydberg", "Raman", "Microwave"),
+            name=("Rydberg", "Raman", "Microwave", "DMM"),
             basis=("ground-rydberg", "digital", "XY"),
             addressing=("Local", "Global"),
         )
@@ -262,6 +262,14 @@ class Channel(ABC):
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
         """
+        # Can't initialize a channel whose addressing is determined internally
+        for cls_field in fields(cls):
+            if cls_field.name == "addressing":
+                break
+        if not cls_field.init and cls_field.default is not MISSING:
+            raise NotImplementedError(
+                f"{cls} cannot be initialized from `Local` method."
+            )
         return cls(
             "Local",
             max_abs_detuning,
@@ -299,6 +307,14 @@ class Channel(ABC):
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
         """
+        # Can't initialize a channel whose addressing is determined internally
+        for cls_field in fields(cls):
+            if cls_field.name == "addressing":
+                break
+        if not cls_field.init and cls_field.default is not MISSING:
+            raise NotImplementedError(
+                f"{cls} cannot be initialized from `Global` method."
+            )
         return cls("Global", max_abs_detuning, max_amp, **kwargs)
 
     def validate_duration(self, duration: int) -> int:

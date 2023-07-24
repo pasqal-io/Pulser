@@ -56,6 +56,15 @@ Chadoq2 = Device(
             max_duration=2**26,
         ),
     ),
+    # TODO: Add DMM once it is supported for serialization
+    # dmm_objects=(
+    #     DMM(
+    #         clock_period=4,
+    #         min_duration=16,
+    #         max_duration=2**26,
+    #         bottom_detuning=-20,
+    #     ),
+    # ),
 )
 
 IroiseMVP = Device(

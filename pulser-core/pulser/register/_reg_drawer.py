@@ -18,14 +18,15 @@ from collections import defaultdict
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import collections as mc
 from scipy.spatial import KDTree
 
-from pulser.register.base_register import QubitId
+if TYPE_CHECKING:
+    from pulser.register.base_register import QubitId
 
 
 class RegDrawer:
@@ -58,6 +59,7 @@ class RegDrawer:
         qubit_colors: Mapping[QubitId, str] = dict(),
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
+        dmm_qubits: Mapping[QubitId, float] = {},
     ) -> None:
         ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(
             ids, qubit_colors
@@ -73,21 +75,34 @@ class RegDrawer:
         ax.scatter(pos[:, ix], pos[:, iy], alpha=0.7, **params)
 
         # Draw square halo around masked qubits
-        if masked_qubits:
-            mask_pos = []
+        if (
+            masked_qubits
+            and dmm_qubits
+            and masked_qubits != set(dmm_qubits.keys())
+        ):
+            raise ValueError("masked qubits and dmm qubits must be the same.")
+        elif masked_qubits:
+            dmm_qubits = {
+                masked_qubit: 1.0 / len(masked_qubits)
+                for masked_qubit in masked_qubits
+            }
+
+        if dmm_qubits:
+            dmm_pos = []
             for i, c in zip(ids, pos):
-                if i in masked_qubits:
-                    mask_pos.append(c)
-            mask_arr = np.array(mask_pos)
+                if i in dmm_qubits.keys():
+                    dmm_pos.append(c)
+            dmm_arr = np.array(dmm_pos)
             ax.scatter(
-                mask_arr[:, ix],
-                mask_arr[:, iy],
+                dmm_arr[:, ix],
+                dmm_arr[:, iy],
                 marker="s",
                 s=1200,
-                alpha=0.2,
+                alpha=0.2
+                * np.array(list(dmm_qubits.values()))
+                / max(dmm_qubits.values()),
                 c="black",
             )
-
         axes = "xyz"
 
         ax.set_xlabel(axes[ix] + " (µm)")
@@ -106,6 +121,7 @@ class RegDrawer:
             i = 0
             bbs = {}
             final_plot_ids: list[str] = []
+            final_plot_det_map: list = []
             while i < len(plot_ids):
                 r = plot_pos[i]
                 j = i + 1
@@ -120,26 +136,41 @@ class RegDrawer:
                     else:
                         j += 1
                 # Sort qubits in plot_ids[i] according to masked status
+                det_map = [
+                    q for q, weight in dmm_qubits.items() if weight > 0.0
+                ]
                 plot_ids[i] = sorted(
                     plot_ids[i],
-                    key=lambda s: s in [str(q) for q in masked_qubits],
+                    key=lambda s: s in det_map,
                 )
-                # Merge all masked qubits
-                has_masked = False
+                # Merge all masked qubits with their detuning
+                # if the detunings are not all the same (masked qubits then)
+                has_det_map = False
+                is_mask = len(set([dmm_qubits[q] for q in det_map])) == 1
                 for j in range(len(plot_ids[i])):
-                    if plot_ids[i][j] in [str(q) for q in masked_qubits]:
-                        plot_ids[i][j:] = [", ".join(plot_ids[i][j:])]
-                        has_masked = True
+                    if plot_ids[i][j] in [str(q) for q in det_map]:
+                        qubit_det = []
+                        for q in plot_ids[i][j:]:
+                            extra_label = (
+                                f": {dmm_qubits[int(q)]:.2f}"
+                                if not is_mask
+                                else ""
+                            )
+                            qubit_det.append(q + extra_label)
+                        plot_ids[i][j:] = [", ".join(qubit_det)]
+                        has_det_map = True
                         break
                 # Add a square bracket that encloses all masked qubits
-                if has_masked:
+                if has_det_map:
                     plot_ids[i][-1] = "[" + plot_ids[i][-1] + "]"
+                    # Lower the fontsize if detuning is shown (not a mask)
+                    if not is_mask:
+                        final_plot_det_map.append(i)
                 # Merge what remains
                 final_plot_ids.append(", ".join(plot_ids[i]))
                 bbs[final_plot_ids[i]] = overlap
                 i += 1
-
-            for q, coords in zip(final_plot_ids, plot_pos):
+            for i, (q, coords) in enumerate(zip(final_plot_ids, plot_pos)):
                 bb = (
                     dict(boxstyle="square", fill=False, ec="gray", ls="--")
                     if bbs[q]
@@ -154,7 +185,7 @@ class RegDrawer:
                     va=v_al,
                     wrap=True,
                     bbox=bb,
-                    fontsize=12,
+                    fontsize=12 if i not in final_plot_det_map else 8.3,
                     multialignment="right",
                 )
                 txt._get_wrap_line_width = lambda: 50.0

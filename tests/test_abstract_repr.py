@@ -27,6 +27,7 @@ import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.channels import Rydberg
+from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import AnalogDevice, Chadoq2, Device, IroiseMVP, MockDevice
 from pulser.json.abstract_repr.deserializer import (
@@ -234,6 +235,46 @@ class TestDevice:
         )
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
+
+    @pytest.fixture
+    def chadoq2_with_dmm(self):
+        # TODO: Delete once Chadoq2 actually has a DMM
+        dmm = DMM(
+            bottom_detuning=-1,
+            clock_period=1,
+            min_duration=1,
+            max_duration=1e6,
+            mod_bandwidth=20,
+        )
+        return replace(Chadoq2, dmm_objects=(dmm,))
+
+    @pytest.mark.xfail(
+        raises=jsonschema.exceptions.ValidationError, strict=True
+    )
+    def test_abstract_repr_dmm_serialize(self, chadoq2_with_dmm):
+        chadoq2_with_dmm.to_abstract_repr()
+
+    @pytest.mark.xfail(raises=DeserializeDeviceError, strict=True)
+    @pytest.mark.parametrize(
+        "skip_validation",
+        [
+            False,  # Fails validation
+            True,  # Fails because the DMM channel is deserialized as Rydberg
+        ],
+    )
+    def test_abstract_repr_dmm_deserialize(
+        self, chadoq2_with_dmm, monkeypatch, skip_validation
+    ):
+        ser_device = json.dumps(chadoq2_with_dmm, cls=AbstractReprEncoder)
+        if skip_validation:
+
+            def dummy(*args, **kwargs):
+                return True
+
+            # Patches jsonschema.validate with a function that returns True
+            monkeypatch.setattr(jsonschema, "validate", dummy)
+        device = deserialize_device(ser_device)
+        assert device == chadoq2_with_dmm
 
 
 def validate_schema(instance):

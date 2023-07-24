@@ -31,6 +31,7 @@ from pulser.channels.eom import (
     RydbergEOM,
 )
 from pulser.devices import Device, VirtualDevice
+from pulser.devices._device_datacls import PARAMS_WITH_ABSTR_REPR
 from pulser.json.abstract_repr.signatures import (
     BINARY_OPERATORS,
     UNARY_OPERATORS,
@@ -346,12 +347,19 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     params: dict[str, Any] = dict(
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
-    ex_params = ("channel_objects", "channel_ids")
+    if "dmm_channels" in obj:
+        params["dmm_objects"] = tuple(
+            _deserialize_channel(dmm_ch) for dmm_ch in obj["dmm_channels"]
+        )
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
     for param in device_fields:
         use_default = param.name not in obj and param.name in device_defaults
-        if not param.init or param.name in ex_params or use_default:
+        if (
+            not param.init
+            or param.name in PARAMS_WITH_ABSTR_REPR
+            or use_default
+        ):
             continue
         if param.name == "pre_calibrated_layouts":
             key = "pre_calibrated_layouts"

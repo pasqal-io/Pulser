@@ -23,6 +23,7 @@ from pulser.json.utils import obj_to_dict, stringify_qubit_ids
 if TYPE_CHECKING:
     from pulser.register.base_register import BaseRegister, QubitId
     from pulser.register.register_layout import RegisterLayout
+    from pulser.register.weight_maps import DetuningMap
 
 
 class MappableRegister:
@@ -121,6 +122,22 @@ class MappableRegister:
                 "The IDs list must be selected among pre-declared qubit IDs."
             )
         return [self.qubit_ids.index(id) for id in id_list]
+
+    def define_detuning_map(
+        self, detuning_weights: Mapping[int, float]
+    ) -> DetuningMap:
+        """Defines a DetuningMap for some trap ids of the register layout.
+
+        Args:
+            detuning_weights: A mapping between the IDs of the targeted traps
+                and detuning weights (between 0 and 1, their sum must be equal
+                to 1).
+
+        Returns:
+            A DetuningMap associating detuning weights to the trap coordinates
+                of the targeted traps.
+        """
+        return self._layout.define_detuning_map(detuning_weights)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._layout, *self._qubit_ids)
