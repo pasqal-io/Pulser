@@ -496,6 +496,11 @@ class Sequence(Generic[DeviceType]):
         channel_match: dict[str, Any] = {}
         strict_error_message = ""
         ch_match_err = ""
+        active_eom_channels = [
+            {**dict(zip(("channel",), call.args)), **call.kwargs}["channel"]
+            for call in self._calls + self._to_build_calls
+            if call.name == "enable_eom_mode"
+        ]
         for old_ch_name, old_ch_obj in self.declared_channels.items():
             channel_match[old_ch_name] = None
             # Find the corresponding channel on the new device
@@ -509,27 +514,31 @@ class Sequence(Generic[DeviceType]):
 
                 # We verify the channel class then
                 # check whether the addressing is Global or Local
+                type_match = type(old_ch_obj) == type(new_ch_obj)
                 basis_match = old_ch_obj.basis == new_ch_obj.basis
                 addressing_match = (
                     old_ch_obj.addressing == new_ch_obj.addressing
                 )
                 base_msg = f"No match for channel {old_ch_name}"
-                if not (basis_match and addressing_match):
+                if not (type_match and basis_match and addressing_match):
                     # If there already is a message, keeps it
                     ch_match_err = ch_match_err or (
-                        base_msg + " with the right basis and addressing."
+                        base_msg
+                        + " with the right type, basis and addressing."
                     )
                     continue
-                if any(
-                    call.name == "enable_eom_mode"
-                    for call in self._calls + self._to_build_calls
-                ):
+                if old_ch_name in active_eom_channels:
                     # Uses EOM mode, so the new device needs a matching
                     # EOM configuration
                     if new_ch_obj.eom_config is None:
                         ch_match_err = base_msg + " with an EOM configuration."
                         continue
                     if (
+                        # TODO: Improvements to this check:
+                        # 1. multiple_beam_control doesn't matter when there
+                        # is only one beam
+                        # 2. custom_buffer_time doesn't have to match as long
+                        # as `Channel_eom_buffer_time`` does
                         new_ch_obj.eom_config != old_ch_obj.eom_config
                         and strict
                     ):
