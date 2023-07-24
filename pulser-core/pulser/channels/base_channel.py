@@ -17,17 +17,8 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, fields
-from typing import (
-    Any,
-    Literal,
-    Optional,
-    Type,
-    TypeVar,
-    cast,
-    get_args,
-    get_type_hints,
-)
+from dataclasses import MISSING, dataclass, field, fields
+from typing import Any, Literal, Optional, Type, TypeVar, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -271,8 +262,11 @@ class Channel(ABC):
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
         """
-        print(get_type_hints(cls)["addressing"])
-        if len(get_args(get_type_hints(cls)["addressing"])) == 1:
+        # Can't initialize a channel whose addressing is determined internally
+        for cls_field in fields(cls):
+            if cls_field.name == "addressing":
+                break
+        if not cls_field.init and not cls_field.default == MISSING:
             raise NotImplementedError(
                 f"{cls} cannot be initialized from `Local` method."
             )
@@ -313,8 +307,11 @@ class Channel(ABC):
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
         """
-        print(get_args(get_type_hints(cls)["addressing"]))
-        if len(get_args(get_type_hints(cls)["addressing"])) == 1:
+        # Can't initialize a channel whose addressing is determined internally
+        for cls_field in fields(cls):
+            if cls_field.name == "addressing":
+                break
+        if not cls_field.init and not cls_field.default == MISSING:
             raise NotImplementedError(
                 f"{cls} cannot be initialized from `Global` method."
             )
