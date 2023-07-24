@@ -266,7 +266,7 @@ class Channel(ABC):
         for cls_field in fields(cls):
             if cls_field.name == "addressing":
                 break
-        if not cls_field.init and not cls_field.default == MISSING:
+        if not cls_field.init and cls_field.default is not MISSING:
             raise NotImplementedError(
                 f"{cls} cannot be initialized from `Local` method."
             )

@@ -64,14 +64,7 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 
 
 class TestDevice:
-    @pytest.fixture(
-        params=[
-            Chadoq2,
-            IroiseMVP,
-            MockDevice,
-            AnalogDevice,
-        ]
-    )
+    @pytest.fixture(params=[Chadoq2, IroiseMVP, MockDevice, AnalogDevice])
     def abstract_device(self, request):
         device = request.param
         return json.loads(device.to_abstract_repr())
