@@ -1132,11 +1132,6 @@ class QutipEmulator:
             raise ValueError(
                 "No instructions given for the channels in the sequence."
             )
-        if with_modulation and sequence._slm_mask_targets:
-            raise NotImplementedError(
-                "Simulation of sequences combining an SLM mask and output "
-                "modulation is not supported."
-            )
         return cls(
             sampler.sample(
                 sequence,
