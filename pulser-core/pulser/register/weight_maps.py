@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import TYPE_CHECKING, Mapping, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,6 +24,9 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 from pulser.register._reg_drawer import RegDrawer
+
+if TYPE_CHECKING:
+    from pulser.register.base_register import QubitId
 
 
 @dataclass
@@ -47,6 +50,23 @@ class WeightMap(RegDrawer):
             raise ValueError("All weights must be non-negative.")
         if not np.isclose(sum(self.weights), 1.0, atol=1e-16):
             raise ValueError("The sum of the weights should be 1.")
+
+    def get_qubit_weight_map(
+        self, qubits: Mapping[QubitId, np.ndarray]
+    ) -> dict[QubitId, float]:
+        """Creates a map between qubit IDs and the weight on their sites."""
+        coord_precision = 6  # TODO: Use COORD_PRECISION instead
+        qubit_weight_map = {}
+        coords_arr = np.array(self.trap_coordinates)
+        weights_arr = np.array(self.weights)
+        for qid, pos in qubits.items():
+            dists = np.round(
+                np.linalg.norm(coords_arr - np.array(pos), axis=1),
+                decimals=coord_precision,
+            )
+            matches = np.argwhere(dists == 0.0)
+            qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
+        return qubit_weight_map
 
     def draw(
         self,
