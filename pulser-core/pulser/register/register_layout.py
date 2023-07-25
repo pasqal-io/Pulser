@@ -15,16 +15,14 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
-from functools import cached_property
-from hashlib import sha256
 from operator import itemgetter
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
@@ -33,13 +31,12 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
+from pulser.register.traps import Traps
 from pulser.register.weight_maps import DetuningMap
-
-COORD_PRECISION = 6
 
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
-class RegisterLayout(RegDrawer):
+class RegisterLayout(Traps, RegDrawer):
     """A layout of traps out of which registers can be defined.
 
     The traps are always sorted under the same convention: ascending order
@@ -51,96 +48,14 @@ class RegisterLayout(RegDrawer):
         slug: An optional identifier for the layout.
     """
 
-    _trap_coordinates: ArrayLike
     slug: Optional[str]
 
     def __init__(
         self, trap_coordinates: ArrayLike, slug: Optional[str] = None
     ):
         """Initializes a RegisterLayout."""
-        array_type_error_msg = ValueError(
-            "'trap_coordinates' must be an array or list of coordinates."
-        )
-
-        try:
-            coords_arr = np.array(trap_coordinates, dtype=float)
-        except ValueError as e:
-            raise array_type_error_msg from e
-
-        shape = coords_arr.shape
-        if len(shape) != 2:
-            raise array_type_error_msg
-
-        if shape[1] not in (2, 3):
-            raise ValueError(
-                f"Each coordinate must be of size 2 or 3, not {shape[1]}."
-            )
-
-        if len(np.unique(trap_coordinates, axis=0)) != shape[0]:
-            raise ValueError(
-                "All trap coordinates of a register layout must be unique."
-            )
-
-        object.__setattr__(self, "_trap_coordinates", trap_coordinates)
+        super().__init__(trap_coordinates)
         object.__setattr__(self, "slug", slug)
-
-    @property
-    def traps_dict(self) -> dict:
-        """Mapping between trap IDs and coordinates."""
-        return dict(enumerate(self.coords))
-
-    @cached_property  # Acts as an attribute in a frozen dataclass
-    def _coords(self) -> np.ndarray:
-        coords = np.array(self._trap_coordinates, dtype=float)
-        # Sorting the coordinates 1st left to right, 2nd bottom to top
-        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
-        dims = rounded_coords.shape[1]
-        sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
-        sorting = np.lexsort(tuple(sorter))
-        return cast(np.ndarray, rounded_coords[sorting])
-
-    @cached_property  # Acts as an attribute in a frozen dataclass
-    def _coords_to_traps(self) -> dict[tuple[float, ...], int]:
-        return {tuple(coord): id for id, coord in self.traps_dict.items()}
-
-    @property
-    def coords(self) -> np.ndarray:
-        """The sorted trap coordinates."""
-        # Copies to prevent direct access to self._coords
-        return self._coords.copy()
-
-    @property
-    def number_of_traps(self) -> int:
-        """The number of traps in the layout."""
-        return len(self._coords)
-
-    @property
-    def dimensionality(self) -> int:
-        """The dimensionality of the layout (2 or 3)."""
-        return self._coords.shape[1]
-
-    def get_traps_from_coordinates(self, *coordinates: ArrayLike) -> list[int]:
-        """Finds the trap ID for a given set of trap coordinates.
-
-        Args:
-            coordinates: The coordinates to return the trap IDs.
-
-        Returns:
-            The list of trap IDs corresponding to the coordinates.
-        """
-        traps = []
-        rounded_coords = np.round(
-            np.array(coordinates), decimals=COORD_PRECISION
-        )
-        for coord, rounded in zip(coordinates, rounded_coords):
-            key = tuple(rounded)
-            if key not in self._coords_to_traps:
-                raise ValueError(
-                    f"The coordinate '{coord!s}' is not a part of the "
-                    "RegisterLayout."
-                )
-            traps.append(self._coords_to_traps[key])
-        return traps
 
     def define_register(
         self, *trap_ids: int, qubit_ids: Optional[abcSequence[QubitId]] = None
@@ -311,38 +226,18 @@ class RegisterLayout(RegDrawer):
         qubit_ids = [f"{prefix}{i}" for i in range(n_qubits)]
         return MappableRegister(self, *qubit_ids)
 
-    def _safe_hash(self) -> bytes:
-        # Include dimensionality because the array is flattened with tobytes()
-        hash = sha256(bytes(self.dimensionality))
-        hash.update(self.coords.tobytes())
-        return hash.digest()
-
-    def static_hash(self) -> str:
-        """Returns the layout's idempotent hash.
-
-        Python's standard hash is not idempotent as it changes between
-        sessions. This hash can be used when an idempotent hash is
-        required.
-
-        Returns:
-            str: An hexstring encoding the hash.
-
-        Note:
-            This hash will be returned as an hexstring without
-            the '0x' prefix (unlike what is returned by 'hex()').
-        """
-        return self._safe_hash().hex()
+    @property
+    def _hash_object(self) -> hashlib._Hash:
+        return super()._hash_object
 
     def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, RegisterLayout):
-            return False
-        return self._safe_hash() == other._safe_hash()
-
-    def __hash__(self) -> int:
-        return hash(self._safe_hash())
+        return super().__eq__(other) and isinstance(other, RegisterLayout)
 
     def __repr__(self) -> str:
         return f"RegisterLayout_{self._safe_hash().hex()}"
+
+    def __hash__(self) -> int:
+        return hash(self._safe_hash())
 
     def __str__(self) -> str:
         return self.slug or self.__repr__()

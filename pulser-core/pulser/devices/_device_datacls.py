@@ -31,7 +31,8 @@ from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.register.register_layout import COORD_PRECISION, RegisterLayout
+from pulser.register.register_layout import RegisterLayout
+from pulser.register.traps import COORD_PRECISION
 
 DIMENSIONS = Literal[2, 3]
 
