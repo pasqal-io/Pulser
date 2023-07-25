@@ -710,30 +710,11 @@ class QutipEmulator:
                 [("sigma_du", [q1]), ("sigma_ud", [q2])]
             )
 
-        def make_interaction_term(masked: bool = False) -> qutip.Qobj:
-            if masked:
-                # Calculate the total number of good, unmasked qubits
-                effective_size = self._size - sum(self._bad_atoms.values())
-                for q in self.samples_obj._slm_mask.targets:
-                    if not self._bad_atoms[q]:
-                        effective_size -= 1
-                if effective_size < 2:
-                    return 0 * self.build_operator([("I", "global")])
-
+        def make_interaction_term() -> qutip.Qobj:
             # make interaction term
             dipole_interaction = cast(qutip.Qobj, 0)
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
-                if (
-                    self._bad_atoms[q1]
-                    or self._bad_atoms[q2]
-                    or (
-                        masked
-                        and (
-                            q1 in self.samples_obj._slm_mask.targets
-                            or q2 in self.samples_obj._slm_mask.targets
-                        )
-                    )
-                ):
+                if self._bad_atoms[q1] or self._bad_atoms[q2]:
                     continue
 
                 if self._interaction == "XY":
@@ -802,31 +783,7 @@ class QutipEmulator:
         # Time independent term:
         effective_size = self._size - sum(self._bad_atoms.values())
         if self.basis_name != "digital" and effective_size > 1:
-            # Build time-dependent or time-independent interaction term based
-            # on whether an SLM mask was defined or not
-            if self.samples_obj._slm_mask.end > 0:
-                # Build an array of binary coefficients for the interaction
-                # term of unmasked qubits
-                coeff = np.ones(self._tot_duration)
-                coeff[0 : self.samples_obj._slm_mask.end] = 0
-                # Build the interaction term for unmasked qubits
-                qobj_list = [
-                    [
-                        make_interaction_term(),
-                        self._adapt_to_sampling_rate(coeff),
-                    ]
-                ]
-                # Build the interaction term for masked qubits
-                qobj_list += [
-                    [
-                        make_interaction_term(masked=True),
-                        self._adapt_to_sampling_rate(
-                            np.logical_not(coeff).astype(int)
-                        ),
-                    ]
-                ]
-            else:
-                qobj_list = [make_interaction_term()]
+            qobj_list = [make_interaction_term()]
 
         # Time dependent terms:
         for addr in self.samples:

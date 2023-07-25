@@ -992,6 +992,7 @@ def test_mask_nopulses():
         assert sim_empty.samples_obj._slm_mask.end == 0
 
 
+@pytest.mark.xfail(reason="Effects of SLM mask were removed")
 def test_mask_equals_remove():
     """Check that masking is equivalent to removing the masked qubits.
 
@@ -1050,6 +1051,7 @@ def test_mask_equals_remove():
             assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
 
 
+@pytest.mark.xfail(reason="Effects of SLM mask were removed")
 def test_mask_two_pulses():
     """Similar to test_mask_equals_remove, but with more pulses afterwards.
 
@@ -1100,6 +1102,7 @@ def test_mask_two_pulses():
                 assert ham_masked == ham_three
 
 
+@pytest.mark.xfail(reason="Effects of SLM mask were removed")
 def test_mask_local_channel():
     seq_ = Sequence(Register.square(2, prefix="q"), MockDevice)
     seq_.declare_channel("rydberg_global", "rydberg_global")
@@ -1143,6 +1146,7 @@ def test_effective_size_intersection():
         )
 
 
+@pytest.mark.xfail(reason="Effects of SLM mask were removed")
 def test_effective_size_disjoint():
     simple_reg = Register.square(2, prefix="atom")
     rise = Pulse.ConstantPulse(1500, 0, 0, 0)

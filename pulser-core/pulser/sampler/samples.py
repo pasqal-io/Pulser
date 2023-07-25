@@ -442,18 +442,9 @@ class SequenceSamples:
             else:
                 det_weight_map = defaultdict(lambda: 1.0)
             if addr == _GLOBAL and not all_local and not is_dmm:
-                start_t = self._slm_mask.end
-                d[_GLOBAL][basis][_AMP][start_t:] += cs.amp[start_t:]
-                d[_GLOBAL][basis][_DET][start_t:] += cs.det[start_t:]
-                d[_GLOBAL][basis][_PHASE][start_t:] += cs.phase[start_t:]
-                if start_t == 0:
-                    # Prevents lines below from running unnecessarily
-                    continue
-                unmasked_targets = cs.slots[0].targets - self._slm_mask.targets
-                for t in unmasked_targets:
-                    d[_LOCAL][basis][t][_AMP][:start_t] += cs.amp[:start_t]
-                    d[_LOCAL][basis][t][_DET][:start_t] += cs.det[:start_t]
-                    d[_LOCAL][basis][t][_PHASE][:start_t] += cs.phase[:start_t]
+                d[_GLOBAL][basis][_AMP] += cs.amp
+                d[_GLOBAL][basis][_DET] += cs.det
+                d[_GLOBAL][basis][_PHASE] += cs.phase
             else:
                 if not cs.slots:
                     # Fill the defaultdict entries to not return an empty dict
@@ -461,10 +452,7 @@ class SequenceSamples:
                         d[_LOCAL][basis][t]
                 for s in cs.slots:
                     for t in s.targets:
-                        ti = s.ti
-                        if t in self._slm_mask.targets:
-                            ti = max(ti, self._slm_mask.end)
-                        times = slice(ti, s.tf)
+                        times = slice(s.ti, s.tf)
                         d[_LOCAL][basis][t][_AMP][times] += cs.amp[times]
                         d[_LOCAL][basis][t][_DET][times] += (
                             cs.det[times] * det_weight_map[t]
