@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
@@ -25,7 +25,7 @@ from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.register.weight_maps import DetuningMap
-from pulser.sampler.samples import ChannelSamples, _PulseTargetSlot
+from pulser.sampler.samples import ChannelSamples, DMMSamples, _PulseTargetSlot
 from pulser.waveforms import ConstantWaveform
 
 
@@ -251,6 +251,28 @@ class _ChannelSchedule:
 @dataclass
 class _DMMSchedule(_ChannelSchedule):
     detuning_map: DetuningMap
+
+    def get_samples(
+        self,
+        ignore_detuned_delay_phase: bool = True,
+        qubits: dict[QubitId, np.ndarray] | None = None,
+    ) -> DMMSamples:
+        ch_samples = super().get_samples(
+            ignore_detuned_delay_phase=ignore_detuned_delay_phase
+        )
+        init_fields = {
+            f.name: getattr(ch_samples, f.name)
+            for f in fields(ch_samples)
+            if f.init
+        }
+        if qubits is None:
+            raise ValueError(
+                "'qubits' must be defined when extracting the samples of a"
+                " DMM channel."
+            )
+        return DMMSamples(
+            **init_fields, detuning_map=self.detuning_map, qubits=qubits
+        )
 
 
 class _Schedule(Dict[str, _ChannelSchedule]):
