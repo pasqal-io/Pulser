@@ -24,6 +24,7 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 from pulser.register._reg_drawer import RegDrawer
+from pulser.register.traps import COORD_PRECISION
 
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
@@ -55,14 +56,13 @@ class WeightMap(RegDrawer):
         self, qubits: Mapping[QubitId, np.ndarray]
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
-        coord_precision = 6  # TODO: Use COORD_PRECISION instead
         qubit_weight_map = {}
         coords_arr = np.array(self.trap_coordinates)
         weights_arr = np.array(self.weights)
         for qid, pos in qubits.items():
             dists = np.round(
                 np.linalg.norm(coords_arr - np.array(pos), axis=1),
-                decimals=coord_precision,
+                decimals=COORD_PRECISION,
             )
             matches = np.argwhere(dists == 0.0)
             qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
