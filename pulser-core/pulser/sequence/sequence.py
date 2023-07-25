@@ -144,8 +144,19 @@ class Sequence(Generic[DeviceType]):
         # Marks the sequence as empty until the first pulse is added
         self._empty_sequence: bool = True
         self._dmm_protocols: dict[str, PROTOCOLS] = {}
+        # SLM mask targets and on/off times
+        self._slm_mask_targets: set[QubitId] = set()
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
+
+    @property
+    def _slm_mask_time(self) -> list[int]:
+        """The initial and final time when the SLM mask is on."""
+        return (
+            []
+            if not self._slm_mask_targets
+            else self._schedule.find_slm_mask_times()
+        )
 
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
@@ -409,7 +420,7 @@ class Sequence(Generic[DeviceType]):
     def config_slm_mask(
         self, qubits: Iterable[QubitId], dmm_id: str = "dmm_0"
     ) -> None:
-        """Configures a DMM as a SLM mask by specifying the qubits it targets.
+        """Setup an SLM mask by specifying the qubits it targets.
 
         A SLM mask is a DetuningMap where the detuning of each masked qubit
         is the same.
@@ -439,6 +450,11 @@ class Sequence(Generic[DeviceType]):
 
         if self.is_parametrized():
             return
+
+        if self._slm_mask_targets:
+            raise ValueError("SLM mask can be configured only once.")
+
+        self._slm_mask_targets = targets
 
         ntargets = len(targets)
         detuning_map = self.register.define_detuning_map(

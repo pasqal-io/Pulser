@@ -271,6 +271,8 @@ def serialize_abstract_sequence(
             )
         elif call.name == "set_magnetic_field":
             res["magnetic_field"] = seq.magnetic_field.tolist()
+        elif call.name == "config_slm_mask":
+            res["slm_mask_targets"] = tuple(seq._slm_mask_targets)
         elif call.name == "enable_eom_mode":
             data = get_all_args(
                 ("channel", "amp_on", "detuning_on", "optimal_detuning_off"),

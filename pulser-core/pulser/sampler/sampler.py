@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from pulser.sampler.samples import SequenceSamples
+from pulser.sampler.samples import SequenceSamples, _SlmMask
 
 if TYPE_CHECKING:
     from pulser import Sequence
@@ -41,6 +41,11 @@ def sample(
         samples_list.append(samples)
 
     optionals: dict = dict()
+    if seq._slm_mask_targets and seq._slm_mask_time:
+        optionals["_slm_mask"] = _SlmMask(
+            seq._slm_mask_targets,
+            seq._slm_mask_time[1],
+        )
     if seq._in_xy:
         optionals["_magnetic_field"] = seq.magnetic_field
     if hasattr(seq, "_measurement"):
