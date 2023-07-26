@@ -24,7 +24,6 @@ from typing import Any, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
@@ -48,15 +47,6 @@ class RegisterLayout(Traps, RegDrawer):
         trap_coordinates: The trap coordinates defining the layout.
         slug: An optional identifier for the layout.
     """
-
-    slug: Optional[str]
-
-    def __init__(
-        self, trap_coordinates: ArrayLike, slug: Optional[str] = None
-    ):
-        """Initializes a RegisterLayout."""
-        super().__init__(trap_coordinates)
-        object.__setattr__(self, "slug", slug)
 
     @property
     def coords(self) -> np.ndarray:
@@ -244,9 +234,6 @@ class RegisterLayout(Traps, RegDrawer):
 
     def __hash__(self) -> int:
         return hash(self._safe_hash())
-
-    def __str__(self) -> str:
-        return self.slug or self.__repr__()
 
     def _to_dict(self) -> dict[str, Any]:
         # Allows for serialization of subclasses without a special _to_dict()

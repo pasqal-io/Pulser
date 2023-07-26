@@ -39,8 +39,9 @@ class Traps(ABC):
     """
 
     _trap_coordinates: ArrayLike
+    slug: str | None
 
-    def __init__(self, trap_coordinates: ArrayLike):
+    def __init__(self, trap_coordinates: ArrayLike, slug: str | None = None):
         """Initializes a RegisterLayout."""
         array_type_error_msg = ValueError(
             "'trap_coordinates' must be an array or list of coordinates."
@@ -65,6 +66,7 @@ class Traps(ABC):
                 "All trap coordinates of a register layout must be unique."
             )
         object.__setattr__(self, "_trap_coordinates", trap_coordinates)
+        object.__setattr__(self, "slug", slug)
 
     @property
     def traps_dict(self) -> dict:
@@ -162,3 +164,6 @@ class Traps(ABC):
         if not isinstance(other, Traps):
             return False
         return self._safe_hash() == other._safe_hash()
+
+    def __str__(self) -> str:
+        return self.slug or self.__repr__()

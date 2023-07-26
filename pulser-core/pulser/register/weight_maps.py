@@ -46,10 +46,13 @@ class WeightMap(Traps, RegDrawer):
     weights: tuple[float, ...]
 
     def __init__(
-        self, trap_coordinates: ArrayLike, weights: typing.Sequence[float]
+        self,
+        trap_coordinates: ArrayLike,
+        weights: typing.Sequence[float],
+        slug: str | None = None,
     ) -> None:
         """Initializes a new weight map."""
-        super().__init__(trap_coordinates)
+        super().__init__(trap_coordinates, slug)
         if len(cast(list, trap_coordinates)) != len(weights):
             raise ValueError("Number of traps and weights don't match.")
         if not np.all(np.array(weights) >= 0):
@@ -138,6 +141,11 @@ class WeightMap(Traps, RegDrawer):
         hash_.update(self.sorted_weights.tobytes())
         hash_.update(type(self).__name__.encode())
         return hash_
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}_{self._safe_hash().hex()}"
+
+    # TODO: Serialization methods
 
 
 @dataclass(init=False, eq=False, frozen=True)
