@@ -69,16 +69,23 @@ class Traps(ABC):
     @property
     def traps_dict(self) -> dict:
         """Mapping between trap IDs and coordinates."""
-        return dict(enumerate(self.coords))
+        return dict(enumerate(self.sorted_coords))
 
-    @cached_property  # Acts as an attribute in a frozen dataclass
-    def _coords(self) -> np.ndarray:
+    def _calc_sorting_order(self) -> np.ndarray:
+        """Calculates the unique order that sorts the coordinates."""
         coords = np.array(self._trap_coordinates, dtype=float)
         # Sorting the coordinates 1st left to right, 2nd bottom to top
         rounded_coords = np.round(coords, decimals=COORD_PRECISION)
         dims = rounded_coords.shape[1]
         sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
         sorting = np.lexsort(tuple(sorter))
+        return cast(np.ndarray, sorting)
+
+    @cached_property  # Acts as an attribute in a frozen dataclass
+    def _coords(self) -> np.ndarray:
+        coords = np.array(self._trap_coordinates, dtype=float)
+        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
+        sorting = self._calc_sorting_order()
         return cast(np.ndarray, rounded_coords[sorting])
 
     @cached_property  # Acts as an attribute in a frozen dataclass
@@ -86,7 +93,7 @@ class Traps(ABC):
         return {tuple(coord): id for id, coord in self.traps_dict.items()}
 
     @property
-    def coords(self) -> np.ndarray:
+    def sorted_coords(self) -> np.ndarray:
         """The sorted trap coordinates."""
         # Copies to prevent direct access to self._coords
         return self._coords.copy()
@@ -128,9 +135,9 @@ class Traps(ABC):
     @abstractmethod
     def _hash_object(self) -> hashlib._Hash:
         # Include dimensionality because the array is flattened with tobytes()
-        hash = hashlib.sha256(bytes(self.dimensionality))
-        hash.update(self.coords.tobytes())
-        return hash
+        hash_ = hashlib.sha256(bytes(self.dimensionality))
+        hash_.update(self.sorted_coords.tobytes())
+        return hash_
 
     def _safe_hash(self) -> bytes:
         return self._hash_object.digest()

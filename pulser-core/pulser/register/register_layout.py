@@ -23,6 +23,7 @@ from operator import itemgetter
 from typing import Any, Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
@@ -56,6 +57,11 @@ class RegisterLayout(Traps, RegDrawer):
         """Initializes a RegisterLayout."""
         super().__init__(trap_coordinates)
         object.__setattr__(self, "slug", slug)
+
+    @property
+    def coords(self) -> np.ndarray:
+        """A shorthand for 'sorted_coords'."""
+        return self.sorted_coords
 
     def define_register(
         self, *trap_ids: int, qubit_ids: Optional[abcSequence[QubitId]] = None
