@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import typing
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Mapping, Optional, cast
 
@@ -24,14 +26,14 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 from pulser.register._reg_drawer import RegDrawer
-from pulser.register.traps import COORD_PRECISION
+from pulser.register.traps import COORD_PRECISION, Traps
 
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
 
 
-@dataclass
-class WeightMap(RegDrawer):
+@dataclass(init=False, eq=False, frozen=True)
+class WeightMap(Traps, RegDrawer):
     """Defines a generic map of weights on traps.
 
     The sum of the provided weights must be equal to 1.
@@ -41,24 +43,39 @@ class WeightMap(RegDrawer):
         weights: A list weights to associate to the traps.
     """
 
-    trap_coordinates: ArrayLike
-    weights: list[float]
+    weights: tuple[float, ...]
 
-    def __post_init__(self) -> None:
-        if len(cast(list, self.trap_coordinates)) != len(self.weights):
+    def __init__(
+        self, trap_coordinates: ArrayLike, weights: typing.Sequence[float]
+    ) -> None:
+        """Initializes a new weight map."""
+        super().__init__(trap_coordinates)
+        if len(cast(list, trap_coordinates)) != len(weights):
             raise ValueError("Number of traps and weights don't match.")
-        if not np.all(np.array(self.weights) >= 0):
+        if not np.all(np.array(weights) >= 0):
             raise ValueError("All weights must be non-negative.")
-        if not np.isclose(sum(self.weights), 1.0, atol=1e-16):
+        if not np.isclose(sum(weights), 1.0, atol=1e-16):
             raise ValueError("The sum of the weights should be 1.")
+        object.__setattr__(self, "weights", tuple(weights))
+
+    @property
+    def trap_coordinates(self) -> np.ndarray:
+        """The array of trap coordinates, in the order they were given."""
+        return np.array(self._trap_coordinates)
+
+    @property
+    def sorted_weights(self) -> np.ndarray:
+        """The weights sorted to match the sorted trap coordinates."""
+        sorting = self._calc_sorting_order()
+        return cast(np.ndarray, np.array(self.weights)[sorting])
 
     def get_qubit_weight_map(
         self, qubits: Mapping[QubitId, np.ndarray]
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
         qubit_weight_map = {}
-        coords_arr = np.array(self.trap_coordinates)
-        weights_arr = np.array(self.weights)
+        coords_arr = self.sorted_coords
+        weights_arr = self.sorted_weights
         for qid, pos in qubits.items():
             dists = np.round(
                 np.linalg.norm(coords_arr - np.array(pos), axis=1),
@@ -94,13 +111,14 @@ class WeightMap(RegDrawer):
                 combining this plot with other ones in a single figure, one may
                 need to set this flag to False.
         """
-        pos = np.array(self.trap_coordinates)
+        pos = self.trap_coordinates
         if custom_ax is None:
             _, custom_ax = self._initialize_fig_axes(pos)
 
         super()._draw_2D(
             custom_ax,
             pos,
+            # TODO: Confirm that using these IDs make sense
             [i for i, _ in enumerate(cast(list, self.trap_coordinates))],
             with_labels=with_labels,
             dmm_qubits=dict(enumerate(self.weights)),
@@ -112,8 +130,16 @@ class WeightMap(RegDrawer):
         if show:
             plt.show()
 
+    @property
+    def _hash_object(self) -> hashlib._Hash:
+        hash_ = super()._hash_object
+        # Include the weights and the type in the hash
+        hash_.update(self.sorted_weights.tobytes())
+        hash_.update(type(self).__name__.encode())
+        return hash_
 
-@dataclass
+
+@dataclass(init=False, eq=False, frozen=True)
 class DetuningMap(WeightMap):
     """Defines a DetuningMap.
 
@@ -121,6 +147,6 @@ class DetuningMap(WeightMap):
     The sum of the provided weights must be equal to 1.
 
     Args:
-        trap_coordinates: an array containing the coordinates of the traps.
+        trap_coordinates: An array containing the coordinates of the traps.
         weights: A list of detuning weights to associate to the traps.
     """
