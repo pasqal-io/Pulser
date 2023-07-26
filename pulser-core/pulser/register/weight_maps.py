@@ -87,7 +87,7 @@ class WeightMap(Traps, RegDrawer):
 
     def draw(
         self,
-        with_labels: bool = True,
+        labels: typing.Sequence[QubitId] | None = None,
         fig_name: str | None = None,
         kwargs_savefig: dict = {},
         custom_ax: Optional[Axes] = None,
@@ -96,8 +96,8 @@ class WeightMap(Traps, RegDrawer):
         """Draws the detuning map.
 
         Args:
-            with_labels: If True, writes the qubit ID's
-                next to each qubit.
+            labels: If defined, writes the labels next to each site. Must have
+                the same length and order like the `trap_coordinates`.
             fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig: Keywords arguments for
@@ -115,13 +115,14 @@ class WeightMap(Traps, RegDrawer):
         if custom_ax is None:
             _, custom_ax = self._initialize_fig_axes(pos)
 
+        labels_ = labels if labels is not None else list(range(len(pos)))
+
         super()._draw_2D(
             custom_ax,
             pos,
-            # TODO: Confirm that using these IDs make sense
-            [i for i, _ in enumerate(cast(list, self.trap_coordinates))],
-            with_labels=with_labels,
-            dmm_qubits=dict(enumerate(self.weights)),
+            labels_,
+            with_labels=labels is not None,
+            dmm_qubits=dict(zip(labels_, self.weights)),
         )
 
         if fig_name is not None:

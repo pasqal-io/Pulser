@@ -140,7 +140,7 @@ def test_init(
 
 def test_draw(det_map, slm_map, patch_plt_show):
     for detuning_map in (det_map, slm_map):
-        detuning_map.draw(with_labels=True, show=True, custom_ax=None)
+        detuning_map.draw(show=True, custom_ax=None)
         with patch("matplotlib.pyplot.savefig"):
             detuning_map.draw(fig_name="det_map.pdf")
     with pytest.raises(
