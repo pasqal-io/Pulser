@@ -14,12 +14,14 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 
 import numpy as np
 import pytest
 
 import pulser
 import pulser_simulation
+from pulser.channels.dmm import DMM
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
 from pulser.sampler import sample
@@ -285,7 +287,7 @@ def seq_with_SLM() -> pulser.Sequence:
     }
 
     reg = pulser.Register(q_dict)
-    seq = pulser.Sequence(reg, MockDevice)
+    seq = pulser.Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
 
     seq.declare_channel("ch0", "rydberg_global")
     seq.config_slm_mask(["batman"])

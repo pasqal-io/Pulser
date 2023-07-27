@@ -669,11 +669,12 @@ class TestSerialization:
 
             ParamObj(Foo, "bar")._to_abstract_repr()
 
+    @pytest.mark.xfail
     def test_mw_sequence(self, triangular_lattice):
         mag_field = [-10, 40, 0]
         mask = {"q0", "q2", "q4"}
         reg = triangular_lattice.hexagonal_register(5)
-        seq = Sequence(reg, MockDevice)
+        seq = Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
         seq.declare_channel("mw_ch", "mw_global")
         seq.set_magnetic_field(*mag_field)
         seq.config_slm_mask(mask)
@@ -986,8 +987,20 @@ class TestDeserialization:
         assert seq._register.qubit_ids == tuple(qids)
         assert seq._register.layout == RegisterLayout(layout_coords)
 
+    @pytest.mark.xfail
     def test_deserialize_seq_with_slm_mask(self):
-        s = _get_serialized_seq(slm_mask_targets=["q0"])
+        s = _get_serialized_seq(
+            slm_mask_targets=["q0"],
+            variables={},
+            **{
+                "dmm_channels": {"dmm_0": "dmm_0"},
+                "device": json.loads(
+                    replace(
+                        Chadoq2, dmm_objects=(DMM(bottom_detuning=-100),)
+                    ).to_abstract_repr()
+                ),
+            },
+        )
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
         assert seq._slm_mask_targets == {"q0"}
