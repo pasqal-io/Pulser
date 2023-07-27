@@ -209,12 +209,6 @@ def serialize_abstract_sequence(
                         "target": convert_targets(data["initial_target"]),
                     }
                 )
-        elif call.name == "config_detuning_map":
-            data = get_all_args(("detuning_map", "dmm_id"), call)
-            res["dmms"][data["dmm_id"]] = data["detuning_map"]
-        elif call.name == "config_detuning_map":
-            data = get_all_args(("detuning_map", "dmm_id", "protocol"), call)
-            res["dmms"][data["dmm_id"]] = data["detuning_map"]
         elif "target" in call.name:
             data = get_all_args(("qubits", "channel"), call)
             if call.name == "target":
