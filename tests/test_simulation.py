@@ -28,7 +28,6 @@ from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig, Simulation
 
-
 assert not MockDevice.dmm_objects, "Delete the next line"
 MockDevice = replace(MockDevice, dmm_objects=(DMM(),))
 
