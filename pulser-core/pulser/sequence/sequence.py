@@ -516,7 +516,9 @@ class Sequence(Generic[DeviceType]):
         dmm_name = dmm_id
         if dmm_id in self.declared_channels:
             assert self._device.reusable_channels
-            dmm_name += f"_{''.join(self.declared_channels.keys()).count(dmm_id)}"
+            dmm_name += (
+                f"_{''.join(self.declared_channels.keys()).count(dmm_id)}"
+            )
 
         self._schedule[dmm_name] = _DMMSchedule(
             dmm_id, dmm_ch, detuning_map=detuning_map
@@ -765,6 +767,12 @@ class Sequence(Generic[DeviceType]):
         if ch.basis == "XY" and not self._in_xy:
             self._in_xy = True
             self.set_magnetic_field()
+            # If schedule contains a DMM channel, delete it.
+            if len(self._schedule) > 0:
+                assert len(self._schedule) == 1 and isinstance(
+                    list(self._schedule.values())[0], DMM
+                )
+                self._schedule.pop(list(self._schedule.keys())[0])
 
         self._schedule[name] = _ChannelSchedule(channel_id, ch)
 
