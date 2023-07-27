@@ -50,11 +50,11 @@ class DMM(Channel):
 
     bottom_detuning: Optional[float] = field(default=None, init=True)
     addressing: Literal["Global"] = field(default="Global", init=False)
-    max_abs_detuning: Optional[float] = field(init=False, default=None)
-    max_amp: float = field(default=1e-16, init=False)  # can't be 0
-    min_retarget_interval: Optional[int] = field(init=False, default=None)
-    fixed_retarget_t: Optional[int] = field(init=False, default=None)
-    max_targets: Optional[int] = field(init=False, default=None)
+    max_abs_detuning: Optional[float] = field(default=None, init=False)
+    max_amp: float = field(default=0, init=False)  # can't be 0
+    min_retarget_interval: Optional[int] = field(default=None, init=False)
+    fixed_retarget_t: Optional[int] = field(default=None, init=False)
+    max_targets: Optional[int] = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()

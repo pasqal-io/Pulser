@@ -117,6 +117,7 @@ class Channel(ABC):
             "min_avg_amp",
         ]
         non_negative = [
+            "max_amp",
             "max_abs_detuning",
             "min_retarget_interval",
             "fixed_retarget_t",

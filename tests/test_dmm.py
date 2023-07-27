@@ -161,6 +161,7 @@ def test_draw(det_map, slm_map, patch_plt_show):
 
 
 def test_DMM():
+    assert DMM().is_virtual()
     dmm = DMM(
         bottom_detuning=-1,
         clock_period=1,
@@ -168,10 +169,11 @@ def test_DMM():
         max_duration=1e6,
         mod_bandwidth=20,
     )
+    assert not dmm.is_virtual()
     assert dmm.basis == "ground-rydberg"
     assert dmm.addressing == "Global"
     assert dmm.bottom_detuning == -1
-    assert dmm.max_amp == 1e-16
+    assert dmm.max_amp == 0
     for value in (
         dmm.max_abs_detuning,
         dmm.min_retarget_interval,
