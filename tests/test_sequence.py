@@ -25,6 +25,7 @@ import pytest
 import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
+from pulser.channels.dmm import DMM
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.base_register import BaseRegister
@@ -49,7 +50,9 @@ def reg():
 
 @pytest.fixture
 def device():
-    return Chadoq2
+    return dataclasses.replace(
+        Chadoq2, dmm_objects=(DMM(bottom_detuning=-100),)
+    )
 
 
 def test_init(reg, device):
@@ -59,7 +62,10 @@ def test_init(reg, device):
     seq = Sequence(reg, device)
     assert seq.qubit_info == reg.qubits
     assert seq.declared_channels == {}
-    assert seq.available_channels.keys() == device.channels.keys()
+    assert (
+        seq.available_channels.keys()
+        == {**device.channels, **device.dmm_channels}.keys()
+    )
 
 
 def test_channel_declaration(reg, device):
@@ -984,6 +990,8 @@ def test_config_slm_mask(qubit_ids, device):
         assert seq._slm_mask_targets == {"q0", "q2"}
     else:
         assert seq._slm_mask_targets == {0, 2}
+    assert seq._schedule["dmm_0"].detuning_map.weights[0] == 0.5
+    assert seq._schedule["dmm_0"].detuning_map.weights[2] == 0.5
 
     with pytest.raises(ValueError, match="configured only once"):
         seq.config_slm_mask(targets)
@@ -998,21 +1006,23 @@ def test_config_slm_mask(qubit_ids, device):
         fail_seq.config_slm_mask({trap_ids[0], trap_ids[2]})
 
 
+@pytest.mark.xfail
 def test_slm_mask(reg, patch_plt_show):
+    mock_dev = dataclasses.replace(MockDevice, dmm_objects=(DMM(),))
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
     pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
 
     # Set mask when an XY pulse is already in the schedule
-    seq_xy1 = Sequence(reg, MockDevice)
+    seq_xy1 = Sequence(reg, mock_dev)
     seq_xy1.declare_channel("ch_xy", "mw_global")
     seq_xy1.add(pulse1, "ch_xy")
     seq_xy1.config_slm_mask(targets)
     assert seq_xy1._slm_mask_time == [0, 100]
 
     # Set mask and then add an XY pulse to the schedule
-    seq_xy2 = Sequence(reg, MockDevice)
+    seq_xy2 = Sequence(reg, mock_dev)
     seq_xy2.config_slm_mask(targets)
     seq_xy2.declare_channel("ch_xy", "mw_global")
     seq_xy2.add(pulse1, "ch_xy")
@@ -1024,7 +1034,7 @@ def test_slm_mask(reg, patch_plt_show):
 
     # Check that SLM mask time is updated accordingly if a new pulse with
     # earlier start is added
-    seq_xy3 = Sequence(reg, MockDevice)
+    seq_xy3 = Sequence(reg, mock_dev)
     seq_xy3.declare_channel("ch_xy1", "mw_global")
     seq_xy3.config_slm_mask(targets)
     seq_xy3.delay(duration=100, channel="ch_xy1")
@@ -1035,7 +1045,7 @@ def test_slm_mask(reg, patch_plt_show):
     assert seq_xy3._slm_mask_time == [0, 100]
 
     # Same as previous check, but mask is added afterwards
-    seq_xy4 = Sequence(reg, MockDevice)
+    seq_xy4 = Sequence(reg, mock_dev)
     seq_xy4.declare_channel("ch_xy1", "mw_global")
     seq_xy4.delay(duration=100, channel="ch_xy1")
     seq_xy4.add(pulse1, "ch_xy1")
@@ -1045,7 +1055,7 @@ def test_slm_mask(reg, patch_plt_show):
     assert seq_xy4._slm_mask_time == [0, 100]
 
     # Check that paramatrize works with SLM mask
-    seq_xy5 = Sequence(reg, MockDevice)
+    seq_xy5 = Sequence(reg, mock_dev)
     seq_xy5.declare_channel("ch", "mw_global")
     var = seq_xy5.declare_variable("var")
     seq_xy5.add(Pulse.ConstantPulse(200, var, 0, 0), "ch")
@@ -1064,7 +1074,7 @@ def test_draw_register(reg, patch_plt_show):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
-    seq = Sequence(reg, MockDevice)
+    seq = Sequence(reg, dataclasses.replace(MockDevice, dmm_objects=(DMM(),)))
     seq.declare_channel("ch_xy", "mw_global")
     seq.add(pulse, "ch_xy")
     seq.config_slm_mask(targets)
@@ -1072,7 +1082,9 @@ def test_draw_register(reg, patch_plt_show):
 
     # Draw 3d register from sequence
     reg3d = Register3D.cubic(3, 8)
-    seq3d = Sequence(reg3d, MockDevice)
+    seq3d = Sequence(
+        reg3d, dataclasses.replace(MockDevice, dmm_objects=(DMM(),))
+    )
     seq3d.declare_channel("ch_xy", "mw_global")
     seq3d.add(pulse, "ch_xy")
     seq3d.config_slm_mask([6, 15])

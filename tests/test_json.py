@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -57,7 +58,7 @@ def test_device(mod_device):
 
 def test_virtual_device(mod_device):
     assert encode_decode(MockDevice) == MockDevice
-    virtual_mod = mod_device.to_virtual()
+    virtual_mod = replace(mod_device.to_virtual(), dmm_objects=())
     assert encode_decode(virtual_mod) == virtual_mod
 
 

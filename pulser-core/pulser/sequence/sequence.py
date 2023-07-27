@@ -40,6 +40,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
@@ -143,7 +144,6 @@ class Sequence(Generic[DeviceType]):
         self._building: bool = True
         # Marks the sequence as empty until the first pulse is added
         self._empty_sequence: bool = True
-        self._dmm_protocols: dict[str, PROTOCOLS] = {}
         # SLM mask targets and on/off times
         self._slm_mask_targets: set[QubitId] = set()
         # Initializes all parametrized Sequence related attributes
@@ -215,22 +215,34 @@ class Sequence(Generic[DeviceType]):
         # Show all channels if none are declared, otherwise filter depending
         # on whether the sequence is working on XY mode
         # If already in XY mode, filter right away
-        if not self._schedule and not self._in_xy:
-            return dict(self._device.channels)
+        all_channels = {**self._device.channels, **self._device.dmm_channels}
+        xy_channels = {
+            id: ch for id, ch in all_channels.items() if ch.basis == "XY"
+        }
+        if not self._schedule:
+            if not self._in_xy:
+                return all_channels
+            return {**xy_channels, **self._device.dmm_channels}
         else:
             # MockDevice channels can be declared multiple times
             occupied_ch_ids = [cs.channel_id for cs in self._schedule.values()]
-            all_channels = {
-                **self._device.channels,
-                **self._device.dmm_channels,
-            }
-            return {
+            non_occupied_channels = {
                 id: ch
                 for id, ch in all_channels.items()
                 if (
                     id not in occupied_ch_ids or self._device.reusable_channels
                 )
-                and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
+            }
+            if len(occupied_ch_ids) == 1 and isinstance(
+                all_channels[occupied_ch_ids[0]], DMM
+            ):
+                if not self._in_xy:
+                    return non_occupied_channels
+                return xy_channels
+            return {
+                id: ch
+                for id, ch in non_occupied_channels.items()
+                if (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
     @property
@@ -455,22 +467,23 @@ class Sequence(Generic[DeviceType]):
             raise ValueError("SLM mask can be configured only once.")
 
         self._slm_mask_targets = targets
-
-        ntargets = len(targets)
-        detuning_map = self.register.define_detuning_map(
-            {
-                qubit: (1 / ntargets if qubit in targets else 0)
-                for qubit in self.register.qubit_ids
-            }
-        )
-        self.config_detuning_map(detuning_map, dmm_id)
+        if self._in_xy and dmm_id not in self._device.dmm_channels:
+            raise ValueError("No DMM %s in the device." % dmm_id)
+        elif not self._in_xy:
+            ntargets = len(targets)
+            detuning_map = self.register.define_detuning_map(
+                {
+                    qubit: (1 / ntargets if qubit in targets else 0)
+                    for qubit in self.register.qubit_ids
+                }
+            )
+            self.config_detuning_map(detuning_map, dmm_id)
 
     @seq_decorators.block_if_measured
     def config_detuning_map(
         self,
         detuning_map: DetuningMap,
         dmm_id: str,
-        protocol: PROTOCOLS = "no-delay",
     ) -> None:
         """Declares a new DMM channel to the Sequence.
 
@@ -486,13 +499,11 @@ class Sequence(Generic[DeviceType]):
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
                 available (start by "dmm_" ) and the associated description.
-            protocol: The default protocol when adding Pulses to the DMM.
-                Defaults to "no-delay" (see Sequence.add() for other options).
         """
         if dmm_id not in self._device.dmm_channels:
             raise ValueError("No DMM %s in the device." % dmm_id)
 
-        dmm_ch = self._device.channels[dmm_id]
+        dmm_ch = self._device.dmm_channels[dmm_id]
         if dmm_id not in self.available_channels:
             if self._in_xy:
                 raise ValueError(
@@ -502,26 +513,24 @@ class Sequence(Generic[DeviceType]):
             else:
                 raise ValueError(f"DMM {dmm_id} is not available.")
 
-        self._validate_add_protocol(protocol)
+        dmm_name = dmm_id
+        if dmm_id in self.declared_channels:
+            assert self._device.reusable_channels
+            dmm_name += f"_{''.join(self.declared_channels.keys()).count(dmm_id)}"
 
-        self._schedule[dmm_id] = _DMMSchedule(
+        self._schedule[dmm_name] = _DMMSchedule(
             dmm_id, dmm_ch, detuning_map=detuning_map
         )
-        self._dmm_protocols[dmm_id] = protocol
         if "ground-rydberg" not in self._basis_ref:
             self._basis_ref["ground-rydberg"] = {
                 q: _QubitRef() for q in self._qids
             }
 
         # DMM has Global addressing
-        self._add_to_schedule(dmm_id, _TimeSlot("target", -1, 0, self._qids))
+        self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
         # Manually store the channel declaration as a regular call
         self._calls.append(
-            _Call(
-                "config_detuning_map",
-                (detuning_map, dmm_id),
-                {"protocol": protocol},
-            )
+            _Call("config_detuning_map", (dmm_name, dmm_id, detuning_map), {})
         )
 
     def switch_device(
@@ -1068,14 +1077,14 @@ class Sequence(Generic[DeviceType]):
     def modulate_det_map(
         self,
         waveform: Union[Waveform, Parametrized],
-        dmm_id: str,
-        protocol: PROTOCOLS | None = None,
+        dmm_name: str,
+        protocol: PROTOCOLS = "no-delay",
     ) -> None:
         """Modulates the detuning map by a waveform.
 
         Args:
             waveform: The waveform to add to the detuning of the dmm.
-            dmm_id: The id of the dmm to modulate.
+            dmm_name: The id of the dmm to modulate.
             protocol: Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
                 of having multiple channels act on the same target
@@ -1089,11 +1098,11 @@ class Sequence(Generic[DeviceType]):
                   that idles the channel until the end of the other channels'
                   latest pulse.
         """
-        self._validate_channel(dmm_id)
+        self._validate_channel(dmm_name)
         self._add(
             Pulse.ConstantAmplitude(0, waveform, 0),
-            dmm_id,
-            protocol or self._dmm_protocols[dmm_id],
+            dmm_name,
+            protocol,
         )
 
     @seq_decorators.store

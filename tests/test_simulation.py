@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from collections import Counter
+from dataclasses import replace
 from unittest.mock import patch
 
 import numpy as np
@@ -20,6 +21,7 @@ import pytest
 import qutip
 
 from pulser import Pulse, Register, Sequence
+from pulser.channels.dmm import DMM
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
@@ -978,7 +980,7 @@ def test_mask_nopulses():
     """Check interaction between SLM mask and a simulation with no pulses."""
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     for channel_type in ["mw_global", "rydberg_global"]:
-        seq_empty = Sequence(reg, MockDevice)
+        seq_empty = Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
         if channel_type == "mw_global":
             seq_empty.set_magnetic_field(0, 1.0, 0.0)
         seq_empty.declare_channel("ch", channel_type)
@@ -1005,7 +1007,9 @@ def test_mask_equals_remove():
 
     for channel_type in ["mw_global", "rydberg_global", "raman_global"]:
         # Masked simulation
-        seq_masked = Sequence(reg_three, MockDevice)
+        seq_masked = Sequence(
+            reg_three, replace(MockDevice, dmm_objects=(DMM(),))
+        )
         if channel_type == "mw_global":
             seq_masked.set_magnetic_field(0, 1.0, 0.0)
         else:
@@ -1032,9 +1036,13 @@ def test_mask_equals_remove():
             ValueError,
             match="The ids of qubits targeted in SLM mask",
         ):
-            QutipEmulator(sampler.sample(seq_masked), reg_two, MockDevice)
+            QutipEmulator(
+                sampler.sample(seq_masked),
+                reg_two,
+                replace(MockDevice, dmm_objects=(DMM(),)),
+            )
         # Simulation on reduced register
-        seq_two = Sequence(reg_two, MockDevice)
+        seq_two = Sequence(reg_two, replace(MockDevice, dmm_objects=(DMM(),)))
         if channel_type == "mw_global":
             seq_two.set_magnetic_field(0, 1.0, 0.0)
         seq_two.declare_channel("ch_two", channel_type)
@@ -1063,7 +1071,9 @@ def test_mask_two_pulses():
 
     for channel_type in ["mw_global", "rydberg_global", "raman_global"]:
         # Masked simulation
-        seq_masked = Sequence(reg_three, MockDevice)
+        seq_masked = Sequence(
+            reg_three, replace(MockDevice, dmm_objects=(DMM(),))
+        )
         seq_masked.declare_channel("ch_masked", channel_type)
         masked_qubits = ["q2"]
         seq_masked.config_slm_mask(masked_qubits)
@@ -1073,7 +1083,9 @@ def test_mask_two_pulses():
         sim_masked = QutipEmulator.from_sequence(seq_masked)
 
         # Unmasked simulation on full register
-        seq_three = Sequence(reg_three, MockDevice)
+        seq_three = Sequence(
+            reg_three, replace(MockDevice, dmm_objects=(DMM(),))
+        )
         seq_three.declare_channel("ch_three", channel_type)
         seq_three.add(no_pulse, "ch_three")
         seq_three.add(pulse, "ch_three")
@@ -1081,7 +1093,7 @@ def test_mask_two_pulses():
         sim_three = QutipEmulator.from_sequence(seq_three)
 
         # Unmasked simulation on reduced register
-        seq_two = Sequence(reg_two, MockDevice)
+        seq_two = Sequence(reg_two, replace(MockDevice, dmm_objects=(DMM(),)))
         seq_two.declare_channel("ch_two", channel_type)
         seq_two.add(pulse, "ch_two")
         seq_two.add(no_pulse, "ch_two")
@@ -1101,7 +1113,10 @@ def test_mask_two_pulses():
 
 
 def test_mask_local_channel():
-    seq_ = Sequence(Register.square(2, prefix="q"), MockDevice)
+    seq_ = Sequence(
+        Register.square(2, prefix="q"),
+        replace(MockDevice, dmm_objects=(DMM(),)),
+    )
     seq_.declare_channel("rydberg_global", "rydberg_global")
     pulse = Pulse.ConstantPulse(1000, 10, 0, 0)
     seq_.config_slm_mask(["q0", "q3"])
@@ -1125,7 +1140,7 @@ def test_effective_size_intersection():
     rise = Pulse.ConstantPulse(1500, 0, 0, 0)
     for channel_type in ["mw_global", "rydberg_global"]:
         np.random.seed(15092021)
-        seq = Sequence(simple_reg, MockDevice)
+        seq = Sequence(simple_reg, replace(MockDevice, dmm_objects=(DMM(),)))
         seq.declare_channel("ch0", channel_type)
         seq.add(rise, "ch0")
         seq.config_slm_mask(["atom0"])
@@ -1148,7 +1163,7 @@ def test_effective_size_disjoint():
     rise = Pulse.ConstantPulse(1500, 0, 0, 0)
     for channel_type in ["mw_global", "rydberg_global", "raman_global"]:
         np.random.seed(15092021)
-        seq = Sequence(simple_reg, MockDevice)
+        seq = Sequence(simple_reg, replace(MockDevice, dmm_objects=(DMM(),)))
         seq.declare_channel("ch0", channel_type)
         seq.add(rise, "ch0")
         seq.config_slm_mask(["atom1"])
