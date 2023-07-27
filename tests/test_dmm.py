@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import re
 from typing import cast
 from unittest.mock import patch
 
@@ -23,7 +24,7 @@ from pulser.channels.dmm import DMM
 from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
-from pulser.register.weight_maps import DetuningMap
+from pulser.register.weight_maps import DetuningMap, WeightMap
 
 
 @pytest.fixture
@@ -62,7 +63,7 @@ def slm_map(layout: RegisterLayout, slm_dict: dict[int, float]) -> DetuningMap:
 
 
 @pytest.mark.parametrize("bad_key", [{"1": 1.0}, {4: 1.0}])
-def test_define_detuning_att(
+def test_define_detuning_map(
     layout: RegisterLayout,
     register: BaseRegister,
     map_reg: MappableRegister,
@@ -71,9 +72,9 @@ def test_define_detuning_att(
     for reg in (layout, map_reg):
         with pytest.raises(
             ValueError,
-            match=(
+            match=re.escape(
                 "The trap ids of detuning weights have to be integers"
-                " between 0 and 4"
+                " in [0, 3]."
             ),
         ):
             reg.define_detuning_map(bad_key)  # type: ignore
@@ -87,7 +88,63 @@ def test_define_detuning_att(
         register.define_detuning_map(bad_key)
 
 
-def test_bad_init(
+def test_qubit_weight_map(register):
+    # Purposefully unsorted
+    qid_weight_map = {1: 0.5, 0: 0.1, 3: 0.4}
+    sorted_qids = sorted(qid_weight_map)
+    det_map = register.define_detuning_map(qid_weight_map)
+    qubits = register.qubits
+    coords = [qubits[qid] for qid in sorted_qids]
+    weights = [qid_weight_map[qid] for qid in sorted_qids]
+
+    np.testing.assert_equal(det_map.sorted_coords, coords)
+    np.testing.assert_equal(det_map.sorted_weights, weights)
+
+    # We recover the original qid_weight_map (and undefined qids show as 0)
+    assert det_map.get_qubit_weight_map(qubits) == {**qid_weight_map, 2: 0.0}
+
+
+def test_detuning_map_hash(det_map, det_dict, layout):
+    disordered_det_dict = {
+        i: det_dict[i] for i in sorted(det_dict, reverse=True)
+    }
+    assert disordered_det_dict == det_dict
+    assert list(disordered_det_dict) != list(det_dict)
+
+    det_map2 = layout.define_detuning_map(disordered_det_dict)
+
+    # The maps differ in the arguments order
+    assert np.any(det_map.trap_coordinates != det_map2.trap_coordinates)
+    assert det_map.weights != det_map2.weights
+
+    # But are equal in sorted content
+    np.testing.assert_equal(det_map.sorted_coords, det_map2.sorted_coords)
+    np.testing.assert_equal(det_map.sorted_weights, det_map2.sorted_weights)
+
+    # And they have the same type, so they should be equal
+    assert type(det_map) == type(det_map2)
+    assert det_map == det_map2
+
+    # This means their static hashes and reprs match
+    static_hash = det_map.static_hash()
+    assert static_hash == det_map2.static_hash()
+    assert repr(det_map) == repr(det_map2) == f"DetuningMap_{static_hash}"
+
+    # However, if the types don't match, this should no longer hold
+    w_map = WeightMap(det_map.trap_coordinates, det_map.weights)
+
+    # Content is still the same
+    np.testing.assert_equal(det_map.sorted_coords, w_map.sorted_coords)
+    np.testing.assert_equal(det_map.sorted_weights, w_map.sorted_weights)
+
+    # But the rest isn't
+    assert static_hash != w_map.static_hash()
+    assert repr(w_map) != repr(det_map)
+    assert repr(w_map) == f"WeightMap_{w_map.static_hash()}"
+    assert w_map != det_map
+
+
+def test_detuning_map_bad_init(
     layout: RegisterLayout,
     register: BaseRegister,
     map_reg: MappableRegister,
@@ -138,9 +195,13 @@ def test_init(
             )
 
 
-def test_draw(det_map, slm_map, patch_plt_show):
+@pytest.mark.parametrize("with_labels", [False, True])
+def test_draw(det_map, slm_map, patch_plt_show, with_labels):
     for detuning_map in (det_map, slm_map):
-        detuning_map.draw(show=True, custom_ax=None)
+        labels = (
+            list(range(detuning_map.number_of_traps)) if with_labels else None
+        )
+        detuning_map.draw(labels=labels, show=True, custom_ax=None)
         with patch("matplotlib.pyplot.savefig"):
             detuning_map.draw(fig_name="det_map.pdf")
     with pytest.raises(

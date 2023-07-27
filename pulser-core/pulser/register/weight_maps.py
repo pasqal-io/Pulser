@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
 
 
-@dataclass(init=False, eq=False, frozen=True)
+@dataclass(init=False, repr=False, eq=False, frozen=True)
 class WeightMap(Traps, RegDrawer):
     """Defines a generic map of weights on traps.
 
@@ -148,7 +148,7 @@ class WeightMap(Traps, RegDrawer):
     # TODO: Serialization methods
 
 
-@dataclass(init=False, eq=False, frozen=True)
+@dataclass(init=False, repr=False, eq=False, frozen=True)
 class DetuningMap(WeightMap):
     """Defines a DetuningMap.
 

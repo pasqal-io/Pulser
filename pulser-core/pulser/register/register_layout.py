@@ -116,7 +116,7 @@ class RegisterLayout(Traps, RegDrawer):
         if not set(detuning_weights.keys()) <= set(self.traps_dict):
             raise ValueError(
                 "The trap ids of detuning weights have to be integers"
-                f" between 0 and {self.number_of_traps}."
+                f" in [0, {self.number_of_traps-1}]."
             )
         return DetuningMap(
             itemgetter(*detuning_weights.keys())(self.traps_dict),
