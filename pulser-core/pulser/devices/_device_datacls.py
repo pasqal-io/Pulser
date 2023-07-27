@@ -518,7 +518,7 @@ class Device(BaseDevice):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        for ch_id, ch_obj in self.channels.items():
+        for ch_id, ch_obj in {**self.channels, **self.dmm_channels}.items():
             if ch_obj.is_virtual():
                 _sep = "', '"
                 raise ValueError(

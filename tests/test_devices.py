@@ -403,6 +403,12 @@ def test_device_params():
 
 
 def test_dmm_channels():
+    with pytest.raises(
+        ValueError,
+        match="A 'Device' instance cannot contain virtual channels."
+        " For channel 'dmm_0', please define: 'bottom_detuning'",
+    ):
+        replace(Chadoq2, dmm_objects=(DMM(),))
     dmm = DMM(
         bottom_detuning=-1,
         clock_period=1,
@@ -426,5 +432,3 @@ def test_dmm_channels():
             channel_objects=(Rydberg.Global(None, None),),
             channel_ids=("dmm_0",),
         )
-    assert not dmm.is_virtual()
-    assert DMM().is_virtual()
