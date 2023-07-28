@@ -304,6 +304,7 @@ def seq_with_SLM() -> pulser.Sequence:
     return seq
 
 
+@pytest.mark.xfail(reason="Effects of SLM mask were removed")
 def test_SLM_samples(seq_with_SLM):
     pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0)
     a_samples = pulse.amplitude.samples

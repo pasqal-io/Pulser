@@ -15,19 +15,26 @@
 
 from __future__ import annotations
 
+import hashlib
+import typing
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import TYPE_CHECKING, Any, Mapping, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
+from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
+from pulser.register.traps import COORD_PRECISION, Traps
+
+if TYPE_CHECKING:
+    from pulser.register.base_register import QubitId
 
 
-@dataclass
-class WeightMap(RegDrawer):
+@dataclass(init=False, repr=False, eq=False, frozen=True)
+class WeightMap(Traps, RegDrawer):
     """Defines a generic map of weights on traps.
 
     The sum of the provided weights must be equal to 1.
@@ -37,20 +44,54 @@ class WeightMap(RegDrawer):
         weights: A list weights to associate to the traps.
     """
 
-    trap_coordinates: ArrayLike
-    weights: list[float]
+    weights: tuple[float, ...]
 
-    def __post_init__(self) -> None:
-        if len(cast(list, self.trap_coordinates)) != len(self.weights):
+    def __init__(
+        self,
+        trap_coordinates: ArrayLike,
+        weights: typing.Sequence[float],
+        slug: str | None = None,
+    ) -> None:
+        """Initializes a new weight map."""
+        super().__init__(trap_coordinates, slug)
+        if len(cast(list, trap_coordinates)) != len(weights):
             raise ValueError("Number of traps and weights don't match.")
-        if not np.all(np.array(self.weights) >= 0):
+        if not np.all(np.array(weights) >= 0):
             raise ValueError("All weights must be non-negative.")
-        if not np.isclose(sum(self.weights), 1.0, atol=1e-16):
+        if not np.isclose(sum(weights), 1.0, atol=1e-16):
             raise ValueError("The sum of the weights should be 1.")
+        object.__setattr__(self, "weights", tuple(weights))
+
+    @property
+    def trap_coordinates(self) -> np.ndarray:
+        """The array of trap coordinates, in the order they were given."""
+        return np.array(self._trap_coordinates)
+
+    @property
+    def sorted_weights(self) -> np.ndarray:
+        """The weights sorted to match the sorted trap coordinates."""
+        sorting = self._calc_sorting_order()
+        return cast(np.ndarray, np.array(self.weights)[sorting])
+
+    def get_qubit_weight_map(
+        self, qubits: Mapping[QubitId, np.ndarray]
+    ) -> dict[QubitId, float]:
+        """Creates a map between qubit IDs and the weight on their sites."""
+        qubit_weight_map = {}
+        coords_arr = self.sorted_coords
+        weights_arr = self.sorted_weights
+        for qid, pos in qubits.items():
+            dists = np.round(
+                np.linalg.norm(coords_arr - np.array(pos), axis=1),
+                decimals=COORD_PRECISION,
+            )
+            matches = np.argwhere(dists == 0.0)
+            qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
+        return qubit_weight_map
 
     def draw(
         self,
-        with_labels: bool = True,
+        labels: typing.Sequence[QubitId] | None = None,
         fig_name: str | None = None,
         kwargs_savefig: dict = {},
         custom_ax: Optional[Axes] = None,
@@ -59,8 +100,8 @@ class WeightMap(RegDrawer):
         """Draws the detuning map.
 
         Args:
-            with_labels: If True, writes the qubit ID's
-                next to each qubit.
+            labels: If defined, writes the labels next to each site. Must have
+                the same length and order like the `trap_coordinates`.
             fig_name: The name on which to save the figure.
                 If None the figure will not be saved.
             kwargs_savefig: Keywords arguments for
@@ -74,16 +115,18 @@ class WeightMap(RegDrawer):
                 combining this plot with other ones in a single figure, one may
                 need to set this flag to False.
         """
-        pos = np.array(self.trap_coordinates)
+        pos = self.trap_coordinates
         if custom_ax is None:
             _, custom_ax = self._initialize_fig_axes(pos)
+
+        labels_ = labels if labels is not None else list(range(len(pos)))
 
         super()._draw_2D(
             custom_ax,
             pos,
-            [i for i, _ in enumerate(cast(list, self.trap_coordinates))],
-            with_labels=with_labels,
-            dmm_qubits=dict(enumerate(self.weights)),
+            labels_,
+            with_labels=labels is not None,
+            dmm_qubits=dict(zip(labels_, self.weights)),
         )
 
         if fig_name is not None:
@@ -92,8 +135,40 @@ class WeightMap(RegDrawer):
         if show:
             plt.show()
 
+    @property
+    def _hash_object(self) -> hashlib._Hash:
+        hash_ = super()._hash_object
+        # Include the weights and the type in the hash
+        hash_.update(self.sorted_weights.tobytes())
+        hash_.update(type(self).__name__.encode())
+        return hash_
 
-@dataclass
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}_{self._safe_hash().hex()}"
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(
+            self,
+            trap_coordinates=self.trap_coordinates,
+            weights=self.weights,
+            slug=self.slug,
+        )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        d: dict[str, Any] = dict(
+            traps=[
+                {"weight": weight, "x": x, "y": y}
+                for weight, (x, y) in zip(
+                    self.sorted_weights, self.sorted_coords
+                )
+            ]
+        )
+        if self.slug is not None:
+            d["slug"] = self.slug
+        return d
+
+
+@dataclass(init=False, repr=False, eq=False, frozen=True)
 class DetuningMap(WeightMap):
     """Defines a DetuningMap.
 
@@ -101,6 +176,6 @@ class DetuningMap(WeightMap):
     The sum of the provided weights must be equal to 1.
 
     Args:
-        trap_coordinates: an array containing the coordinates of the traps.
+        trap_coordinates: An array containing the coordinates of the traps.
         weights: A list of detuning weights to associate to the traps.
     """

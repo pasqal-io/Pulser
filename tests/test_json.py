@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -28,6 +27,7 @@ from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
 )
+from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import BlackmanWaveform
 
 
@@ -58,7 +58,7 @@ def test_device(mod_device):
 
 def test_virtual_device(mod_device):
     assert encode_decode(MockDevice) == MockDevice
-    virtual_mod = replace(mod_device.to_virtual(), dmm_objects=())
+    virtual_mod = mod_device.to_virtual()
     assert encode_decode(virtual_mod) == virtual_mod
 
 
@@ -100,6 +100,15 @@ def test_register_from_layout():
     assert reg == new_reg
     assert new_reg.layout == layout
     assert new_reg._layout_info.trap_ids == (1, 0)
+
+
+def test_detuning_map():
+    custom_det_map = DetuningMap(
+        [[0, 0], [1, 1], [1, 0], [0, 1]], [0.1, 0.2, 0.3, 0.4]
+    )
+    new_custom_det_map = encode_decode(custom_det_map)
+    assert new_custom_det_map == custom_det_map
+    assert type(new_custom_det_map) is DetuningMap
 
 
 @pytest.mark.parametrize(
