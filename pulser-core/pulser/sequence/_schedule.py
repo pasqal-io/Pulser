@@ -22,6 +22,7 @@ from typing import Dict, NamedTuple, Optional, Union, cast, overload
 import numpy as np
 
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.register.weight_maps import DetuningMap
@@ -273,6 +274,27 @@ class _DMMSchedule(_ChannelSchedule):
         return DMMSamples(
             **init_fields, detuning_map=self.detuning_map, qubits=qubits
         )
+    def insert_slm(self, duration: int, det: float) -> None:
+        """Inserts a constant pulse as first operation."""
+        new_slot = [self.slots[0]]
+        new_slot.append(
+            _TimeSlot(
+                Pulse.ConstantAmplitude(0, ConstantWaveform(duration, det), 0),
+                0,
+                duration,
+                self.slots[0].targets,
+            )
+        )
+        for slot in self:
+            new_slot.append(
+                _TimeSlot(
+                    slot.type,
+                    slot.ti + duration,
+                    slot.tf + duration,
+                    slot.targets,
+                )
+            )
+        self.slots = new_slot.copy()
 
 
 class _Schedule(Dict[str, _ChannelSchedule]):
@@ -296,7 +318,9 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         # Find tentative initial and final time of SLM mask if possible
         mask_time: list[int] = []
         for ch_schedule in self.values():
-            if ch_schedule.channel_obj.addressing != "Global":
+            if ch_schedule.channel_obj.addressing != "Global" or isinstance(
+                ch_schedule.channel_obj, DMM
+            ):
                 continue
             # Cycle on slots in schedule until the first pulse is found
             for slot in ch_schedule:

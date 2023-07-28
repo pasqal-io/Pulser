@@ -1202,6 +1202,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.config_slm_mask({"control1"})
+    print(seq._slm_mask_targets)
     pulse1 = Pulse.ConstantPulse(120, 1, 0, 2.0)
     seq.add(pulse1, "ch0")
 
