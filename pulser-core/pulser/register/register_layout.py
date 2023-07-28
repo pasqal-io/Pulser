@@ -240,6 +240,7 @@ class RegisterLayout(Traps, RegDrawer):
         return obj_to_dict(
             self,
             self._trap_coordinates,
+            slug=self.slug,
             _module=__name__,
             _name="RegisterLayout",
         )

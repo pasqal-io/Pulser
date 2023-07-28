@@ -18,13 +18,14 @@ from __future__ import annotations
 import hashlib
 import typing
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Mapping, Optional, cast
+from typing import TYPE_CHECKING, Any, Mapping, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
+from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.traps import COORD_PRECISION, Traps
 
@@ -145,7 +146,26 @@ class WeightMap(Traps, RegDrawer):
     def __repr__(self) -> str:
         return f"{type(self).__name__}_{self._safe_hash().hex()}"
 
-    # TODO: Serialization methods
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(
+            self,
+            trap_coordinates=self.trap_coordinates,
+            weights=self.weights,
+            slug=self.slug,
+        )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        d: dict[str, Any] = dict(
+            traps=[
+                {"weight": weight, "x": x, "y": y}
+                for weight, (x, y) in zip(
+                    self.sorted_weights, self.sorted_coords
+                )
+            ]
+        )
+        if self.slug is not None:
+            d["slug"] = self.slug
+        return d
 
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
