@@ -49,9 +49,17 @@ def reg():
 
 
 @pytest.fixture
+def det_map(reg: Register):
+    return reg.define_detuning_map(
+        {"q" + str(i): (1 / 4 if i in [0, 1, 3, 4] else 0) for i in range(28)}
+    )
+
+
+@pytest.fixture
 def device():
     return dataclasses.replace(
-        Chadoq2, dmm_objects=(DMM(bottom_detuning=-100),)
+        Chadoq2,
+        dmm_objects=(DMM(bottom_detuning=-70), DMM(bottom_detuning=-100)),
     )
 
 
@@ -115,6 +123,135 @@ def test_channel_declaration(reg, device):
         match="cannot work simultaneously with the declared 'Microwave'",
     ):
         seq2.declare_channel("ch3", "rydberg_global")
+
+
+def test_dmm_declaration(reg, device, det_map):
+    seq = Sequence(reg, device)
+    available_channels = set(seq.available_channels)
+    assert seq.get_addressed_bases() == ()
+    seq.config_detuning_map(det_map, "dmm_0")
+    assert seq.get_addressed_bases() == ("ground-rydberg",)
+    seq.config_detuning_map(det_map, "dmm_1")
+    with pytest.raises(ValueError, match="No DMM dmm_2"):
+        seq.config_detuning_map(det_map, "dmm_2")
+    with pytest.raises(ValueError, match="DMM dmm_0 is not available"):
+        seq.config_detuning_map(det_map, "dmm_0")
+
+    chs = {"dmm_0", "dmm_1"}
+    assert seq._schedule["dmm_0"][-1] == _TimeSlot(
+        "target", -1, 0, set(seq.qubit_info.keys())
+    )
+    assert set(seq.available_channels) == available_channels - chs
+
+    seq2 = Sequence(
+        reg,
+        dataclasses.replace(
+            MockDevice, dmm_objects=(DMM(), DMM(bottom_detuning=-70))
+        ),
+    )
+    available_channels = set(seq2.available_channels)
+    channel_map = {
+        "dmm_0": "dmm_0",
+        "dmm_0_1": "dmm_0",
+        "dmm_1": "dmm_1",
+    }
+    seq2.config_detuning_map(det_map, "dmm_0")
+    # If a DMM was declared but not as an SLM Mask,
+    # MW channels are not available
+    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    seq2.config_detuning_map(det_map, "dmm_0")
+    seq2.config_detuning_map(det_map, "dmm_1")
+    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert channel_map.keys() == seq2.declared_channels.keys()
+    assert set(
+        seq2._schedule[channel].channel_id
+        for channel in seq2.declared_channels
+    ) == set(channel_map.values())
+    with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
+        seq2.declare_channel("mw_ch", "mw_global")
+
+    seq2 = Sequence(
+        reg, dataclasses.replace(MockDevice, dmm_objects=(DMM(), DMM()))
+    )
+    seq2.declare_channel("ch0", "mw_global")
+    # DMM channels are still available,
+    # but can only be declared using an SLM Mask
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
+    with pytest.raises(
+        ValueError,
+        match="cannot work simultaneously with the declared 'Microwave'",
+    ):
+        seq2.config_detuning_map(det_map, "dmm_1")
+
+
+def test_slm_declaration(reg, device, det_map):
+    seq = Sequence(reg, device)
+    available_channels = set(seq.available_channels)
+    assert seq.get_addressed_bases() == ()
+    seq.config_slm_mask(["q0", "q1", "q3", "q4"])
+    assert seq.get_addressed_bases() == ("ground-rydberg",)
+    with pytest.raises(
+        ValueError, match="SLM mask can be configured only once."
+    ):
+        seq.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_1")
+    assert seq._schedule["dmm_0"][-1] == _TimeSlot(
+        "target", -1, 0, set(seq.qubit_info.keys())
+    )
+    assert set(seq.available_channels) == available_channels - {"dmm_0"}
+
+    seq2 = Sequence(
+        reg,
+        dataclasses.replace(
+            MockDevice, dmm_objects=(DMM(), DMM(bottom_detuning=-70))
+        ),
+    )
+    available_channels = set(seq2.available_channels)
+    channel_map = {
+        "dmm_0": "dmm_0",
+        "dmm_0_1": "dmm_0",
+    }
+    seq2.config_slm_mask(["q0", "q1", "q3", "q4"])
+    # If a DMM was declared as an SLM Mask, MW channels are still available
+    assert set(seq2.available_channels) == available_channels
+    # If other DMM are configured, the MW channel is no longer available
+    seq2.config_detuning_map(det_map, "dmm_0")
+    assert set(seq2.available_channels) == (available_channels - {"mw_global"})
+    assert channel_map.keys() == seq2.declared_channels.keys()
+    assert set(
+        seq2._schedule[channel].channel_id
+        for channel in seq2.declared_channels
+    ) == set(channel_map.values())
+    with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
+        seq2.declare_channel("mw_ch", "mw_global")
+
+    seq2 = Sequence(
+        reg, dataclasses.replace(MockDevice, dmm_objects=(DMM(), DMM()))
+    )
+    seq2.declare_channel("ch0", "mw_global")
+    # DMM channels are still available,
+    # but can only be declared using an SLM Mask
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0", "dmm_1"}
+    assert set(seq2.declared_channels.keys()) == {"ch0"}
+    seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_1")
+    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.declared_channels.keys()) == {"ch0"}
+
+    seq2 = Sequence(
+        reg,
+        dataclasses.replace(
+            MockDevice, dmm_objects=(DMM(), DMM(bottom_detuning=-70))
+        ),
+    )
+    available_channels = set(seq2.available_channels)
+    seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_1")
+    # If a DMM was declared as an SLM Mask, all channels are still available
+    assert set(seq2.available_channels) == available_channels
+    assert set(seq2.declared_channels.keys()) == {"dmm_1"}
+    # If MW channel is defined, only mw channels are available
+    seq2.declare_channel("ch0", "mw_global")
+    assert set(seq2.available_channels) == {"mw_global"}
+    # DMM is no longer declared
+    assert set(seq2.declared_channels.keys()) == {"ch0"}
 
 
 def test_magnetic_field(reg):

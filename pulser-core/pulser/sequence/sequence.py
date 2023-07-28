@@ -213,20 +213,20 @@ class Sequence(Generic[DeviceType]):
     @property
     def available_channels(self) -> dict[str, Channel]:
         """Channels still available for declaration."""
-        # Show all channels if none are declared, otherwise filter depending
-        # on whether the sequence is working on XY mode
-        # If already in XY mode, filter right away
         all_channels = {**self._device.channels, **self._device.dmm_channels}
         xy_channels = {
             id: ch for id, ch in all_channels.items() if ch.basis == "XY"
         }
         if not self._schedule:
+            # Show all channels if none are declared
             if not self._in_xy:
                 return all_channels
+            # If already in XY mode, filter right away but let the possibility
+            # to define an SLM Mask using a DMM channel
             return {**xy_channels, **self._device.dmm_channels}
         else:
-            # MockDevice channels can be declared multiple times
             occupied_ch_ids = [cs.channel_id for cs in self._schedule.values()]
+            # MockDevice channels can be declared multiple times
             non_occupied_channels = {
                 id: ch
                 for id, ch in all_channels.items()
@@ -234,16 +234,24 @@ class Sequence(Generic[DeviceType]):
                     id not in occupied_ch_ids or self._device.reusable_channels
                 )
             }
-            if len(occupied_ch_ids) == 1 and isinstance(
-                all_channels[occupied_ch_ids[0]], DMM
-            ):
+            if occupied_ch_ids == [self._slm_mask_dmm]:
+                # If only an SLM Mask has been defined so far
+                assert isinstance(all_channels[occupied_ch_ids[0]], DMM)
+                # All channels can be declared if not in XY mode
                 if not self._in_xy:
                     return non_occupied_channels
+                # If in XY mode, only channels with an XY basis can be defined
                 return xy_channels
+            # Otherwise filter on the basis of the channels
             return {
                 id: ch
                 for id, ch in non_occupied_channels.items()
-                if (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
+                if (
+                    ch.basis == "XY"
+                    or (isinstance(ch, DMM) and self._slm_mask_dmm is None)
+                    if self._in_xy
+                    else ch.basis != "XY"
+                )
             }
 
     @property
@@ -468,6 +476,7 @@ class Sequence(Generic[DeviceType]):
             raise ValueError("SLM mask can be configured only once.")
 
         self._slm_mask_targets = targets
+        self._slm_mask_dmm = dmm_id
         if self._in_xy and dmm_id not in self._device.dmm_channels:
             raise ValueError("No DMM %s in the device." % dmm_id)
         elif not self._in_xy:
@@ -488,7 +497,7 @@ class Sequence(Generic[DeviceType]):
         """Inserts a slot for the SLM mask on the DMM."""
         if not self._slm_mask_dmm:
             raise ValueError("No SLM was defined.")
-        elif not self._slm_mask_time:
+        elif not self._slm_mask_time or self._in_xy:
             return
         slm_mask_end = self._slm_mask_time[1]
         slm_mask_det = -10 * max(
@@ -533,14 +542,13 @@ class Sequence(Generic[DeviceType]):
             raise ValueError("No DMM %s in the device." % dmm_id)
 
         dmm_ch = self._device.dmm_channels[dmm_id]
+        if self._in_xy:
+            raise ValueError(
+                f"DMM '{dmm_ch}' cannot work simultaneously "
+                "with the declared 'Microwave' channel."
+            )
         if dmm_id not in self.available_channels:
-            if self._in_xy:
-                raise ValueError(
-                    f"DMM '{dmm_ch}' cannot work simultaneously "
-                    "with the declared 'Microwave' channel."
-                )
-            else:
-                raise ValueError(f"DMM {dmm_id} is not available.")
+            raise ValueError(f"DMM {dmm_id} is not available.")
 
         dmm_name = dmm_id
         if dmm_id in self.declared_channels:
@@ -798,8 +806,9 @@ class Sequence(Generic[DeviceType]):
             self.set_magnetic_field()
             # If schedule contains a DMM channel, delete it.
             if len(self._schedule) > 0:
+                print(self._schedule)
                 assert len(self._schedule) == 1 and isinstance(
-                    list(self._schedule.values())[0], DMM
+                    list(self._schedule.values())[0], _DMMSchedule
                 )
                 self._schedule.pop(list(self._schedule.keys())[0])
 
