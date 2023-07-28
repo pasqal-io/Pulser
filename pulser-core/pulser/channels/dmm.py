@@ -17,7 +17,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal, Optional
 
+import numpy as np
+
 from pulser.channels.base_channel import Channel
+from pulser.pulse import Pulse
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -51,7 +54,7 @@ class DMM(Channel):
     bottom_detuning: Optional[float] = field(default=None, init=True)
     addressing: Literal["Global"] = field(default="Global", init=False)
     max_abs_detuning: Optional[float] = field(default=None, init=False)
-    max_amp: float = field(default=0, init=False)  # can't be 0
+    max_amp: float = field(default=0, init=False)
     min_retarget_interval: Optional[int] = field(default=None, init=False)
     fixed_retarget_t: Optional[int] = field(default=None, init=False)
     max_targets: Optional[int] = field(default=None, init=False)
@@ -72,3 +75,21 @@ class DMM(Channel):
             "max_duration",
         ]
         return [field for field in optional if getattr(self, field) is None]
+
+    def validate_pulse(self, pulse: Pulse) -> None:
+        """Checks if a pulse can be executed in this DMM.
+
+        Args:
+            pulse: The pulse to validate.
+        """
+        super().validate_pulse(pulse)
+        round_detuning = np.round(pulse.detuning.samples, decimals=6)
+        if np.any(round_detuning > 0):
+            raise ValueError("The detuning in a DMM must not be positive.")
+        if self.bottom_detuning is not None and np.any(
+            round_detuning < self.bottom_detuning
+        ):
+            raise ValueError(
+                "The detuning goes below the bottom detuning "
+                f"of the DMM ({self.bottom_detuning} rad/µs)."
+            )

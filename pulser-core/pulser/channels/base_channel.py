@@ -360,8 +360,6 @@ class Channel(ABC):
 
         Args:
             pulse: The pulse to validate.
-            channel_id: The channel ID used to index the chosen channel
-                on this device.
         """
         if not isinstance(pulse, Pulse):
             raise TypeError(
