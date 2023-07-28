@@ -28,8 +28,6 @@ def sample(
         raise NotImplementedError("Parametrized sequences can't be sampled.")
 
     samples_list = []
-    if seq._slm_mask_dmm:
-        seq.insert_slm_mask()
     for ch_schedule in seq._schedule.values():
         kwargs: dict[str, Any] = dict(
             ignore_detuned_delay_phase=IGNORE_DETUNED_DELAY_PHASE
