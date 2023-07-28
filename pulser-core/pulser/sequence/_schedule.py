@@ -274,6 +274,7 @@ class _DMMSchedule(_ChannelSchedule):
         return DMMSamples(
             **init_fields, detuning_map=self.detuning_map, qubits=qubits
         )
+
     def insert_slm(self, duration: int, det: float) -> None:
         """Inserts a constant pulse as first operation."""
         new_slot = [self.slots[0]]
