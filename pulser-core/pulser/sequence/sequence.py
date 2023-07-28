@@ -146,6 +146,7 @@ class Sequence(Generic[DeviceType]):
         self._empty_sequence: bool = True
         # SLM mask targets and on/off times
         self._slm_mask_targets: set[QubitId] = set()
+        self._slm_mask_dmm: str | None = None
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
 
@@ -478,6 +479,34 @@ class Sequence(Generic[DeviceType]):
                 }
             )
             self.config_detuning_map(detuning_map, dmm_id)
+            for key in reversed(self.declared_channels.keys()):
+                if dmm_id in key:
+                    self._slm_mask_dmm = key
+                    break
+
+    def insert_slm_mask(self) -> None:
+        """Inserts a slot for the SLM mask on the DMM."""
+        if not self._slm_mask_dmm:
+            raise ValueError("No SLM was defined.")
+        elif not self._slm_mask_time:
+            return
+        slm_mask_end = self._slm_mask_time[1]
+        slm_mask_det = -10 * max(
+            np.max(ch_schedule.get_samples().amp[:slm_mask_end])
+            for ch_schedule in self._schedule.values()
+            if not isinstance(ch_schedule.channel_obj, DMM)
+            and ch_schedule.get_duration() > 0
+        )
+        slm_mask_dmm = cast(
+            DMM, self._schedule[self._slm_mask_dmm].channel_obj
+        )
+        if slm_mask_dmm.bottom_detuning:
+            slm_mask_det = max(
+                slm_mask_dmm.bottom_detuning, slm_mask_det
+            )  # max because negative
+        cast(_DMMSchedule, self._schedule[self._slm_mask_dmm]).insert_slm(
+            slm_mask_end, slm_mask_det
+        )
 
     @seq_decorators.block_if_measured
     def config_detuning_map(

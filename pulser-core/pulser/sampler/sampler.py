@@ -28,6 +28,8 @@ def sample(
         raise NotImplementedError("Parametrized sequences can't be sampled.")
 
     samples_list = []
+    if seq._slm_mask_dmm:
+        seq.insert_slm_mask()
     for ch_schedule in seq._schedule.values():
         samples = ch_schedule.get_samples(IGNORE_DETUNED_DELAY_PHASE)
         if extended_duration:
