@@ -56,6 +56,7 @@ class _ChannelSchedule:
     def __post_init__(self) -> None:
         self.slots: list[_TimeSlot] = []
         self.eom_blocks: list[_EOMSettings] = []
+        self._has_pulse_slot = False
 
     def last_target(self) -> int:
         """Last time a target happened on the channel."""
@@ -275,28 +276,6 @@ class _DMMSchedule(_ChannelSchedule):
             **init_fields, detuning_map=self.detuning_map, qubits=qubits
         )
 
-    def insert_slm(self, duration: int, det: float) -> None:
-        """Inserts a constant pulse as first operation."""
-        new_slot = [self.slots[0]]
-        new_slot.append(
-            _TimeSlot(
-                Pulse.ConstantAmplitude(0, ConstantWaveform(duration, det), 0),
-                0,
-                duration,
-                self.slots[0].targets,
-            )
-        )
-        for slot in self:
-            new_slot.append(
-                _TimeSlot(
-                    slot.type,
-                    slot.ti + duration,
-                    slot.tf + duration,
-                    slot.targets,
-                )
-            )
-        self.slots = new_slot.copy()
-
 
 class _Schedule(Dict[str, _ChannelSchedule]):
     def __init__(self, max_duration: int | None = None):
@@ -440,6 +419,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         tf = ti + pulse.duration
         self._check_duration(tf)
         self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
+        self[channel]._has_pulse_slot = True
 
     def add_delay(self, duration: int, channel: str) -> None:
         last = self[channel][-1]

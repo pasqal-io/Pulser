@@ -168,13 +168,18 @@ class Sequence(Generic[DeviceType]):
     def _in_ising(self, value: bool) -> None:
         if not isinstance(value, bool):
             raise TypeError("_in_ising must be a bool.")
-        if self._in_ising and not value:
+        if self._in_ising == value:
+            # If the value doesn't change, do nothing
+            return
+        if self._in_ising:  # ie value = False
+            # Trying to switch off ising
             raise ValueError("Cannot quit ising.")
-        if self._in_xy and value:
+        # At this point, value = True
+        if self._in_xy:
             raise ValueError("Cannot be in ising if in xy.")
-        if self._slm_mask_dmm and self._in_ising != value:
-            self._in_ising_value = value
-            self._set_slm_mask_dmm()
+        self._in_ising_value = True
+        if self._slm_mask_dmm:
+            self._set_slm_mask_dmm(self._slm_mask_dmm, self._slm_mask_targets)
 
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
@@ -231,44 +236,39 @@ class Sequence(Generic[DeviceType]):
     def available_channels(self) -> dict[str, Channel]:
         """Channels still available for declaration."""
         all_channels = {**self._device.channels, **self._device.dmm_channels}
-        xy_channels = {
-            id: ch for id, ch in all_channels.items() if ch.basis == "XY"
-        }
-        if not self._schedule:
-            # Show all channels if none are declared
-            if not self._in_xy:
-                return all_channels
-            # If in xy_mode, the DMMs are available if no SLM has been defined
-            elif not self._slm_mask_dmm:
-                return {**xy_channels, **self._device.dmm_channels}
-            return xy_channels
+        if not self._schedule and not self._in_xy and not self._in_ising:
+            # If no channel has been declared nor any DMM configured
+            # Take out the DMM for the SLM Mask if channels are not reusable
+            if (
+                self._slm_mask_dmm is not None
+                and not self._device.reusable_channels
+            ):
+                return {
+                    id: ch
+                    for id, ch in all_channels.items()
+                    if id != self._slm_mask_dmm
+                }
+            # Otherwise return all the channels without the defined channel
+            return all_channels
         else:
             occupied_ch_ids = [cs.channel_id for cs in self._schedule.values()]
-            # MockDevice channels can be declared multiple times
-            non_occupied_channels = {
+            return {
                 id: ch
                 for id, ch in all_channels.items()
                 if (
-                    id not in occupied_ch_ids or self._device.reusable_channels
-                )
-            }
-            if occupied_ch_ids == [self._slm_mask_dmm]:
-                # If only an SLM Mask has been defined so far
-                assert isinstance(all_channels[occupied_ch_ids[0]], DMM)
-                # All channels can be declared if not in XY mode
-                if not self._in_xy:
-                    return non_occupied_channels
-                # If in XY mode, only channels with an XY basis can be defined
-                return xy_channels
-            # Otherwise filter on the basis of the channels
-            return {
-                id: ch
-                for id, ch in non_occupied_channels.items()
-                if (
-                    ch.basis == "XY"
-                    or (isinstance(ch, DMM) and self._slm_mask_dmm is None)
-                    if self._in_xy
-                    else ch.basis != "XY"
+                    # MockDevice channels can be declared multiple times
+                    (
+                        id not in occupied_ch_ids
+                        or self._device.reusable_channels
+                    )
+                    and (
+                        # If we are in XY mode, the dmm channels are available
+                        # to configure a SLM mask if no slm mask was defined
+                        ch.basis == "XY"
+                        or (isinstance(ch, DMM) and self._slm_mask_dmm is None)
+                        if self._in_xy
+                        else ch.basis != "XY"
+                    )
                 )
             }
 
@@ -455,18 +455,35 @@ class Sequence(Generic[DeviceType]):
         # No parametrization -> Always stored as a regular call
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
-    def _set_slm_mask_dmm(self):
-        ntargets = len(self._slm_mask_targets)
+    def _set_slm_mask_dmm(self, dmm_id: str, targets: set[QubitId]) -> None:
+        ntargets = len(targets)
         detuning_map = self.register.define_detuning_map(
             {
-                qubit: (1 / ntargets if qubit in self._slm_mask_targets else 0)
+                qubit: (1 / ntargets if qubit in targets else 0)
                 for qubit in self.register.qubit_ids
             }
         )
-        self.config_detuning_map(detuning_map, self._slm_mask_dmm)
+        self.config_detuning_map(detuning_map, dmm_id)
+        # Find the name of the dmm in the declared channels.
         for key in reversed(self.declared_channels.keys()):
-            if self._slm_mask_dmm in key:
+            if dmm_id in key:
                 self._slm_mask_dmm = key
+                break
+        # If a channel already contains a slot of type Pulse
+        # Add it to the slm mask DMM just declared.
+        for ch_name, ch_schedule in self._schedule.items():
+            if (
+                isinstance(ch_schedule, _DMMSchedule)
+                or not ch_schedule._has_pulse_slot
+            ):
+                continue
+            for slot in ch_schedule.slots[1:]:
+                if isinstance(
+                    slot.type, Pulse
+                ) and not ch_schedule.is_detuned_delay(slot.type):
+                    self._add_slm_pulse(slot.type, ch_name)
+                    break
+            if self._schedule[cast(str, self._slm_mask_dmm)]._has_pulse_slot:
                 break
 
     @seq_decorators.store
@@ -481,7 +498,7 @@ class Sequence(Generic[DeviceType]):
         Args:
             qubits: Iterable of qubit ID's to mask during the first global
                 pulse of the sequence.
-            dmm_id: Id of the detuning channel to use in the device.
+            dmm_id: Id of the DMM channel to use in the device.
         """
         if not self._device.supports_slm_mask:
             raise ValueError(
@@ -507,12 +524,13 @@ class Sequence(Generic[DeviceType]):
         if self._slm_mask_targets:
             raise ValueError("SLM mask can be configured only once.")
 
+        if self._in_xy or (not self._in_xy and not self._in_ising):
+            if dmm_id not in self._device.dmm_channels:
+                raise ValueError(f"No DMM {dmm_id} in the device.")
+            self._slm_mask_dmm = dmm_id
+        if not self._in_xy and self._in_ising:
+            self._set_slm_mask_dmm(dmm_id, targets)
         self._slm_mask_targets = targets
-        self._slm_mask_dmm = dmm_id
-        if self._in_xy and dmm_id not in self._device.dmm_channels:
-            raise ValueError("No DMM %s in the device." % dmm_id)
-        elif not self._in_xy and self._in_ising:
-            self._set_slm_mask_dmm()
 
     @seq_decorators.block_if_measured
     def config_detuning_map(
@@ -536,7 +554,7 @@ class Sequence(Generic[DeviceType]):
                 available (start by "dmm_" ) and the associated description.
         """
         if dmm_id not in self._device.dmm_channels:
-            raise ValueError("No DMM %s in the device." % dmm_id)
+            raise ValueError(f"No DMM {dmm_id} in the device.")
 
         dmm_ch = self._device.dmm_channels[dmm_id]
         if self._in_xy:
@@ -547,6 +565,10 @@ class Sequence(Generic[DeviceType]):
         if dmm_id not in self.available_channels:
             raise ValueError(f"DMM {dmm_id} is not available.")
 
+        # Configures the DMM implementing an SLM mask if configured before
+        self._in_ising = True
+
+        # Add a suffix to the DMM id if repetition in the declared channels
         dmm_name = dmm_id
         if dmm_id in self.declared_channels:
             assert self._device.reusable_channels
@@ -554,7 +576,6 @@ class Sequence(Generic[DeviceType]):
                 f"_{''.join(self.declared_channels.keys()).count(dmm_id)}"
             )
 
-        self._in_ising = True
         self._schedule[dmm_name] = _DMMSchedule(
             dmm_id, dmm_ch, detuning_map=detuning_map
         )
@@ -771,7 +792,7 @@ class Sequence(Generic[DeviceType]):
             raise ValueError("The given name is already in use.")
 
         if channel_id not in self._device.channels:
-            raise ValueError("No channel %s in the device." % channel_id)
+            raise ValueError(f"No channel {channel_id} in the device.")
 
         ch = self._device.channels[channel_id]
         if channel_id not in self.available_channels:
@@ -803,6 +824,7 @@ class Sequence(Generic[DeviceType]):
             if not self._in_xy:
                 self.set_magnetic_field()
                 self._in_xy = True
+                self._in_ising = False
         else:
             self._in_ising = True
         self._schedule[name] = _ChannelSchedule(channel_id, ch)
@@ -1109,28 +1131,6 @@ class Sequence(Generic[DeviceType]):
         """
         self._validate_channel(channel, block_eom_mode=True)
         self._add(pulse, channel, protocol)
-        if (
-            self._in_ising
-            and self._slm_mask_dmm
-            and self._schedule[self._slm_mask_dmm].get_duration() != 0
-            and not _ChannelSchedule.is_detuned_delay(pulse)
-        ):
-            bottom_detuning = cast(
-                DMM, self._schedule[self._slm_mask_dmm].channel_obj
-            ).bottom_detuning
-            min_det = -10 * max(pulse.detuning.samples())
-            min_det = (
-                bottom_detuning
-                if (bottom_detuning and min_det < bottom_detuning)
-                else min_det
-            )
-            self._add(
-                Pulse.ConstantPulse(
-                    self._schedule.get_duration(), 0, min_det, 0
-                ),
-                self._slm_mask_dmm,
-                "no-delay",
-            )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -1159,7 +1159,7 @@ class Sequence(Generic[DeviceType]):
                   that idles the channel until the end of the other channels'
                   latest pulse.
         """
-        self._validate_channel(dmm_name)
+        self._validate_channel(dmm_name, block_if_slm=True)
         self._add(
             Pulse.ConstantAmplitude(0, waveform, 0),
             dmm_name,
@@ -1632,6 +1632,33 @@ class Sequence(Generic[DeviceType]):
     def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
         return draw_sequence(self, **draw_options)
 
+    def _add_slm_pulse(self, pulse: Pulse, channel: str) -> None:
+        if (
+            self._in_ising
+            and self._slm_mask_dmm
+            and self.declared_channels[channel].addressing == "Global"
+            and isinstance(self.declared_channels[channel], DMM)
+            and not self._schedule[self._slm_mask_dmm]._has_pulse_slot
+            and not _ChannelSchedule.is_detuned_delay(pulse)
+        ):
+            bottom_detuning = cast(
+                DMM, self.declared_channels[self._slm_mask_dmm]
+            ).bottom_detuning
+            min_det = -10 * np.max(pulse.detuning.samples)
+            min_det = (
+                bottom_detuning
+                if (bottom_detuning and min_det < bottom_detuning)
+                else min_det
+            )
+            self._schedule[self._slm_mask_dmm]._has_pulse_slot = True
+            self._add(
+                Pulse.ConstantPulse(
+                    self._schedule[channel].get_duration(), 0, min_det, 0
+                ),
+                self._slm_mask_dmm,
+                "no-delay",
+            )
+
     def _add(
         self,
         pulse: Union[Pulse, Parametrized],
@@ -1678,6 +1705,7 @@ class Sequence(Generic[DeviceType]):
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
             )
+        self._add_slm_pulse(pulse, channel)
 
     @seq_decorators.block_if_measured
     def _target(
@@ -1757,7 +1785,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.block_if_measured
     def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
-        self._validate_channel(channel)
+        self._validate_channel(channel, block_if_slm=True)
         if self.is_parametrized():
             return
         self._schedule.add_delay(cast(int, duration), channel)
@@ -1806,7 +1834,10 @@ class Sequence(Generic[DeviceType]):
         return self._schedule[channel][-1]
 
     def _validate_channel(
-        self, channel: str, block_eom_mode: bool = False
+        self,
+        channel: str,
+        block_eom_mode: bool = False,
+        block_if_slm: bool = False,
     ) -> None:
         if isinstance(channel, Parametrized):
             raise NotImplementedError(
@@ -1818,7 +1849,8 @@ class Sequence(Generic[DeviceType]):
         if block_eom_mode and self.is_in_eom_mode(channel):
             raise RuntimeError("The chosen channel is in EOM mode.")
         if (
-            channel == self._slm_mask_dmm
+            block_if_slm
+            and channel == self._slm_mask_dmm
             and self._schedule[self._slm_mask_dmm].get_duration() == 0
         ):
             raise ValueError(

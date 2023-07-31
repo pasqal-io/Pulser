@@ -51,7 +51,7 @@ def reg():
 @pytest.fixture
 def det_map(reg: Register):
     return reg.define_detuning_map(
-        {"q" + str(i): (1 / 4 if i in [0, 1, 3, 4] else 0) for i in range(28)}
+        {"q" + str(i): (1 / 4 if i in [0, 1, 3, 4] else 0) for i in range(10)}
     )
 
 
@@ -185,6 +185,7 @@ def test_dmm_declaration(reg, device, det_map, mock_dev_dmm):
 
 
 def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
+    # Definining an SLM on a Device
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
@@ -194,9 +195,12 @@ def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
         ValueError, match="SLM mask can be configured only once."
     ):
         seq.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_1")
+    # no channel has been declared
     assert len(seq._schedule) == 0
+    # dmm_0 no longer appears in available channels
     assert set(seq.available_channels) == available_channels - {"dmm_0"}
 
+    # Configuring a DMM after having configured a SLM with the same DMM
     seq2 = Sequence(reg, mock_dev_dmm)
     available_channels = set(seq2.available_channels)
     channel_map = {
@@ -204,10 +208,12 @@ def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
         "dmm_0_1": "dmm_0",
     }
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"])
+    assert set(seq2.declared_channels.keys()) == set()
     # If a DMM was declared as an SLM Mask, MW channels are still available
     assert set(seq2.available_channels) == available_channels
     # If other DMM are configured, the MW channel is no longer available
     seq2.config_detuning_map(det_map, "dmm_0")
+    assert seq2._slm_mask_dmm == "dmm_0"
     assert set(seq2.available_channels) == (available_channels - {"mw_global"})
     assert channel_map.keys() == seq2.declared_channels.keys()
     assert set(
@@ -217,26 +223,34 @@ def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
     with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
         seq2.declare_channel("mw_ch", "mw_global")
 
+    # Configuring an SLM after having configured a DMM with the same DMM
+    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2.config_detuning_map(det_map, "dmm_0")
+    seq2.config_slm_mask(["q0", "q1", "q3", "q4"])
+    # Name of DMM implementing SLM has a suffix
+    assert seq2._slm_mask_dmm == "dmm_0_1"
+
+    # Configuring a SLM after having declared a microwave channel
     seq2 = Sequence(reg, mock_dev_dmm)
     seq2.declare_channel("ch0", "mw_global")
-    # DMM channels are still available,
-    # but can only be declared using an SLM Mask
+    # DMM channels are still available, but can be configured using an SLM Mask
     assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_0")
     assert set(seq2.available_channels) == {"mw_global"}
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
+    # Declaring a microwave channel after having configured an SLM
     seq2 = Sequence(reg, mock_dev_dmm)
     available_channels = set(seq2.available_channels)
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_0")
     # If a DMM was declared as an SLM Mask, all channels are still available
     assert set(seq2.available_channels) == available_channels
-    assert set(seq2.declared_channels.keys()) == {"dmm_0"}
+    assert set(seq2.declared_channels.keys()) == set()
     # If MW channel is defined, only mw channels are available
     seq2.declare_channel("ch0", "mw_global")
     assert set(seq2.available_channels) == {"mw_global"}
-    # DMM is no longer declared
+    # DMM is not shown as declared
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
 
@@ -1094,7 +1108,7 @@ def test_sequence(reg, device, patch_plt_show):
 
 
 @pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
-def test_config_slm_mask(qubit_ids, device):
+def test_config_slm_mask(qubit_ids, device, det_map):
     reg: Register | MappableRegister
     trap_ids = [(0, 0), (10, 10), (-10, -10)]
     reg = Register(dict(zip(qubit_ids, trap_ids)))
@@ -1129,6 +1143,11 @@ def test_config_slm_mask(qubit_ids, device):
         assert seq._slm_mask_targets == {"q0", "q2"}
     else:
         assert seq._slm_mask_targets == {0, 2}
+    assert not seq._schedule
+    with pytest.raises(ValueError, match="DMM dmm_0 is not available."):
+        seq.config_detuning_map(det_map, "dmm_0")
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    assert set(seq._schedule.keys()) == {"dmm_0", "rydberg_global"}
     assert seq._schedule["dmm_0"].detuning_map.weights[0] == 0.5
     assert seq._schedule["dmm_0"].detuning_map.weights[2] == 0.5
 
