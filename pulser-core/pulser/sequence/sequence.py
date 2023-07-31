@@ -822,16 +822,11 @@ class Sequence(Generic[DeviceType]):
             channel_obj.validate_pulse(on_pulse)
             amp_on = cast(float, amp_on)
             detuning_on = cast(float, detuning_on)
-
-            off_options = cast(
-                RydbergEOM, channel_obj.eom_config
-            ).detuning_off_options(amp_on, detuning_on)
-
+            eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                closest_option = np.abs(
-                    off_options - optimal_detuning_off
-                ).argmin()
-                detuning_off = off_options[closest_option]
+                detuning_off = eom_config.calculate_detuning_off(
+                    amp_on, detuning_on, optimal_detuning_off
+                )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
                 )
