@@ -34,7 +34,7 @@ class PulserEncoder(JSONEncoder):
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_dict"):
             return cast(dict, o._to_dict())
-        elif type(o) == type:
+        elif type(o) is type:
             return obj_to_dict(o, _build=False, _name=o.__name__)
         elif isinstance(o, np.ndarray):
             return obj_to_dict(o, o.tolist(), _name="array")
