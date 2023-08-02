@@ -162,7 +162,6 @@ class Sequence(Generic[DeviceType]):
             )._waiting_for_first_pulse
         ):
             slm_slot = self._schedule[self._slm_mask_dmm].slots[1]
-            print(slm_slot)
             return [slm_slot.ti, slm_slot.tf]
         return (
             []
@@ -478,7 +477,7 @@ class Sequence(Generic[DeviceType]):
             if dmm_id in key:
                 self._slm_mask_dmm = key
                 break
-        # Add an SLM pulse if pulses have already been added to Global Channels
+        # Modulate the dmm if pulses have already been added to Global Channels
         slm_mask_times = self._schedule.find_slm_mask_times()
         if slm_mask_times:
             max_amp = max(
@@ -489,9 +488,12 @@ class Sequence(Generic[DeviceType]):
                     and ch_schedule.channel_obj.addressing == "Global"
                 ]
             )
-            self._add_slm_pulse(
-                Pulse.ConstantPulse(slm_mask_times[1], max_amp, 0, 0)
-            )
+            self._modulate_slm_mask_dmm(slm_mask_times[1], max_amp)
+        else:
+            # Block the modulation of this dmm
+            cast(
+                _DMMSchedule, self._schedule[key]
+            )._waiting_for_first_pulse = True
 
     @seq_decorators.store
     def config_slm_mask(
@@ -1638,25 +1640,22 @@ class Sequence(Generic[DeviceType]):
     def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
         return draw_sequence(self, **draw_options)
 
-    def _add_slm_pulse(self, pulse: Pulse) -> None:
-        if (
-            not _ChannelSchedule.is_detuned_delay(pulse)
-            and self._slm_mask_dmm is not None
-        ):
+    def _modulate_slm_mask_dmm(self, duration: int, max_amp: float) -> None:
+        if self._slm_mask_dmm is not None:
             bottom_detuning = cast(
                 DMM, self.declared_channels[self._slm_mask_dmm]
             ).bottom_detuning
-            min_det = -10 * np.max(pulse.amplitude.samples)
+            min_det = -10 * max_amp
             min_det = (
                 bottom_detuning
                 if (bottom_detuning and min_det < bottom_detuning)
                 else min_det
             )
-            self._schedule[
-                self._slm_mask_dmm
-            ]._waiting_for_first_pulse = False  # type: ignore
+            cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse = False
             self._add(
-                Pulse.ConstantPulse(pulse.duration, 0, min_det, 0),
+                Pulse.ConstantPulse(duration, 0, min_det, 0),
                 self._slm_mask_dmm,
                 "no-delay",
             )
@@ -1714,14 +1713,12 @@ class Sequence(Generic[DeviceType]):
                 _DMMSchedule, self._schedule[self._slm_mask_dmm]
             )._waiting_for_first_pulse
             and channel_obj.addressing == "Global"
+            and not _ChannelSchedule.is_detuned_delay(pulse)
+            and not isinstance(channel_obj, DMM)
         ):
-            self._add_slm_pulse(
-                Pulse.ConstantPulse(
-                    self._schedule[channel].get_duration(),
-                    np.max(pulse.amplitude.samples),
-                    0,
-                    0,
-                )
+            self._modulate_slm_mask_dmm(
+                self._schedule[channel].get_duration(),
+                np.max(pulse.amplitude.samples),
             )
 
     @seq_decorators.block_if_measured
@@ -1868,7 +1865,9 @@ class Sequence(Generic[DeviceType]):
         if (
             block_if_slm
             and channel == self._slm_mask_dmm
-            and self._schedule[self._slm_mask_dmm].get_duration() == 0
+            and cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse
         ):
             raise ValueError(
                 "You should add a Pulse to a Global Channel prior to"

@@ -255,7 +255,7 @@ class _DMMSchedule(_ChannelSchedule):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self._waiting_for_first_pulse: bool = True
+        self._waiting_for_first_pulse: bool = False
 
     def get_samples(
         self,

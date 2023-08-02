@@ -28,6 +28,9 @@ from pulser.pulse import Pulse
 from pulser.sampler import sample
 from pulser.sequence._seq_drawer import draw_samples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
+from pulser.register.mappable_reg import MappableRegister
+from pulser.register.register_layout import RegisterLayout
+
 
 # Helpers
 
@@ -280,6 +283,21 @@ def test_eom_modulation(mod_device, disable_eom):
         np.testing.assert_allclose(want, got, atol=1e-10)
 
 
+def test_seq_with_DMM_and_map_reg():
+    reg = MappableRegister(
+        RegisterLayout([[-4, 0], [4, 0], [0, -4], [0, 4]]), *["q0", "q1"]
+    )
+    seq = pulser.Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
+    seq.config_detuning_map(
+        reg.define_detuning_map({i: 0.25 for i in range(4)}), "dmm_0"
+    )
+    with pytest.raises(
+        NotImplementedError,
+        match="DMM channel can't be sampled while their register is mappable.",
+    ):
+        sample(seq)
+
+
 def seq_with_SLM(
     ch_name: Literal["mw_global", "rydberg_global"]
 ) -> pulser.Sequence:
@@ -287,7 +305,6 @@ def seq_with_SLM(
         "batman": np.array([-4.0, 0.0]),  # sometimes masked
         "superman": np.array([4.0, 0.0]),  # always unmasked
     }
-
     reg = pulser.Register(q_dict)
     seq = pulser.Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
 
