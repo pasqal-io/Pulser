@@ -56,7 +56,6 @@ class _ChannelSchedule:
     def __post_init__(self) -> None:
         self.slots: list[_TimeSlot] = []
         self.eom_blocks: list[_EOMSettings] = []
-        self._has_pulse_slot = False
 
     def last_target(self) -> int:
         """Last time a target happened on the channel."""
@@ -254,6 +253,10 @@ class _ChannelSchedule:
 class _DMMSchedule(_ChannelSchedule):
     detuning_map: DetuningMap
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._waiting_for_first_pulse: bool = True
+
     def get_samples(
         self,
         ignore_detuned_delay_phase: bool = True,
@@ -304,7 +307,9 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                 continue
             # Cycle on slots in schedule until the first pulse is found
             for slot in ch_schedule:
-                if not isinstance(slot.type, Pulse):
+                if not isinstance(
+                    slot.type, Pulse
+                ) or ch_schedule.is_detuned_delay(slot.type):
                     continue
                 ti = slot.ti
                 tf = slot.tf
@@ -419,7 +424,6 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         tf = ti + pulse.duration
         self._check_duration(tf)
         self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
-        self[channel]._has_pulse_slot = True
 
     def add_delay(self, duration: int, channel: str) -> None:
         last = self[channel][-1]

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import replace
+from typing import Literal
 
 import numpy as np
 import pytest
@@ -279,8 +280,9 @@ def test_eom_modulation(mod_device, disable_eom):
         np.testing.assert_allclose(want, got, atol=1e-10)
 
 
-@pytest.fixture
-def seq_with_SLM() -> pulser.Sequence:
+def seq_with_SLM(
+    ch_name: Literal["mw_global", "rydberg_global"]
+) -> pulser.Sequence:
     q_dict = {
         "batman": np.array([-4.0, 0.0]),  # sometimes masked
         "superman": np.array([4.0, 0.0]),  # always unmasked
@@ -289,7 +291,7 @@ def seq_with_SLM() -> pulser.Sequence:
     reg = pulser.Register(q_dict)
     seq = pulser.Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
 
-    seq.declare_channel("ch0", "rydberg_global")
+    seq.declare_channel("ch0", ch_name)
     seq.config_slm_mask(["batman"])
 
     seq.add(
@@ -300,35 +302,59 @@ def seq_with_SLM() -> pulser.Sequence:
         Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0),
         "ch0",
     )
-    seq.measure()
+    seq.measure("ground-rydberg" if ch_name == "rydberg_global" else "XY")
     return seq
 
 
-@pytest.mark.xfail(reason="Effects of SLM mask were removed")
-def test_SLM_samples(seq_with_SLM):
+def test_SLM_samples():
+    seq = seq_with_SLM("mw_global")
     pulse = Pulse.ConstantDetuning(BlackmanWaveform(200, np.pi / 2), 0.0, 0.0)
     a_samples = pulse.amplitude.samples
 
     def z() -> np.ndarray:
-        return np.zeros(seq_with_SLM.get_duration())
+        return np.zeros(seq.get_duration())
+
+    want: dict = {
+        "Global": {"XY": {"amp": z(), "det": z(), "phase": z()}},
+        "Local": {
+            "XY": {
+                "superman": {"amp": z(), "det": z(), "phase": z()},
+            }
+        },
+    }
+    want["Global"]["XY"]["amp"][200:400] = a_samples
+    want["Local"]["XY"]["superman"]["amp"][0:200] = a_samples
+
+    got = sample(seq).to_nested_dict()
+    assert_nested_dict_equality(got, want)
+
+    seq = seq_with_SLM("rydberg_global")
+    with pytest.raises(ValueError, match="'qubits' must be defined"):
+        seq._schedule["dmm_0"].get_samples()
 
     want: dict = {
         "Global": {"ground-rydberg": {"amp": z(), "det": z(), "phase": z()}},
         "Local": {
             "ground-rydberg": {
                 "superman": {"amp": z(), "det": z(), "phase": z()},
+                "batman": {"amp": z(), "det": z(), "phase": z()},
             }
         },
     }
+    want["Global"]["ground-rydberg"]["amp"][0:200] = a_samples
     want["Global"]["ground-rydberg"]["amp"][200:400] = a_samples
-    want["Local"]["ground-rydberg"]["superman"]["amp"][0:200] = a_samples
 
-    got = sample(seq_with_SLM).to_nested_dict()
+    want["Local"]["ground-rydberg"]["batman"]["det"][0:200] = np.full_like(
+        a_samples, -10 * np.max(a_samples)
+    )
+
+    got = sample(seq).to_nested_dict()
+    print(got)
     assert_nested_dict_equality(got, want)
 
 
-def test_SLM_against_simulation(seq_with_SLM):
-    assert_same_samples_as_sim(seq_with_SLM)
+def test_SLM_against_simulation():
+    assert_same_samples_as_sim(seq_with_SLM("rydberg_global"))
 
 
 def test_samples_repr(seq_rydberg):

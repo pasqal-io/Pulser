@@ -1181,12 +1181,14 @@ def test_effective_size_intersection():
 )
 def test_effective_size_disjoint(channel_type):
     simple_reg = Register.square(2, prefix="atom")
-    rise = Pulse.ConstantPulse(1500, 0, 0, 0)
+    amp = 1
+    rise = Pulse.ConstantPulse(1500, amp, 0, 0)
     np.random.seed(15092021)
     seq = Sequence(simple_reg, MockDevice)
     seq.declare_channel("ch0", channel_type)
     seq.add(rise, "ch0")
     seq.config_slm_mask(["atom1"])
+    assert seq._slm_mask_time == [0, 1500]
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
     sim.set_config(SimConfig("SPAM", eta=0.4))
     assert sim._bad_atoms == {
@@ -1195,14 +1197,15 @@ def test_effective_size_disjoint(channel_type):
         "atom2": True,
         "atom3": False,
     }
-    assert sim.get_hamiltonian(0) == 0 * sim.build_operator([("I", "global")])
+    assert sim.get_hamiltonian(0) == 0.5 * amp * sim.build_operator(
+        [(qutip.sigmax(), ["atom3"])]
+    )
 
 
 def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.config_slm_mask({"control1"})
-    print(seq._slm_mask_targets)
     pulse1 = Pulse.ConstantPulse(120, 1, 0, 2.0)
     seq.add(pulse1, "ch0")
 

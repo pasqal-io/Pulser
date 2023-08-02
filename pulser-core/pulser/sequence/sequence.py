@@ -154,6 +154,16 @@ class Sequence(Generic[DeviceType]):
     @property
     def _slm_mask_time(self) -> list[int]:
         """The initial and final time when the SLM mask is on."""
+        if (
+            self._in_ising
+            and self._slm_mask_dmm
+            and not cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse
+        ):
+            slm_slot = self._schedule[self._slm_mask_dmm].slots[1]
+            print(slm_slot)
+            return [slm_slot.ti, slm_slot.tf]
         return (
             []
             if not self._slm_mask_targets
@@ -236,9 +246,9 @@ class Sequence(Generic[DeviceType]):
     def available_channels(self) -> dict[str, Channel]:
         """Channels still available for declaration."""
         all_channels = {**self._device.channels, **self._device.dmm_channels}
-        if not self._schedule and not self._in_xy and not self._in_ising:
-            # If no channel has been declared nor any DMM configured
-            # Take out the DMM for the SLM Mask if channels are not reusable
+        if not self._in_xy and not self._in_ising:
+            # If no channel has been declared nor any DMM configured, and if
+            # device is physical, don't show the DMM used for the SLM Mask
             if (
                 self._slm_mask_dmm is not None
                 and not self._device.reusable_channels
@@ -248,7 +258,6 @@ class Sequence(Generic[DeviceType]):
                     for id, ch in all_channels.items()
                     if id != self._slm_mask_dmm
                 }
-            # Otherwise return all the channels without the defined channel
             return all_channels
         else:
             occupied_ch_ids = [cs.channel_id for cs in self._schedule.values()]
@@ -469,22 +478,20 @@ class Sequence(Generic[DeviceType]):
             if dmm_id in key:
                 self._slm_mask_dmm = key
                 break
-        # If a channel already contains a slot of type Pulse
-        # Add it to the slm mask DMM just declared.
-        for ch_name, ch_schedule in self._schedule.items():
-            if (
-                isinstance(ch_schedule, _DMMSchedule)
-                or not ch_schedule._has_pulse_slot
-            ):
-                continue
-            for slot in ch_schedule.slots[1:]:
-                if isinstance(
-                    slot.type, Pulse
-                ) and not ch_schedule.is_detuned_delay(slot.type):
-                    self._add_slm_pulse(slot.type, ch_name)
-                    break
-            if self._schedule[cast(str, self._slm_mask_dmm)]._has_pulse_slot:
-                break
+        # Add an SLM pulse if pulses have already been added to Global Channels
+        slm_mask_times = self._schedule.find_slm_mask_times()
+        if slm_mask_times:
+            max_amp = max(
+                [
+                    np.max(ch_schedule.get_samples().amp[: slm_mask_times[1]])
+                    for ch_schedule in self._schedule.values()
+                    if not isinstance(ch_schedule, _DMMSchedule)
+                    and ch_schedule.channel_obj.addressing == "Global"
+                ]
+            )
+            self._add_slm_pulse(
+                Pulse.ConstantPulse(slm_mask_times[1], max_amp, 0, 0)
+            )
 
     @seq_decorators.store
     def config_slm_mask(
@@ -824,7 +831,6 @@ class Sequence(Generic[DeviceType]):
             if not self._in_xy:
                 self.set_magnetic_field()
                 self._in_xy = True
-                self._in_ising = False
         else:
             self._in_ising = True
         self._schedule[name] = _ChannelSchedule(channel_id, ch)
@@ -1632,29 +1638,25 @@ class Sequence(Generic[DeviceType]):
     def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
         return draw_sequence(self, **draw_options)
 
-    def _add_slm_pulse(self, pulse: Pulse, channel: str) -> None:
+    def _add_slm_pulse(self, pulse: Pulse) -> None:
         if (
-            self._in_ising
-            and self._slm_mask_dmm
-            and self.declared_channels[channel].addressing == "Global"
-            and isinstance(self.declared_channels[channel], DMM)
-            and not self._schedule[self._slm_mask_dmm]._has_pulse_slot
-            and not _ChannelSchedule.is_detuned_delay(pulse)
+            not _ChannelSchedule.is_detuned_delay(pulse)
+            and self._slm_mask_dmm is not None
         ):
             bottom_detuning = cast(
                 DMM, self.declared_channels[self._slm_mask_dmm]
             ).bottom_detuning
-            min_det = -10 * np.max(pulse.detuning.samples)
+            min_det = -10 * np.max(pulse.amplitude.samples)
             min_det = (
                 bottom_detuning
                 if (bottom_detuning and min_det < bottom_detuning)
                 else min_det
             )
-            self._schedule[self._slm_mask_dmm]._has_pulse_slot = True
+            self._schedule[
+                self._slm_mask_dmm
+            ]._waiting_for_first_pulse = False  # type: ignore
             self._add(
-                Pulse.ConstantPulse(
-                    self._schedule[channel].get_duration(), 0, min_det, 0
-                ),
+                Pulse.ConstantPulse(pulse.duration, 0, min_det, 0),
                 self._slm_mask_dmm,
                 "no-delay",
             )
@@ -1705,7 +1707,22 @@ class Sequence(Generic[DeviceType]):
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
             )
-        self._add_slm_pulse(pulse, channel)
+        if (
+            self._in_ising
+            and self._slm_mask_dmm
+            and cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse
+            and channel_obj.addressing == "Global"
+        ):
+            self._add_slm_pulse(
+                Pulse.ConstantPulse(
+                    self._schedule[channel].get_duration(),
+                    np.max(pulse.amplitude.samples),
+                    0,
+                    0,
+                )
+            )
 
     @seq_decorators.block_if_measured
     def _target(
@@ -1854,8 +1871,8 @@ class Sequence(Generic[DeviceType]):
             and self._schedule[self._slm_mask_dmm].get_duration() == 0
         ):
             raise ValueError(
-                "You should add a Pulse to a Channel prior to modulating"
-                " the DMM used for the SLM Mask."
+                "You should add a Pulse to a Global Channel prior to"
+                " modulating the DMM used for the SLM Mask."
             )
 
     def _validate_and_adjust_pulse(
