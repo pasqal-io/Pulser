@@ -501,8 +501,16 @@ class Sequence(Generic[DeviceType]):
     ) -> None:
         """Setup an SLM mask by specifying the qubits it targets.
 
-        A SLM mask is a DetuningMap where the detuning of each masked qubit
-        is the same.
+        If the sequence is in XY mode, masked qubits don't interact with
+        the incoming pulses until the end of the first pulse of the global
+        channel starting the earliest in the schedule.
+
+        If the sequence is in Ising, the SLM Mask is a DetuningMap where
+        the detuning of each masked qubit is the same. DMM "dmm_id" is
+        configured using this Detuning Map, and modulated by a pulse having
+        a large negative detuning and either a duration defined from pulses
+        already present in the sequence (same as in XY mode) or by the first
+        pulse added after this operation.  
 
         Args:
             qubits: Iterable of qubit ID's to mask during the first global
@@ -562,6 +570,13 @@ class Sequence(Generic[DeviceType]):
                 See in ``Sequence.available_channels`` which DMM IDs are still
                 available (start by "dmm_" ) and the associated description.
         """
+        self._config_detuning_map(detuning_map, dmm_id)
+
+    def _config_detuning_map(
+        self,
+        detuning_map: DetuningMap,
+        dmm_id: str,
+    ) -> None:
         if dmm_id not in self._device.dmm_channels:
             raise ValueError(f"No DMM {dmm_id} in the device.")
 
