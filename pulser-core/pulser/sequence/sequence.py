@@ -519,7 +519,7 @@ class Sequence(Generic[DeviceType]):
 
                 # We verify the channel class then
                 # check whether the addressing is Global or Local
-                type_match = type(old_ch_obj) == type(new_ch_obj)
+                type_match = type(old_ch_obj) is type(new_ch_obj)
                 basis_match = old_ch_obj.basis == new_ch_obj.basis
                 addressing_match = (
                     old_ch_obj.addressing == new_ch_obj.addressing
