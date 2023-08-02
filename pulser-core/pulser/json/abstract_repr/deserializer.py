@@ -44,6 +44,7 @@ from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register import Register
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
@@ -276,6 +277,14 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
         )
     elif op["op"] == "disable_eom_mode":
         seq.disable_eom_mode(channel=op["channel"])
+    elif op["op"] == "config_slm_mask":
+        seq.config_slm_mask(qubits=op["qubits"], dmm_id=op["dmm_id"])
+    elif op["op"] == "modulate_det_map":
+        seq.modulate_det_map(
+            waveform=_deserialize_waveform(op["waveform"], vars),
+            dmm_name=op["dmm_name"],
+            protocol=op["protocol"],
+        )
 
 
 def _deserialize_channel(obj: dict[str, Any]) -> Channel:
@@ -431,7 +440,23 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
 
     # SLM Mask
     if "slm_mask_targets" in obj:
+        # This is kept for backwards compatibility
         seq.config_slm_mask(obj["slm_mask_targets"])
+
+    # Detuning Map configuration
+    if "dmm_channels" in obj:
+        for dmm_id, ser_det_map in obj["dmm_channels"]:
+            trap_coords = []
+            weights = []
+            for trap in ser_det_map["traps"]:
+                trap_coords.append((trap["x"], trap["y"]))
+                weights.append(trap["weight"])
+            det_map = DetuningMap(
+                trap_coordinates=trap_coords,
+                weights=weights,
+                slug=ser_det_map.get("slug"),
+            )
+            seq.config_detuning_map(detuning_map=det_map, dmm_id=dmm_id)
 
     # Variables
     vars = {}
