@@ -23,7 +23,7 @@ import jsonschema.exceptions
 
 import pulser
 import pulser.devices as devices
-from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels import DMM, Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import (
     OPTIONAL_ABSTR_EOM_FIELDS,
@@ -282,8 +282,11 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
     params: dict[str, Any] = {}
     channel_cls: Type[Channel]
     if obj["basis"] == "ground-rydberg":
-        channel_cls = Rydberg
-        params["eom_config"] = None
+        if "bottom_detuning" in obj:
+            channel_cls = DMM
+        else:
+            channel_cls = Rydberg
+            params["eom_config"] = None
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
             try:
@@ -347,9 +350,9 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     params: dict[str, Any] = dict(
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
-    if "dmm_channels" in obj:
+    if "dmm_objects" in obj:
         params["dmm_objects"] = tuple(
-            _deserialize_channel(dmm_ch) for dmm_ch in obj["dmm_channels"]
+            _deserialize_channel(dmm_ch) for dmm_ch in obj["dmm_objects"]
         )
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
