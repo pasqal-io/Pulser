@@ -122,7 +122,7 @@ def test_register_numbered_keys(reg):
     j = json.dumps(reg, cls=PulserEncoder)
     decoded_reg = json.loads(j, cls=PulserDecoder)
     assert reg == decoded_reg
-    assert all([type(i) == int for i in decoded_reg.qubit_ids])
+    assert all([type(i) is int for i in decoded_reg.qubit_ids])
 
 
 def test_mappable_register():
