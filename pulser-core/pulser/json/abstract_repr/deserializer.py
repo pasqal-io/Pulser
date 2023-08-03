@@ -23,7 +23,7 @@ import jsonschema.exceptions
 
 import pulser
 import pulser.devices as devices
-from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels import DMM, Microwave, Raman, Rydberg
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import (
     OPTIONAL_ABSTR_EOM_FIELDS,
@@ -44,6 +44,7 @@ from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register import Register
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
@@ -276,14 +277,25 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
         )
     elif op["op"] == "disable_eom_mode":
         seq.disable_eom_mode(channel=op["channel"])
+    elif op["op"] == "config_slm_mask":
+        seq.config_slm_mask(qubits=op["qubits"], dmm_id=op["dmm_id"])
+    elif op["op"] == "modulate_det_map":
+        seq.modulate_det_map(
+            waveform=_deserialize_waveform(op["waveform"], vars),
+            dmm_name=op["dmm_name"],
+            protocol=op["protocol"],
+        )
 
 
 def _deserialize_channel(obj: dict[str, Any]) -> Channel:
     params: dict[str, Any] = {}
     channel_cls: Type[Channel]
     if obj["basis"] == "ground-rydberg":
-        channel_cls = Rydberg
-        params["eom_config"] = None
+        if "bottom_detuning" in obj:
+            channel_cls = DMM
+        else:
+            channel_cls = Rydberg
+            params["eom_config"] = None
         if obj["eom_config"] is not None:
             data = obj["eom_config"]
             try:
@@ -347,9 +359,9 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     params: dict[str, Any] = dict(
         channel_ids=tuple(ch_ids), channel_objects=tuple(ch_objs)
     )
-    if "dmm_channels" in obj:
+    if "dmm_objects" in obj:
         params["dmm_objects"] = tuple(
-            _deserialize_channel(dmm_ch) for dmm_ch in obj["dmm_channels"]
+            _deserialize_channel(dmm_ch) for dmm_ch in obj["dmm_objects"]
         )
     device_fields = dataclasses.fields(device_cls)
     device_defaults = get_dataclass_defaults(device_fields)
@@ -428,7 +440,23 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
 
     # SLM Mask
     if "slm_mask_targets" in obj:
+        # This is kept for backwards compatibility
         seq.config_slm_mask(obj["slm_mask_targets"])
+
+    # Detuning Map configuration
+    if "dmm_channels" in obj:
+        for dmm_id, ser_det_map in obj["dmm_channels"]:
+            trap_coords = []
+            weights = []
+            for trap in ser_det_map["traps"]:
+                trap_coords.append((trap["x"], trap["y"]))
+                weights.append(trap["weight"])
+            det_map = DetuningMap(
+                trap_coordinates=trap_coords,
+                weights=weights,
+                slug=ser_det_map.get("slug"),
+            )
+            seq.config_detuning_map(detuning_map=det_map, dmm_id=dmm_id)
 
     # Variables
     vars = {}

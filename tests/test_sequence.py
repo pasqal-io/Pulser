@@ -126,7 +126,7 @@ def test_channel_declaration(reg, device):
 
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
-    assert set(seq2.available_channels) == {"mw_global"}
+    assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
     with pytest.raises(
         ValueError,
         match="cannot work simultaneously with the declared 'Microwave'",
@@ -292,6 +292,8 @@ def test_magnetic_field(reg, mock_dev_dmm):
     seq3 = Sequence(reg, mock_dev_dmm)
     seq3.config_slm_mask(["q0", "q1"], "dmm_0")
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
+    # dmm_0 doesn't appear because there can only be one in XY mode
+    # and the SLM is already configured
     assert set(seq3.available_channels) == {"mw_global"}
     assert list(seq3.declared_channels.keys()) == []
     seq3.declare_channel("ch0", "mw_global")
@@ -299,7 +301,7 @@ def test_magnetic_field(reg, mock_dev_dmm):
 
     seq3 = Sequence(reg, MockDevice)
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
-    assert set(seq3.available_channels) == {"mw_global"}
+    assert set(seq3.available_channels) == {"mw_global", "dmm_0"}
     seq3.declare_channel("ch0", "mw_global")
     # Does not change to default
     assert np.all(seq3.magnetic_field == np.array((1.0, 0.0, 0.0)))

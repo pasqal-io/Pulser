@@ -165,12 +165,10 @@ class BaseDevice(ABC):
         for dmm_obj in self.dmm_objects:
             type_check("All DMM channels", DMM, value_override=dmm_obj)
 
-        # TODO: Check that device has dmm objects if it supports SLM mask
-        # once DMM is supported for serialization
-        # if self.supports_slm_mask and not self.dmm_objects:
-        #     raise ValueError(
-        #         "One DMM object should be defined to support SLM mask."
-        #     )
+        if self.supports_slm_mask and not self.dmm_objects:
+            raise ValueError(
+                "One DMM object should be defined to support SLM mask."
+            )
 
         if self.channel_ids is not None:
             if not (
@@ -455,6 +453,9 @@ class BaseDevice(ABC):
         for p in ALWAYS_OPTIONAL_PARAMS:
             if params[p] == defaults[p]:
                 params.pop(p, None)
+        # Delete parameters of PARAMS_WITH_ABSTR_REPR in params
+        for p in PARAMS_WITH_ABSTR_REPR:
+            params.pop(p, None)
         ch_list = []
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
@@ -463,12 +464,8 @@ class BaseDevice(ABC):
         dmm_list = []
         for dmm_name, dmm_obj in self.dmm_channels.items():
             dmm_list.append(dmm_obj._to_abstract_repr(dmm_name))
-        # Add dmm channels if different than default
-        if "dmm_objects" in params:
-            params["dmm_channels"] = dmm_list
-        # Delete parameters of PARAMS_WITH_ABSTR_REPR in params
-        for p in PARAMS_WITH_ABSTR_REPR:
-            params.pop(p, None)
+        if dmm_list:
+            params["dmm_objects"] = dmm_list
         return params
 
     def to_abstract_repr(self) -> str:
@@ -668,6 +665,8 @@ class VirtualDevice(BaseDevice):
     max_atom_num: int | None = None
     max_radial_distance: int | None = None
     supports_slm_mask: bool = True
+    # Needed to support SLM mask by default
+    dmm_objects: tuple[DMM, ...] = (DMM(),)
     reusable_channels: bool = True
 
     @property
