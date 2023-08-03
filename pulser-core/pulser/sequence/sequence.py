@@ -510,7 +510,7 @@ class Sequence(Generic[DeviceType]):
         configured using this Detuning Map, and modulated by a pulse having
         a large negative detuning and either a duration defined from pulses
         already present in the sequence (same as in XY mode) or by the first
-        pulse added after this operation.  
+        pulse added after this operation.
 
         Args:
             qubits: Iterable of qubit ID's to mask during the first global

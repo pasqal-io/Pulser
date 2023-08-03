@@ -997,43 +997,20 @@ def test_mask_nopulses():
         assert sim_empty.samples_obj._slm_mask.end == 0
 
 
-slm_xfail = pytest.mark.xfail(
-    reason="Effects of SLM mask were removed", strict=True
-)
+def test_mask_equals_remove_xy():
+    """Check that masking is equivalent to removing the masked qubits in XY.
 
-
-@pytest.mark.parametrize(
-    "channel_type",
-    [
-        "mw_global",
-        pytest.param("rydberg_global", marks=slm_xfail),
-        pytest.param("raman_global", marks=slm_xfail),
-    ],
-)
-def test_mask_equals_remove(channel_type):
-    """Check that masking is equivalent to removing the masked qubits.
-
-    A global pulse acting on three qubits of which one is masked, should be
+    A global MW pulse acting on three qubits of which one is masked, should be
     equivalent to acting on a register with only the two unmasked qubits.
     """
     reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     reg_two = Register({"q0": (0, 0), "q1": (10, 10)})
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
-    local_pulse = Pulse.ConstantPulse(200, 10, 0, 0)
 
     # Masked simulation
     seq_masked = Sequence(reg_three, MockDevice)
-    if channel_type == "mw_global":
-        seq_masked.set_magnetic_field(0, 1.0, 0.0)
-    else:
-        # Add a local channel acting on a masked qubit (has no effect)
-        seq_masked.declare_channel(
-            "local",
-            channel_type[: -len("global")] + "local",
-            initial_target="q2",
-        )
-        seq_masked.add(local_pulse, "local")
-    seq_masked.declare_channel("ch_masked", channel_type)
+    seq_masked.set_magnetic_field(0, 1.0, 0.0)
+    seq_masked.declare_channel("ch_masked", "mw_global")
     masked_qubits = ["q2"]
     seq_masked.config_slm_mask(masked_qubits)
     seq_masked.add(pulse, "ch_masked")
@@ -1052,11 +1029,8 @@ def test_mask_equals_remove(channel_type):
         QutipEmulator(sampler.sample(seq_masked), reg_two, MockDevice)
     # Simulation on reduced register
     seq_two = Sequence(reg_two, MockDevice)
-    if channel_type == "mw_global":
-        seq_two.set_magnetic_field(0, 1.0, 0.0)
-    seq_two.declare_channel("ch_two", channel_type)
-    if channel_type != "mw_global":
-        seq_two.delay(local_pulse.duration, "ch_two")
+    seq_two.set_magnetic_field(0, 1.0, 0.0)
+    seq_two.declare_channel("ch_two", "mw_global")
     seq_two.add(pulse, "ch_two")
     sim_two = QutipEmulator.from_sequence(seq_two)
 
@@ -1067,18 +1041,10 @@ def test_mask_equals_remove(channel_type):
         assert ham_masked == qutip.tensor(ham_two, qutip.qeye(2))
 
 
-@pytest.mark.parametrize(
-    "channel_type",
-    [
-        "mw_global",
-        pytest.param("rydberg_global", marks=slm_xfail),
-        pytest.param("raman_global", marks=slm_xfail),
-    ],
-)
-def test_mask_two_pulses(channel_type):
+def test_mask_two_pulses_xy():
     """Similar to test_mask_equals_remove, but with more pulses afterwards.
 
-    Three global pulses act on a three qubit register, with one qubit masked
+    Three XY global pulses act on a three qubit register, with one qubit masked
     during the first pulse.
     """
     reg_three = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
@@ -1088,7 +1054,7 @@ def test_mask_two_pulses(channel_type):
 
     # Masked simulation
     seq_masked = Sequence(reg_three, MockDevice)
-    seq_masked.declare_channel("ch_masked", channel_type)
+    seq_masked.declare_channel("ch_masked", "mw_global")
     masked_qubits = ["q2"]
     seq_masked.config_slm_mask(masked_qubits)
     seq_masked.add(pulse, "ch_masked")  # First pulse: masked
@@ -1098,7 +1064,7 @@ def test_mask_two_pulses(channel_type):
 
     # Unmasked simulation on full register
     seq_three = Sequence(reg_three, MockDevice)
-    seq_three.declare_channel("ch_three", channel_type)
+    seq_three.declare_channel("ch_three", "mw_global")
     seq_three.add(no_pulse, "ch_three")
     seq_three.add(pulse, "ch_three")
     seq_three.add(pulse, "ch_three")
@@ -1106,7 +1072,7 @@ def test_mask_two_pulses(channel_type):
 
     # Unmasked simulation on reduced register
     seq_two = Sequence(reg_two, MockDevice)
-    seq_two.declare_channel("ch_two", channel_type)
+    seq_two.declare_channel("ch_two", "mw_global")
     seq_two.add(pulse, "ch_two")
     seq_two.add(no_pulse, "ch_two")
     seq_two.add(no_pulse, "ch_two")
@@ -1124,11 +1090,10 @@ def test_mask_two_pulses(channel_type):
             assert ham_masked == ham_three
 
 
-@slm_xfail
 def test_mask_local_channel():
     seq_ = Sequence(
         Register.square(2, prefix="q"),
-        MockDevice,
+        replace(MockDevice, dmm_objects=(DMM(),)),
     )
     seq_.declare_channel("rydberg_global", "rydberg_global")
     pulse = Pulse.ConstantPulse(1000, 10, 0, 0)
@@ -1141,11 +1106,43 @@ def test_mask_local_channel():
 
     assert seq_._slm_mask_time == [0, 1000]
     assert seq_._slm_mask_targets == {"q0", "q3"}
-
     sim = QutipEmulator.from_sequence(seq_)
-    for qty in ("amp", "det", "phase"):
-        assert np.all(sim.samples["Local"]["digital"]["q0"][qty] == 0.0)
-    assert "q3" not in sim.samples["Local"]["digital"]
+    assert np.array_equal(
+        sim.samples["Global"]["ground-rydberg"]["amp"],
+        np.concatenate((pulse.amplitude.samples, [0])),
+    )
+    assert np.array_equal(
+        sim.samples["Global"]["ground-rydberg"]["det"],
+        np.concatenate((pulse.detuning.samples, [0])),
+    )
+    assert np.all(sim.samples["Global"]["ground-rydberg"]["phase"] == 0.0)
+    masked_qubits = ["q0", "q3"]
+    for q in masked_qubits:
+        assert np.all(sim.samples["Local"]["ground-rydberg"][q]["amp"] == 0.0)
+        assert np.array_equal(
+            sim.samples["Local"]["ground-rydberg"][q]["det"],
+            np.concatenate(
+                (-10 / len(masked_qubits) * pulse.amplitude.samples, [0])
+            ),
+        )
+        assert np.all(
+            sim.samples["Local"]["ground-rydberg"][q]["phase"] == 0.0
+        )
+
+    assert np.array_equal(
+        sim.samples["Local"]["digital"]["q0"]["amp"],
+        np.concatenate((pulse2.amplitude.samples, [0])),
+    )
+    assert np.array_equal(
+        sim.samples["Local"]["digital"]["q0"]["det"],
+        np.concatenate((pulse2.detuning.samples, [0])),
+    )
+    assert np.all(
+        np.isclose(
+            sim.samples["Local"]["digital"]["q0"]["phase"],
+            np.concatenate((np.pi * np.ones(1000), [0])),
+        )
+    )
 
 
 def test_effective_size_intersection():
@@ -1175,8 +1172,8 @@ def test_effective_size_intersection():
     "channel_type",
     [
         "mw_global",
-        pytest.param("rydberg_global", marks=slm_xfail),
-        pytest.param("raman_global", marks=slm_xfail),
+        "rydberg_global",
+        "raman_global",
     ],
 )
 def test_effective_size_disjoint(channel_type):
@@ -1197,9 +1194,33 @@ def test_effective_size_disjoint(channel_type):
         "atom2": True,
         "atom3": False,
     }
-    assert sim.get_hamiltonian(0) == 0.5 * amp * sim.build_operator(
-        [(qutip.sigmax(), ["atom3"])]
-    )
+    if channel_type == "mw_global":
+        assert sim.get_hamiltonian(0) == 0.5 * amp * sim.build_operator(
+            [(qutip.sigmax(), ["atom3"])]
+        )
+    else:
+        basis = (
+            "ground-rydberg" if channel_type == "rydberg_global" else "digital"
+        )
+        print(sim.samples["Local"])
+        assert np.array_equal(
+            sim.samples["Local"][basis]["atom1"]["amp"],
+            np.concatenate((rise.amplitude.samples, [0])),
+        )
+        assert np.array_equal(
+            sim.samples["Local"][basis]["atom3"]["amp"],
+            np.concatenate((rise.amplitude.samples, [0])),
+        )
+        # SLM
+        assert np.all(
+            sim.samples["Local"]["ground-rydberg"]["atom1"]["det"]
+            == -10 * np.concatenate((rise.amplitude.samples, [0]))
+        )
+        if channel_type == "raman_global":
+            assert np.all(sim.samples["Local"][basis]["atom1"]["det"] == 0.0)
+        assert np.all(sim.samples["Local"][basis]["atom3"]["det"] == 0.0)
+        for q in ["atom1", "atom3"]:
+            assert np.all(sim.samples["Local"][basis][q]["phase"] == 0.0)
 
 
 def test_simulation_with_modulation(mod_device, reg, patch_plt_show):

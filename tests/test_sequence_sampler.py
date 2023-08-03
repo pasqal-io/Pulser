@@ -25,12 +25,11 @@ import pulser_simulation
 from pulser.channels.dmm import DMM
 from pulser.devices import Device, MockDevice
 from pulser.pulse import Pulse
+from pulser.register.mappable_reg import MappableRegister
+from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sample
 from pulser.sequence._seq_drawer import draw_samples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
-from pulser.register.mappable_reg import MappableRegister
-from pulser.register.register_layout import RegisterLayout
-
 
 # Helpers
 
