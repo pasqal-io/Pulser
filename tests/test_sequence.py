@@ -63,15 +63,6 @@ def device():
     )
 
 
-@pytest.fixture
-def mock_dev_dmm():
-    # Will be replaced by MockDevice once it has a DMM.
-    return dataclasses.replace(
-        MockDevice,
-        dmm_objects=(DMM(),),
-    )
-
-
 def test_init(reg, device):
     with pytest.raises(TypeError, match="must be of type 'BaseDevice'"):
         Sequence(reg, Device)
@@ -134,7 +125,7 @@ def test_channel_declaration(reg, device):
         seq2.declare_channel("ch3", "rydberg_global")
 
 
-def test_dmm_declaration(reg, device, det_map, mock_dev_dmm):
+def test_dmm_declaration(reg, device, det_map):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
@@ -152,7 +143,7 @@ def test_dmm_declaration(reg, device, det_map, mock_dev_dmm):
     )
     assert set(seq.available_channels) == available_channels - chs
 
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     available_channels = set(seq2.available_channels)
     channel_map = {
         "dmm_0": "dmm_0",
@@ -172,7 +163,7 @@ def test_dmm_declaration(reg, device, det_map, mock_dev_dmm):
     with pytest.raises(ValueError, match="type 'Microwave' cannot work "):
         seq2.declare_channel("mw_ch", "mw_global")
 
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
     # DMM channels are still available,
     # but can only be declared using an SLM Mask
@@ -184,7 +175,7 @@ def test_dmm_declaration(reg, device, det_map, mock_dev_dmm):
         seq2.config_detuning_map(det_map, "dmm_0")
 
 
-def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
+def test_slm_declaration(reg, device, det_map):
     # Definining an SLM on a Device
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
@@ -203,7 +194,7 @@ def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
     assert set(seq.available_channels) == available_channels - {"dmm_0"}
 
     # Configuring a DMM after having configured a SLM with the same DMM
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     available_channels = set(seq2.available_channels)
     channel_map = {
         "dmm_0": "dmm_0",
@@ -226,14 +217,14 @@ def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
         seq2.declare_channel("mw_ch", "mw_global")
 
     # Configuring an SLM after having configured a DMM with the same DMM
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     seq2.config_detuning_map(det_map, "dmm_0")
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"])
     # Name of DMM implementing SLM has a suffix
     assert seq2._slm_mask_dmm == "dmm_0_1"
 
     # Configuring a SLM after having declared a microwave channel
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("ch0", "mw_global")
     # DMM channels are still available, but can be configured using an SLM Mask
     assert set(seq2.available_channels) == {"mw_global", "dmm_0"}
@@ -243,7 +234,7 @@ def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
     # Declaring a microwave channel after having configured an SLM
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     available_channels = set(seq2.available_channels)
     seq2.config_slm_mask(["q0", "q1", "q3", "q4"], "dmm_0")
     # If a DMM was declared as an SLM Mask, all channels are still available
@@ -256,7 +247,7 @@ def test_slm_declaration(reg, device, det_map, mock_dev_dmm):
     assert set(seq2.declared_channels.keys()) == {"ch0"}
 
 
-def test_magnetic_field(reg, mock_dev_dmm):
+def test_magnetic_field(reg):
     seq = Sequence(reg, MockDevice)
     with pytest.raises(
         AttributeError,
@@ -283,13 +274,13 @@ def test_magnetic_field(reg, mock_dev_dmm):
         seq2.set_magnetic_field(1.0, 0.0, 0.0)
 
     # Same if a dmm channel was configured
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     seq2.config_detuning_map(det_map, "dmm_0")  # not in XY mode
     with pytest.raises(ValueError, match="can only be set in 'XY Mode'."):
         seq2.set_magnetic_field(1.0, 0.0, 0.0)
 
     # Works if a slm mask was configured
-    seq3 = Sequence(reg, mock_dev_dmm)
+    seq3 = Sequence(reg, MockDevice)
     seq3.config_slm_mask(["q0", "q1"], "dmm_0")
     seq3.set_magnetic_field(1.0, 0.0, 0.0)  # sets seq to XY mode
     # dmm_0 doesn't appear because there can only be one in XY mode
@@ -498,9 +489,7 @@ def test_ising_mode(
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_down(
-    reg, devices, pulses, mappable_reg, parametrized, mock_dev_dmm
-):
+def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
     # Device checkout
     seq = init_seq(
         reg,
@@ -521,7 +510,7 @@ def test_switch_device_down(
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
         reg,
-        mock_dev_dmm,
+        MockDevice,
         "global",
         "rydberg_global",
         None,
@@ -539,7 +528,7 @@ def test_switch_device_down(
 
     seq_ising = init_seq(
         reg,
-        mock_dev_dmm,
+        MockDevice,
         "ising",
         "rydberg_global",
         None,
@@ -549,7 +538,7 @@ def test_switch_device_down(
 
     seq_xy = init_seq(
         reg,
-        mock_dev_dmm,
+        MockDevice,
         "microwave",
         "mw_global",
         None,
@@ -557,7 +546,7 @@ def test_switch_device_down(
         mappable_reg=mappable_reg,
     )
     mod_mock = dataclasses.replace(
-        mock_dev_dmm, rydberg_level=50, interaction_coeff_xy=100.0
+        MockDevice, rydberg_level=50, interaction_coeff_xy=100.0
     )
     for seq, msg in [
         (seq_ising, "Rydberg level"),
@@ -1190,14 +1179,14 @@ def test_config_slm_mask(qubit_ids, device, det_map):
         fail_seq.config_slm_mask({trap_ids[0], trap_ids[2]})
 
 
-def test_slm_mask_in_xy(reg, patch_plt_show, mock_dev_dmm):
+def test_slm_mask_in_xy(reg, patch_plt_show):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
     pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
 
     # Set mask when an XY pulse is already in the schedule
-    seq_xy1 = Sequence(reg, mock_dev_dmm)
+    seq_xy1 = Sequence(reg, MockDevice)
     seq_xy1.declare_channel("ch_xy", "mw_global")
     seq_xy1.add(pulse1, "ch_xy")
     seq_xy1.add(pulse2, "ch_xy")
@@ -1206,7 +1195,7 @@ def test_slm_mask_in_xy(reg, patch_plt_show, mock_dev_dmm):
     assert "dmm_0" not in seq_xy1._schedule
 
     # Set mask and then add an XY pulse to the schedule
-    seq_xy2 = Sequence(reg, mock_dev_dmm)
+    seq_xy2 = Sequence(reg, MockDevice)
     seq_xy2.config_slm_mask(targets)
     seq_xy2.declare_channel("ch_xy", "mw_global")
     seq_xy2.add(pulse1, "ch_xy")
@@ -1219,7 +1208,7 @@ def test_slm_mask_in_xy(reg, patch_plt_show, mock_dev_dmm):
 
     # Check that SLM mask time is updated accordingly if a new pulse with
     # earlier start is added
-    seq_xy3 = Sequence(reg, mock_dev_dmm)
+    seq_xy3 = Sequence(reg, MockDevice)
     seq_xy3.declare_channel("ch_xy1", "mw_global")
     seq_xy3.config_slm_mask(targets)
     seq_xy3.delay(duration=100, channel="ch_xy1")
@@ -1230,7 +1219,7 @@ def test_slm_mask_in_xy(reg, patch_plt_show, mock_dev_dmm):
     assert seq_xy3._slm_mask_time == [0, 100]
 
     # Same as previous check, but mask is added afterwards
-    seq_xy4 = Sequence(reg, mock_dev_dmm)
+    seq_xy4 = Sequence(reg, MockDevice)
     seq_xy4.declare_channel("ch_xy1", "mw_global")
     seq_xy4.delay(duration=100, channel="ch_xy1")
     seq_xy4.add(pulse1, "ch_xy1")
@@ -1240,7 +1229,7 @@ def test_slm_mask_in_xy(reg, patch_plt_show, mock_dev_dmm):
     assert seq_xy4._slm_mask_time == [0, 100]
 
     # Check that paramatrize works with SLM mask
-    seq_xy5 = Sequence(reg, mock_dev_dmm)
+    seq_xy5 = Sequence(reg, MockDevice)
     seq_xy5.declare_channel("ch", "mw_global")
     var = seq_xy5.declare_variable("var")
     seq_xy5.add(Pulse.ConstantPulse(200, var, 0, 0), "ch")
@@ -1254,14 +1243,14 @@ def test_slm_mask_in_xy(reg, patch_plt_show, mock_dev_dmm):
     seq_xy2.draw()
 
 
-def test_slm_mask_in_ising(reg, patch_plt_show, mock_dev_dmm, det_map):
+def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
     pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
 
     # Set mask when ising pulses are already in the schedule
-    seq1 = Sequence(reg, mock_dev_dmm)
+    seq1 = Sequence(reg, MockDevice)
     seq1.declare_channel("ryd_glob", "rydberg_global")
     seq1.config_detuning_map(det_map, "dmm_0")
     seq1.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0")
@@ -1278,7 +1267,7 @@ def test_slm_mask_in_ising(reg, patch_plt_show, mock_dev_dmm, det_map):
     assert seq1._slm_mask_time == [0, 400]
 
     # Set mask and then add ising pulses to the schedule
-    seq2 = Sequence(reg, mock_dev_dmm)
+    seq2 = Sequence(reg, MockDevice)
     seq2.config_slm_mask(targets)
     seq2.declare_channel("ryd_glob", "rydberg_global")
     seq2.config_detuning_map(det_map, "dmm_0")  # configured as dmm_0_1
@@ -1297,24 +1286,23 @@ def test_slm_mask_in_ising(reg, patch_plt_show, mock_dev_dmm, det_map):
     seq2.add(pulse2, "ryd_glob")
     assert seq2._slm_mask_time == [0, 500]
 
-    # TODO: Check that paramatrize works with SLM mask
-    # seq5 = Sequence(reg, mock_dev_dmm)
-    # seq5.declare_channel("ch", "rydberg_global")
-    # var = seq5.declare_variable("var")
-    # seq5.add(Pulse.ConstantPulse(200, var, 0, 0), "ch")
-    # assert seq5.is_parametrized()
-    # seq5.config_slm_mask(targets)
-    # seq5_str = seq5.serialize()
-    # seq5_ = Sequence.deserialize(seq5_str)
-    # assert str(seq5) == str(seq5_)
+    seq5 = Sequence(reg, MockDevice)
+    seq5.declare_channel("ch", "rydberg_global")
+    var = seq5.declare_variable("var")
+    seq5.add(Pulse.ConstantPulse(200, var, 0, 0), "ch")
+    assert seq5.is_parametrized()
+    seq5.config_slm_mask(targets)
+    seq5_str = seq5.serialize()
+    seq5_ = Sequence.deserialize(seq5_str)
+    assert str(seq5) == str(seq5_)
 
 
-def test_draw_register(reg, patch_plt_show, mock_dev_dmm):
+def test_draw_register(reg, patch_plt_show):
     # Draw 2d register from sequence
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
     targets = ["q0", "q2"]
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
-    seq = Sequence(reg, mock_dev_dmm)
+    seq = Sequence(reg, MockDevice)
     seq.declare_channel("ch_xy", "mw_global")
     seq.add(pulse, "ch_xy")
     seq.config_slm_mask(targets)
@@ -1322,7 +1310,7 @@ def test_draw_register(reg, patch_plt_show, mock_dev_dmm):
 
     # Draw 3d register from sequence
     reg3d = Register3D.cubic(3, 8)
-    seq3d = Sequence(reg3d, mock_dev_dmm)
+    seq3d = Sequence(reg3d, MockDevice)
     seq3d.declare_channel("ch_xy", "mw_global")
     seq3d.add(pulse, "ch_xy")
     seq3d.config_slm_mask([6, 15])

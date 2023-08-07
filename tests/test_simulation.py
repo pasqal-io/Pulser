@@ -1088,7 +1088,7 @@ def test_mask_two_pulses_xy():
 def test_mask_local_channel():
     seq_ = Sequence(
         Register.square(2, prefix="q"),
-        replace(MockDevice, dmm_objects=(DMM(),)),
+        MockDevice,
     )
     seq_.declare_channel("rydberg_global", "rydberg_global")
     pulse = Pulse.ConstantPulse(1000, 10, 0, 0)
