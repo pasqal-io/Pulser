@@ -26,6 +26,7 @@ import numpy as np
 from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError
+from pulser.json.utils import stringify_qubit_ids
 
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
@@ -209,6 +210,15 @@ def serialize_abstract_sequence(
                         "target": convert_targets(data["initial_target"]),
                     }
                 )
+        elif call.name == "config_detuning_map":
+            data = get_all_args(("dmm_name", "dmm_id", "detuning_map"), call)
+            if "dmm_channels" not in res:
+                # Adding this field will break backwards compatibility, so
+                # we only add it if necessary
+                res["dmm_channels"] = []
+            res["dmm_channels"].append(
+                [data["dmm_name"], data["detuning_map"]]
+            )
         elif "target" in call.name:
             data = get_all_args(("qubits", "channel"), call)
             if call.name == "target":
@@ -266,7 +276,21 @@ def serialize_abstract_sequence(
         elif call.name == "set_magnetic_field":
             res["magnetic_field"] = seq.magnetic_field.tolist()
         elif call.name == "config_slm_mask":
-            res["slm_mask_targets"] = tuple(seq._slm_mask_targets)
+            data = get_all_args(("qubits", "dmm_id"), call)
+            qubit_ids = stringify_qubit_ids(data["qubits"])
+            if seq._in_xy and data["dmm_id"] == get_kwarg_default(
+                call.name, "dmm_id"
+            ):
+                # Use the old way in XY mode to preserve compatibility
+                res["slm_mask_targets"] = tuple(qubit_ids)
+            else:
+                operations.append(
+                    {
+                        "op": "config_slm_mask",
+                        "qubits": qubit_ids,
+                        "dmm_id": data["dmm_id"],
+                    }
+                )
         elif call.name == "enable_eom_mode":
             data = get_all_args(
                 ("channel", "amp_on", "detuning_on", "optimal_detuning_off"),
@@ -290,6 +314,9 @@ def serialize_abstract_sequence(
             operations.append(
                 {"op": "disable_eom_mode", "channel": data["channel"]}
             )
+        elif call.name == "modulate_det_map":
+            data = get_all_args(("waveform", "dmm_name", "protocol"), call)
+            operations.append({"op": "modulate_det_map", **data})
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

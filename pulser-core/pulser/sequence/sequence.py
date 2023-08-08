@@ -471,10 +471,10 @@ class Sequence(Generic[DeviceType]):
                 for qubit in self.register.qubit_ids
             }
         )
-        self.config_detuning_map(detuning_map, dmm_id)
+        self._config_detuning_map(detuning_map, dmm_id, to_store=False)
         # Find the name of the dmm in the declared channels.
         for key in reversed(self.declared_channels.keys()):
-            if dmm_id in key:
+            if dmm_id == "_".join(key.split("_")[0:2]):
                 self._slm_mask_dmm = key
                 break
         # Modulate the dmm if pulses have already been added to Global Channels
@@ -568,14 +568,15 @@ class Sequence(Generic[DeviceType]):
                 detuning to modulate.
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
-                available (start by "dmm_" ) and the associated description.
+                available (start by "dmm" ) and the associated description.
         """
-        self._config_detuning_map(detuning_map, dmm_id)
+        self._config_detuning_map(detuning_map, dmm_id, to_store=True)
 
     def _config_detuning_map(
         self,
         detuning_map: DetuningMap,
         dmm_id: str,
+        to_store: bool = True,
     ) -> None:
         if dmm_id not in self._device.dmm_channels:
             raise ValueError(f"No DMM {dmm_id} in the device.")
@@ -611,9 +612,12 @@ class Sequence(Generic[DeviceType]):
         # DMM has Global addressing
         self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
         # Manually store the channel declaration as a regular call
-        self._calls.append(
-            _Call("config_detuning_map", (dmm_name, dmm_id, detuning_map), {})
-        )
+        if to_store:
+            self._calls.append(
+                _Call(
+                    "config_detuning_map", (dmm_name, dmm_id, detuning_map), {}
+                )
+            )
 
     def switch_device(
         self, new_device: DeviceType, strict: bool = False

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from collections import Counter
-from dataclasses import replace
 from unittest.mock import patch
 
 import numpy as np
@@ -21,15 +20,11 @@ import pytest
 import qutip
 
 from pulser import Pulse, Register, Sequence
-from pulser.channels.dmm import DMM
 from pulser.devices import Chadoq2, IroiseMVP, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
 from pulser_simulation import QutipEmulator, SimConfig, Simulation
-
-assert not MockDevice.dmm_objects, "Delete the next line"
-MockDevice = replace(MockDevice, dmm_objects=(DMM(),))
 
 
 @pytest.fixture
@@ -1093,7 +1088,7 @@ def test_mask_two_pulses_xy():
 def test_mask_local_channel():
     seq_ = Sequence(
         Register.square(2, prefix="q"),
-        replace(MockDevice, dmm_objects=(DMM(),)),
+        MockDevice,
     )
     seq_.declare_channel("rydberg_global", "rydberg_global")
     pulse = Pulse.ConstantPulse(1000, 10, 0, 0)

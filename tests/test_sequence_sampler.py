@@ -286,7 +286,7 @@ def test_seq_with_DMM_and_map_reg():
     reg = MappableRegister(
         RegisterLayout([[-4, 0], [4, 0], [0, -4], [0, 4]]), *["q0", "q1"]
     )
-    seq = pulser.Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
+    seq = pulser.Sequence(reg, MockDevice)
     seq.config_detuning_map(
         reg.define_detuning_map({i: 0.25 for i in range(4)}), "dmm_0"
     )
@@ -365,7 +365,6 @@ def test_SLM_samples():
     )
 
     got = sample(seq).to_nested_dict()
-    print(got)
     assert_nested_dict_equality(got, want)
 
 

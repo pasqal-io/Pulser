@@ -125,7 +125,7 @@ class TestDetuningMap:
         )
 
         # And they have the same type, so they should be equal
-        assert type(det_map) == type(det_map2)
+        assert type(det_map) is type(det_map2)
         assert det_map == det_map2
 
         # This means their static hashes and reprs match

@@ -27,7 +27,6 @@ import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.channels import Rydberg
-from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import AnalogDevice, Chadoq2, Device, IroiseMVP, MockDevice
 from pulser.json.abstract_repr.deserializer import (
@@ -235,46 +234,6 @@ class TestDevice:
         )
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
-
-    @pytest.fixture
-    def chadoq2_with_dmm(self):
-        # TODO: Delete once Chadoq2 actually has a DMM
-        dmm = DMM(
-            bottom_detuning=-1,
-            clock_period=1,
-            min_duration=1,
-            max_duration=1e6,
-            mod_bandwidth=20,
-        )
-        return replace(Chadoq2, dmm_objects=(dmm,))
-
-    @pytest.mark.xfail(
-        raises=jsonschema.exceptions.ValidationError, strict=True
-    )
-    def test_abstract_repr_dmm_serialize(self, chadoq2_with_dmm):
-        chadoq2_with_dmm.to_abstract_repr()
-
-    @pytest.mark.xfail(raises=DeserializeDeviceError, strict=True)
-    @pytest.mark.parametrize(
-        "skip_validation",
-        [
-            False,  # Fails validation
-            True,  # Fails because the DMM channel is deserialized as Rydberg
-        ],
-    )
-    def test_abstract_repr_dmm_deserialize(
-        self, chadoq2_with_dmm, monkeypatch, skip_validation
-    ):
-        ser_device = json.dumps(chadoq2_with_dmm, cls=AbstractReprEncoder)
-        if skip_validation:
-
-            def dummy(*args, **kwargs):
-                return True
-
-            # Patches jsonschema.validate with a function that returns True
-            monkeypatch.setattr(jsonschema, "validate", dummy)
-        device = deserialize_device(ser_device)
-        assert device == chadoq2_with_dmm
 
 
 def validate_schema(instance):
@@ -669,12 +628,11 @@ class TestSerialization:
 
             ParamObj(Foo, "bar")._to_abstract_repr()
 
-    @pytest.mark.xfail
     def test_mw_sequence(self, triangular_lattice):
         mag_field = [-10, 40, 0]
         mask = {"q0", "q2", "q4"}
         reg = triangular_lattice.hexagonal_register(5)
-        seq = Sequence(reg, replace(MockDevice, dmm_objects=(DMM(),)))
+        seq = Sequence(reg, MockDevice)
         seq.declare_channel("mw_ch", "mw_global")
         seq.set_magnetic_field(*mag_field)
         seq.config_slm_mask(mask)
@@ -694,6 +652,8 @@ class TestSerialization:
         assert abstract["magnetic_field"] == mag_field
         assert abstract["slm_mask_targets"] == list(mask)
         assert abstract["measurement"] == "XY"
+        assert "dmm_channels" not in abstract
+        assert "config_slm_mask" not in abstract["operations"]
 
     def test_mappable_register(self, triangular_lattice):
         reg = triangular_lattice.make_mappable_register(2)
@@ -836,6 +796,59 @@ class TestSerialization:
         seq.declare_channel("raman_local", "raman_local")
         getattr(seq, op)(*args)
         seq.to_abstract_repr()
+
+    @pytest.mark.parametrize("is_empty", [True, False])
+    def test_dmm_slm_mask(self, triangular_lattice, is_empty):
+        mask = {"q0", "q2", "q4", "q5"}
+        dmm = {"q0": 0.2, "q1": 0.3, "q2": 0.4, "q3": 0.1}
+        reg = triangular_lattice.rectangular_register(3, 4)
+        seq = Sequence(reg, MockDevice)
+        seq.config_slm_mask(mask, "dmm_0")
+        if not is_empty:
+            seq.config_detuning_map(
+                reg.define_detuning_map(dmm, "det_map"), "dmm_0"
+            )
+            seq.modulate_det_map(ConstantWaveform(100, -10), "dmm_0_1")
+            seq.declare_channel("rydberg_global", "rydberg_global")
+            seq.add(Pulse.ConstantPulse(100, 10, 0, 0), "rydberg_global")
+
+        abstract = json.loads(seq.to_abstract_repr())
+        validate_schema(abstract)
+        assert abstract["register"] == [
+            {"name": str(qid), "x": c[0], "y": c[1]}
+            for qid, c in reg.qubits.items()
+        ]
+        assert abstract["layout"] == {
+            "coordinates": triangular_lattice.coords.tolist(),
+            "slug": triangular_lattice.slug,
+        }
+
+        assert "slm_mask_targets" not in abstract  # only in xy
+        assert len(abstract["operations"]) == 1 if is_empty else 3
+
+        assert abstract["operations"][0]["op"] == "config_slm_mask"
+        assert abstract["operations"][0]["qubits"] == list(mask)
+        assert abstract["operations"][0]["dmm_id"] == "dmm_0"
+
+        if not is_empty:
+            assert abstract["channels"] == {"rydberg_global": "rydberg_global"}
+
+            assert abstract["dmm_channels"][0][0] == "dmm_0_1"
+            assert abstract["dmm_channels"][0][1]["traps"] == [
+                {
+                    "weight": weight,
+                    "x": reg._coords[i][0],
+                    "y": reg._coords[i][1],
+                }
+                for i, weight in enumerate(list(dmm.values()))
+            ]
+            assert abstract["dmm_channels"][0][1]["slug"] == "det_map"
+
+            assert abstract["operations"][1]["op"] == "modulate_det_map"
+            assert abstract["operations"][1]["dmm_name"] == "dmm_0_1"
+
+            assert abstract["operations"][2]["op"] == "pulse"
+            assert abstract["operations"][2]["channel"] == "rydberg_global"
 
 
 def _get_serialized_seq(
@@ -987,23 +1000,86 @@ class TestDeserialization:
         assert seq._register.qubit_ids == tuple(qids)
         assert seq._register.layout == RegisterLayout(layout_coords)
 
-    @pytest.mark.xfail
     def test_deserialize_seq_with_slm_mask(self):
         s = _get_serialized_seq(
-            slm_mask_targets=["q0"],
-            variables={},
+            [{"op": "config_slm_mask", "qubits": ["q0"], "dmm_id": "dmm_0"}],
             **{
-                "dmm_channels": {"dmm_0": "dmm_0"},
-                "device": json.loads(
-                    replace(
-                        Chadoq2, dmm_objects=(DMM(bottom_detuning=-100),)
-                    ).to_abstract_repr()
-                ),
+                "device": json.loads(MockDevice.to_abstract_repr()),
+                "channels": {},
             },
         )
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
         assert seq._slm_mask_targets == {"q0"}
+        assert not seq._in_xy and not seq._in_ising
+
+    def test_deserialize_seq_with_slm_mask_xy(self):
+        mag_field = [0.0, -10.0, 30.0]
+        s = _get_serialized_seq(
+            channels={},
+            magnetic_field=mag_field,
+            slm_mask_targets=["q0"],
+            device=json.loads(MockDevice.to_abstract_repr()),
+        )
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert seq._slm_mask_targets == {"q0"}
+        assert seq._in_xy
+
+    def test_deserialize_seq_with_slm_dmm(self):
+        op = [
+            {
+                "op": "config_slm_mask",
+                "qubits": [
+                    "q0",
+                ],
+                "dmm_id": "dmm_0",
+            },
+            {
+                "op": "modulate_det_map",
+                "protocol": "no-delay",
+                "waveform": {
+                    "kind": "constant",
+                    "duration": 100,
+                    "value": -10.0,
+                },
+                "dmm_name": "dmm_0_2",
+            },
+            {
+                "op": "pulse",
+                "channel": "global",
+                "protocol": "min-delay",
+                "amplitude": {
+                    "kind": "constant",
+                    "duration": 100,
+                    "value": 10.0,
+                },
+                "detuning": {
+                    "kind": "constant",
+                    "duration": 100,
+                    "value": 0.0,
+                },
+                "phase": 0.0,
+                "post_phase_shift": 0.0,
+            },
+        ]
+        traps = [
+            {"weight": 0.5, "x": -2.0, "y": 9.0},
+            {"weight": 0.5, "x": 0.0, "y": 2.0},
+            {"weight": 0, "x": 12.0, "y": 0.0},
+        ]
+        kwargs = {
+            "device": json.loads(MockDevice.to_abstract_repr()),
+            "dmm_channels": [
+                ["dmm_0", {"traps": traps}],
+                ["dmm_0_2", {"traps": traps, "slug": "det_map"}],
+            ],
+        }
+        s = _get_serialized_seq(op, **kwargs)
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert seq._slm_mask_targets == {"q0"}
+        assert not seq._in_xy and seq._in_ising
 
     def test_deserialize_seq_with_mag_field(self):
         mag_field = [10.0, -43.2, 0.0]

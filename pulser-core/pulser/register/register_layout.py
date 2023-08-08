@@ -100,7 +100,9 @@ class RegisterLayout(Traps, RegDrawer):
         return reg
 
     def define_detuning_map(
-        self, detuning_weights: Mapping[int, float]
+        self,
+        detuning_weights: Mapping[int, float],
+        slug: str | None = None,
     ) -> DetuningMap:
         """Defines a DetuningMap for some trap ids of the register layout.
 
@@ -121,6 +123,7 @@ class RegisterLayout(Traps, RegDrawer):
         return DetuningMap(
             itemgetter(*detuning_weights.keys())(self.traps_dict),
             list(detuning_weights.values()),
+            slug,
         )
 
     def draw(
