@@ -568,7 +568,7 @@ class Sequence(Generic[DeviceType]):
                 detuning to modulate.
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
-                available (start by "dmm_" ) and the associated description.
+                available (start by "dmm" ) and the associated description.
         """
         self._config_detuning_map(detuning_map, dmm_id, to_store=True)
 
