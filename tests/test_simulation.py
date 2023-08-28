@@ -1111,15 +1111,21 @@ def test_mask_local_channel():
         np.concatenate((pulse.detuning.samples, [0])),
     )
     assert np.all(sim.samples["Global"]["ground-rydberg"]["phase"] == 0.0)
+    qubits = ["q0", "q1", "q2", "q3"]
     masked_qubits = ["q0", "q3"]
-    for q in masked_qubits:
+    for q in qubits:
+        if q in masked_qubits:
+            assert np.array_equal(
+                sim.samples["Local"]["ground-rydberg"][q]["det"],
+                np.concatenate(
+                    (-10 / len(masked_qubits) * pulse.amplitude.samples, [0])
+                ),
+            )
+        else:
+            assert np.all(
+                sim.samples["Local"]["ground-rydberg"][q]["det"] == 0.0
+            )
         assert np.all(sim.samples["Local"]["ground-rydberg"][q]["amp"] == 0.0)
-        assert np.array_equal(
-            sim.samples["Local"]["ground-rydberg"][q]["det"],
-            np.concatenate(
-                (-10 / len(masked_qubits) * pulse.amplitude.samples, [0])
-            ),
-        )
         assert np.all(
             sim.samples["Local"]["ground-rydberg"][q]["phase"] == 0.0
         )
@@ -1197,7 +1203,6 @@ def test_effective_size_disjoint(channel_type):
         basis = (
             "ground-rydberg" if channel_type == "rydberg_global" else "digital"
         )
-        print(sim.samples["Local"])
         assert np.array_equal(
             sim.samples["Local"][basis]["atom1"]["amp"],
             np.concatenate((rise.amplitude.samples, [0])),
