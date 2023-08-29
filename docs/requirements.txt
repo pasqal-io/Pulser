@@ -1,5 +1,5 @@
 # For generating documentation.
-Sphinx
+Sphinx < 7
 sphinx-rtd-theme # documentation theme
 sphinx_autodoc_typehints == 1.21.3
 nbsphinx
