@@ -360,8 +360,9 @@ def test_results_xy(reg, pi_pulse):
     assert results_._size == 2
     assert results_._basis_name == "XY"
     assert results_._meas_basis == "XY"
+    # Checks the initial state
     assert results_.states[0] == qutip.tensor(
-        [qutip.basis(2, 1), qutip.basis(2, 1)]
+        [qutip.basis(2, 0), qutip.basis(2, 0)]
     )
 
     with pytest.raises(TypeError, match="Can't reduce a system in"):
