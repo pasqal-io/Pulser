@@ -38,7 +38,7 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
-from pulser.json.abstract_repr.validation import RESOLVER
+from pulser.json.abstract_repr.validation import REGISTRY
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
@@ -282,7 +282,7 @@ def validate_schema(instance):
         "pulser-core/pulser/json/abstract_repr/schemas/" "sequence-schema.json"
     ) as f:
         schema = json.load(f)
-    jsonschema.validate(instance=instance, schema=schema, resolver=RESOLVER)
+    jsonschema.validate(instance=instance, schema=schema, registry=REGISTRY)
 
 
 class TestSerialization:
