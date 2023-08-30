@@ -70,6 +70,40 @@ Note that the atoms may be labelled arbitrarily without any inherent order, it's
 order with which they are stored in the ``Register`` (as returned by 
 ``Register.qubit_ids``) that matters .
 
+State Preparation and Measurement
+####################################
+
+.. list-table:: Initial State and Measurement Conventions
+   :align: center
+   :widths: 60 40 75
+   :header-rows: 1
+
+   * - Basis
+     - Initial state
+     - Measurement
+   * - ``ground-rydberg``
+     - :math:`|g\rangle`
+     - :math:`|r\rangle \rightarrow 1;~|g\rangle,|h\rangle \rightarrow 0`
+   * - ``digital``
+     - :math:`|g\rangle`
+     - :math:`|h\rangle \rightarrow 1;~|g\rangle,|r\rangle \rightarrow 0`
+   * - ``XY``
+     - :math:`|0\rangle`
+     - :math:`|1\rangle \rightarrow 1;~|0\rangle \rightarrow 0`
+
+Measurement samples order
+***************************
+
+Measurement samples are returned as a sequence of 0s and 1s, in
+the same order as the atoms in the ``Register`` and in the multi-partite state.
+
+For example, a four-qutrit state :math:`|q_0, q_1, q_2, q_3\rangle` that's
+projected onto :math:`|g, r, h, r\rangle` when measured will record a count to
+sample
+
+* ``0101``, if measured in the ``ground-rydberg`` basis
+* ``0010``, if measured in the ``digital`` basis
+
 Hamiltonians
 ####################################
 
@@ -188,37 +222,3 @@ and
 
 **Note**: The definitions given for both interaction Hamiltonians are independent
 of the chosen state vector convention.
-
-State Preparation and Measurement
-####################################
-
-.. list-table:: Initial State and Measurement Conventions
-   :align: center
-   :widths: 60 40 75
-   :header-rows: 1
-
-   * - Basis
-     - Initial state
-     - Measurement
-   * - ``ground-rydberg``
-     - :math:`|g\rangle`
-     - :math:`|r\rangle \rightarrow 1;~|g\rangle,|h\rangle \rightarrow 0`
-   * - ``digital``
-     - :math:`|g\rangle`
-     - :math:`|h\rangle \rightarrow 1;~|g\rangle,|r\rangle \rightarrow 0`
-   * - ``XY``
-     - :math:`|0\rangle`
-     - :math:`|1\rangle \rightarrow 1;~|0\rangle \rightarrow 0`
-
-Measurement samples order
-***************************
-
-Measurement samples are returned as a sequence of 0s and 1s, in
-the same order as the atoms in the ``Register`` and in the multi-partite state.
-
-For example, a four-qutrit state :math:`|q_0, q_1, q_2, q_3\rangle` that's
-projected onto :math:`|g, r, h, r\rangle` when measured will record a count to
-sample
-
-* ``0101``, if measured in the ``ground-rydberg`` basis
-* ``0010``, if measured in the ``digital`` basis
