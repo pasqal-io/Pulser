@@ -180,6 +180,15 @@ def serialize_abstract_sequence(
         }
         return {**default_values, **params}
 
+    def remove_kwarg_if_default(
+        data: dict[str, Any], call_name: str, kwarg_name: str
+    ) -> dict[str, Any]:
+        if data.get(kwarg_name, None) == get_kwarg_default(
+            call_name, kwarg_name
+        ):
+            data.pop(kwarg_name, None)
+        return data
+
     operations = res["operations"]
     for call in chain(seq._calls, seq._to_build_calls):
         if call.name == "__init__":
@@ -269,8 +278,17 @@ def serialize_abstract_sequence(
             res["slm_mask_targets"] = tuple(seq._slm_mask_targets)
         elif call.name == "enable_eom_mode":
             data = get_all_args(
-                ("channel", "amp_on", "detuning_on", "optimal_detuning_off"),
+                (
+                    "channel",
+                    "amp_on",
+                    "detuning_on",
+                    "optimal_detuning_off",
+                    "correct_phase_drift",
+                ),
                 call,
+            )
+            data = remove_kwarg_if_default(
+                data, call.name, "correct_phase_drift"
             )
             operations.append({"op": "enable_eom_mode", **data})
         elif call.name == "add_eom_pulse":
@@ -281,15 +299,20 @@ def serialize_abstract_sequence(
                     "phase",
                     "post_phase_shift",
                     "protocol",
+                    "correct_phase_drift",
                 ),
                 call,
             )
+            data = remove_kwarg_if_default(
+                data, call.name, "correct_phase_drift"
+            )
             operations.append({"op": "add_eom_pulse", **data})
         elif call.name == "disable_eom_mode":
-            data = get_all_args(("channel",), call)
-            operations.append(
-                {"op": "disable_eom_mode", "channel": data["channel"]}
+            data = get_all_args(("channel", "correct_phase_drift"), call)
+            data = remove_kwarg_if_default(
+                data, call.name, "correct_phase_drift"
             )
+            operations.append({"op": "disable_eom_mode", **data})
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

@@ -16,12 +16,12 @@ import json
 from typing import Literal
 
 import jsonschema
+from referencing import Registry, Resource
 
-from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
+from pulser.json.abstract_repr import SCHEMAS
 
-RESOLVER = jsonschema.validators.RefResolver(
-    base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
-    referrer=SCHEMAS["sequence"],
+REGISTRY: Registry = Registry().with_resources(
+    [("device-schema.json", Resource.from_contents(SCHEMAS["device"]))]
 )
 
 
@@ -37,5 +37,5 @@ def validate_abstract_repr(
     obj = json.loads(obj_str)
     validate_args = dict(instance=obj, schema=SCHEMAS[name])
     if name == "sequence":
-        validate_args["resolver"] = RESOLVER
+        validate_args["registry"] = REGISTRY
     jsonschema.validate(**validate_args)

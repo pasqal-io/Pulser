@@ -449,6 +449,10 @@
           "$ref": "#/definitions/ChannelName",
           "description": "The name of the channel to take out of EOM mode."
         },
+        "correct_phase_drift": {
+          "description": "Performs a phase shift to correct for the phase drift that occured since the last pulse (or the start of the EOM mode, if no pulse was added).",
+          "type": "boolean"
+        },
         "op": {
           "const": "disable_eom_mode",
           "type": "string"
@@ -466,6 +470,10 @@
         "channel": {
           "$ref": "#/definitions/ChannelName",
           "description": "The name of the channel to add the pulse to."
+        },
+        "correct_phase_drift": {
+          "description": "Performs a phase shift to correct for the phase drift that occured since the last pulse (or the start of the EOM mode, if adding the first pulse).",
+          "type": "boolean"
         },
         "duration": {
           "$ref": "#/definitions/ParametrizedNum",
@@ -513,6 +521,10 @@
         "channel": {
           "$ref": "#/definitions/ChannelName",
           "description": "The name of the channel to put in EOM mode."
+        },
+        "correct_phase_drift": {
+          "description": "Performs a phase shift to correct for the phase drift incurred while turning on the EOM mode.",
+          "type": "boolean"
         },
         "detuning_on": {
           "$ref": "#/definitions/ParametrizedNum",
