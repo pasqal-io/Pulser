@@ -418,6 +418,29 @@
       ],
       "type": "object"
     },
+    "OpConfigDetMap": {
+      "additionalProperties": false,
+      "properties": {
+        "detuning_map": {
+          "$ref": "#/definitions/WeightMap",
+          "description": "DetuningMap to associate with the DMM channel."
+        },
+        "dmm_id": {
+          "$ref": "#/definitions/ChannelId",
+          "description": "ID of the DMM channel to configure."
+        },
+        "op": {
+          "const": "config_detuning_map",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "detuning_map",
+        "dmm_id"
+      ],
+      "type": "object"
+    },
     "OpConfigSLM": {
       "additionalProperties": false,
       "properties": {
@@ -742,6 +765,9 @@
           "$ref": "#/definitions/OpConfigSLM"
         },
         {
+          "$ref": "#/definitions/OpConfigDetMap"
+        },
+        {
           "$ref": "#/definitions/OpModDetMap"
         }
       ],
@@ -800,23 +826,6 @@
                 }
               ],
               "description": "A valid device in which to execute the Sequence"
-            },
-            "dmm_channels": {
-              "description": "DMM channels declared in this Sequence.",
-              "items": {
-                "items": [
-                  {
-                    "$ref": "#/definitions/ChannelId"
-                  },
-                  {
-                    "$ref": "#/definitions/WeightMap"
-                  }
-                ],
-                "maxItems": 2,
-                "minItems": 2,
-                "type": "array"
-              },
-              "type": "array"
             },
             "layout": {
               "$ref": "#/definitions/Layout",
@@ -914,23 +923,6 @@
                 }
               ],
               "description": "A valid device in which to execute the Sequence"
-            },
-            "dmm_channels": {
-              "description": "DMM channels declared in this Sequence.",
-              "items": {
-                "items": [
-                  {
-                    "$ref": "#/definitions/ChannelId"
-                  },
-                  {
-                    "$ref": "#/definitions/WeightMap"
-                  }
-                ],
-                "maxItems": 2,
-                "minItems": 2,
-                "type": "array"
-              },
-              "type": "array"
             },
             "layout": {
               "$ref": "#/definitions/Layout",

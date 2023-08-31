@@ -813,13 +813,16 @@ def test_switch_device_up(
                 # modulates detuning map on trap ids 0, 1, 3, 4
                 mod_trap_ids = [20, 32, 54, 66]
                 assert np.all(
-                    nested_s1_loc[key][:100] == (-2.5 if trap_id in mod_trap_ids else 0)
+                    nested_s1_loc[key][:100]
+                    == (-2.5 if trap_id in mod_trap_ids else 0)
                 )
                 assert np.all(
-                    nested_s2_loc[key][:100] == (-2.5 if trap_id in mod_trap_ids else 0)
+                    nested_s2_loc[key][:100]
+                    == (-2.5 if trap_id in mod_trap_ids else 0)
                 )
                 assert np.all(
-                    nested_s3_loc[key][:100] == (-2.5 if trap_id in mod_trap_ids else 0)
+                    nested_s3_loc[key][:100]
+                    == (-2.5 if trap_id in mod_trap_ids else 0)
                 )
             else:
                 # first pulse is covered by SLM Mask
