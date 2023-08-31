@@ -47,9 +47,9 @@ Qubit states
 **************
 
 .. warning:: 
-  There is no implicit relationship between the state vector of a state and its associated
-  measurement value. To see the measurement value of a state for each measurement basis,
-  see :ref:`SPAM` .
+  There is no implicit relationship between a state's vector representation and its 
+  associated measurement value. To see the measurement value of a state for each 
+  measurement basis, see :ref:`SPAM` .
 
 When using only the ``ground-rydberg`` or ``digital`` basis, the qutrit state is not
 needed and is thus reduced to a qubit state. This reduction is made simply by tracing-out
