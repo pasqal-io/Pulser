@@ -46,6 +46,11 @@ The qutrit state's basis vectors are defined as:
 Qubit states
 **************
 
+.. warning:: 
+  There is no implicit relationship between the state vector of a state and its associated
+  measurement value. To see the measurement value of a state for each measurement basis,
+  see :ref:`SPAM` .
+
 When using only the ``ground-rydberg`` or ``digital`` basis, the qutrit state is not
 needed and is thus reduced to a qubit state. This reduction is made simply by tracing-out
 the extra basis state, so we obtain
@@ -66,9 +71,12 @@ For a register with ordered atoms ``(q0, q1, q2, ..., qn)``, the full quantum st
 
 .. math:: |q_0, q_1, q_2, ...\rangle = |q_0\rangle \otimes |q_1\rangle \otimes |q_2\rangle \otimes ... \otimes |q_n\rangle
 
-Note that the atoms may be labelled arbitrarily without any inherent order, it's only the
-order with which they are stored in the ``Register`` (as returned by 
-``Register.qubit_ids``) that matters .
+.. note::
+  The atoms may be labelled arbitrarily without any inherent order, it's only the
+  order with which they are stored in the ``Register`` (as returned by 
+  ``Register.qubit_ids``) that matters .
+
+.. _SPAM:
 
 State Preparation and Measurement
 ####################################
@@ -127,8 +135,9 @@ Rabi frequency :math:`\Omega(t)`, detuning :math:`\delta(t)` and phase :math:`\p
 
 .. math:: H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
 
-In this form, it is **independent of the state vector representation of each basis state**,
-but it still assumes that :math:`|b\rangle` **has a higher energy than** :math:`|a\rangle`.
+.. warning::
+  In this form, the Hamiltonian is **independent of the state vector representation of each basis state**,
+  but it still assumes that :math:`|b\rangle` **has a higher energy than** :math:`|a\rangle`.
 
 
 Pauli matrix form
@@ -188,12 +197,13 @@ as rewriten below with highlighted differences.
   \mathbf{+\frac{\Omega(t)}{2}} \sin(\phi(t)) \hat{\sigma}^y 
   - \delta(t) \hat{n}
 
-A common case for the use of this alternative definition arises when
-trying to reconcile the  basis states of the ``ground-rydberg`` basis 
-(where :math:`|r\rangle` is the higher energy level) with the 
-computational-basis state-vector convention, thus ending up with 
+.. note::
+  A common case for the use of this alternative definition arises when
+  trying to reconcile the  basis states of the ``ground-rydberg`` basis 
+  (where :math:`|r\rangle` is the higher energy level) with the 
+  computational-basis state-vector convention, thus ending up with 
 
-.. math:: |0\rangle = |g\rangle = |a\rangle = (1, 0)^T,~~|1\rangle = |r\rangle = |b\rangle = (0, 1)^T
+  .. math:: |0\rangle = |g\rangle = |a\rangle = (1, 0)^T,~~|1\rangle = |r\rangle = |b\rangle = (0, 1)^T
 
 
 Interaction Hamiltonian
@@ -220,5 +230,4 @@ and
 
 .. math:: \hat{\sigma}_i^{+} =  |1\rangle\langle 0|_i,~~~\hat{\sigma}_i^{-} =  |0\rangle\langle 1|_i
 
-**Note**: The definitions given for both interaction Hamiltonians are independent
-of the chosen state vector convention.
+.. note:: The definitions given for both interaction Hamiltonians are independent of the chosen state vector convention.
