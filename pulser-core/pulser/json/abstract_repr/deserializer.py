@@ -264,6 +264,7 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             optimal_detuning_off=_deserialize_parameter(
                 op["optimal_detuning_off"], vars
             ),
+            correct_phase_drift=op.get("correct_phase_drift", False),
         )
     elif op["op"] == "add_eom_pulse":
         seq.add_eom_pulse(
@@ -274,9 +275,13 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
                 op["post_phase_shift"], vars
             ),
             protocol=op["protocol"],
+            correct_phase_drift=op.get("correct_phase_drift", False),
         )
     elif op["op"] == "disable_eom_mode":
-        seq.disable_eom_mode(channel=op["channel"])
+        seq.disable_eom_mode(
+            channel=op["channel"],
+            correct_phase_drift=op.get("correct_phase_drift", False),
+        )
     elif op["op"] == "modulate_det_map":
         seq.modulate_det_map(
             waveform=_deserialize_waveform(op["waveform"], vars),
