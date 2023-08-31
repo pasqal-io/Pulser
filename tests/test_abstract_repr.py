@@ -846,7 +846,7 @@ class TestSerialization:
         }
 
         assert "slm_mask_targets" not in abstract  # only in xy
-        assert len(abstract["operations"]) == 1 if is_empty else 3
+        assert len(abstract["operations"]) == 1 if is_empty else 4
 
         assert abstract["operations"][0]["op"] == "config_slm_mask"
         assert abstract["operations"][0]["qubits"] == list(mask)
@@ -855,8 +855,9 @@ class TestSerialization:
         if not is_empty:
             assert abstract["channels"] == {"rydberg_global": "rydberg_global"}
 
-            assert abstract["dmm_channels"][0][0] == "dmm_0_1"
-            assert abstract["dmm_channels"][0][1]["traps"] == [
+            assert abstract["operations"][1]["op"] == "config_detuning_map"
+            assert abstract["operations"][1]["dmm_id"] == "dmm_0"
+            assert abstract["operations"][1]["detuning_map"]["traps"] == [
                 {
                     "weight": weight,
                     "x": reg._coords[i][0],
@@ -864,13 +865,15 @@ class TestSerialization:
                 }
                 for i, weight in enumerate(list(dmm.values()))
             ]
-            assert abstract["dmm_channels"][0][1]["slug"] == "det_map"
+            assert (
+                abstract["operations"][1]["detuning_map"]["slug"] == "det_map"
+            )
 
-            assert abstract["operations"][1]["op"] == "modulate_det_map"
-            assert abstract["operations"][1]["dmm_name"] == "dmm_0_1"
+            assert abstract["operations"][2]["op"] == "modulate_det_map"
+            assert abstract["operations"][2]["dmm_name"] == "dmm_0_1"
 
-            assert abstract["operations"][2]["op"] == "pulse"
-            assert abstract["operations"][2]["channel"] == "rydberg_global"
+            assert abstract["operations"][3]["op"] == "pulse"
+            assert abstract["operations"][3]["channel"] == "rydberg_global"
 
 
 def _get_serialized_seq(
@@ -1053,12 +1056,27 @@ class TestDeserialization:
         assert seq._in_xy
 
     def test_deserialize_seq_with_slm_dmm(self):
+        traps = [
+            {"weight": 0.5, "x": -2.0, "y": 9.0},
+            {"weight": 0.5, "x": 0.0, "y": 2.0},
+            {"weight": 0, "x": 12.0, "y": 0.0},
+        ]
         op = [
+            {
+                "op": "config_detuning_map",
+                "detuning_map": {"traps": traps},
+                "dmm_id": "dmm_0",
+            },
             {
                 "op": "config_slm_mask",
                 "qubits": [
                     "q0",
                 ],
+                "dmm_id": "dmm_0",
+            },
+            {
+                "op": "config_detuning_map",
+                "detuning_map": {"traps": traps, "slug": "det_map"},
                 "dmm_id": "dmm_0",
             },
             {
@@ -1089,22 +1107,18 @@ class TestDeserialization:
                 "post_phase_shift": 0.0,
             },
         ]
-        traps = [
-            {"weight": 0.5, "x": -2.0, "y": 9.0},
-            {"weight": 0.5, "x": 0.0, "y": 2.0},
-            {"weight": 0, "x": 12.0, "y": 0.0},
-        ]
-        kwargs = {
-            "device": json.loads(MockDevice.to_abstract_repr()),
-            "dmm_channels": [
-                ["dmm_0", {"traps": traps}],
-                ["dmm_0_2", {"traps": traps, "slug": "det_map"}],
-            ],
-        }
+        kwargs = {"device": json.loads(MockDevice.to_abstract_repr())}
         s = _get_serialized_seq(op, **kwargs)
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
         assert seq._slm_mask_targets == {"q0"}
+        assert seq.declared_channels.keys() == {
+            "digital",
+            "global",
+            "dmm_0",
+            "dmm_0_1",
+            "dmm_0_2",
+        }
         assert not seq._in_xy and seq._in_ising
 
     def test_deserialize_seq_with_mag_field(self):
