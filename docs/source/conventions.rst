@@ -193,14 +193,14 @@ as rewriten below with highlighted differences.
 .. math::
 
   \hat{\sigma}^x = |a\rangle\langle b| + |b\rangle\langle a|, \\
-  \hat{\sigma}^y = \color{red}{-}i|a\rangle\langle b| \color{red}{+}i|b\rangle\langle a|, \\
-  \hat{\sigma}^z = \color{red}{-}|b\rangle\langle b| \color{red}{+} |a\rangle\langle a|  \\
-  \hat{n} = |b\rangle\langle b| = (1 \color{red}{-} \sigma_z) / 2 
+  \hat{\sigma}^y = \textcolor{red}{-}i|a\rangle\langle b| \textcolor{red}{+}i|b\rangle\langle a|, \\
+  \hat{\sigma}^z = \textcolor{red}{-}|b\rangle\langle b| \textcolor{red}{+} |a\rangle\langle a|  \\
+  \hat{n} = |b\rangle\langle b| = (1 \textcolor{red}{-} \sigma_z) / 2 
 
 .. math:: 
   
   H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos(\phi(t)) \hat{\sigma}^x 
-  \color{red}{+}\frac{\Omega(t)}{2} \sin(\phi(t)) \hat{\sigma}^y 
+  \textcolor{red}{+}\frac{\Omega(t)}{2} \sin(\phi(t)) \hat{\sigma}^y 
   - \delta(t) \hat{n}
 
 .. note::
