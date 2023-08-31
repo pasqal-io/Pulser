@@ -124,7 +124,7 @@ Hamiltonians
 Independently of the mode of operation, the Hamiltonian describing the system
 can be written as
 
-.. math:: H(t) = \sum_i \left (H^D_i(t) + \sum_{i<j}H^\text{int}_{ij} \right), 
+.. math:: H(t) = \sum_i \left (H^D_i(t) + \sum_{j<i}H^\text{int}_{ij} \right), 
 
 where :math:`H^D_i` is the driving Hamiltonian for atom :math:`i` and
 :math:`H^\text{int}_{ij}` is the interaction Hamiltonian between atoms :math:`i`
