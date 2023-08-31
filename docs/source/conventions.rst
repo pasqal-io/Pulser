@@ -91,13 +91,19 @@ State Preparation and Measurement
      - Measurement
    * - ``ground-rydberg``
      - :math:`|g\rangle`
-     - :math:`|r\rangle \rightarrow 1;~|g\rangle,|h\rangle \rightarrow 0`
+     - |
+       | :math:`|r\rangle \rightarrow 1`
+       | :math:`|g\rangle,|h\rangle \rightarrow 0`
    * - ``digital``
      - :math:`|g\rangle`
-     - :math:`|h\rangle \rightarrow 1;~|g\rangle,|r\rangle \rightarrow 0`
+     - |
+       | :math:`|h\rangle \rightarrow 1`
+       | :math:`|g\rangle,|r\rangle \rightarrow 0`
    * - ``XY``
      - :math:`|0\rangle`
-     - :math:`|1\rangle \rightarrow 1;~|0\rangle \rightarrow 0`
+     - |
+       | :math:`|1\rangle \rightarrow 1`
+       | :math:`|0\rangle \rightarrow 0`
 
 Measurement samples order
 ***************************
@@ -187,14 +193,14 @@ as rewriten below with highlighted differences.
 .. math::
 
   \hat{\sigma}^x = |a\rangle\langle b| + |b\rangle\langle a|, \\
-  \mathbf{\hat{\sigma}^y} = -i|a\rangle\langle b| +i|b\rangle\langle a|, \\
-  \mathbf{\hat{\sigma}^z} = -|b\rangle\langle b| + |a\rangle\langle a|  \\
-  \mathbf{\hat{n}} = |b\rangle\langle b| = (1 - \sigma_z) / 2 
+  \hat{\sigma}^y = \color{red}{-}i|a\rangle\langle b| \color{red}{+}i|b\rangle\langle a|, \\
+  \hat{\sigma}^z = \color{red}{-}|b\rangle\langle b| \color{red}{+} |a\rangle\langle a|  \\
+  \hat{n} = |b\rangle\langle b| = (1 \color{red}{-} \sigma_z) / 2 
 
 .. math:: 
   
   H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos(\phi(t)) \hat{\sigma}^x 
-  \mathbf{+\frac{\Omega(t)}{2}} \sin(\phi(t)) \hat{\sigma}^y 
+  \color{red}{+}\frac{\Omega(t)}{2} \sin(\phi(t)) \hat{\sigma}^y 
   - \delta(t) \hat{n}
 
 .. note::
