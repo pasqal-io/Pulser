@@ -37,6 +37,7 @@ from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
+    ConstantWaveform,
     InterpolatedWaveform,
     RampWaveform,
 )
@@ -319,6 +320,7 @@ def devices():
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
+        supports_slm_mask=True,
         channel_objects=(
             Raman.Global(
                 2 * np.pi * 20,
@@ -340,6 +342,14 @@ def devices():
                 max_duration=2**26,
             ),
         ),
+        dmm_objects=(
+            DMM(
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+                bottom_detuning=-20,
+            ),
+        ),
     )
 
     device2 = Device(
@@ -349,6 +359,7 @@ def devices():
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
+        supports_slm_mask=True,
         channel_ids=("rmn_local", "rydberg_global"),
         channel_objects=(
             Raman.Local(
@@ -367,6 +378,14 @@ def devices():
                 max_duration=2**26,
             ),
         ),
+        dmm_objects=(
+            DMM(
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+                bottom_detuning=-20,
+            ),
+        ),
     )
 
     device3 = VirtualDevice(
@@ -374,6 +393,7 @@ def devices():
         dimensions=2,
         rydberg_level=70,
         min_atom_distance=5,
+        supports_slm_mask=True,
         channel_ids=(
             "rmn_local1",
             "rmn_local2",
@@ -413,6 +433,14 @@ def devices():
                 max_duration=2**26,
             ),
         ),
+        dmm_objects=(
+            DMM(
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+                bottom_detuning=-20,
+            ),
+        ),
     )
 
     return [device1, device2, device3]
@@ -447,6 +475,7 @@ def init_seq(
     initial_target=None,
     parametrized=False,
     mappable_reg=False,
+    config_det_map=False,
 ) -> Sequence:
     register = (
         reg.layout.make_mappable_register(len(reg.qubits))
@@ -463,7 +492,17 @@ def init_seq(
     if parametrized:
         delay = seq.declare_variable("delay", dtype=int)
         seq.delay(delay, channel_name)
-
+    if config_det_map:
+        det_map = reg.define_detuning_map(
+            {
+                "q" + str(i): (1 / 4 if i in [0, 1, 3, 4] else 0)
+                for i in range(10)
+            }
+        )
+        if mappable_reg:
+            seq.config_detuning_map(det_map, "dmm_0")
+        else:
+            seq.config_slm_mask(["q0"], "dmm_0")
     return seq
 
 
@@ -489,7 +528,9 @@ def test_ising_mode(
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
+def test_switch_device_down(
+    reg, det_map, devices, pulses, mappable_reg, parametrized
+):
     # Device checkout
     seq = init_seq(
         reg,
@@ -526,6 +567,35 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
         # Can't find a match for the 2nd rydberg_global
         seq.switch_device(Chadoq2)
 
+    # From sequence reusing DMMs to Device without reusable channels
+    seq = init_seq(
+        reg,
+        MockDevice,
+        "global",
+        "rydberg_global",
+        None,
+        parametrized=parametrized,
+        mappable_reg=mappable_reg,
+        config_det_map=True,
+    )
+    seq.config_detuning_map(det_map, "dmm_0")
+    if not mappable_reg and parametrized:
+        # Only detuning map is shown declared, SLM is not because parametrized
+        assert list(seq.declared_channels.keys()) == ["global", "dmm_0"]
+    else:
+        assert list(seq.declared_channels.keys()) == [
+            "global",
+            "dmm_0",
+            "dmm_0_1",
+        ]
+
+    with pytest.raises(
+        TypeError,
+        match="No match for channel dmm_0_1 with the"
+        " right type, basis and addressing.",
+    ):
+        # Can't find a match for the 2nd dmm_0
+        seq.switch_device(Chadoq2)
     seq_ising = init_seq(
         reg,
         MockDevice,
@@ -644,10 +714,20 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
 
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
+@pytest.mark.parametrize("trap_id", [20, 38, 50])
 @pytest.mark.parametrize("parametrized", [False, True])
+@pytest.mark.parametrize("config_det_map", [False, True])
 @pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
 def test_switch_device_up(
-    reg, device_ind, devices, pulses, strict, mappable_reg, parametrized
+    reg,
+    device_ind,
+    devices,
+    pulses,
+    strict,
+    mappable_reg,
+    trap_id,
+    parametrized,
+    config_det_map,
 ):
     # Device checkout
     seq = init_seq(
@@ -658,6 +738,7 @@ def test_switch_device_up(
         None,
         parametrized=parametrized,
         mappable_reg=mappable_reg,
+        config_det_map=config_det_map,
     )
     with pytest.warns(
         UserWarning,
@@ -665,12 +746,12 @@ def test_switch_device_up(
         "sequence unchanged",
     ):
         assert seq.switch_device(Chadoq2)._device == Chadoq2
-
     # Test non-strict mode
     assert "ising" in seq.switch_device(devices[0]).declared_channels
 
     # Strict: Jump_phase_time & CLock-period criteria
-    # Jump_phase_time check 1: phase not nill
+    # Jump_phase_time check 1: phase not null
+    mod_wvf = ConstantWaveform(100, -10)
     seq1 = init_seq(
         reg,
         devices[device_ind],
@@ -679,7 +760,10 @@ def test_switch_device_up(
         l_pulses=pulses[:2],
         parametrized=parametrized,
         mappable_reg=mappable_reg,
+        config_det_map=config_det_map,
     )
+    if config_det_map:
+        seq1.modulate_det_map(mod_wvf, "dmm_0")
     seq2 = init_seq(
         reg,
         devices[0],
@@ -688,13 +772,16 @@ def test_switch_device_up(
         l_pulses=pulses[:2],
         parametrized=parametrized,
         mappable_reg=mappable_reg,
+        config_det_map=config_det_map,
     )
+    if config_det_map:
+        seq2.modulate_det_map(mod_wvf, "dmm_0")
     new_seq = seq1.switch_device(devices[0], strict)
     build_kwargs = {}
     if parametrized:
         build_kwargs["delay"] = 120
     if mappable_reg:
-        build_kwargs["qubits"] = {"q0": 50}
+        build_kwargs["qubits"] = {"q0": trap_id}
 
     if build_kwargs:
         seq1 = seq1.build(**build_kwargs)
@@ -703,15 +790,55 @@ def test_switch_device_up(
     s1 = sample(new_seq)
     s2 = sample(seq1)
     s3 = sample(seq2)
-    nested_s1 = s1.to_nested_dict()["Global"]["ground-rydberg"]
-    nested_s2 = s2.to_nested_dict()["Global"]["ground-rydberg"]
-    nested_s3 = s3.to_nested_dict()["Global"]["ground-rydberg"]
-
+    nested_s1_glob = s1.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s2_glob = s2.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s3_glob = s3.to_nested_dict()["Global"]["ground-rydberg"]
+    if config_det_map:
+        nested_s1_loc = s1.to_nested_dict()["Local"]["ground-rydberg"]["q0"]
+        nested_s2_loc = s2.to_nested_dict()["Local"]["ground-rydberg"]["q0"]
+        nested_s3_loc = s3.to_nested_dict()["Local"]["ground-rydberg"]["q0"]
     # Check if the samples are the same
     for key in ["amp", "det", "phase"]:
-        np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
+        np.testing.assert_array_equal(nested_s1_glob[key], nested_s3_glob[key])
         if strict:
-            np.testing.assert_array_equal(nested_s1[key], nested_s2[key])
+            np.testing.assert_array_equal(
+                nested_s1_glob[key], nested_s2_glob[key]
+            )
+        if config_det_map:
+            if key != "det":
+                assert np.all(nested_s1_loc[key] == 0.0)
+                assert np.all(nested_s2_loc[key] == 0.0)
+                assert np.all(nested_s3_loc[key] == 0.0)
+            elif mappable_reg:
+                # modulates detuning map on trap ids 0, 1, 3, 4
+                mod_trap_ids = [20, 32, 54, 66]
+                assert np.all(
+                    nested_s1_loc[key][:100] == (-2.5 if trap_id in mod_trap_ids else 0)
+                )
+                assert np.all(
+                    nested_s2_loc[key][:100] == (-2.5 if trap_id in mod_trap_ids else 0)
+                )
+                assert np.all(
+                    nested_s3_loc[key][:100] == (-2.5 if trap_id in mod_trap_ids else 0)
+                )
+            else:
+                # first pulse is covered by SLM Mask
+                np.all(
+                    nested_s1_loc[key][:252]
+                    == -10 * np.max(pulses[0].amplitude.samples)
+                )
+                np.all(
+                    nested_s2_loc[key][:252]
+                    == -10 * np.max(pulses[0].amplitude.samples)
+                )
+                np.all(
+                    nested_s3_loc[key][:252]
+                    == -10 * np.max(pulses[0].amplitude.samples)
+                )
+                # Modulated pulse added afterwards
+                assert np.all(nested_s1_loc[key][252:352] == -10)
+                assert np.all(nested_s2_loc[key][252:352] == -10)
+                assert np.all(nested_s3_loc[key][252:352] == -10)
 
     # Channels with the same mod_bandwidth and fixed_retarget_t
     seq = init_seq(

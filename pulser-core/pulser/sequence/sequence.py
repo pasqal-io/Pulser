@@ -72,6 +72,10 @@ DeviceType = TypeVar("DeviceType", bound=BaseDevice)
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
 
 
+def _dmm_id_from_name(dmm_name: str) -> str:
+    return "_".join(dmm_name.split("_")[0:2])
+
+
 class Sequence(Generic[DeviceType]):
     """A sequence of operations on a device.
 
@@ -474,7 +478,7 @@ class Sequence(Generic[DeviceType]):
         self._config_detuning_map(detuning_map, dmm_id, to_store=False)
         # Find the name of the dmm in the declared channels.
         for key in reversed(self.declared_channels.keys()):
-            if dmm_id == "_".join(key.split("_")[0:2]):
+            if dmm_id == _dmm_id_from_name(key):
                 self._slm_mask_dmm = key
                 break
         # Modulate the dmm if pulses have already been added to Global Channels
@@ -535,6 +539,7 @@ class Sequence(Generic[DeviceType]):
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register.")
 
+        # If sequence is parametrized slm is configured at build
         if self.is_parametrized():
             return
 
@@ -614,9 +619,7 @@ class Sequence(Generic[DeviceType]):
         # Manually store the channel declaration as a regular call
         if to_store:
             self._calls.append(
-                _Call(
-                    "config_detuning_map", (dmm_name, dmm_id, detuning_map), {}
-                )
+                _Call("config_detuning_map", (detuning_map, dmm_id), {})
             )
 
     def switch_device(
@@ -671,6 +674,14 @@ class Sequence(Generic[DeviceType]):
                 int, ch_obj.fixed_retarget_t
             ) < cast(int, ch_obj.min_retarget_interval)
 
+        def get_dmm_name(dmm_id: str, channels: list[str]) -> str:
+            dmm_count = len(
+                [key for key in channels if _dmm_id_from_name(key) == dmm_id]
+            )
+            if dmm_count == 0:
+                return dmm_id
+            return dmm_id + f"_{dmm_count}"
+
         # Channel match
         channel_match: dict[str, Any] = {}
         strict_error_message = ""
@@ -680,10 +691,26 @@ class Sequence(Generic[DeviceType]):
             for call in self._calls + self._to_build_calls
             if call.name == "enable_eom_mode"
         ]
-        for old_ch_name, old_ch_obj in self.declared_channels.items():
+        all_channels_new_device = {
+            **new_device.channels,
+            **new_device.dmm_channels,
+        }
+        all_declared_channels = self.declared_channels
+        if self.is_parametrized():
+            # SLM mask configures a DMM after all the DMMs
+            for call in self._to_build_calls:
+                if call.name == "config_slm_mask":
+                    all_declared_channels[
+                        get_dmm_name(
+                            call.args[1], list(self.declared_channels.keys())
+                        )
+                    ] = self.device.dmm_channels[call.args[1]]
+                    break
+
+        for old_ch_name, old_ch_obj in all_declared_channels.items():
             channel_match[old_ch_name] = None
             # Find the corresponding channel on the new device
-            for new_ch_id, new_ch_obj in new_device.channels.items():
+            for new_ch_id, new_ch_obj in all_channels_new_device.items():
                 if (
                     not new_device.reusable_channels
                     and new_ch_id in channel_match.values()
@@ -727,6 +754,8 @@ class Sequence(Generic[DeviceType]):
                         continue
                 if not strict:
                     channel_match[old_ch_name] = new_ch_id
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
                     break
 
                 params_to_check = [
@@ -748,6 +777,8 @@ class Sequence(Generic[DeviceType]):
                 else:
                     # Only reached if all checks passed
                     channel_match[old_ch_name] = new_ch_id
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
                     break
 
         if None in channel_match.values():
@@ -757,21 +788,20 @@ class Sequence(Generic[DeviceType]):
                 raise TypeError(ch_match_err)
         # Initialize the new sequence (works for Sequence subclasses too)
         new_seq = type(self)(register=self._register, device=new_device)
-
+        dmm_calls: list[str] = []
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
-
         for call in self._calls[1:] + self._to_build_calls:
-            if not (
-                call.name == "declare_channel"
-                or call.name == "config_detuning_map"
-            ):
-                getattr(new_seq, call.name)(*call.args, **call.kwargs)
-                continue
             # Switch the old id with the correct id
             sw_channel_args = list(call.args)
             sw_channel_kw_args = call.kwargs.copy()
-            if "name" in sw_channel_kw_args:  # pragma: no cover
+            if not (
+                call.name == "declare_channel"
+                or call.name == "config_detuning_map"
+                or call.name == "config_slm_mask"
+            ):
+                pass
+            elif "name" in sw_channel_kw_args:  # pragma: no cover
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_kw_args["name"]
                 ]
@@ -779,10 +809,19 @@ class Sequence(Generic[DeviceType]):
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_args[0]
                 ]
-            else:
+            elif "dmm_id" in sw_channel_kw_args:  # pragma: no cover
+                sw_channel_kw_args["dmm_id"] = channel_match[
+                    get_dmm_name(sw_channel_kw_args["dmm_id"], dmm_calls)
+                ]
+                dmm_calls.append(sw_channel_kw_args["dmm_id"])
+            elif call.name == "declare_channel":
                 sw_channel_args[1] = channel_match[sw_channel_args[0]]
-
-            new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
+            else:
+                sw_channel_args[1] = channel_match[
+                    get_dmm_name(sw_channel_args[1], dmm_calls)
+                ]
+                dmm_calls.append(sw_channel_args[1])
+            getattr(new_seq, call.name)(*sw_channel_args, **sw_channel_kw_args)
         return new_seq
 
     @seq_decorators.block_if_measured
@@ -1877,7 +1916,19 @@ class Sequence(Generic[DeviceType]):
                 "Using parametrized objects or variables to refer to channels "
                 "is not supported."
             )
-        if channel not in self._schedule:
+        if channel not in self._schedule and not (
+            self.is_parametrized()
+            and [channel]
+            == [
+                (
+                    call.args[1]
+                    if "dmm_id" not in call.kwargs
+                    else call.kwargs["dmm_id"]
+                )
+                for call in self._to_build_calls
+                if call.name == "config_slm_mask"
+            ]
+        ):
             raise ValueError("Use the name of a declared channel.")
         if block_eom_mode and self.is_in_eom_mode(channel):
             raise RuntimeError("The chosen channel is in EOM mode.")
@@ -1896,7 +1947,12 @@ class Sequence(Generic[DeviceType]):
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
-        channel_obj = self._schedule[channel].channel_obj
+        channel_obj: Channel
+        if channel in self._schedule:
+            channel_obj = self._schedule[channel].channel_obj
+        else:
+            # Sequence is parametrized and channel is dmm_id of config_slm_mask
+            channel_obj = self.device.dmm_channels[channel]
         channel_obj.validate_pulse(pulse)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
