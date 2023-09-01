@@ -418,6 +418,29 @@
       ],
       "type": "object"
     },
+    "OpConfigDetMap": {
+      "additionalProperties": false,
+      "properties": {
+        "detuning_map": {
+          "$ref": "#/definitions/WeightMap",
+          "description": "DetuningMap to associate with the DMM channel."
+        },
+        "dmm_id": {
+          "$ref": "#/definitions/ChannelId",
+          "description": "ID of the DMM channel to configure."
+        },
+        "op": {
+          "const": "config_detuning_map",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "detuning_map",
+        "dmm_id"
+      ],
+      "type": "object"
+    },
     "OpConfigSLM": {
       "additionalProperties": false,
       "properties": {
@@ -740,6 +763,9 @@
         },
         {
           "$ref": "#/definitions/OpConfigSLM"
+        },
+        {
+          "$ref": "#/definitions/OpConfigDetMap"
         },
         {
           "$ref": "#/definitions/OpModDetMap"

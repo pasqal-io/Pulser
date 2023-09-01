@@ -60,6 +60,7 @@ from pulser.sequence._call import _Call
 from pulser.sequence._schedule import (
     _ChannelSchedule,
     _DMMSchedule,
+    _PhaseDriftParams,
     _Schedule,
     _TimeSlot,
 )
@@ -70,6 +71,10 @@ from pulser.waveforms import Waveform
 DeviceType = TypeVar("DeviceType", bound=BaseDevice)
 
 PROTOCOLS = Literal["min-delay", "no-delay", "wait-for-all"]
+
+
+def _dmm_id_from_name(dmm_name: str) -> str:
+    return "_".join(dmm_name.split("_")[0:2])
 
 
 class Sequence(Generic[DeviceType]):
@@ -474,7 +479,7 @@ class Sequence(Generic[DeviceType]):
         self._config_detuning_map(detuning_map, dmm_id, to_store=False)
         # Find the name of the dmm in the declared channels.
         for key in reversed(self.declared_channels.keys()):
-            if dmm_id == "_".join(key.split("_")[0:2]):
+            if dmm_id == _dmm_id_from_name(key):
                 self._slm_mask_dmm = key
                 break
         # Modulate the dmm if pulses have already been added to Global Channels
@@ -535,6 +540,7 @@ class Sequence(Generic[DeviceType]):
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register.")
 
+        # If sequence is parametrized slm is configured at build
         if self.is_parametrized():
             return
 
@@ -614,9 +620,7 @@ class Sequence(Generic[DeviceType]):
         # Manually store the channel declaration as a regular call
         if to_store:
             self._calls.append(
-                _Call(
-                    "config_detuning_map", (dmm_name, dmm_id, detuning_map), {}
-                )
+                _Call("config_detuning_map", (detuning_map, dmm_id), {})
             )
 
     def switch_device(
@@ -671,6 +675,14 @@ class Sequence(Generic[DeviceType]):
                 int, ch_obj.fixed_retarget_t
             ) < cast(int, ch_obj.min_retarget_interval)
 
+        def get_dmm_name(dmm_id: str, channels: list[str]) -> str:
+            dmm_count = len(
+                [key for key in channels if _dmm_id_from_name(key) == dmm_id]
+            )
+            if dmm_count == 0:
+                return dmm_id
+            return dmm_id + f"_{dmm_count}"
+
         # Channel match
         channel_match: dict[str, Any] = {}
         strict_error_message = ""
@@ -680,10 +692,26 @@ class Sequence(Generic[DeviceType]):
             for call in self._calls + self._to_build_calls
             if call.name == "enable_eom_mode"
         ]
-        for old_ch_name, old_ch_obj in self.declared_channels.items():
+        all_channels_new_device = {
+            **new_device.channels,
+            **new_device.dmm_channels,
+        }
+        all_declared_channels = self.declared_channels
+        if self.is_parametrized():
+            # SLM mask configures a DMM after all the DMMs
+            for call in self._to_build_calls:
+                if call.name == "config_slm_mask":
+                    all_declared_channels[
+                        get_dmm_name(
+                            call.args[1], list(self.declared_channels.keys())
+                        )
+                    ] = self.device.dmm_channels[call.args[1]]
+                    break
+
+        for old_ch_name, old_ch_obj in all_declared_channels.items():
             channel_match[old_ch_name] = None
             # Find the corresponding channel on the new device
-            for new_ch_id, new_ch_obj in new_device.channels.items():
+            for new_ch_id, new_ch_obj in all_channels_new_device.items():
                 if (
                     not new_device.reusable_channels
                     and new_ch_id in channel_match.values()
@@ -727,6 +755,8 @@ class Sequence(Generic[DeviceType]):
                         continue
                 if not strict:
                     channel_match[old_ch_name] = new_ch_id
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
                     break
 
                 params_to_check = [
@@ -748,6 +778,8 @@ class Sequence(Generic[DeviceType]):
                 else:
                     # Only reached if all checks passed
                     channel_match[old_ch_name] = new_ch_id
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
                     break
 
         if None in channel_match.values():
@@ -757,21 +789,20 @@ class Sequence(Generic[DeviceType]):
                 raise TypeError(ch_match_err)
         # Initialize the new sequence (works for Sequence subclasses too)
         new_seq = type(self)(register=self._register, device=new_device)
-
+        dmm_calls: list[str] = []
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
-
         for call in self._calls[1:] + self._to_build_calls:
-            if not (
-                call.name == "declare_channel"
-                or call.name == "config_detuning_map"
-            ):
-                getattr(new_seq, call.name)(*call.args, **call.kwargs)
-                continue
             # Switch the old id with the correct id
             sw_channel_args = list(call.args)
             sw_channel_kw_args = call.kwargs.copy()
-            if "name" in sw_channel_kw_args:  # pragma: no cover
+            if not (
+                call.name == "declare_channel"
+                or call.name == "config_detuning_map"
+                or call.name == "config_slm_mask"
+            ):
+                pass
+            elif "name" in sw_channel_kw_args:  # pragma: no cover
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_kw_args["name"]
                 ]
@@ -779,10 +810,19 @@ class Sequence(Generic[DeviceType]):
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_args[0]
                 ]
-            else:
+            elif "dmm_id" in sw_channel_kw_args:  # pragma: no cover
+                sw_channel_kw_args["dmm_id"] = channel_match[
+                    get_dmm_name(sw_channel_kw_args["dmm_id"], dmm_calls)
+                ]
+                dmm_calls.append(sw_channel_kw_args["dmm_id"])
+            elif call.name == "declare_channel":
                 sw_channel_args[1] = channel_match[sw_channel_args[0]]
-
-            new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
+            else:
+                sw_channel_args[1] = channel_match[
+                    get_dmm_name(sw_channel_args[1], dmm_calls)
+                ]
+                dmm_calls.append(sw_channel_args[1])
+            getattr(new_seq, call.name)(*sw_channel_args, **sw_channel_kw_args)
         return new_seq
 
     @seq_decorators.block_if_measured
@@ -958,6 +998,7 @@ class Sequence(Generic[DeviceType]):
         amp_on: Union[float, Parametrized],
         detuning_on: Union[float, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
+        correct_phase_drift: bool = False,
     ) -> None:
         """Puts a channel in EOM mode operation.
 
@@ -990,6 +1031,8 @@ class Sequence(Generic[DeviceType]):
             optimal_detuning_off: The optimal value of detuning (in rad/µs)
                 when there is no pulse being played. It will choose the closest
                 value among the existing options.
+            correct_phase_drift: Performs a phase shift to correct for the
+                phase drift incurred while turning on the EOM mode.
         """
         if self.is_in_eom_mode(channel):
             raise RuntimeError(
@@ -1006,29 +1049,35 @@ class Sequence(Generic[DeviceType]):
             channel_obj.validate_pulse(on_pulse)
             amp_on = cast(float, amp_on)
             detuning_on = cast(float, detuning_on)
-
-            off_options = cast(
-                RydbergEOM, channel_obj.eom_config
-            ).detuning_off_options(amp_on, detuning_on)
-
+            eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                closest_option = np.abs(
-                    off_options - optimal_detuning_off
-                ).argmin()
-                detuning_off = off_options[closest_option]
+                detuning_off = eom_config.calculate_detuning_off(
+                    amp_on, detuning_on, optimal_detuning_off
+                )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
                 )
                 channel_obj.validate_pulse(off_pulse)
 
             if not self.is_parametrized():
+                phase_drift_params = _PhaseDriftParams(
+                    drift_rate=-detuning_off, ti=self.get_duration(channel)
+                )
                 self._schedule.enable_eom(
                     channel, amp_on, detuning_on, detuning_off
                 )
+                if correct_phase_drift:
+                    buffer_slot = self._last(channel)
+                    drift = phase_drift_params.calc_phase_drift(buffer_slot.tf)
+                    self._phase_shift(
+                        -drift, *buffer_slot.targets, basis=channel_obj.basis
+                    )
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
-    def disable_eom_mode(self, channel: str) -> None:
+    def disable_eom_mode(
+        self, channel: str, correct_phase_drift: bool = False
+    ) -> None:
         """Takes a channel out of EOM mode operation.
 
         For channels with a finite modulation bandwidth and an EOM, operation
@@ -1051,11 +1100,24 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             channel: The name of the channel to take out of EOM mode.
+            correct_phase_drift: Performs a phase shift to correct for the
+                phase drift that occured since the last pulse (or the start of
+                the EOM mode, if no pulse was added).
         """
         if not self.is_in_eom_mode(channel):
             raise RuntimeError(f"The '{channel}' channel is not in EOM mode.")
         if not self.is_parametrized():
             self._schedule.disable_eom(channel)
+            if correct_phase_drift:
+                ch_schedule = self._schedule[channel]
+                # EOM mode has just been disabled, so tf is defined
+                last_eom_block_tf = cast(int, ch_schedule.eom_blocks[-1].tf)
+                drift_params = self._get_last_eom_pulse_phase_drift(channel)
+                self._phase_shift(
+                    -drift_params.calc_phase_drift(last_eom_block_tf),
+                    *ch_schedule[-1].targets,
+                    basis=ch_schedule.channel_obj.basis,
+                )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -1067,6 +1129,7 @@ class Sequence(Generic[DeviceType]):
         phase: Union[float, Parametrized],
         post_phase_shift: Union[float, Parametrized] = 0.0,
         protocol: PROTOCOLS = "min-delay",
+        correct_phase_drift: bool = False,
     ) -> None:
         """Adds a square pulse to a channel in EOM mode.
 
@@ -1097,6 +1160,11 @@ class Sequence(Generic[DeviceType]):
                 immediately after the end of the pulse.
             protocol: Stipulates how to deal with eventual conflicts with
                 other channels (see `Sequence.add()` for more details).
+            correct_phase_drift: Adjusts the phase to correct for the phase
+                drift that occured since the last pulse (or the start of the
+                EOM mode, if adding the first pulse). This effectively
+                changes the phase of the EOM pulse, so an extra delay might
+                be added to enforce the phase jump time.
         """
         if not self.is_in_eom_mode(channel):
             raise RuntimeError(f"Channel '{channel}' must be in EOM mode.")
@@ -1120,7 +1188,14 @@ class Sequence(Generic[DeviceType]):
             phase,
             post_phase_shift=post_phase_shift,
         )
-        self._add(eom_pulse, channel, protocol)
+        phase_drift_params = (
+            self._get_last_eom_pulse_phase_drift(channel)
+            if correct_phase_drift
+            else None
+        )
+        self._add(
+            eom_pulse, channel, protocol, phase_drift_params=phase_drift_params
+        )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -1684,6 +1759,7 @@ class Sequence(Generic[DeviceType]):
         pulse: Union[Pulse, Parametrized],
         channel: str,
         protocol: PROTOCOLS,
+        phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
         self._validate_add_protocol(protocol)
         if self.is_parametrized():
@@ -1713,7 +1789,13 @@ class Sequence(Generic[DeviceType]):
             self._basis_ref[basis][q].phase.last_time for q in last.targets
         ]
 
-        self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
+        self._schedule.add_pulse(
+            pulse,
+            channel,
+            phase_barriers,
+            protocol,
+            phase_drift_params=phase_drift_params,
+        )
 
         true_finish = self._last(channel).tf + pulse.fall_time(
             channel_obj, in_eom_mode=self.is_in_eom_mode(channel)
@@ -1842,6 +1924,24 @@ class Sequence(Generic[DeviceType]):
             for qubit in target_ids:
                 self._basis_ref[basis][qubit].increment_phase(phi)
 
+    def _get_last_eom_pulse_phase_drift(
+        self, channel: str
+    ) -> _PhaseDriftParams:
+        eom_settings = self._schedule[channel].eom_blocks[-1]
+        try:
+            last_pulse_tf = (
+                self._schedule[channel]
+                .last_pulse_slot(ignore_detuned_delay=True)
+                .tf
+            )
+        except RuntimeError:
+            # There is no previous pulse
+            last_pulse_tf = 0
+        return _PhaseDriftParams(
+            drift_rate=-eom_settings.detuning_off,
+            ti=max(eom_settings.ti, last_pulse_tf),
+        )
+
     def _to_dict(self, _module: str = "pulser.sequence") -> dict[str, Any]:
         d = obj_to_dict(
             self,
@@ -1877,7 +1977,19 @@ class Sequence(Generic[DeviceType]):
                 "Using parametrized objects or variables to refer to channels "
                 "is not supported."
             )
-        if channel not in self._schedule:
+        if channel not in self._schedule and not (
+            self.is_parametrized()
+            and [channel]
+            == [
+                (
+                    call.args[1]
+                    if "dmm_id" not in call.kwargs
+                    else call.kwargs["dmm_id"]
+                )
+                for call in self._to_build_calls
+                if call.name == "config_slm_mask"
+            ]
+        ):
             raise ValueError("Use the name of a declared channel.")
         if block_eom_mode and self.is_in_eom_mode(channel):
             raise RuntimeError("The chosen channel is in EOM mode.")
@@ -1896,7 +2008,12 @@ class Sequence(Generic[DeviceType]):
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
-        channel_obj = self._schedule[channel].channel_obj
+        channel_obj: Channel
+        if channel in self._schedule:
+            channel_obj = self._schedule[channel].channel_obj
+        else:
+            # Sequence is parametrized and channel is dmm_id of config_slm_mask
+            channel_obj = self.device.dmm_channels[channel]
         channel_obj.validate_pulse(pulse)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)

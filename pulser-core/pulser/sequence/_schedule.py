@@ -49,6 +49,16 @@ class _EOMSettings:
 
 
 @dataclass
+class _PhaseDriftParams:
+    drift_rate: float  # rad/µs
+    ti: int  # ns
+
+    def calc_phase_drift(self, tf: int) -> float:
+        """Calculate the phase drift during the elapsed time."""
+        return self.drift_rate * (tf - self.ti) * 1e-3
+
+
+@dataclass
 class _ChannelSchedule:
     channel_id: str
     channel_obj: Channel
@@ -381,8 +391,16 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         channel: str,
         phase_barrier_ts: list[int],
         protocol: str,
+        phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
-        pass
+        def corrected_phase(tf: int) -> float:
+            phase_drift = (
+                phase_drift_params.calc_phase_drift(tf)
+                if phase_drift_params
+                else 0
+            )
+            return pulse.phase - phase_drift
+
         last = self[channel][-1]
         t0 = last.tf
         current_max_t = max(t0, *phase_barrier_ts)
@@ -399,7 +417,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                 )
                 last_pulse = cast(Pulse, last_pulse_slot.type)
                 # Checks if the current pulse changes the phase
-                if last_pulse.phase != pulse.phase:
+                if last_pulse.phase != corrected_phase(current_max_t):
                     # Subtracts the time that has already elapsed since the
                     # last pulse from the phase_jump_time and adds the
                     # fall_time to let the last pulse ramp down
@@ -423,6 +441,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         ti = t0 + delay_duration
         tf = ti + pulse.duration
         self._check_duration(tf)
+        # dataclasses.replace() does not work on Pulse (because init=False)
+        if phase_drift_params is not None:
+            pulse = Pulse(
+                amplitude=pulse.amplitude,
+                detuning=pulse.detuning,
+                phase=corrected_phase(ti),
+                post_phase_shift=pulse.post_phase_shift,
+            )
         self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
 
     def add_delay(self, duration: int, channel: str) -> None:
