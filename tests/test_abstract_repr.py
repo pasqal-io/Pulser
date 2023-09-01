@@ -693,32 +693,48 @@ class TestSerialization:
         ]
         assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
-    def test_eom_mode(self, triangular_lattice):
+    @pytest.mark.parametrize("correct_phase_drift", (False, True))
+    def test_eom_mode(self, triangular_lattice, correct_phase_drift):
         reg = triangular_lattice.hexagonal_register(7)
         seq = Sequence(reg, IroiseMVP)
         seq.declare_channel("ryd", "rydberg_global")
         det_off = seq.declare_variable("det_off", dtype=float)
         duration = seq.declare_variable("duration", dtype=int)
         seq.enable_eom_mode(
-            "ryd", amp_on=3.0, detuning_on=0.0, optimal_detuning_off=det_off
+            "ryd",
+            amp_on=3.0,
+            detuning_on=0.0,
+            optimal_detuning_off=det_off,
+            correct_phase_drift=correct_phase_drift,
         )
-        seq.add_eom_pulse("ryd", duration, 0.0)
+        seq.add_eom_pulse(
+            "ryd", duration, 0.0, correct_phase_drift=correct_phase_drift
+        )
         seq.delay(duration, "ryd")
-        seq.disable_eom_mode("ryd")
+        seq.disable_eom_mode("ryd", correct_phase_drift)
 
         abstract = json.loads(seq.to_abstract_repr())
         validate_schema(abstract)
 
+        extra_kwargs = (
+            dict(correct_phase_drift=correct_phase_drift)
+            if correct_phase_drift
+            else {}
+        )
+
         assert abstract["operations"][0] == {
-            "op": "enable_eom_mode",
-            "channel": "ryd",
-            "amp_on": 3.0,
-            "detuning_on": 0.0,
-            "optimal_detuning_off": {
-                "expression": "index",
-                "lhs": {"variable": "det_off"},
-                "rhs": 0,
+            **{
+                "op": "enable_eom_mode",
+                "channel": "ryd",
+                "amp_on": 3.0,
+                "detuning_on": 0.0,
+                "optimal_detuning_off": {
+                    "expression": "index",
+                    "lhs": {"variable": "det_off"},
+                    "rhs": 0,
+                },
             },
+            **extra_kwargs,
         }
 
         ser_duration = {
@@ -727,17 +743,23 @@ class TestSerialization:
             "rhs": 0,
         }
         assert abstract["operations"][1] == {
-            "op": "add_eom_pulse",
-            "channel": "ryd",
-            "duration": ser_duration,
-            "phase": 0.0,
-            "post_phase_shift": 0.0,
-            "protocol": "min-delay",
+            **{
+                "op": "add_eom_pulse",
+                "channel": "ryd",
+                "duration": ser_duration,
+                "phase": 0.0,
+                "post_phase_shift": 0.0,
+                "protocol": "min-delay",
+            },
+            **extra_kwargs,
         }
 
         assert abstract["operations"][3] == {
-            "op": "disable_eom_mode",
-            "channel": "ryd",
+            **{
+                "op": "disable_eom_mode",
+                "channel": "ryd",
+            },
+            **extra_kwargs,
         }
 
     @pytest.mark.parametrize("use_default", [True, False])
@@ -891,6 +913,10 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
                             *(op[wf][qty] for qty in wf_args)
                         )
                         op[wf] = reconstructed_wf._to_abstract_repr()
+        elif "eom" in op["op"] and not op.get("correct_phase_drift"):
+            # Remove correct_phase_drift when at default, since the
+            # roundtrip will delete it
+            op.pop("correct_phase_drift", None)
 
     seq = Sequence.from_abstract_repr(json.dumps(s))
     defaults = {
@@ -1514,7 +1540,8 @@ class TestDeserialization:
         else:
             assert pulse.kwargs["detuning"] == 1
 
-    def test_deserialize_eom_ops(self):
+    @pytest.mark.parametrize("correct_phase_drift", (False, True, None))
+    def test_deserialize_eom_ops(self, correct_phase_drift):
         s = _get_serialized_seq(
             operations=[
                 {
@@ -1523,6 +1550,7 @@ class TestDeserialization:
                     "amp_on": 3.0,
                     "detuning_on": 0.0,
                     "optimal_detuning_off": -1.0,
+                    "correct_phase_drift": correct_phase_drift,
                 },
                 {
                     "op": "add_eom_pulse",
@@ -1535,16 +1563,21 @@ class TestDeserialization:
                     "phase": 0.0,
                     "post_phase_shift": 0.0,
                     "protocol": "no-delay",
+                    "correct_phase_drift": correct_phase_drift,
                 },
                 {
                     "op": "disable_eom_mode",
                     "channel": "global",
+                    "correct_phase_drift": correct_phase_drift,
                 },
             ],
             variables={"duration": {"type": "int", "value": [100]}},
             device=json.loads(IroiseMVP.to_abstract_repr()),
             channels={"global": "rydberg_global"},
         )
+        if correct_phase_drift is None:
+            for op in s["operations"]:
+                del op["correct_phase_drift"]
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
         # init + declare_channel + enable_eom_mode
@@ -1559,11 +1592,15 @@ class TestDeserialization:
             "amp_on": 3.0,
             "detuning_on": 0.0,
             "optimal_detuning_off": -1.0,
+            "correct_phase_drift": bool(correct_phase_drift),
         }
 
         disable_eom_call = seq._to_build_calls[-1]
         assert disable_eom_call.name == "disable_eom_mode"
-        assert disable_eom_call.kwargs == {"channel": "global"}
+        assert disable_eom_call.kwargs == {
+            "channel": "global",
+            "correct_phase_drift": bool(correct_phase_drift),
+        }
 
         eom_pulse_call = seq._to_build_calls[0]
         assert eom_pulse_call.name == "add_eom_pulse"
@@ -1572,6 +1609,9 @@ class TestDeserialization:
         assert eom_pulse_call.kwargs["phase"] == 0.0
         assert eom_pulse_call.kwargs["post_phase_shift"] == 0.0
         assert eom_pulse_call.kwargs["protocol"] == "no-delay"
+        assert eom_pulse_call.kwargs["correct_phase_drift"] == bool(
+            correct_phase_drift
+        )
 
     @pytest.mark.parametrize(
         "wf_obj",

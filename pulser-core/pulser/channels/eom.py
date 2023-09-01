@@ -180,6 +180,22 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
                     f" enumeration, not {self.limiting_beam}."
                 )
 
+    def calculate_detuning_off(
+        self, amp_on: float, detuning_on: float, optimal_detuning_off: float
+    ) -> float:
+        """Calculates the detuning when the amplitude is off in EOM mode.
+
+        Args:
+            amp_on: The amplitude of the EOM pulses (in rad/µs).
+            detuning_on: The detuning of the EOM pulses (in rad/µs).
+            optimal_detuning_off: The optimal value of detuning (in rad/µs)
+                when there is no pulse being played. It will choose the closest
+                value among the existing options.
+        """
+        off_options = self.detuning_off_options(amp_on, detuning_on)
+        closest_option = np.abs(off_options - optimal_detuning_off).argmin()
+        return cast(float, off_options[closest_option])
+
     def detuning_off_options(
         self, rabi_frequency: float, detuning_on: float
     ) -> np.ndarray:
