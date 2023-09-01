@@ -174,8 +174,8 @@ and the driving Hamiltonian takes the form
 
 .. math:: 
   
-  H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos(\phi(t)) \hat{\sigma}^x 
-  - \frac{\Omega(t)}{2} \sin(\phi(t)) \hat{\sigma}^y 
+  H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x 
+  - \frac{\Omega(t)}{2} \sin\phi(t) \hat{\sigma}^y 
   - \delta(t) \hat{n}
 
 
@@ -199,8 +199,8 @@ as rewriten below with highlighted differences.
 
 .. math:: 
   
-  H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos(\phi(t)) \hat{\sigma}^x 
-  \textcolor{red}{+}\frac{\Omega(t)}{2} \sin(\phi(t)) \hat{\sigma}^y 
+  H^D(t) / \hbar = \frac{\Omega(t)}{2} \cos\phi(t) \hat{\sigma}^x 
+  \textcolor{red}{+}\frac{\Omega(t)}{2} \sin\phi(t) \hat{\sigma}^y 
   - \delta(t) \hat{n}
 
 .. note::
