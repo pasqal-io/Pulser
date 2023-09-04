@@ -83,7 +83,7 @@ class QutipResult(Result):
                 # State vector ordered with r first for 'ground_rydberg'
                 # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
-                # In the XY and digital bases, the order is cannonical
+                # In the XY and digital bases, the order is canonical
                 weights = (
                     probs[::-1]
                     if self.meas_basis == "ground-rydberg"

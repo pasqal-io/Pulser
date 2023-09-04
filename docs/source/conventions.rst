@@ -7,7 +7,7 @@ States and Bases
 
 Bases
 *******
-Essentially, a basis refers to a set of two eigenstates. The transition between
+A basis refers to a set of two eigenstates. The transition between
 these two states is said to be addressed by a channel that targets that basis. Namely:
 
 .. list-table:: 
