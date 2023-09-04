@@ -555,6 +555,7 @@ class Sequence(Generic[DeviceType]):
             self._set_slm_mask_dmm(dmm_id, targets)
         self._slm_mask_targets = targets
 
+    @seq_decorators.store
     @seq_decorators.block_if_measured
     def config_detuning_map(
         self,
@@ -576,13 +577,12 @@ class Sequence(Generic[DeviceType]):
                 See in ``Sequence.available_channels`` which DMM IDs are still
                 available (start by "dmm" ) and the associated description.
         """
-        self._config_detuning_map(detuning_map, dmm_id, to_store=True)
+        self._config_detuning_map(detuning_map, dmm_id)
 
     def _config_detuning_map(
         self,
         detuning_map: DetuningMap,
         dmm_id: str,
-        to_store: bool = True,
     ) -> None:
         if dmm_id not in self._device.dmm_channels:
             raise ValueError(f"No DMM {dmm_id} in the device.")
@@ -617,11 +617,6 @@ class Sequence(Generic[DeviceType]):
 
         # DMM has Global addressing
         self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
-        # Manually store the channel declaration as a regular call
-        if to_store:
-            self._calls.append(
-                _Call("config_detuning_map", (detuning_map, dmm_id), {})
-            )
 
     def switch_device(
         self, new_device: DeviceType, strict: bool = False
