@@ -226,78 +226,12 @@ def gather_data(
     data["total_duration"] = total_duration
     return data
 
-
-def _draw_channel_content(
+def _draw_register_det_maps(
     sampled_seq: SequenceSamples,
     register: Optional[BaseRegister] = None,
-    sampling_rate: Optional[float] = None,
-    draw_phase_area: bool = False,
-    draw_phase_shifts: bool = False,
-    draw_input: bool = True,
-    draw_modulation: bool = False,
-    draw_phase_curve: bool = False,
     draw_detuning_maps: bool = False,
-    shown_duration: Optional[int] = None,
-) -> tuple[Figure | None, Figure, Any, dict]:
-    """Draws samples of a sequence.
-
-    Args:
-        sampled_seq: The input samples of a sequence of operations.
-        register: If present, draw the register before the pulse
-            sequence, with a visual indication (square halo) around the qubits
-            masked by the SLM.
-        sampling_rate: Sampling rate of the effective pulse used by
-            the solver. If present, plots the effective pulse alongside the
-            input pulse.
-        draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False. If `draw_phase_curve=True`,
-            phase values are ommited.
-        draw_phase_shifts: Whether phase shift and reference information
-            should be added to the plot, defaults to False.
-        draw_input: Draws the programmed pulses on the channels, defaults
-            to True.
-        draw_modulation: Draws the expected channel output, defaults to
-            False. If the channel does not have a defined 'mod_bandwidth', this
-            is skipped unless 'draw_input=False'.
-        draw_phase_curve: Draws the changes in phase in its own curve (ignored
-            if the phase doesn't change throughout the channel).
-        draw_detuning_maps: Draws the detuning maps applied on the qubits of
-            the register of the sequence. Shown before the pulse sequence,
-            defaults to False.
-        shown_duration: Total duration to be shown in the X axis.
-    """
-
-    def phase_str(phi: float) -> str:
-        """Formats a phase value for printing."""
-        value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
-        if value == -1:
-            return r"$\pi$"
-        elif value == 0:
-            return "0"  # pragma: no cover - just for safety
-        else:
-            return rf"{value:.2g}$\pi$"
-
-    n_channels = len(sampled_seq.channels)
-    if not n_channels:
-        raise RuntimeError("Can't draw an empty sequence.")
-
-    data = gather_data(sampled_seq, shown_duration)
-    total_duration = data["total_duration"]
-    time_scale = 1e3 if total_duration > 1e4 else 1
-    for ch in sampled_seq.channels:
-        if np.count_nonzero(data[ch].samples.det) > 0:
-            data[ch].curves_on["detuning"] = True
-        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
-            data[ch].curves_on["phase"] = True
-
-    # Boxes for qubit and phase text
-    q_box = dict(boxstyle="round", facecolor="orange")
-    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
-    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
-    slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
-    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
-
-    # Draw register and detuning maps
+) -> Figure | None:
+    fig_reg: Figure | None = None
     det_maps = {
         ch: cast(DetuningMap, cast(DMMSamples, ch_samples).detuning_map)
         for (ch, ch_samples) in sampled_seq.channel_samples.items()
@@ -363,7 +297,7 @@ def _draw_channel_content(
         # Initialize figure for detuning maps if register was not shown
         need_init = register is None
         for i, (ch, det_map) in enumerate(det_maps.items()):
-            qubits = cast(DMMSamples, data[ch].samples).qubits
+            qubits = cast(DMMSamples, sampled_seq.channel_samples[ch]).qubits
             reg_det_map = det_map.get_qubit_weight_map(qubits)
             pos = np.array(list(qubits.values()))
             if need_init:
@@ -412,6 +346,81 @@ def _draw_channel_content(
                     dmm_qubits=reg_det_map,
                 )
                 ax_reg.set_title(ch, pad=10)
+    return fig_reg
+        
+
+def _draw_channel_content(
+    sampled_seq: SequenceSamples,
+    register: Optional[BaseRegister] = None,
+    sampling_rate: Optional[float] = None,
+    draw_phase_area: bool = False,
+    draw_phase_shifts: bool = False,
+    draw_input: bool = True,
+    draw_modulation: bool = False,
+    draw_phase_curve: bool = False,
+    draw_detuning_maps: bool = False,
+    shown_duration: Optional[int] = None,
+) -> tuple[Figure | None, Figure, Any, dict]:
+    """Draws samples of a sequence.
+
+    Args:
+        sampled_seq: The input samples of a sequence of operations.
+        register: If present, draw the register before the pulse
+            sequence, with a visual indication (square halo) around the qubits
+            masked by the SLM.
+        sampling_rate: Sampling rate of the effective pulse used by
+            the solver. If present, plots the effective pulse alongside the
+            input pulse.
+        draw_phase_area: Whether phase and area values need to be shown
+            as text on the plot, defaults to False. If `draw_phase_curve=True`,
+            phase values are ommited.
+        draw_phase_shifts: Whether phase shift and reference information
+            should be added to the plot, defaults to False.
+        draw_input: Draws the programmed pulses on the channels, defaults
+            to True.
+        draw_modulation: Draws the expected channel output, defaults to
+            False. If the channel does not have a defined 'mod_bandwidth', this
+            is skipped unless 'draw_input=False'.
+        draw_phase_curve: Draws the changes in phase in its own curve (ignored
+            if the phase doesn't change throughout the channel).
+        draw_detuning_maps: Draws the detuning maps applied on the qubits of
+            the register of the sequence. Shown before the pulse sequence,
+            defaults to False.
+        shown_duration: Total duration to be shown in the X axis.
+    """
+
+    def phase_str(phi: float) -> str:
+        """Formats a phase value for printing."""
+        value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
+        if value == -1:
+            return r"$\pi$"
+        elif value == 0:
+            return "0"  # pragma: no cover - just for safety
+        else:
+            return rf"{value:.2g}$\pi$"
+
+    n_channels = len(sampled_seq.channels)
+    if not n_channels:
+        raise RuntimeError("Can't draw an empty sequence.")
+
+    data = gather_data(sampled_seq, shown_duration)
+    total_duration = data["total_duration"]
+    time_scale = 1e3 if total_duration > 1e4 else 1
+    for ch in sampled_seq.channels:
+        if np.count_nonzero(data[ch].samples.det) > 0:
+            data[ch].curves_on["detuning"] = True
+        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
+            data[ch].curves_on["phase"] = True
+
+    # Draw register and detuning maps
+    fig_reg = _draw_register_det_maps(sampled_seq, register, draw_detuning_maps)
+
+    # Boxes for qubit and phase text
+    q_box = dict(boxstyle="round", facecolor="orange")
+    ph_box = dict(boxstyle="round", facecolor="ghostwhite")
+    area_ph_box = dict(boxstyle="round", facecolor="ghostwhite", alpha=0.7)
+    slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
+    eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
 
     ratios = [
         SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels
@@ -776,8 +785,7 @@ def _draw_channel_content(
                 ax.axhline(ax_lims[i][1], **hline_kwargs)
             if ax_lims[i][0] < 0:
                 ax.axhline(0, **hline_kwargs)
-
-    return (fig_reg if register else None, fig, ch_axes, data)
+    return (fig_reg, fig, ch_axes, data)
 
 
 def draw_samples(
