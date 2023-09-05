@@ -126,6 +126,7 @@ class WeightMap(Traps, RegDrawer):
             pos,
             labels_,
             with_labels=labels is not None,
+            are_traps=True,
             dmm_qubits=dict(zip(labels_, self.weights)),
         )
 

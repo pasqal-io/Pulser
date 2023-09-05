@@ -1567,6 +1567,7 @@ class Sequence(Generic[DeviceType]):
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
         draw_phase_curve: bool = False,
+        draw_detuning_maps: bool = False,
         fig_name: str | None = None,
         kwargs_savefig: dict = {},
         show: bool = True,
@@ -1595,6 +1596,9 @@ class Sequence(Generic[DeviceType]):
                 True if the sequence is defined with a mappable register.
             draw_phase_curve: Draws the changes in phase in its own curve
                 (ignored if the phase doesn't change throughout the channel).
+            draw_detuning_maps: Whether to draw the detuning maps applied on
+                the qubits of the register of the sequence. Shown before the
+                pulse sequence, defaults to False.
             fig_name: The name on which to save the
                 figure. If `draw_register` is True, both pulses and register
                 will be saved as figures, with a suffix ``_pulses`` and
@@ -1645,6 +1649,7 @@ class Sequence(Generic[DeviceType]):
             draw_input="input" in mode,
             draw_modulation="output" in mode,
             draw_phase_curve=draw_phase_curve,
+            draw_detuning_maps=draw_detuning_maps,
         )
         if fig_name is not None and fig_reg is not None:
             name, ext = os.path.splitext(fig_name)

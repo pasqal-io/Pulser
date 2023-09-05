@@ -1297,25 +1297,38 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     assert str(seq5) == str(seq5_)
 
 
-def test_draw_register(reg, patch_plt_show):
+@pytest.mark.parametrize("ch_name", ["rydberg_global", "mw_global"])
+def test_draw_register_det_maps(reg, ch_name, patch_plt_show):
     # Draw 2d register from sequence
-    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    reg_layout = RegisterLayout(
+        [(0, 0), (10, 10), (-10, -10), (20, 20), (30, 30), (40, 40)]
+    )
+    det_map = reg_layout.define_detuning_map(
+        {0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5}
+    )
+    reg = reg_layout.define_register(0, 1, 2, qubit_ids=["q0", "q1", "q2"])
     targets = ["q0", "q2"]
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
     seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ch_xy", "mw_global")
-    seq.add(pulse, "ch_xy")
+    seq.declare_channel(ch_name, ch_name)
+    seq.add(pulse, ch_name)
+    if ch_name == "rydberg_global":
+        seq.config_detuning_map(det_map, "dmm_0")
     seq.config_slm_mask(targets)
     seq.draw(draw_register=True)
+    seq.draw(draw_detuning_maps=True)
+    seq.draw(draw_register=True, draw_detuning_maps=True)
 
     # Draw 3d register from sequence
     reg3d = Register3D.cubic(3, 8)
     seq3d = Sequence(reg3d, MockDevice)
-    seq3d.declare_channel("ch_xy", "mw_global")
-    seq3d.add(pulse, "ch_xy")
+    seq3d.declare_channel(ch_name, ch_name)
+    seq3d.add(pulse, ch_name)
     seq3d.config_slm_mask([6, 15])
-    seq3d.measure(basis="XY")
+    seq3d.measure(basis="XY" if ch_name == "mw_global" else "ground-rydberg")
     seq3d.draw(draw_register=True)
+    seq3d.draw(draw_detuning_maps=True)
+    seq3d.draw(draw_register=True, draw_detuning_maps=True)
 
 
 def test_hardware_constraints(reg, patch_plt_show):

@@ -28,10 +28,12 @@ from scipy.interpolate import CubicSpline
 import pulser
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
+from pulser.register.weight_maps import DetuningMap
 from pulser.sampler.sampler import sample
-from pulser.sampler.samples import ChannelSamples, SequenceSamples
+from pulser.sampler.samples import ChannelSamples, DMMSamples, SequenceSamples
 from pulser.waveforms import InterpolatedWaveform
 
 # Color scheme
@@ -234,6 +236,7 @@ def _draw_channel_content(
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
+    draw_detuning_maps: bool = False,
     shown_duration: Optional[int] = None,
 ) -> tuple[Figure | None, Figure, Any, dict]:
     """Draws samples of a sequence.
@@ -258,6 +261,9 @@ def _draw_channel_content(
             is skipped unless 'draw_input=False'.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
+        draw_detuning_maps: Draws the detuning maps applied on the qubits of
+            the register of the sequence. Shown before the pulse sequence,
+            defaults to False.
         shown_duration: Total duration to be shown in the X axis.
     """
 
@@ -291,20 +297,36 @@ def _draw_channel_content(
     slm_box = dict(boxstyle="round", alpha=0.4, facecolor="grey", hatch="//")
     eom_box = dict(boxstyle="round", facecolor="lightsteelblue")
 
+    # Draw register and detuning maps
+    det_maps = {
+        ch: cast(DetuningMap, cast(DMMSamples, ch_samples).detuning_map)
+        for (ch, ch_samples) in sampled_seq.channel_samples.items()
+        if isinstance(sampled_seq._ch_objs[ch], DMM)
+    }
+    n_det_maps = len(det_maps)
+    nregisters = (
+        int(register is not None) + int(draw_detuning_maps) * n_det_maps
+    )
     # Draw masked register
     if register:
         pos = np.array(register._coords)
+        title = (
+            "Register"
+            if sampled_seq._slm_mask.targets == set()
+            else "Masked register"
+        )
         if isinstance(register, Register3D):
             labels = "xyz"
             fig_reg, axes_reg = register._initialize_fig_axes_projection(
                 pos,
                 blockade_radius=35,
                 draw_half_radius=True,
+                nregisters=nregisters,
             )
-            fig_reg.get_layout_engine().set(w_pad=6.5)
 
             for ax_reg, (ix, iy) in zip(
-                axes_reg, combinations(np.arange(3), 2)
+                axes_reg if nregisters == 1 else axes_reg[0],
+                combinations(np.arange(3), 2),
             ):
                 register._draw_2D(
                     ax=ax_reg,
@@ -314,25 +336,82 @@ def _draw_channel_content(
                     masked_qubits=sampled_seq._slm_mask.targets,
                 )
                 ax_reg.set_title(
-                    "Masked register projected onto\n the "
+                    title
+                    + " projected onto\n the "
                     + labels[ix]
                     + labels[iy]
                     + "-plane"
                 )
 
         elif isinstance(register, Register):
-            fig_reg, ax_reg = register._initialize_fig_axes(
+            fig_reg, axes_reg = register._initialize_fig_axes(
                 pos,
                 blockade_radius=35,
                 draw_half_radius=True,
+                nregisters=nregisters,
             )
+            ax_reg = axes_reg if nregisters == 1 else axes_reg[0]
             register._draw_2D(
                 ax=ax_reg,
                 pos=pos,
                 ids=register._ids,
                 masked_qubits=sampled_seq._slm_mask.targets,
             )
-            ax_reg.set_title("Masked register", pad=10)
+            ax_reg.set_title(title, pad=10)
+    # Draw detuning maps
+    if draw_detuning_maps:
+        # Initialize figure for detuning maps if register was not shown
+        need_init = register is None
+        for i, (ch, det_map) in enumerate(det_maps.items()):
+            qubits = cast(DMMSamples, data[ch].samples).qubits
+            reg_det_map = det_map.get_qubit_weight_map(qubits)
+            pos = np.array(list(qubits.values()))
+            if need_init:
+                if det_map.dimensionality == 3:
+                    labels = "xyz"
+                    (
+                        fig_reg,
+                        axes_reg,
+                    ) = det_map._initialize_fig_axes_projection(
+                        pos,
+                        nregisters=nregisters,
+                    )
+                else:
+                    fig_reg, axes_reg = det_map._initialize_fig_axes(
+                        pos,
+                        nregisters=nregisters,
+                    )
+                need_init = False
+            ax_reg = (
+                axes_reg
+                if nregisters == 1
+                else axes_reg[i + int(register is not None)]
+            )
+            if det_map.dimensionality == 3:
+                for sub_ax_reg, (ix, iy) in zip(
+                    ax_reg, combinations(np.arange(3), 2)
+                ):
+                    det_map._draw_2D(
+                        ax=sub_ax_reg,
+                        pos=pos,
+                        ids=list(qubits.keys()),
+                        plane=(ix, iy),
+                        dmm_qubits=reg_det_map,
+                    )
+                    sub_ax_reg.set_title(
+                        f"{ch} projected onto\n the "
+                        + labels[ix]
+                        + labels[iy]
+                        + "-plane"
+                    )
+            else:
+                det_map._draw_2D(
+                    ax=ax_reg,
+                    pos=pos,
+                    ids=list(qubits.keys()),
+                    dmm_qubits=reg_det_map,
+                )
+                ax_reg.set_title(ch, pad=10)
 
     ratios = [
         SIZE_PER_WIDTH[data[ch].n_axes_on] for ch in sampled_seq.channels
@@ -513,16 +592,31 @@ def _draw_channel_content(
         for coords in ch_data.target:
             targets = list(ch_data.target[coords])
             tgt_strs = [str(q) for q in targets]
-            tgt_txt_y = max_amp * 1.1 - 0.25 * (len(targets) - 1)
+            if isinstance(ch_obj, DMM):
+                samples = cast(DMMSamples, ch_data.samples)
+                det_map = cast(DetuningMap, ch_data.samples.detuning_map)
+                det_weight_map = defaultdict(
+                    int, det_map.get_qubit_weight_map(samples.qubits)
+                )
+                targets = [t for t in targets if det_weight_map[t] > 0]
+                if targets == []:
+                    tgt_strs = ["NONE"]
+                else:
+                    tgt_strs = [
+                        f"{q}: {det_weight_map[q]:.2f}" for q in targets
+                    ]
+            elif ch_obj.addressing == "Global":
+                tgt_strs = ["GLOBAL"]
+            tgt_txt_y = max_amp * 1.1 - 0.25 * (len(tgt_strs) - 1)
             tgt_str = "\n".join(tgt_strs)
             if coords == "initial":
                 x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
-                if ch_obj.addressing == "Global":
+                if tgt_strs == ["GLOBAL"] or tgt_strs == ["NONE"]:
                     axes[0].text(
                         x,
                         amp_top * 0.98,
-                        "GLOBAL",
+                        tgt_strs[0],
                         fontsize=13,
                         rotation=90,
                         ha="left",
@@ -742,6 +836,7 @@ def draw_sequence(
     draw_input: bool = True,
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
+    draw_detuning_maps: bool = False,
 ) -> tuple[Figure | None, Figure]:
     """Draws the entire sequence.
 
@@ -768,6 +863,9 @@ def draw_sequence(
             is skipped unless 'draw_input=False'.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
+        draw_detuning_maps: Whether to draw the detuning maps applied on the
+            qubits of the register of the sequence. Shown before the pulse
+            sequence, defaults to False.
     """
     # Sample the sequence and get the data to plot
     shown_duration = seq.get_duration(include_fall_time=draw_modulation)
@@ -782,6 +880,7 @@ def draw_sequence(
         draw_input,
         draw_modulation,
         draw_phase_curve,
+        draw_detuning_maps,
         shown_duration,
     )
 
