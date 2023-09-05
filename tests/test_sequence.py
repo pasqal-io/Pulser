@@ -81,7 +81,8 @@ def test_channel_declaration(reg, device):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
-
+    with pytest.raises(ValueError, match="Name starting by 'dmm_'"):
+        seq.declare_channel("dmm_1_2", "raman")
     seq.declare_channel("ch0", "rydberg_global")
     assert seq.get_addressed_bases() == ("ground-rydberg",)
     seq.declare_channel("ch1", "raman_local")
@@ -578,16 +579,12 @@ def test_switch_device_down(
         mappable_reg=mappable_reg,
         config_det_map=True,
     )
-    seq.config_detuning_map(det_map, "dmm_0")
-    if not mappable_reg and parametrized:
-        # Only detuning map is shown declared, SLM is not because parametrized
-        assert list(seq.declared_channels.keys()) == ["global", "dmm_0"]
-    else:
-        assert list(seq.declared_channels.keys()) == [
-            "global",
-            "dmm_0",
-            "dmm_0_1",
-        ]
+    seq.config_detuning_map(det_map, dmm_id="dmm_0")
+    assert list(seq.declared_channels.keys()) == [
+        "global",
+        "dmm_0",
+        "dmm_0_1",
+    ]
 
     with pytest.raises(
         TypeError,
