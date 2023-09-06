@@ -567,6 +567,25 @@ def test_switch_device_down(
     ):
         # Can't find a match for the 2nd rydberg_global
         seq.switch_device(Chadoq2)
+    # From sequence reusing channels to Device without reusable channels
+    seq = init_seq(
+        reg,
+        MockDevice,
+        "global",
+        "rydberg_global",
+        None,
+        parametrized=parametrized,
+        mappable_reg=mappable_reg,
+    )
+    seq.declare_channel("raman", "raman_local", ["q0"])
+    seq.declare_channel("raman_1", "raman_local", ["q0"])
+    with pytest.raises(
+        TypeError,
+        match="No match for channel raman_1 with the"
+        " right type, basis and addressing.",
+    ):
+        # Can't find a match for the 2nd rydberg_global
+        seq.switch_device(Chadoq2)
 
     # From sequence reusing DMMs to Device without reusable channels
     seq = init_seq(
@@ -802,43 +821,28 @@ def test_switch_device_up(
                 nested_s1_glob[key], nested_s2_glob[key]
             )
         if config_det_map:
-            if key != "det":
-                assert np.all(nested_s1_loc[key] == 0.0)
-                assert np.all(nested_s2_loc[key] == 0.0)
-                assert np.all(nested_s3_loc[key] == 0.0)
-            elif mappable_reg:
-                # modulates detuning map on trap ids 0, 1, 3, 4
-                mod_trap_ids = [20, 32, 54, 66]
-                assert np.all(
-                    nested_s1_loc[key][:100]
-                    == (-2.5 if trap_id in mod_trap_ids else 0)
-                )
-                assert np.all(
-                    nested_s2_loc[key][:100]
-                    == (-2.5 if trap_id in mod_trap_ids else 0)
-                )
-                assert np.all(
-                    nested_s3_loc[key][:100]
-                    == (-2.5 if trap_id in mod_trap_ids else 0)
-                )
-            else:
-                # first pulse is covered by SLM Mask
-                np.all(
-                    nested_s1_loc[key][:252]
-                    == -10 * np.max(pulses[0].amplitude.samples)
-                )
-                np.all(
-                    nested_s2_loc[key][:252]
-                    == -10 * np.max(pulses[0].amplitude.samples)
-                )
-                np.all(
-                    nested_s3_loc[key][:252]
-                    == -10 * np.max(pulses[0].amplitude.samples)
-                )
-                # Modulated pulse added afterwards
-                assert np.all(nested_s1_loc[key][252:352] == -10)
-                assert np.all(nested_s2_loc[key][252:352] == -10)
-                assert np.all(nested_s3_loc[key][252:352] == -10)
+            for nested_s_loc in [
+                nested_s1_loc[key],
+                nested_s2_loc[key],
+                nested_s3_loc[key],
+            ]:
+                if key != "det":
+                    assert np.all(nested_s_loc == 0.0)
+                elif mappable_reg:
+                    # modulates detuning map on trap ids 0, 1, 3, 4
+                    mod_trap_ids = [20, 32, 54, 66]
+                    assert np.all(
+                        nested_s_loc[:100]
+                        == (-2.5 if trap_id in mod_trap_ids else 0)
+                    )
+                else:
+                    # first pulse is covered by SLM Mask
+                    np.all(
+                        nested_s_loc[:252]
+                        == -10 * np.max(pulses[0].amplitude.samples)
+                    )
+                    # Modulated pulse added afterwards
+                    assert np.all(nested_s_loc[252:352] == -10)
 
     # Channels with the same mod_bandwidth and fixed_retarget_t
     seq = init_seq(
