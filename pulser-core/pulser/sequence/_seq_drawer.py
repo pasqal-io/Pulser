@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from itertools import chain, combinations
 from typing import Any, Optional, Union, cast
 
@@ -226,6 +226,101 @@ def gather_data(
     data["total_duration"] = total_duration
     return data
 
+def _get_qubit_data(data:dict)->dict:
+    """Gets information to plot per qubits
+
+    Transforms a dictionary associating a ChannelDrawContent to each channel
+    into a dictionary associating a ChannelSamples to group of qubits.
+
+    Args:
+        data: A dictionary associating ChannelDrawContents to channels
+    
+    Returns:
+        A dictionary associating ChannelSamples to qubits
+    """
+    # TODO: Should be initialized with a tuple containing all the qubits that will be targeted
+    # Delete initialization of qubit data
+    # Make a for loop around targets and differentiate if DMM/Global or other type and build amp/det/phase to add
+    qubit_data: dict[tuple, ChannelSamples] = {}
+    for ch, ch_data in data.items():
+        if ch in ["measurement", "total_duration"]:
+            qubit_data[ch] = ch_data
+            continue
+        targeted_qubits: dict[float, set] = {}
+        if isinstance(ch_data.samples, DMMSamples):
+            # DMM channel
+            # Defining targeted qubits
+            det_map = cast(DetuningMap, ch_data.samples.detuning_map)
+            det_weight_map = defaultdict(
+                int, det_map.get_qubit_weight_map(ch_data.samples.qubits)
+            )
+            for t, w in det_weight_map.items():
+                if w == 0:
+                    continue
+                if w not in targeted_qubits:
+                    targeted_qubits[w] = set()
+                targeted_qubits[w].add(t)
+            # Initialize qubit data if it is empty
+            if not qubit_data:
+                for w, set_t in targeted_qubits:
+                    qubit_data[tuple(set_t)] = replace(ch_data.samples, det=w*ch_data.samples.det)
+                continue
+            # Update qubit data if not empty
+            old_qubit_data = qubit_data.copy()
+            qubit_data = {}
+            for qubits, qubit_data in old_qubit_data.items():
+                for w, set_t in targeted_qubits.items():
+                    sub_target = set_t.intersection(set(qubits))
+                    if not sub_target == set():
+                        qubit_data[tuple(sub_target)] = replace(qubit_data.samples, det=w*ch_data.samples.det+qubit_data.samples.det)
+        elif len(ch_data.target) == 1:
+            # Global channel
+            # Targeted qubits: 1.0: ch_data.target["initial"]
+            # Initialize qubit data if it is empty
+            if not qubit_data:
+                qubit_data[tuple(ch_data.target["initial"])] = ch_data.samples
+                continue
+            # Update qubit data if not empty
+            old_qubit_data = qubit_data.copy()
+            qubit_data = {}
+            for qubits, qubit_data in old_qubit_data.items():
+                sub_target = set(ch_data.target["initial"]).intersection(set(qubits))
+                if not sub_target == set():
+                    qubit_data[tuple(sub_target)] = replace(
+                        qubit_data.samples,
+                        amp = ch_data.samples.amp+qubit_data.samples.amp,
+                        det = ch_data.samples.det+qubit_data.samples.det,
+                        phase = ch_data.samples.phase+qubit_data.samples.phase,
+                        )
+        else:
+            # Channel with targeted
+            # Targeted qubits: 1.0: ch_data.target["initial"]
+            # Initialize qubit data if it is empty
+            ch_data_target = ch_data.target.copy()
+            ch_data_target.pop("initial")
+            for target in ch_data_target:
+                if not qubit_data:
+                    qubit_data[tuple(ch_data.target[target])] = replace(
+                        qubit_data.samples,
+                        amp = np.pad(ch_data.samples.amp[target[0][0]: target[0][1]], target[0]),
+                        det = np.pad(ch_data.samples.det[target[0][0]: target[0][1]], target[0]),
+                        phase = np.pad(ch_data.samples.phase[target[0][0]: target[0][1]], target[0]),
+                        )
+                    continue
+            # Update qubit data if not empty
+            old_qubit_data = qubit_data.copy()
+            qubit_data = {}
+            for qubits, qubit_data in old_qubit_data.items():
+                sub_target = set(ch_data.target["initial"]).intersection(set(qubits))
+                if not sub_target == set():
+                    qubit_data[tuple(sub_target)] = replace(
+                        qubit_data.samples,
+                        amp = qubit_data.samples.amp+np.pad(ch_data.samples.amp[target[0][0]: target[0][1]], target[0]),
+                        det = qubit_data.samples.det+np.pad(ch_data.samples.det[target[0][0]: target[0][1]], target[0]),
+                        phase = qubit_data.samples.phase+np.pad(ch_data.samples.phase[target[0][0]: target[0][1]], target[0]),
+                        )
+    return qubit_data
+
 def _draw_register_det_maps(
     sampled_seq: SequenceSamples,
     register: Optional[BaseRegister] = None,
@@ -398,10 +493,6 @@ def _draw_channel_content(
             return "0"  # pragma: no cover - just for safety
         else:
             return rf"{value:.2g}$\pi$"
-
-    n_channels = len(sampled_seq.channels)
-    if not n_channels:
-        raise RuntimeError("Can't draw an empty sequence.")
 
     data = gather_data(sampled_seq, shown_duration)
     total_duration = data["total_duration"]
@@ -814,6 +905,8 @@ def draw_samples(
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
     """
+    if not len(sampled_seq.channels):
+        raise RuntimeError("Can't draw an empty sequence.")
     slot_tfs = [
         ch_samples.slots[-1].tf
         for ch_samples in sampled_seq.channel_samples.values()
