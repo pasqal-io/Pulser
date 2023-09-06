@@ -40,7 +40,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel
-from pulser.channels.dmm import DMM
+from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
@@ -66,7 +66,6 @@ from pulser.sequence._schedule import (
 )
 from pulser.sequence._seq_drawer import Figure, draw_sequence
 from pulser.sequence._seq_str import seq_to_str
-from pulser.sequence._seq_tools import dmm_id_from_name, get_dmm_name
 from pulser.waveforms import Waveform
 
 DeviceType = TypeVar("DeviceType", bound=BaseDevice)
@@ -252,7 +251,7 @@ class Sequence(Generic[DeviceType]):
                     dmm_id = call.args[1]
                 else:
                     dmm_id = "dmm_0"
-                dmm_name = get_dmm_name(
+                dmm_name = _get_dmm_name(
                     dmm_id, list(all_declared_channels.keys())
                 )
                 all_declared_channels[dmm_name] = self.device.dmm_channels[
@@ -286,7 +285,7 @@ class Sequence(Generic[DeviceType]):
             occupied_ch_ids = [
                 self._schedule[ch_name].channel_id
                 if ch_name in self._schedule
-                else dmm_id_from_name(ch_name)
+                else _dmm_id_from_name(ch_name)
                 for ch_name in self.declared_channels.keys()
             ]
             return {
@@ -503,7 +502,7 @@ class Sequence(Generic[DeviceType]):
         self._config_detuning_map(detuning_map, dmm_id)
         # Find the name of the dmm in the declared channels.
         for key in reversed(self.declared_channels.keys()):
-            if dmm_id == dmm_id_from_name(key):
+            if dmm_id == _dmm_id_from_name(key):
                 self._slm_mask_dmm = key
                 break
         # Modulate the dmm if pulses have already been added to Global Channels
@@ -815,14 +814,14 @@ class Sequence(Generic[DeviceType]):
                 ]
             elif "dmm_id" in sw_channel_kw_args:  # pragma: no cover
                 sw_channel_kw_args["dmm_id"] = channel_match[
-                    get_dmm_name(sw_channel_kw_args["dmm_id"], dmm_calls)
+                    _get_dmm_name(sw_channel_kw_args["dmm_id"], dmm_calls)
                 ]
                 dmm_calls.append(sw_channel_kw_args["dmm_id"])
             elif call.name == "declare_channel":
                 sw_channel_args[1] = channel_match[sw_channel_args[0]]
             else:
                 sw_channel_args[1] = channel_match[
-                    get_dmm_name(sw_channel_args[1], dmm_calls)
+                    _get_dmm_name(sw_channel_args[1], dmm_calls)
                 ]
                 dmm_calls.append(sw_channel_args[1])
             getattr(new_seq, call.name)(*sw_channel_args, **sw_channel_kw_args)
@@ -2008,7 +2007,7 @@ class Sequence(Generic[DeviceType]):
             channel_obj = self._schedule[channel].channel_obj
         else:
             # Sequence is parametrized and channel is a dmm_name
-            channel_obj = self.device.dmm_channels[dmm_id_from_name(channel)]
+            channel_obj = self.device.dmm_channels[_dmm_id_from_name(channel)]
         channel_obj.validate_pulse(pulse)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
