@@ -383,5 +383,5 @@ def test_results_xy(reg, pi_pulse):
     )
 
     # Check that measurement projectors are correct
-    assert results_._meas_projector(0) == qutip.basis(2, 1).proj()
-    assert results_._meas_projector(1) == qutip.basis(2, 0).proj()
+    assert results_._meas_projector(0) == qutip.basis(2, 0).proj()
+    assert results_._meas_projector(1) == qutip.basis(2, 1).proj()
