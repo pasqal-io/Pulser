@@ -139,17 +139,19 @@ The driving Hamiltonian describes the coherent excitation of an individual atom
 between two energies levels, :math:`|a\rangle` and :math:`|b\rangle`, with
 Rabi frequency :math:`\Omega(t)`, detuning :math:`\delta(t)` and phase :math:`\phi(t)`.
 
-.. math:: H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
-
-.. image:: files/two_level_ab.png
+.. figure:: files/two_level_ab.png
   :align: center
   :width: 200
   :alt: The energy levels for the driving Hamiltonian.
+
+  The coherent excitation is driven between a lower energy level, :math:`|a\rangle`, and a higher energy level,
+  :math:`|b\rangle`, with Rabi frequency :math:`\Omega(t)` and detuning :math:`\delta(t)`.
 
 .. warning::
   In this form, the Hamiltonian is **independent of the state vector representation of each basis state**,
   but it still assumes that :math:`|b\rangle` **has a higher energy than** :math:`|a\rangle`.
 
+.. math:: H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
 
 Pauli matrix form
 ---------------------
