@@ -15,13 +15,14 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from itertools import chain, combinations
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from scipy.interpolate import CubicSpline
 
@@ -226,100 +227,118 @@ def gather_data(
     data["total_duration"] = total_duration
     return data
 
-def _get_qubit_data(data:dict)->dict:
-    """Gets information to plot per qubits
 
-    Transforms a dictionary associating a ChannelDrawContent to each channel
-    into a dictionary associating a ChannelSamples to group of qubits.
+def gather_qubit_data(
+    sampled_seq: SequenceSamples,
+    data: dict,
+    register: Optional[BaseRegister] = None,
+    modulate: bool = False,
+) -> list[dict[tuple, np.ndarray]]:
+    """Collects all the data per qubit for plotting.
 
     Args:
-        data: A dictionary associating ChannelDrawContents to channels
-    
+        sampled_seq: The sampled sequence whose amplitude/detuning should
+            be displayed per qubit.
+        data: A dictionary associating ChannelDrawContents to channels.
+        register: The register associated with the sampled sequence.
+        modulate: Whether to gather the modulated amplitude/
+            detuning using the modulation bandwidth of the channels.
+
     Returns:
-        A dictionary associating ChannelSamples to qubits
+        A list of two dictionaries, associating an array of amplitude
+        (1st dict)/detuning (2nd dict) to tuple of qubits sharing same
+        amplitude/detuning.
     """
-    # TODO: Should be initialized with a tuple containing all the qubits that will be targeted
-    # Delete initialization of qubit data
-    # Make a for loop around targets and differentiate if DMM/Global or other type and build amp/det/phase to add
-    qubit_data: dict[tuple, ChannelSamples] = {}
+    # Gathers all the targeted qubits
+    all_targets = (
+        set().union(
+            *[
+                set(target)
+                for ch, ch_data in data.items()
+                if ch not in ["measurement", "total_duration"]
+                for target in list(ch_data.target.values())
+            ]
+        )
+        if register is None
+        else set(register.qubit_ids)
+    )
+    total_duration = data["total_duration"]
+    # Init: All the qubits are targeted by a pulse of zero amp/det
+    qubit_data: list[dict[tuple, np.ndarray]] = [
+        {
+            tuple(all_targets): np.zeros(total_duration),
+        }
+        for _ in range(2)
+    ]
     for ch, ch_data in data.items():
+        # for each channel
         if ch in ["measurement", "total_duration"]:
-            qubit_data[ch] = ch_data
             continue
-        targeted_qubits: dict[float, set] = {}
-        if isinstance(ch_data.samples, DMMSamples):
-            # DMM channel
-            # Defining targeted qubits
-            det_map = cast(DetuningMap, ch_data.samples.detuning_map)
-            det_weight_map = defaultdict(
-                int, det_map.get_qubit_weight_map(ch_data.samples.qubits)
+        # Associate a set of targets to a weight for each new target slot
+        for times, target in ch_data.target.items():
+            weight_target_map: list[dict[float, set]] = [{} for _ in range(2)]
+            if isinstance(ch_data.samples, DMMSamples):
+                assert len(ch_data.target) == 1
+                # DMM channel
+                # Defining targeted qubits
+                det_map = cast(DetuningMap, ch_data.samples.detuning_map)
+                det_weight_map = defaultdict(
+                    int,
+                    det_map.get_qubit_weight_map(
+                        ch_data.samples.qubits
+                        if not register
+                        else register.qubits
+                    ),
+                )
+                # 0 amplitude on all qubits:
+                weight_target_map[0][0] = all_targets
+                # If zero detuning, equivalent to having zero weight
+                if np.all(0.0 == ch_data.samples.det):
+                    weight_target_map[1][0] = all_targets
+                else:
+                    # Regroup the qubits targeted by the same weight
+                    for t, w in det_weight_map.items():
+                        if w not in weight_target_map[1]:
+                            weight_target_map[1][w] = set()
+                        weight_target_map[1][w].add(t)
+            elif len(ch_data.target) == 1:
+                # Global channel
+                # Targeted qubits: 1.0: ch_data.target["initial"]
+                for i in range(2):
+                    weight_target_map[i][1] = set(ch_data.target["initial"])
+            elif times != "initial":
+                for i in range(2):
+                    weight_target_map[i][1] = set(target)
+            else:
+                continue
+            # Update qubit data
+            old_qubit_data = qubit_data.copy()
+            qubit_data = [{} for _ in range(2)]
+            y = (
+                ch_data.get_input_curves()
+                if not modulate
+                else ch_data.get_output_curves(sampled_seq._ch_objs[ch])
             )
-            for t, w in det_weight_map.items():
-                if w == 0:
-                    continue
-                if w not in targeted_qubits:
-                    targeted_qubits[w] = set()
-                targeted_qubits[w].add(t)
-            # Initialize qubit data if it is empty
-            if not qubit_data:
-                for w, set_t in targeted_qubits:
-                    qubit_data[tuple(set_t)] = replace(ch_data.samples, det=w*ch_data.samples.det)
-                continue
-            # Update qubit data if not empty
-            old_qubit_data = qubit_data.copy()
-            qubit_data = {}
-            for qubits, qubit_data in old_qubit_data.items():
-                for w, set_t in targeted_qubits.items():
-                    sub_target = set_t.intersection(set(qubits))
-                    if not sub_target == set():
-                        qubit_data[tuple(sub_target)] = replace(qubit_data.samples, det=w*ch_data.samples.det+qubit_data.samples.det)
-        elif len(ch_data.target) == 1:
-            # Global channel
-            # Targeted qubits: 1.0: ch_data.target["initial"]
-            # Initialize qubit data if it is empty
-            if not qubit_data:
-                qubit_data[tuple(ch_data.target["initial"])] = ch_data.samples
-                continue
-            # Update qubit data if not empty
-            old_qubit_data = qubit_data.copy()
-            qubit_data = {}
-            for qubits, qubit_data in old_qubit_data.items():
-                sub_target = set(ch_data.target["initial"]).intersection(set(qubits))
-                if not sub_target == set():
-                    qubit_data[tuple(sub_target)] = replace(
-                        qubit_data.samples,
-                        amp = ch_data.samples.amp+qubit_data.samples.amp,
-                        det = ch_data.samples.det+qubit_data.samples.det,
-                        phase = ch_data.samples.phase+qubit_data.samples.phase,
-                        )
-        else:
-            # Channel with targeted
-            # Targeted qubits: 1.0: ch_data.target["initial"]
-            # Initialize qubit data if it is empty
-            ch_data_target = ch_data.target.copy()
-            ch_data_target.pop("initial")
-            for target in ch_data_target:
-                if not qubit_data:
-                    qubit_data[tuple(ch_data.target[target])] = replace(
-                        qubit_data.samples,
-                        amp = np.pad(ch_data.samples.amp[target[0][0]: target[0][1]], target[0]),
-                        det = np.pad(ch_data.samples.det[target[0][0]: target[0][1]], target[0]),
-                        phase = np.pad(ch_data.samples.phase[target[0][0]: target[0][1]], target[0]),
-                        )
-                    continue
-            # Update qubit data if not empty
-            old_qubit_data = qubit_data.copy()
-            qubit_data = {}
-            for qubits, qubit_data in old_qubit_data.items():
-                sub_target = set(ch_data.target["initial"]).intersection(set(qubits))
-                if not sub_target == set():
-                    qubit_data[tuple(sub_target)] = replace(
-                        qubit_data.samples,
-                        amp = qubit_data.samples.amp+np.pad(ch_data.samples.amp[target[0][0]: target[0][1]], target[0]),
-                        det = qubit_data.samples.det+np.pad(ch_data.samples.det[target[0][0]: target[0][1]], target[0]),
-                        phase = qubit_data.samples.phase+np.pad(ch_data.samples.phase[target[0][0]: target[0][1]], target[0]),
-                        )
+            for i, ch_samples in enumerate(y[:2]):  # not interested in phase
+                for q, q_data in old_qubit_data[i].items():
+                    for w, set_t in weight_target_map[i].items():
+                        sub_target = set_t.intersection(set(q))
+                        if sub_target != set():
+                            pad_times = (
+                                0 if times == "initial" else target[0],
+                                0
+                                if times == "initial"
+                                else total_duration - target[1],
+                            )
+                            qubit_data[i][tuple(sub_target)] = (
+                                w
+                                * np.pad(
+                                    ch_samples[:total_duration], pad_times
+                                )
+                                + q_data
+                            )
     return qubit_data
+
 
 def _draw_register_det_maps(
     sampled_seq: SequenceSamples,
@@ -392,7 +411,11 @@ def _draw_register_det_maps(
         # Initialize figure for detuning maps if register was not shown
         need_init = register is None
         for i, (ch, det_map) in enumerate(det_maps.items()):
-            qubits = cast(DMMSamples, sampled_seq.channel_samples[ch]).qubits
+            qubits = (
+                register.qubits
+                if register
+                else cast(DMMSamples, sampled_seq.channel_samples[ch]).qubits
+            )
             reg_det_map = det_map.get_qubit_weight_map(qubits)
             pos = np.array(list(qubits.values()))
             if need_init:
@@ -442,11 +465,10 @@ def _draw_register_det_maps(
                 )
                 ax_reg.set_title(ch, pad=10)
     return fig_reg
-        
+
 
 def _draw_channel_content(
     sampled_seq: SequenceSamples,
-    register: Optional[BaseRegister] = None,
     sampling_rate: Optional[float] = None,
     draw_phase_area: bool = False,
     draw_phase_shifts: bool = False,
@@ -455,7 +477,7 @@ def _draw_channel_content(
     draw_phase_curve: bool = False,
     draw_detuning_maps: bool = False,
     shown_duration: Optional[int] = None,
-) -> tuple[Figure | None, Figure, Any, dict]:
+) -> tuple[Figure, Any, dict]:
     """Draws samples of a sequence.
 
     Args:
@@ -495,6 +517,7 @@ def _draw_channel_content(
             return rf"{value:.2g}$\pi$"
 
     data = gather_data(sampled_seq, shown_duration)
+    n_channels = len(sampled_seq.channels)
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
     for ch in sampled_seq.channels:
@@ -502,9 +525,6 @@ def _draw_channel_content(
             data[ch].curves_on["detuning"] = True
         if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
             data[ch].curves_on["phase"] = True
-
-    # Draw register and detuning maps
-    fig_reg = _draw_register_det_maps(sampled_seq, register, draw_detuning_maps)
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
@@ -876,7 +896,165 @@ def _draw_channel_content(
                 ax.axhline(ax_lims[i][1], **hline_kwargs)
             if ax_lims[i][0] < 0:
                 ax.axhline(0, **hline_kwargs)
-    return (fig_reg, fig, ch_axes, data)
+    return (fig, ch_axes, data)
+
+
+def _draw_qubit_content(
+    sampled_seq: SequenceSamples,
+    data: dict,
+    register: Optional[BaseRegister] = None,
+    draw_input: bool = True,
+    draw_modulation: bool = False,
+    draw_qubit_amp: bool = False,
+    draw_qubit_det: bool = True,
+) -> Figure | None:
+    """Gets information to plot per qubits.
+
+    Draws the amplitude and detuning seen locally by each qubit.
+
+    Args:
+        sampled_seq: The sampled sequence whose amplitude/detuning should
+            be displayed per qubit.
+        data: A dictionary associating ChannelDrawContents to channels.
+        register: The register associated with the sampled sequence.
+        draw_input: Whether to draw to input of the amplitude/detuning.
+        draw_qubit_modulation: Whether to draw the modulated amplitude/
+            detuning using the modulation bandwidth of the channels.
+        draw_qubit_amp: Whether to draw the amplitude per qubit or not.
+        draw_qubit_det: Whether to draw the detuning per qubit or not.
+
+    Returns:
+        A figure to plot.
+    """
+    if not draw_qubit_det and not draw_qubit_amp:
+        return None
+    elif not np.all(
+        [
+            ch_obj.basis == "ground-rydberg"
+            for ch, ch_obj in sampled_seq._ch_objs.items()
+        ]
+    ):
+        raise ValueError("Can only draw qubit contents for rydberg channels.")
+    # Gather data per targeted qubits
+    total_duration = data["total_duration"]
+    draw_data = {"input": draw_input, "modulated": draw_modulation}
+    n_data = sum(list(draw_data.values()))
+    qubit_data = [
+        gather_qubit_data(
+            sampled_seq, data, register, (data_name == "modulated")
+        )
+        if to_draw
+        else None
+        for data_name, to_draw in draw_data.items()
+    ]
+    # Draw quantities
+    draw_quantities = [draw_qubit_amp, draw_qubit_det]
+    n_quantities = sum(draw_quantities)
+    ratios = [SIZE_PER_WIDTH[n_quantities]] * n_data
+    fig = plt.figure(
+        constrained_layout=False,
+        figsize=(20, sum(ratios)),
+    )
+    gs = fig.add_gridspec(n_data, 1, hspace=0.075, height_ratios=ratios)
+
+    fig.suptitle("Quantities per qubit over time", fontsize=16)
+    cmap = LinearSegmentedColormap.from_list("", COLORS)
+    hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
+    # The time axis of all channels is the same
+    time_scale = 1e3 if total_duration > 1e4 else 1
+    time = np.arange(total_duration) / time_scale
+    final_t = time[-1]
+    t_min = -final_t * 0.03
+    t_max = final_t * 1.05
+    plot_index = 0
+    for data_index, (data_name, to_draw) in enumerate(draw_data.items()):
+        if not to_draw:
+            continue
+        assert qubit_data[data_index] is not None
+        gs_ = gs[plot_index]
+        ax = fig.add_subplot(gs_)
+        for side in ("top", "bottom", "left", "right"):
+            ax.spines[side].set_color("none")
+        ax.tick_params(
+            labelcolor="w", top=False, bottom=False, left=False, right=False
+        )
+        ax.set_ylabel(data_name, labelpad=40, fontsize=18)
+        subgs = gs_.subgridspec(n_quantities, 1, hspace=0.0)
+        axes = [fig.add_subplot(subgs[i, :]) for i in range(n_quantities)]
+        subplot_index = 0
+        for i, draw_qty in enumerate(draw_quantities):
+            if not draw_qty:
+                continue
+            sub_ax = axes[subplot_index]
+            sub_ax.axvline(0, linestyle="--", linewidth=0.5, color="grey")
+            if subplot_index > 0:
+                sub_ax.spines["top"].set_visible(False)
+            if subplot_index < n_quantities - 1:
+                sub_ax.spines["bottom"].set_visible(False)
+            if plot_index < n_data - 1 or subplot_index < n_quantities - 1:
+                sub_ax.tick_params(
+                    axis="x",
+                    which="both",
+                    bottom=True,
+                    top=False,
+                    labelbottom=False,
+                    direction="in",
+                )
+            else:
+                unit = "ns" if time_scale == 1 else r"$\mu s$"
+                sub_ax.set_xlabel(f"t ({unit})", fontsize=12)
+            max_val = np.max(
+                [
+                    local_data
+                    for local_data in list(
+                        cast(list, qubit_data[data_index])[i].values()
+                    )
+                ]
+            )
+            min_val = np.min(
+                [
+                    local_data
+                    for local_data in list(
+                        cast(list, qubit_data[data_index])[i].values()
+                    )
+                ]
+            )
+            if i == 0:
+                max_val = 1 if max_val == 0 else max_val
+                max_val = max_val * 1.2
+                min_val = min(min_val, 0.0)
+            elif i == 1:
+                # Makes sure that [-1, 1] range is always represented
+                max_val = max(max_val, 1)
+                min_val = min(min_val, -1)
+                range_val = max_val - min_val
+                max_val = max_val + range_val * 0.15
+                min_val = min_val - range_val * 0.05
+            sub_ax.set_xlim(t_min, t_max)
+            sub_ax.set_ylim(min_val, max_val)
+            nb_targets = len(cast(list, qubit_data[data_index])[i])
+            for target_index, (target, q_data) in enumerate(
+                cast(list, qubit_data[data_index])[i].items()
+            ):
+                sub_ax.plot(
+                    time,
+                    q_data,
+                    label=",".join(map(str, target)),
+                    color=cmap(target_index / nb_targets),
+                    linewidth=0.8,
+                )
+            sub_ax.set_ylabel(LABELS[i], fontsize=14)
+            sub_ax.legend()
+
+            if subplot_index > 0:
+                sub_ax.axhline(max_val, **hline_kwargs)
+            if min_val < 0:
+                sub_ax.axhline(0, **hline_kwargs)
+
+            subplot_index += 1
+        plot_index += 1
+
+    return fig
 
 
 def draw_samples(
@@ -886,7 +1064,10 @@ def draw_samples(
     draw_phase_area: bool = False,
     draw_phase_shifts: bool = False,
     draw_phase_curve: bool = False,
-) -> tuple[Figure | None, Figure]:
+    draw_detuning_maps: bool = False,
+    draw_qubit_amp: bool = False,
+    draw_qubit_det: bool = False,
+) -> tuple[Figure | None, Figure, Figure | None]:
     """Draws a SequenceSamples.
 
     Args:
@@ -904,6 +1085,13 @@ def draw_samples(
             should be added to the plot, defaults to False.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
             if the phase doesn't change throughout the channel).
+        draw_detuning_maps: Whether to draw the detuning maps applied on the
+            qubits of the provided register. Shown before the samples,
+            defaults to False.
+        draw_qubit_amp: Draws the amplitude seen by the qubits locally after
+            the drawing of the sequence.
+        draw_qubit_det: Draws the detuning seen by the qubits locally after
+            the drawing of the sequence.
     """
     if not len(sampled_seq.channels):
         raise RuntimeError("Can't draw an empty sequence.")
@@ -912,9 +1100,12 @@ def draw_samples(
         for ch_samples in sampled_seq.channel_samples.values()
     ]
     max_slot_tf = max(slot_tfs) if len(slot_tfs) > 0 else None
-    (fig_reg, fig, ch_axes, data) = _draw_channel_content(
+    # Draw register and detuning maps
+    fig_reg = _draw_register_det_maps(
+        sampled_seq, register, draw_detuning_maps
+    )
+    (fig, ch_axes, data) = _draw_channel_content(
         sampled_seq,
-        register,
         sampling_rate,
         draw_phase_area,
         draw_phase_shifts,
@@ -923,8 +1114,16 @@ def draw_samples(
         draw_phase_curve=draw_phase_curve,
         shown_duration=max_slot_tf,
     )
-
-    return (fig_reg, fig)
+    fig_qubit = _draw_qubit_content(
+        sampled_seq,
+        data,
+        register,
+        draw_input=True,
+        draw_modulation=False,
+        draw_qubit_amp=draw_qubit_amp,
+        draw_qubit_det=draw_qubit_det,
+    )
+    return (fig_reg, fig, fig_qubit)
 
 
 def draw_sequence(
@@ -938,7 +1137,9 @@ def draw_sequence(
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
     draw_detuning_maps: bool = False,
-) -> tuple[Figure | None, Figure]:
+    draw_qubit_amp: bool = False,
+    draw_qubit_det: bool = False,
+) -> tuple[Figure | None, Figure, Figure | None]:
     """Draws the entire sequence.
 
     Args:
@@ -967,14 +1168,24 @@ def draw_sequence(
         draw_detuning_maps: Whether to draw the detuning maps applied on the
             qubits of the register of the sequence. Shown before the pulse
             sequence, defaults to False.
+        draw_qubit_amp: Draws the amplitude seen by the qubits locally after
+            the drawing of the sequence.
+        draw_qubit_det: Draws the detuning seen by the qubits locally after
+            the drawing of the sequence.
     """
     # Sample the sequence and get the data to plot
     shown_duration = seq.get_duration(include_fall_time=draw_modulation)
     sampled_seq = sample(seq)
-
-    (fig_reg, fig, ch_axes, data) = _draw_channel_content(
+    if not len(sampled_seq.channels):
+        raise RuntimeError("Can't draw an empty sequence.")
+    # Draw register and detuning maps
+    fig_reg = _draw_register_det_maps(
         sampled_seq,
         seq.register if draw_register else None,
+        draw_detuning_maps,
+    )
+    (fig, ch_axes, data) = _draw_channel_content(
+        sampled_seq,
         sampling_rate,
         draw_phase_area,
         draw_phase_shifts,
@@ -984,7 +1195,20 @@ def draw_sequence(
         draw_detuning_maps,
         shown_duration,
     )
-
+    draw_output = draw_modulation
+    for ch_obj in list(seq.declared_channels.values()):
+        draw_output = draw_output and (
+            ch_obj.mod_bandwidth is not None or not draw_input
+        )
+    fig_qubit = _draw_qubit_content(
+        sampled_seq,
+        data,
+        seq.register if draw_register else None,
+        draw_input=draw_input,
+        draw_modulation=draw_output,
+        draw_qubit_amp=draw_qubit_amp,
+        draw_qubit_det=draw_qubit_det,
+    )
     # Gather additional data for sequence specific drawing
     for ch, sch in seq._schedule.items():
         interp_pts: defaultdict[str, list[list[float]]] = defaultdict(list)
@@ -1014,4 +1238,4 @@ def draw_sequence(
                     pts = np.array(ch_data.interp_pts[qty])
                     axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
 
-    return (fig_reg, fig)
+    return (fig_reg, fig, fig_qubit)

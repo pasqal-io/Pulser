@@ -1568,6 +1568,8 @@ class Sequence(Generic[DeviceType]):
         draw_register: bool = False,
         draw_phase_curve: bool = False,
         draw_detuning_maps: bool = False,
+        draw_qubit_amp: bool = False,
+        draw_qubit_det: bool = False,
         fig_name: str | None = None,
         kwargs_savefig: dict = {},
         show: bool = True,
@@ -1599,6 +1601,10 @@ class Sequence(Generic[DeviceType]):
             draw_detuning_maps: Whether to draw the detuning maps applied on
                 the qubits of the register of the sequence. Shown before the
                 pulse sequence, defaults to False.
+            draw_qubit_amp: Draws the amplitude seen by the qubits locally
+                after the drawing of the sequence.
+            draw_qubit_det: Draws the detuning seen by the qubits locally after
+                the drawing of the sequence.
             fig_name: The name on which to save the
                 figure. If `draw_register` is True, both pulses and register
                 will be saved as figures, with a suffix ``_pulses`` and
@@ -1641,7 +1647,7 @@ class Sequence(Generic[DeviceType]):
                 "Can't draw the register for a sequence without a defined "
                 "register."
             )
-        fig_reg, fig = self._plot(
+        fig_reg, fig, fig_qubit = self._plot(
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
@@ -1650,18 +1656,25 @@ class Sequence(Generic[DeviceType]):
             draw_modulation="output" in mode,
             draw_phase_curve=draw_phase_curve,
             draw_detuning_maps=draw_detuning_maps,
+            draw_qubit_amp=draw_qubit_amp,
+            draw_qubit_det=draw_qubit_det,
         )
         if fig_name is not None and fig_reg is not None:
             name, ext = os.path.splitext(fig_name)
             fig.savefig(name + "_pulses" + ext, **kwargs_savefig)
             fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
+            if fig_qubit is not None:
+                fig_qubit.savefig(name + "_per_qubit" + ext, **kwargs_savefig)
+
         elif fig_name:
             fig.savefig(fig_name, **kwargs_savefig)
 
         if show:
             plt.show()
 
-    def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
+    def _plot(
+        self, **draw_options: bool
+    ) -> tuple[Figure | None, Figure, Figure | None]:
         return draw_sequence(self, **draw_options)
 
     def _modulate_slm_mask_dmm(self, duration: int, max_amp: float) -> None:
