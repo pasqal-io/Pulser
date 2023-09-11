@@ -276,6 +276,11 @@ def gather_qubit_data(
             continue
         # Associate a set of targets to a weight for each new target slot
         for times, target in ch_data.target.items():
+            y = (
+                ch_data.get_input_curves()
+                if not modulate
+                else ch_data.get_output_curves(sampled_seq._ch_objs[ch])
+            )
             weight_target_map: list[dict[float, set]] = [{} for _ in range(2)]
             if isinstance(ch_data.samples, DMMSamples):
                 assert len(ch_data.target) == 1
@@ -301,24 +306,17 @@ def gather_qubit_data(
                         if w not in weight_target_map[1]:
                             weight_target_map[1][w] = set()
                         weight_target_map[1][w].add(t)
-            elif len(ch_data.target) == 1:
-                # Global channel
-                # Targeted qubits: 1.0: ch_data.target["initial"]
-                for i in range(2):
-                    weight_target_map[i][1] = set(ch_data.target["initial"])
-            elif times != "initial":
-                for i in range(2):
-                    weight_target_map[i][1] = set(target)
             else:
-                continue
+                for i, samples in enumerate(y[:2]):
+                    if np.all(samples == 0.0):
+                        weight_target_map[i][0] = all_targets
+                        continue
+                    weight_target_map[i][1] = set(target)
+                    weight_target_map[i][0] = all_targets - set(target)
+
             # Update qubit data
             old_qubit_data = qubit_data.copy()
             qubit_data = [{} for _ in range(2)]
-            y = (
-                ch_data.get_input_curves()
-                if not modulate
-                else ch_data.get_output_curves(sampled_seq._ch_objs[ch])
-            )
             for i, ch_samples in enumerate(y[:2]):  # not interested in phase
                 for q, q_data in old_qubit_data[i].items():
                     for w, set_t in weight_target_map[i].items():
