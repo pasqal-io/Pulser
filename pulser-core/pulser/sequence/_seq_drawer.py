@@ -1034,16 +1034,31 @@ def _draw_qubit_content(
             for target_index, (target, q_data) in enumerate(
                 cast(list, qubit_data[data_index])[i].items()
             ):
+                label = ""
+                max_targets = 20
+                for label_index in range(0, len(target), max_targets):
+                    label += (
+                        ",".join(
+                            map(
+                                str,
+                                target[
+                                    label_index : label_index + max_targets
+                                ],
+                            )
+                        )
+                        + "\n"
+                    )
                 sub_ax.plot(
                     time,
                     q_data,
-                    label=",".join(map(str, target)),
+                    label=label,
                     color=cmap(target_index / nb_targets),
                     linewidth=0.8,
+                    linestyle="--" if data_name == "modulated" else "-",
                 )
             sub_ax.set_ylabel(LABELS[i], fontsize=14)
-            sub_ax.legend()
-
+            if plot_index == 0:
+                sub_ax.legend()
             if subplot_index > 0:
                 sub_ax.axhline(max_val, **hline_kwargs)
             if min_val < 0:
