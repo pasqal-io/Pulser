@@ -1653,8 +1653,11 @@ def test_multiple_index_targets(reg):
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
+@pytest.mark.parametrize("correct_phase_drift", (True, False))
 @pytest.mark.parametrize("custom_buffer_time", (None, 400))
-def test_eom_mode(reg, mod_device, custom_buffer_time, patch_plt_show):
+def test_eom_mode(
+    reg, mod_device, custom_buffer_time, correct_phase_drift, patch_plt_show
+):
     # Setting custom_buffer_time
     channels = mod_device.channels
     eom_config = dataclasses.replace(
@@ -1700,22 +1703,39 @@ def test_eom_mode(reg, mod_device, custom_buffer_time, patch_plt_show):
     ]
 
     pulse_duration = 100
-    seq.add_eom_pulse("ch0", pulse_duration, phase=0.0)
+    seq.add_eom_pulse(
+        "ch0",
+        pulse_duration,
+        phase=0.0,
+        correct_phase_drift=correct_phase_drift,
+    )
     first_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
     assert first_pulse_slot.ti == delay_slot.tf
     assert first_pulse_slot.tf == first_pulse_slot.ti + pulse_duration
-    eom_pulse = Pulse.ConstantPulse(pulse_duration, amp_on, detuning_on, 0.0)
+    phase = detuning_off * first_pulse_slot.ti * 1e-3 * correct_phase_drift
+    eom_pulse = Pulse.ConstantPulse(pulse_duration, amp_on, detuning_on, phase)
     assert first_pulse_slot.type == eom_pulse
     assert not seq._schedule["ch0"].is_detuned_delay(eom_pulse)
 
     # Check phase jump buffer
-    seq.add_eom_pulse("ch0", pulse_duration, phase=np.pi)
+    phase_ = np.pi
+    seq.add_eom_pulse(
+        "ch0",
+        pulse_duration,
+        phase=phase_,
+        correct_phase_drift=correct_phase_drift,
+    )
     second_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
     phase_buffer = (
         eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
         + seq.declared_channels["ch0"].phase_jump_time
     )
     assert second_pulse_slot.ti == first_pulse_slot.tf + phase_buffer
+    # Corrects the phase acquired during the phase buffer
+    phase_ += detuning_off * phase_buffer * 1e-3 * correct_phase_drift
+    assert second_pulse_slot.type == Pulse.ConstantPulse(
+        pulse_duration, amp_on, detuning_on, phase_
+    )
 
     # Check phase jump buffer is not enforced with "no-delay"
     seq.add_eom_pulse("ch0", pulse_duration, phase=0.0, protocol="no-delay")
@@ -1746,8 +1766,15 @@ def test_eom_mode(reg, mod_device, custom_buffer_time, patch_plt_show):
     )
     assert buffer_delay.type == "delay"
 
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == 0
     # Check buffer when EOM is not enabled at the start of the sequence
-    seq.enable_eom_mode("ch0", amp_on, detuning_on, optimal_detuning_off=-100)
+    seq.enable_eom_mode(
+        "ch0",
+        amp_on,
+        detuning_on,
+        optimal_detuning_off=-100,
+        correct_phase_drift=correct_phase_drift,
+    )
     last_slot = seq._schedule["ch0"][-1]
     assert len(seq._schedule["ch0"].eom_blocks) == 2
     new_eom_block = seq._schedule["ch0"].eom_blocks[1]
@@ -1761,6 +1788,23 @@ def test_eom_mode(reg, mod_device, custom_buffer_time, patch_plt_show):
     # The buffer is a Pulse at 'detuning_off' and zero amplitude
     assert last_slot.type == Pulse.ConstantPulse(
         duration, 0.0, new_eom_block.detuning_off, last_pulse_slot.type.phase
+    )
+    # Check the phase shift that corrects for the drift
+    phase_ref = (
+        (new_eom_block.detuning_off * duration * 1e-3)
+        % (2 * np.pi)
+        * correct_phase_drift
+    )
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == phase_ref
+
+    # Add delay to test the phase drift correction in disable_eom_mode
+    last_delay_time = 400
+    seq.delay(last_delay_time, "ch0")
+
+    seq.disable_eom_mode("ch0", correct_phase_drift=True)
+    phase_ref += new_eom_block.detuning_off * last_delay_time * 1e-3
+    assert seq.current_phase_ref("q0", basis="ground-rydberg") == phase_ref % (
+        2 * np.pi
     )
 
     # Test drawing in eom mode

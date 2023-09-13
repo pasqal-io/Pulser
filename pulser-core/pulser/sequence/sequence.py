@@ -60,6 +60,7 @@ from pulser.sequence._call import _Call
 from pulser.sequence._schedule import (
     _ChannelSchedule,
     _DMMSchedule,
+    _PhaseDriftParams,
     _Schedule,
     _TimeSlot,
 )
@@ -958,6 +959,7 @@ class Sequence(Generic[DeviceType]):
         amp_on: Union[float, Parametrized],
         detuning_on: Union[float, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
+        correct_phase_drift: bool = False,
     ) -> None:
         """Puts a channel in EOM mode operation.
 
@@ -990,6 +992,8 @@ class Sequence(Generic[DeviceType]):
             optimal_detuning_off: The optimal value of detuning (in rad/µs)
                 when there is no pulse being played. It will choose the closest
                 value among the existing options.
+            correct_phase_drift: Performs a phase shift to correct for the
+                phase drift incurred while turning on the EOM mode.
         """
         if self.is_in_eom_mode(channel):
             raise RuntimeError(
@@ -1006,29 +1010,35 @@ class Sequence(Generic[DeviceType]):
             channel_obj.validate_pulse(on_pulse)
             amp_on = cast(float, amp_on)
             detuning_on = cast(float, detuning_on)
-
-            off_options = cast(
-                RydbergEOM, channel_obj.eom_config
-            ).detuning_off_options(amp_on, detuning_on)
-
+            eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                closest_option = np.abs(
-                    off_options - optimal_detuning_off
-                ).argmin()
-                detuning_off = off_options[closest_option]
+                detuning_off = eom_config.calculate_detuning_off(
+                    amp_on, detuning_on, optimal_detuning_off
+                )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
                 )
                 channel_obj.validate_pulse(off_pulse)
 
             if not self.is_parametrized():
+                phase_drift_params = _PhaseDriftParams(
+                    drift_rate=-detuning_off, ti=self.get_duration(channel)
+                )
                 self._schedule.enable_eom(
                     channel, amp_on, detuning_on, detuning_off
                 )
+                if correct_phase_drift:
+                    buffer_slot = self._last(channel)
+                    drift = phase_drift_params.calc_phase_drift(buffer_slot.tf)
+                    self._phase_shift(
+                        -drift, *buffer_slot.targets, basis=channel_obj.basis
+                    )
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
-    def disable_eom_mode(self, channel: str) -> None:
+    def disable_eom_mode(
+        self, channel: str, correct_phase_drift: bool = False
+    ) -> None:
         """Takes a channel out of EOM mode operation.
 
         For channels with a finite modulation bandwidth and an EOM, operation
@@ -1051,11 +1061,24 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             channel: The name of the channel to take out of EOM mode.
+            correct_phase_drift: Performs a phase shift to correct for the
+                phase drift that occured since the last pulse (or the start of
+                the EOM mode, if no pulse was added).
         """
         if not self.is_in_eom_mode(channel):
             raise RuntimeError(f"The '{channel}' channel is not in EOM mode.")
         if not self.is_parametrized():
             self._schedule.disable_eom(channel)
+            if correct_phase_drift:
+                ch_schedule = self._schedule[channel]
+                # EOM mode has just been disabled, so tf is defined
+                last_eom_block_tf = cast(int, ch_schedule.eom_blocks[-1].tf)
+                drift_params = self._get_last_eom_pulse_phase_drift(channel)
+                self._phase_shift(
+                    -drift_params.calc_phase_drift(last_eom_block_tf),
+                    *ch_schedule[-1].targets,
+                    basis=ch_schedule.channel_obj.basis,
+                )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -1067,6 +1090,7 @@ class Sequence(Generic[DeviceType]):
         phase: Union[float, Parametrized],
         post_phase_shift: Union[float, Parametrized] = 0.0,
         protocol: PROTOCOLS = "min-delay",
+        correct_phase_drift: bool = False,
     ) -> None:
         """Adds a square pulse to a channel in EOM mode.
 
@@ -1097,6 +1121,11 @@ class Sequence(Generic[DeviceType]):
                 immediately after the end of the pulse.
             protocol: Stipulates how to deal with eventual conflicts with
                 other channels (see `Sequence.add()` for more details).
+            correct_phase_drift: Adjusts the phase to correct for the phase
+                drift that occured since the last pulse (or the start of the
+                EOM mode, if adding the first pulse). This effectively
+                changes the phase of the EOM pulse, so an extra delay might
+                be added to enforce the phase jump time.
         """
         if not self.is_in_eom_mode(channel):
             raise RuntimeError(f"Channel '{channel}' must be in EOM mode.")
@@ -1120,7 +1149,14 @@ class Sequence(Generic[DeviceType]):
             phase,
             post_phase_shift=post_phase_shift,
         )
-        self._add(eom_pulse, channel, protocol)
+        phase_drift_params = (
+            self._get_last_eom_pulse_phase_drift(channel)
+            if correct_phase_drift
+            else None
+        )
+        self._add(
+            eom_pulse, channel, protocol, phase_drift_params=phase_drift_params
+        )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -1706,6 +1742,7 @@ class Sequence(Generic[DeviceType]):
         pulse: Union[Pulse, Parametrized],
         channel: str,
         protocol: PROTOCOLS,
+        phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
         self._validate_add_protocol(protocol)
         if self.is_parametrized():
@@ -1735,7 +1772,13 @@ class Sequence(Generic[DeviceType]):
             self._basis_ref[basis][q].phase.last_time for q in last.targets
         ]
 
-        self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
+        self._schedule.add_pulse(
+            pulse,
+            channel,
+            phase_barriers,
+            protocol,
+            phase_drift_params=phase_drift_params,
+        )
 
         true_finish = self._last(channel).tf + pulse.fall_time(
             channel_obj, in_eom_mode=self.is_in_eom_mode(channel)
@@ -1863,6 +1906,24 @@ class Sequence(Generic[DeviceType]):
 
             for qubit in target_ids:
                 self._basis_ref[basis][qubit].increment_phase(phi)
+
+    def _get_last_eom_pulse_phase_drift(
+        self, channel: str
+    ) -> _PhaseDriftParams:
+        eom_settings = self._schedule[channel].eom_blocks[-1]
+        try:
+            last_pulse_tf = (
+                self._schedule[channel]
+                .last_pulse_slot(ignore_detuned_delay=True)
+                .tf
+            )
+        except RuntimeError:
+            # There is no previous pulse
+            last_pulse_tf = 0
+        return _PhaseDriftParams(
+            drift_rate=-eom_settings.detuning_off,
+            ti=max(eom_settings.ti, last_pulse_tf),
+        )
 
     def _to_dict(self, _module: str = "pulser.sequence") -> dict[str, Any]:
         d = obj_to_dict(
