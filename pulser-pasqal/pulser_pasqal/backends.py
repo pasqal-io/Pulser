@@ -24,7 +24,9 @@ from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import JobParams, RemoteBackend, RemoteResults
 from pulser_pasqal.pasqal_cloud import PasqalCloud
 
-DEFAULT_CONFIG_EMU_TN = EmulatorConfig(evaluation_times="Final")
+DEFAULT_CONFIG_EMU_TN = EmulatorConfig(
+    evaluation_times="Final", sampling_rate=0.1
+)
 DEFAULT_CONFIG_EMU_FREE = EmulatorConfig(
     evaluation_times="Final", sampling_rate=0.25
 )
