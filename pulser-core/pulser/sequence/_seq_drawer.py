@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain, combinations
@@ -380,6 +381,7 @@ def _draw_register_det_maps(
                     ids=register._ids,
                     plane=(ix, iy),
                     masked_qubits=sampled_seq._slm_mask.targets,
+                    scale=1 / nregisters,
                 )
                 ax_reg.set_title(
                     title
@@ -402,6 +404,7 @@ def _draw_register_det_maps(
                 pos=pos,
                 ids=register._ids,
                 masked_qubits=sampled_seq._slm_mask.targets,
+                scale=1 / nregisters,
             )
             ax_reg.set_title(title, pad=10)
     # Draw detuning maps
@@ -447,6 +450,7 @@ def _draw_register_det_maps(
                         ids=list(qubits.keys()),
                         plane=(ix, iy),
                         dmm_qubits=reg_det_map,
+                        scale=1 / nregisters,
                     )
                     sub_ax_reg.set_title(
                         f"{ch} projected onto\n the "
@@ -460,6 +464,7 @@ def _draw_register_det_maps(
                     pos=pos,
                     ids=list(qubits.keys()),
                     dmm_qubits=reg_det_map,
+                    scale=1 / nregisters,
                 )
                 ax_reg.set_title(ch, pad=10)
     return fig_reg
@@ -711,18 +716,7 @@ def _draw_channel_content(
             targets = list(ch_data.target[coords])
             tgt_strs = [str(q) for q in targets]
             if isinstance(ch_obj, DMM):
-                samples = cast(DMMSamples, ch_data.samples)
-                det_map = cast(DetuningMap, ch_data.samples.detuning_map)
-                det_weight_map = defaultdict(
-                    int, det_map.get_qubit_weight_map(samples.qubits)
-                )
-                targets = [t for t in targets if det_weight_map[t] > 0]
-                if targets == []:
-                    tgt_strs = ["NONE"]
-                else:
-                    tgt_strs = [
-                        f"{q}: {det_weight_map[q]:.2f}" for q in targets
-                    ]
+                tgt_strs = ["⚄"]
             elif ch_obj.addressing == "Global":
                 tgt_strs = ["GLOBAL"]
             tgt_txt_y = max_amp * 1.1 - 0.25 * (len(tgt_strs) - 1)
@@ -730,13 +724,13 @@ def _draw_channel_content(
             if coords == "initial":
                 x = t_min + final_t * 0.005
                 target_regions.append([0, targets])
-                if tgt_strs == ["GLOBAL"] or tgt_strs == ["NONE"]:
+                if ch_obj.addressing == "Global":
                     axes[0].text(
                         x,
                         amp_top * 0.98,
                         tgt_strs[0],
                         fontsize=13,
-                        rotation=90,
+                        rotation=90 if tgt_strs == ["GLOBAL"] else 0,
                         ha="left",
                         va="top",
                         bbox=q_box,
@@ -905,7 +899,7 @@ def _draw_qubit_content(
     draw_modulation: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = True,
-) -> Figure | None:
+) -> tuple[Figure | None, Figure | None]:
     """Gets information to plot per qubits.
 
     Draws the amplitude and detuning seen locally by each qubit.
@@ -922,10 +916,15 @@ def _draw_qubit_content(
         draw_qubit_det: Whether to draw the detuning per qubit or not.
 
     Returns:
-        A figure to plot.
+        A figure displaying the amplitude/detuning seen by the atoms locally.
+        The atoms having same amplitude/detuning are grouped together. If a
+        register is provided, these groups of atoms are displayed in space in
+        a second figure.
     """
+    # Show nothing if no drawing per qubit asked
     if not draw_qubit_det and not draw_qubit_amp:
-        return None
+        return (None, None)
+    # Or if a channel is not in the ground-rydberg basis
     elif not np.all(
         [
             ch_obj.basis == "ground-rydberg"
@@ -945,7 +944,8 @@ def _draw_qubit_content(
         else None
         for data_name, to_draw in draw_data.items()
     ]
-    # Draw quantities
+    # Figure composed of 2 subplots (input, modulated) each composed
+    # of 2 subplots (amplitude, detuning)
     draw_quantities = [draw_qubit_amp, draw_qubit_det]
     n_quantities = sum(draw_quantities)
     ratios = [SIZE_PER_WIDTH[n_quantities]] * n_data
@@ -958,17 +958,56 @@ def _draw_qubit_content(
     fig.suptitle("Quantities per qubit over time", fontsize=16)
     cmap = LinearSegmentedColormap.from_list("", COLORS)
     hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
+    max_targets = 20  # maximum number of targets shown in legend
+    # If qubits can be defined, another figure is added to display legend
+    dmm_samples: list[DMMSamples] = [
+        cast(DMMSamples, sampled_seq.channel_samples[ch])
+        for ch in sampled_seq.channels
+        if isinstance(sampled_seq.channel_samples[ch], DMMSamples)
+    ]
+    qubits: None | dict = None
+    if register:
+        qubits = register.qubits
+    elif dmm_samples:
+        qubits = dmm_samples[0].qubits
+    else:
+        UserWarning("Provide a register for a more visible representation")
+    fig_legend: None | Figure = None
+    axes_legend: None | Axes = None
+    dimensionality_3d: bool | None = None
+    if register or dmm_samples:
+        dimensionality_3d = isinstance(register, Register3D) or (
+            dmm_samples != []
+            and cast(DetuningMap, dmm_samples[0].detuning_map).dimensionality
+            == 3
+        )
+        if dimensionality_3d:
+            labels = "xyz"
+            (
+                fig_legend,
+                axes_legend,
+            ) = Register._initialize_fig_axes_projection(
+                np.array(list(cast(dict, qubits).values())),
+                nregisters=n_quantities,
+            )
+        else:
+            (fig_legend, axes_legend) = Register._initialize_fig_axes(
+                np.array(list(cast(dict, qubits).values())),
+                nregisters=n_quantities,
+            )
     # The time axis of all channels is the same
     time_scale = 1e3 if total_duration > 1e4 else 1
     time = np.arange(total_duration) / time_scale
     final_t = time[-1]
     t_min = -final_t * 0.03
     t_max = final_t * 1.05
+    # Draw mode (input/modulated/both)
     plot_index = 0
     for data_index, (data_name, to_draw) in enumerate(draw_data.items()):
         if not to_draw:
             continue
         assert qubit_data[data_index] is not None
+        # Define plot
         gs_ = gs[plot_index]
         ax = fig.add_subplot(gs_)
         for side in ("top", "bottom", "left", "right"):
@@ -979,10 +1018,12 @@ def _draw_qubit_content(
         ax.set_ylabel(data_name, labelpad=40, fontsize=18)
         subgs = gs_.subgridspec(n_quantities, 1, hspace=0.0)
         axes = [fig.add_subplot(subgs[i, :]) for i in range(n_quantities)]
+        # Draw quantity (amplitude/detuning/both)
         subplot_index = 0
         for i, draw_qty in enumerate(draw_quantities):
             if not draw_qty:
                 continue
+            # Define subplot
             sub_ax = axes[subplot_index]
             sub_ax.axvline(0, linestyle="--", linewidth=0.5, color="grey")
             if subplot_index > 0:
@@ -1001,6 +1042,7 @@ def _draw_qubit_content(
             else:
                 unit = "ns" if time_scale == 1 else r"$\mu s$"
                 sub_ax.set_xlabel(f"t ({unit})", fontsize=12)
+            # Define the y axis
             max_val = np.max(
                 [
                     local_data
@@ -1030,44 +1072,88 @@ def _draw_qubit_content(
                 min_val = min_val - range_val * 0.05
             sub_ax.set_xlim(t_min, t_max)
             sub_ax.set_ylim(min_val, max_val)
+            # Plot one curve per target
             nb_targets = len(cast(list, qubit_data[data_index])[i])
             for target_index, (target, q_data) in enumerate(
                 cast(list, qubit_data[data_index])[i].items()
             ):
-                label = ""
-                max_targets = 20
-                for label_index in range(0, len(target), max_targets):
-                    label += (
-                        ",".join(
-                            map(
-                                str,
-                                target[
-                                    label_index : label_index + max_targets
-                                ],
-                            )
+                # label is simpler if qubits are defined
+                label: str = ""
+                if qubits:
+                    label = f"targets_{target_index}"
+                else:
+                    for label_index in range(0, len(target), max_targets):
+                        sub_target = map(
+                            str,
+                            target[label_index : label_index + max_targets],
                         )
-                        + "\n"
-                    )
+                        label += ",".join(sub_target) + "\n"
+                # Add curve
+                color = cmap(target_index / nb_targets)
                 sub_ax.plot(
                     time,
                     q_data,
                     label=label,
-                    color=cmap(target_index / nb_targets),
+                    color=color,
                     linewidth=0.8,
                     linestyle="--" if data_name == "modulated" else "-",
                 )
+                # Add targets to legend if qubits are defined
+                if plot_index == 0 and qubits:
+                    ax_leg = (
+                        axes_legend
+                        if n_quantities == 1
+                        else cast(list, axes_legend)[subplot_index]
+                    )
+                    targeted_atoms = {t: qubits[t] for t in target}
+                    pos = np.array(list(targeted_atoms.values()))
+                    if dimensionality_3d:
+                        for sub_ax_leg, (ix, iy) in zip(
+                            ax_leg, combinations(np.arange(3), 2)
+                        ):
+                            Register._draw_2D(
+                                ax=sub_ax_leg,
+                                pos=pos,
+                                ids=list(targeted_atoms.keys()),
+                                plane=(ix, iy),
+                                qubit_colors={t: color for t in target},
+                                masked_qubits=set(target),
+                                draw_label=label,
+                                scale=1 / n_quantities,
+                            )
+                            if target_index == 0:
+                                sub_ax_leg.set_title(
+                                    f"{LABELS[i]} projected onto\n the "
+                                    + labels[ix]
+                                    + labels[iy]
+                                    + "-plane"
+                                )
+                    else:
+                        Register._draw_2D(
+                            ax=ax_leg,
+                            pos=pos,
+                            ids=list(targeted_atoms.keys()),
+                            qubit_colors={t: color for t in target},
+                            masked_qubits=set(target),
+                            draw_label=label,
+                            scale=1 / n_quantities,
+                        )
+                        if target_index == 0:
+                            ax_leg.set_title(
+                                f"Targeted atoms for {LABELS[i][:8]}", pad=10
+                            )
             sub_ax.set_ylabel(LABELS[i], fontsize=14)
-            if plot_index == 0:
-                sub_ax.legend()
+            # Show legend only if qubits can't be defined
+            sub_ax.legend()
+
             if subplot_index > 0:
                 sub_ax.axhline(max_val, **hline_kwargs)
             if min_val < 0:
                 sub_ax.axhline(0, **hline_kwargs)
-
             subplot_index += 1
         plot_index += 1
 
-    return fig
+    return fig, fig_legend
 
 
 def draw_samples(
@@ -1080,7 +1166,7 @@ def draw_samples(
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
-) -> tuple[Figure | None, Figure, Figure | None]:
+) -> tuple[Figure | None, Figure, Figure | None, Figure | None]:
     """Draws a SequenceSamples.
 
     Args:
@@ -1127,7 +1213,7 @@ def draw_samples(
         draw_phase_curve=draw_phase_curve,
         shown_duration=max_slot_tf,
     )
-    fig_qubit = _draw_qubit_content(
+    (fig_qubit, fig_legend) = _draw_qubit_content(
         sampled_seq,
         data,
         register,
@@ -1136,7 +1222,7 @@ def draw_samples(
         draw_qubit_amp=draw_qubit_amp,
         draw_qubit_det=draw_qubit_det,
     )
-    return (fig_reg, fig, fig_qubit)
+    return (fig_reg, fig, fig_qubit, fig_legend)
 
 
 def draw_sequence(
@@ -1152,7 +1238,7 @@ def draw_sequence(
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
-) -> tuple[Figure | None, Figure, Figure | None]:
+) -> tuple[Figure | None, Figure, Figure | None, Figure | None]:
     """Draws the entire sequence.
 
     Args:
@@ -1210,13 +1296,18 @@ def draw_sequence(
     )
     draw_output = draw_modulation
     for ch_obj in list(seq.declared_channels.values()):
-        draw_output = draw_output and (
-            ch_obj.mod_bandwidth is not None or not draw_input
+        draw_output = draw_output and ch_obj.mod_bandwidth is not None
+    if not draw_output and not draw_input:
+        warnings.warn(
+            "Can't display modulated quantities per qubit if a channel does "
+            "not have a modulation bandwidth, displays the input per qubit.",
+            stacklevel=2,
         )
-    fig_qubit = _draw_qubit_content(
+        draw_input = True
+    (fig_qubit, fig_legend) = _draw_qubit_content(
         sampled_seq,
         data,
-        seq.register if draw_register else None,
+        seq.register,
         draw_input=draw_input,
         draw_modulation=draw_output,
         draw_qubit_amp=draw_qubit_amp,
@@ -1251,4 +1342,4 @@ def draw_sequence(
                     pts = np.array(ch_data.interp_pts[qty])
                     axes[ind].scatter(pts[:, 0], pts[:, 1], color=COLORS[ind])
 
-    return (fig_reg, fig, fig_qubit)
+    return (fig_reg, fig, fig_qubit, fig_legend)

@@ -1647,7 +1647,7 @@ class Sequence(Generic[DeviceType]):
                 "Can't draw the register for a sequence without a defined "
                 "register."
             )
-        fig_reg, fig, fig_qubit = self._plot(
+        fig_reg, fig, fig_qubit, fig_legend = self._plot(
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
@@ -1665,6 +1665,10 @@ class Sequence(Generic[DeviceType]):
             fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
             if fig_qubit is not None:
                 fig_qubit.savefig(name + "_per_qubit" + ext, **kwargs_savefig)
+                if fig_legend is not None:
+                    fig_qubit.savefig(
+                        name + "_per_qubit_legend" + ext, **kwargs_savefig
+                    )
 
         elif fig_name:
             fig.savefig(fig_name, **kwargs_savefig)
@@ -1674,7 +1678,7 @@ class Sequence(Generic[DeviceType]):
 
     def _plot(
         self, **draw_options: bool
-    ) -> tuple[Figure | None, Figure, Figure | None]:
+    ) -> tuple[Figure | None, Figure, Figure | None, Figure | None]:
         return draw_sequence(self, **draw_options)
 
     def _modulate_slm_mask_dmm(self, duration: int, max_amp: float) -> None:
