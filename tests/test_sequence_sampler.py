@@ -452,8 +452,17 @@ def test_phase_sampling(mod_device):
 @pytest.mark.parametrize("draw_phase_shifts", [True, False])
 @pytest.mark.parametrize("draw_phase_curve", [True, False])
 def test_draw_samples(
-    mod_seq, modulation, draw_phase_area, draw_phase_curve, draw_phase_shifts
+    mod_device,
+    mod_seq,
+    modulation,
+    draw_phase_area,
+    draw_phase_curve,
+    draw_phase_shifts,
 ):
+    reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
+    seq = pulser.Sequence(reg, mod_device)
+    with pytest.raises(RuntimeError, match="Can't draw an empty sequence."):
+        draw_samples(sample(seq, modulation=modulation))
     sampled_seq = sample(mod_seq, modulation=modulation)
     draw_samples(
         sampled_seq,

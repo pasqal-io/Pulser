@@ -931,7 +931,9 @@ def _draw_qubit_content(
             for ch, ch_obj in sampled_seq._ch_objs.items()
         ]
     ):
-        raise ValueError("Can only draw qubit contents for rydberg channels.")
+        raise NotImplementedError(
+            "Can only draw qubit contents for channels in rydberg basis."
+        )
     # Gather data per targeted qubits
     total_duration = data["total_duration"]
     draw_data = {"input": draw_input, "modulated": draw_modulation}
@@ -971,7 +973,11 @@ def _draw_qubit_content(
     elif dmm_samples:
         qubits = dmm_samples[0].qubits
     else:
-        UserWarning("Provide a register for a more visible representation")
+        warnings.warn(
+            "Provide a register and select draw_register for a more"
+            "visible representation",
+            UserWarning,
+        )
     fig_legend: None | Figure = None
     axes_legend: None | Axes = None
     dimensionality_3d: bool | None = None
@@ -1297,17 +1303,22 @@ def draw_sequence(
     draw_output = draw_modulation
     for ch_obj in list(seq.declared_channels.values()):
         draw_output = draw_output and ch_obj.mod_bandwidth is not None
-    if not draw_output and not draw_input:
+    if (
+        not draw_output
+        and not draw_input
+        and (draw_qubit_det or draw_qubit_amp)
+    ):
         warnings.warn(
             "Can't display modulated quantities per qubit if a channel does "
             "not have a modulation bandwidth, displays the input per qubit.",
+            UserWarning,
             stacklevel=2,
         )
         draw_input = True
     (fig_qubit, fig_legend) = _draw_qubit_content(
         sampled_seq,
         data,
-        seq.register,
+        seq.register if draw_register else None,
         draw_input=draw_input,
         draw_modulation=draw_output,
         draw_qubit_amp=draw_qubit_amp,
