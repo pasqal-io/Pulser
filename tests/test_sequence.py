@@ -590,7 +590,7 @@ def test_switch_device_down(
     # From sequence reusing DMMs to Device without reusable channels
     seq = init_seq(
         reg,
-        MockDevice,
+        dataclasses.replace(Chadoq2.to_virtual(), reusable_channels=True),
         "global",
         "rydberg_global",
         None,
@@ -612,6 +612,24 @@ def test_switch_device_down(
     ):
         # Can't find a match for the 2nd dmm_0
         seq.switch_device(Chadoq2)
+    # Strict switch imposes to have same bottom detuning for DMMs
+    with pytest.raises(
+        ValueError,
+        match="No match for channel dmm_0_1 with the" " same bottom_detuning.",
+    ):
+        # Can't find a match for the 1st dmm_0
+        seq.switch_device(
+            dataclasses.replace(
+                Chadoq2,
+                dmm_objects=(
+                    Chadoq2.dmm_channels["dmm_0"],
+                    dataclasses.replace(
+                        Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+                    ),
+                ),
+            ),
+            strict=True,
+        )
     seq_ising = init_seq(
         reg,
         MockDevice,
@@ -1552,7 +1570,8 @@ def test_hardware_constraints(reg, patch_plt_show):
     seq.draw(mode="input+output")
 
 
-def test_mappable_register(patch_plt_show):
+@pytest.mark.parametrize("with_dmm", [False, True])
+def test_mappable_register(det_map, patch_plt_show, with_dmm):
     layout = TriangularLatticeLayout(100, 5)
     mapp_reg = layout.make_mappable_register(10)
     seq = Sequence(mapp_reg, Chadoq2)
@@ -1577,19 +1596,32 @@ def test_mappable_register(patch_plt_show):
     seq.__str__()
     # Warning if sequence has Global channels and a mappable register
     seq.declare_channel("ryd_glob", "rydberg_global")
-    warn_message_global = (
+    global_channels = ["ryd_glob"]
+    if with_dmm:
+        seq.config_detuning_map(det_map, "dmm_0")
+        global_channels.append("dmm_0")
+    warn_message_rydberg = [
         "Showing the register for a sequence with a mappable register."
-        + "Target qubits of channel ryd_glob will be defined in build."
-    )
-    with pytest.warns(UserWarning, match=warn_message_global):
+        + f"Target qubits of channel {ch} will be defined in build."
+        for ch in global_channels
+    ]
+    with pytest.warns(UserWarning) as records:
         seq.__str__()
+    assert len(records) == len(global_channels)
+    assert [
+        str(records[i].message) for i in range(len(global_channels))
+    ] == warn_message_rydberg
     # Index of mappable register can be accessed
     seq.phase_shift_index(np.pi / 4, 0, basis="digital")  # 0 -> q0
     seq.target_index(2, "ryd_loc")  # 2 -> q2
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_glob")
+    if with_dmm:
+        seq.modulate_det_map(RampWaveform(100, -10, 0), "dmm_0")
     seq.add(Pulse.ConstantPulse(200, 1, 0, 0), "ram")
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_loc")
     assert seq._last("ryd_glob").targets == set(reserved_qids)
+    if with_dmm:
+        assert seq._last("dmm_0").targets == set(reserved_qids)
     assert seq._last("ram").targets == {"q0"}
     assert seq._last("ryd_loc").targets == {"q2"}
 
@@ -1597,7 +1629,17 @@ def test_mappable_register(patch_plt_show):
         seq.draw(draw_register=True)
 
     # Can draw if 'draw_register=False'
-    seq.draw()
+    if with_dmm:
+        with pytest.raises(
+            NotImplementedError,
+            match=(
+                "Sequences with a DMM channel can't be sampled while "
+                "their register is mappable."
+            ),
+        ):
+            seq.draw()
+    else:
+        seq.draw()
     with pytest.raises(ValueError, match="'qubits' must be specified"):
         seq.build()
 
