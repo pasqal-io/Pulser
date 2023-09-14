@@ -336,21 +336,54 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
         reg,
-        MockDevice,
+        dataclasses.replace(Chadoq2.to_virtual(), reusable_channels=True),
         "global",
         "rydberg_global",
         None,
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    seq.declare_channel("global2", "rydberg_global")
+    seq.declare_channel("raman", "raman_local", ["q0"])
+    seq.declare_channel("raman_1", "raman_local", ["q0"])
     with pytest.raises(
         TypeError,
-        match="No match for channel global2 with the"
+        match="No match for channel raman_1 with the"
         " right type, basis and addressing.",
     ):
-        # Can't find a match for the 2nd rydberg_global
+        # Can't find a match for the 2nd rydberg_local
         seq.switch_device(Chadoq2)
+
+    with pytest.raises(
+        TypeError,
+        match="No match for channel raman_1 with the"
+        " right type, basis and addressing.",
+    ):
+        # Can't find a match for the 2nd rydberg_local
+        seq.switch_device(Chadoq2)
+
+    with pytest.raises(
+        ValueError,
+        match="No match for channel raman_1 with the" " same clock_period.",
+    ):
+        # Can't find a match for the 2nd rydberg_local
+        seq.switch_device(
+            dataclasses.replace(
+                Chadoq2,
+                channel_objects=(
+                    Chadoq2.channels["rydberg_global"],
+                    dataclasses.replace(
+                        Chadoq2.channels["raman_local"], clock_period=10
+                    ),
+                    Chadoq2.channels["raman_local"],
+                ),
+                channel_ids=(
+                    "rydberg_global",
+                    "rydberg_local",
+                    "rydberg_local1",
+                ),
+            ),
+            strict=True,
+        )
 
     seq_ising = init_seq(
         reg,

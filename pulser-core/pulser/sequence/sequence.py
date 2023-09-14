@@ -553,6 +553,8 @@ class Sequence(Generic[DeviceType]):
                         continue
                 if not strict:
                     channel_match[old_ch_name] = new_ch_id
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
                     break
 
                 params_to_check = [
@@ -574,6 +576,10 @@ class Sequence(Generic[DeviceType]):
                 else:
                     # Only reached if all checks passed
                     channel_match[old_ch_name] = new_ch_id
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
+                    if strict_error_message.startswith(base_msg):
+                        strict_error_message = ""
                     break
 
         if None in channel_match.values():
