@@ -1192,7 +1192,7 @@ class Sequence(Generic[DeviceType]):
             `phase_jump_time` is respected. To override this behaviour, use
             the ``'no-delay'`` protocol.
         """
-        self._validate_channel(channel, block_eom_mode=True)
+        self._validate_channel(channel, block_eom_mode=True, block_if_slm=channel.startswith("dmm_"))
         self._add(pulse, channel, protocol)
 
     @seq_decorators.store
