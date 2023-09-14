@@ -350,7 +350,7 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
         match="No match for channel raman_1 with the"
         " right type, basis and addressing.",
     ):
-        # Can't find a match for the 2nd rydberg_local
+        # Can't find a match for the 2nd raman_local
         seq.switch_device(Chadoq2)
 
     with pytest.raises(
@@ -358,7 +358,7 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
         match="No match for channel raman_1 with the"
         " right type, basis and addressing.",
     ):
-        # Can't find a match for the 2nd rydberg_local
+        # Can't find a match for the 2nd raman_local
         seq.switch_device(Chadoq2)
 
     with pytest.raises(
