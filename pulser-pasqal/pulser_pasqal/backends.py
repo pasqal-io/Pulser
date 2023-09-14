@@ -111,7 +111,8 @@ class EmuTNBackend(PasqalEmulator):
     """An emulator backend using tensor network simulation.
 
     Configurable fields in EmulatorConfig:
-        - sampling_rate
+        - sampling_rate: Defaults to 0.1. This value must remain low to use
+          this backend efficiently.
         - backend_options:
             - precision (str): The precision of the simulation. Can be "low",
               "normal" or "high". Defaults to "normal".
