@@ -811,7 +811,7 @@ def test_switch_device_up(
         config_det_map=config_det_map,
     )
     if config_det_map:
-        seq1.modulate_det_map(mod_wvf, "dmm_0")
+        seq1.add_dmm_detuning(mod_wvf, "dmm_0")
     seq2 = init_seq(
         reg,
         devices[0],
@@ -823,7 +823,7 @@ def test_switch_device_up(
         config_det_map=config_det_map,
     )
     if config_det_map:
-        seq2.modulate_det_map(mod_wvf, "dmm_0")
+        seq2.add_dmm_detuning(mod_wvf, "dmm_0")
     new_seq = seq1.switch_device(devices[0], strict)
     build_kwargs = {}
     if parametrized:
@@ -1636,7 +1636,7 @@ def test_mappable_register(det_map, patch_plt_show, with_dmm):
     seq.target_index(2, "ryd_loc")  # 2 -> q2
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_glob")
     if with_dmm:
-        seq.modulate_det_map(RampWaveform(100, -10, 0), "dmm_0")
+        seq.add_dmm_detuning(RampWaveform(100, -10, 0), "dmm_0")
     seq.add(Pulse.ConstantPulse(200, 1, 0, 0), "ram")
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_loc")
     assert seq._last("ryd_glob").targets == set(reserved_qids)
