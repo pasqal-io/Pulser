@@ -24,7 +24,9 @@ from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import JobParams, RemoteBackend, RemoteResults
 from pulser_pasqal.pasqal_cloud import PasqalCloud
 
-DEFAULT_CONFIG_EMU_TN = EmulatorConfig(evaluation_times="Final")
+DEFAULT_CONFIG_EMU_TN = EmulatorConfig(
+    evaluation_times="Final", sampling_rate=0.1
+)
 DEFAULT_CONFIG_EMU_FREE = EmulatorConfig(
     evaluation_times="Final", sampling_rate=0.25
 )
@@ -109,7 +111,8 @@ class EmuTNBackend(PasqalEmulator):
     """An emulator backend using tensor network simulation.
 
     Configurable fields in EmulatorConfig:
-        - sampling_rate
+        - sampling_rate: Defaults to 0.1. This value must remain low to use
+          this backend efficiently.
         - backend_options:
             - precision (str): The precision of the simulation. Can be "low",
               "normal" or "high". Defaults to "normal".
