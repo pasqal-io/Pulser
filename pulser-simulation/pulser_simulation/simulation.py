@@ -402,7 +402,7 @@ class QutipEmulator:
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
                 [
-                    self.basis["d" if self._interaction == "XY" else "g"]
+                    self.basis["u" if self._interaction == "XY" else "g"]
                     for _ in range(self._size)
                 ]
             )
@@ -683,7 +683,7 @@ class QutipEmulator:
             """Construct the XY interaction Term.
 
             For each pair of qubits, calculate the distance between them,
-            then assign the local operator "sigma_du * sigma_ud" at each pair.
+            then assign the local operator "sigma_ud * sigma_du" at each pair.
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
@@ -707,7 +707,7 @@ class QutipEmulator:
                 / dist**3
             )
             return U * self.build_operator(
-                [("sigma_du", [q1]), ("sigma_ud", [q2])]
+                [("sigma_ud", [q1]), ("sigma_du", [q2])]
             )
 
         def make_interaction_term(masked: bool = False) -> qutip.Qobj:
@@ -753,7 +753,7 @@ class QutipEmulator:
             elif basis == "digital":
                 op_ids = ["sigma_hg", "sigma_gg"]
             elif basis == "XY":
-                op_ids = ["sigma_du", "sigma_dd"]
+                op_ids = ["sigma_du", "sigma_uu"]
 
             terms = []
             if addr == "Global":

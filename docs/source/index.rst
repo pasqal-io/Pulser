@@ -60,6 +60,7 @@ computers and simulators, check the pages in :doc:`review`.
    :caption: Fundamental Concepts
 
    review
+   conventions
 
 .. toctree::
    :maxdepth: 2
