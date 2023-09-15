@@ -1488,7 +1488,7 @@ def test_slm_mask_in_ising(
     mask_time = 700 + 2 * mymockdevice.channels["rydberg_global"].rise_time
     assert seq1._slm_mask_time == [0, mask_time]
     assert seq1._schedule["dmm_0_1"].slots[1].type == Pulse.ConstantPulse(
-        700, 0, -100, 0
+        mask_time, 0, -100, 0
     )
     # Possible to modulate dmm_0_1 after slm declaration
     seq1.add_dmm_detuning(RampWaveform(300, 0, -10), "dmm_0_1")
