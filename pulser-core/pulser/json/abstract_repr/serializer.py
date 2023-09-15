@@ -337,9 +337,9 @@ def serialize_abstract_sequence(
                 data, call.name, "correct_phase_drift"
             )
             operations.append({"op": "disable_eom_mode", **data})
-        elif call.name == "modulate_det_map":
+        elif call.name == "add_dmm_detuning":
             data = get_all_args(("waveform", "dmm_name", "protocol"), call)
-            operations.append({"op": "modulate_det_map", **data})
+            operations.append({"op": "add_dmm_detuning", **data})
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 
