@@ -359,7 +359,7 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
         " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd raman_local
-        seq.switch_device(Chadoq2)
+        seq.switch_device(Chadoq2, strict=True)
 
     with pytest.raises(
         ValueError,
