@@ -217,11 +217,11 @@ class SimulationResults(ABC, Results[ResultType]):
         Args:
             state_n: The measured state (0 or 1).
         """
-        if self._basis_name == "digital":
-            return qutip.basis(2, state_n).proj()
+        if self._basis_name == "ground-rydberg":
+            # 0 = |g>; 1 = |r>
+            return qutip.basis(2, 1 - state_n).proj()
 
-        # 0 = |g or d> = |1>; 1 = |r or u> = |0>
-        return qutip.basis(2, 1 - state_n).proj()
+        return qutip.basis(2, state_n).proj()
 
 
 class NoisyResults(SimulationResults):
@@ -495,9 +495,13 @@ class CoherentResults(SimulationResults):
                 else self._meas_errors["epsilon_prime"]
             )
             # 'good' is the position of the state that measures to state_n
-            # Matches for the digital basis, is inverted for ground-rydberg and
-            # for XY
-            good = state_n if self._basis_name == "digital" else 1 - state_n
+            # Matches for the digital basis and XY, is inverted for
+            # ground-rydberg
+            good = (
+                1 - state_n
+                if self._basis_name == "ground-rydberg"
+                else state_n
+            )
             return (
                 qutip.basis(2, good).proj() * (1 - err_param)
                 + qutip.basis(2, 1 - good).proj() * err_param
