@@ -1206,13 +1206,13 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     @seq_decorators.mark_non_empty
     @seq_decorators.block_if_measured
-    def modulate_det_map(
+    def add_dmm_detuning(
         self,
         waveform: Union[Waveform, Parametrized],
         dmm_name: str,
         protocol: PROTOCOLS = "no-delay",
     ) -> None:
-        """Modulates the detuning map by a waveform.
+        """Add a Pulse of zero amplitude and detuning defined by a waveform to a dmm.
 
         Args:
             waveform: The waveform to add to the detuning of the dmm.

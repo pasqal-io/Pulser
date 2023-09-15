@@ -1286,7 +1286,7 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     seq1 = Sequence(reg, MockDevice)
     seq1.declare_channel("ryd_glob", "rydberg_global")
     seq1.config_detuning_map(det_map, "dmm_0")
-    seq1.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0")
+    seq1.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
     # Same function with add is longer
     seq1.add(Pulse.ConstantAmplitude(0, RampWaveform(300, -10, 0), 0), "dmm_0")
     # pulse is added on rydberg global with a delay (protocol is "min-delay")
@@ -1298,7 +1298,7 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
         700, 0, -100, 0
     )
     # Possible to modulate dmm_0_1 after slm declaration
-    seq1.modulate_det_map(RampWaveform(300, 0, -10), "dmm_0_1")
+    seq1.add_dmm_detuning(RampWaveform(300, 0, -10), "dmm_0_1")
     assert seq1._slm_mask_time == [0, 700]
 
     # Set mask and then add ising pulses to the schedule
@@ -1309,12 +1309,12 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     with pytest.raises(
         ValueError, match="You should add a Pulse to a Global Channel"
     ):
-        seq2.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0")
+        seq2.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
     with pytest.raises(
         ValueError, match="You should add a Pulse to a Global Channel"
     ):
         seq2.add(Pulse.ConstantPulse(300, 0, -10, 0), "dmm_0")
-    seq2.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0_1")  # not slm
+    seq2.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0_1")  # not slm
     seq2.add(pulse2, "ryd_glob")  # slm pulse between 0 and 500
     assert seq2._slm_mask_time == [0, 500]
     assert seq2._schedule["dmm_0"].slots[1].type == Pulse.ConstantPulse(

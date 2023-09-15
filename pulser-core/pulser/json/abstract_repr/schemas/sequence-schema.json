@@ -582,7 +582,7 @@
           "description": "The name of the DMM."
         },
         "op": {
-          "const": "modulate_det_map",
+          "const": "add_dmm_detuning",
           "type": "string"
         },
         "protocol": {

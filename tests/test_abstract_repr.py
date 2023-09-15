@@ -830,7 +830,7 @@ class TestSerialization:
             seq.config_detuning_map(
                 reg.define_detuning_map(dmm, "det_map"), "dmm_0"
             )
-            seq.modulate_det_map(ConstantWaveform(100, -10), "dmm_0_1")
+            seq.add_dmm_detuning(ConstantWaveform(100, -10), "dmm_0_1")
             seq.declare_channel("rydberg_global", "rydberg_global")
             seq.add(Pulse.ConstantPulse(100, 10, 0, 0), "rydberg_global")
 
@@ -866,7 +866,7 @@ class TestSerialization:
             ]
             assert abstract["dmm_channels"][0][1]["slug"] == "det_map"
 
-            assert abstract["operations"][1]["op"] == "modulate_det_map"
+            assert abstract["operations"][1]["op"] == "add_dmm_detuning"
             assert abstract["operations"][1]["dmm_name"] == "dmm_0_1"
 
             assert abstract["operations"][2]["op"] == "pulse"
@@ -1062,7 +1062,7 @@ class TestDeserialization:
                 "dmm_id": "dmm_0",
             },
             {
-                "op": "modulate_det_map",
+                "op": "add_dmm_detuning",
                 "protocol": "no-delay",
                 "waveform": {
                     "kind": "constant",
