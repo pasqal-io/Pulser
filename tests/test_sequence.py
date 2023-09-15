@@ -37,6 +37,7 @@ from pulser.sequence.sequence import _TimeSlot
 from pulser.waveforms import (
     BlackmanWaveform,
     CompositeWaveform,
+    ConstantWaveform,
     InterpolatedWaveform,
     RampWaveform,
 )
@@ -80,7 +81,8 @@ def test_channel_declaration(reg, device):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
-
+    with pytest.raises(ValueError, match="Name starting by 'dmm_'"):
+        seq.declare_channel("dmm_1_2", "raman")
     seq.declare_channel("ch0", "rydberg_global")
     assert seq.get_addressed_bases() == ("ground-rydberg",)
     seq.declare_channel("ch1", "raman_local")
@@ -319,6 +321,7 @@ def devices():
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
+        supports_slm_mask=True,
         channel_objects=(
             Raman.Global(
                 2 * np.pi * 20,
@@ -340,6 +343,14 @@ def devices():
                 max_duration=2**26,
             ),
         ),
+        dmm_objects=(
+            DMM(
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+                bottom_detuning=-20,
+            ),
+        ),
     )
 
     device2 = Device(
@@ -349,6 +360,7 @@ def devices():
         max_atom_num=100,
         max_radial_distance=60,
         min_atom_distance=5,
+        supports_slm_mask=True,
         channel_ids=("rmn_local", "rydberg_global"),
         channel_objects=(
             Raman.Local(
@@ -367,6 +379,14 @@ def devices():
                 max_duration=2**26,
             ),
         ),
+        dmm_objects=(
+            DMM(
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+                bottom_detuning=-20,
+            ),
+        ),
     )
 
     device3 = VirtualDevice(
@@ -374,6 +394,7 @@ def devices():
         dimensions=2,
         rydberg_level=70,
         min_atom_distance=5,
+        supports_slm_mask=True,
         channel_ids=(
             "rmn_local1",
             "rmn_local2",
@@ -413,6 +434,14 @@ def devices():
                 max_duration=2**26,
             ),
         ),
+        dmm_objects=(
+            DMM(
+                clock_period=4,
+                min_duration=16,
+                max_duration=2**26,
+                bottom_detuning=-20,
+            ),
+        ),
     )
 
     return [device1, device2, device3]
@@ -447,6 +476,7 @@ def init_seq(
     initial_target=None,
     parametrized=False,
     mappable_reg=False,
+    config_det_map=False,
 ) -> Sequence:
     register = (
         reg.layout.make_mappable_register(len(reg.qubits))
@@ -463,7 +493,17 @@ def init_seq(
     if parametrized:
         delay = seq.declare_variable("delay", dtype=int)
         seq.delay(delay, channel_name)
-
+    if config_det_map:
+        det_map = reg.define_detuning_map(
+            {
+                "q" + str(i): (1 / 4 if i in [0, 1, 3, 4] else 0)
+                for i in range(10)
+            }
+        )
+        if mappable_reg:
+            seq.config_detuning_map(det_map, "dmm_0")
+        else:
+            seq.config_slm_mask(["q0"], "dmm_0")
     return seq
 
 
@@ -489,7 +529,9 @@ def test_ising_mode(
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
+def test_switch_device_down(
+    reg, det_map, devices, pulses, mappable_reg, parametrized
+):
     # Device checkout
     seq = init_seq(
         reg,
@@ -510,22 +552,98 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
         reg,
-        MockDevice,
+        dataclasses.replace(Chadoq2.to_virtual(), reusable_channels=True),
         "global",
         "rydberg_global",
         None,
         parametrized=parametrized,
         mappable_reg=mappable_reg,
     )
-    seq.declare_channel("global2", "rydberg_global")
+    seq.declare_channel("raman", "raman_local", ["q0"])
+    seq.declare_channel("raman_1", "raman_local", ["q0"])
     with pytest.raises(
         TypeError,
-        match="No match for channel global2 with the"
+        match="No match for channel raman_1 with the"
         " right type, basis and addressing.",
     ):
-        # Can't find a match for the 2nd rydberg_global
+        # Can't find a match for the 2nd raman_local
         seq.switch_device(Chadoq2)
 
+    with pytest.raises(
+        TypeError,
+        match="No match for channel raman_1 with the"
+        " right type, basis and addressing.",
+    ):
+        # Can't find a match for the 2nd raman_local
+        seq.switch_device(Chadoq2, strict=True)
+
+    with pytest.raises(
+        ValueError,
+        match="No match for channel raman_1 with the" " same clock_period.",
+    ):
+        # Can't find a match for the 2nd rydberg_local
+        seq.switch_device(
+            dataclasses.replace(
+                Chadoq2,
+                channel_objects=(
+                    Chadoq2.channels["rydberg_global"],
+                    dataclasses.replace(
+                        Chadoq2.channels["raman_local"], clock_period=10
+                    ),
+                    Chadoq2.channels["raman_local"],
+                ),
+                channel_ids=(
+                    "rydberg_global",
+                    "rydberg_local",
+                    "rydberg_local1",
+                ),
+            ),
+            strict=True,
+        )
+
+    # From sequence reusing DMMs to Device without reusable channels
+    seq = init_seq(
+        reg,
+        dataclasses.replace(Chadoq2.to_virtual(), reusable_channels=True),
+        "global",
+        "rydberg_global",
+        None,
+        parametrized=parametrized,
+        mappable_reg=mappable_reg,
+        config_det_map=True,
+    )
+    seq.config_detuning_map(det_map, dmm_id="dmm_0")
+    assert list(seq.declared_channels.keys()) == [
+        "global",
+        "dmm_0",
+        "dmm_0_1",
+    ]
+
+    with pytest.raises(
+        TypeError,
+        match="No match for channel dmm_0_1 with the"
+        " right type, basis and addressing.",
+    ):
+        # Can't find a match for the 2nd dmm_0
+        seq.switch_device(Chadoq2)
+    # Strict switch imposes to have same bottom detuning for DMMs
+    with pytest.raises(
+        ValueError,
+        match="No match for channel dmm_0_1 with the" " same bottom_detuning.",
+    ):
+        # Can't find a match for the 1st dmm_0
+        seq.switch_device(
+            dataclasses.replace(
+                Chadoq2,
+                dmm_objects=(
+                    Chadoq2.dmm_channels["dmm_0"],
+                    dataclasses.replace(
+                        Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+                    ),
+                ),
+            ),
+            strict=True,
+        )
     seq_ising = init_seq(
         reg,
         MockDevice,
@@ -644,10 +762,20 @@ def test_switch_device_down(reg, devices, pulses, mappable_reg, parametrized):
 
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
+@pytest.mark.parametrize("trap_id", [20, 38, 50])
 @pytest.mark.parametrize("parametrized", [False, True])
+@pytest.mark.parametrize("config_det_map", [False, True])
 @pytest.mark.parametrize("device_ind, strict", [(1, False), (2, True)])
 def test_switch_device_up(
-    reg, device_ind, devices, pulses, strict, mappable_reg, parametrized
+    reg,
+    device_ind,
+    devices,
+    pulses,
+    strict,
+    mappable_reg,
+    trap_id,
+    parametrized,
+    config_det_map,
 ):
     # Device checkout
     seq = init_seq(
@@ -658,6 +786,7 @@ def test_switch_device_up(
         None,
         parametrized=parametrized,
         mappable_reg=mappable_reg,
+        config_det_map=config_det_map,
     )
     with pytest.warns(
         UserWarning,
@@ -665,12 +794,12 @@ def test_switch_device_up(
         "sequence unchanged",
     ):
         assert seq.switch_device(Chadoq2)._device == Chadoq2
-
     # Test non-strict mode
     assert "ising" in seq.switch_device(devices[0]).declared_channels
 
     # Strict: Jump_phase_time & CLock-period criteria
-    # Jump_phase_time check 1: phase not nill
+    # Jump_phase_time check 1: phase not null
+    mod_wvf = ConstantWaveform(100, -10)
     seq1 = init_seq(
         reg,
         devices[device_ind],
@@ -679,7 +808,10 @@ def test_switch_device_up(
         l_pulses=pulses[:2],
         parametrized=parametrized,
         mappable_reg=mappable_reg,
+        config_det_map=config_det_map,
     )
+    if config_det_map:
+        seq1.add_dmm_detuning(mod_wvf, "dmm_0")
     seq2 = init_seq(
         reg,
         devices[0],
@@ -688,13 +820,16 @@ def test_switch_device_up(
         l_pulses=pulses[:2],
         parametrized=parametrized,
         mappable_reg=mappable_reg,
+        config_det_map=config_det_map,
     )
+    if config_det_map:
+        seq2.add_dmm_detuning(mod_wvf, "dmm_0")
     new_seq = seq1.switch_device(devices[0], strict)
     build_kwargs = {}
     if parametrized:
         build_kwargs["delay"] = 120
     if mappable_reg:
-        build_kwargs["qubits"] = {"q0": 50}
+        build_kwargs["qubits"] = {"q0": trap_id}
 
     if build_kwargs:
         seq1 = seq1.build(**build_kwargs)
@@ -703,15 +838,43 @@ def test_switch_device_up(
     s1 = sample(new_seq)
     s2 = sample(seq1)
     s3 = sample(seq2)
-    nested_s1 = s1.to_nested_dict()["Global"]["ground-rydberg"]
-    nested_s2 = s2.to_nested_dict()["Global"]["ground-rydberg"]
-    nested_s3 = s3.to_nested_dict()["Global"]["ground-rydberg"]
-
+    nested_s1_glob = s1.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s2_glob = s2.to_nested_dict()["Global"]["ground-rydberg"]
+    nested_s3_glob = s3.to_nested_dict()["Global"]["ground-rydberg"]
+    if config_det_map:
+        nested_s1_loc = s1.to_nested_dict()["Local"]["ground-rydberg"]["q0"]
+        nested_s2_loc = s2.to_nested_dict()["Local"]["ground-rydberg"]["q0"]
+        nested_s3_loc = s3.to_nested_dict()["Local"]["ground-rydberg"]["q0"]
     # Check if the samples are the same
     for key in ["amp", "det", "phase"]:
-        np.testing.assert_array_equal(nested_s1[key], nested_s3[key])
+        np.testing.assert_array_equal(nested_s1_glob[key], nested_s3_glob[key])
         if strict:
-            np.testing.assert_array_equal(nested_s1[key], nested_s2[key])
+            np.testing.assert_array_equal(
+                nested_s1_glob[key], nested_s2_glob[key]
+            )
+        if config_det_map:
+            for nested_s_loc in [
+                nested_s1_loc[key],
+                nested_s2_loc[key],
+                nested_s3_loc[key],
+            ]:
+                if key != "det":
+                    assert np.all(nested_s_loc == 0.0)
+                elif mappable_reg:
+                    # modulates detuning map on trap ids 0, 1, 3, 4
+                    mod_trap_ids = [20, 32, 54, 66]
+                    assert np.all(
+                        nested_s_loc[:100]
+                        == (-2.5 if trap_id in mod_trap_ids else 0)
+                    )
+                else:
+                    # first pulse is covered by SLM Mask
+                    np.all(
+                        nested_s_loc[:252]
+                        == -10 * np.max(pulses[0].amplitude.samples)
+                    )
+                    # Modulated pulse added afterwards
+                    assert np.all(nested_s_loc[252:352] == -10)
 
     # Channels with the same mod_bandwidth and fixed_retarget_t
     seq = init_seq(
@@ -1315,18 +1478,20 @@ def test_slm_mask_in_ising(
             "Can't display modulated quantities per qubit"
         )
     seq1.draw(mode, draw_qubit_det=draw_qubit_det, draw_interp_pts=False)
-    seq1.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0")
+    seq1.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
+    # Same function with add is longer
+    seq1.add(Pulse.ConstantAmplitude(0, RampWaveform(300, -10, 0), 0), "dmm_0")
     # pulse is added on rydberg global with a delay (protocol is "min-delay")
     seq1.add(pulse1, "ryd_glob")  # slm pulse between 0 and 400
     seq1.add(pulse2, "ryd_glob")
     seq1.config_slm_mask(targets)
-    mask_time = 400 + 2 * mymockdevice.channels["rydberg_global"].rise_time
+    mask_time = 700 + 2 * mymockdevice.channels["rydberg_global"].rise_time
     assert seq1._slm_mask_time == [0, mask_time]
     assert seq1._schedule["dmm_0_1"].slots[1].type == Pulse.ConstantPulse(
-        mask_time, 0, -100, 0
+        700, 0, -100, 0
     )
     # Possible to modulate dmm_0_1 after slm declaration
-    seq1.modulate_det_map(RampWaveform(300, 0, -10), "dmm_0_1")
+    seq1.add_dmm_detuning(RampWaveform(300, 0, -10), "dmm_0_1")
     assert seq1._slm_mask_time == [0, mask_time]
     # Possible to add pulses afterwards,
     seq1.declare_channel("ryd_loc", "rydberg_local", ["q0", "q1"])
@@ -1360,8 +1525,12 @@ def test_slm_mask_in_ising(
     with pytest.raises(
         ValueError, match="You should add a Pulse to a Global Channel"
     ):
-        seq2.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0")
-    seq2.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0_1")  # not slm
+        seq2.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
+    with pytest.raises(
+        ValueError, match="You should add a Pulse to a Global Channel"
+    ):
+        seq2.add(Pulse.ConstantPulse(300, 0, -10, 0), "dmm_0")
+    seq2.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0_1")  # not slm
     seq2.add(pulse2, "ryd_glob")  # slm pulse between 0 and 500
     assert seq2._slm_mask_time == [0, 500]
     assert seq2._schedule["dmm_0"].slots[1].type == Pulse.ConstantPulse(
@@ -1520,7 +1689,8 @@ def test_hardware_constraints(reg, patch_plt_show):
     seq.draw(mode="input+output")
 
 
-def test_mappable_register(patch_plt_show):
+@pytest.mark.parametrize("with_dmm", [False, True])
+def test_mappable_register(det_map, patch_plt_show, with_dmm):
     layout = TriangularLatticeLayout(100, 5)
     mapp_reg = layout.make_mappable_register(10)
     seq = Sequence(mapp_reg, Chadoq2)
@@ -1545,19 +1715,32 @@ def test_mappable_register(patch_plt_show):
     seq.__str__()
     # Warning if sequence has Global channels and a mappable register
     seq.declare_channel("ryd_glob", "rydberg_global")
-    warn_message_global = (
+    global_channels = ["ryd_glob"]
+    if with_dmm:
+        seq.config_detuning_map(det_map, "dmm_0")
+        global_channels.append("dmm_0")
+    warn_message_rydberg = [
         "Showing the register for a sequence with a mappable register."
-        + "Target qubits of channel ryd_glob will be defined in build."
-    )
-    with pytest.warns(UserWarning, match=warn_message_global):
+        + f"Target qubits of channel {ch} will be defined in build."
+        for ch in global_channels
+    ]
+    with pytest.warns(UserWarning) as records:
         seq.__str__()
+    assert len(records) == len(global_channels)
+    assert [
+        str(records[i].message) for i in range(len(global_channels))
+    ] == warn_message_rydberg
     # Index of mappable register can be accessed
     seq.phase_shift_index(np.pi / 4, 0, basis="digital")  # 0 -> q0
     seq.target_index(2, "ryd_loc")  # 2 -> q2
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_glob")
+    if with_dmm:
+        seq.add_dmm_detuning(RampWaveform(100, -10, 0), "dmm_0")
     seq.add(Pulse.ConstantPulse(200, 1, 0, 0), "ram")
     seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ryd_loc")
     assert seq._last("ryd_glob").targets == set(reserved_qids)
+    if with_dmm:
+        assert seq._last("dmm_0").targets == set(reserved_qids)
     assert seq._last("ram").targets == {"q0"}
     assert seq._last("ryd_loc").targets == {"q2"}
 
@@ -1565,7 +1748,17 @@ def test_mappable_register(patch_plt_show):
         seq.draw(draw_register=True)
 
     # Can draw if 'draw_register=False'
-    seq.draw()
+    if with_dmm:
+        with pytest.raises(
+            NotImplementedError,
+            match=(
+                "Sequences with a DMM channel can't be sampled while "
+                "their register is mappable."
+            ),
+        ):
+            seq.draw()
+    else:
+        seq.draw()
     with pytest.raises(ValueError, match="'qubits' must be specified"):
         seq.build()
 

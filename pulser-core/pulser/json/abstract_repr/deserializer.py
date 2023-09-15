@@ -282,11 +282,18 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             channel=op["channel"],
             correct_phase_drift=op.get("correct_phase_drift", False),
         )
-    elif op["op"] == "modulate_det_map":
-        seq.modulate_det_map(
+    elif op["op"] == "add_dmm_detuning":
+        seq.add_dmm_detuning(
             waveform=_deserialize_waveform(op["waveform"], vars),
             dmm_name=op["dmm_name"],
             protocol=op["protocol"],
+        )
+    elif op["op"] == "config_slm_mask":
+        seq.config_slm_mask(qubits=op["qubits"], dmm_id=op["dmm_id"])
+    elif op["op"] == "config_detuning_map":
+        seq.config_detuning_map(
+            detuning_map=_deserialize_det_map(op["detuning_map"]),
+            dmm_id=op["dmm_id"],
         )
 
 
@@ -459,34 +466,6 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
         # This is kept for backwards compatibility
         seq.config_slm_mask(obj["slm_mask_targets"])
 
-    to_config_det_map: dict[str, dict] = dict()
-    if "dmm_channels" in obj:
-        # Make a dictionnary with all the configured dmm channels
-        for dmm_name, ser_det_map in obj["dmm_channels"]:
-            splitted_dmm_name = dmm_name.split("_")  # dmm_id_num
-            dmm_id = "_".join(splitted_dmm_name[0:2])
-            call_num = (
-                0 if len(splitted_dmm_name) <= 2 else int(splitted_dmm_name[2])
-            )
-            if dmm_id not in to_config_det_map:
-                to_config_det_map[dmm_id] = {}
-            to_config_det_map[dmm_id][call_num] = ser_det_map
-
-        for dmm_id, ser_det_maps in to_config_det_map.items():
-            slm_mask_dmm = None
-            call_nums = list(ser_det_maps.keys())
-            # If an SLM Mask has been defined, an iteration will be taken
-            for i, call_num in enumerate(call_nums):
-                if call_nums != i:
-                    slm_mask_dmm = i
-            # Have to wait for the SLM Mask to be configured to finish
-            # configuring the last Detuning Maps
-            for call_num, ser_det_map in ser_det_maps.items():
-                if slm_mask_dmm is not None and call_num >= slm_mask_dmm:
-                    break
-                det_map = _deserialize_det_map(ser_det_map)
-                seq.config_detuning_map(detuning_map=det_map, dmm_id=dmm_id)
-
     # Variables
     vars = {}
     for name, desc in obj["variables"].items():
@@ -499,21 +478,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
 
     # Operations
     for op in obj["operations"]:
-        if op["op"] == "config_slm_mask":
-            seq.config_slm_mask(qubits=op["qubits"], dmm_id=op["dmm_id"])
-            # Finish configuration of detuning maps
-            if op["dmm_id"] in to_config_det_map and slm_mask_dmm is not None:
-                for call_num, ser_det_map in to_config_det_map[
-                    op["dmm_id"]
-                ].items():
-                    if call_num <= slm_mask_dmm:
-                        continue
-                    det_map = _deserialize_det_map(ser_det_map)
-                    seq.config_detuning_map(
-                        detuning_map=det_map, dmm_id=op["dmm_id"]
-                    )
-        else:
-            _deserialize_operation(seq, op, vars)
+        _deserialize_operation(seq, op, vars)
 
     # Measurement
     if obj["measurement"] is not None:

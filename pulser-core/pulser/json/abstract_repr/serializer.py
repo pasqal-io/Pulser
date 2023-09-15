@@ -220,13 +220,13 @@ def serialize_abstract_sequence(
                     }
                 )
         elif call.name == "config_detuning_map":
-            data = get_all_args(("dmm_name", "dmm_id", "detuning_map"), call)
-            if "dmm_channels" not in res:
-                # Adding this field will break backwards compatibility, so
-                # we only add it if necessary
-                res["dmm_channels"] = []
-            res["dmm_channels"].append(
-                [data["dmm_name"], data["detuning_map"]]
+            data = get_all_args(("detuning_map", "dmm_id"), call)
+            operations.append(
+                {
+                    "op": "config_detuning_map",
+                    "detuning_map": data["detuning_map"],
+                    "dmm_id": data["dmm_id"],
+                }
             )
         elif "target" in call.name:
             data = get_all_args(("qubits", "channel"), call)
@@ -337,9 +337,9 @@ def serialize_abstract_sequence(
                 data, call.name, "correct_phase_drift"
             )
             operations.append({"op": "disable_eom_mode", **data})
-        elif call.name == "modulate_det_map":
+        elif call.name == "add_dmm_detuning":
             data = get_all_args(("waveform", "dmm_name", "protocol"), call)
-            operations.append({"op": "modulate_det_map", **data})
+            operations.append({"op": "add_dmm_detuning", **data})
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

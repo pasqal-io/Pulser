@@ -397,6 +397,39 @@
       ],
       "type": "object"
     },
+    "OpAddDmmDet": {
+      "additionalProperties": false,
+      "properties": {
+        "dmm_name": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "The name of the DMM."
+        },
+        "op": {
+          "const": "add_dmm_detuning",
+          "type": "string"
+        },
+        "protocol": {
+          "description": "Stipulates how to deal with eventual conflicts with other channels, specifically in terms of having multiple channels act on the same target simultaneously.\n\n- ``'min-delay'``: Before adding the pulse, introduces the   smallest possible delay that avoids all exisiting conflicts.\n\n- ``'no-delay'``: Adds the pulse to the channel, regardless of   existing conflicts.\n\n- ``'wait-for-all'``: Before adding the pulse, adds a delay   that idles the channel until the end of the other channels'   latest pulse.",
+          "enum": [
+            "min-delay",
+            "no-delay",
+            "wait-for-all"
+          ],
+          "type": "string"
+        },
+        "waveform": {
+          "$ref": "#/definitions/Waveform",
+          "description": "The waveform to add to the detuning of the DMM."
+        }
+      },
+      "required": [
+        "op",
+        "waveform",
+        "dmm_name",
+        "protocol"
+      ],
+      "type": "object"
+    },
     "OpAlign": {
       "additionalProperties": false,
       "description": "Aligns multiple channels in time.\n\nIntroduces delays that align the provided channels with the one that finished the latest, such that the next action added to any of them will start right after the latest channel has finished.",
@@ -415,6 +448,29 @@
       "required": [
         "op",
         "channels"
+      ],
+      "type": "object"
+    },
+    "OpConfigDetMap": {
+      "additionalProperties": false,
+      "properties": {
+        "detuning_map": {
+          "$ref": "#/definitions/WeightMap",
+          "description": "DetuningMap to associate with the DMM channel."
+        },
+        "dmm_id": {
+          "$ref": "#/definitions/ChannelId",
+          "description": "ID of the DMM channel to configure."
+        },
+        "op": {
+          "const": "config_detuning_map",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "detuning_map",
+        "dmm_id"
       ],
       "type": "object"
     },
@@ -574,39 +630,6 @@
       ],
       "type": "object"
     },
-    "OpModDetMap": {
-      "additionalProperties": false,
-      "properties": {
-        "dmm_name": {
-          "$ref": "#/definitions/ChannelName",
-          "description": "The name of the DMM."
-        },
-        "op": {
-          "const": "modulate_det_map",
-          "type": "string"
-        },
-        "protocol": {
-          "description": "Stipulates how to deal with eventual conflicts with other channels, specifically in terms of having multiple channels act on the same target simultaneously.\n\n- ``'min-delay'``: Before adding the pulse, introduces the   smallest possible delay that avoids all exisiting conflicts.\n\n- ``'no-delay'``: Adds the pulse to the channel, regardless of   existing conflicts.\n\n- ``'wait-for-all'``: Before adding the pulse, adds a delay   that idles the channel until the end of the other channels'   latest pulse.",
-          "enum": [
-            "min-delay",
-            "no-delay",
-            "wait-for-all"
-          ],
-          "type": "string"
-        },
-        "waveform": {
-          "$ref": "#/definitions/Waveform",
-          "description": "The waveform to add to the detuning of the DMM."
-        }
-      },
-      "required": [
-        "op",
-        "waveform",
-        "dmm_name",
-        "protocol"
-      ],
-      "type": "object"
-    },
     "OpPhaseShift": {
       "additionalProperties": false,
       "description": "Adds a separate phase shift to atoms. If possible, OpPulse phase and post_phase_shift are preferred.",
@@ -742,7 +765,10 @@
           "$ref": "#/definitions/OpConfigSLM"
         },
         {
-          "$ref": "#/definitions/OpModDetMap"
+          "$ref": "#/definitions/OpConfigDetMap"
+        },
+        {
+          "$ref": "#/definitions/OpAddDmmDet"
         }
       ],
       "description": "Sequence operation. All operations are performed in specified order."
@@ -800,23 +826,6 @@
                 }
               ],
               "description": "A valid device in which to execute the Sequence"
-            },
-            "dmm_channels": {
-              "description": "DMM channels declared in this Sequence.",
-              "items": {
-                "items": [
-                  {
-                    "$ref": "#/definitions/ChannelId"
-                  },
-                  {
-                    "$ref": "#/definitions/WeightMap"
-                  }
-                ],
-                "maxItems": 2,
-                "minItems": 2,
-                "type": "array"
-              },
-              "type": "array"
             },
             "layout": {
               "$ref": "#/definitions/Layout",
@@ -914,23 +923,6 @@
                 }
               ],
               "description": "A valid device in which to execute the Sequence"
-            },
-            "dmm_channels": {
-              "description": "DMM channels declared in this Sequence.",
-              "items": {
-                "items": [
-                  {
-                    "$ref": "#/definitions/ChannelId"
-                  },
-                  {
-                    "$ref": "#/definitions/WeightMap"
-                  }
-                ],
-                "maxItems": 2,
-                "minItems": 2,
-                "type": "array"
-              },
-              "type": "array"
             },
             "layout": {
               "$ref": "#/definitions/Layout",
