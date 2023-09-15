@@ -282,8 +282,8 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             channel=op["channel"],
             correct_phase_drift=op.get("correct_phase_drift", False),
         )
-    elif op["op"] == "modulate_det_map":
-        seq.modulate_det_map(
+    elif op["op"] == "add_dmm_detuning":
+        seq.add_dmm_detuning(
             waveform=_deserialize_waveform(op["waveform"], vars),
             dmm_name=op["dmm_name"],
             protocol=op["protocol"],
