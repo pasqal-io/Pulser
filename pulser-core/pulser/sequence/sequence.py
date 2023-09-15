@@ -1200,7 +1200,11 @@ class Sequence(Generic[DeviceType]):
             `phase_jump_time` is respected. To override this behaviour, use
             the ``'no-delay'`` protocol.
         """
-        self._validate_channel(channel, block_eom_mode=True, block_if_slm=channel.startswith("dmm_"))
+        self._validate_channel(
+            channel,
+            block_eom_mode=True,
+            block_if_slm=channel.startswith("dmm_"),
+        )
         self._add(pulse, channel, protocol)
 
     @seq_decorators.store
@@ -1212,7 +1216,7 @@ class Sequence(Generic[DeviceType]):
         dmm_name: str,
         protocol: PROTOCOLS = "no-delay",
     ) -> None:
-        """Add a Pulse of zero amplitude and detuning defined by a waveform to a dmm.
+        """Add a waveform to the detuning of a dmm.
 
         Args:
             waveform: The waveform to add to the detuning of the dmm.

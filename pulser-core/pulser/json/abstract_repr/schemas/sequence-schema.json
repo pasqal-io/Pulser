@@ -397,6 +397,39 @@
       ],
       "type": "object"
     },
+    "OpAddDmmDet": {
+      "additionalProperties": false,
+      "properties": {
+        "dmm_name": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "The name of the DMM."
+        },
+        "op": {
+          "const": "add_dmm_detuning",
+          "type": "string"
+        },
+        "protocol": {
+          "description": "Stipulates how to deal with eventual conflicts with other channels, specifically in terms of having multiple channels act on the same target simultaneously.\n\n- ``'min-delay'``: Before adding the pulse, introduces the   smallest possible delay that avoids all exisiting conflicts.\n\n- ``'no-delay'``: Adds the pulse to the channel, regardless of   existing conflicts.\n\n- ``'wait-for-all'``: Before adding the pulse, adds a delay   that idles the channel until the end of the other channels'   latest pulse.",
+          "enum": [
+            "min-delay",
+            "no-delay",
+            "wait-for-all"
+          ],
+          "type": "string"
+        },
+        "waveform": {
+          "$ref": "#/definitions/Waveform",
+          "description": "The waveform to add to the detuning of the DMM."
+        }
+      },
+      "required": [
+        "op",
+        "waveform",
+        "dmm_name",
+        "protocol"
+      ],
+      "type": "object"
+    },
     "OpAlign": {
       "additionalProperties": false,
       "description": "Aligns multiple channels in time.\n\nIntroduces delays that align the provided channels with the one that finished the latest, such that the next action added to any of them will start right after the latest channel has finished.",
@@ -597,39 +630,6 @@
       ],
       "type": "object"
     },
-    "OpModDetMap": {
-      "additionalProperties": false,
-      "properties": {
-        "dmm_name": {
-          "$ref": "#/definitions/ChannelName",
-          "description": "The name of the DMM."
-        },
-        "op": {
-          "const": "add_dmm_detuning",
-          "type": "string"
-        },
-        "protocol": {
-          "description": "Stipulates how to deal with eventual conflicts with other channels, specifically in terms of having multiple channels act on the same target simultaneously.\n\n- ``'min-delay'``: Before adding the pulse, introduces the   smallest possible delay that avoids all exisiting conflicts.\n\n- ``'no-delay'``: Adds the pulse to the channel, regardless of   existing conflicts.\n\n- ``'wait-for-all'``: Before adding the pulse, adds a delay   that idles the channel until the end of the other channels'   latest pulse.",
-          "enum": [
-            "min-delay",
-            "no-delay",
-            "wait-for-all"
-          ],
-          "type": "string"
-        },
-        "waveform": {
-          "$ref": "#/definitions/Waveform",
-          "description": "The waveform to add to the detuning of the DMM."
-        }
-      },
-      "required": [
-        "op",
-        "waveform",
-        "dmm_name",
-        "protocol"
-      ],
-      "type": "object"
-    },
     "OpPhaseShift": {
       "additionalProperties": false,
       "description": "Adds a separate phase shift to atoms. If possible, OpPulse phase and post_phase_shift are preferred.",
@@ -768,7 +768,7 @@
           "$ref": "#/definitions/OpConfigDetMap"
         },
         {
-          "$ref": "#/definitions/OpModDetMap"
+          "$ref": "#/definitions/OpAddDmmDet"
         }
       ],
       "description": "Sequence operation. All operations are performed in specified order."
