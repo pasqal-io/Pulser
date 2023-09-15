@@ -220,13 +220,13 @@ def serialize_abstract_sequence(
                     }
                 )
         elif call.name == "config_detuning_map":
-            data = get_all_args(("dmm_name", "dmm_id", "detuning_map"), call)
-            if "dmm_channels" not in res:
-                # Adding this field will break backwards compatibility, so
-                # we only add it if necessary
-                res["dmm_channels"] = []
-            res["dmm_channels"].append(
-                [data["dmm_name"], data["detuning_map"]]
+            data = get_all_args(("detuning_map", "dmm_id"), call)
+            operations.append(
+                {
+                    "op": "config_detuning_map",
+                    "detuning_map": data["detuning_map"],
+                    "dmm_id": data["dmm_id"],
+                }
             )
         elif "target" in call.name:
             data = get_all_args(("qubits", "channel"), call)
