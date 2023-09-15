@@ -914,7 +914,12 @@ def test_get_xy_hamiltonian():
         < 1e-10
     )
     assert simple_ham[0, 1] == 0.5 * amp
-    assert simple_ham[3, 3] == -2 * detun
+    # |udd><udd| -> 1 atom in |u>
+    assert simple_ham[3, 3] == -detun
+    # |udd><udd| -> 3 atom in |u>
+    assert simple_ham[0, 0] == -3 * detun
+    # |ddd><ddd| -> no atom in |u>
+    assert simple_ham[7, 7] == 0
 
 
 def test_run_xy():
