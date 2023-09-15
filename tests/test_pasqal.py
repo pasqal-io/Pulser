@@ -321,7 +321,7 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
     sdk_config: EmuTNConfig | EmuFreeConfig
     if isinstance(emu, EmuTNBackend):
         emulator_type = EmulatorType.EMU_TN
-        sdk_config = EmuTNConfig(dt=1.0)
+        sdk_config = EmuTNConfig(dt=10)
     else:
         emulator_type = EmulatorType.EMU_FREE
         sdk_config = EmuFreeConfig()
