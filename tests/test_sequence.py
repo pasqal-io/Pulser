@@ -552,25 +552,7 @@ def test_switch_device_down(
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
         reg,
-        MockDevice,
-        "global",
-        "rydberg_global",
-        None,
-        parametrized=parametrized,
-        mappable_reg=mappable_reg,
-    )
-    seq.declare_channel("global2", "rydberg_global")
-    with pytest.raises(
-        TypeError,
-        match="No match for channel global2 with the"
-        " right type, basis and addressing.",
-    ):
-        # Can't find a match for the 2nd rydberg_global
-        seq.switch_device(Chadoq2)
-    # From sequence reusing channels to Device without reusable channels
-    seq = init_seq(
-        reg,
-        MockDevice,
+        dataclasses.replace(Chadoq2.to_virtual(), reusable_channels=True),
         "global",
         "rydberg_global",
         None,
@@ -584,8 +566,40 @@ def test_switch_device_down(
         match="No match for channel raman_1 with the"
         " right type, basis and addressing.",
     ):
-        # Can't find a match for the 2nd rydberg_global
+        # Can't find a match for the 2nd raman_local
         seq.switch_device(Chadoq2)
+
+    with pytest.raises(
+        TypeError,
+        match="No match for channel raman_1 with the"
+        " right type, basis and addressing.",
+    ):
+        # Can't find a match for the 2nd raman_local
+        seq.switch_device(Chadoq2, strict=True)
+
+    with pytest.raises(
+        ValueError,
+        match="No match for channel raman_1 with the" " same clock_period.",
+    ):
+        # Can't find a match for the 2nd rydberg_local
+        seq.switch_device(
+            dataclasses.replace(
+                Chadoq2,
+                channel_objects=(
+                    Chadoq2.channels["rydberg_global"],
+                    dataclasses.replace(
+                        Chadoq2.channels["raman_local"], clock_period=10
+                    ),
+                    Chadoq2.channels["raman_local"],
+                ),
+                channel_ids=(
+                    "rydberg_global",
+                    "rydberg_local",
+                    "rydberg_local1",
+                ),
+            ),
+            strict=True,
+        )
 
     # From sequence reusing DMMs to Device without reusable channels
     seq = init_seq(
@@ -1402,18 +1416,20 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     seq1 = Sequence(reg, MockDevice)
     seq1.declare_channel("ryd_glob", "rydberg_global")
     seq1.config_detuning_map(det_map, "dmm_0")
-    seq1.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0")
+    seq1.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
+    # Same function with add is longer
+    seq1.add(Pulse.ConstantAmplitude(0, RampWaveform(300, -10, 0), 0), "dmm_0")
     # pulse is added on rydberg global with a delay (protocol is "min-delay")
     seq1.add(pulse1, "ryd_glob")  # slm pulse between 0 and 400
     seq1.add(pulse2, "ryd_glob")
     seq1.config_slm_mask(targets)
-    assert seq1._slm_mask_time == [0, 400]
+    assert seq1._slm_mask_time == [0, 700]
     assert seq1._schedule["dmm_0_1"].slots[1].type == Pulse.ConstantPulse(
-        400, 0, -100, 0
+        700, 0, -100, 0
     )
     # Possible to modulate dmm_0_1 after slm declaration
-    seq1.modulate_det_map(RampWaveform(300, 0, -10), "dmm_0_1")
-    assert seq1._slm_mask_time == [0, 400]
+    seq1.add_dmm_detuning(RampWaveform(300, 0, -10), "dmm_0_1")
+    assert seq1._slm_mask_time == [0, 700]
 
     # Set mask and then add ising pulses to the schedule
     seq2 = Sequence(reg, MockDevice)
@@ -1423,8 +1439,12 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     with pytest.raises(
         ValueError, match="You should add a Pulse to a Global Channel"
     ):
-        seq2.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0")
-    seq2.modulate_det_map(RampWaveform(300, -10, 0), "dmm_0_1")  # not slm
+        seq2.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
+    with pytest.raises(
+        ValueError, match="You should add a Pulse to a Global Channel"
+    ):
+        seq2.add(Pulse.ConstantPulse(300, 0, -10, 0), "dmm_0")
+    seq2.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0_1")  # not slm
     seq2.add(pulse2, "ryd_glob")  # slm pulse between 0 and 500
     assert seq2._slm_mask_time == [0, 500]
     assert seq2._schedule["dmm_0"].slots[1].type == Pulse.ConstantPulse(

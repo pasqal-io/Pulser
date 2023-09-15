@@ -756,6 +756,7 @@ class Sequence(Generic[DeviceType]):
                         continue
                 if not strict:
                     channel_match[old_ch_name] = new_ch_id
+                    # Found a match, clear match error msg for this channel
                     if ch_match_err.startswith(base_msg):
                         ch_match_err = ""
                     break
@@ -780,6 +781,7 @@ class Sequence(Generic[DeviceType]):
                 else:
                     # Only reached if all checks passed
                     channel_match[old_ch_name] = new_ch_id
+                    # Found a match, clear match error msgs for this channel
                     if ch_match_err.startswith(base_msg):
                         ch_match_err = ""
                     if strict_error_message.startswith(base_msg):
@@ -1239,19 +1241,23 @@ class Sequence(Generic[DeviceType]):
             `phase_jump_time` is respected. To override this behaviour, use
             the ``'no-delay'`` protocol.
         """
-        self._validate_channel(channel, block_eom_mode=True)
+        self._validate_channel(
+            channel,
+            block_eom_mode=True,
+            block_if_slm=channel.startswith("dmm_"),
+        )
         self._add(pulse, channel, protocol)
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
     @seq_decorators.block_if_measured
-    def modulate_det_map(
+    def add_dmm_detuning(
         self,
         waveform: Union[Waveform, Parametrized],
         dmm_name: str,
         protocol: PROTOCOLS = "no-delay",
     ) -> None:
-        """Modulates the detuning map by a waveform.
+        """Add a waveform to the detuning of a dmm.
 
         Args:
             waveform: The waveform to add to the detuning of the dmm.
