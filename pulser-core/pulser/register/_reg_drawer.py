@@ -61,7 +61,6 @@ class RegDrawer:
         are_traps: bool = False,
         dmm_qubits: Mapping[QubitId, float] = {},
         draw_label: str = "atoms",
-        scale: float = 1.0,
     ) -> None:
         ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(
             ids, qubit_colors
@@ -71,15 +70,13 @@ class RegDrawer:
 
         if are_traps:
             params = dict(
-                s=50 * scale**2,
+                s=50,
                 edgecolors="black",
                 facecolors="none",
                 label="traps",
             )
         else:
-            params = dict(
-                s=30 * scale**2, c=ordered_qubit_colors, label=draw_label
-            )
+            params = dict(s=30, c=ordered_qubit_colors, label=draw_label)
 
         ax.scatter(pos[:, ix], pos[:, iy], alpha=0.7, **params)
 
@@ -112,7 +109,7 @@ class RegDrawer:
                 dmm_arr[:, ix],
                 dmm_arr[:, iy],
                 marker="s",
-                s=1200 * scale**2,
+                s=1200,
                 alpha=alpha,
                 c="black" if not qubit_colors else ordered_qubit_colors,
             )
@@ -198,7 +195,7 @@ class RegDrawer:
                     wrap=True,
                     bbox=bb,
                     fontsize=max(
-                        (12 if i not in final_plot_det_map else 8.3) * scale,
+                        (12 if i not in final_plot_det_map else 8.3),
                         5,
                     ),
                     multialignment="right",
@@ -232,7 +229,6 @@ class RegDrawer:
             ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
         ax.legend(
             loc="best",
-            bbox_to_anchor=(0.0, 0.0, 1.0, 0.25),
             prop=dict(stretch="condensed", size=9),
             handlelength=1.5,
             handleheight=0.6,
@@ -389,10 +385,10 @@ class RegDrawer:
         Ls = proportions * max(
             min(big_side / 4, 10), 4
         )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
-        Ls[1] = max(Ls[1], 1.0 * nregisters)  # Figsize height is at least 1
+        Ls[1] = max(Ls[1], 2.0 * nregisters)  # Figsize height is at least 2
         fig, axes = plt.subplots(
             nrows=nregisters,
-            figsize=Ls,
+            figsize=Ls * nregisters,
             layout="constrained",
         )
         return (fig, axes)
@@ -431,7 +427,7 @@ class RegDrawer:
         fig_width = min(np.sum(widths), fig_height * 4)
 
         rescaling = 20 / max(max(fig_width, fig_height), 20)
-        figsize = (rescaling * fig_width, rescaling * fig_height)
+        figsize = (rescaling * fig_width, rescaling * fig_height * nregisters)
 
         fig, axes = plt.subplots(
             nrows=nregisters,

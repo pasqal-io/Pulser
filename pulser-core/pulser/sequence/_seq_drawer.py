@@ -381,7 +381,6 @@ def _draw_register_det_maps(
                     ids=register._ids,
                     plane=(ix, iy),
                     masked_qubits=sampled_seq._slm_mask.targets,
-                    scale=1 / nregisters,
                 )
                 ax_reg.set_title(
                     title
@@ -404,7 +403,6 @@ def _draw_register_det_maps(
                 pos=pos,
                 ids=register._ids,
                 masked_qubits=sampled_seq._slm_mask.targets,
-                scale=1 / nregisters,
             )
             ax_reg.set_title(title, pad=10)
     # Draw detuning maps
@@ -450,7 +448,6 @@ def _draw_register_det_maps(
                         ids=list(qubits.keys()),
                         plane=(ix, iy),
                         dmm_qubits=reg_det_map,
-                        scale=1 / nregisters,
                     )
                     sub_ax_reg.set_title(
                         f"{ch} projected onto\n the "
@@ -464,7 +461,6 @@ def _draw_register_det_maps(
                     pos=pos,
                     ids=list(qubits.keys()),
                     dmm_qubits=reg_det_map,
-                    scale=1 / nregisters,
                 )
                 ax_reg.set_title(ch, pad=10)
     return fig_reg
@@ -1125,7 +1121,6 @@ def _draw_qubit_content(
                                 qubit_colors={t: color for t in target},
                                 masked_qubits=set(target),
                                 draw_label=label,
-                                scale=1 / n_quantities,
                             )
                             if target_index == 0:
                                 sub_ax_leg.set_title(
@@ -1142,7 +1137,6 @@ def _draw_qubit_content(
                             qubit_colors={t: color for t in target},
                             masked_qubits=set(target),
                             draw_label=label,
-                            scale=1 / n_quantities,
                         )
                         if target_index == 0:
                             ax_leg.set_title(
