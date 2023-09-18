@@ -229,7 +229,8 @@ class RegDrawer:
             ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
         ax.legend(
             loc="best",
-            prop=dict(stretch="condensed", size=9),
+            bbox_to_anchor=(0.0, 0.0, 1.0, 0.3),
+            prop=dict(stretch="condensed", size=8),
             handlelength=1.5,
             handleheight=0.6,
             handletextpad=0.1,
