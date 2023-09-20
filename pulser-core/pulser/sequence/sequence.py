@@ -34,6 +34,7 @@ from typing import (
 )
 
 import matplotlib.pyplot as plt
+import jsonschema
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -46,6 +47,7 @@ from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
 )
 from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
+from pulser.json.exceptions import AbstractReprError
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
@@ -1344,9 +1346,20 @@ class Sequence(Generic[DeviceType]):
         See Also:
             ``serialize``
         """
-        return serialize_abstract_sequence(
-            self, seq_name, json_dumps_options, **defaults
-        )
+        try:
+            return serialize_abstract_sequence(
+                self, seq_name, json_dumps_options, **defaults
+            )
+        except jsonschema.exceptions.ValidationError as e:
+            if self.is_parametrized():
+                raise AbstractReprError(
+                    "The serialization of the parametrized sequence failed, "
+                    "potentially due to an error that only appears at build "
+                    "time. Check that no errors appear when building with "
+                    "`Sequence.build()` or when providing the `defaults` to "
+                    "`Sequence.to_abstract_repr()`."
+                ) from e
+            raise e
 
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:
@@ -1368,6 +1381,11 @@ class Sequence(Generic[DeviceType]):
             ``json.loads``: Built-in function for deserialization from a JSON
             formatted string.
         """
+        if not isinstance(obj, str):
+            raise TypeError(
+                "The serialized sequence must be given as a string. "
+                f"Instead, got object of type {type(obj)}."
+            )
         if "Sequence" not in obj:
             raise ValueError(
                 "The given JSON formatted string does not encode a Sequence."
@@ -1386,6 +1404,11 @@ class Sequence(Generic[DeviceType]):
         Returns:
             Sequence: The Pulser sequence.
         """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized sequence must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
         return deserialize_abstract_sequence(obj_str)
 
     @seq_decorators.screen
