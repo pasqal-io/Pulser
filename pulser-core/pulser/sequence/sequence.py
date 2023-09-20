@@ -33,8 +33,8 @@ from typing import (
     overload,
 )
 
-import matplotlib.pyplot as plt
 import jsonschema
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -47,8 +47,8 @@ from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
 )
 from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
-from pulser.json.exceptions import AbstractReprError
 from pulser.json.coders import PulserDecoder, PulserEncoder
+from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
