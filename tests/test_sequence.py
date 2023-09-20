@@ -1139,7 +1139,7 @@ def test_block_if_measured(reg, call, args):
         getattr(seq, call)(*args)
 
 
-def test_str(reg, device, mod_device):
+def test_str(reg, device, mod_device, det_map):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
@@ -1151,6 +1151,10 @@ def test_str(reg, device, mod_device):
     seq.enable_eom_mode("ch1", 2, 0, optimal_detuning_off=10.0)
     seq.add_eom_pulse("ch1", duration=100, phase=0, protocol="no-delay")
     seq.delay(500, "ch1")
+
+    seq.config_detuning_map(det_map, "dmm_0")
+    seq.add_dmm_detuning(ConstantWaveform(100, -10), "dmm_0")
+    seq.add_dmm_detuning(RampWaveform(100, -10, 0), "dmm_0")
 
     seq.measure("digital")
     msg_ch0 = (
@@ -1168,9 +1172,16 @@ def test_str(reg, device, mod_device):
         "\nt: 100->600 | Detuned Delay | Detuning: -1 rad/µs"
     )
 
+    msg_det_map = (
+        f"\n\nChannel: dmm_0\nt: 0 | Initial targets: {targets} "
+        "| Phase Reference: 0.0 "
+        f"\nt: 0->100 | Detuning: -10 rad/µs | Targets: {targets}"
+        f"\nt: 100->200 | Detuning: Ramp(-10->0 rad/µs) | Targets: {targets}"
+    )
+
     measure_msg = "\n\nMeasured in basis: digital"
     print(seq)
-    assert seq.__str__() == msg_ch0 + msg_ch1 + measure_msg
+    assert seq.__str__() == msg_ch0 + msg_ch1 + msg_det_map + measure_msg
 
     seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
     seq2.declare_channel("ch1", "rydberg_global")
