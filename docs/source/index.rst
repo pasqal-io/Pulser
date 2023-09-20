@@ -87,6 +87,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/reg_layouts
    tutorials/interpolated_wfs
    tutorials/serialization
+   tutorials/dmm
    tutorials/slm_mask
    tutorials/output_mod_eom
    tutorials/virtual_devices

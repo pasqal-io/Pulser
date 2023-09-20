@@ -1139,7 +1139,7 @@ def test_block_if_measured(reg, call, args):
         getattr(seq, call)(*args)
 
 
-def test_str(reg, device, mod_device):
+def test_str(reg, device, mod_device, det_map):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     pulse = Pulse.ConstantPulse(500, 2, -10, 0, post_phase_shift=np.pi)
@@ -1151,6 +1151,10 @@ def test_str(reg, device, mod_device):
     seq.enable_eom_mode("ch1", 2, 0, optimal_detuning_off=10.0)
     seq.add_eom_pulse("ch1", duration=100, phase=0, protocol="no-delay")
     seq.delay(500, "ch1")
+
+    seq.config_detuning_map(det_map, "dmm_0")
+    seq.add_dmm_detuning(ConstantWaveform(100, -10), "dmm_0")
+    seq.add_dmm_detuning(RampWaveform(100, -10, 0), "dmm_0")
 
     seq.measure("digital")
     msg_ch0 = (
@@ -1168,9 +1172,16 @@ def test_str(reg, device, mod_device):
         "\nt: 100->600 | Detuned Delay | Detuning: -1 rad/µs"
     )
 
+    msg_det_map = (
+        f"\n\nChannel: dmm_0\nt: 0 | Initial targets: {targets} "
+        "| Phase Reference: 0.0 "
+        f"\nt: 0->100 | Detuning: -10 rad/µs | Targets: {targets}"
+        f"\nt: 100->200 | Detuning: Ramp(-10->0 rad/µs) | Targets: {targets}"
+    )
+
     measure_msg = "\n\nMeasured in basis: digital"
     print(seq)
-    assert seq.__str__() == msg_ch0 + msg_ch1 + measure_msg
+    assert seq.__str__() == msg_ch0 + msg_ch1 + msg_det_map + measure_msg
 
     seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
     seq2.declare_channel("ch1", "rydberg_global")
@@ -1406,16 +1417,78 @@ def test_slm_mask_in_xy(reg, patch_plt_show):
     seq_xy2.draw()
 
 
-def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
+@pytest.mark.parametrize("dims3D", [False, True])
+@pytest.mark.parametrize("draw_qubit_amp", [True, False])
+@pytest.mark.parametrize("draw_qubit_det", [True, False])
+@pytest.mark.parametrize("draw_register", [True, False])
+@pytest.mark.parametrize("mode", ["input", "input+output"])
+@pytest.mark.parametrize("mod_bandwidth", [0, 10])
+def test_slm_mask_in_ising(
+    reg,
+    patch_plt_show,
+    dims3D,
+    mode,
+    mod_bandwidth,
+    draw_qubit_amp,
+    draw_qubit_det,
+    draw_register,
+):
     reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    if dims3D:
+        reg = Register3D(
+            {"q0": (0, 0, 0), "q1": (10, 10, 0), "q2": (-10, -10, 0)}
+        )
+    det_map = reg.define_detuning_map({"q0": 0.2, "q1": 0.8, "q2": 0.0})
     targets = ["q0", "q2"]
     pulse1 = Pulse.ConstantPulse(100, 10, 0, 0)
     pulse2 = Pulse.ConstantPulse(200, 10, 0, 0)
-
+    mymockdevice = (
+        MockDevice
+        if mod_bandwidth == 0
+        else dataclasses.replace(
+            MockDevice,
+            dmm_objects=(DMM(mod_bandwidth=mod_bandwidth),),
+            channel_objects=(
+                dataclasses.replace(
+                    MockDevice.channels["rydberg_global"],
+                    mod_bandwidth=mod_bandwidth,
+                ),
+                dataclasses.replace(
+                    MockDevice.channels["rydberg_local"],
+                    mod_bandwidth=mod_bandwidth,
+                ),
+                MockDevice.channels["raman_global"],
+            ),
+            channel_ids=("rydberg_global", "rydberg_local", "raman_global"),
+        )
+    )
     # Set mask when ising pulses are already in the schedule
-    seq1 = Sequence(reg, MockDevice)
+    seq1 = Sequence(reg, mymockdevice)
     seq1.declare_channel("ryd_glob", "rydberg_global")
+    if not draw_register:
+        with patch("matplotlib.figure.Figure.savefig"):
+            with pytest.warns(
+                UserWarning,
+                match="Provide a register and select draw_register",
+            ):
+                seq1.draw(draw_qubit_det=True, fig_name="empty_rydberg")
     seq1.config_detuning_map(det_map, "dmm_0")
+    if mod_bandwidth == 0:
+        with pytest.warns() as record:
+            seq1.draw(
+                draw_qubit_det=True, draw_interp_pts=False, mode="output"
+            )  # Drawing Sequence with only a DMM
+        assert len(record) == 7
+        assert np.all(
+            str(record[i].message).startswith(
+                "No modulation bandwidth defined"
+            )
+            for i in range(6)
+        )
+        assert str(record[6].message).startswith(
+            "Can't display modulated quantities per qubit"
+        )
+    seq1.draw(mode, draw_qubit_det=draw_qubit_det, draw_interp_pts=False)
     seq1.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
     # Same function with add is longer
     seq1.add(Pulse.ConstantAmplitude(0, RampWaveform(300, -10, 0), 0), "dmm_0")
@@ -1423,14 +1496,38 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     seq1.add(pulse1, "ryd_glob")  # slm pulse between 0 and 400
     seq1.add(pulse2, "ryd_glob")
     seq1.config_slm_mask(targets)
-    assert seq1._slm_mask_time == [0, 700]
+    mask_time = 700 + 2 * mymockdevice.channels["rydberg_global"].rise_time
+    assert seq1._slm_mask_time == [0, mask_time]
     assert seq1._schedule["dmm_0_1"].slots[1].type == Pulse.ConstantPulse(
-        700, 0, -100, 0
+        mask_time, 0, -100, 0
     )
     # Possible to modulate dmm_0_1 after slm declaration
     seq1.add_dmm_detuning(RampWaveform(300, 0, -10), "dmm_0_1")
-    assert seq1._slm_mask_time == [0, 700]
-
+    assert seq1._slm_mask_time == [0, mask_time]
+    # Possible to add pulses afterwards,
+    seq1.declare_channel("ryd_loc", "rydberg_local", ["q0", "q1"])
+    seq1.add(pulse2, "ryd_loc", protocol="no-delay")
+    assert seq1._slm_mask_time == [0, mask_time]
+    with patch("matplotlib.figure.Figure.savefig"):
+        seq1.draw(
+            mode,
+            draw_qubit_det=draw_qubit_det,
+            draw_qubit_amp=draw_qubit_amp,
+            draw_interp_pts=False,
+            draw_register=draw_register,
+            fig_name="local_quantities",
+        )
+    seq1.declare_channel("raman_glob", "raman_global")
+    if draw_qubit_det or draw_qubit_amp:
+        with pytest.raises(
+            NotImplementedError,
+            match="Can only draw qubit contents for channels in rydberg basis",
+        ):
+            seq1.draw(
+                mode,
+                draw_qubit_det=draw_qubit_det,
+                draw_qubit_amp=draw_qubit_amp,
+            )
     # Set mask and then add ising pulses to the schedule
     seq2 = Sequence(reg, MockDevice)
     seq2.config_slm_mask(targets)
@@ -1466,25 +1563,38 @@ def test_slm_mask_in_ising(reg, patch_plt_show, det_map):
     assert str(seq5) == str(seq5_)
 
 
-def test_draw_register(reg, patch_plt_show):
+@pytest.mark.parametrize("ch_name", ["rydberg_global", "mw_global"])
+def test_draw_register_det_maps(reg, ch_name, patch_plt_show):
     # Draw 2d register from sequence
-    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    reg_layout = RegisterLayout(
+        [(0, 0), (10, 10), (-10, -10), (20, 20), (30, 30), (40, 40)]
+    )
+    det_map = reg_layout.define_detuning_map(
+        {0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5}
+    )
+    reg = reg_layout.define_register(0, 1, 2, qubit_ids=["q0", "q1", "q2"])
     targets = ["q0", "q2"]
     pulse = Pulse.ConstantPulse(100, 10, 0, 0)
     seq = Sequence(reg, MockDevice)
-    seq.declare_channel("ch_xy", "mw_global")
-    seq.add(pulse, "ch_xy")
+    seq.declare_channel(ch_name, ch_name)
+    seq.add(pulse, ch_name)
+    if ch_name == "rydberg_global":
+        seq.config_detuning_map(det_map, "dmm_0")
     seq.config_slm_mask(targets)
     seq.draw(draw_register=True)
+    seq.draw(draw_detuning_maps=True)
+    seq.draw(draw_register=True, draw_detuning_maps=True)
 
     # Draw 3d register from sequence
     reg3d = Register3D.cubic(3, 8)
     seq3d = Sequence(reg3d, MockDevice)
-    seq3d.declare_channel("ch_xy", "mw_global")
-    seq3d.add(pulse, "ch_xy")
+    seq3d.declare_channel(ch_name, ch_name)
+    seq3d.add(pulse, ch_name)
     seq3d.config_slm_mask([6, 15])
-    seq3d.measure(basis="XY")
+    seq3d.measure(basis="XY" if ch_name == "mw_global" else "ground-rydberg")
     seq3d.draw(draw_register=True)
+    seq3d.draw(draw_detuning_maps=True)
+    seq3d.draw(draw_register=True, draw_detuning_maps=True)
 
 
 def test_hardware_constraints(reg, patch_plt_show):
