@@ -17,6 +17,7 @@ import re
 import numpy as np
 import pytest
 
+import pulser
 from pulser import Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
@@ -268,3 +269,5 @@ def test_deprecation_warning():
 
     with pytest.warns(DeprecationWarning, match=msg):
         Sequence.deserialize(s)
+
+    assert pulser.__version__ < "1.0", "Remove legacy serializer methods"
