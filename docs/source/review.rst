@@ -160,8 +160,8 @@ In the analog simulation approach, the laser field acts on the entire array
 of atoms. This creates a **global** Hamiltonian of the form
 
 .. math::
-   H = \frac{\hbar\Omega(t)}{2} \sum_i  \sigma_i^x - \frac{\hbar\delta(t)}{2} \sum_i
-        \sigma_i^z + \sum_{i<j} U_{ij} n_i n_j
+   H = \sum_i \left( \frac{\hbar\Omega(t)}{2} \sigma_i^x - \frac{\hbar\delta(t)}{2}
+        \sigma_i^z + \sum_{j<i} U_{ij} n_i n_j \right)
 
 Through the continuous manipulation of :math:`\Omega(t)` and :math:`\delta(t)`,
 one has a very high degree of control over the system's dynamics and properties.
