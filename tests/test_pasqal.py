@@ -85,7 +85,7 @@ def mock_batch(mock_job, seq):
     class MockBatch:
         id = "abcd"
         status = "DONE"
-        jobs = {mock_job.id: mock_job}
+        ordered_jobs = [mock_job]
         sequence_builder = seq_.to_abstract_repr()
 
     return MockBatch()
@@ -207,16 +207,6 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
             wait=False,
         )
     )
-
-    job_params[0]["runs"] = 1
-    with pytest.raises(RuntimeError, match="Failed to find job ID"):
-        # Job runs don't match MockJob
-        fixt.pasqal_cloud.submit(
-            seq,
-            job_params=job_params,
-            emulator=emulator,
-            config=config,
-        )
 
     job_params[0]["runs"] = {10}
     with pytest.raises(
