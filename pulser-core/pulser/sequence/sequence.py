@@ -1375,9 +1375,6 @@ class Sequence(Generic[DeviceType]):
 
         Returns:
             str: The sequence encoded as an abstract JSON object.
-
-        See Also:
-            ``serialize``
         """
         try:
             return serialize_abstract_sequence(
@@ -1392,7 +1389,7 @@ class Sequence(Generic[DeviceType]):
                     "`Sequence.build()` or when providing the `defaults` to "
                     "`Sequence.to_abstract_repr()`."
                 ) from e
-            raise e
+            raise e  # pragma: no cover
 
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:

@@ -149,8 +149,8 @@ def test_magnetic_field(reg):
     with pytest.raises(ValueError, match="can only be set on an empty seq"):
         seq3.set_magnetic_field()
 
-    seq3_str = seq3.serialize()
-    seq3_ = Sequence.deserialize(seq3_str)
+    seq3_str = seq3._serialize()
+    seq3_ = Sequence._deserialize(seq3_str)
     assert seq3_._in_xy
     assert str(seq3) == str(seq3_)
     assert np.all(seq3_.magnetic_field == np.array((1.0, 0.0, 0.0)))
@@ -975,9 +975,9 @@ def test_sequence(reg, device, patch_plt_show):
     seq.draw(draw_phase_area=True)
     seq.draw(draw_phase_curve=True)
 
-    s = seq.serialize()
+    s = seq._serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
-    seq_ = Sequence.deserialize(s)
+    seq_ = Sequence._deserialize(s)
     assert str(seq) == str(seq_)
 
 
@@ -1084,8 +1084,8 @@ def test_slm_mask(reg, patch_plt_show):
     seq_xy5.add(Pulse.ConstantPulse(200, var, 0, 0), "ch")
     assert seq_xy5.is_parametrized()
     seq_xy5.config_slm_mask(targets)
-    seq_xy5_str = seq_xy5.serialize()
-    seq_xy5_ = Sequence.deserialize(seq_xy5_str)
+    seq_xy5_str = seq_xy5._serialize()
+    seq_xy5_ = Sequence._deserialize(seq_xy5_str)
     assert str(seq_xy5) == str(seq_xy5_)
 
     # Check drawing method

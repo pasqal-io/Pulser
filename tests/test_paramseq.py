@@ -200,12 +200,12 @@ def test_build():
     assert seq.current_phase_ref("q0") == 0.0
     assert seq._measurement == "ground-rydberg"
 
-    s = sb.serialize()
-    sb_ = Sequence.deserialize(s)
+    s = sb._serialize()
+    sb_ = Sequence._deserialize(s)
     assert str(sb) == str(sb_)
 
-    s2 = sb_.serialize()
-    sb_2 = Sequence.deserialize(s2)
+    s2 = sb_._serialize()
+    sb_2 = Sequence._deserialize(s2)
     assert str(sb) == str(sb_2)
 
 
