@@ -60,7 +60,7 @@ class RegDrawer:
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
         dmm_qubits: Mapping[QubitId, float] = {},
-        draw_label: str = "atoms",
+        label_name: str = "atoms",
     ) -> None:
         ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(
             ids, qubit_colors
@@ -76,7 +76,7 @@ class RegDrawer:
                 label="traps",
             )
         else:
-            params = dict(s=30, c=ordered_qubit_colors, label=draw_label)
+            params = dict(s=30, c=ordered_qubit_colors, label=label_name)
 
         ax.scatter(pos[:, ix], pos[:, iy], alpha=0.7, **params)
 
@@ -99,10 +99,10 @@ class RegDrawer:
                 if i in dmm_qubits.keys():
                     dmm_pos.append(c)
             dmm_arr = np.array(dmm_pos)
-            max_dmm_qubits = max(dmm_qubits.values())
+            max_weight = max(dmm_qubits.values())
             alpha = (
-                0.2 * np.array(list(dmm_qubits.values())) / max_dmm_qubits
-                if max_dmm_qubits > 0
+                0.2 * np.array(list(dmm_qubits.values())) / max_weight
+                if max_weight > 0
                 else 0
             )
             ax.scatter(
@@ -194,10 +194,7 @@ class RegDrawer:
                     va=v_al,
                     wrap=True,
                     bbox=bb,
-                    fontsize=max(
-                        (12 if i not in final_plot_det_map else 8.3),
-                        5,
-                    ),
+                    fontsize=12 if i not in final_plot_det_map else 8.3,
                     multialignment="right",
                 )
                 txt._get_wrap_line_width = lambda: 50.0

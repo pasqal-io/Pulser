@@ -725,7 +725,7 @@ def _draw_channel_content(
                         x,
                         amp_top * 0.98,
                         tgt_strs[0],
-                        fontsize=13,
+                        fontsize=13 if tgt_strs == ["GLOBAL"] else 17,
                         rotation=90 if tgt_strs == ["GLOBAL"] else 0,
                         ha="left",
                         va="top",
@@ -1120,7 +1120,7 @@ def _draw_qubit_content(
                                 plane=(ix, iy),
                                 qubit_colors={t: color for t in target},
                                 masked_qubits=set(target),
-                                draw_label=label,
+                                label_name=label,
                             )
                             if target_index == 0:
                                 sub_ax_leg.set_title(
@@ -1136,7 +1136,7 @@ def _draw_qubit_content(
                             ids=list(targeted_atoms.keys()),
                             qubit_colors={t: color for t in target},
                             masked_qubits=set(target),
-                            draw_label=label,
+                            label_name=label,
                         )
                         if target_index == 0:
                             ax_leg.set_title(

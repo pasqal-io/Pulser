@@ -1694,12 +1694,18 @@ class Sequence(Generic[DeviceType]):
                 after the drawing of the sequence.
             draw_qubit_det: Draws the detuning seen by the qubits locally after
                 the drawing of the sequence.
-            fig_name: The name on which to save the
-                figure. If `draw_register` is True, both pulses and register
-                will be saved as figures, with a suffix ``_pulses`` and
-                ``_register`` in the file name. If `draw_register` is False,
-                only the pulses are saved, with no suffix. If `fig_name` is
-                None, no figure is saved.
+            fig_name: The name on which to save the figures. Figures are saved
+                if `fig_name` is not None. If `draw_register`, `draw_qubit_amp`
+                and `draw_qubit_det` are False, only the pulses are saved, with
+                no suffix. If one of them is True, the pulses will be saved
+                with a suffix ``_pulses``. If draw_register is True, the
+                register is saved in another figure, with a suffix
+                ``_register`` in the file name. If `draw_qubit_amp` or
+                `draw_qubit_det` is True, the evolution of the quantities along
+                time for group of qubits is saved in another figure with the
+                prefix '_per_qubit', and the group of qubits having same
+                evolution of quantities along time are saved in a figure with
+                suffix '_per_qubit_legend'.
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
@@ -1748,19 +1754,22 @@ class Sequence(Generic[DeviceType]):
             draw_qubit_amp=draw_qubit_amp,
             draw_qubit_det=draw_qubit_det,
         )
-        if fig_name is not None and fig_reg is not None:
+        if fig_name is not None:
             name, ext = os.path.splitext(fig_name)
-            fig.savefig(name + "_pulses" + ext, **kwargs_savefig)
-            fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
+            suffix = (
+                "_pulses"
+                if all(fig is None for fig in (fig_reg, fig_qubit, fig_legend))
+                else ""
+            )
+            fig.savefig(name + suffix + ext, **kwargs_savefig)
+            if fig_reg is not None:
+                fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
             if fig_qubit is not None:
                 fig_qubit.savefig(name + "_per_qubit" + ext, **kwargs_savefig)
                 if fig_legend is not None:
                     fig_qubit.savefig(
                         name + "_per_qubit_legend" + ext, **kwargs_savefig
                     )
-
-        elif fig_name:
-            fig.savefig(fig_name, **kwargs_savefig)
 
         if show:
             plt.show()
