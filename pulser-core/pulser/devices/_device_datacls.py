@@ -548,10 +548,12 @@ class Device(BaseDevice):
             True if register_layout is found among calibrated_register_layouts,
             False otherwise.
         """
-        for _, calibrated_layout in self.calibrated_register_layouts.items():
-            if register_layout == calibrated_layout:
-                return True
-        return False
+        return any(
+            [
+                register_layout == layout
+                for layout in list(self.calibrated_register_layouts.values())
+            ]
+        )
 
     def register_is_from_calibrated_layout(
         self, register: BaseRegister | MappableRegister
@@ -569,16 +571,14 @@ class Device(BaseDevice):
             True if register has a layout and it is found among
             calibrated_register_layouts, False otherwise.
         """
-        if not isinstance(register, BaseRegister) or isinstance(
-            register, MappableRegister
-        ):
+        if not isinstance(register, (BaseRegister, MappableRegister)):
             raise TypeError(
                 "The register to check must be of type "
                 "BaseRegister or MappableRegister."
             )
         if isinstance(register, BaseRegister) and register.layout is None:
             return False
-        return self.is_calibrated_layout(register.layout)
+        return self.is_calibrated_layout(cast(RegisterLayout, register.layout))
 
     def to_virtual(self) -> VirtualDevice:
         """Converts the Device into a VirtualDevice."""
