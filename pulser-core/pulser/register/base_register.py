@@ -206,7 +206,9 @@ class BaseRegister(ABC):
                 )
 
     def define_detuning_map(
-        self, detuning_weights: Mapping[QubitId, float]
+        self,
+        detuning_weights: Mapping[QubitId, float],
+        slug: str | None = None,
     ) -> DetuningMap:
         """Defines a DetuningMap for some qubits of the register.
 
@@ -214,6 +216,7 @@ class BaseRegister(ABC):
             detuning_weights: A mapping between the IDs of the targeted qubits
                 and detuning weights (between 0 and 1, their sum must be equal
                 to 1).
+            slug: An optional identifier for the detuning map.
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
@@ -227,6 +230,7 @@ class BaseRegister(ABC):
         return DetuningMap(
             [self.qubits[qubit_id] for qubit_id in detuning_weights],
             list(detuning_weights.values()),
+            slug,
         )
 
     @abstractmethod

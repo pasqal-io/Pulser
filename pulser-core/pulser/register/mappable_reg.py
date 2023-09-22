@@ -124,7 +124,9 @@ class MappableRegister:
         return [self.qubit_ids.index(id) for id in id_list]
 
     def define_detuning_map(
-        self, detuning_weights: Mapping[int, float]
+        self,
+        detuning_weights: Mapping[int, float],
+        slug: str | None = None,
     ) -> DetuningMap:
         """Defines a DetuningMap for some trap ids of the register layout.
 
@@ -132,12 +134,13 @@ class MappableRegister:
             detuning_weights: A mapping between the IDs of the targeted traps
                 and detuning weights (between 0 and 1, their sum must be equal
                 to 1).
+            slug: An optional identifier for the detuning map.
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
                 of the targeted traps.
         """
-        return self._layout.define_detuning_map(detuning_weights)
+        return self._layout.define_detuning_map(detuning_weights, slug)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._layout, *self._qubit_ids)

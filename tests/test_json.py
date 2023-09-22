@@ -27,6 +27,7 @@ from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
 )
+from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import BlackmanWaveform
 
 
@@ -99,6 +100,15 @@ def test_register_from_layout():
     assert reg == new_reg
     assert new_reg.layout == layout
     assert new_reg._layout_info.trap_ids == (1, 0)
+
+
+def test_detuning_map():
+    custom_det_map = DetuningMap(
+        [[0, 0], [1, 1], [1, 0], [0, 1]], [0.1, 0.2, 0.3, 0.4]
+    )
+    new_custom_det_map = encode_decode(custom_det_map)
+    assert new_custom_det_map == custom_det_map
+    assert type(new_custom_det_map) is DetuningMap
 
 
 @pytest.mark.parametrize(

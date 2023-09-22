@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 
 from pulser.channels import Raman, Rydberg
+from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import Device
 
@@ -71,6 +72,10 @@ def mod_device() -> Device:
                 clock_period=4,
                 mod_bandwidth=4.0,
             ),
+        ),
+        dmm_objects=(
+            DMM(bottom_detuning=-100),
+            DMM(clock_period=4, mod_bandwidth=4.0, bottom_detuning=-50),
         ),
     )
 

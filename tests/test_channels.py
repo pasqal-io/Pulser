@@ -27,7 +27,7 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 @pytest.mark.parametrize(
     "bad_param,bad_value",
     [
-        ("max_amp", 0),
+        ("max_amp", -0.00001),
         ("max_abs_detuning", -0.001),
         ("clock_period", 0),
         ("min_duration", 0),

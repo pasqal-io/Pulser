@@ -17,7 +17,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal, Optional
 
+import numpy as np
+
 from pulser.channels.base_channel import Channel
+from pulser.pulse import Pulse
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -50,11 +53,11 @@ class DMM(Channel):
 
     bottom_detuning: Optional[float] = field(default=None, init=True)
     addressing: Literal["Global"] = field(default="Global", init=False)
-    max_abs_detuning: Optional[float] = field(init=False, default=None)
-    max_amp: float = field(default=1e-16, init=False)  # can't be 0
-    min_retarget_interval: Optional[int] = field(init=False, default=None)
-    fixed_retarget_t: Optional[int] = field(init=False, default=None)
-    max_targets: Optional[int] = field(init=False, default=None)
+    max_abs_detuning: Optional[float] = field(default=None, init=False)
+    max_amp: float = field(default=0, init=False)
+    min_retarget_interval: Optional[int] = field(default=None, init=False)
+    fixed_retarget_t: Optional[int] = field(default=None, init=False)
+    max_targets: Optional[int] = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -72,3 +75,57 @@ class DMM(Channel):
             "max_duration",
         ]
         return [field for field in optional if getattr(self, field) is None]
+
+    def validate_pulse(self, pulse: Pulse) -> None:
+        """Checks if a pulse can be executed in this DMM.
+
+        Args:
+            pulse: The pulse to validate.
+        """
+        super().validate_pulse(pulse)
+        round_detuning = np.round(pulse.detuning.samples, decimals=6)
+        if np.any(round_detuning > 0):
+            raise ValueError("The detuning in a DMM must not be positive.")
+        if self.bottom_detuning is not None and np.any(
+            round_detuning < self.bottom_detuning
+        ):
+            raise ValueError(
+                "The detuning goes below the bottom detuning "
+                f"of the DMM ({self.bottom_detuning} rad/µs)."
+            )
+
+
+def _dmm_id_from_name(dmm_name: str) -> str:
+    """Converts a dmm_name into a dmm_id.
+
+    As a reminder the dmm_name is generated automatically from dmm_id
+    as dmm_id_{number of times dmm_id has been called}.
+
+    Args:
+        dmm_name: The dmm_name to convert.
+
+    Returns:
+        The associated dmm_id.
+    """
+    return "_".join(dmm_name.split("_")[0:2])
+
+
+def _get_dmm_name(dmm_id: str, channels: list[str]) -> str:
+    """Get the dmm_name to add a dmm_id to a list of channels.
+
+    Counts the number of channels starting by dmm_id, generates the
+    dmm_name as dmm_id_{number of times dmm_id has been called}.
+
+    Args:
+        dmm_id: the id of the DMM to add to the list of channels.
+        channels: a list of channel names.
+
+    Returns:
+        The associated dmm_name.
+    """
+    dmm_count = len(
+        [key for key in channels if _dmm_id_from_name(key) == dmm_id]
+    )
+    if dmm_count == 0:
+        return dmm_id
+    return dmm_id + f"_{dmm_count}"

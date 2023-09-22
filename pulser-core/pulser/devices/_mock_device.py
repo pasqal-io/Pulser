@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels import DMM, Microwave, Raman, Rydberg
 from pulser.devices._device_datacls import VirtualDevice
 
 MockDevice = VirtualDevice(
@@ -31,5 +31,5 @@ MockDevice = VirtualDevice(
         Raman.Local(None, None, max_duration=None),
         Microwave.Global(None, None, max_duration=None),
     ),
-    # TODO: Add DMM once it is supported for serialization
+    dmm_objects=(DMM(),),
 )
