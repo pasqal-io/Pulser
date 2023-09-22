@@ -117,6 +117,7 @@ class Channel(ABC):
             "min_avg_amp",
         ]
         non_negative = [
+            "max_amp",
             "max_abs_detuning",
             "min_retarget_interval",
             "fixed_retarget_t",
@@ -359,8 +360,6 @@ class Channel(ABC):
 
         Args:
             pulse: The pulse to validate.
-            channel_id: The channel ID used to index the chosen channel
-                on this device.
         """
         if not isinstance(pulse, Pulse):
             raise TypeError(

@@ -1,7 +1,7 @@
 """The main function for sequence sampling."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pulser.sampler.samples import SequenceSamples, _SlmMask
 
@@ -29,7 +29,17 @@ def sample(
 
     samples_list = []
     for ch_schedule in seq._schedule.values():
-        samples = ch_schedule.get_samples(IGNORE_DETUNED_DELAY_PHASE)
+        kwargs: dict[str, Any] = dict(
+            ignore_detuned_delay_phase=IGNORE_DETUNED_DELAY_PHASE
+        )
+        if hasattr(ch_schedule, "detuning_map"):
+            if seq.is_register_mappable():
+                raise NotImplementedError(
+                    "Sequences with a DMM channel can't be sampled while "
+                    "their register is mappable."
+                )
+            kwargs["qubits"] = seq.register.qubits
+        samples = ch_schedule.get_samples(**kwargs)
         if extended_duration:
             samples = samples.extend_duration(extended_duration)
         if modulation:

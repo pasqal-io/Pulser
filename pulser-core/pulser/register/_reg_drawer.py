@@ -60,6 +60,7 @@ class RegDrawer:
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
         dmm_qubits: Mapping[QubitId, float] = {},
+        label_name: str = "atoms",
     ) -> None:
         ordered_qubit_colors = RegDrawer._compute_ordered_qubit_colors(
             ids, qubit_colors
@@ -68,9 +69,14 @@ class RegDrawer:
         ix, iy = plane
 
         if are_traps:
-            params = dict(s=50, edgecolors="black", facecolors="none")
+            params = dict(
+                s=50,
+                edgecolors="black",
+                facecolors="none",
+                label="traps",
+            )
         else:
-            params = dict(s=30, c=ordered_qubit_colors)
+            params = dict(s=30, c=ordered_qubit_colors, label=label_name)
 
         ax.scatter(pos[:, ix], pos[:, iy], alpha=0.7, **params)
 
@@ -93,15 +99,19 @@ class RegDrawer:
                 if i in dmm_qubits.keys():
                     dmm_pos.append(c)
             dmm_arr = np.array(dmm_pos)
+            max_weight = max(dmm_qubits.values())
+            alpha = (
+                0.2 * np.array(list(dmm_qubits.values())) / max_weight
+                if max_weight > 0
+                else 0
+            )
             ax.scatter(
                 dmm_arr[:, ix],
                 dmm_arr[:, iy],
                 marker="s",
                 s=1200,
-                alpha=0.2
-                * np.array(list(dmm_qubits.values()))
-                / max(dmm_qubits.values()),
-                c="black",
+                alpha=alpha,
+                c="black" if not qubit_colors else ordered_qubit_colors,
             )
         axes = "xyz"
 
@@ -115,6 +125,7 @@ class RegDrawer:
             # Determine which labels would overlap and merge those
             plot_pos = list(pos[:, (ix, iy)])
             plot_ids: list[list[str]] = [[f"{i}"] for i in ids]
+            dmm_qubits = {str(q): w for q, w in dmm_qubits.items()}
             # Threshold distance between points
             epsilon = 1.0e-2 * np.diff(ax.get_xlim())[0]
 
@@ -152,9 +163,7 @@ class RegDrawer:
                         qubit_det = []
                         for q in plot_ids[i][j:]:
                             extra_label = (
-                                f": {dmm_qubits[int(q)]:.2f}"
-                                if not is_mask
-                                else ""
+                                f":{dmm_qubits[q]:.2f}" if not is_mask else ""
                             )
                             qubit_det.append(q + extra_label)
                         plot_ids[i][j:] = [", ".join(qubit_det)]
@@ -215,6 +224,15 @@ class RegDrawer:
             # Only draw central axis lines when not drawing the graph
             ax.axvline(0, c="grey", alpha=0.5, linestyle=":")
             ax.axhline(0, c="grey", alpha=0.5, linestyle=":")
+        ax.legend(
+            loc="best",
+            bbox_to_anchor=(0.0, 0.0, 1.0, 0.3),
+            prop=dict(stretch="condensed", size=8),
+            handlelength=1.5,
+            handleheight=0.6,
+            handletextpad=0.1,
+            markerscale=0.8,
+        )
 
     @staticmethod
     def _draw_3D(
@@ -351,6 +369,7 @@ class RegDrawer:
         pos: np.ndarray,
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
+        nregisters: int = 1,
     ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
         """Creates the Figure and Axes for drawing the register."""
         diffs = RegDrawer._register_dims(
@@ -364,8 +383,12 @@ class RegDrawer:
         Ls = proportions * max(
             min(big_side / 4, 10), 4
         )  # Figsize is, at most, (10,10), and, at least (4,*) or (*,4)
-        Ls[1] = max(Ls[1], 1.0)  # Figsize height is at least 1
-        fig, axes = plt.subplots(figsize=Ls, layout="constrained")
+        Ls[1] = max(Ls[1], 2.0 * nregisters)  # Figsize height is at least 2
+        fig, axes = plt.subplots(
+            nrows=nregisters,
+            figsize=Ls * nregisters,
+            layout="constrained",
+        )
         return (fig, axes)
 
     @staticmethod
@@ -373,6 +396,7 @@ class RegDrawer:
         pos: np.ndarray,
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
+        nregisters: int = 1,
     ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
         """Creates the Figure and Axes for drawing the register projections."""
         diffs = RegDrawer._register_dims(
@@ -401,9 +425,10 @@ class RegDrawer:
         fig_width = min(np.sum(widths), fig_height * 4)
 
         rescaling = 20 / max(max(fig_width, fig_height), 20)
-        figsize = (rescaling * fig_width, rescaling * fig_height)
+        figsize = (rescaling * fig_width, rescaling * fig_height * nregisters)
 
         fig, axes = plt.subplots(
+            nrows=nregisters,
             ncols=3,
             figsize=figsize,
             gridspec_kw=dict(width_ratios=widths),

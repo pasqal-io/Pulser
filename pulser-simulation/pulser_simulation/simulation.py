@@ -728,6 +728,7 @@ class QutipEmulator:
                     or self._bad_atoms[q2]
                     or (
                         masked
+                        and self._interaction == "XY"
                         and (
                             q1 in self.samples_obj._slm_mask.targets
                             or q2 in self.samples_obj._slm_mask.targets
@@ -804,7 +805,10 @@ class QutipEmulator:
         if self.basis_name != "digital" and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
-            if self.samples_obj._slm_mask.end > 0:
+            if (
+                self.samples_obj._slm_mask.end > 0
+                and self._interaction == "XY"
+            ):
                 # Build an array of binary coefficients for the interaction
                 # term of unmasked qubits
                 coeff = np.ones(self._tot_duration)

@@ -15,8 +15,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+from pulser.channels import DMM
 from pulser.pulse import Pulse
 
 if TYPE_CHECKING:
@@ -30,6 +31,8 @@ def seq_to_str(sequence: Sequence) -> str:
     target_line = "t: {}->{} | Target: {} | Phase Reference: {}\n"
     delay_line = "t: {}->{} | Delay \n"
     det_delay_line = "t: {}->{} | Detuned Delay | Detuning: {:.3g} rad/µs\n"
+    dmm_det_line = "t: {}->{} | Detuning: {} | Targets: {}\n"
+
     for ch, seq in sequence._schedule.items():
         if (
             seq.channel_obj.addressing == "Global"
@@ -56,7 +59,18 @@ def seq_to_str(sequence: Sequence) -> str:
                 )
             tgt_txt = ", ".join(map(str, tgts))
             if isinstance(ts.type, Pulse):
-                if seq.is_detuned_delay(ts.type):
+                if isinstance(sequence.declared_channels[ch], DMM):
+                    full += dmm_det_line.format(
+                        ts.ti,
+                        ts.tf,
+                        ts.type.detuning
+                        if not seq.is_detuned_delay(ts.type)
+                        else "{:.3g} rad/µs".format(
+                            cast(float, ts.type.detuning[0])
+                        ),
+                        tgt_txt,
+                    )
+                elif seq.is_detuned_delay(ts.type):
                     det = ts.type.detuning[0]
                     full += det_delay_line.format(ts.ti, ts.tf, det)
                 else:

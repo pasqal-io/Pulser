@@ -16,16 +16,17 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
 
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.register.weight_maps import DetuningMap
-from pulser.sampler.samples import ChannelSamples, _PulseTargetSlot
+from pulser.sampler.samples import ChannelSamples, DMMSamples, _PulseTargetSlot
 from pulser.waveforms import ConstantWaveform
 
 
@@ -262,6 +263,32 @@ class _ChannelSchedule:
 class _DMMSchedule(_ChannelSchedule):
     detuning_map: DetuningMap
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._waiting_for_first_pulse: bool = False
+
+    def get_samples(
+        self,
+        ignore_detuned_delay_phase: bool = True,
+        qubits: dict[QubitId, np.ndarray] | None = None,
+    ) -> DMMSamples:
+        ch_samples = super().get_samples(
+            ignore_detuned_delay_phase=ignore_detuned_delay_phase
+        )
+        init_fields = {
+            f.name: getattr(ch_samples, f.name)
+            for f in fields(ch_samples)
+            if f.init
+        }
+        if qubits is None:
+            raise ValueError(
+                "'qubits' must be defined when extracting the samples of a"
+                " DMM channel."
+            )
+        return DMMSamples(
+            **init_fields, detuning_map=self.detuning_map, qubits=qubits
+        )
+
 
 class _Schedule(Dict[str, _ChannelSchedule]):
     def __init__(self, max_duration: int | None = None):
@@ -284,11 +311,15 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         # Find tentative initial and final time of SLM mask if possible
         mask_time: list[int] = []
         for ch_schedule in self.values():
-            if ch_schedule.channel_obj.addressing != "Global":
+            if ch_schedule.channel_obj.addressing != "Global" or isinstance(
+                ch_schedule.channel_obj, DMM
+            ):
                 continue
             # Cycle on slots in schedule until the first pulse is found
             for slot in ch_schedule:
-                if not isinstance(slot.type, Pulse):
+                if not isinstance(
+                    slot.type, Pulse
+                ) or ch_schedule.is_detuned_delay(slot.type):
                     continue
                 ti = slot.ti
                 tf = slot.tf

@@ -136,14 +136,14 @@ def test_post_init_value_errors(test_params, param, value, msg):
         VirtualDevice(**test_params)
 
 
-# TODO: Add test of comptability SLM-DMM once DMM is added for serialization
-# def test_post_init_slm_dmm_compatibility(test_params):
-#     test_params["supports_slm_mask"] = True
-#     test_params["dmm_objects"] = ()
-#     with pytest.raises(ValueError,
-#       match="One DMM object should be defined to support SLM mask."
-#     ):
-#         VirtualDevice(**test_params)
+def test_post_init_slm_dmm_compatibility(test_params):
+    test_params["supports_slm_mask"] = True
+    test_params["dmm_objects"] = ()
+    with pytest.raises(
+        ValueError,
+        match="One DMM object should be defined to support SLM mask.",
+    ):
+        VirtualDevice(**test_params)
 
 
 potential_params = ["max_atom_num", "max_radial_distance"]
@@ -384,7 +384,10 @@ def test_convert_to_virtual():
     assert Device(
         pre_calibrated_layouts=(TriangularLatticeLayout(40, 2),), **params
     ).to_virtual() == VirtualDevice(
-        supports_slm_mask=False, reusable_channels=False, **params
+        supports_slm_mask=False,
+        reusable_channels=False,
+        dmm_objects=(),
+        **params,
     )
 
 
@@ -403,6 +406,12 @@ def test_device_params():
 
 
 def test_dmm_channels():
+    with pytest.raises(
+        ValueError,
+        match="A 'Device' instance cannot contain virtual channels."
+        " For channel 'dmm_0', please define: 'bottom_detuning'",
+    ):
+        replace(Chadoq2, dmm_objects=(DMM(),))
     dmm = DMM(
         bottom_detuning=-1,
         clock_period=1,
@@ -426,5 +435,3 @@ def test_dmm_channels():
             channel_objects=(Rydberg.Global(None, None),),
             channel_ids=("dmm_0",),
         )
-    assert not dmm.is_virtual()
-    assert DMM().is_virtual()

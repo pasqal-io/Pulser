@@ -143,23 +143,8 @@ class PasqalCloud(RemoteConnection):
             configuration=configuration,
             wait=False,
         )
-        jobs_order = []
-        if job_params:
-            for job_dict in job_params:
-                for job in batch.jobs.values():
-                    if (
-                        job.id not in jobs_order
-                        and job_dict["runs"] == job.runs
-                        and job_dict.get("variables", None) == job.variables
-                    ):
-                        jobs_order.append(job.id)
-                        break
-                else:
-                    raise RuntimeError(
-                        f"Failed to find job ID for {job_dict}."
-                    )
 
-        return RemoteResults(batch.id, self, jobs_order or None)
+        return RemoteResults(batch.id, self)
 
     @backoff_decorator
     def fetch_available_devices(self) -> dict[str, Device]:
@@ -170,9 +155,7 @@ class PasqalCloud(RemoteConnection):
             for name, dev_str in abstract_devices.items()
         }
 
-    def _fetch_result(
-        self, submission_id: str, jobs_order: list[str] | None
-    ) -> tuple[Result, ...]:
+    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
         # For now, the results are always sampled results
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
         batch = get_batch_fn(id=submission_id)
@@ -182,13 +165,7 @@ class PasqalCloud(RemoteConnection):
         meas_basis = seq_builder.get_measurement_basis()
 
         results = []
-
-        jobs = (
-            (batch.jobs[job_id] for job_id in jobs_order)
-            if jobs_order
-            else batch.jobs.values()
-        )
-        for job in jobs:
+        for job in batch.ordered_jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:

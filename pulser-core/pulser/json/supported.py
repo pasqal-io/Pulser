@@ -70,10 +70,11 @@ SUPPORTED_MODULES = {
         "TriangularLatticeLayout",
     ),
     "pulser.register.mappable_reg": ("MappableRegister",),
+    "pulser.register.weight_maps": ("DetuningMap",),
     "pulser.devices": tuple(
         [dev.name for dev in devices._valid_devices] + ["VirtualDevice"]
     ),
-    "pulser.channels": ("Rydberg", "Raman", "Microwave"),
+    "pulser.channels": ("Rydberg", "Raman", "Microwave", "DMM"),
     "pulser.channels.eom": ("BaseEOM", "RydbergEOM", "RydbergBeam"),
     "pulser.pulse": ("Pulse",),
     "pulser.waveforms": (
