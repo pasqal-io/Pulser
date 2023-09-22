@@ -355,6 +355,11 @@ def test_calibrated_layouts():
         "TriangularLatticeLayout(100, 6.8µm)",
         "TriangularLatticeLayout(200, 5.0µm)",
     }
+    with pytest.raises(
+        TypeError,
+        match="The register to check must be of type ",
+    ):
+        TestDevice.register_is_from_calibrated_layout(layout100)
     assert TestDevice.is_calibrated_layout(layout100)
     register = layout200.define_register(*range(10))
     assert TestDevice.register_is_from_calibrated_layout(register)

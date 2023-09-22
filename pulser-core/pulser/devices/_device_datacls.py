@@ -542,16 +542,13 @@ class Device(BaseDevice):
         """Checks whether a layout is within the calibrated layouts.
 
         Args:
-            register_layout: the RegisterLayout to check.
+            register_layout: The RegisterLayout to check.
 
         Returns:
             True if register_layout is found among calibrated_register_layouts,
             False otherwise.
         """
-        for (
-            name,
-            calibrated_layout,
-        ) in self.calibrated_register_layouts.items():
+        for _, calibrated_layout in self.calibrated_register_layouts.items():
             if register_layout == calibrated_layout:
                 return True
         return False
@@ -572,12 +569,16 @@ class Device(BaseDevice):
             True if register has a layout and it is found among
             calibrated_register_layouts, False otherwise.
         """
-        if (
-            isinstance(register, BaseRegister)
-            and register._layout_info is None
+        if not isinstance(register, BaseRegister) or isinstance(
+            register, MappableRegister
         ):
+            raise TypeError(
+                "The register to check must be of type "
+                "BaseRegister or MappableRegister."
+            )
+        if isinstance(register, BaseRegister) and register.layout is None:
             return False
-        return self.is_calibrated_layout(cast(RegisterLayout, register.layout))
+        return self.is_calibrated_layout(register.layout)
 
     def to_virtual(self) -> VirtualDevice:
         """Converts the Device into a VirtualDevice."""
