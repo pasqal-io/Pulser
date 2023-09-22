@@ -538,6 +538,48 @@ class Device(BaseDevice):
         """Register layouts already calibrated on this device."""
         return {str(layout): layout for layout in self.pre_calibrated_layouts}
 
+    def is_calibrated_layout(self, register_layout: RegisterLayout) -> bool:
+        """Checks whether a layout is within the calibrated layouts.
+
+        Args:
+            register_layout: The RegisterLayout to check.
+
+        Returns:
+            True if register_layout is found among calibrated_register_layouts,
+            False otherwise.
+        """
+        return any(
+            [
+                register_layout == layout
+                for layout in list(self.calibrated_register_layouts.values())
+            ]
+        )
+
+    def register_is_from_calibrated_layout(
+        self, register: BaseRegister | MappableRegister
+    ) -> bool:
+        """Checks whether a register was constructed from a calibrated layout.
+
+        If the register is a BaseRegister, checks that it has a layout. If so,
+        or if it is a MappableRegister, check that its layout is within the
+        calibrated layouts.
+
+        Args:
+            register_layout: the Register or MappableRegister to check.
+
+        Returns:
+            True if register has a layout and it is found among
+            calibrated_register_layouts, False otherwise.
+        """
+        if not isinstance(register, (BaseRegister, MappableRegister)):
+            raise TypeError(
+                "The register to check must be of type "
+                "BaseRegister or MappableRegister."
+            )
+        if isinstance(register, BaseRegister) and register.layout is None:
+            return False
+        return self.is_calibrated_layout(cast(RegisterLayout, register.layout))
+
     def to_virtual(self) -> VirtualDevice:
         """Converts the Device into a VirtualDevice."""
         params = self._params()

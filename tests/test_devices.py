@@ -25,7 +25,10 @@ from pulser.channels.dmm import DMM
 from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
-from pulser.register.special_layouts import TriangularLatticeLayout
+from pulser.register.special_layouts import (
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
 
 
 @pytest.fixture
@@ -336,6 +339,8 @@ def test_calibrated_layouts():
             pre_calibrated_layouts=(TriangularLatticeLayout(201, 3),),
         )
 
+    layout100 = TriangularLatticeLayout(100, 6.8)
+    layout200 = TriangularLatticeLayout(200, 5)
     TestDevice = Device(
         name="TestDevice",
         dimensions=2,
@@ -344,15 +349,32 @@ def test_calibrated_layouts():
         max_radial_distance=50,
         min_atom_distance=4,
         channel_objects=(),
-        pre_calibrated_layouts=(
-            TriangularLatticeLayout(100, 6.8),
-            TriangularLatticeLayout(200, 5),
-        ),
+        pre_calibrated_layouts=(layout100, layout200),
     )
     assert TestDevice.calibrated_register_layouts.keys() == {
         "TriangularLatticeLayout(100, 6.8µm)",
         "TriangularLatticeLayout(200, 5.0µm)",
     }
+    with pytest.raises(
+        TypeError,
+        match="The register to check must be of type ",
+    ):
+        TestDevice.register_is_from_calibrated_layout(layout100)
+    assert TestDevice.is_calibrated_layout(layout100)
+    register = layout200.define_register(*range(10))
+    assert TestDevice.register_is_from_calibrated_layout(register)
+    # Checking a register not built from a layout returns False
+    assert not TestDevice.register_is_from_calibrated_layout(
+        Register.triangular_lattice(4, 25, 6.8)
+    )
+    # Checking Layouts that don't match calibrated layouts returns False
+    square_layout = SquareLatticeLayout(10, 10, 6.8)
+    layout125 = TriangularLatticeLayout(125, 6.8)
+    compact_layout = TriangularLatticeLayout(100, 3)
+    for bad_layout in (square_layout, layout125, compact_layout):
+        assert not TestDevice.is_calibrated_layout(bad_layout)
+        register = bad_layout.define_register(*range(10))
+        assert not TestDevice.register_is_from_calibrated_layout(register)
 
 
 def test_device_with_virtual_channel():
