@@ -33,6 +33,7 @@ from typing import (
     overload,
 )
 
+import jsonschema
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
@@ -48,6 +49,7 @@ from pulser.json.abstract_repr.deserializer import (
 )
 from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
+from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
@@ -1567,6 +1569,39 @@ class Sequence(Generic[DeviceType]):
         Returns:
             The sequence encoded in a JSON formatted string.
 
+        Warning:
+            This method has been deprecated and is scheduled for removal
+            in Pulser v1.0.0. For sequence serialization and deserialization,
+            use ``Sequence.to_abstract_repr()`` and
+            ``Sequence.from_abstract_repr()`` instead.
+
+        See Also:
+            ``json.dumps``: Built-in function for serialization to a JSON
+            formatted string.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "`Sequence.serialize()` and `Sequence.deserialize()` have "
+                    "been deprecated and will be removed in Pulser v1.0.0. "
+                    "Use `Sequence.to_abstract_repr()` and "
+                    "`Sequence.from_abstract_repr()` instead."
+                )
+            )
+
+        return self._serialize(**kwargs)
+
+    def _serialize(self, **kwargs: Any) -> str:
+        """Serializes the Sequence into a JSON formatted string.
+
+        Other Parameters:
+            kwargs: Valid keyword-arguments for ``json.dumps()``, except for
+                ``cls``.
+
+        Returns:
+            The sequence encoded in a JSON formatted string.
+
         See Also:
             ``json.dumps``: Built-in function for serialization to a JSON
             formatted string.
@@ -1599,16 +1634,62 @@ class Sequence(Generic[DeviceType]):
 
         Returns:
             str: The sequence encoded as an abstract JSON object.
-
-        See Also:
-            ``serialize``
         """
-        return serialize_abstract_sequence(
-            self, seq_name, json_dumps_options, **defaults
-        )
+        try:
+            return serialize_abstract_sequence(
+                self, seq_name, json_dumps_options, **defaults
+            )
+        except jsonschema.exceptions.ValidationError as e:
+            if self.is_parametrized():
+                raise AbstractReprError(
+                    "The serialization of the parametrized sequence failed, "
+                    "potentially due to an error that only appears at build "
+                    "time. Check that no errors appear when building with "
+                    "`Sequence.build()` or when providing the `defaults` to "
+                    "`Sequence.to_abstract_repr()`."
+                ) from e
+            raise e  # pragma: no cover
 
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:
+        """Deserializes a JSON formatted string.
+
+        Args:
+            obj: The JSON formatted string to deserialize, coming from
+                the serialization of a ``Sequence`` through
+                ``Sequence.serialize()``.
+
+        Other Parameters:
+            kwargs: Valid keyword-arguments for ``json.loads()``, except for
+                ``cls`` and ``object_hook``.
+
+        Returns:
+            The deserialized Sequence object.
+
+        Warning:
+            This method has been deprecated and is scheduled for removal
+            in Pulser v1.0.0. For sequence serialization and deserialization,
+            use ``Sequence.to_abstract_repr()`` and
+            ``Sequence.from_abstract_repr()`` instead.
+
+        See Also:
+            ``json.loads``: Built-in function for deserialization from a JSON
+            formatted string.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "`Sequence.serialize()` and `Sequence.deserialize()` have "
+                    "been deprecated and will be removed in Pulser v1.0.0. "
+                    "Use `Sequence.to_abstract_repr()` and "
+                    "`Sequence.from_abstract_repr()` instead."
+                )
+            )
+        return Sequence._deserialize(obj, **kwargs)
+
+    @staticmethod
+    def _deserialize(obj: str, **kwargs: Any) -> Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
@@ -1627,6 +1708,11 @@ class Sequence(Generic[DeviceType]):
             ``json.loads``: Built-in function for deserialization from a JSON
             formatted string.
         """
+        if not isinstance(obj, str):
+            raise TypeError(
+                "The serialized sequence must be given as a string. "
+                f"Instead, got object of type {type(obj)}."
+            )
         if "Sequence" not in obj:
             raise ValueError(
                 "The given JSON formatted string does not encode a Sequence."
@@ -1645,6 +1731,11 @@ class Sequence(Generic[DeviceType]):
         Returns:
             Sequence: The Pulser sequence.
         """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized sequence must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
         return deserialize_abstract_sequence(obj_str)
 
     @seq_decorators.screen

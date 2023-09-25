@@ -819,6 +819,23 @@ class TestSerialization:
         getattr(seq, op)(*args)
         seq.to_abstract_repr()
 
+    def test_parametrized_fails_validation(self):
+        seq_ = Sequence(Register.square(1, prefix="q"), MockDevice)
+        vars = seq_.declare_variable("vars", dtype=int, size=2)
+        seq_.declare_channel("ryd", "rydberg_global")
+        seq_.delay(vars, "ryd")  # vars has size 2, the build will fail
+        with pytest.raises(
+            AbstractReprError,
+            match=re.escape(
+                "The serialization of the parametrized sequence failed, "
+                "potentially due to an error that only appears at build "
+                "time. Check that no errors appear when building with "
+                "`Sequence.build()` or when providing the `defaults` to "
+                "`Sequence.to_abstract_repr()`."
+            ),
+        ):
+            seq_.to_abstract_repr()
+
     @pytest.mark.parametrize("is_empty", [True, False])
     def test_dmm_slm_mask(self, triangular_lattice, is_empty):
         mask = {"q0", "q2", "q4", "q5"}
@@ -1965,3 +1982,14 @@ class TestDeserialization:
         )
         seq = Sequence.from_abstract_repr(json.dumps(s))
         assert seq.device == device
+
+    def test_bad_type(self):
+        s = _get_serialized_seq()
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "The serialized sequence must be given as a string. "
+                f"Instead, got object of type {dict}."
+            ),
+        ):
+            Sequence.from_abstract_repr(s)
