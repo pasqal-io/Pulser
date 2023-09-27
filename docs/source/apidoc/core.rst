@@ -56,9 +56,9 @@ DetuningMap
 -------------------
 
 A ``DetuningMap`` is associated to a ``DMM`` in a ``Sequence``. It links a set
-of weights to a set of trap coordinates. As such, it is intended to be defined
-by the user from a ``RegisterLayout``, a ``Register`` or a ``MappableRegister``
-using ``define_detuning_map``.
+of weights to a set of trap coordinates. It is intended to be defined by the user
+from a ``RegisterLayout``, a ``Register`` or a ``MappableRegister`` using
+``define_detuning_map``.
 
 .. autoclass:: pulser.register.detuning_map
   :members:
