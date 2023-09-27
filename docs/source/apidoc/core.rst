@@ -30,7 +30,7 @@ The register classes allow for the creation of arbitrary registers.
 Register layout
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 A ``RegisterLayout`` is used to define a register from a set of traps. It is
-intended to be given to the user by the hardware provided as a way of showing
+intended to be given to the user by the hardware provider as a way of showing
 which layouts are already available on a given device. In turn, the user
 can create a ``Register`` by selecting the traps on which to place atoms, or
 even a ``MappableRegister``, which allows for the creation of sequences whose
@@ -126,7 +126,7 @@ Available Channels
    :members:
    :show-inheritance:
 
-.. automodule:: pulser.channels.dmm
+.. autoclass:: pulser.channels.dmm.DMM
    :members:
    :show-inheritance:
 
