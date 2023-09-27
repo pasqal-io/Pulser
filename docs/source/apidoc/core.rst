@@ -137,3 +137,4 @@ Result
 ------------------
 .. automodule:: pulser.result
    :members:
+   :show-inheritance:
