@@ -60,6 +60,7 @@ computers and simulators, check the pages in :doc:`review`.
    :caption: Fundamental Concepts
 
    review
+   conventions
 
 .. toctree::
    :maxdepth: 2
@@ -86,6 +87,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/reg_layouts
    tutorials/interpolated_wfs
    tutorials/serialization
+   tutorials/dmm
    tutorials/slm_mask
    tutorials/output_mod_eom
    tutorials/virtual_devices

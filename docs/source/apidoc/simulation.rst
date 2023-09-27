@@ -29,12 +29,19 @@ Simulation Results
 
 Depending on the types of noise involved in a simulation, the results are returned
 as an instance of :class:`SimulationResults`, namely :class:`CoherentResults`
-(when the results can still be represented as a state vector or a density matrix, before being measured)
-or :class:`NoisyResults` (when they can only be represented as a probability
-distribution over the basis states).
+(when each result can still be represented as a :class:`QutipResult` i.e. a state vector
+or a density matrix, before being measured) or :class:`NoisyResults` (when each of them can only
+be represented as :class:`SampledResult` i.e. a probability distribution over the basis states).
 
 Both classes feature methods for processing and displaying the results stored
 within them.
+
+QutipResult
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: pulser_simulation.qutip_result.QutipResult
+   :members:
+   :inherited-members:
 
 CoherentResults
 ^^^^^^^^^^^^^^^^

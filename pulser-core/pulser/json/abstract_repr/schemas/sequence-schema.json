@@ -397,6 +397,39 @@
       ],
       "type": "object"
     },
+    "OpAddDmmDet": {
+      "additionalProperties": false,
+      "properties": {
+        "dmm_name": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "The name of the DMM."
+        },
+        "op": {
+          "const": "add_dmm_detuning",
+          "type": "string"
+        },
+        "protocol": {
+          "description": "Stipulates how to deal with eventual conflicts with other channels, specifically in terms of having multiple channels act on the same target simultaneously.\n\n- ``'min-delay'``: Before adding the pulse, introduces the   smallest possible delay that avoids all exisiting conflicts.\n\n- ``'no-delay'``: Adds the pulse to the channel, regardless of   existing conflicts.\n\n- ``'wait-for-all'``: Before adding the pulse, adds a delay   that idles the channel until the end of the other channels'   latest pulse.",
+          "enum": [
+            "min-delay",
+            "no-delay",
+            "wait-for-all"
+          ],
+          "type": "string"
+        },
+        "waveform": {
+          "$ref": "#/definitions/Waveform",
+          "description": "The waveform to add to the detuning of the DMM."
+        }
+      },
+      "required": [
+        "op",
+        "waveform",
+        "dmm_name",
+        "protocol"
+      ],
+      "type": "object"
+    },
     "OpAlign": {
       "additionalProperties": false,
       "description": "Aligns multiple channels in time.\n\nIntroduces delays that align the provided channels with the one that finished the latest, such that the next action added to any of them will start right after the latest channel has finished.",
@@ -415,6 +448,55 @@
       "required": [
         "op",
         "channels"
+      ],
+      "type": "object"
+    },
+    "OpConfigDetMap": {
+      "additionalProperties": false,
+      "properties": {
+        "detuning_map": {
+          "$ref": "#/definitions/WeightMap",
+          "description": "DetuningMap to associate with the DMM channel."
+        },
+        "dmm_id": {
+          "$ref": "#/definitions/ChannelId",
+          "description": "ID of the DMM channel to configure."
+        },
+        "op": {
+          "const": "config_detuning_map",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "detuning_map",
+        "dmm_id"
+      ],
+      "type": "object"
+    },
+    "OpConfigSLM": {
+      "additionalProperties": false,
+      "properties": {
+        "dmm_id": {
+          "$ref": "#/definitions/ChannelId",
+          "description": "ID of the DMM channel to use for the SLM mask."
+        },
+        "op": {
+          "const": "config_slm_mask",
+          "type": "string"
+        },
+        "qubits": {
+          "description": "Qubit ID's to mask during the first global pulse of the sequence.",
+          "items": {
+            "$ref": "#/definitions/QubitId"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "op",
+        "qubits",
+        "dmm_id"
       ],
       "type": "object"
     },
@@ -449,6 +531,10 @@
           "$ref": "#/definitions/ChannelName",
           "description": "The name of the channel to take out of EOM mode."
         },
+        "correct_phase_drift": {
+          "description": "Performs a phase shift to correct for the phase drift that occured since the last pulse (or the start of the EOM mode, if no pulse was added).",
+          "type": "boolean"
+        },
         "op": {
           "const": "disable_eom_mode",
           "type": "string"
@@ -466,6 +552,10 @@
         "channel": {
           "$ref": "#/definitions/ChannelName",
           "description": "The name of the channel to add the pulse to."
+        },
+        "correct_phase_drift": {
+          "description": "Performs a phase shift to correct for the phase drift that occured since the last pulse (or the start of the EOM mode, if adding the first pulse).",
+          "type": "boolean"
         },
         "duration": {
           "$ref": "#/definitions/ParametrizedNum",
@@ -513,6 +603,10 @@
         "channel": {
           "$ref": "#/definitions/ChannelName",
           "description": "The name of the channel to put in EOM mode."
+        },
+        "correct_phase_drift": {
+          "description": "Performs a phase shift to correct for the phase drift incurred while turning on the EOM mode.",
+          "type": "boolean"
         },
         "detuning_on": {
           "$ref": "#/definitions/ParametrizedNum",
@@ -666,6 +760,15 @@
         },
         {
           "$ref": "#/definitions/OpEOMPulse"
+        },
+        {
+          "$ref": "#/definitions/OpConfigSLM"
+        },
+        {
+          "$ref": "#/definitions/OpConfigDetMap"
+        },
+        {
+          "$ref": "#/definitions/OpAddDmmDet"
         }
       ],
       "description": "Sequence operation. All operations are performed in specified order."
@@ -1005,6 +1108,48 @@
         }
       ],
       "description": "Modulation waveform of any kind"
+    },
+    "WeightMap": {
+      "additionalProperties": false,
+      "description": "Associates weights to trap coordinates. The sum of the provided weights must be equal to 1.",
+      "properties": {
+        "slug": {
+          "type": "string"
+        },
+        "traps": {
+          "items": {
+            "$ref": "#/definitions/WeightedTrap"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "traps"
+      ],
+      "type": "object"
+    },
+    "WeightedTrap": {
+      "additionalProperties": false,
+      "properties": {
+        "weight": {
+          "description": "The weight on the site.",
+          "type": "number"
+        },
+        "x": {
+          "description": "x-position in µm",
+          "type": "number"
+        },
+        "y": {
+          "description": "y-position in µm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "weight",
+        "x",
+        "y"
+      ],
+      "type": "object"
     }
   }
 }

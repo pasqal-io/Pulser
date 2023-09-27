@@ -11,6 +11,7 @@ import numpy as np
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
+from pulser.register.weight_maps import DetuningMap
 from pulser.sequence._basis_ref import _QubitRef
 
 if TYPE_CHECKING:
@@ -343,6 +344,17 @@ class ChannelSamples:
 
 
 @dataclass
+class DMMSamples(ChannelSamples):
+    """Gathers samples of a DMM channel."""
+
+    # TODO: Make these arguments KW_ONLY once python >= 3.10
+    # Although these shouldn't have a default, in this way we can
+    # subclass ChannelSamples
+    detuning_map: DetuningMap | None = None
+    qubits: dict[QubitId, np.ndarray] = field(default_factory=dict)
+
+
+@dataclass
 class SequenceSamples:
     """Gather samples for each channel in a sequence."""
 
@@ -420,8 +432,18 @@ class SequenceSamples:
             )
             addr = self._ch_objs[chname].addressing
             basis = self._ch_objs[chname].basis
-            if addr == _GLOBAL and not all_local:
-                start_t = self._slm_mask.end
+            is_dmm = isinstance(samples, DMMSamples)
+            in_xy = basis == "XY"
+            if is_dmm:
+                samples = cast(DMMSamples, samples)
+                det_map = cast(DetuningMap, samples.detuning_map)
+                det_weight_map = defaultdict(
+                    int, det_map.get_qubit_weight_map(samples.qubits)
+                )
+            else:
+                det_weight_map = defaultdict(lambda: 1.0)
+            if addr == _GLOBAL and not all_local and not is_dmm:
+                start_t = self._slm_mask.end if in_xy else 0
                 d[_GLOBAL][basis][_AMP][start_t:] += cs.amp[start_t:]
                 d[_GLOBAL][basis][_DET][start_t:] += cs.det[start_t:]
                 d[_GLOBAL][basis][_PHASE][start_t:] += cs.phase[start_t:]
@@ -441,11 +463,13 @@ class SequenceSamples:
                 for s in cs.slots:
                     for t in s.targets:
                         ti = s.ti
-                        if t in self._slm_mask.targets:
+                        if in_xy and t in self._slm_mask.targets:
                             ti = max(ti, self._slm_mask.end)
                         times = slice(ti, s.tf)
                         d[_LOCAL][basis][t][_AMP][times] += cs.amp[times]
-                        d[_LOCAL][basis][t][_DET][times] += cs.det[times]
+                        d[_LOCAL][basis][t][_DET][times] += (
+                            cs.det[times] * det_weight_map[t]
+                        )
                         d[_LOCAL][basis][t][_PHASE][times] += cs.phase[times]
 
         return _default_to_regular(d)
@@ -459,5 +483,5 @@ class SequenceSamples:
 
 
 # This is just to preserve backwards compatibility after the renaming of
-# _TargetSlot to _PulseTarget slot
+# _TargetSlot to _PulseTargetSlot
 _TargetSlot = _PulseTargetSlot

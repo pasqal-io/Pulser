@@ -14,7 +14,7 @@
 """Definitions of real devices."""
 import numpy as np
 
-from pulser.channels import Raman, Rydberg
+from pulser.channels import DMM, Raman, Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import Device
 from pulser.register.special_layouts import TriangularLatticeLayout
@@ -54,6 +54,14 @@ Chadoq2 = Device(
             clock_period=4,
             min_duration=16,
             max_duration=2**26,
+        ),
+    ),
+    dmm_objects=(
+        DMM(
+            clock_period=4,
+            min_duration=16,
+            max_duration=2**26,
+            bottom_detuning=-20,
         ),
     ),
 )

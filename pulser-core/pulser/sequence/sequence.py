@@ -33,6 +33,7 @@ from typing import (
     overload,
 )
 
+import jsonschema
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
@@ -40,6 +41,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
@@ -47,17 +49,26 @@ from pulser.json.abstract_repr.deserializer import (
 )
 from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
+from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
+from pulser.register.weight_maps import DetuningMap
 from pulser.sequence._basis_ref import _QubitRef
 from pulser.sequence._call import _Call
-from pulser.sequence._schedule import _ChannelSchedule, _Schedule, _TimeSlot
+from pulser.sequence._schedule import (
+    _ChannelSchedule,
+    _DMMSchedule,
+    _PhaseDriftParams,
+    _Schedule,
+    _TimeSlot,
+)
 from pulser.sequence._seq_drawer import Figure, draw_sequence
 from pulser.sequence._seq_str import seq_to_str
+from pulser.waveforms import Waveform
 
 DeviceType = TypeVar("DeviceType", bound=BaseDevice)
 
@@ -120,6 +131,7 @@ class Sequence(Generic[DeviceType]):
         self._register: Union[BaseRegister, MappableRegister] = register
         self._device = device
         self._in_xy: bool = False
+        self._in_ising_value: bool = False
         self._mag_field: Optional[tuple[float, float, float]] = None
         self._calls: list[_Call] = [
             _Call("__init__", (), {"register": register, "device": device})
@@ -138,18 +150,48 @@ class Sequence(Generic[DeviceType]):
         self._empty_sequence: bool = True
         # SLM mask targets and on/off times
         self._slm_mask_targets: set[QubitId] = set()
-
+        self._slm_mask_dmm: str | None = None
         # Initializes all parametrized Sequence related attributes
         self._reset_parametrized()
 
     @property
     def _slm_mask_time(self) -> list[int]:
         """The initial and final time when the SLM mask is on."""
+        if (
+            self._in_ising
+            and self._slm_mask_dmm
+            and not cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse
+        ):
+            slm_slot = self._schedule[self._slm_mask_dmm].slots[1]
+            return [slm_slot.ti, slm_slot.tf]
         return (
             []
             if not self._slm_mask_targets
             else self._schedule.find_slm_mask_times()
         )
+
+    @property
+    def _in_ising(self) -> bool:
+        return self._in_ising_value
+
+    @_in_ising.setter
+    def _in_ising(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise TypeError("_in_ising must be a bool.")
+        if self._in_ising == value:
+            # If the value doesn't change, do nothing
+            return
+        if self._in_ising:  # ie value = False
+            # Trying to switch off ising
+            raise ValueError("Cannot quit ising.")
+        # At this point, value = True
+        if self._in_xy:
+            raise ValueError("Cannot be in ising if in xy.")
+        self._in_ising_value = True
+        if self._slm_mask_dmm:
+            self._set_slm_mask_dmm(self._slm_mask_dmm, self._slm_mask_targets)
 
     @property
     def qubit_info(self) -> dict[QubitId, np.ndarray]:
@@ -195,7 +237,29 @@ class Sequence(Generic[DeviceType]):
     @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
-        return {name: cs.channel_obj for name, cs in self._schedule.items()}
+        all_declared_channels = {
+            name: cs.channel_obj for name, cs in self._schedule.items()
+        }
+        # Add DMM and SLM whose configuration is stored
+        for call in self._to_build_calls:
+            if (
+                call.name == "config_slm_mask"
+                or call.name == "config_detuning_map"
+            ):
+                dmm_id: str
+                if "dmm_id" in call.kwargs:
+                    dmm_id = call.kwargs["dmm_id"]
+                elif len(call.args) > 1:
+                    dmm_id = call.args[1]
+                else:
+                    dmm_id = "dmm_0"
+                dmm_name = _get_dmm_name(
+                    dmm_id, list(all_declared_channels.keys())
+                )
+                all_declared_channels[dmm_name] = self.device.dmm_channels[
+                    dmm_id
+                ]
+        return all_declared_channels
 
     @property
     def declared_variables(self) -> dict[str, Variable]:
@@ -205,21 +269,45 @@ class Sequence(Generic[DeviceType]):
     @property
     def available_channels(self) -> dict[str, Channel]:
         """Channels still available for declaration."""
-        # Show all channels if none are declared, otherwise filter depending
-        # on whether the sequence is working on XY mode
-        # If already in XY mode, filter right away
-        if not self._schedule and not self._in_xy:
-            return dict(self._device.channels)
+        all_channels = {**self._device.channels, **self._device.dmm_channels}
+        if not self._in_xy and not self._in_ising:
+            # If no channel has been declared nor any DMM configured, and if
+            # device is physical, don't show the DMM used for the SLM Mask
+            if (
+                self._slm_mask_dmm is not None
+                and not self._device.reusable_channels
+            ):
+                return {
+                    id: ch
+                    for id, ch in all_channels.items()
+                    if id != self._slm_mask_dmm
+                }
+            return all_channels
         else:
-            # MockDevice channels can be declared multiple times
-            occupied_ch_ids = [cs.channel_id for cs in self._schedule.values()]
+            occupied_ch_ids = [
+                self._schedule[ch_name].channel_id
+                if ch_name in self._schedule
+                else _dmm_id_from_name(ch_name)
+                for ch_name in self.declared_channels.keys()
+            ]
             return {
                 id: ch
-                for id, ch in self._device.channels.items()
+                for id, ch in all_channels.items()
                 if (
-                    id not in occupied_ch_ids or self._device.reusable_channels
+                    # MockDevice channels can be declared multiple times
+                    (
+                        id not in occupied_ch_ids
+                        or self._device.reusable_channels
+                    )
+                    and (
+                        # If we are in XY mode, the dmm channels are available
+                        # to configure a SLM mask if no slm mask was defined
+                        ch.basis == "XY"
+                        or (isinstance(ch, DMM) and self._slm_mask_dmm is None)
+                        if self._in_xy
+                        else ch.basis != "XY"
+                    )
                 )
-                and (ch.basis == "XY" if self._in_xy else ch.basis != "XY")
             }
 
     @property
@@ -405,13 +493,59 @@ class Sequence(Generic[DeviceType]):
         # No parametrization -> Always stored as a regular call
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
+    def _set_slm_mask_dmm(self, dmm_id: str, targets: set[QubitId]) -> None:
+        ntargets = len(targets)
+        detuning_map = self.register.define_detuning_map(
+            {
+                qubit: (1 / ntargets if qubit in targets else 0)
+                for qubit in self.register.qubit_ids
+            }
+        )
+        self._config_detuning_map(detuning_map, dmm_id)
+        # Find the name of the dmm in the declared channels.
+        for key in reversed(self.declared_channels.keys()):
+            if dmm_id == _dmm_id_from_name(key):
+                self._slm_mask_dmm = key
+                break
+        # Modulate the dmm if pulses have already been added to Global Channels
+        slm_mask_times = self._schedule.find_slm_mask_times()
+        if slm_mask_times:
+            max_amp = max(
+                [
+                    np.max(ch_schedule.get_samples().amp[: slm_mask_times[1]])
+                    for ch_schedule in self._schedule.values()
+                    if not isinstance(ch_schedule, _DMMSchedule)
+                    and ch_schedule.channel_obj.addressing == "Global"
+                ]
+            )
+            self._modulate_slm_mask_dmm(slm_mask_times[1], max_amp)
+        else:
+            # Block the modulation of this dmm
+            cast(
+                _DMMSchedule, self._schedule[key]
+            )._waiting_for_first_pulse = True
+
     @seq_decorators.store
-    def config_slm_mask(self, qubits: Iterable[QubitId]) -> None:
+    def config_slm_mask(
+        self, qubits: Iterable[QubitId], dmm_id: str = "dmm_0"
+    ) -> None:
         """Setup an SLM mask by specifying the qubits it targets.
+
+        If the sequence is in XY mode, masked qubits don't interact with
+        the incoming pulses until the end of the first pulse of the global
+        channel starting the earliest in the schedule.
+
+        If the sequence is in Ising, the SLM Mask is a DetuningMap where
+        the detuning of each masked qubit is the same. DMM "dmm_id" is
+        configured using this Detuning Map, and modulated by a pulse having
+        a large negative detuning and either a duration defined from pulses
+        already present in the sequence (same as in XY mode) or by the first
+        pulse added after this operation.
 
         Args:
             qubits: Iterable of qubit ID's to mask during the first global
                 pulse of the sequence.
+            dmm_id: Id of the DMM channel to use in the device.
         """
         if not self._device.supports_slm_mask:
             raise ValueError(
@@ -431,19 +565,96 @@ class Sequence(Generic[DeviceType]):
         if not targets.issubset(self._qids):
             raise ValueError("SLM mask targets must exist in the register.")
 
+        # If sequence is parametrized slm is configured at build
         if self.is_parametrized():
             return
 
         if self._slm_mask_targets:
             raise ValueError("SLM mask can be configured only once.")
 
-        # If checks have passed, set the SLM mask targets
+        if self._in_xy or (not self._in_xy and not self._in_ising):
+            if dmm_id not in self._device.dmm_channels:
+                raise ValueError(f"No DMM {dmm_id} in the device.")
+            self._slm_mask_dmm = dmm_id
+        if not self._in_xy and self._in_ising:
+            self._set_slm_mask_dmm(dmm_id, targets)
         self._slm_mask_targets = targets
+
+    @seq_decorators.store
+    @seq_decorators.block_if_measured
+    def config_detuning_map(
+        self,
+        detuning_map: DetuningMap,
+        dmm_id: str,
+    ) -> None:
+        """Declares a new DMM channel to the Sequence.
+
+        Associates a DetuningMap to a DMM channel of the Device.
+
+        Note:
+            Regular devices only allow a DMM to be declared once, but
+            ``MockDevice`` DMM can be repeatedly declared if needed.
+
+        Args:
+            detuning_map: A DetuningMap defining atoms to act on and bottom
+                detuning to modulate.
+            dmm_id: How the channel is identified in the device.
+                See in ``Sequence.available_channels`` which DMM IDs are still
+                available (start by "dmm" ) and the associated description.
+        """
+        self._config_detuning_map(detuning_map, dmm_id)
+
+    def _config_detuning_map(
+        self,
+        detuning_map: DetuningMap,
+        dmm_id: str,
+    ) -> None:
+        if dmm_id not in self._device.dmm_channels:
+            raise ValueError(f"No DMM {dmm_id} in the device.")
+
+        dmm_ch = self._device.dmm_channels[dmm_id]
+        if self._in_xy:
+            raise ValueError(
+                f"DMM '{dmm_ch}' cannot work simultaneously "
+                "with the declared 'Microwave' channel."
+            )
+        if dmm_id not in self.available_channels:
+            raise ValueError(f"DMM {dmm_id} is not available.")
+
+        # Configures the DMM implementing an SLM mask if configured before
+        self._in_ising = True
+
+        if self.is_parametrized():
+            return
+        # Add a suffix to the DMM id if repetition in the declared channels
+        dmm_name = dmm_id
+        if dmm_id in self.declared_channels:
+            assert self._device.reusable_channels
+            dmm_name += (
+                f"_{''.join(self.declared_channels.keys()).count(dmm_id)}"
+            )
+
+        self._schedule[dmm_name] = _DMMSchedule(
+            dmm_id, dmm_ch, detuning_map=detuning_map
+        )
+        if "ground-rydberg" not in self._basis_ref:
+            self._basis_ref["ground-rydberg"] = {
+                q: _QubitRef() for q in self._qids
+            }
+
+        # DMM has Global addressing
+        self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
 
     def switch_device(
         self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:
-        """Switch the device of a sequence.
+        """Replicate the sequence with a different device.
+
+        This method is designed to replicate the sequence with as few changes
+        to the original contents as possible.
+        If the `strict` option is chosen, the device switch will fail whenever
+        it cannot guarantee that the new sequence's contents will not be
+        modified in the process.
 
         Args:
             new_device: The target device instance.
@@ -501,10 +712,16 @@ class Sequence(Generic[DeviceType]):
             for call in self._calls + self._to_build_calls
             if call.name == "enable_eom_mode"
         ]
+        all_channels_new_device = {
+            **new_device.channels,
+            **new_device.dmm_channels,
+        }
+
         for old_ch_name, old_ch_obj in self.declared_channels.items():
             channel_match[old_ch_name] = None
+            base_msg = f"No match for channel {old_ch_name}"
             # Find the corresponding channel on the new device
-            for new_ch_id, new_ch_obj in new_device.channels.items():
+            for new_ch_id, new_ch_obj in all_channels_new_device.items():
                 if (
                     not new_device.reusable_channels
                     and new_ch_id in channel_match.values()
@@ -514,12 +731,11 @@ class Sequence(Generic[DeviceType]):
 
                 # We verify the channel class then
                 # check whether the addressing is Global or Local
-                type_match = type(old_ch_obj) == type(new_ch_obj)
+                type_match = type(old_ch_obj) is type(new_ch_obj)
                 basis_match = old_ch_obj.basis == new_ch_obj.basis
                 addressing_match = (
                     old_ch_obj.addressing == new_ch_obj.addressing
                 )
-                base_msg = f"No match for channel {old_ch_name}"
                 if not (type_match and basis_match and addressing_match):
                     # If there already is a message, keeps it
                     ch_match_err = ch_match_err or (
@@ -548,6 +764,9 @@ class Sequence(Generic[DeviceType]):
                         continue
                 if not strict:
                     channel_match[old_ch_name] = new_ch_id
+                    # Found a match, clear match error msg for this channel
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
                     break
 
                 params_to_check = [
@@ -555,20 +774,26 @@ class Sequence(Generic[DeviceType]):
                     "fixed_retarget_t",
                     "clock_period",
                 ]
-
+                if isinstance(old_ch_obj, DMM):
+                    params_to_check.append("bottom_detuning")
                 if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
                     params_to_check.append("min_retarget_interval")
                 for param_ in params_to_check:
                     if getattr(new_ch_obj, param_) != getattr(
                         old_ch_obj, param_
                     ):
-                        strict_error_message = strict_error_message or (
+                        strict_error_message = (
                             base_msg + f" with the same {param_}."
                         )
                         break
                 else:
                     # Only reached if all checks passed
                     channel_match[old_ch_name] = new_ch_id
+                    # Found a match, clear match error msgs for this channel
+                    if ch_match_err.startswith(base_msg):
+                        ch_match_err = ""
+                    if strict_error_message.startswith(base_msg):
+                        strict_error_message = ""
                     break
 
         if None in channel_match.values():
@@ -578,18 +803,20 @@ class Sequence(Generic[DeviceType]):
                 raise TypeError(ch_match_err)
         # Initialize the new sequence (works for Sequence subclasses too)
         new_seq = type(self)(register=self._register, device=new_device)
-
+        dmm_calls: list[str] = []
         # Copy the variables to the new sequence
         new_seq._variables = self.declared_variables
-
         for call in self._calls[1:] + self._to_build_calls:
-            if not (call.name == "declare_channel"):
-                getattr(new_seq, call.name)(*call.args, **call.kwargs)
-                continue
             # Switch the old id with the correct id
             sw_channel_args = list(call.args)
             sw_channel_kw_args = call.kwargs.copy()
-            if "name" in sw_channel_kw_args:  # pragma: no cover
+            if not (
+                call.name == "declare_channel"
+                or call.name == "config_detuning_map"
+                or call.name == "config_slm_mask"
+            ):
+                pass
+            elif "name" in sw_channel_kw_args:  # pragma: no cover
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_kw_args["name"]
                 ]
@@ -597,10 +824,19 @@ class Sequence(Generic[DeviceType]):
                 sw_channel_kw_args["channel_id"] = channel_match[
                     sw_channel_args[0]
                 ]
-            else:
+            elif "dmm_id" in sw_channel_kw_args:  # pragma: no cover
+                sw_channel_kw_args["dmm_id"] = channel_match[
+                    _get_dmm_name(sw_channel_kw_args["dmm_id"], dmm_calls)
+                ]
+                dmm_calls.append(sw_channel_kw_args["dmm_id"])
+            elif call.name == "declare_channel":
                 sw_channel_args[1] = channel_match[sw_channel_args[0]]
-
-            new_seq.declare_channel(*sw_channel_args, **sw_channel_kw_args)
+            else:
+                sw_channel_args[1] = channel_match[
+                    _get_dmm_name(sw_channel_args[1], dmm_calls)
+                ]
+                dmm_calls.append(sw_channel_args[1])
+            getattr(new_seq, call.name)(*sw_channel_args, **sw_channel_kw_args)
         return new_seq
 
     @seq_decorators.block_if_measured
@@ -634,11 +870,15 @@ class Sequence(Generic[DeviceType]):
                 target will have to be set manually as the first addition
                 to this channel.
         """
+        if name.startswith("dmm_"):
+            raise ValueError(
+                "Name starting by 'dmm_' are reserved for DMM channels."
+            )
         if name in self._schedule:
             raise ValueError("The given name is already in use.")
 
         if channel_id not in self._device.channels:
-            raise ValueError("No channel %s in the device." % channel_id)
+            raise ValueError(f"No channel {channel_id} in the device.")
 
         ch = self._device.channels[channel_id]
         if channel_id not in self.available_channels:
@@ -666,10 +906,12 @@ class Sequence(Generic[DeviceType]):
             if cond:
                 raise TypeError("The initial_target cannot be parametrized")
 
-        if ch.basis == "XY" and not self._in_xy:
-            self._in_xy = True
-            self.set_magnetic_field()
-
+        if ch.basis == "XY":
+            if not self._in_xy:
+                self.set_magnetic_field()
+                self._in_xy = True
+        else:
+            self._in_ising = True
         self._schedule[name] = _ChannelSchedule(channel_id, ch)
 
         if ch.basis not in self._basis_ref:
@@ -766,7 +1008,7 @@ class Sequence(Generic[DeviceType]):
             self._variables[name] = var
             return var
 
-    @seq_decorators.store
+    @seq_decorators.verify_parametrization
     @seq_decorators.block_if_measured
     def enable_eom_mode(
         self,
@@ -774,6 +1016,7 @@ class Sequence(Generic[DeviceType]):
         amp_on: Union[float, Parametrized],
         detuning_on: Union[float, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
+        correct_phase_drift: bool = False,
     ) -> None:
         """Puts a channel in EOM mode operation.
 
@@ -806,6 +1049,8 @@ class Sequence(Generic[DeviceType]):
             optimal_detuning_off: The optimal value of detuning (in rad/µs)
                 when there is no pulse being played. It will choose the closest
                 value among the existing options.
+            correct_phase_drift: Performs a phase shift to correct for the
+                phase drift incurred while turning on the EOM mode.
         """
         if self.is_in_eom_mode(channel):
             raise RuntimeError(
@@ -818,33 +1063,63 @@ class Sequence(Generic[DeviceType]):
         on_pulse = Pulse.ConstantPulse(
             channel_obj.min_duration, amp_on, detuning_on, 0.0
         )
+        stored_opt_detuning_off = optimal_detuning_off
         if not isinstance(on_pulse, Parametrized):
             channel_obj.validate_pulse(on_pulse)
             amp_on = cast(float, amp_on)
             detuning_on = cast(float, detuning_on)
-
-            off_options = cast(
-                RydbergEOM, channel_obj.eom_config
-            ).detuning_off_options(amp_on, detuning_on)
-
+            eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                closest_option = np.abs(
-                    off_options - optimal_detuning_off
-                ).argmin()
-                detuning_off = off_options[closest_option]
+                detuning_off = eom_config.calculate_detuning_off(
+                    amp_on, detuning_on, optimal_detuning_off
+                )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
                 )
                 channel_obj.validate_pulse(off_pulse)
+                # Update optimal_detuning_off to match the chosen detuning_off
+                # This minimizes the changes to the sequence when the device
+                # is switched
+                stored_opt_detuning_off = detuning_off
 
             if not self.is_parametrized():
+                phase_drift_params = _PhaseDriftParams(
+                    drift_rate=-detuning_off, ti=self.get_duration(channel)
+                )
                 self._schedule.enable_eom(
                     channel, amp_on, detuning_on, detuning_off
                 )
+                if correct_phase_drift:
+                    buffer_slot = self._last(channel)
+                    drift = phase_drift_params.calc_phase_drift(buffer_slot.tf)
+                    self._phase_shift(
+                        -drift, *buffer_slot.targets, basis=channel_obj.basis
+                    )
+
+        # Manually store the call to "enable_eom_mode" so that the updated
+        # 'optimal_detuning_off' is stored
+        call_container = (
+            self._to_build_calls if self.is_parametrized() else self._calls
+        )
+        call_container.append(
+            _Call(
+                "enable_eom_mode",
+                (),
+                dict(
+                    channel=channel,
+                    amp_on=amp_on,
+                    detuning_on=detuning_on,
+                    optimal_detuning_off=stored_opt_detuning_off,
+                    correct_phase_drift=correct_phase_drift,
+                ),
+            )
+        )
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
-    def disable_eom_mode(self, channel: str) -> None:
+    def disable_eom_mode(
+        self, channel: str, correct_phase_drift: bool = False
+    ) -> None:
         """Takes a channel out of EOM mode operation.
 
         For channels with a finite modulation bandwidth and an EOM, operation
@@ -867,11 +1142,24 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             channel: The name of the channel to take out of EOM mode.
+            correct_phase_drift: Performs a phase shift to correct for the
+                phase drift that occured since the last pulse (or the start of
+                the EOM mode, if no pulse was added).
         """
         if not self.is_in_eom_mode(channel):
             raise RuntimeError(f"The '{channel}' channel is not in EOM mode.")
         if not self.is_parametrized():
             self._schedule.disable_eom(channel)
+            if correct_phase_drift:
+                ch_schedule = self._schedule[channel]
+                # EOM mode has just been disabled, so tf is defined
+                last_eom_block_tf = cast(int, ch_schedule.eom_blocks[-1].tf)
+                drift_params = self._get_last_eom_pulse_phase_drift(channel)
+                self._phase_shift(
+                    -drift_params.calc_phase_drift(last_eom_block_tf),
+                    *ch_schedule[-1].targets,
+                    basis=ch_schedule.channel_obj.basis,
+                )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -883,6 +1171,7 @@ class Sequence(Generic[DeviceType]):
         phase: Union[float, Parametrized],
         post_phase_shift: Union[float, Parametrized] = 0.0,
         protocol: PROTOCOLS = "min-delay",
+        correct_phase_drift: bool = False,
     ) -> None:
         """Adds a square pulse to a channel in EOM mode.
 
@@ -913,6 +1202,11 @@ class Sequence(Generic[DeviceType]):
                 immediately after the end of the pulse.
             protocol: Stipulates how to deal with eventual conflicts with
                 other channels (see `Sequence.add()` for more details).
+            correct_phase_drift: Adjusts the phase to correct for the phase
+                drift that occured since the last pulse (or the start of the
+                EOM mode, if adding the first pulse). This effectively
+                changes the phase of the EOM pulse, so an extra delay might
+                be added to enforce the phase jump time.
         """
         if not self.is_in_eom_mode(channel):
             raise RuntimeError(f"Channel '{channel}' must be in EOM mode.")
@@ -936,7 +1230,14 @@ class Sequence(Generic[DeviceType]):
             phase,
             post_phase_shift=post_phase_shift,
         )
-        self._add(eom_pulse, channel, protocol)
+        phase_drift_params = (
+            self._get_last_eom_pulse_phase_drift(channel)
+            if correct_phase_drift
+            else None
+        )
+        self._add(
+            eom_pulse, channel, protocol, phase_drift_params=phase_drift_params
+        )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -972,8 +1273,46 @@ class Sequence(Generic[DeviceType]):
             `phase_jump_time` is respected. To override this behaviour, use
             the ``'no-delay'`` protocol.
         """
-        self._validate_channel(channel, block_eom_mode=True)
+        self._validate_channel(
+            channel,
+            block_eom_mode=True,
+            block_if_slm=channel.startswith("dmm_"),
+        )
         self._add(pulse, channel, protocol)
+
+    @seq_decorators.store
+    @seq_decorators.mark_non_empty
+    @seq_decorators.block_if_measured
+    def add_dmm_detuning(
+        self,
+        waveform: Union[Waveform, Parametrized],
+        dmm_name: str,
+        protocol: PROTOCOLS = "no-delay",
+    ) -> None:
+        """Add a waveform to the detuning of a dmm.
+
+        Args:
+            waveform: The waveform to add to the detuning of the dmm.
+            dmm_name: The id of the dmm to modulate.
+            protocol: Stipulates how to deal with
+                eventual conflicts with other channels, specifically in terms
+                of having multiple channels act on the same target
+                simultaneously (defaults to "no-delay").
+
+                - ``'min-delay'``: Before adding the pulse, introduces the
+                  smallest possible delay that avoids all exisiting conflicts.
+                - ``'no-delay'``: Adds the pulse to the channel, regardless of
+                  existing conflicts.
+                - ``'wait-for-all'``: Before adding the pulse, adds a delay
+                  that idles the channel until the end of the other channels'
+                  latest pulse.
+        """
+        self._validate_channel(dmm_name, block_if_slm=True)
+        self._add(
+            Pulse.ConstantAmplitude(0, waveform, 0),
+            dmm_name,
+            protocol,
+        )
 
     @seq_decorators.store
     def target(
@@ -1260,6 +1599,39 @@ class Sequence(Generic[DeviceType]):
         Returns:
             The sequence encoded in a JSON formatted string.
 
+        Warning:
+            This method has been deprecated and is scheduled for removal
+            in Pulser v1.0.0. For sequence serialization and deserialization,
+            use ``Sequence.to_abstract_repr()`` and
+            ``Sequence.from_abstract_repr()`` instead.
+
+        See Also:
+            ``json.dumps``: Built-in function for serialization to a JSON
+            formatted string.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "`Sequence.serialize()` and `Sequence.deserialize()` have "
+                    "been deprecated and will be removed in Pulser v1.0.0. "
+                    "Use `Sequence.to_abstract_repr()` and "
+                    "`Sequence.from_abstract_repr()` instead."
+                )
+            )
+
+        return self._serialize(**kwargs)
+
+    def _serialize(self, **kwargs: Any) -> str:
+        """Serializes the Sequence into a JSON formatted string.
+
+        Other Parameters:
+            kwargs: Valid keyword-arguments for ``json.dumps()``, except for
+                ``cls``.
+
+        Returns:
+            The sequence encoded in a JSON formatted string.
+
         See Also:
             ``json.dumps``: Built-in function for serialization to a JSON
             formatted string.
@@ -1292,16 +1664,62 @@ class Sequence(Generic[DeviceType]):
 
         Returns:
             str: The sequence encoded as an abstract JSON object.
-
-        See Also:
-            ``serialize``
         """
-        return serialize_abstract_sequence(
-            self, seq_name, json_dumps_options, **defaults
-        )
+        try:
+            return serialize_abstract_sequence(
+                self, seq_name, json_dumps_options, **defaults
+            )
+        except jsonschema.exceptions.ValidationError as e:
+            if self.is_parametrized():
+                raise AbstractReprError(
+                    "The serialization of the parametrized sequence failed, "
+                    "potentially due to an error that only appears at build "
+                    "time. Check that no errors appear when building with "
+                    "`Sequence.build()` or when providing the `defaults` to "
+                    "`Sequence.to_abstract_repr()`."
+                ) from e
+            raise e  # pragma: no cover
 
     @staticmethod
     def deserialize(obj: str, **kwargs: Any) -> Sequence:
+        """Deserializes a JSON formatted string.
+
+        Args:
+            obj: The JSON formatted string to deserialize, coming from
+                the serialization of a ``Sequence`` through
+                ``Sequence.serialize()``.
+
+        Other Parameters:
+            kwargs: Valid keyword-arguments for ``json.loads()``, except for
+                ``cls`` and ``object_hook``.
+
+        Returns:
+            The deserialized Sequence object.
+
+        Warning:
+            This method has been deprecated and is scheduled for removal
+            in Pulser v1.0.0. For sequence serialization and deserialization,
+            use ``Sequence.to_abstract_repr()`` and
+            ``Sequence.from_abstract_repr()`` instead.
+
+        See Also:
+            ``json.loads``: Built-in function for deserialization from a JSON
+            formatted string.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                DeprecationWarning(
+                    "`Sequence.serialize()` and `Sequence.deserialize()` have "
+                    "been deprecated and will be removed in Pulser v1.0.0. "
+                    "Use `Sequence.to_abstract_repr()` and "
+                    "`Sequence.from_abstract_repr()` instead."
+                )
+            )
+        return Sequence._deserialize(obj, **kwargs)
+
+    @staticmethod
+    def _deserialize(obj: str, **kwargs: Any) -> Sequence:
         """Deserializes a JSON formatted string.
 
         Args:
@@ -1320,6 +1738,11 @@ class Sequence(Generic[DeviceType]):
             ``json.loads``: Built-in function for deserialization from a JSON
             formatted string.
         """
+        if not isinstance(obj, str):
+            raise TypeError(
+                "The serialized sequence must be given as a string. "
+                f"Instead, got object of type {type(obj)}."
+            )
         if "Sequence" not in obj:
             raise ValueError(
                 "The given JSON formatted string does not encode a Sequence."
@@ -1338,6 +1761,11 @@ class Sequence(Generic[DeviceType]):
         Returns:
             Sequence: The Pulser sequence.
         """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized sequence must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
         return deserialize_abstract_sequence(obj_str)
 
     @seq_decorators.screen
@@ -1349,6 +1777,9 @@ class Sequence(Generic[DeviceType]):
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
         draw_phase_curve: bool = False,
+        draw_detuning_maps: bool = False,
+        draw_qubit_amp: bool = False,
+        draw_qubit_det: bool = False,
         fig_name: str | None = None,
         kwargs_savefig: dict = {},
         show: bool = True,
@@ -1377,12 +1808,25 @@ class Sequence(Generic[DeviceType]):
                 True if the sequence is defined with a mappable register.
             draw_phase_curve: Draws the changes in phase in its own curve
                 (ignored if the phase doesn't change throughout the channel).
-            fig_name: The name on which to save the
-                figure. If `draw_register` is True, both pulses and register
-                will be saved as figures, with a suffix ``_pulses`` and
-                ``_register`` in the file name. If `draw_register` is False,
-                only the pulses are saved, with no suffix. If `fig_name` is
-                None, no figure is saved.
+            draw_detuning_maps: Whether to draw the detuning maps applied on
+                the qubits of the register of the sequence. Shown before the
+                pulse sequence, defaults to False.
+            draw_qubit_amp: Draws the amplitude seen by the qubits locally
+                after the drawing of the sequence.
+            draw_qubit_det: Draws the detuning seen by the qubits locally after
+                the drawing of the sequence.
+            fig_name: The name on which to save the figures. Figures are saved
+                if `fig_name` is not None. If `draw_register`, `draw_qubit_amp`
+                and `draw_qubit_det` are False, only the pulses are saved, with
+                no suffix. If one of them is True, the pulses will be saved
+                with a suffix ``_pulses``. If draw_register is True, the
+                register is saved in another figure, with a suffix
+                ``_register`` in the file name. If `draw_qubit_amp` or
+                `draw_qubit_det` is True, the evolution of the quantities along
+                time for group of qubits is saved in another figure with the
+                prefix '_per_qubit', and the group of qubits having same
+                evolution of quantities along time are saved in a figure with
+                suffix '_per_qubit_legend'.
             kwargs_savefig: Keywords arguments for
                 ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
                 is ``None``.
@@ -1419,7 +1863,7 @@ class Sequence(Generic[DeviceType]):
                 "Can't draw the register for a sequence without a defined "
                 "register."
             )
-        fig_reg, fig = self._plot(
+        fig_reg, fig, fig_qubit, fig_legend = self._plot(
             draw_phase_area=draw_phase_area,
             draw_interp_pts=draw_interp_pts,
             draw_phase_shifts=draw_phase_shifts,
@@ -1427,25 +1871,61 @@ class Sequence(Generic[DeviceType]):
             draw_input="input" in mode,
             draw_modulation="output" in mode,
             draw_phase_curve=draw_phase_curve,
+            draw_detuning_maps=draw_detuning_maps,
+            draw_qubit_amp=draw_qubit_amp,
+            draw_qubit_det=draw_qubit_det,
         )
-        if fig_name is not None and fig_reg is not None:
+        if fig_name is not None:
             name, ext = os.path.splitext(fig_name)
-            fig.savefig(name + "_pulses" + ext, **kwargs_savefig)
-            fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
-        elif fig_name:
-            fig.savefig(fig_name, **kwargs_savefig)
+            suffix = (
+                "_pulses"
+                if all(fig is None for fig in (fig_reg, fig_qubit, fig_legend))
+                else ""
+            )
+            fig.savefig(name + suffix + ext, **kwargs_savefig)
+            if fig_reg is not None:
+                fig_reg.savefig(name + "_register" + ext, **kwargs_savefig)
+            if fig_qubit is not None:
+                fig_qubit.savefig(name + "_per_qubit" + ext, **kwargs_savefig)
+                if fig_legend is not None:
+                    fig_qubit.savefig(
+                        name + "_per_qubit_legend" + ext, **kwargs_savefig
+                    )
 
         if show:
             plt.show()
 
-    def _plot(self, **draw_options: bool) -> tuple[Figure | None, Figure]:
+    def _plot(
+        self, **draw_options: bool
+    ) -> tuple[Figure | None, Figure, Figure | None, Figure | None]:
         return draw_sequence(self, **draw_options)
+
+    def _modulate_slm_mask_dmm(self, duration: int, max_amp: float) -> None:
+        if self._slm_mask_dmm is not None:
+            bottom_detuning = cast(
+                DMM, self.declared_channels[self._slm_mask_dmm]
+            ).bottom_detuning
+            min_det = -10 * max_amp
+            min_det = (
+                bottom_detuning
+                if (bottom_detuning and min_det < bottom_detuning)
+                else min_det
+            )
+            cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse = False
+            self._add(
+                Pulse.ConstantPulse(duration, 0, min_det, 0),
+                self._slm_mask_dmm,
+                "no-delay",
+            )
 
     def _add(
         self,
         pulse: Union[Pulse, Parametrized],
         channel: str,
         protocol: PROTOCOLS,
+        phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
         self._validate_add_protocol(protocol)
         if self.is_parametrized():
@@ -1475,7 +1955,13 @@ class Sequence(Generic[DeviceType]):
             self._basis_ref[basis][q].phase.last_time for q in last.targets
         ]
 
-        self._schedule.add_pulse(pulse, channel, phase_barriers, protocol)
+        self._schedule.add_pulse(
+            pulse,
+            channel,
+            phase_barriers,
+            protocol,
+            phase_drift_params=phase_drift_params,
+        )
 
         true_finish = self._last(channel).tf + pulse.fall_time(
             channel_obj, in_eom_mode=self.is_in_eom_mode(channel)
@@ -1486,6 +1972,20 @@ class Sequence(Generic[DeviceType]):
         if pulse.post_phase_shift:
             self._phase_shift(
                 pulse.post_phase_shift, *last.targets, basis=basis
+            )
+        if (
+            self._in_ising
+            and self._slm_mask_dmm
+            and cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse
+            and channel_obj.addressing == "Global"
+            and not _ChannelSchedule.is_detuned_delay(pulse)
+            and not isinstance(channel_obj, DMM)
+        ):
+            self._modulate_slm_mask_dmm(
+                self._schedule[channel].get_duration(),
+                np.max(pulse.amplitude.samples),
             )
 
     @seq_decorators.block_if_measured
@@ -1566,7 +2066,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.block_if_measured
     def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
-        self._validate_channel(channel)
+        self._validate_channel(channel, block_if_slm=True)
         if self.is_parametrized():
             return
         self._schedule.add_delay(cast(int, duration), channel)
@@ -1589,6 +2089,24 @@ class Sequence(Generic[DeviceType]):
 
             for qubit in target_ids:
                 self._basis_ref[basis][qubit].increment_phase(phi)
+
+    def _get_last_eom_pulse_phase_drift(
+        self, channel: str
+    ) -> _PhaseDriftParams:
+        eom_settings = self._schedule[channel].eom_blocks[-1]
+        try:
+            last_pulse_tf = (
+                self._schedule[channel]
+                .last_pulse_slot(ignore_detuned_delay=True)
+                .tf
+            )
+        except RuntimeError:
+            # There is no previous pulse
+            last_pulse_tf = 0
+        return _PhaseDriftParams(
+            drift_rate=-eom_settings.detuning_off,
+            ti=max(eom_settings.ti, last_pulse_tf),
+        )
 
     def _to_dict(self, _module: str = "pulser.sequence") -> dict[str, Any]:
         d = obj_to_dict(
@@ -1615,22 +2133,41 @@ class Sequence(Generic[DeviceType]):
         return self._schedule[channel][-1]
 
     def _validate_channel(
-        self, channel: str, block_eom_mode: bool = False
+        self,
+        channel: str,
+        block_eom_mode: bool = False,
+        block_if_slm: bool = False,
     ) -> None:
         if isinstance(channel, Parametrized):
             raise NotImplementedError(
                 "Using parametrized objects or variables to refer to channels "
                 "is not supported."
             )
-        if channel not in self._schedule:
+        if channel not in self.declared_channels:
             raise ValueError("Use the name of a declared channel.")
         if block_eom_mode and self.is_in_eom_mode(channel):
             raise RuntimeError("The chosen channel is in EOM mode.")
+        if (
+            block_if_slm
+            and channel == self._slm_mask_dmm
+            and cast(
+                _DMMSchedule, self._schedule[self._slm_mask_dmm]
+            )._waiting_for_first_pulse
+        ):
+            raise ValueError(
+                "You should add a Pulse to a Global Channel prior to"
+                " modulating the DMM used for the SLM Mask."
+            )
 
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
-        channel_obj = self._schedule[channel].channel_obj
+        channel_obj: Channel
+        if channel in self._schedule:
+            channel_obj = self._schedule[channel].channel_obj
+        else:
+            # Sequence is parametrized and channel is a dmm_name
+            channel_obj = self.device.dmm_channels[_dmm_id_from_name(channel)]
         channel_obj.validate_pulse(pulse)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)

@@ -16,15 +16,17 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
 
 from pulser.channels.base_channel import Channel
+from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
-from pulser.sampler.samples import ChannelSamples, _PulseTargetSlot
+from pulser.register.weight_maps import DetuningMap
+from pulser.sampler.samples import ChannelSamples, DMMSamples, _PulseTargetSlot
 from pulser.waveforms import ConstantWaveform
 
 
@@ -44,6 +46,16 @@ class _EOMSettings:
     detuning_off: float
     ti: int
     tf: Optional[int] = None
+
+
+@dataclass
+class _PhaseDriftParams:
+    drift_rate: float  # rad/µs
+    ti: int  # ns
+
+    def calc_phase_drift(self, tf: int) -> float:
+        """Calculate the phase drift during the elapsed time."""
+        return self.drift_rate * (tf - self.ti) * 1e-3
 
 
 @dataclass
@@ -247,6 +259,37 @@ class _ChannelSchedule:
             yield slot
 
 
+@dataclass
+class _DMMSchedule(_ChannelSchedule):
+    detuning_map: DetuningMap
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._waiting_for_first_pulse: bool = False
+
+    def get_samples(
+        self,
+        ignore_detuned_delay_phase: bool = True,
+        qubits: dict[QubitId, np.ndarray] | None = None,
+    ) -> DMMSamples:
+        ch_samples = super().get_samples(
+            ignore_detuned_delay_phase=ignore_detuned_delay_phase
+        )
+        init_fields = {
+            f.name: getattr(ch_samples, f.name)
+            for f in fields(ch_samples)
+            if f.init
+        }
+        if qubits is None:
+            raise ValueError(
+                "'qubits' must be defined when extracting the samples of a"
+                " DMM channel."
+            )
+        return DMMSamples(
+            **init_fields, detuning_map=self.detuning_map, qubits=qubits
+        )
+
+
 class _Schedule(Dict[str, _ChannelSchedule]):
     def __init__(self, max_duration: int | None = None):
         self.max_duration = max_duration
@@ -268,11 +311,15 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         # Find tentative initial and final time of SLM mask if possible
         mask_time: list[int] = []
         for ch_schedule in self.values():
-            if ch_schedule.channel_obj.addressing != "Global":
+            if ch_schedule.channel_obj.addressing != "Global" or isinstance(
+                ch_schedule.channel_obj, DMM
+            ):
                 continue
             # Cycle on slots in schedule until the first pulse is found
             for slot in ch_schedule:
-                if not isinstance(slot.type, Pulse):
+                if not isinstance(
+                    slot.type, Pulse
+                ) or ch_schedule.is_detuned_delay(slot.type):
                     continue
                 ti = slot.ti
                 tf = slot.tf
@@ -344,8 +391,16 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         channel: str,
         phase_barrier_ts: list[int],
         protocol: str,
+        phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
-        pass
+        def corrected_phase(tf: int) -> float:
+            phase_drift = (
+                phase_drift_params.calc_phase_drift(tf)
+                if phase_drift_params
+                else 0
+            )
+            return pulse.phase - phase_drift
+
         last = self[channel][-1]
         t0 = last.tf
         current_max_t = max(t0, *phase_barrier_ts)
@@ -362,7 +417,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                 )
                 last_pulse = cast(Pulse, last_pulse_slot.type)
                 # Checks if the current pulse changes the phase
-                if last_pulse.phase != pulse.phase:
+                if last_pulse.phase != corrected_phase(current_max_t):
                     # Subtracts the time that has already elapsed since the
                     # last pulse from the phase_jump_time and adds the
                     # fall_time to let the last pulse ramp down
@@ -386,6 +441,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         ti = t0 + delay_duration
         tf = ti + pulse.duration
         self._check_duration(tf)
+        # dataclasses.replace() does not work on Pulse (because init=False)
+        if phase_drift_params is not None:
+            pulse = Pulse(
+                amplitude=pulse.amplitude,
+                detuning=pulse.detuning,
+                phase=corrected_phase(ti),
+                post_phase_shift=pulse.post_phase_shift,
+            )
         self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
 
     def add_delay(self, duration: int, channel: str) -> None:

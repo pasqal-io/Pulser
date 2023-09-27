@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from unittest.mock import patch
 
 import numpy as np
@@ -21,10 +21,14 @@ import pytest
 
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.dmm import DMM
 from pulser.devices import Chadoq2, Device, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
-from pulser.register.special_layouts import TriangularLatticeLayout
+from pulser.register.special_layouts import (
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
 
 
 @pytest.fixture
@@ -73,6 +77,11 @@ def test_params():
             "When the device has a 'Microwave' channel, "
             "'interaction_coeff_xy' must be a 'float',"
             " not '<class 'NoneType'>'.",
+        ),
+        (
+            "dmm_objects",
+            ("DMM(bottom_detuning=-1)",),
+            "All DMM channels must be of type 'DMM', not 'str'",
         ),
         ("max_sequence_duration", 1.02, None),
         ("max_runs", 1e8, None),
@@ -127,6 +136,16 @@ def test_post_init_value_errors(test_params, param, value, msg):
     test_params[param] = value
     error_msg = msg or f"When defined, '{param}' must be greater than zero"
     with pytest.raises(ValueError, match=error_msg):
+        VirtualDevice(**test_params)
+
+
+def test_post_init_slm_dmm_compatibility(test_params):
+    test_params["supports_slm_mask"] = True
+    test_params["dmm_objects"] = ()
+    with pytest.raises(
+        ValueError,
+        match="One DMM object should be defined to support SLM mask.",
+    ):
         VirtualDevice(**test_params)
 
 
@@ -320,6 +339,8 @@ def test_calibrated_layouts():
             pre_calibrated_layouts=(TriangularLatticeLayout(201, 3),),
         )
 
+    layout100 = TriangularLatticeLayout(100, 6.8)
+    layout200 = TriangularLatticeLayout(200, 5)
     TestDevice = Device(
         name="TestDevice",
         dimensions=2,
@@ -328,15 +349,32 @@ def test_calibrated_layouts():
         max_radial_distance=50,
         min_atom_distance=4,
         channel_objects=(),
-        pre_calibrated_layouts=(
-            TriangularLatticeLayout(100, 6.8),
-            TriangularLatticeLayout(200, 5),
-        ),
+        pre_calibrated_layouts=(layout100, layout200),
     )
     assert TestDevice.calibrated_register_layouts.keys() == {
         "TriangularLatticeLayout(100, 6.8µm)",
         "TriangularLatticeLayout(200, 5.0µm)",
     }
+    with pytest.raises(
+        TypeError,
+        match="The register to check must be of type ",
+    ):
+        TestDevice.register_is_from_calibrated_layout(layout100)
+    assert TestDevice.is_calibrated_layout(layout100)
+    register = layout200.define_register(*range(10))
+    assert TestDevice.register_is_from_calibrated_layout(register)
+    # Checking a register not built from a layout returns False
+    assert not TestDevice.register_is_from_calibrated_layout(
+        Register.triangular_lattice(4, 25, 6.8)
+    )
+    # Checking Layouts that don't match calibrated layouts returns False
+    square_layout = SquareLatticeLayout(10, 10, 6.8)
+    layout125 = TriangularLatticeLayout(125, 6.8)
+    compact_layout = TriangularLatticeLayout(100, 3)
+    for bad_layout in (square_layout, layout125, compact_layout):
+        assert not TestDevice.is_calibrated_layout(bad_layout)
+        register = bad_layout.define_register(*range(10))
+        assert not TestDevice.register_is_from_calibrated_layout(register)
 
 
 def test_device_with_virtual_channel():
@@ -368,7 +406,10 @@ def test_convert_to_virtual():
     assert Device(
         pre_calibrated_layouts=(TriangularLatticeLayout(40, 2),), **params
     ).to_virtual() == VirtualDevice(
-        supports_slm_mask=False, reusable_channels=False, **params
+        supports_slm_mask=False,
+        reusable_channels=False,
+        dmm_objects=(),
+        **params,
     )
 
 
@@ -384,3 +425,35 @@ def test_device_params():
     assert set(all_params) - set(all_virtual_params) == {
         "pre_calibrated_layouts"
     }
+
+
+def test_dmm_channels():
+    with pytest.raises(
+        ValueError,
+        match="A 'Device' instance cannot contain virtual channels."
+        " For channel 'dmm_0', please define: 'bottom_detuning'",
+    ):
+        replace(Chadoq2, dmm_objects=(DMM(),))
+    dmm = DMM(
+        bottom_detuning=-1,
+        clock_period=1,
+        min_duration=1,
+        max_duration=1e6,
+        mod_bandwidth=20,
+    )
+    device = replace(Chadoq2, dmm_objects=(dmm,))
+    assert len(device.dmm_channels) == 1
+    assert device.dmm_channels["dmm_0"] == dmm
+    with pytest.raises(
+        ValueError,
+        match=(
+            "When defined, the names of channel IDs must be different"
+            " than the names of DMM channels 'dmm_0', 'dmm_1', ... ."
+        ),
+    ):
+        device = replace(
+            Chadoq2,
+            dmm_objects=(dmm,),
+            channel_objects=(Rydberg.Global(None, None),),
+            channel_ids=("dmm_0",),
+        )

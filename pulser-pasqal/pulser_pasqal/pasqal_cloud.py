@@ -16,9 +16,8 @@ from __future__ import annotations
 
 import copy
 import json
-import warnings
 from dataclasses import fields
-from typing import Any, Optional, Type, cast
+from typing import Any, Type, cast
 
 import backoff
 import numpy as np
@@ -40,7 +39,6 @@ from pulser.backend.remote import (
 from pulser.devices import Device
 from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser.result import Result, SampledResult
-from pulser_pasqal.job_parameters import JobParameters
 
 EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {
     pasqal_cloud.EmulatorType.EMU_FREE: EmuFreeConfig,
@@ -145,23 +143,8 @@ class PasqalCloud(RemoteConnection):
             configuration=configuration,
             wait=False,
         )
-        jobs_order = []
-        if job_params:
-            for job_dict in job_params:
-                for job in batch.jobs.values():
-                    if (
-                        job.id not in jobs_order
-                        and job_dict["runs"] == job.runs
-                        and job_dict.get("variables", None) == job.variables
-                    ):
-                        jobs_order.append(job.id)
-                        break
-                else:
-                    raise RuntimeError(
-                        f"Failed to find job ID for {job_dict}."
-                    )
 
-        return RemoteResults(batch.id, self, jobs_order or None)
+        return RemoteResults(batch.id, self)
 
     @backoff_decorator
     def fetch_available_devices(self) -> dict[str, Device]:
@@ -172,9 +155,7 @@ class PasqalCloud(RemoteConnection):
             for name, dev_str in abstract_devices.items()
         }
 
-    def _fetch_result(
-        self, submission_id: str, jobs_order: list[str] | None
-    ) -> tuple[Result, ...]:
+    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
         # For now, the results are always sampled results
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
         batch = get_batch_fn(id=submission_id)
@@ -184,13 +165,7 @@ class PasqalCloud(RemoteConnection):
         meas_basis = seq_builder.get_measurement_basis()
 
         results = []
-
-        jobs = (
-            (batch.jobs[job_id] for job_id in jobs_order)
-            if jobs_order
-            else batch.jobs.values()
-        )
-        for job in jobs:
+        for job in batch.ordered_jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:
@@ -233,86 +208,3 @@ class PasqalCloud(RemoteConnection):
             pasqal_config_kwargs["dt"] = 1.0 / config.sampling_rate
 
         return emu_cls(**pasqal_config_kwargs)
-
-    def create_batch(
-        self,
-        seq: Sequence,
-        jobs: list[JobParameters],
-        emulator: pasqal_cloud.EmulatorType | None = None,
-        configuration: Optional[pasqal_cloud.BaseConfig] = None,
-        wait: bool = False,
-        fetch_results: bool = False,
-    ) -> pasqal_cloud.Batch:
-        """Create a new batch and send it to the API.
-
-        For Iroise MVP, the batch must contain at least one job and will be
-        declared as complete immediately.
-
-        Args:
-            seq: Pulser sequence.
-            jobs: List of jobs to be added to the batch at creation.
-            emulator: TThe type of emulator to use. If set to None, the device
-                will be set to the one stored in the serialized sequence.
-            configuration: Optional extra configuration for emulators.
-            wait: Whether to wait for the batch to be done.
-            fetch_results: Whether to download the results. Implies waiting for the batch. # noqa: 501
-
-        Returns:
-            Batch: The new batch that has been created in the database.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                "'PasqalCloud.create_batch()' is deprecated and will be "
-                "removed after v0.14. To submit jobs to the Pasqal Cloud, "
-                "use one of the remote backends (eg QPUBackend, EmuTNBacked,"
-                " EmuFreeBackend) with an open PasqalCloud() connection.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-
-        if emulator is None and not isinstance(seq.device, Device):
-            raise TypeError(
-                "To be sent to a real QPU, the device of the sequence "
-                "must be a real device, instance of 'Device'."
-            )
-
-        for params in jobs:
-            seq.build(**params.variables.get_dict())  # type: ignore
-
-        return self._sdk_connection.create_batch(
-            serialized_sequence=seq.to_abstract_repr(),
-            jobs=[j.get_dict() for j in jobs],
-            emulator=emulator,
-            configuration=configuration,
-            wait=wait,
-            fetch_results=fetch_results,
-        )
-
-    def get_batch(
-        self, id: str, fetch_results: bool = False
-    ) -> pasqal_cloud.Batch:
-        """Retrieve a batch's data and all its jobs.
-
-        Args:
-            id: Id of the batch.
-            fetch_results: Whether to load job results.
-
-        Returns:
-            Batch: The batch stored in the database.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                "'PasqalCloud.get_batch()' is deprecated and will be removed "
-                "after v0.14. To retrieve the results from a job executed "
-                "through the Pasqal Cloud, use the RemoteResults instance "
-                "returned after calling run() on one of the remote backends"
-                " (eg QPUBackend, EmuTNBacked, EmuFreeBackend) with an open "
-                "PasqalCloud() connection.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-        return self._sdk_connection.get_batch(
-            id=id, fetch_results=fetch_results
-        )

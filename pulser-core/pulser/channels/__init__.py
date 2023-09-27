@@ -14,3 +14,4 @@
 """The various hardware channel types."""
 
 from pulser.channels.channels import Microwave, Raman, Rydberg
+from pulser.channels.dmm import DMM

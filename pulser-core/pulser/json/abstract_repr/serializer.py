@@ -26,9 +26,10 @@ import numpy as np
 from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError
-from pulser.register.base_register import QubitId
+from pulser.json.utils import stringify_qubit_ids
 
 if TYPE_CHECKING:
+    from pulser.register.base_register import QubitId
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
 
@@ -180,6 +181,15 @@ def serialize_abstract_sequence(
         }
         return {**default_values, **params}
 
+    def remove_kwarg_if_default(
+        data: dict[str, Any], call_name: str, kwarg_name: str
+    ) -> dict[str, Any]:
+        if data.get(kwarg_name, None) == get_kwarg_default(
+            call_name, kwarg_name
+        ):
+            data.pop(kwarg_name, None)
+        return data
+
     operations = res["operations"]
     for call in chain(seq._calls, seq._to_build_calls):
         if call.name == "__init__":
@@ -209,6 +219,15 @@ def serialize_abstract_sequence(
                         "target": convert_targets(data["initial_target"]),
                     }
                 )
+        elif call.name == "config_detuning_map":
+            data = get_all_args(("detuning_map", "dmm_id"), call)
+            operations.append(
+                {
+                    "op": "config_detuning_map",
+                    "detuning_map": data["detuning_map"],
+                    "dmm_id": data["dmm_id"],
+                }
+            )
         elif "target" in call.name:
             data = get_all_args(("qubits", "channel"), call)
             if call.name == "target":
@@ -266,11 +285,34 @@ def serialize_abstract_sequence(
         elif call.name == "set_magnetic_field":
             res["magnetic_field"] = seq.magnetic_field.tolist()
         elif call.name == "config_slm_mask":
-            res["slm_mask_targets"] = tuple(seq._slm_mask_targets)
+            data = get_all_args(("qubits", "dmm_id"), call)
+            qubit_ids = stringify_qubit_ids(data["qubits"])
+            if seq._in_xy and data["dmm_id"] == get_kwarg_default(
+                call.name, "dmm_id"
+            ):
+                # Use the old way in XY mode to preserve compatibility
+                res["slm_mask_targets"] = tuple(qubit_ids)
+            else:
+                operations.append(
+                    {
+                        "op": "config_slm_mask",
+                        "qubits": qubit_ids,
+                        "dmm_id": data["dmm_id"],
+                    }
+                )
         elif call.name == "enable_eom_mode":
             data = get_all_args(
-                ("channel", "amp_on", "detuning_on", "optimal_detuning_off"),
+                (
+                    "channel",
+                    "amp_on",
+                    "detuning_on",
+                    "optimal_detuning_off",
+                    "correct_phase_drift",
+                ),
                 call,
+            )
+            data = remove_kwarg_if_default(
+                data, call.name, "correct_phase_drift"
             )
             operations.append({"op": "enable_eom_mode", **data})
         elif call.name == "add_eom_pulse":
@@ -281,15 +323,23 @@ def serialize_abstract_sequence(
                     "phase",
                     "post_phase_shift",
                     "protocol",
+                    "correct_phase_drift",
                 ),
                 call,
             )
+            data = remove_kwarg_if_default(
+                data, call.name, "correct_phase_drift"
+            )
             operations.append({"op": "add_eom_pulse", **data})
         elif call.name == "disable_eom_mode":
-            data = get_all_args(("channel",), call)
-            operations.append(
-                {"op": "disable_eom_mode", "channel": data["channel"]}
+            data = get_all_args(("channel", "correct_phase_drift"), call)
+            data = remove_kwarg_if_default(
+                data, call.name, "correct_phase_drift"
             )
+            operations.append({"op": "disable_eom_mode", **data})
+        elif call.name == "add_dmm_detuning":
+            data = get_all_args(("waveform", "dmm_name", "protocol"), call)
+            operations.append({"op": "add_dmm_detuning", **data})
         else:
             raise AbstractReprError(f"Unknown call '{call.name}'.")
 

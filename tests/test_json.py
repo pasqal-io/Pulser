@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import re
 
 import numpy as np
 import pytest
 
+import pulser
 from pulser import Register, Register3D, Sequence
 from pulser.devices import Chadoq2, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
@@ -27,6 +29,7 @@ from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
 )
+from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import BlackmanWaveform
 
 
@@ -101,6 +104,15 @@ def test_register_from_layout():
     assert new_reg._layout_info.trap_ids == (1, 0)
 
 
+def test_detuning_map():
+    custom_det_map = DetuningMap(
+        [[0, 0], [1, 1], [1, 0], [0, 1]], [0.1, 0.2, 0.3, 0.4]
+    )
+    new_custom_det_map = encode_decode(custom_det_map)
+    assert new_custom_det_map == custom_det_map
+    assert type(new_custom_det_map) is DetuningMap
+
+
 @pytest.mark.parametrize(
     "reg",
     [
@@ -112,7 +124,7 @@ def test_register_numbered_keys(reg):
     j = json.dumps(reg, cls=PulserEncoder)
     decoded_reg = json.loads(j, cls=PulserDecoder)
     assert reg == decoded_reg
-    assert all([type(i) == int for i in decoded_reg.qubit_ids])
+    assert all([type(i) is int for i in decoded_reg.qubit_ids])
 
 
 def test_mappable_register():
@@ -126,7 +138,7 @@ def test_mappable_register():
     assert seq.is_register_mappable()
     mapped_seq = seq.build(qubits={"q0": 2, "q1": 1})
     assert not mapped_seq.is_register_mappable()
-    new_mapped_seq = Sequence.deserialize(mapped_seq.serialize())
+    new_mapped_seq = Sequence._deserialize(mapped_seq._serialize())
     assert not new_mapped_seq.is_register_mappable()
 
 
@@ -144,8 +156,15 @@ def test_rare_cases(patch_plt_show):
         s = encode(wf())
     s = encode(wf)
 
+    with pytest.raises(
+        TypeError,
+        match="The serialized sequence must be given as a string. "
+        f"Instead, got object of type {dict}.",
+    ):
+        wf_ = Sequence._deserialize(json.loads(s))
+
     with pytest.raises(ValueError, match="not encode a Sequence"):
-        wf_ = Sequence.deserialize(s)
+        wf_ = Sequence._deserialize(s)
 
     wf_ = decode(s)
     seq._variables["var"]._assign(-10)
@@ -198,31 +217,43 @@ def test_sequence_module():
     # Check that the sequence module is backwards compatible after refactoring
     seq = Sequence(Register.square(2), Chadoq2)
 
-    obj_dict = json.loads(seq.serialize())
+    obj_dict = json.loads(seq._serialize())
     assert obj_dict["__module__"] == "pulser.sequence"
 
     # Defensively check that the standard format runs
-    Sequence.deserialize(seq.serialize())
+    Sequence._deserialize(seq._serialize())
 
     # Use module being used in v0.7.0-0.7.2.0
     obj_dict["__module__"] == "pulser.sequence.sequence"
 
     # Check that it also works
     s = json.dumps(obj_dict)
-    Sequence.deserialize(s)
+    Sequence._deserialize(s)
 
 
-def test_deprecation():
+def test_type_error():
+    s = Sequence(Register.square(1), MockDevice)._serialize()
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "The serialized sequence must be given as a string. "
+            f"Instead, got object of type {dict}."
+        ),
+    ):
+        Sequence._deserialize(json.loads(s))
+
+
+def test_deprecated_device_args():
     seq = Sequence(Register.square(1), MockDevice)
 
-    seq_dict = json.loads(seq.serialize())
+    seq_dict = json.loads(seq._serialize())
     dev_dict = seq_dict["__kwargs__"]["device"]
 
     assert "_channels" not in dev_dict["__kwargs__"]
     dev_dict["__kwargs__"]["_channels"] = []
 
     s = json.dumps(seq_dict)
-    new_seq = Sequence.deserialize(s)
+    new_seq = Sequence._deserialize(s)
     assert new_seq.device == MockDevice
 
     ids = dev_dict["__kwargs__"].pop("channel_ids")
@@ -231,5 +262,22 @@ def test_deprecation():
 
     assert seq_dict["__kwargs__"]["device"] == dev_dict
     s = json.dumps(seq_dict)
-    new_seq = Sequence.deserialize(s)
+    new_seq = Sequence._deserialize(s)
     assert new_seq.device == MockDevice
+
+
+def test_deprecation_warning():
+    msg = re.escape(
+        "`Sequence.serialize()` and `Sequence.deserialize()` have "
+        "been deprecated and will be removed in Pulser v1.0.0. "
+        "Use `Sequence.to_abstract_repr()` and "
+        "`Sequence.from_abstract_repr()` instead."
+    )
+    seq = Sequence(Register.square(1), MockDevice)
+    with pytest.warns(DeprecationWarning, match=msg):
+        s = seq.serialize()
+
+    with pytest.warns(DeprecationWarning, match=msg):
+        Sequence.deserialize(s)
+
+    assert pulser.__version__ < "1.0", "Remove legacy serializer methods"

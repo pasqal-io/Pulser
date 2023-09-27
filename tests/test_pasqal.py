@@ -32,13 +32,11 @@ from pulser.backend.remote import (
     SubmissionStatus,
 )
 from pulser.devices import Chadoq2
-from pulser.register import Register
 from pulser.register.special_layouts import SquareLatticeLayout
 from pulser.result import SampledResult
 from pulser.sequence import Sequence
-from pulser_pasqal import BaseConfig, EmulatorType, Endpoints, PasqalCloud
+from pulser_pasqal import EmulatorType, Endpoints, PasqalCloud
 from pulser_pasqal.backends import EmuFreeBackend, EmuTNBackend
-from pulser_pasqal.job_parameters import JobParameters, JobVariables
 
 root = Path(__file__).parent.parent
 
@@ -87,7 +85,7 @@ def mock_batch(mock_job, seq):
     class MockBatch:
         id = "abcd"
         status = "DONE"
-        jobs = {mock_job.id: mock_job}
+        ordered_jobs = [mock_job]
         sequence_builder = seq_.to_abstract_repr()
 
     return MockBatch()
@@ -210,16 +208,6 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
         )
     )
 
-    job_params[0]["runs"] = 1
-    with pytest.raises(RuntimeError, match="Failed to find job ID"):
-        # Job runs don't match MockJob
-        fixt.pasqal_cloud.submit(
-            seq,
-            job_params=job_params,
-            emulator=emulator,
-            config=config,
-        )
-
     job_params[0]["runs"] = {10}
     with pytest.raises(
         TypeError, match="Object of type set is not JSON serializable"
@@ -323,7 +311,7 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
     sdk_config: EmuTNConfig | EmuFreeConfig
     if isinstance(emu, EmuTNBackend):
         emulator_type = EmulatorType.EMU_TN
-        sdk_config = EmuTNConfig(dt=1.0)
+        sdk_config = EmuTNConfig(dt=10)
     else:
         emulator_type = EmulatorType.EMU_FREE
         sdk_config = EmuFreeConfig()
@@ -335,116 +323,3 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
         configuration=sdk_config,
         wait=False,
     )
-
-
-# Deprecated
-
-
-def check_pasqal_cloud(fixt, seq, emulator, expected_seq_representation):
-    create_batch_kwargs = dict(
-        jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
-        emulator=emulator,
-        configuration=BaseConfig(
-            extra_config={
-                "dt": 10.0,
-                "precision": "normal",
-            }
-        ),
-        wait=True,
-        fetch_results=False,
-    )
-
-    expected_create_batch_kwargs = {
-        **create_batch_kwargs,
-        "jobs": [{"runs": 10, "variables": {"qubits": None, "a": [3, 5]}}],
-    }
-
-    with pytest.warns(UserWarning, match="No declared variables named: a"):
-        fixt.pasqal_cloud.create_batch(
-            seq,
-            **create_batch_kwargs,
-        )
-        assert pulser_pasqal.__version__ < "0.15"
-
-    fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
-        serialized_sequence=expected_seq_representation,
-        **expected_create_batch_kwargs,
-    )
-
-    get_batch_kwargs = dict(
-        id="uuid",
-        fetch_results=True,
-    )
-    with pytest.deprecated_call():
-        fixt.pasqal_cloud.get_batch(**get_batch_kwargs)
-        assert pulser_pasqal.__version__ < "0.15"
-
-    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(**get_batch_kwargs)
-
-
-@pytest.mark.parametrize(
-    "emulator, device",
-    [
-        [emulator, device]
-        for emulator in (EmulatorType.EMU_FREE, EmulatorType.EMU_TN)
-        for device in (test_device, virtual_device)
-    ],
-)
-def test_pasqal_cloud_emu(fixt, emulator, device):
-    reg = Register.from_coordinates(
-        [(0, 0), (0, 10)], center=False, prefix="q"
-    )
-    seq = Sequence(reg, device)
-
-    check_pasqal_cloud(
-        fixt=fixt,
-        seq=seq,
-        emulator=emulator,
-        expected_seq_representation=seq.to_abstract_repr(),
-    )
-
-
-def test_pasqal_cloud_qpu(fixt):
-    device = test_device
-
-    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-    seq = Sequence(reg, device)
-
-    check_pasqal_cloud(
-        fixt=fixt,
-        seq=seq,
-        emulator=None,
-        expected_seq_representation=seq.to_abstract_repr(),
-    )
-
-
-def test_virtual_device_on_qpu_error(fixt):
-    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-    device = Chadoq2.to_virtual()
-    seq = Sequence(reg, device)
-
-    with pytest.deprecated_call(), pytest.raises(
-        TypeError, match="must be a real device"
-    ):
-        fixt.pasqal_cloud.create_batch(
-            seq,
-            jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
-            emulator=None,
-            wait=True,
-        )
-
-
-def test_wrong_parameters(fixt):
-    reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-    seq = Sequence(reg, test_device)
-    seq.declare_variable("unset", dtype=int)
-
-    with pytest.warns(
-        UserWarning, match="No declared variables named: a"
-    ), pytest.raises(TypeError, match="Did not receive values for variables"):
-        fixt.pasqal_cloud.create_batch(
-            seq,
-            jobs=[JobParameters(runs=10, variables=JobVariables(a=[3, 5]))],
-            emulator=None,
-            wait=True,
-        )
