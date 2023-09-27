@@ -1077,6 +1077,10 @@ class Sequence(Generic[DeviceType]):
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
                 )
                 channel_obj.validate_pulse(off_pulse)
+                # Update optimal_detuning_off to match the chosen detuning_off
+                # This minimizes the changes to the sequence when the device
+                # is switched
+                stored_opt_detuning_off = detuning_off
 
             if not self.is_parametrized():
                 phase_drift_params = _PhaseDriftParams(
@@ -1091,10 +1095,6 @@ class Sequence(Generic[DeviceType]):
                     self._phase_shift(
                         -drift, *buffer_slot.targets, basis=channel_obj.basis
                     )
-                # Update optimal_detuning_off to match the chosen detuning_off
-                # This minimizes the changes to the sequence when the device
-                # is switched
-                stored_opt_detuning_off = detuning_off
 
         # Manually store the call to "enable_eom_mode" so that the updated
         # 'optimal_detuning_off' is stored
