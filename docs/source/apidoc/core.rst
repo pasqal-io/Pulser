@@ -38,6 +38,7 @@ register can be defined at build time.
 
 .. autoclass:: pulser.register.register_layout.RegisterLayout
   :members:
+  :inherited-members:
 
 .. autoclass:: pulser.register.mappable_reg.MappableRegister
   :members:
@@ -114,6 +115,9 @@ Available Channels
    :members:
    :show-inheritance:
 
+.. automodule:: pulser.channels.dmm
+   :members:
+   :show-inheritance:
 
 EOM Mode Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -129,3 +133,7 @@ Sampler
 .. automodule:: pulser.sampler.samples
    :members:
 
+Result
+------------------
+.. automodule:: pulser.result
+   :members:
