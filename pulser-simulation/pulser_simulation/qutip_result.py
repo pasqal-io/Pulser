@@ -20,6 +20,7 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
+from pulser.register import QubitId
 from pulser.result import Result
 
 
@@ -37,6 +38,8 @@ class QutipResult(Result):
             same as the state's basis.
     """
 
+    atom_order: tuple[QubitId, ...]
+    meas_basis: str
     state: qutip.Qobj
     matching_meas_basis: bool
 

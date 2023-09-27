@@ -41,7 +41,7 @@ QutipResult
 
 .. autoclass:: pulser_simulation.qutip_result.QutipResult
    :members:
-   :show-inheritance:
+   :inherited-members:
 
 CoherentResults
 ^^^^^^^^^^^^^^^^
