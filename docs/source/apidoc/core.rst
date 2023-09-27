@@ -60,7 +60,7 @@ of weights to a set of trap coordinates. It is intended to be defined by the use
 from a ``RegisterLayout``, a ``Register`` or a ``MappableRegister`` using
 ``define_detuning_map``.
 
-.. autoclass:: pulser.register.detuning_map
+.. autoclass:: pulser.register.weight_maps.DetuningMap
   :members:
   :inherited-members:
 
