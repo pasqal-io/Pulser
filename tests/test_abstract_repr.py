@@ -1572,14 +1572,24 @@ class TestDeserialization:
             assert pulse.kwargs["detuning"] == 1
 
     @pytest.mark.parametrize("correct_phase_drift", (False, True, None))
-    def test_deserialize_eom_ops(self, correct_phase_drift):
+    @pytest.mark.parametrize("var_detuning_on", [False, True])
+    def test_deserialize_eom_ops(self, correct_phase_drift, var_detuning_on):
+        detuning_on = (
+            {
+                "expression": "index",
+                "lhs": {"variable": "detuning_on"},
+                "rhs": 0,
+            }
+            if var_detuning_on
+            else 0.0
+        )
         s = _get_serialized_seq(
             operations=[
                 {
                     "op": "enable_eom_mode",
                     "channel": "global",
                     "amp_on": 3.0,
-                    "detuning_on": 0.0,
+                    "detuning_on": detuning_on,
                     "optimal_detuning_off": -1.0,
                     "correct_phase_drift": correct_phase_drift,
                 },
@@ -1602,29 +1612,52 @@ class TestDeserialization:
                     "correct_phase_drift": correct_phase_drift,
                 },
             ],
-            variables={"duration": {"type": "int", "value": [100]}},
+            variables={
+                "duration": {"type": "int", "value": [100]},
+                "detuning_on": {"type": "int", "value": [0.0]},
+            },
             device=json.loads(IroiseMVP.to_abstract_repr()),
             channels={"global": "rydberg_global"},
         )
         if correct_phase_drift is None:
             for op in s["operations"]:
                 del op["correct_phase_drift"]
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
-        # init + declare_channel + enable_eom_mode
-        assert len(seq._calls) == 3
-        # add_eom_pulse + disable_eom
-        assert len(seq._to_build_calls) == 2
 
-        enable_eom_call = seq._calls[-1]
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        # init + declare_channel + enable_eom_mode (if not var_detuning_on)
+        assert len(seq._calls) == 3 - var_detuning_on
+        # add_eom_pulse + disable_eom + enable_eom_mode (if var_detuning_on)
+        assert len(seq._to_build_calls) == 2 + var_detuning_on
+
+        if var_detuning_on:
+            enable_eom_call = seq._to_build_calls[0]
+            optimal_det_off = -1.0
+        else:
+            enable_eom_call = seq._calls[-1]
+            eom_conf = seq.declared_channels["global"].eom_config
+            optimal_det_off = eom_conf.calculate_detuning_off(
+                3.0, detuning_on, -1.0
+            )
+
+        # Roundtrip will only match if the optimal detuning off matches
+        # detuning_off from the start
+        mod_s = deepcopy(s)
+        mod_s["operations"][0]["optimal_detuning_off"] = optimal_det_off
+        _check_roundtrip(mod_s)
+
         assert enable_eom_call.name == "enable_eom_mode"
-        assert enable_eom_call.kwargs == {
+        enable_eom_kwargs = enable_eom_call.kwargs.copy()
+        detuning_on_kwarg = enable_eom_kwargs.pop("detuning_on")
+        assert enable_eom_kwargs == {
             "channel": "global",
             "amp_on": 3.0,
-            "detuning_on": 0.0,
-            "optimal_detuning_off": -1.0,
+            "optimal_detuning_off": optimal_det_off,
             "correct_phase_drift": bool(correct_phase_drift),
         }
+        if var_detuning_on:
+            assert isinstance(detuning_on_kwarg, VariableItem)
+        else:
+            assert detuning_on_kwarg == detuning_on
 
         disable_eom_call = seq._to_build_calls[-1]
         assert disable_eom_call.name == "disable_eom_mode"
@@ -1633,7 +1666,7 @@ class TestDeserialization:
             "correct_phase_drift": bool(correct_phase_drift),
         }
 
-        eom_pulse_call = seq._to_build_calls[0]
+        eom_pulse_call = seq._to_build_calls[var_detuning_on]
         assert eom_pulse_call.name == "add_eom_pulse"
         assert eom_pulse_call.kwargs["channel"] == "global"
         assert isinstance(eom_pulse_call.kwargs["duration"], VariableItem)
