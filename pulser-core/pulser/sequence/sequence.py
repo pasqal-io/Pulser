@@ -648,7 +648,13 @@ class Sequence(Generic[DeviceType]):
     def switch_device(
         self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:
-        """Switch the device of a sequence.
+        """Replicate the sequence with a different device.
+
+        This method is designed to replicate the sequence with as few changes
+        to the original contents as possible.
+        If the `strict` option is chosen, the device switch will fail whenever
+        it cannot guarantee that the new sequence's contents will not be
+        modified in the process.
 
         Args:
             new_device: The target device instance.
@@ -1002,7 +1008,7 @@ class Sequence(Generic[DeviceType]):
             self._variables[name] = var
             return var
 
-    @seq_decorators.store
+    @seq_decorators.verify_parametrization
     @seq_decorators.block_if_measured
     def enable_eom_mode(
         self,
@@ -1057,6 +1063,7 @@ class Sequence(Generic[DeviceType]):
         on_pulse = Pulse.ConstantPulse(
             channel_obj.min_duration, amp_on, detuning_on, 0.0
         )
+        stored_opt_detuning_off = optimal_detuning_off
         if not isinstance(on_pulse, Parametrized):
             channel_obj.validate_pulse(on_pulse)
             amp_on = cast(float, amp_on)
@@ -1070,6 +1077,10 @@ class Sequence(Generic[DeviceType]):
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
                 )
                 channel_obj.validate_pulse(off_pulse)
+                # Update optimal_detuning_off to match the chosen detuning_off
+                # This minimizes the changes to the sequence when the device
+                # is switched
+                stored_opt_detuning_off = detuning_off
 
             if not self.is_parametrized():
                 phase_drift_params = _PhaseDriftParams(
@@ -1084,6 +1095,25 @@ class Sequence(Generic[DeviceType]):
                     self._phase_shift(
                         -drift, *buffer_slot.targets, basis=channel_obj.basis
                     )
+
+        # Manually store the call to "enable_eom_mode" so that the updated
+        # 'optimal_detuning_off' is stored
+        call_container = (
+            self._to_build_calls if self.is_parametrized() else self._calls
+        )
+        call_container.append(
+            _Call(
+                "enable_eom_mode",
+                (),
+                dict(
+                    channel=channel,
+                    amp_on=amp_on,
+                    detuning_on=detuning_on,
+                    optimal_detuning_off=stored_opt_detuning_off,
+                    correct_phase_drift=correct_phase_drift,
+                ),
+            )
+        )
 
     @seq_decorators.store
     @seq_decorators.block_if_measured

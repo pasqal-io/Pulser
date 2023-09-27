@@ -1558,8 +1558,8 @@ def test_slm_mask_in_ising(
     seq5.add(Pulse.ConstantPulse(200, var, 0, 0), "ch")
     assert seq5.is_parametrized()
     seq5.config_slm_mask(targets)
-    seq5_str = seq5.serialize()
-    seq5_ = Sequence.deserialize(seq5_str)
+    seq5_str = seq5._serialize()
+    seq5_ = Sequence._deserialize(seq5_str)
     assert str(seq5) == str(seq5_)
 
 
