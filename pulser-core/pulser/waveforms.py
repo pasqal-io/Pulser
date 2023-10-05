@@ -805,12 +805,12 @@ class InterpolatedWaveform(Waveform):
     @cached_property
     def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform."""
-        return cast(
-            np.ndarray,
-            np.round(
-                self._interp_func(np.arange(self._duration)), decimals=9
-            ),  # Rounds to the order of Hz
-        )
+        samples = self._interp_func(np.arange(self._duration))
+        value_range = np.max(np.abs(samples))
+        decimals = int(
+            min(np.finfo(samples.dtype).precision - np.log10(value_range), 9)
+        )  # Reduces decimal values below 9 for large ranges
+        return cast(np.ndarray, np.round(samples, decimals=decimals))
 
     @property
     def interp_function(
