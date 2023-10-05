@@ -249,6 +249,12 @@ def test_interpolated():
         interp_wf2.samples, np.linspace(0, 1, num=dt) ** 2, atol=1e-3
     )
 
+    # Test rounding when range of values is large
+    wf = InterpolatedWaveform(
+        1000, times=[0.0, 0.5, 1.0], values=[0, 2.6e7, 0]
+    )
+    assert np.all(wf.samples >= 0)
+
 
 def test_kaiser():
     duration: int = 40
