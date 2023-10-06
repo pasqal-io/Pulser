@@ -21,22 +21,24 @@ package_name = "pulser"  # The main module name
 current_directory = Path(__file__).parent
 
 # Reads the version from the VERSION.txt file
-with open(current_directory.parent / "VERSION.txt", "r") as f:
+with open(
+    current_directory.parent / "VERSION.txt", "r", encoding="utf-8"
+) as f:
     __version__ = f.read().strip()
 
 # Changes to the directory where setup.py is
 os.chdir(current_directory)
 
-with open("requirements.txt") as f:
+with open("requirements.txt", "r", encoding="utf-8") as f:
     requirements = f.read().splitlines()
 
 # Stashes the source code for the local version file
 local_version_fpath = Path(package_name) / "_version.py"
-with open(local_version_fpath, "r") as f:
+with open(local_version_fpath, "r", encoding="utf-8") as f:
     stashed_version_source = f.read()
 
 # Overwrites the _version.py for the source distribution (reverted at the end)
-with open(local_version_fpath, "w") as f:
+with open(local_version_fpath, "w", encoding="utf-8") as f:
     f.write(f"__version__ = '{__version__}'\n")
 
 setup(
@@ -47,7 +49,7 @@ setup(
     package_data={package_name: ["py.typed"]},
     include_package_data=True,
     description="A pulse-level composer for neutral-atom quantum devices.",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",
     python_requires=">=3.8",
@@ -61,5 +63,5 @@ setup(
 )
 
 # Restores the original source code of _version.py
-with open(local_version_fpath, "w") as f:
+with open(local_version_fpath, "w", encoding="utf-8") as f:
     f.write(stashed_version_source)

@@ -71,7 +71,9 @@ class TestDevice:
     @pytest.fixture
     def device_schema(self):
         with open(
-            "pulser-core/pulser/json/abstract_repr/schemas/device-schema.json"
+            "pulser-core/pulser/json/abstract_repr/schemas/device-schema.json",
+            "r",
+            encoding="utf-8",
         ) as f:
             dev_schema = json.load(f)
         return dev_schema
@@ -238,7 +240,10 @@ class TestDevice:
 
 def validate_schema(instance):
     with open(
-        "pulser-core/pulser/json/abstract_repr/schemas/" "sequence-schema.json"
+        "pulser-core/pulser/json/abstract_repr/schemas/"
+        "sequence-schema.json",
+        "r",
+        encoding="utf-8",
     ) as f:
         schema = json.load(f)
     jsonschema.validate(instance=instance, schema=schema, registry=REGISTRY)
