@@ -213,6 +213,7 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
         seq.phase_shift_index(
             _deserialize_parameter(op["phi"], vars),
             *[_deserialize_parameter(t, vars) for t in op["targets"]],
+            basis=op["basis"],
         )
     elif op["op"] == "pulse":
         phase = _deserialize_parameter(op["phase"], vars)

@@ -1240,6 +1240,7 @@ class TestDeserialization:
         elif op["op"] == "phase_shift":
             assert c.name == "phase_shift_index"
             assert c.args == tuple([op["phi"], *op["targets"]])
+            assert c.kwargs["basis"] == "digital"
         elif op["op"] == "pulse":
             assert c.name == "add"
             assert c.kwargs["channel"] == op["channel"]
@@ -1395,7 +1396,7 @@ class TestDeserialization:
                 "op": "phase_shift",
                 "phi": var1,
                 "targets": [2, var1],
-                "basis": "digital",
+                "basis": "ground-rydberg",
             },
             {
                 "op": "pulse",
@@ -1452,6 +1453,8 @@ class TestDeserialization:
             assert c.args[1] == 2
             # qubit 2 is variable
             assert isinstance(c.args[2], VariableItem)
+            # basis is fixed
+            assert c.kwargs["basis"] == "ground-rydberg"
         elif op["op"] == "pulse":
             assert c.name == "add"
             assert c.kwargs["channel"] == op["channel"]
