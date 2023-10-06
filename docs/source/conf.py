@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../../"))
 
-with open("../../VERSION.txt", "r") as f:
+with open("../../VERSION.txt", "r", encoding="utf-8") as f:
     __version__ = f.read().strip()
 
 # -- Project information -----------------------------------------------------

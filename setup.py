@@ -15,7 +15,7 @@
 from setuptools import setup
 
 # Reads the version from the VERSION.txt file
-with open("VERSION.txt", "r") as f:
+with open("VERSION.txt", "r", encoding="utf-8") as f:
     __version__ = f.read().strip()
 
 if "dev" in __version__:
@@ -25,7 +25,7 @@ if "dev" in __version__:
         "`make dev-install` instead."
     )
 
-with open("packages.txt", "r") as f:
+with open("packages.txt", "r", encoding="utf-8") as f:
     requirements = [f"{pkg.strip()}=={__version__}" for pkg in f.readlines()]
 
 # Just a meta-package that requires all pulser packages
@@ -34,7 +34,7 @@ setup(
     version=__version__,
     install_requires=requirements,
     description="A pulse-level composer for neutral-atom quantum devices.",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",
     python_requires=">=3.8",
