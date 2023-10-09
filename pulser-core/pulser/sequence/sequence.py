@@ -447,7 +447,9 @@ class Sequence(Generic[DeviceType]):
             )
 
         if basis not in self._basis_ref:
-            raise ValueError("No declared channel targets the given 'basis'.")
+            raise ValueError(
+                f"No declared channel targets the given 'basis' ('{basis}')."
+            )
 
         return self._basis_ref[basis][qubit].phase.last_phase
 
@@ -2079,7 +2081,9 @@ class Sequence(Generic[DeviceType]):
         _index: bool = False,
     ) -> None:
         if basis not in self._basis_ref:
-            raise ValueError("No declared channel targets the given 'basis'.")
+            raise ValueError(
+                f"No declared channel targets the given 'basis' ('{basis}')."
+            )
         target_ids = self._check_qubits_give_ids(*targets, _index=_index)
 
         if not self.is_parametrized():
