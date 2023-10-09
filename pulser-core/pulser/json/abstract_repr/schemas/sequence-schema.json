@@ -724,8 +724,15 @@
           "type": "string"
         },
         "target": {
-          "$ref": "#/definitions/ParametrizedNum",
-          "description": "New target atom index"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ParametrizedNum"
+            },
+            {
+              "$ref": "#/definitions/ParametrizedNumArray"
+            }
+          ],
+          "description": "New target atom index (or indices)"
         }
       },
       "required": [

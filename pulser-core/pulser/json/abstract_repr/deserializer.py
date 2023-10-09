@@ -63,7 +63,7 @@ if TYPE_CHECKING:
 
 VARIABLE_TYPE_MAP = {"int": int, "float": float}
 
-ExpReturnType = Union[int, float, ParamObj]
+ExpReturnType = Union[int, float, list, ParamObj]
 
 
 @overload
@@ -78,13 +78,20 @@ def _deserialize_parameter(param: float, vars: dict[str, Variable]) -> float:
 
 @overload
 def _deserialize_parameter(
+    param: list[int], vars: dict[str, Variable]
+) -> list[int]:
+    pass
+
+
+@overload
+def _deserialize_parameter(
     param: dict[str, str], vars: dict[str, Variable]
 ) -> Variable:
     pass
 
 
 def _deserialize_parameter(
-    param: Union[int, float, dict[str, Any]],
+    param: Union[int, float, list[int], dict[str, Any]],
     vars: dict[str, Variable],
 ) -> Union[ExpReturnType, Variable]:
     """Deserialize a parameterized object.

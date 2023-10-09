@@ -16,19 +16,20 @@ from __future__ import annotations
 
 import inspect
 import json
+from collections.abc import Iterable
 from itertools import chain
-from typing import TYPE_CHECKING, Any
-from typing import Sequence as abcSequence
-from typing import Union, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
+import pulser
 from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import stringify_qubit_ids
 
 if TYPE_CHECKING:
+    from pulser.parametrized import Parametrized
     from pulser.register.base_register import QubitId
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
@@ -154,10 +155,22 @@ def serialize_abstract_sequence(
         for var in seq._variables.values():
             res["variables"][var.name]["value"] = [var.dtype()] * var.size
 
+    def unfold_targets(
+        target_ids: QubitId | Iterable[QubitId],
+    ) -> QubitId | list[QubitId]:
+        try:
+            return (
+                list(cast(Iterable, target_ids))
+                if not isinstance(target_ids, str)
+                else target_ids
+            )
+        except TypeError:
+            return cast(Union[int, str], target_ids)
+
     def convert_targets(
-        target_ids: Union[QubitId, abcSequence[QubitId]]
+        target_ids: Union[QubitId, Iterable[QubitId]]
     ) -> Union[int, list[int]]:
-        target_array = np.array(target_ids)
+        target_array = np.array(unfold_targets(target_ids))
         og_dim = target_array.ndim
         if og_dim == 0:
             target_array = target_array[np.newaxis]
@@ -230,10 +243,19 @@ def serialize_abstract_sequence(
             )
         elif "target" in call.name:
             data = get_all_args(("qubits", "channel"), call)
+            target: Parametrized | int | list[int]
             if call.name == "target":
                 target = convert_targets(data["qubits"])
             elif call.name == "target_index":
-                target = data["qubits"]
+                if isinstance(
+                    data["qubits"], pulser.parametrized.Parametrized
+                ):
+                    # The qubits are given as a variable
+                    target = data["qubits"]
+                else:
+                    target = cast(
+                        Union[int, list], unfold_targets(data["qubits"])
+                    )
             else:
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
             operations.append(

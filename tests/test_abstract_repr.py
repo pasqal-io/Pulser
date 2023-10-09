@@ -41,7 +41,7 @@ from pulser.json.abstract_repr.validation import REGISTRY
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
-from pulser.parametrized.variable import VariableItem
+from pulser.parametrized.variable import Variable, VariableItem
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence._call import _Call
@@ -260,7 +260,10 @@ class TestSerialization:
         reg = Register(qubits)
         device = request.param
         seq = Sequence(reg, device)
-        seq.declare_channel("digital", "raman_local", initial_target="control")
+
+        seq.declare_channel(
+            "digital", "raman_local", initial_target=("control",)
+        )
         seq.declare_channel(
             "rydberg", "rydberg_local", initial_target="control"
         )
@@ -291,7 +294,7 @@ class TestSerialization:
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
         seq.phase_shift(1.0, "control", "target", basis="ground-rydberg")
-        seq.target("target", "rydberg")
+        seq.target({"target"}, "rydberg")
         seq.add(two_pi_pulse, "rydberg")
 
         seq.delay(100, "digital")
@@ -348,6 +351,12 @@ class TestSerialization:
         assert abstract["operations"][0] == {
             "op": "target",
             "channel": "digital",
+            "target": [0],
+        }
+
+        assert abstract["operations"][1] == {
+            "op": "target",
+            "channel": "rydberg",
             "target": 0,
         }
 
@@ -412,6 +421,12 @@ class TestSerialization:
             "detuning": {"kind": "constant", "duration": 0, "value": 0.0},
             "phase": 0.0,
             "post_phase_shift": 0.0,
+        }
+
+        assert abstract["operations"][8] == {
+            "op": "target",
+            "channel": "rydberg",
+            "target": [1],
         }
 
         assert abstract["operations"][10] == {
@@ -1185,6 +1200,7 @@ class TestDeserialization:
         "op",
         [
             {"op": "target", "target": 2, "channel": "digital"},
+            {"op": "target", "target": [0], "channel": "digital"},
             {"op": "delay", "time": 500, "channel": "global"},
             {"op": "align", "channels": ["digital", "global"]},
             {
@@ -1391,6 +1407,11 @@ class TestDeserialization:
         "op",
         [
             {"op": "target", "target": var1, "channel": "digital"},
+            {
+                "op": "target",
+                "target": {"variable": "var1"},
+                "channel": "digital",
+            },
             {"op": "delay", "time": var2, "channel": "global"},
             {
                 "op": "phase_shift",
@@ -1439,7 +1460,10 @@ class TestDeserialization:
         c = seq._to_build_calls[0]
         if op["op"] == "target":
             assert c.name == "target_index"
-            assert isinstance(c.kwargs["qubits"], VariableItem)
+            target_type = (
+                VariableItem if "expression" in op["target"] else Variable
+            )
+            assert isinstance(c.kwargs["qubits"], target_type)
             assert c.kwargs["channel"] == op["channel"]
         elif op["op"] == "delay":
             assert c.name == "delay"
