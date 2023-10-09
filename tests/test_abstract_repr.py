@@ -41,7 +41,7 @@ from pulser.json.abstract_repr.validation import REGISTRY
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
-from pulser.parametrized.variable import VariableItem
+from pulser.parametrized.variable import Variable, VariableItem
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.sequence._call import _Call
@@ -260,7 +260,10 @@ class TestSerialization:
         reg = Register(qubits)
         device = request.param
         seq = Sequence(reg, device)
-        seq.declare_channel("digital", "raman_local", initial_target="control")
+
+        seq.declare_channel(
+            "digital", "raman_local", initial_target=("control",)
+        )
         seq.declare_channel(
             "rydberg", "rydberg_local", initial_target="control"
         )
@@ -291,7 +294,7 @@ class TestSerialization:
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
         seq.phase_shift(1.0, "control", "target", basis="ground-rydberg")
-        seq.target("target", "rydberg")
+        seq.target({"target"}, "rydberg")
         seq.add(two_pi_pulse, "rydberg")
 
         seq.delay(100, "digital")
@@ -348,6 +351,12 @@ class TestSerialization:
         assert abstract["operations"][0] == {
             "op": "target",
             "channel": "digital",
+            "target": 0,  # tuple[int] is still serialized as int
+        }
+
+        assert abstract["operations"][1] == {
+            "op": "target",
+            "channel": "rydberg",
             "target": 0,
         }
 
@@ -412,6 +421,12 @@ class TestSerialization:
             "detuning": {"kind": "constant", "duration": 0, "value": 0.0},
             "phase": 0.0,
             "post_phase_shift": 0.0,
+        }
+
+        assert abstract["operations"][8] == {
+            "op": "target",
+            "channel": "rydberg",
+            "target": 1,
         }
 
         assert abstract["operations"][10] == {
@@ -897,6 +912,33 @@ class TestSerialization:
             assert abstract["operations"][3]["op"] == "pulse"
             assert abstract["operations"][3]["channel"] == "rydberg_global"
 
+    def test_multi_qubit_target(self):
+        seq_ = Sequence(Register.square(2, prefix="q"), MockDevice)
+        var_targets = seq_.declare_variable("var_targets", dtype=int, size=4)
+
+        seq_.declare_channel(
+            "rydberg_local", "rydberg_local", initial_target=("q0", "q1")
+        )
+        seq_.target(["q3", "q2"], "rydberg_local")
+        seq_.target_index(var_targets, "rydberg_local")
+        seq_.target(["q0"], "rydberg_local")
+        seq_.target_index(var_targets[2], "rydberg_local")
+
+        abstract = json.loads(seq_.to_abstract_repr())
+
+        assert all(op["op"] == "target" for op in abstract["operations"])
+        assert abstract["operations"][0]["target"] == [0, 1]
+        assert abstract["operations"][1]["target"] == [3, 2]
+        assert abstract["operations"][2]["target"] == {
+            "variable": "var_targets"
+        }
+        assert abstract["operations"][3]["target"] == 0
+        assert abstract["operations"][4]["target"] == {
+            "expression": "index",
+            "lhs": {"variable": "var_targets"},
+            "rhs": 2,
+        }
+
 
 def _get_serialized_seq(
     operations: list[dict] = [],
@@ -1185,6 +1227,7 @@ class TestDeserialization:
         "op",
         [
             {"op": "target", "target": 2, "channel": "digital"},
+            {"op": "target", "target": [1, 2], "channel": "digital"},
             {"op": "delay", "time": 500, "channel": "global"},
             {"op": "align", "channels": ["digital", "global"]},
             {
@@ -1215,7 +1258,9 @@ class TestDeserialization:
         ids=_get_op,
     )
     def test_deserialize_non_parametrized_op(self, op):
-        s = _get_serialized_seq(operations=[op])
+        s = _get_serialized_seq(
+            operations=[op], device=json.loads(MockDevice.to_abstract_repr())
+        )
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 
@@ -1240,6 +1285,7 @@ class TestDeserialization:
         elif op["op"] == "phase_shift":
             assert c.name == "phase_shift_index"
             assert c.args == tuple([op["phi"], *op["targets"]])
+            assert c.kwargs["basis"] == "digital"
         elif op["op"] == "pulse":
             assert c.name == "add"
             assert c.kwargs["channel"] == op["channel"]
@@ -1390,12 +1436,17 @@ class TestDeserialization:
         "op",
         [
             {"op": "target", "target": var1, "channel": "digital"},
+            {
+                "op": "target",
+                "target": {"variable": "var1"},
+                "channel": "digital",
+            },
             {"op": "delay", "time": var2, "channel": "global"},
             {
                 "op": "phase_shift",
                 "phi": var1,
                 "targets": [2, var1],
-                "basis": "digital",
+                "basis": "ground-rydberg",
             },
             {
                 "op": "pulse",
@@ -1438,7 +1489,10 @@ class TestDeserialization:
         c = seq._to_build_calls[0]
         if op["op"] == "target":
             assert c.name == "target_index"
-            assert isinstance(c.kwargs["qubits"], VariableItem)
+            target_type = (
+                VariableItem if "expression" in op["target"] else Variable
+            )
+            assert isinstance(c.kwargs["qubits"], target_type)
             assert c.kwargs["channel"] == op["channel"]
         elif op["op"] == "delay":
             assert c.name == "delay"
@@ -1452,6 +1506,8 @@ class TestDeserialization:
             assert c.args[1] == 2
             # qubit 2 is variable
             assert isinstance(c.args[2], VariableItem)
+            # basis is fixed
+            assert c.kwargs["basis"] == "ground-rydberg"
         elif op["op"] == "pulse":
             assert c.name == "add"
             assert c.kwargs["channel"] == op["channel"]

@@ -16,19 +16,20 @@ from __future__ import annotations
 
 import inspect
 import json
+from collections.abc import Iterable
 from itertools import chain
-from typing import TYPE_CHECKING, Any
-from typing import Sequence as abcSequence
-from typing import Union, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
+import pulser
 from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import stringify_qubit_ids
 
 if TYPE_CHECKING:
+    from pulser.parametrized import Parametrized
     from pulser.register.base_register import QubitId
     from pulser.sequence import Sequence
     from pulser.sequence._call import _Call
@@ -154,17 +155,29 @@ def serialize_abstract_sequence(
         for var in seq._variables.values():
             res["variables"][var.name]["value"] = [var.dtype()] * var.size
 
+    def unfold_targets(
+        target_ids: QubitId | Iterable[QubitId],
+    ) -> QubitId | list[QubitId]:
+        if isinstance(target_ids, (int, str)):
+            return target_ids
+
+        targets = list(cast(Iterable, target_ids))
+        return targets if len(targets) > 1 else targets[0]
+
     def convert_targets(
-        target_ids: Union[QubitId, abcSequence[QubitId]]
+        target_ids: Union[QubitId, Iterable[QubitId]],
+        force_list_out: bool = False,
     ) -> Union[int, list[int]]:
-        target_array = np.array(target_ids)
+        target_array = np.array(unfold_targets(target_ids))
         og_dim = target_array.ndim
         if og_dim == 0:
             target_array = target_array[np.newaxis]
         indices = seq.get_register(include_mappable=True).find_indices(
             target_array.tolist()
         )
-        return indices[0] if og_dim == 0 else indices
+        if force_list_out or og_dim > 0:
+            return indices
+        return indices[0]
 
     def get_kwarg_default(call_name: str, kwarg_name: str) -> Any:
         sig = inspect.signature(getattr(seq, call_name))
@@ -230,10 +243,20 @@ def serialize_abstract_sequence(
             )
         elif "target" in call.name:
             data = get_all_args(("qubits", "channel"), call)
+            target: Parametrized | int | list[int]
             if call.name == "target":
                 target = convert_targets(data["qubits"])
             elif call.name == "target_index":
-                target = data["qubits"]
+                if isinstance(
+                    data["qubits"], pulser.parametrized.Parametrized
+                ):
+                    # The qubit indices are given through a variable
+                    target = data["qubits"]
+                else:
+                    # Either a single index or a sequence of indices
+                    target = cast(
+                        Union[int, list], unfold_targets(data["qubits"])
+                    )
             else:
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
             operations.append(
@@ -269,7 +292,7 @@ def serialize_abstract_sequence(
         elif "phase_shift" in call.name:
             targets = call.args[1:]
             if call.name == "phase_shift":
-                targets = convert_targets(targets)
+                targets = convert_targets(targets, force_list_out=True)
             elif call.name != "phase_shift_index":
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
             operations.append(
