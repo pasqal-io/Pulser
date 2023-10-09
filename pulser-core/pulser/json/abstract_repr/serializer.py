@@ -250,9 +250,10 @@ def serialize_abstract_sequence(
                 if isinstance(
                     data["qubits"], pulser.parametrized.Parametrized
                 ):
-                    # The qubits are given as a variable
+                    # The qubit indices are given through a variable
                     target = data["qubits"]
                 else:
+                    # Either a single index or a sequence of indices
                     target = cast(
                         Union[int, list], unfold_targets(data["qubits"])
                     )
