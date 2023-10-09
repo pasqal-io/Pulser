@@ -351,7 +351,7 @@ class TestSerialization:
         assert abstract["operations"][0] == {
             "op": "target",
             "channel": "digital",
-            "target": [0],
+            "target": 0,  # tuple[int] is still serialized as int
         }
 
         assert abstract["operations"][1] == {
@@ -426,7 +426,7 @@ class TestSerialization:
         assert abstract["operations"][8] == {
             "op": "target",
             "channel": "rydberg",
-            "target": [1],
+            "target": 1,
         }
 
         assert abstract["operations"][10] == {
@@ -912,6 +912,33 @@ class TestSerialization:
             assert abstract["operations"][3]["op"] == "pulse"
             assert abstract["operations"][3]["channel"] == "rydberg_global"
 
+    def test_multi_qubit_target(self):
+        seq_ = Sequence(Register.square(2, prefix="q"), MockDevice)
+        var_targets = seq_.declare_variable("var_targets", dtype=int, size=4)
+
+        seq_.declare_channel(
+            "rydberg_local", "rydberg_local", initial_target=("q0", "q1")
+        )
+        seq_.target(["q3", "q2"], "rydberg_local")
+        seq_.target_index(var_targets, "rydberg_local")
+        seq_.target(["q0"], "rydberg_local")
+        seq_.target_index(var_targets[2], "rydberg_local")
+
+        abstract = json.loads(seq_.to_abstract_repr())
+
+        assert all(op["op"] == "target" for op in abstract["operations"])
+        assert abstract["operations"][0]["target"] == [0, 1]
+        assert abstract["operations"][1]["target"] == [3, 2]
+        assert abstract["operations"][2]["target"] == {
+            "variable": "var_targets"
+        }
+        assert abstract["operations"][3]["target"] == 0
+        assert abstract["operations"][4]["target"] == {
+            "expression": "index",
+            "lhs": {"variable": "var_targets"},
+            "rhs": 2,
+        }
+
 
 def _get_serialized_seq(
     operations: list[dict] = [],
@@ -1200,7 +1227,7 @@ class TestDeserialization:
         "op",
         [
             {"op": "target", "target": 2, "channel": "digital"},
-            {"op": "target", "target": [0], "channel": "digital"},
+            {"op": "target", "target": [1, 2], "channel": "digital"},
             {"op": "delay", "time": 500, "channel": "global"},
             {"op": "align", "channels": ["digital", "global"]},
             {
@@ -1231,7 +1258,9 @@ class TestDeserialization:
         ids=_get_op,
     )
     def test_deserialize_non_parametrized_op(self, op):
-        s = _get_serialized_seq(operations=[op])
+        s = _get_serialized_seq(
+            operations=[op], device=json.loads(MockDevice.to_abstract_repr())
+        )
         _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
 

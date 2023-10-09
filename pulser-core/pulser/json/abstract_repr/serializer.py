@@ -158,17 +158,15 @@ def serialize_abstract_sequence(
     def unfold_targets(
         target_ids: QubitId | Iterable[QubitId],
     ) -> QubitId | list[QubitId]:
-        try:
-            return (
-                list(cast(Iterable, target_ids))
-                if not isinstance(target_ids, str)
-                else target_ids
-            )
-        except TypeError:
-            return cast(Union[int, str], target_ids)
+        if isinstance(target_ids, (int, str)):
+            return target_ids
+
+        targets = list(cast(Iterable, target_ids))
+        return targets if len(targets) > 1 else targets[0]
 
     def convert_targets(
-        target_ids: Union[QubitId, Iterable[QubitId]]
+        target_ids: Union[QubitId, Iterable[QubitId]],
+        force_list_out: bool = False,
     ) -> Union[int, list[int]]:
         target_array = np.array(unfold_targets(target_ids))
         og_dim = target_array.ndim
@@ -177,7 +175,9 @@ def serialize_abstract_sequence(
         indices = seq.get_register(include_mappable=True).find_indices(
             target_array.tolist()
         )
-        return indices[0] if og_dim == 0 else indices
+        if force_list_out or og_dim > 0:
+            return indices
+        return indices[0]
 
     def get_kwarg_default(call_name: str, kwarg_name: str) -> Any:
         sig = inspect.signature(getattr(seq, call_name))
@@ -292,7 +292,7 @@ def serialize_abstract_sequence(
         elif "phase_shift" in call.name:
             targets = call.args[1:]
             if call.name == "phase_shift":
-                targets = convert_targets(targets)
+                targets = convert_targets(targets, force_list_out=True)
             elif call.name != "phase_shift_index":
                 raise AbstractReprError(f"Unknown call '{call.name}'.")
             operations.append(
