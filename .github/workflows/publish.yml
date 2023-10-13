@@ -29,7 +29,9 @@ jobs:
         shell: bash
         run: ./.github/scripts/package.sh
       - name: Publish to TestPyPI
-        run: twine upload --repository testpypi dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
       - name: Install from TestPyPI
         timeout-minutes: 5
         shell: bash
