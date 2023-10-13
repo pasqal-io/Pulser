@@ -3,7 +3,6 @@ name: Release to PyPI
 on:
   release:
     types: [released]
-  pull_request:
 
 jobs:
   deploy:
@@ -24,7 +23,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools wheel twine
+          pip install setuptools wheel
       - name: Build packages
         shell: bash
         run: ./.github/scripts/package.sh
@@ -47,54 +46,51 @@ jobs:
         run: |
           grep -e pytest dev_requirements.txt | sed 's/ //g' | xargs pip install
           pytest
-      # - name: Publish to PyPI
-      #   env:
-      #     TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-      #     TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      #   run: twine upload dist/*
-      # - name: Confirm deployment
-      #   timeout-minutes: 5
-      #   shell: bash
-      #   run: |
-      #     version="$(head -1 VERSION.txt)"
-      #     until pip download pulser==$version
-      #     do
-      #       echo "Failed to download from PyPI, will wait for upload and retry."
-      #       sleep 30
-      #     done
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Confirm deployment
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          version="$(head -1 VERSION.txt)"
+          until pip download pulser==$version
+          do
+            echo "Failed to download from PyPI, will wait for upload and retry."
+            sleep 30
+          done
 
-  # check-release:
-  #   needs: deploy
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ubuntu-latest, macos-latest, windows-latest]
-  #       python-version: ["3.8", "3.9", "3.10", "3.11"]
-  #   steps:
-  #     - name: Check out Pulser
-  #       uses: actions/checkout@v3
-  #       with:
-  #         ref: ${{ github.ref }}
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Install Pulser from PyPI
-  #       timeout-minutes: 5
-  #       shell: bash
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         version="$(head -1 VERSION.txt)"
-  #         until pip install pulser==$version
-  #         do
-  #           echo "Failed to install from PyPI, will wait for upload and retry."
-  #           sleep 30
-  #         done
-  #     - name: Test the installation
-  #       shell: bash
-  #       run: |
-  #         version="$(head -1 VERSION.txt)"
-  #         python -c "import pulser; assert pulser.__version__ == '$version'"
-  #         grep -e pytest dev_requirements.txt | sed 's/ //g' | xargs pip install
-  #         pytest
+  check-release:
+    needs: deploy
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    steps:
+      - name: Check out Pulser
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Pulser from PyPI
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          version="$(head -1 VERSION.txt)"
+          until pip install pulser==$version
+          do
+            echo "Failed to install from PyPI, will wait for upload and retry."
+            sleep 30
+          done
+      - name: Test the installation
+        shell: bash
+        run: |
+          version="$(head -1 VERSION.txt)"
+          python -c "import pulser; assert pulser.__version__ == '$version'"
+          grep -e pytest dev_requirements.txt | sed 's/ //g' | xargs pip install
+          pytest
