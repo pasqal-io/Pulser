@@ -1,4 +1,4 @@
-name: Upload Release Package to PyPI
+name: Release to PyPI
 
 on:
   release:
@@ -7,6 +7,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
@@ -19,15 +23,14 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools wheel twine
+          pip install setuptools wheel
       - name: Build packages
         shell: bash
         run: ./.github/scripts/package.sh
       - name: Publish to TestPyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.TESTPYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TESTPYPI_PASSWORD }}
-        run: twine upload --repository testpypi dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
       - name: Install from TestPyPI
         timeout-minutes: 5
         shell: bash
@@ -44,10 +47,7 @@ jobs:
           grep -e pytest dev_requirements.txt | sed 's/ //g' | xargs pip install
           pytest
       - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: twine upload dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
       - name: Confirm deployment
         timeout-minutes: 5
         shell: bash
