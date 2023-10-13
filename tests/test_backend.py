@@ -219,7 +219,7 @@ class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
 
-    def submit(self, sequence, **kwargs) -> RemoteResults:
+    def submit(self, sequence, wait: bool = False, **kwargsn) -> RemoteResults:
         return RemoteResults("abcd", self)
 
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
