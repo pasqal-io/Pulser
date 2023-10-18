@@ -36,7 +36,10 @@ class QPUBackend(RemoteBackend):
                 is parametrized, the values for all the variables necessary
                 to build the sequence must be given in it's own mapping, for
                 each job, under the 'variables' field.
-            wait: Whether to wait until the results become available.
+            wait: Whether to wait until the results of the jobs become
+                available.  If set to False, the call is non-blocking and the
+                obtained results' status can be checked using their `status`
+                property.
 
         Returns:
             The results, which can be accessed once all sequences have been
