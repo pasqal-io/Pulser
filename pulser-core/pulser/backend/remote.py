@@ -96,7 +96,7 @@ class RemoteConnection(ABC):
 
     @abstractmethod
     def submit(
-        self, sequence: Sequence, **kwargs: Any
+        self, sequence: Sequence, wait: bool = False, **kwargs: Any
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
         pass
