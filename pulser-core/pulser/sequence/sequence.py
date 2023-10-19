@@ -1220,7 +1220,7 @@ class Sequence(Generic[DeviceType]):
                 channel_obj = self.declared_channels[channel]
                 channel_obj.validate_duration(duration)
             for arg in (phase, post_phase_shift):
-                if not isinstance(arg, (float, int)):
+                if not isinstance(arg, (Parametrized, float, int)):
                     raise TypeError("Phase values must be a numeric value.")
             return
 
