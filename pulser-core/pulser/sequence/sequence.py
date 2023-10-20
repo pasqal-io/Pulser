@@ -19,7 +19,7 @@ import copy
 import json
 import os
 import warnings
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Mapping
 from typing import (
     Any,
     Generic,
@@ -529,7 +529,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     def config_slm_mask(
-        self, qubits: Iterable[QubitId], dmm_id: str = "dmm_0"
+        self, qubits: Collection[QubitId], dmm_id: str = "dmm_0"
     ) -> None:
         """Setup an SLM mask by specifying the qubits it targets.
 
@@ -545,7 +545,7 @@ class Sequence(Generic[DeviceType]):
         pulse added after this operation.
 
         Args:
-            qubits: Iterable of qubit ID's to mask during the first global
+            qubits: Collection of qubit ID's to mask during the first global
                 pulse of the sequence.
             dmm_id: Id of the DMM channel to use in the device.
         """
@@ -846,7 +846,7 @@ class Sequence(Generic[DeviceType]):
         self,
         name: str,
         channel_id: str,
-        initial_target: Optional[Union[QubitId, Iterable[QubitId]]] = None,
+        initial_target: Optional[Union[QubitId, Collection[QubitId]]] = None,
     ) -> None:
         """Declares a new channel to the Sequence.
 
@@ -901,7 +901,7 @@ class Sequence(Generic[DeviceType]):
             try:
                 cond = any(
                     isinstance(t, Parametrized)
-                    for t in cast(Iterable, initial_target)
+                    for t in cast(Collection, initial_target)
                 )
             except TypeError:
                 cond = isinstance(initial_target, Parametrized)
@@ -930,7 +930,7 @@ class Sequence(Generic[DeviceType]):
             else:
                 # "_target" call is not saved
                 self._target(
-                    cast(Union[Iterable, QubitId], initial_target), name
+                    cast(Union[Collection, QubitId], initial_target), name
                 )
 
         # Manually store the channel declaration as a regular call
@@ -1319,14 +1319,14 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def target(
         self,
-        qubits: Union[QubitId, Iterable[QubitId]],
+        qubits: Union[QubitId, Collection[QubitId]],
         channel: str,
     ) -> None:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
             qubits: The new target for this channel. Must correspond to a
-                qubit ID in device or an iterable of qubit IDs, when
+                qubit ID in device or a collection of qubit IDs, when
                 multi-qubit addressing is possible.
             channel: The channel's name provided when declared. Must be
                 a channel with 'Local' addressing.
@@ -1336,14 +1336,14 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def target_index(
         self,
-        qubits: Union[int, Iterable[int], Parametrized],
+        qubits: Union[int, Collection[int], Parametrized],
         channel: str,
     ) -> None:
         """Changes the target qubit of a 'Local' channel.
 
         Args:
             qubits: The new target for this channel. Must correspond to a
-                qubit index or an iterable of qubit indices, when multi-qubit
+                qubit index or an collection of qubit indices, when multi-qubit
                 addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -1993,7 +1993,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.block_if_measured
     def _target(
         self,
-        qubits: Union[Iterable[QubitId], QubitId, Parametrized],
+        qubits: Union[Collection[QubitId], QubitId, Parametrized],
         channel: str,
         _index: bool = False,
     ) -> None:
@@ -2001,7 +2001,7 @@ class Sequence(Generic[DeviceType]):
         channel_obj = self._schedule[channel].channel_obj
         try:
             qubits_set = (
-                set(cast(Iterable, qubits))
+                set(cast(Collection, qubits))
                 if not isinstance(qubits, str)
                 else {qubits}
             )
