@@ -2008,6 +2008,11 @@ class Sequence(Generic[DeviceType]):
         except TypeError:
             qubits_set = {qubits}
 
+        if not qubits_set:
+            raise ValueError(
+                "Need at least one qubit to target but none were given."
+            )
+
         if channel_obj.addressing != "Local":
             raise ValueError("Can only choose target of 'Local' channels.")
         elif (
