@@ -88,13 +88,12 @@ class QutipEmulator:
         if sampled_seq.max_duration == 0:
             raise ValueError("SequenceSamples is empty.")
         # Check compatibility of register and device
-        self._device = device
-        self._device.validate_register(register)
+        device.validate_register(register)
         self._register = register
         # Check compatibility of samples and device:
         if (
             sampled_seq._slm_mask.end > 0
-            and not self._device.supports_slm_mask
+            and not device.supports_slm_mask
         ):
             raise ValueError(
                 "Samples use SLM mask but device does not have one."
@@ -134,14 +133,10 @@ class QutipEmulator:
                     )
                 )
         _sampled_seq = replace(sampled_seq, samples_list=samples_list)
-        self._interaction = "XY" if _sampled_seq._in_xy else "ising"
         self._tot_duration = _sampled_seq.max_duration
         self.samples_obj = _sampled_seq.extend_duration(self._tot_duration + 1)
 
-        # Initializing qubit infos
-        self._qdict = self._register.qubits
-
-        # Initializing sampling and evaluation times
+        # Testing sampling
         if not (0 < sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "
@@ -152,23 +147,18 @@ class QutipEmulator:
             raise ValueError(
                 "`sampling_rate` is too small, less than 4 data points."
             )
-        self._sampling_rate = sampling_rate
-        self.sampling_times = adapt_to_sampling_rate(
-            # Include extra time step for final instruction from samples:
-            np.arange(self._tot_duration + 1, dtype=np.double) / 1000,
-            self._sampling_rate,
-            self._tot_duration + 1,
-        )
-        self.set_evaluation_times(evaluation_times)
-
         # Sets the config as well as builds the hamiltonian
         self.hamiltonian = Hamiltonian(
             self.samples_obj,
-            self._qdict,
-            self._device,
-            self._sampling_rate,
+            self._register.qubits,
+            device,
+            sampling_rate,
             config if config else SimConfig(),
         )
+        # Initializing evaluation times
+        self._eval_times_array: np.ndarray
+        self.set_evaluation_times(evaluation_times)
+
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
@@ -286,7 +276,6 @@ class QutipEmulator:
         self._eval_times_array = np.union1d(
             eval_times, [0.0, self._tot_duration / 1000]
         )
-        self._eval_times_instruction = value
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
         r"""Get the Hamiltonian created from the sequence at a fixed time.

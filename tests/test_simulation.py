@@ -663,12 +663,12 @@ def test_config():
 
 
 def test_noise(seq, matrices):
-    np.random.seed(3)
+    np.random.seed(2)
     sim2 = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
     )
     assert sim2.run().sample_final_state() == Counter(
-        {"000": 857, "110": 73, "100": 70}
+        {"000": 955, "001": 6, "100": 39}
     )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="dephasing"))

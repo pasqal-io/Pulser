@@ -77,7 +77,6 @@ class Hamiltonian:
         self.op_matrix: dict[str, qutip.Qobj]
         self.basis: dict[str, qutip.Qobj]
         self.dim: int
-        self._eval_times_array: np.ndarray
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
 
