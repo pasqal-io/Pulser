@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Defines the QutipEmulator, used to simulate a Sequence or its samples."""
+"""Defines the Hamiltonian class."""
 
 from __future__ import annotations
 
@@ -45,53 +45,57 @@ def adapt_to_sampling_rate(
 
 
 class Hamiltonian:
-    r"""Hamiltonian generated from a sampled sequence and noise.
+    r"""Generates Hamiltonian from a sampled sequence and noise.
 
     Args:
-        sampled_obj: A sampled pulse sequence extended such that all its
-            channels have same duration.
+        samples_obj: A sampled sequence whose ChannelSamples have same
+            duration.
+        qdict: A dictionary associating coordinates to qubit ids.
         device: The device specifications.
         sampling_rate: The fraction of samples that we wish to extract from
             the samples to simulate. Has to be a value between 0.05 and 1.0.
-        interaction: The type of interaction between the atoms ("XY",
-            "ground-rydberg", "raman").
-        qdict: A dictionary associating positions to qubit ids.
-        config: Noise configuration to use.
+        config: Configuration to be used for this simulation.
     """
 
     def __init__(
         self,
         samples_obj: SequenceSamples,
+        qdict: dict[QubitId, np.ndarray],
         device: BaseDevice,
         sampling_rate: float,
-        interaction: str,
-        qdict: dict[QubitId, np.ndarray],
         config: SimConfig,
-    ):
+    ) -> None:
         """Instantiates a Hamiltonian object."""
-        self.samples_obj: SequenceSamples = samples_obj
-        self.duration = self.samples_obj.max_duration
+        self.samples_obj = samples_obj
+        self._qdict = qdict
         self._device = device
         self._sampling_rate = sampling_rate
-        self.sampling_times = adapt_to_sampling_rate(
-            # Include extra time step for final instruction from samples:
-            np.arange(self.duration, dtype=np.double) / 1000,
-            self._sampling_rate,
-            self.duration,
-        )
-        self._interaction = interaction
-        self._qdict: dict[QubitId, np.ndarray] = qdict
-        self._config: SimConfig
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
+        self._config: SimConfig
         self.op_matrix: dict[str, qutip.Qobj]
         self.basis: dict[str, qutip.Qobj]
         self.dim: int
         self._eval_times_array: np.ndarray
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
-        self.samples: dict
+
+        # Define interaction
+        self._interaction = "XY" if self.samples_obj._in_xy else "ising"
+
+        # Initializing qubit infos
+        self._size = len(self._qdict)
+        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
+
+        # Compute sampling times
+        self.duration = self.samples_obj.max_duration
+        self.sampling_times = adapt_to_sampling_rate(
+            # Include extra time step for final instruction from samples:
+            np.arange(self.duration, dtype=np.double) / 1000,
+            self._sampling_rate,
+            self.duration,
+        )
 
         # Stores the qutip operators used in building the Hamiltonian
         self.operators: dict[str, defaultdict[str, dict]] = {
@@ -99,69 +103,12 @@ class Hamiltonian:
         }
         self._collapse_ops: list[qutip.Qobj] = []
 
-        # Initializing qubit infos
-        self._size = len(self._qdict)
-        self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
-
-        # Builds the hamiltonian
         self.set_config(config)
 
     @property
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
         return self._config
-
-    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
-        """Creates an operator with non-trivial actions on some qubits.
-
-        Takes as argument a list of tuples ``[(operator_1, qubits_1),
-        (operator_2, qubits_2)...]``. Returns the operator given by the tensor
-        product of {``operator_i`` applied on ``qubits_i``} and Id on the rest.
-        ``(operator, 'global')`` returns the sum for all ``j`` of operator
-        applied at ``qubit_j`` and identity elsewhere.
-
-        Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
-        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
-
-        Args:
-            operations: List of tuples `(operator, qubits)`.
-                `operator` can be a ``qutip.Quobj`` or a string key for
-                ``self.op_matrix``. `qubits` is the list on which operator
-                will be applied. The qubits can be passed as their
-                index or their label in the register.
-
-        Returns:
-            The final operator.
-        """
-        op_list = [self.op_matrix["I"] for j in range(self._size)]
-
-        if not isinstance(operations, list):
-            operations = [operations]
-
-        for operator, qubits in operations:
-            if qubits == "global":
-                return sum(
-                    self.build_operator([(operator, [q_id])])
-                    for q_id in self._qdict
-                )
-            else:
-                qubits_set = set(qubits)
-                if len(qubits_set) < len(qubits):
-                    raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(self._qdict.keys()):
-                    raise ValueError(
-                        "Invalid qubit names: "
-                        f"{qubits_set - self._qdict.keys()}"
-                    )
-                if isinstance(operator, str):
-                    try:
-                        operator = self.op_matrix[operator]
-                    except KeyError:
-                        raise ValueError(f"{operator} is not a valid operator")
-                for qubit in qubits:
-                    k = self._qid_index[qubit]
-                    op_list[k] = operator
-        return qutip.tensor(op_list)
 
     def _build_collapse_operators(self, prev_config: SimConfig) -> None:
         kraus_ops = []
@@ -285,8 +232,8 @@ class Hamiltonian:
             self._bad_atoms = {qid: False for qid in self._qid_index}
         if "doppler" not in self.config.noise:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
-        self.generate_hamiltonian()
-        # Update collapse operators
+        # Noise, samples and Hamiltonian update routine
+        self._construct_hamiltonian()
         self._build_collapse_operators(prev_config)
 
     def add_config(self, config: SimConfig) -> None:
@@ -343,23 +290,13 @@ class Hamiltonian:
         # set config with the new parameters:
         self.set_config(SimConfig(**param_dict))
 
-    def _update_noise(self) -> None:
-        """Updates noise random parameters.
+    def show_config(self, solver_options: bool = False) -> None:
+        """Shows current configuration."""
+        print(self._config.__str__(solver_options))
 
-        Used at the start of each run. If SPAM isn't in chosen noises, all
-        atoms are set to be correctly prepared.
-        """
-        if "SPAM" in self.config.noise and self.config.eta > 0:
-            dist = (
-                np.random.uniform(size=len(self._qid_index))
-                < self.config.spam_dict["eta"]
-            )
-            self._bad_atoms = dict(zip(self._qid_index, dist))
-        if "doppler" in self.config.noise:
-            detune = np.random.normal(
-                0, self.config.doppler_sigma, size=len(self._qid_index)
-            )
-            self._doppler_detune = dict(zip(self._qid_index, detune))
+    def reset_config(self) -> None:
+        """Resets configuration to default."""
+        self.set_config(SimConfig())
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
@@ -411,6 +348,76 @@ class Hamiltonian:
                             samples["Local"][basis][qid][qty] = 0.0
         self.samples = samples
 
+    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+        """Creates an operator with non-trivial actions on some qubits.
+
+        Takes as argument a list of tuples ``[(operator_1, qubits_1),
+        (operator_2, qubits_2)...]``. Returns the operator given by the tensor
+        product of {``operator_i`` applied on ``qubits_i``} and Id on the rest.
+        ``(operator, 'global')`` returns the sum for all ``j`` of operator
+        applied at ``qubit_j`` and identity elsewhere.
+
+        Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
+        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
+
+        Args:
+            operations: List of tuples `(operator, qubits)`.
+                `operator` can be a ``qutip.Quobj`` or a string key for
+                ``self.op_matrix``. `qubits` is the list on which operator
+                will be applied. The qubits can be passed as their
+                index or their label in the register.
+
+        Returns:
+            The final operator.
+        """
+        op_list = [self.op_matrix["I"] for j in range(self._size)]
+
+        if not isinstance(operations, list):
+            operations = [operations]
+
+        for operator, qubits in operations:
+            if qubits == "global":
+                return sum(
+                    self.build_operator([(operator, [q_id])])
+                    for q_id in self._qdict
+                )
+            else:
+                qubits_set = set(qubits)
+                if len(qubits_set) < len(qubits):
+                    raise ValueError("Duplicate atom ids in argument list.")
+                if not qubits_set.issubset(self._qdict.keys()):
+                    raise ValueError(
+                        "Invalid qubit names: "
+                        f"{qubits_set - self._qdict.keys()}"
+                    )
+                if isinstance(operator, str):
+                    try:
+                        operator = self.op_matrix[operator]
+                    except KeyError:
+                        raise ValueError(f"{operator} is not a valid operator")
+                for qubit in qubits:
+                    k = self._qid_index[qubit]
+                    op_list[k] = operator
+        return qutip.tensor(op_list)
+
+    def _update_noise(self) -> None:
+        """Updates noise random parameters.
+
+        Used at the start of each run. If SPAM isn't in chosen noises, all
+        atoms are set to be correctly prepared.
+        """
+        if "SPAM" in self.config.noise and self.config.eta > 0:
+            dist = (
+                np.random.uniform(size=len(self._qid_index))
+                < self.config.spam_dict["eta"]
+            )
+            self._bad_atoms = dict(zip(self._qid_index, dist))
+        if "doppler" in self.config.noise:
+            detune = np.random.normal(
+                0, self.config.doppler_sigma, size=len(self._qid_index)
+            )
+            self._doppler_detune = dict(zip(self._qid_index, detune))
+
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
         if self._interaction == "XY":
@@ -443,12 +450,11 @@ class Hamiltonian:
                 self.basis[proj[0]] * self.basis[proj[1]].dag()
             )
 
-    def generate_hamiltonian(self, update: bool = True) -> None:
-        """Generates the hamiltonian from the sampled sequence and noise.
+    def _construct_hamiltonian(self, update: bool = True) -> None:
+        """Constructs the hamiltonian from the sampled Sequence and noise.
 
-        Also builds qutip.Qobjs related to the SequenceSamples if not built
-        already, and refreshes potential noise parameters by drawing new at
-        random.
+        Also builds qutip.Qobjs related to the Sequence if not built already,
+        and refreshes potential noise parameters by drawing new at random.
 
         Args:
             update: Whether to update the noise parameters.
@@ -647,26 +653,3 @@ class Hamiltonian:
         ham = ham + ham.dag()
         ham.compress()
         self._hamiltonian = ham
-
-    def __call__(self, time: float) -> qutip.Qobj:
-        r"""Get the Hamiltonian created from the sequence at a fixed time.
-
-        Note:
-            The whole Hamiltonian is divided by :math:`\hbar`, so its
-            units are rad/µs.
-
-        Args:
-            time: The specific time at which we want to extract the
-                Hamiltonian (in ns).
-
-        Returns:
-            A new Qobj for the Hamiltonian with coefficients
-            extracted from the effective sequence (determined by
-            `self.sampling_rate`) at the specified time.
-        """
-        if time < 0:
-            raise ValueError(
-                f"Provided time (`time` = {time}) must be "
-                "greater than or equal to 0."
-            )
-        return self._hamiltonian(time / 1000)  # Creates new Qutip.Qobj

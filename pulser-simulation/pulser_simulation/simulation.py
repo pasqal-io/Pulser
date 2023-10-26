@@ -164,10 +164,9 @@ class QutipEmulator:
         # Sets the config as well as builds the hamiltonian
         self.hamiltonian = Hamiltonian(
             self.samples_obj,
+            self._qdict,
             self._device,
             self._sampling_rate,
-            self._interaction,
-            self._qdict,
             config if config else SimConfig(),
         )
         if self.samples_obj._measurement:
@@ -178,14 +177,6 @@ class QutipEmulator:
             else:
                 self._meas_basis = self.basis_name
         self.set_initial_state("all-ground")
-
-    def show_config(self, solver_options: bool = False) -> None:
-        """Shows current configuration."""
-        print(self.config.__str__(solver_options))
-
-    def reset_config(self) -> None:
-        """Resets configuration to default."""
-        self.set_config(SimConfig())
 
     @property
     def initial_state(self) -> qutip.Qobj:
