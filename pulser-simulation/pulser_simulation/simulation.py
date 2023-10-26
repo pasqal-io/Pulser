@@ -310,7 +310,12 @@ class QutipEmulator:
                 "less than or equal to the sequence duration "
                 f"({self._tot_duration})."
             )
-        return self.hamiltonian(time)
+        if time < 0:
+            raise ValueError(
+                f"Provided time (`time` = {time}) must be "
+                "greater than or equal to 0."
+            )
+        return self._hamiltonian(time / 1000)  # Creates new Qutip.Qobj
 
     # Run Simulation Evolution using Qutip
     def run(
@@ -458,7 +463,7 @@ class QutipEmulator:
             else:
                 reps = 1
             # At each run, new random noise: new Hamiltonian
-            self.hamiltonian.generate_hamiltonian(update=update_ham)
+            self._construct_hamiltonian(update=update_ham)
             # Get CoherentResults instance from sequence with added noise:
             cleanres_noisyseq = _run_solver()
             # Extract statistics at eval time:
