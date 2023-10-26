@@ -444,10 +444,11 @@ class Hamiltonian:
             )
 
     def generate_hamiltonian(self, update: bool = True) -> None:
-        """Constructs the hamiltonian from the Sequence.
+        """Generates the hamiltonian from the sampled sequence and noise.
 
-        Also builds qutip.Qobjs related to the Sequence if not built already,
-        and refreshes potential noise parameters by drawing new at random.
+        Also builds qutip.Qobjs related to the SequenceSamples if not built
+        already, and refreshes potential noise parameters by drawing new at
+        random.
 
         Args:
             update: Whether to update the noise parameters.
