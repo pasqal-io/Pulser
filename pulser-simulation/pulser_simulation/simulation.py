@@ -33,7 +33,7 @@ from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
 from pulser.sampler.samples import SequenceSamples
 from pulser.sequence._seq_drawer import draw_samples, draw_sequence
-from pulser_simulation.hamiltonian import Hamiltonian, adapt_to_sampling_rate
+from pulser_simulation.hamiltonian import Hamiltonian
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import (
@@ -91,10 +91,7 @@ class QutipEmulator:
         device.validate_register(register)
         self._register = register
         # Check compatibility of samples and device:
-        if (
-            sampled_seq._slm_mask.end > 0
-            and not device.supports_slm_mask
-        ):
+        if sampled_seq._slm_mask.end > 0 and not device.supports_slm_mask:
             raise ValueError(
                 "Samples use SLM mask but device does not have one."
             )
@@ -276,6 +273,7 @@ class QutipEmulator:
         self._eval_times_array = np.union1d(
             eval_times, [0.0, self._tot_duration / 1000]
         )
+        self._eval_times_instruction = value
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
         r"""Get the Hamiltonian created from the sequence at a fixed time.

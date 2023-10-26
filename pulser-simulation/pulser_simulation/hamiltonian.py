@@ -31,19 +31,6 @@ from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SimConfig
 
 
-def adapt_to_sampling_rate(
-    full_array: np.ndarray, sampling_rate: float, duration: int
-) -> np.ndarray:
-    """Adapt list to correspond to sampling rate."""
-    indices = np.linspace(
-        0,
-        len(full_array) - 1,
-        int(sampling_rate * duration),
-        dtype=int,
-    )
-    return cast(np.ndarray, full_array[indices])
-
-
 class Hamiltonian:
     r"""Generates Hamiltonian from a sampled sequence and noise.
 
@@ -89,11 +76,10 @@ class Hamiltonian:
 
         # Compute sampling times
         self.duration = self.samples_obj.max_duration
-        self.sampling_times = adapt_to_sampling_rate(
+        self.sampling_times = self._adapt_to_sampling_rate(
             # Include extra time step for final instruction from samples:
-            np.arange(self.duration, dtype=np.double) / 1000,
-            self._sampling_rate,
-            self.duration,
+            np.arange(self.duration, dtype=np.double)
+            / 1000
         )
 
         # Stores the qutip operators used in building the Hamiltonian
@@ -103,6 +89,16 @@ class Hamiltonian:
         self._collapse_ops: list[qutip.Qobj] = []
 
         self.set_config(config)
+
+    def _adapt_to_sampling_rate(self, full_array: np.ndarray) -> np.ndarray:
+        """Adapt list to correspond to sampling rate."""
+        indices = np.linspace(
+            0,
+            len(full_array) - 1,
+            int(self._sampling_rate * self.duration),
+            dtype=int,
+        )
+        return cast(np.ndarray, full_array[indices])
 
     @property
     def config(self) -> SimConfig:
@@ -568,9 +564,7 @@ class Hamiltonian:
                         terms.append(
                             [
                                 operators[op_id],
-                                adapt_to_sampling_rate(
-                                    coeff, self._sampling_rate, self.duration
-                                ),
+                                self._adapt_to_sampling_rate(coeff),
                             ]
                         )
             elif addr == "Local":
@@ -592,11 +586,7 @@ class Hamiltonian:
                             terms.append(
                                 [
                                     operators[q_id][op_id],
-                                    adapt_to_sampling_rate(
-                                        coeff,
-                                        self._sampling_rate,
-                                        self.duration,
-                                    ),
+                                    self._adapt_to_sampling_rate(coeff),
                                 ]
                             )
             self.operators[addr][basis] = operators
@@ -620,19 +610,15 @@ class Hamiltonian:
                 qobj_list = [
                     [
                         make_interaction_term(),
-                        adapt_to_sampling_rate(
-                            coeff, self._sampling_rate, self.duration
-                        ),
+                        self._adapt_to_sampling_rate(coeff),
                     ]
                 ]
                 # Build the interaction term for masked qubits
                 qobj_list += [
                     [
                         make_interaction_term(masked=True),
-                        adapt_to_sampling_rate(
+                        self._adapt_to_sampling_rate(
                             np.logical_not(coeff).astype(int),
-                            self._sampling_rate,
-                            self.duration,
                         ),
                     ]
                 ]
