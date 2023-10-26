@@ -53,11 +53,12 @@ class Hamiltonian:
         device: The device specifications.
         sampling_rate: The fraction of samples that we wish to extract from
             the samples to simulate. Has to be a value between 0.05 and 1.0.
-        interaction: The type of interaction between the atoms ("XY", 
+        interaction: The type of interaction between the atoms ("XY",
             "ground-rydberg", "raman").
         qdict: A dictionary associating positions to qubit ids.
         config: Noise configuration to use.
     """
+
     def __init__(
         self,
         samples_obj: SequenceSamples,

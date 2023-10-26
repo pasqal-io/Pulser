@@ -179,7 +179,6 @@ class QutipEmulator:
                 self._meas_basis = self.basis_name
         self.set_initial_state("all-ground")
 
-
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
         print(self.config.__str__(solver_options))
