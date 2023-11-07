@@ -75,10 +75,10 @@ class Hamiltonian:
         self._qid_index = {qid: i for i, qid in enumerate(self._qdict)}
 
         # Compute sampling times
-        self.duration = self.samples_obj.max_duration
+        self._duration = self.samples_obj.max_duration
         self.sampling_times = self._adapt_to_sampling_rate(
             # Include extra time step for final instruction from samples:
-            np.arange(self.duration, dtype=np.double)
+            np.arange(self._duration, dtype=np.double)
             / 1000
         )
 
@@ -95,7 +95,7 @@ class Hamiltonian:
         indices = np.linspace(
             0,
             len(full_array) - 1,
-            int(self._sampling_rate * self.duration),
+            int(self._sampling_rate * self._duration),
             dtype=int,
         )
         return cast(np.ndarray, full_array[indices])
@@ -105,19 +105,18 @@ class Hamiltonian:
         """The current configuration, as a SimConfig instance."""
         return self._config
 
-    def _build_collapse_operators(self, prev_config: SimConfig) -> None:
+    def _build_collapse_operators(self, config: SimConfig) -> None:
         kraus_ops = []
         self._collapse_ops = []
-        if "dephasing" in self.config.noise:
+        if "dephasing" in config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
-                self.set_config(prev_config)
                 raise NotImplementedError(
                     "Cannot include dephasing noise in digital- or all-basis."
                 )
             # Probability of phase (Z) flip:
             # First order in prob
-            prob = self.config.dephasing_prob / 2
+            prob = config.dephasing_prob / 2
             n = self._size
             if prob > 0.1 and n > 1:
                 warnings.warn(
@@ -134,17 +133,16 @@ class Hamiltonian:
             ]
             kraus_ops.append(k * qutip.sigmaz())
 
-        if "depolarizing" in self.config.noise:
+        if "depolarizing" in config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
-                self.set_config(prev_config)
                 raise NotImplementedError(
                     "Cannot include depolarizing "
                     + "noise in digital- or all-basis."
                 )
             # Probability of error occurrence
 
-            prob = self.config.depolarizing_prob / 4
+            prob = config.depolarizing_prob / 4
             n = self._size
             if prob > 0.1 and n > 1:
                 warnings.warn(
@@ -163,20 +161,19 @@ class Hamiltonian:
             kraus_ops.append(k * qutip.sigmay())
             kraus_ops.append(k * qutip.sigmaz())
 
-        if "eff_noise" in self.config.noise:
+        if "eff_noise" in config.noise:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
-                self.set_config(prev_config)
                 raise NotImplementedError(
                     "Cannot include general "
                     + "noise in digital- or all-basis."
                 )
             # Probability distribution of error occurences
             n = self._size
-            m = len(self.config.eff_noise_opers)
+            m = len(config.eff_noise_opers)
             if n > 1:
                 for i in range(1, m):
-                    prob_i = self.config.eff_noise_probs[i]
+                    prob_i = config.eff_noise_probs[i]
                     if prob_i > 0.1:
                         warnings.warn(
                             "The effective noise model is a first-order"
@@ -186,16 +183,14 @@ class Hamiltonian:
                         )
                         break
             # Deriving Kraus operators
-            prob_id = self.config.eff_noise_probs[0]
+            prob_id = config.eff_noise_probs[0]
             self._collapse_ops += [
                 np.sqrt(prob_id**n)
                 * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
             ]
             for i in range(1, m):
-                k = np.sqrt(
-                    self.config.eff_noise_probs[i] * prob_id ** (n - 1)
-                )
-                k_op = k * self.config.eff_noise_opers[i]
+                k = np.sqrt(config.eff_noise_probs[i] * prob_id ** (n - 1))
+                k_op = k * config.eff_noise_opers[i]
                 kraus_ops.append(k_op)
 
         # Building collapse operators
@@ -221,7 +216,9 @@ class Hamiltonian:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        prev_config = self.config if hasattr(self, "_config") else SimConfig()
+        if not hasattr(self, "basis_name"):
+            self._build_basis_and_op_matrices()
+        self._build_collapse_operators(cfg)
         self._config = cfg
         if not ("SPAM" in self.config.noise and self.config.eta > 0):
             self._bad_atoms = {qid: False for qid in self._qid_index}
@@ -229,7 +226,6 @@ class Hamiltonian:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
-        self._build_collapse_operators(prev_config)
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
@@ -604,7 +600,7 @@ class Hamiltonian:
             ):
                 # Build an array of binary coefficients for the interaction
                 # term of unmasked qubits
-                coeff = np.ones(self.duration - 1)
+                coeff = np.ones(self._duration - 1)
                 coeff[0 : self.samples_obj._slm_mask.end] = 0
                 # Build the interaction term for unmasked qubits
                 qobj_list = [

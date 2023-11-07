@@ -145,7 +145,7 @@ class QutipEmulator:
                 "`sampling_rate` is too small, less than 4 data points."
             )
         # Sets the config as well as builds the hamiltonian
-        self.hamiltonian = Hamiltonian(
+        self._hamiltonian = Hamiltonian(
             self.samples_obj,
             self._register.qubits,
             device,
@@ -159,11 +159,96 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self.basis_name in {"digital", "all"}:
+            if self._hamiltonian.basis_name in {"digital", "all"}:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self.basis_name
+                self._meas_basis = self._hamiltonian.basis_name
         self.set_initial_state("all-ground")
+
+    @property
+    def sampling_times(self) -> np.ndarray:
+        """The times at which hamiltonian is sampled."""
+        return self._hamiltonian.sampling_times
+
+    @property
+    def _sampling_rate(self) -> np.ndarray:
+        """The sampling rate."""
+        return self._hamiltonian._sampling_rate
+
+    @property
+    def dim(self) -> int:
+        """The dimension of the basis."""
+        return self._hamiltonian.dim
+
+    @property
+    def basis_name(self) -> str:
+        """The name of the basis."""
+        return self._hamiltonian.basis_name
+
+    @property
+    def basis(self) -> str:
+        """The basis in which result is expressed."""
+        return self._hamiltonian.basis
+
+    @property
+    def config(self) -> SimConfig:
+        """The current configuration, as a SimConfig instance."""
+        return self._hamiltonian._config
+
+    def set_config(self, cfg: SimConfig) -> None:
+        """Sets current config to cfg and updates simulation parameters.
+
+        Args:
+            cfg: New configuration.
+        """
+        if not isinstance(cfg, SimConfig):
+            raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
+        not_supported = (
+            set(cfg.noise)
+            - cfg.supported_noises[self._hamiltonian._interaction]
+        )
+        if not_supported:
+            raise NotImplementedError(
+                f"Interaction mode '{self._hamiltonian._interaction}' does not"
+                " support simulation of noise types:"
+                f"{', '.join(not_supported)}."
+            )
+        self._hamiltonian.set_config(cfg)
+
+    def add_config(self, config: SimConfig) -> None:
+        """Updates the current configuration with parameters of another one.
+
+        Mostly useful when dealing with multiple noise types in different
+        configurations and wanting to merge these configurations together.
+        Adds simulation parameters to noises that weren't available in the
+        former SimConfig. Noises specified in both SimConfigs will keep
+        former noise parameters.
+
+        Args:
+            config: SimConfig to retrieve parameters from.
+        """
+        if not isinstance(config, SimConfig):
+            raise ValueError(f"Object {config} is not a valid `SimConfig`")
+
+        not_supported = (
+            set(config.noise)
+            - config.supported_noises[self._hamiltonian._interaction]
+        )
+        if not_supported:
+            raise NotImplementedError(
+                f"Interaction mode '{self._hamiltonian._interaction}' does not"
+                " support simulation of noise types: "
+                f"{', '.join(not_supported)}."
+            )
+        self._hamiltonian.add_config(config)
+
+    def show_config(self, solver_options: bool = False) -> None:
+        """Shows current configuration."""
+        print(self.config.__str__(solver_options))
+
+    def reset_config(self) -> None:
+        """Resets configuration to default."""
+        self.set_config(SimConfig())
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -187,15 +272,20 @@ class QutipEmulator:
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
                 [
-                    self.basis["u" if self._interaction == "XY" else "g"]
-                    for _ in range(self._size)
+                    self._hamiltonian.basis[
+                        "u" if self._hamiltonian._interaction == "XY" else "g"
+                    ]
+                    for _ in range(self._hamiltonian._size)
                 ]
             )
         else:
             state = cast(Union[np.ndarray, qutip.Qobj], state)
             shape = state.shape[0]
-            legal_shape = self.dim**self._size
-            legal_dims = [[self.dim] * self._size, [1] * self._size]
+            legal_shape = self._hamiltonian.dim**self._hamiltonian._size
+            legal_dims = [
+                [self._hamiltonian.dim] * self._hamiltonian._size,
+                [1] * self._hamiltonian._size,
+            ]
             if shape != legal_shape:
                 raise ValueError(
                     "Incompatible shape of initial state."
@@ -229,7 +319,7 @@ class QutipEmulator:
         """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
-                eval_times = np.copy(self.sampling_times)
+                eval_times = np.copy(self._hamiltonian.sampling_times)
             elif value == "Minimal":
                 eval_times = np.array([])
             else:
@@ -245,12 +335,12 @@ class QutipEmulator:
                 )
             indices = np.linspace(
                 0,
-                len(self.sampling_times) - 1,
-                int(value * len(self.sampling_times)),
+                len(self._hamiltonian.sampling_times) - 1,
+                int(value * len(self._hamiltonian.sampling_times)),
                 dtype=int,
             )
             # Note: if `value` is very small `eval_times` is an empty list:
-            eval_times = self.sampling_times[indices]
+            eval_times = self._hamiltonian.sampling_times[indices]
         elif isinstance(value, (list, tuple, np.ndarray)):
             if np.max(value, initial=0) > self._tot_duration / 1000:
                 raise ValueError(
@@ -302,7 +392,9 @@ class QutipEmulator:
                 f"Provided time (`time` = {time}) must be "
                 "greater than or equal to 0."
             )
-        return self._hamiltonian(time / 1000)  # Creates new Qutip.Qobj
+        return self._hamiltonian._hamiltonian(
+            time / 1000
+        )  # Creates new Qutip.Qobj
 
     # Run Simulation Evolution using Qutip
     def run(
@@ -349,7 +441,10 @@ class QutipEmulator:
                 for k in ("epsilon", "epsilon_prime")
             }
             if self.config.eta > 0 and self.initial_state != qutip.tensor(
-                [self.basis["g"] for _ in range(self._size)]
+                [
+                    self._hamiltonian.basis["g"]
+                    for _ in range(self._hamiltonian._size)
+                ]
             ):
                 raise NotImplementedError(
                     "Can't combine state preparation errors with an initial "
@@ -373,16 +468,16 @@ class QutipEmulator:
                 or "eff_noise" in self.config.noise
             ):
                 result = qutip.mesolve(
-                    self._hamiltonian,
+                    self._hamiltonian._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
-                    self._collapse_ops,
+                    self._hamiltonian._collapse_ops,
                     progress_bar=p_bar,
                     options=solv_ops,
                 )
             else:
                 result = qutip.sesolve(
-                    self._hamiltonian,
+                    self._hamiltonian._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
                     progress_bar=p_bar,
@@ -390,17 +485,17 @@ class QutipEmulator:
                 )
             results = [
                 QutipResult(
-                    tuple(self._qdict),
+                    tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self.basis_name,
+                    self._meas_basis == self._hamiltonian.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
-                self._size,
-                self.basis_name,
+                self._hamiltonian._size,
+                self._hamiltonian.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -419,7 +514,9 @@ class QutipEmulator:
                 initial_configs = Counter(
                     "".join(
                         (
-                            np.random.uniform(size=len(self._qid_index))
+                            np.random.uniform(
+                                size=len(self._hamiltonian._qid_index)
+                            )
                             < self.config.eta
                         )
                         .astype(int)
@@ -441,16 +538,16 @@ class QutipEmulator:
             if not update_ham:
                 initial_state, reps = initial_configs[i]
                 # We load the initial state manually
-                self._bad_atoms = dict(
+                self._hamiltonian._bad_atoms = dict(
                     zip(
-                        self._qid_index,
+                        self._hamiltonian._qid_index,
                         np.array(list(initial_state)).astype(bool),
                     )
                 )
             else:
                 reps = 1
             # At each run, new random noise: new Hamiltonian
-            self._construct_hamiltonian(update=update_ham)
+            self._hamiltonian._construct_hamiltonian(update=update_ham)
             # Get CoherentResults instance from sequence with added noise:
             cleanres_noisyseq = _run_solver()
             # Extract statistics at eval time:
@@ -464,13 +561,17 @@ class QutipEmulator:
             )
         n_measures = self.config.runs * self.config.samples_per_run
         results = [
-            SampledResult(tuple(self._qdict), self._meas_basis, total_count[t])
+            SampledResult(
+                tuple(self._hamiltonian._qdict),
+                self._meas_basis,
+                total_count[t],
+            )
             for t in time_indices
         ]
         return NoisyResults(
             results,
-            self._size,
-            self.basis_name,
+            self._hamiltonian._size,
+            self._hamiltonian.basis_name,
             self._eval_times_array,
             n_measures,
         )
@@ -584,9 +685,6 @@ class QutipEmulator:
             config,
             evaluation_times,
         )
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self.hamiltonian, name)
 
 
 class Simulation:
