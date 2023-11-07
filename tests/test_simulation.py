@@ -838,18 +838,20 @@ def test_add_config(matrices):
     )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
-    sim.add_config(
-        SimConfig(
-            noise=(
-                "SPAM",
-                "doppler",
-                "eff_noise",
-            ),
-            eff_noise_opers=[matrices["I"], matrices["X"]],
-            eff_noise_probs=[0.4, 0.6],
-            temperature=20000,
-        )
+    with pytest.raises(ValueError, match="is not a valid"):
+        sim._hamiltonian.add_config("bad_cfg")
+    config = SimConfig(
+        noise=(
+            "SPAM",
+            "doppler",
+            "eff_noise",
+        ),
+        eff_noise_opers=[matrices["I"], matrices["X"]],
+        eff_noise_probs=[0.4, 0.6],
+        temperature=20000,
     )
+    print("init", config)
+    sim.add_config(config)
     assert (
         "doppler" in sim.config.noise
         and "SPAM" in sim.config.noise
@@ -983,7 +985,14 @@ def test_noisy_xy():
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
         sim.set_config(SimConfig(("SPAM", "doppler")))
-
+    with pytest.raises(NotImplementedError, match="is not a valid"):
+        sim._hamiltonian.set_config(SimConfig(("SPAM", "doppler")))
+    with pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim._hamiltonian.set_config(
+            SimConfig(("SPAM", "doppler")).to_noise_model()
+        )
     sim.set_config(SimConfig("SPAM", eta=0.4))
     assert sim._hamiltonian._bad_atoms == {
         "atom0": True,
@@ -995,6 +1004,11 @@ def test_noisy_xy():
         NotImplementedError, match="simulation of noise types: amplitude"
     ):
         sim.add_config(SimConfig("amplitude"))
+
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: amplitude"
+    ):
+        sim._hamiltonian.add_config(SimConfig("amplitude").to_noise_model())
 
 
 def test_mask_nopulses():

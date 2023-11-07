@@ -28,6 +28,7 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
+from pulser.backend.noise_model import NoiseModel
 from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
@@ -150,7 +151,7 @@ class QutipEmulator:
             self._register.qubits,
             device,
             sampling_rate,
-            config if config else SimConfig(),
+            config.to_noise_model() if config else NoiseModel(),
         )
         # Initializing evaluation times
         self._eval_times_array: np.ndarray
@@ -171,7 +172,7 @@ class QutipEmulator:
         return self._hamiltonian.sampling_times
 
     @property
-    def _sampling_rate(self) -> np.ndarray:
+    def _sampling_rate(self) -> float:
         """The sampling rate."""
         return self._hamiltonian._sampling_rate
 
@@ -186,14 +187,14 @@ class QutipEmulator:
         return self._hamiltonian.basis_name
 
     @property
-    def basis(self) -> str:
+    def basis(self) -> dict[str, Any]:
         """The basis in which result is expressed."""
         return self._hamiltonian.basis
 
     @property
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
-        return self._hamiltonian._config
+        return SimConfig.from_noise_model(self._hamiltonian.config)
 
     def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
@@ -213,7 +214,7 @@ class QutipEmulator:
                 " support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
-        self._hamiltonian.set_config(cfg)
+        self._hamiltonian.set_config(cfg.to_noise_model())
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
@@ -240,7 +241,8 @@ class QutipEmulator:
                 " support simulation of noise types: "
                 f"{', '.join(not_supported)}."
             )
-        self._hamiltonian.add_config(config)
+        print("transformed", config.to_noise_model())
+        self._hamiltonian.add_config(config.to_noise_model())
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -248,11 +250,17 @@ class QutipEmulator:
 
     def reset_config(self) -> None:
         """Resets configuration to default."""
-        self.set_config(SimConfig())
+        self._hamiltonian.set_config(NoiseModel())
 
     @property
     def initial_state(self) -> qutip.Qobj:
-        """The initial state of the simulation.
+        """The initial state of the simulation."""
+        return self._initial_state
+
+    def set_initial_state(
+        self, state: Union[str, np.ndarray, qutip.Qobj]
+    ) -> None:
+        """Sets the initial state of the simulation.
 
         Args:
             state: The initial state.
@@ -262,12 +270,6 @@ class QutipEmulator:
                 - An ArrayLike with a shape compatible with the system
                 - A Qobj object
         """
-        return self._initial_state
-
-    def set_initial_state(
-        self, state: Union[str, np.ndarray, qutip.Qobj]
-    ) -> None:
-        """Sets the initial state of the simulation."""
         self._initial_state: qutip.Qobj
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
@@ -295,7 +297,13 @@ class QutipEmulator:
 
     @property
     def evaluation_times(self) -> np.ndarray:
-        """The times at which the results of this simulation are returned.
+        """The times at which the results of this simulation are returned."""
+        return np.array(self._eval_times_array)
+
+    def set_evaluation_times(
+        self, value: Union[str, ArrayLike, float]
+    ) -> None:
+        """Sets times at which the results of this simulation are returned.
 
         Args:
             value: Choose between:
@@ -311,12 +319,6 @@ class QutipEmulator:
 
                 - A float to act as a sampling rate for the resulting state.
         """
-        return np.array(self._eval_times_array)
-
-    def set_evaluation_times(
-        self, value: Union[str, ArrayLike, float]
-    ) -> None:
-        """Sets times at which the results of this simulation are returned."""
         if isinstance(value, str):
             if value == "Full":
                 eval_times = np.copy(self._hamiltonian.sampling_times)

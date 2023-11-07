@@ -25,10 +25,11 @@ from typing import Any, Union, cast
 import numpy as np
 import qutip
 
+from pulser.backend.noise_model import NoiseModel
 from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
-from pulser_simulation.simconfig import SimConfig
+from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
 
 
 class Hamiltonian:
@@ -50,7 +51,7 @@ class Hamiltonian:
         qdict: dict[QubitId, np.ndarray],
         device: BaseDevice,
         sampling_rate: float,
-        config: SimConfig,
+        config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
         self.samples_obj = samples_obj
@@ -60,7 +61,7 @@ class Hamiltonian:
 
         # Type hints for attributes defined outside of __init__
         self.basis_name: str
-        self._config: SimConfig
+        self._config: NoiseModel
         self.op_matrix: dict[str, qutip.Qobj]
         self.basis: dict[str, qutip.Qobj]
         self.dim: int
@@ -101,14 +102,14 @@ class Hamiltonian:
         return cast(np.ndarray, full_array[indices])
 
     @property
-    def config(self) -> SimConfig:
-        """The current configuration, as a SimConfig instance."""
+    def config(self) -> NoiseModel:
+        """The current configuration, as a NoiseModel instance."""
         return self._config
 
-    def _build_collapse_operators(self, config: SimConfig) -> None:
+    def _build_collapse_operators(self, config: NoiseModel) -> None:
         kraus_ops = []
         self._collapse_ops = []
-        if "dephasing" in config.noise:
+        if "dephasing" in config.noise_types:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
@@ -133,7 +134,7 @@ class Hamiltonian:
             ]
             kraus_ops.append(k * qutip.sigmaz())
 
-        if "depolarizing" in config.noise:
+        if "depolarizing" in config.noise_types:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
@@ -161,7 +162,7 @@ class Hamiltonian:
             kraus_ops.append(k * qutip.sigmay())
             kraus_ops.append(k * qutip.sigmaz())
 
-        if "eff_noise" in config.noise:
+        if "eff_noise" in config.noise_types:
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
@@ -200,16 +201,16 @@ class Hamiltonian:
                 for qid in self._qid_index
             ]
 
-    def set_config(self, cfg: SimConfig) -> None:
+    def set_config(self, cfg: NoiseModel) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
         """
-        if not isinstance(cfg, SimConfig):
-            raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
+        if not isinstance(cfg, NoiseModel):
+            raise ValueError(f"Object {cfg} is not a valid `NoiseModel`.")
         not_supported = (
-            set(cfg.noise) - cfg.supported_noises[self._interaction]
+            set(cfg.noise_types) - SUPPORTED_NOISES[self._interaction]
         )
         if not_supported:
             raise NotImplementedError(
@@ -220,30 +221,33 @@ class Hamiltonian:
             self._build_basis_and_op_matrices()
         self._build_collapse_operators(cfg)
         self._config = cfg
-        if not ("SPAM" in self.config.noise and self.config.eta > 0):
+        if not (
+            "SPAM" in self.config.noise_types
+            and self.config.state_prep_error > 0
+        ):
             self._bad_atoms = {qid: False for qid in self._qid_index}
-        if "doppler" not in self.config.noise:
+        if "doppler" not in self.config.noise_types:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
 
-    def add_config(self, config: SimConfig) -> None:
+    def add_config(self, config: NoiseModel) -> None:
         """Updates the current configuration with parameters of another one.
 
         Mostly useful when dealing with multiple noise types in different
         configurations and wanting to merge these configurations together.
         Adds simulation parameters to noises that weren't available in the
-        former SimConfig. Noises specified in both SimConfigs will keep
+        former NoiseModel. Noises specified in both NoiseModels will keep
         former noise parameters.
 
         Args:
-            config: SimConfig to retrieve parameters from.
+            config: NoiseModel to retrieve parameters from.
         """
-        if not isinstance(config, SimConfig):
-            raise ValueError(f"Object {config} is not a valid `SimConfig`")
+        if not isinstance(config, NoiseModel):
+            raise ValueError(f"Object {config} is not a valid `NoiseModel`")
 
         not_supported = (
-            set(config.noise) - config.supported_noises[self._interaction]
+            set(config.noise_types) - SUPPORTED_NOISES[self._interaction]
         )
         if not_supported:
             raise NotImplementedError(
@@ -251,17 +255,18 @@ class Hamiltonian:
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
 
-        old_noise_set = set(self.config.noise)
-        new_noise_set = old_noise_set.union(config.noise)
+        old_noise_set = set(self.config.noise_types)
+        new_noise_set = old_noise_set.union(config.noise_types)
         diff_noise_set = new_noise_set - old_noise_set
+        print(diff_noise_set)
         # Create temporary param_dict to add noise parameters:
         param_dict: dict[str, Any] = asdict(self._config)
         # Begin populating with added noise parameters:
-        param_dict["noise"] = tuple(new_noise_set)
+        param_dict["noise_types"] = tuple(new_noise_set)
         if "SPAM" in diff_noise_set:
-            param_dict["eta"] = config.eta
-            param_dict["epsilon"] = config.epsilon
-            param_dict["epsilon_prime"] = config.epsilon_prime
+            param_dict["state_prep_error"] = config.state_prep_error
+            param_dict["p_false_pos"] = config.p_false_pos
+            param_dict["p_false_neg"] = config.p_false_neg
         if "doppler" in diff_noise_set:
             param_dict["temperature"] = config.temperature
         if "amplitude" in diff_noise_set:
@@ -273,29 +278,23 @@ class Hamiltonian:
         if "eff_noise" in diff_noise_set:
             param_dict["eff_noise_opers"] = config.eff_noise_opers
             param_dict["eff_noise_probs"] = config.eff_noise_probs
-        param_dict["temperature"] *= 1.0e6
         # update runs:
         param_dict["runs"] = config.runs
         param_dict["samples_per_run"] = config.samples_per_run
 
         # set config with the new parameters:
-        self.set_config(SimConfig(**param_dict))
-
-    def show_config(self, solver_options: bool = False) -> None:
-        """Shows current configuration."""
-        print(self._config.__str__(solver_options))
-
-    def reset_config(self) -> None:
-        """Resets configuration to default."""
-        self.set_config(SimConfig())
+        self.set_config(NoiseModel(**param_dict))
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
-        if set(self.config.noise).issubset(
+        if set(self.config.noise_types).issubset(
             {"dephasing", "SPAM", "depolarizing", "eff_noise"}
         ):
-            local_noises = "SPAM" in self.config.noise and self.config.eta > 0
+            local_noises = (
+                "SPAM" in self.config.noise_types
+                and self.config.state_prep_error > 0
+            )
         samples = self.samples_obj.to_nested_dict(all_local=local_noises)
 
         def add_noise(
@@ -312,12 +311,12 @@ class Hamiltonian:
                 0, np.random.normal(1.0, self.config.amp_sigma)
             )
             for qid in slot.targets:
-                if "doppler" in self.config.noise:
+                if "doppler" in self.config.noise_types:
                     noise_det = self._doppler_detune[qid]
                     samples_dict[qid]["det"][slot.ti : slot.tf] += noise_det
                 # Gaussian beam loss in amplitude for global pulses only
                 # Noise is drawn at random for each pulse
-                if "amplitude" in self.config.noise and is_global_pulse:
+                if "amplitude" in self.config.noise_types and is_global_pulse:
                     position = self._qdict[qid]
                     r = np.linalg.norm(position)
                     w0 = self.config.laser_waist
@@ -389,7 +388,7 @@ class Hamiltonian:
                 for qubit in qubits:
                     k = self._qid_index[qubit]
                     op_list[k] = operator
-        return qutip.tensor(op_list)
+        return qutip.tensor(list(map(qutip.Qobj, op_list)))
 
     def _update_noise(self) -> None:
         """Updates noise random parameters.
@@ -397,15 +396,20 @@ class Hamiltonian:
         Used at the start of each run. If SPAM isn't in chosen noises, all
         atoms are set to be correctly prepared.
         """
-        if "SPAM" in self.config.noise and self.config.eta > 0:
+        if (
+            "SPAM" in self.config.noise_types
+            and self.config.state_prep_error > 0
+        ):
             dist = (
                 np.random.uniform(size=len(self._qid_index))
-                < self.config.spam_dict["eta"]
+                < self.config.state_prep_error
             )
             self._bad_atoms = dict(zip(self._qid_index, dist))
-        if "doppler" in self.config.noise:
+        if "doppler" in self.config.noise_types:
             detune = np.random.normal(
-                0, self.config.doppler_sigma, size=len(self._qid_index)
+                0,
+                doppler_sigma(self.config.temperature * 1e-6),
+                size=len(self._qid_index),
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
@@ -453,8 +457,6 @@ class Hamiltonian:
         if update:
             self._update_noise()
         self._extract_samples()
-        if not hasattr(self, "basis_name"):
-            self._build_basis_and_op_matrices()
 
         def make_vdw_term(q1: QubitId, q2: QubitId) -> qutip.Qobj:
             """Construct the Van der Waals interaction Term.
