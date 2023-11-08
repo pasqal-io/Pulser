@@ -16,7 +16,7 @@ import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
 from pulser.backend.noise_model import NoiseModel
-from pulser_simulation import SimConfig
+from pulser_simulation.simconfig import SimConfig, doppler_sigma
 
 
 @pytest.fixture
@@ -57,6 +57,7 @@ def test_init():
         eff_noise_probs=[0.3, 0.7],
     )
     str_config = config.__str__(True)
+    assert config.doppler_sigma == doppler_sigma(50 * 1e-6)
     assert (
         "Effective noise distribution" in str_config
         and "Effective noise operators" in str_config

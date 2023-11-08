@@ -79,7 +79,7 @@ class QutipEmulator:
         config: Optional[SimConfig] = None,
         evaluation_times: Union[float, str, ArrayLike] = "Full",
     ) -> None:
-        """Instantiates a Simulation object."""
+        """Instantiates a QutipEmulator object."""
         # Initializing the samples obj
         if not isinstance(sampled_seq, SequenceSamples):
             raise TypeError(

@@ -408,7 +408,7 @@ class Hamiltonian:
         if "doppler" in self.config.noise_types:
             detune = np.random.normal(
                 0,
-                doppler_sigma(self.config.temperature * 1e-6),
+                doppler_sigma(self.config.temperature / 1e6),
                 size=len(self._qid_index),
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))

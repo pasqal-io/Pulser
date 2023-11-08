@@ -985,7 +985,7 @@ def test_noisy_xy():
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
         sim.set_config(SimConfig(("SPAM", "doppler")))
-    with pytest.raises(NotImplementedError, match="is not a valid"):
+    with pytest.raises(ValueError, match="is not a valid"):
         sim._hamiltonian.set_config(SimConfig(("SPAM", "doppler")))
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
