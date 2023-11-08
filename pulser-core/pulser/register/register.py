@@ -253,11 +253,6 @@ class Register(BaseRegister, RegDrawer):
                 f" ({device.max_atom_num})."
             )
 
-        if not device.min_atom_distance > 0.0:
-            raise NotImplementedError(
-                "Maximum connectivity layouts are not well defined for a "
-                f"device with 'min_atom_distance={device.min_atom_distance}'."
-            )
         # Default spacing or check minimal distance
         if spacing is None:
             spacing = device.min_atom_distance
@@ -267,6 +262,12 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than or equal to the minimal"
                 " distance supported by this device"
                 f" ({device.min_atom_distance})."
+            )
+        if spacing <= 0.0:
+            # spacing is None or 0.0, device.min_atom_distance is 0.0
+            raise NotImplementedError(
+                "Maximum connectivity layouts are not well defined for a "
+                "device with 'min_atom_distance=0.0'."
             )
 
         coords = patterns.triangular_hex(n_qubits) * spacing
