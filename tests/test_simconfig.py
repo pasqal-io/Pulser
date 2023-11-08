@@ -41,6 +41,7 @@ def test_init():
         temperature=1000.0,
         runs=100,
     )
+    assert config.temperature == 1e-3  # in K
     str_config = config.__str__(True)
     assert "SPAM, doppler, dephasing, amplitude" in str_config
     assert (
@@ -49,6 +50,8 @@ def test_init():
         and "Solver Options" in str_config
     )
     config = SimConfig(noise="depolarizing")
+    assert config.temperature == 5e-5
+    assert config.to_noise_model().temperature == 50
     str_config = config.__str__(True)
     assert "depolarizing" in str_config
     config = SimConfig(
