@@ -159,7 +159,7 @@ class SimConfig:
             raise TypeError(
                 f"'temperature' must be a float, not {type(self.temperature)}."
             )
-        self._change_attribute("temperature", self.temperature * 1e-6)
+        self._change_attribute("temperature", self.temperature / 1e6)
 
         # Kept to show error messages with the right parameter names
         self._check_spam_dict()
