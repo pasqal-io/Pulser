@@ -859,13 +859,13 @@ class TestSerialization:
     @pytest.mark.parametrize("is_empty", [True, False])
     def test_dmm_slm_mask(self, triangular_lattice, is_empty):
         mask = {"q0", "q2", "q4", "q5"}
-        dmm = {"q0": 0.2, "q1": 0.3, "q2": 0.4, "q3": 0.1}
+        det_map = {"q0": 1.0, "q1": 0.5, "q2": 0.5, "q3": 0.0}
         reg = triangular_lattice.rectangular_register(3, 4)
         seq = Sequence(reg, MockDevice)
         seq.config_slm_mask(mask, "dmm_0")
         if not is_empty:
             seq.config_detuning_map(
-                reg.define_detuning_map(dmm, "det_map"), "dmm_0"
+                reg.define_detuning_map(det_map, "det_map"), "dmm_0"
             )
             seq.add_dmm_detuning(ConstantWaveform(100, -10), "dmm_0_1")
             seq.declare_channel("rydberg_global", "rydberg_global")
@@ -900,7 +900,7 @@ class TestSerialization:
                     "x": reg._coords[i][0],
                     "y": reg._coords[i][1],
                 }
-                for i, weight in enumerate(list(dmm.values()))
+                for i, weight in enumerate(list(det_map.values()))
             ]
             assert (
                 abstract["operations"][1]["detuning_map"]["slug"] == "det_map"
@@ -1121,8 +1121,8 @@ class TestDeserialization:
 
     def test_deserialize_seq_with_slm_dmm(self):
         traps = [
-            {"weight": 0.5, "x": -2.0, "y": 9.0},
-            {"weight": 0.5, "x": 0.0, "y": 2.0},
+            {"weight": 1.0, "x": -2.0, "y": 9.0},
+            {"weight": 1.0, "x": 0.0, "y": 2.0},
             {"weight": 0, "x": 12.0, "y": 0.0},
         ]
         op = [

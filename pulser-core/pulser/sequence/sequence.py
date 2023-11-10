@@ -496,10 +496,9 @@ class Sequence(Generic[DeviceType]):
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
     def _set_slm_mask_dmm(self, dmm_id: str, targets: set[QubitId]) -> None:
-        ntargets = len(targets)
         detuning_map = self.register.define_detuning_map(
             {
-                qubit: (1 / ntargets if qubit in targets else 0)
+                qubit: (1.0 if qubit in targets else 0)
                 for qubit in self.register.qubit_ids
             }
         )
@@ -538,7 +537,7 @@ class Sequence(Generic[DeviceType]):
         channel starting the earliest in the schedule.
 
         If the sequence is in Ising, the SLM Mask is a DetuningMap where
-        the detuning of each masked qubit is the same. DMM "dmm_id" is
+        the detuning of each masked qubit is 1.0. DMM "dmm_id" is
         configured using this Detuning Map, and modulated by a pulse having
         a large negative detuning and either a duration defined from pulses
         already present in the sequence (same as in XY mode) or by the first
@@ -598,8 +597,8 @@ class Sequence(Generic[DeviceType]):
             ``MockDevice`` DMM can be repeatedly declared if needed.
 
         Args:
-            detuning_map: A DetuningMap defining atoms to act on and bottom
-                detuning to modulate.
+            detuning_map: A DetuningMap defining the amont of detuning each
+                atom receives.
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
                 available (start by "dmm" ) and the associated description.

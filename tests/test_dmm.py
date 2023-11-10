@@ -43,7 +43,7 @@ class TestDetuningMap:
 
     @pytest.fixture
     def det_dict(self) -> dict[int, float]:
-        return {0: 0.7, 1: 0.3, 2: 0}
+        return {0: 1.0, 1: 0.3, 2: 0}
 
     @pytest.fixture
     def det_map(
@@ -53,7 +53,7 @@ class TestDetuningMap:
 
     @pytest.fixture
     def slm_dict(self) -> dict[int, float]:
-        return {0: 1 / 3, 1: 1 / 3, 2: 1 / 3}
+        return {0: 1.0, 1: 1.0, 2: 1.0}
 
     @pytest.fixture
     def slm_map(
@@ -89,7 +89,7 @@ class TestDetuningMap:
 
     def test_qubit_weight_map(self, register):
         # Purposefully unsorted
-        qid_weight_map = {1: 0.5, 0: 0.1, 3: 0.4}
+        qid_weight_map = {1: 1.0, 0: 0.1, 3: 0.4}
         sorted_qids = sorted(qid_weight_map)
         det_map = register.define_detuning_map(qid_weight_map)
         qubits = register.qubits
@@ -158,16 +158,11 @@ class TestDetuningMap:
             DetuningMap([(0, 0), (1, 0)], [0])
 
         bad_weights = {0: -1.0, 1: 1.0, 2: 1.0}
-        bad_sum = {0: 0.1, 2: 0.9, 3: 0.1}
         for reg in (layout, map_reg, register):
             with pytest.raises(
-                ValueError, match="All weights must be non-negative."
+                ValueError, match="All weights must be between 0 and 1."
             ):
                 reg.define_detuning_map(bad_weights)  # type: ignore
-            with pytest.raises(
-                ValueError, match="The sum of the weights should be 1."
-            ):
-                reg.define_detuning_map(bad_sum)  # type: ignore
 
     def test_init(
         self,

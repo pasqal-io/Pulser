@@ -1122,9 +1122,7 @@ def test_mask_local_channel():
         if q in masked_qubits:
             assert np.array_equal(
                 sim.samples["Local"]["ground-rydberg"][q]["det"],
-                np.concatenate(
-                    (-10 / len(masked_qubits) * pulse.amplitude.samples, [0])
-                ),
+                np.concatenate((-10 * pulse.amplitude.samples, [0])),
             )
         else:
             assert np.all(

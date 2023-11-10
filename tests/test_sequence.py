@@ -52,7 +52,7 @@ def reg():
 @pytest.fixture
 def det_map(reg: Register):
     return reg.define_detuning_map(
-        {"q" + str(i): (1 / 4 if i in [0, 1, 3, 4] else 0) for i in range(10)}
+        {"q" + str(i): (1.0 if i in [0, 1, 3, 4] else 0) for i in range(10)}
     )
 
 
@@ -496,7 +496,7 @@ def init_seq(
     if config_det_map:
         det_map = reg.define_detuning_map(
             {
-                "q" + str(i): (1 / 4 if i in [0, 1, 3, 4] else 0)
+                "q" + str(i): (1.0 if i in [0, 1, 3, 4] else 0)
                 for i in range(10)
             }
         )
@@ -865,7 +865,7 @@ def test_switch_device_up(
                     mod_trap_ids = [20, 32, 54, 66]
                     assert np.all(
                         nested_s_loc[:100]
-                        == (-2.5 if trap_id in mod_trap_ids else 0)
+                        == (-10.0 if trap_id in mod_trap_ids else 0)
                     )
                 else:
                     # first pulse is covered by SLM Mask
@@ -1339,8 +1339,8 @@ def test_config_slm_mask(qubit_ids, device, det_map):
         seq.config_detuning_map(det_map, "dmm_0")
     seq.declare_channel("rydberg_global", "rydberg_global")
     assert set(seq._schedule.keys()) == {"dmm_0", "rydberg_global"}
-    assert seq._schedule["dmm_0"].detuning_map.weights[0] == 0.5
-    assert seq._schedule["dmm_0"].detuning_map.weights[2] == 0.5
+    assert seq._schedule["dmm_0"].detuning_map.weights[0] == 1.0
+    assert seq._schedule["dmm_0"].detuning_map.weights[2] == 1.0
 
     with pytest.raises(ValueError, match="configured only once"):
         seq.config_slm_mask(targets)
@@ -1572,7 +1572,7 @@ def test_draw_register_det_maps(reg, ch_name, patch_plt_show):
         [(0, 0), (10, 10), (-10, -10), (20, 20), (30, 30), (40, 40)]
     )
     det_map = reg_layout.define_detuning_map(
-        {0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5}
+        {0: 0, 1: 0, 2: 0, 3: 1.0, 4: 1.0}
     )
     reg = reg_layout.define_register(0, 1, 2, qubit_ids=["q0", "q1", "q2"])
     targets = ["q0", "q2"]
