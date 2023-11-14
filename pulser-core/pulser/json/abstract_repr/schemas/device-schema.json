@@ -21,7 +21,7 @@
           "type": "string"
         },
         "bottom_detuning": {
-          "description": "Minimum possible detuning (in rad/µs), must be below zero.",
+          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"
@@ -38,6 +38,13 @@
         "fixed_retarget_t": {
           "description": "Time taken to change the target (in ns).",
           "type": "null"
+        },
+        "global_bottom_detuning": {
+          "description": "Minimum possible detuning of the whole channel (in rad/µs), must be below zero.",
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "id": {
           "$ref": "#/definitions/ChannelId",
@@ -90,6 +97,7 @@
         "clock_period",
         "eom_config",
         "fixed_retarget_t",
+        "global_bottom_detuning",
         "id",
         "max_abs_detuning",
         "max_amp",
@@ -1435,7 +1443,7 @@
           "type": "string"
         },
         "bottom_detuning": {
-          "description": "Minimum possible detuning (in rad/µs), must be below zero.",
+          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero.",
           "type": "number"
         },
         "clock_period": {
@@ -1449,6 +1457,10 @@
         "fixed_retarget_t": {
           "description": "Time taken to change the target (in ns).",
           "type": "null"
+        },
+        "global_bottom_detuning": {
+          "description": "Minimum possible detuning of the whole channel (in rad/µs), must be below zero.",
+          "type": "number"
         },
         "id": {
           "$ref": "#/definitions/ChannelId",
@@ -1498,6 +1510,7 @@
         "clock_period",
         "eom_config",
         "fixed_retarget_t",
+        "global_bottom_detuning",
         "id",
         "max_abs_detuning",
         "max_amp",
