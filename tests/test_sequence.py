@@ -62,7 +62,7 @@ def device():
         Chadoq2,
         dmm_objects=(
             DMM(bottom_detuning=-70, global_bottom_detuning=-700),
-            DMM(bottom_detuning=-100, global_bottom_detuning=-10000),
+            DMM(bottom_detuning=-100, global_bottom_detuning=-1000),
         ),
     )
 
@@ -645,6 +645,25 @@ def test_switch_device_down(
                     Chadoq2.dmm_channels["dmm_0"],
                     dataclasses.replace(
                         Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+                    ),
+                ),
+            ),
+            strict=True,
+        )
+    with pytest.raises(
+        ValueError,
+        match="No match for channel dmm_0_1 with the same "
+        "global_bottom_detuning.",
+    ):
+        # Can't find a match for the 1st dmm_0
+        seq.switch_device(
+            dataclasses.replace(
+                Chadoq2,
+                dmm_objects=(
+                    Chadoq2.dmm_channels["dmm_0"],
+                    dataclasses.replace(
+                        Chadoq2.dmm_channels["dmm_0"],
+                        global_bottom_detuning=-500,
                     ),
                 ),
             ),
@@ -1431,8 +1450,7 @@ def test_slm_mask_in_xy(reg, patch_plt_show):
 @pytest.mark.parametrize("draw_register", [True, False])
 @pytest.mark.parametrize("mode", ["input", "input+output"])
 @pytest.mark.parametrize("mod_bandwidth", [0, 10])
-def test_slm_mask_in_ising(
-    reg,
+def test_draw_slm_mask_in_ising(
     patch_plt_show,
     dims3D,
     mode,
@@ -1536,8 +1554,30 @@ def test_slm_mask_in_ising(
                 draw_qubit_det=draw_qubit_det,
                 draw_qubit_amp=draw_qubit_amp,
             )
+
+
+@pytest.mark.parametrize(
+    "bottom_detunings", [(None, None), (-20, None), (None, -20), (-20, -20)]
+)
+def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
+    reg = Register({"q0": (0, 0), "q1": (10, 10), "q2": (-10, -10)})
+    det_map = reg.define_detuning_map({"q0": 0.2, "q1": 0.8, "q2": 0.0})
+    targets = ["q0", "q2"]
+    amp = 10
+    pulse = Pulse.ConstantPulse(200, amp, 0, 0)
     # Set mask and then add ising pulses to the schedule
-    seq2 = Sequence(reg, MockDevice)
+    seq2 = Sequence(
+        reg,
+        dataclasses.replace(
+            MockDevice,
+            dmm_objects=(
+                DMM(
+                    bottom_detuning=bottom_detunings[0],
+                    global_bottom_detuning=bottom_detunings[1],
+                ),
+            ),
+        ),
+    )
     seq2.config_slm_mask(targets)
     seq2.declare_channel("ryd_glob", "rydberg_global")
     seq2.config_detuning_map(det_map, "dmm_0")  # configured as dmm_0_1
@@ -1550,14 +1590,24 @@ def test_slm_mask_in_ising(
     ):
         seq2.add(Pulse.ConstantPulse(300, 0, -10, 0), "dmm_0")
     seq2.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0_1")  # not slm
-    seq2.add(pulse2, "ryd_glob")  # slm pulse between 0 and 500
+    seq2.add(pulse, "ryd_glob")  # slm pulse between 0 and 500
     assert seq2._slm_mask_time == [0, 500]
+    slm_det: float
+    if bottom_detunings == (None, None):
+        slm_det = -10 * amp
+    elif bottom_detunings[0] is None:
+        slm_det = max(-10 * amp, bottom_detunings[1] / len(targets))
+    elif bottom_detunings[1] is None:
+        slm_det = max(-10 * amp, bottom_detunings[0])
+    else:
+        assert bottom_detunings[1] / len(targets) > bottom_detunings[0]
+        slm_det = max(-10 * amp, bottom_detunings[1] / len(targets))
     assert seq2._schedule["dmm_0"].slots[1].type == Pulse.ConstantPulse(
-        500, 0, -100, 0
+        500, 0, slm_det, 0
     )
 
     # Check that adding extra pulses does not change SLM mask time
-    seq2.add(pulse2, "ryd_glob")
+    seq2.add(pulse, "ryd_glob")
     assert seq2._slm_mask_time == [0, 500]
 
     seq5 = Sequence(reg, MockDevice)
