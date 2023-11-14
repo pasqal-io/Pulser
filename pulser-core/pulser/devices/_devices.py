@@ -61,7 +61,8 @@ Chadoq2 = Device(
             clock_period=4,
             min_duration=16,
             max_duration=2**26,
-            bottom_detuning=-20,
+            bottom_detuning=-2 * np.pi * 20,
+            global_bottom_detuning=-2 * np.pi * 2000,
         ),
     ),
 )

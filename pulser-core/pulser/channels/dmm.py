@@ -21,6 +21,7 @@ import numpy as np
 
 from pulser.channels.base_channel import Channel
 from pulser.pulse import Pulse
+from pulser.register.weight_maps import DetuningMap
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -31,16 +32,20 @@ class DMM(Channel):
     (of zero amplitude and phase). These Pulses are locally modulated by the
     weights of a `DetuningMap`, thus providing a local control over the
     detuning. The detuning of the pulses added to a DMM has to be negative,
-    between 0 and `bottom_detuning`. Channel targeting the transition between
-    the ground and rydberg states, thus encoding the 'ground-rydberg' basis.
+    between 0 and `bottom_detuning`, and the sum of the weights multiplied by
+    that detuning has to be blow `global_bottom_detuning`. Channel targeting
+    the transition between the ground and rydberg states, thus encoding the
+    'ground-rydberg' basis.
 
     Note:
         The protocol to add pulses to the DMM Channel is by default
         "no-delay".
 
     Args:
-        bottom_detuning: Minimum possible detuning (in rad/µs), must be below
-            zero.
+        bottom_detuning: Minimum possible detuning for each atom (in rad/µs),
+            must be below zero.
+        global_bottom_detuning: Minimum possible detuning distributed on all
+            atoms (in rad/µs), must be below zero.
         clock_period: The duration of a clock cycle (in ns). The duration of a
             pulse or delay instruction is enforced to be a multiple of the
             clock cycle.
@@ -52,6 +57,7 @@ class DMM(Channel):
     """
 
     bottom_detuning: Optional[float] = field(default=None, init=True)
+    global_bottom_detuning: Optional[float] = field(default=None, init=True)
     addressing: Literal["Global"] = field(default="Global", init=False)
     max_abs_detuning: Optional[float] = field(default=None, init=False)
     max_amp: float = field(default=0, init=False)
@@ -63,6 +69,17 @@ class DMM(Channel):
         super().__post_init__()
         if self.bottom_detuning and self.bottom_detuning > 0:
             raise ValueError("bottom_detuning must be negative.")
+        if self.global_bottom_detuning:
+            if self.global_bottom_detuning > 0:
+                raise ValueError("global_bottom_detuning must be negative.")
+            if (
+                self.bottom_detuning
+                and self.bottom_detuning < self.global_bottom_detuning
+            ):
+                raise ValueError(
+                    "global_bottom_detuning must be lower than"
+                    " bottom_detuning."
+                )
 
     @property
     def basis(self) -> Literal["ground-rydberg"]:
@@ -72,26 +89,47 @@ class DMM(Channel):
     def _undefined_fields(self) -> list[str]:
         optional = [
             "bottom_detuning",
+            "global_bottom_detuning",
             "max_duration",
         ]
         return [field for field in optional if getattr(self, field) is None]
 
-    def validate_pulse(self, pulse: Pulse) -> None:
-        """Checks if a pulse can be executed in this DMM.
+    def validate_pulse(
+        self,
+        pulse: Pulse,
+        detuning_map: DetuningMap = DetuningMap(
+            trap_coordinates=[(0, 0)], weights=[1.0]
+        ),
+    ) -> None:
+        """Checks if a pulse can be executed via this DMM on a DetuningMap.
 
         Args:
             pulse: The pulse to validate.
+            detuning_map: The detuning map on which the pulse is applied
+                (defaults to a detuning map with weight 1.0).
         """
         super().validate_pulse(pulse)
         round_detuning = np.round(pulse.detuning.samples, decimals=6)
+        # Check that detuning is negative
         if np.any(round_detuning > 0):
             raise ValueError("The detuning in a DMM must not be positive.")
+        # Check that detuning on each atom is above bottom_detuning
         if self.bottom_detuning is not None and np.any(
-            round_detuning < self.bottom_detuning
+            np.max(detuning_map.weights) * round_detuning
+            < self.bottom_detuning
         ):
             raise ValueError(
-                "The detuning goes below the bottom detuning "
-                f"of the DMM ({self.bottom_detuning} rad/µs)."
+                "The detunings on some atoms go below the local bottom "
+                f"detuning of the DMM ({self.bottom_detuning} rad/µs)."
+            )
+        # Check that distributed detuning is above global_bottom_detuning
+        if self.global_bottom_detuning is not None and np.any(
+            np.sum(detuning_map.weights) * round_detuning
+            < self.global_bottom_detuning
+        ):
+            raise ValueError(
+                "The applied detuning goes below the global bottom detuning "
+                f"of the DMM ({self.global_bottom_detuning} rad/µs)."
             )
 
 

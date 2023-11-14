@@ -436,6 +436,7 @@ def test_dmm_channels():
         replace(Chadoq2, dmm_objects=(DMM(),))
     dmm = DMM(
         bottom_detuning=-1,
+        global_bottom_detuning=-100,
         clock_period=1,
         min_duration=1,
         max_duration=1e6,

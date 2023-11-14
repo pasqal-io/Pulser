@@ -25,6 +25,7 @@ from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import TriangularLatticeLayout
 from pulser.register.weight_maps import DetuningMap, WeightMap
 
 
@@ -228,6 +229,7 @@ class TestDMM:
     def physical_dmm(self):
         return DMM(
             bottom_detuning=-1,
+            global_bottom_detuning=-10,
             clock_period=1,
             min_duration=1,
             max_duration=1e6,
@@ -236,12 +238,12 @@ class TestDMM:
 
     def test_init(self, physical_dmm):
         assert DMM().is_virtual()
-
         dmm = physical_dmm
         assert not dmm.is_virtual()
         assert dmm.basis == "ground-rydberg"
         assert dmm.addressing == "Global"
         assert dmm.bottom_detuning == -1
+        assert dmm.global_bottom_detuning == -10
         assert dmm.max_amp == 0
         for value in (
             dmm.max_abs_detuning,
@@ -254,6 +256,14 @@ class TestDMM:
             ValueError, match="bottom_detuning must be negative."
         ):
             DMM(bottom_detuning=1)
+        with pytest.raises(
+            ValueError, match="global_bottom_detuning must be negative."
+        ):
+            DMM(global_bottom_detuning=10)
+        with pytest.raises(
+            ValueError, match="global_bottom_detuning must be lower"
+        ):
+            DMM(global_bottom_detuning=-1, bottom_detuning=-10)
         with pytest.raises(
             NotImplementedError,
             match=f"{DMM} cannot be initialized from `Global` method.",
@@ -278,13 +288,34 @@ class TestDMM:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "The detuning goes below the bottom detuning "
-                f"of the DMM ({physical_dmm.bottom_detuning} rad/µs)"
+                "The detunings on some atoms go below the local "
+                "bottom detuning of the DMM "
+                f"({physical_dmm.bottom_detuning} rad/µs)"
             ),
         ):
+            # tested with detuning map with weight 1
             physical_dmm.validate_pulse(too_low_pulse)
 
-        # Should be valid in a virtual DMM
-        virtual_dmm = DMM()
+        # Should be valid in a virtual DMM without local bottom detuning
+        virtual_dmm = DMM(global_bottom_detuning=-10)
         assert virtual_dmm.is_virtual()
         virtual_dmm.validate_pulse(too_low_pulse)
+
+        # Not too low if weights of detuning map are lower than 1
+        det_map = TriangularLatticeLayout(100, 10).define_detuning_map(
+            {i: 0.5 if i < 20 else 0.0 for i in range(100)}
+        )
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "The applied detuning goes below the global bottom detuning "
+                f"of the DMM ({physical_dmm.global_bottom_detuning} rad/µs)"
+            ),
+        ):
+            # local detunings match bottom_detuning, global don't
+            physical_dmm.validate_pulse(too_low_pulse, det_map)
+
+        # Should be valid in a virtual DMM without global bottom detuning
+        virtual_dmm = DMM(bottom_detuning=-1)
+        assert virtual_dmm.is_virtual()
+        virtual_dmm.validate_pulse(too_low_pulse, det_map)

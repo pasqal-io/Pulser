@@ -234,6 +234,25 @@ class Sequence(Generic[DeviceType]):
         """The atom register on which to apply the pulses."""
         return self._register if include_mappable else self.register
 
+    def _get_dmm_id_detuning_map(self, call: _Call) -> tuple[str, DetuningMap]:
+        dmm_id: str
+        det_map: DetuningMap
+        # Get DMM name
+        if "dmm_id" in call.kwargs:
+            dmm_id = call.kwargs["dmm_id"]
+        elif len(call.args) > 1:
+            dmm_id = call.args[1]
+        else:
+            dmm_id = "dmm_0"
+        # Get DetuningMap
+        if "detuning_map" in call.kwargs:
+            det_map = call.kwargs["detuning_map"]
+        elif isinstance(call.args[0], DetuningMap):
+            det_map = call.args[0]
+        else:  # SLM case:
+            det_map = self._slm_detuning_map(set(call.args[0]))
+        return (dmm_id, det_map)
+
     @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
@@ -246,13 +265,7 @@ class Sequence(Generic[DeviceType]):
                 call.name == "config_slm_mask"
                 or call.name == "config_detuning_map"
             ):
-                dmm_id: str
-                if "dmm_id" in call.kwargs:
-                    dmm_id = call.kwargs["dmm_id"]
-                elif len(call.args) > 1:
-                    dmm_id = call.args[1]
-                else:
-                    dmm_id = "dmm_0"
+                (dmm_id, _) = self._get_dmm_id_detuning_map(call)
                 dmm_name = _get_dmm_name(
                     dmm_id, list(all_declared_channels.keys())
                 )
@@ -495,13 +508,16 @@ class Sequence(Generic[DeviceType]):
         # No parametrization -> Always stored as a regular call
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
-    def _set_slm_mask_dmm(self, dmm_id: str, targets: set[QubitId]) -> None:
-        detuning_map = self.register.define_detuning_map(
+    def _slm_detuning_map(self, targets: set[QubitId]) -> DetuningMap:
+        return self.register.define_detuning_map(
             {
                 qubit: (1.0 if qubit in targets else 0)
                 for qubit in self.register.qubit_ids
             }
         )
+
+    def _set_slm_mask_dmm(self, dmm_id: str, targets: set[QubitId]) -> None:
+        detuning_map = self._slm_detuning_map(targets)
         self._config_detuning_map(detuning_map, dmm_id)
         # Find the name of the dmm in the declared channels.
         for key in reversed(self.declared_channels.keys()):
@@ -2171,12 +2187,42 @@ class Sequence(Generic[DeviceType]):
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
         channel_obj: Channel
+        detuning_map: DetuningMap | None = None
         if channel in self._schedule:
             channel_obj = self._schedule[channel].channel_obj
+            if isinstance(channel_obj, DMM):
+                detuning_map = cast(
+                    _DMMSchedule, self._schedule[channel]
+                ).detuning_map
         else:
             # Sequence is parametrized and channel is a dmm_name
-            channel_obj = self.device.dmm_channels[_dmm_id_from_name(channel)]
-        channel_obj.validate_pulse(pulse)
+            dmm_id = _dmm_id_from_name(channel)
+            channel_obj = self.device.dmm_channels[dmm_id]
+            dmm_idx = -1
+            for call in self._calls[1:] + self._to_build_calls:
+                if (
+                    call.name == "config_detuning_map"
+                    or call.name == "config_slm_mask"
+                ):
+                    # Check whether dmm_name matches with channel
+                    (
+                        current_dmm,
+                        current_det_map,
+                    ) = self._get_dmm_id_detuning_map(call)
+                    if current_dmm == dmm_id:
+                        dmm_idx += 1
+                        current_dmm_name = (
+                            current_dmm
+                            if dmm_idx == 0
+                            else current_dmm + f"_{dmm_idx}"
+                        )
+                        if current_dmm_name == channel:
+                            detuning_map = current_det_map
+                            break
+        if detuning_map is None:
+            channel_obj.validate_pulse(pulse)
+        else:
+            cast(DMM, channel_obj).validate_pulse(pulse, detuning_map)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:

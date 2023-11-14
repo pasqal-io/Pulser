@@ -60,7 +60,10 @@ def det_map(reg: Register):
 def device():
     return dataclasses.replace(
         Chadoq2,
-        dmm_objects=(DMM(bottom_detuning=-70), DMM(bottom_detuning=-100)),
+        dmm_objects=(
+            DMM(bottom_detuning=-70, global_bottom_detuning=-700),
+            DMM(bottom_detuning=-100, global_bottom_detuning=-10000),
+        ),
     )
 
 
@@ -348,7 +351,8 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-20,
+                bottom_detuning=-2 * np.pi * 20,
+                global_bottom_detuning=-2 * np.pi * 2000,
             ),
         ),
     )
@@ -384,7 +388,8 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-20,
+                bottom_detuning=-2 * np.pi * 20,
+                global_bottom_detuning=-2 * np.pi * 2000,
             ),
         ),
     )
@@ -439,7 +444,8 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-20,
+                bottom_detuning=-2 * np.pi * 20,
+                global_bottom_detuning=-2 * np.pi * 2000,
             ),
         ),
     )
