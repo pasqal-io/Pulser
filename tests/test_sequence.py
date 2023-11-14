@@ -507,7 +507,7 @@ def init_seq(
             }
         )
         if mappable_reg:
-            seq.config_detuning_map(det_map, "dmm_0")
+            seq.config_detuning_map(detuning_map=det_map, dmm_id="dmm_0")
         else:
             seq.config_slm_mask(["q0"], "dmm_0")
     return seq
