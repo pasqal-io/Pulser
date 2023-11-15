@@ -3,7 +3,7 @@ black[jupyter] ~= 23.1
 flake8
 flake8-docstrings
 isort
-mypy == 1.1.1
+mypy == 1.3.0
 pytest
 pytest-cov
 
