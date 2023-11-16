@@ -40,7 +40,7 @@
           "type": "null"
         },
         "global_bottom_detuning": {
-          "description": "Minimum possible detuning of the whole channel (in rad/µs), must be below zero.",
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"
@@ -1459,7 +1459,7 @@
           "type": "null"
         },
         "global_bottom_detuning": {
-          "description": "Minimum possible detuning of the whole channel (in rad/µs), must be below zero.",
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": "number"
         },
         "id": {
