@@ -114,9 +114,8 @@ class DMM(Channel):
         if np.any(round_detuning > 0):
             raise ValueError("The detuning in a DMM must not be positive.")
         # Check that detuning on each atom is above bottom_detuning
-        if (
-            self.bottom_detuning is not None
-            and np.max(detuning_map.weights) * round_detuning
+        if self.bottom_detuning is not None and np.any(
+            np.max(detuning_map.weights) * round_detuning
             < self.bottom_detuning
         ):
             raise ValueError(
@@ -124,8 +123,9 @@ class DMM(Channel):
                 f"detuning of the DMM ({self.bottom_detuning} rad/µs)."
             )
         # Check that distributed detuning is above global_bottom_detuning
-        if self.global_bottom_detuning is not None and np.any(
-            np.sum(detuning_map.weights) * round_detuning
+        if (
+            self.global_bottom_detuning is not None
+            and np.sum(detuning_map.weights) * round_detuning
             < self.global_bottom_detuning
         ):
             raise ValueError(
