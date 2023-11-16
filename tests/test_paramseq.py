@@ -319,13 +319,16 @@ def test_parametrized_before_eom_mode(mod_device):
     with pytest.raises(ValueError, match="duration has to be at least"):
         seq.add_eom_pulse("ch0", 0, 0.0)
 
-    seq.add_eom_pulse("ch0", 100, 0.0)
+    var = seq.declare_variable("var", dtype=float, size=None)
+    seq.add_eom_pulse("ch0", 100, 0.0, post_phase_shift=var)
+    seq.add_eom_pulse("ch0", var * 1000, np.pi)
+    seq.add_eom_pulse("ch0", 200, var)
 
     seq.disable_eom_mode("ch0")
     assert not seq.is_in_eom_mode("ch0")
 
     # Just check that building works
-    seq.build(amp=3.0)
+    seq.build(amp=3.0, var=0.5)
 
 
 def test_iterable_variable_check():
