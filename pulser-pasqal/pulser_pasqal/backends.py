@@ -57,7 +57,7 @@ class PasqalEmulator(RemoteBackend):
             )
 
     def run(
-        self, job_params: list[JobParams] | None = None
+        self, job_params: list[JobParams] | None = None, wait: bool = False
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Executes on the emulator backend through the Pasqal Cloud.
 
@@ -68,6 +68,10 @@ class PasqalEmulator(RemoteBackend):
                 is parametrized, the values for all the variables necessary
                 to build the sequence must be given in it's own mapping, for
                 each job, under the 'variables' field.
+            wait: Whether to wait until the results of the jobs become
+                available.  If set to False, the call is non-blocking and the
+                obtained results' status can be checked using their `status`
+                property.
 
         Returns:
             The results, which can be accessed once all sequences have been
@@ -87,6 +91,7 @@ class PasqalEmulator(RemoteBackend):
             job_params=job_params,
             emulator=self.emulator,
             config=self._config,
+            wait=wait,
         )
 
     def _validate_config(self, config: EmulatorConfig) -> None:

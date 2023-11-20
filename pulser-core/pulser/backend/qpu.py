@@ -24,7 +24,9 @@ from pulser.devices import Device
 class QPUBackend(RemoteBackend):
     """Backend for sequence execution on a QPU."""
 
-    def run(self, job_params: list[JobParams] | None = None) -> RemoteResults:
+    def run(
+        self, job_params: list[JobParams] | None = None, wait: bool = False
+    ) -> RemoteResults:
         """Runs the sequence on the remote QPU and returns the result.
 
         Args:
@@ -34,6 +36,10 @@ class QPUBackend(RemoteBackend):
                 is parametrized, the values for all the variables necessary
                 to build the sequence must be given in it's own mapping, for
                 each job, under the 'variables' field.
+            wait: Whether to wait until the results of the jobs become
+                available.  If set to False, the call is non-blocking and the
+                obtained results' status can be checked using their `status`
+                property.
 
         Returns:
             The results, which can be accessed once all sequences have been
@@ -55,7 +61,7 @@ class QPUBackend(RemoteBackend):
                     f"device ({max_runs})" + suffix
                 )
         results = self._connection.submit(
-            self._sequence, job_params=job_params
+            self._sequence, job_params=job_params, wait=wait
         )
         return cast(RemoteResults, results)
 

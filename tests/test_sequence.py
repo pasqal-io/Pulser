@@ -958,6 +958,8 @@ def test_target(reg, device):
         seq.target("q3", "ch1")
     with pytest.raises(ValueError, match="can target at most 1 qubits"):
         seq.target(["q1", "q5"], "ch0")
+    with pytest.raises(ValueError, match="Need at least one qubit to target"):
+        seq.target([], "ch0")
 
     assert seq._schedule["ch0"][-1] == _TimeSlot("target", -1, 0, {"q1"})
     seq.target("q4", "ch0")

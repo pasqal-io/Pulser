@@ -181,10 +181,8 @@ def test_max_connectivity():
     # Check spacing
     reg = Register.max_connectivity(max_atom_num, device, spacing=spacing)
     with pytest.raises(ValueError, match="Spacing "):
-        reg = Register.max_connectivity(
-            max_atom_num, device, spacing=spacing - 1.0
-        )
-
+        Register.max_connectivity(max_atom_num, device, spacing=spacing - 1.0)
+    reg = Register.max_connectivity(max_atom_num, MockDevice, spacing=spacing)
     with pytest.raises(
         NotImplementedError,
         match="Maximum connectivity layouts are not well defined for a "

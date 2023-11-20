@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import inspect
 import json
-from collections.abc import Iterable
+from collections.abc import Collection
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union, cast
 
@@ -156,16 +156,16 @@ def serialize_abstract_sequence(
             res["variables"][var.name]["value"] = [var.dtype()] * var.size
 
     def unfold_targets(
-        target_ids: QubitId | Iterable[QubitId],
+        target_ids: QubitId | Collection[QubitId],
     ) -> QubitId | list[QubitId]:
         if isinstance(target_ids, (int, str)):
             return target_ids
 
-        targets = list(cast(Iterable, target_ids))
+        targets = list(cast(Collection, target_ids))
         return targets if len(targets) > 1 else targets[0]
 
     def convert_targets(
-        target_ids: Union[QubitId, Iterable[QubitId]],
+        target_ids: Union[QubitId, Collection[QubitId]],
         force_list_out: bool = False,
     ) -> Union[int, list[int]]:
         target_array = np.array(unfold_targets(target_ids))
