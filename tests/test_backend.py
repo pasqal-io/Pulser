@@ -151,24 +151,6 @@ class TestNoiseModel:
         matrices["I3"] = np.eye(3)
         return matrices
 
-    @pytest.mark.parametrize(
-        "prob_distr",
-        [
-            [-1.0, 0.5],
-            [0.5, 2.0],
-            [0.3, 0.2],
-        ],
-    )
-    def test_eff_noise_probs(self, prob_distr, matrices):
-        with pytest.raises(
-            ValueError, match="is not a probability distribution."
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I"], matrices["X"]],
-                eff_noise_probs=prob_distr,
-            )
-
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
             NoiseModel(noise_types=("eff_noise",), eff_noise_probs=[1.0])
@@ -196,22 +178,6 @@ class TestNoiseModel:
                 noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I3"]],
                 eff_noise_probs=[1.0],
-            )
-        with pytest.raises(
-            NotImplementedError, match="You must put the identity matrix"
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["X"], matrices["I"]],
-                eff_noise_probs=[0.5, 0.5],
-            )
-        with pytest.raises(
-            ValueError, match="The completeness relation is not"
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I"], matrices["Zh"]],
-                eff_noise_probs=[0.5, 0.5],
             )
 
 

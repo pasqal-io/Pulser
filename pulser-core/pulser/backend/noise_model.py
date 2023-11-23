@@ -71,8 +71,7 @@ class NoiseModel:
         depolarizing_prob: The probability of a depolarizing error occuring.
         eff_noise_probs: The probability associated to each effective noise
             operator.
-        eff_noise_opers: The operators for the effective noise model. The
-            first operator must be the identity.
+        eff_noise_opers: The operators for the effective noise model.
     """
 
     noise_types: tuple[NOISE_TYPES, ...] = ()
@@ -170,9 +169,8 @@ class NoiseModel:
         prob_distr = np.array(self.eff_noise_probs)
         lower_bound = np.any(prob_distr < 0.0)
         upper_bound = np.any(prob_distr > 1.0)
-        sum_p = not np.isclose(sum(prob_distr), 1.0)
 
-        if sum_p or lower_bound or upper_bound:
+        if lower_bound or upper_bound:
             raise ValueError(
                 "The distribution given is not a probability distribution."
             )
@@ -186,20 +184,3 @@ class NoiseModel:
                 raise NotImplementedError(
                     "Operator's shape must be (2,2) " f"not {operator.shape}."
                 )
-        # Identity position
-        identity = np.eye(2)
-        if np.any(self.eff_noise_opers[0] != identity):
-            raise NotImplementedError(
-                "You must put the identity matrix at the "
-                "beginning of the operator list."
-            )
-        # Completeness relation checking
-        sum_op = np.zeros((2, 2), dtype=complex)
-        for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
-            sum_op += prob * op @ op.conj().transpose()
-
-        if not np.all(np.isclose(sum_op, identity)):
-            raise ValueError(
-                "The completeness relation is not verified."
-                f" Ended up with {sum_op} instead of {identity}."
-            )

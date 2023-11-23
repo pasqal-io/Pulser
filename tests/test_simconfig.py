@@ -106,20 +106,11 @@ def test_eff_noise_opers(matrices):
             eff_noise_opers=[matrices["I3"]],
             eff_noise_probs=[1.0],
         )
-    with pytest.raises(
-        NotImplementedError, match="You must put the identity matrix"
-    ):
-        SimConfig(
-            noise=("eff_noise"),
-            eff_noise_opers=[matrices["X"], matrices["I"]],
-            eff_noise_probs=[0.5, 0.5],
-        )
-    with pytest.raises(ValueError, match="The completeness relation is not"):
-        SimConfig(
-            noise=("eff_noise"),
-            eff_noise_opers=[matrices["I"], matrices["Zh"]],
-            eff_noise_probs=[0.5, 0.5],
-        )
+    SimConfig(
+        noise=("eff_noise"),
+        eff_noise_opers=[matrices["X"], matrices["I"]],
+        eff_noise_probs=[0.5, 0.5],
+    )
 
 
 def test_from_noise_model():

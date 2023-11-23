@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Mapping
 from typing import Union, cast
@@ -119,59 +118,23 @@ class Hamiltonian:
         if "dephasing" in config.noise_types:
             basis_check("dephasing")
             # Probability of phase (Z) flip:
-            # First order in prob
-            prob = config.dephasing_prob / 2
-            if prob > 0.1 and self._size > 1:
-                warnings.warn(
-                    "The dephasing model is a first-order approximation in the"
-                    f" dephasing probability. p = {2*prob} is too large for "
-                    "realistic results.",
-                    stacklevel=2,
-                )
-            local_collapse_ops.append(
-                np.sqrt(prob * (1 - prob) ** (self._size - 1)) * qutip.sigmaz()
-            )
+            coeff = np.sqrt(config.dephasing_prob / 2)
+            local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "depolarizing" in config.noise_types:
             basis_check("dephasing")
             # Probability of error occurrence
-            prob = config.depolarizing_prob / 4
-            if prob > 0.1 and self._size > 1:
-                warnings.warn(
-                    "The depolarizing model is a first-order approximation"
-                    f" in the depolarizing probability. p = {4*prob}"
-                    " is too large for realistic results.",
-                    stacklevel=2,
-                )
-
-            k = np.sqrt(prob * (1 - 3 * prob) ** (self._size - 1))
-            local_collapse_ops.append(k * qutip.sigmax())
-            local_collapse_ops.append(k * qutip.sigmay())
-            local_collapse_ops.append(k * qutip.sigmaz())
+            coeff = np.sqrt(config.depolarizing_prob / 4)
+            local_collapse_ops.append(coeff * qutip.sigmax())
+            local_collapse_ops.append(coeff * qutip.sigmay())
+            local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "eff_noise" in config.noise_types:
             basis_check("general")
-            # Probability distribution of error occurences
-            m = len(config.eff_noise_opers)
-            if self._size > 1:
-                for i in range(1, m):
-                    prob_i = config.eff_noise_probs[i]
-                    if prob_i > 0.1:
-                        warnings.warn(
-                            "The effective noise model is a first-order"
-                            " approximation in the noise probability."
-                            f"p={prob_i} is large for realistic results.",
-                            stacklevel=2,
-                        )
-                        break
-            # Deriving Kraus operators
-            prob_id = config.eff_noise_probs[0]
-            for i in range(1, m):
-                k = np.sqrt(
-                    config.eff_noise_probs[i] * prob_id ** (self._size - 1)
+            for id, prob in enumerate(config.eff_noise_probs):
+                local_collapse_ops.append(
+                    np.sqrt(prob) * config.eff_noise_opers[id]
                 )
-                k_op = k * config.eff_noise_opers[i]
-                local_collapse_ops.append(k_op)
 
         # Building collapse operators
         self._collapse_ops = []
