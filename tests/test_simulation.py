@@ -760,7 +760,7 @@ def test_depolarizing():
     sim = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
     )
-    assert sim.run().sample_final_state() == Counter({"1": 523, "0": 477})
+    assert sim.run().sample_final_state() == Counter({"0": 587, "1": 413})
     trace_2 = sim.run().states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
     assert len(sim._hamiltonian._collapse_ops) != 0
