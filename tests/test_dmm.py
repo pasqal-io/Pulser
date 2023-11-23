@@ -229,7 +229,7 @@ class TestDMM:
     def physical_dmm(self):
         return DMM(
             bottom_detuning=-1,
-            global_bottom_detuning=-10,
+            total_bottom_detuning=-10,
             clock_period=1,
             min_duration=1,
             max_duration=1e6,
@@ -243,7 +243,7 @@ class TestDMM:
         assert dmm.basis == "ground-rydberg"
         assert dmm.addressing == "Global"
         assert dmm.bottom_detuning == -1
-        assert dmm.global_bottom_detuning == -10
+        assert dmm.total_bottom_detuning == -10
         assert dmm.max_amp == 0
         for value in (
             dmm.max_abs_detuning,
@@ -257,13 +257,13 @@ class TestDMM:
         ):
             DMM(bottom_detuning=1)
         with pytest.raises(
-            ValueError, match="global_bottom_detuning must be negative."
+            ValueError, match="total_bottom_detuning must be negative."
         ):
-            DMM(global_bottom_detuning=10)
+            DMM(total_bottom_detuning=10)
         with pytest.raises(
-            ValueError, match="global_bottom_detuning must be lower"
+            ValueError, match="total_bottom_detuning must be lower"
         ):
-            DMM(global_bottom_detuning=-1, bottom_detuning=-10)
+            DMM(total_bottom_detuning=-1, bottom_detuning=-10)
         with pytest.raises(
             NotImplementedError,
             match=f"{DMM} cannot be initialized from `Global` method.",
@@ -297,7 +297,7 @@ class TestDMM:
             physical_dmm.validate_pulse(too_low_pulse)
 
         # Should be valid in a virtual DMM without local bottom detuning
-        virtual_dmm = DMM(global_bottom_detuning=-10)
+        virtual_dmm = DMM(total_bottom_detuning=-10)
         assert virtual_dmm.is_virtual()
         virtual_dmm.validate_pulse(too_low_pulse)
 
@@ -309,7 +309,7 @@ class TestDMM:
             ValueError,
             match=re.escape(
                 "The applied detuning goes below the global bottom detuning "
-                f"of the DMM ({physical_dmm.global_bottom_detuning} rad/µs)"
+                f"of the DMM ({physical_dmm.total_bottom_detuning} rad/µs)"
             ),
         ):
             # local detunings match bottom_detuning, global don't

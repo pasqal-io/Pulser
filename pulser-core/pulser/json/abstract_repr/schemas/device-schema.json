@@ -39,7 +39,7 @@
           "description": "Time taken to change the target (in ns).",
           "type": "null"
         },
-        "global_bottom_detuning": {
+        "total_bottom_detuning": {
           "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": [
             "number",
@@ -97,7 +97,7 @@
         "clock_period",
         "eom_config",
         "fixed_retarget_t",
-        "global_bottom_detuning",
+        "total_bottom_detuning",
         "id",
         "max_abs_detuning",
         "max_amp",
@@ -1458,7 +1458,7 @@
           "description": "Time taken to change the target (in ns).",
           "type": "null"
         },
-        "global_bottom_detuning": {
+        "total_bottom_detuning": {
           "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": "number"
         },
@@ -1510,7 +1510,7 @@
         "clock_period",
         "eom_config",
         "fixed_retarget_t",
-        "global_bottom_detuning",
+        "total_bottom_detuning",
         "id",
         "max_abs_detuning",
         "max_amp",

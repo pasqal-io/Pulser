@@ -793,7 +793,7 @@ class Sequence(Generic[DeviceType]):
                 ]
                 if isinstance(old_ch_obj, DMM):
                     params_to_check.append("bottom_detuning")
-                    params_to_check.append("global_bottom_detuning")
+                    params_to_check.append("total_bottom_detuning")
                 if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
                     params_to_check.append("min_retarget_interval")
                 for param_ in params_to_check:
@@ -1923,18 +1923,18 @@ class Sequence(Generic[DeviceType]):
             bottom_detuning = cast(
                 DMM, self.declared_channels[self._slm_mask_dmm]
             ).bottom_detuning
-            global_bottom_detuning = cast(
+            total_bottom_detuning = cast(
                 DMM, self.declared_channels[self._slm_mask_dmm]
-            ).global_bottom_detuning
+            ).total_bottom_detuning
             min_det = -10 * max_amp
             if bottom_detuning and min_det < bottom_detuning:
                 min_det = bottom_detuning
             if (
-                global_bottom_detuning
+                total_bottom_detuning
                 and min_det * len(set(self._slm_mask_targets))
-                < global_bottom_detuning
+                < total_bottom_detuning
             ):
-                min_det = global_bottom_detuning / len(
+                min_det = total_bottom_detuning / len(
                     set(self._slm_mask_targets)
                 )
             cast(

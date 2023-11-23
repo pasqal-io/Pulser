@@ -61,8 +61,8 @@ def device():
     return dataclasses.replace(
         Chadoq2,
         dmm_objects=(
-            DMM(bottom_detuning=-70, global_bottom_detuning=-700),
-            DMM(bottom_detuning=-100, global_bottom_detuning=-1000),
+            DMM(bottom_detuning=-70, total_bottom_detuning=-700),
+            DMM(bottom_detuning=-100, total_bottom_detuning=-1000),
         ),
     )
 
@@ -352,7 +352,7 @@ def devices():
                 min_duration=16,
                 max_duration=2**26,
                 bottom_detuning=-2 * np.pi * 20,
-                global_bottom_detuning=-2 * np.pi * 2000,
+                total_bottom_detuning=-2 * np.pi * 2000,
             ),
         ),
     )
@@ -389,7 +389,7 @@ def devices():
                 min_duration=16,
                 max_duration=2**26,
                 bottom_detuning=-2 * np.pi * 20,
-                global_bottom_detuning=-2 * np.pi * 2000,
+                total_bottom_detuning=-2 * np.pi * 2000,
             ),
         ),
     )
@@ -445,7 +445,7 @@ def devices():
                 min_duration=16,
                 max_duration=2**26,
                 bottom_detuning=-2 * np.pi * 20,
-                global_bottom_detuning=-2 * np.pi * 2000,
+                total_bottom_detuning=-2 * np.pi * 2000,
             ),
         ),
     )
@@ -653,7 +653,7 @@ def test_switch_device_down(
     with pytest.raises(
         ValueError,
         match="No match for channel dmm_0_1 with the same "
-        "global_bottom_detuning.",
+        "total_bottom_detuning.",
     ):
         # Can't find a match for the 1st dmm_0
         seq.switch_device(
@@ -663,7 +663,7 @@ def test_switch_device_down(
                     Chadoq2.dmm_channels["dmm_0"],
                     dataclasses.replace(
                         Chadoq2.dmm_channels["dmm_0"],
-                        global_bottom_detuning=-500,
+                        total_bottom_detuning=-500,
                     ),
                 ),
             ),
@@ -1573,7 +1573,7 @@ def test_slm_mask_in_ising(patch_plt_show, bottom_detunings):
             dmm_objects=(
                 DMM(
                     bottom_detuning=bottom_detunings[0],
-                    global_bottom_detuning=bottom_detunings[1],
+                    total_bottom_detuning=bottom_detunings[1],
                 ),
             ),
         ),

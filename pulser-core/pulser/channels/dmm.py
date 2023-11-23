@@ -33,7 +33,7 @@ class DMM(Channel):
     weights of a `DetuningMap`, thus providing a local control over the
     detuning. The detuning of the pulses added to a DMM has to be negative,
     between 0 and `bottom_detuning`, and the sum of the weights multiplied by
-    that detuning has to be blow `global_bottom_detuning`. Channel targeting
+    that detuning has to be blow `total_bottom_detuning`. Channel targeting
     the transition between the ground and rydberg states, thus encoding the
     'ground-rydberg' basis.
 
@@ -44,7 +44,7 @@ class DMM(Channel):
     Args:
         bottom_detuning: Minimum possible detuning per atom (in rad/µs),
             must be below zero.
-        global_bottom_detuning: Minimum possible detuning distributed on all
+        total_bottom_detuning: Minimum possible detuning distributed on all
             atoms (in rad/µs), must be below zero.
         clock_period: The duration of a clock cycle (in ns). The duration of a
             pulse or delay instruction is enforced to be a multiple of the
@@ -57,7 +57,7 @@ class DMM(Channel):
     """
 
     bottom_detuning: Optional[float] = field(default=None, init=True)
-    global_bottom_detuning: Optional[float] = field(default=None, init=True)
+    total_bottom_detuning: Optional[float] = field(default=None, init=True)
     addressing: Literal["Global"] = field(default="Global", init=False)
     max_abs_detuning: Optional[float] = field(default=None, init=False)
     max_amp: float = field(default=0, init=False)
@@ -69,15 +69,15 @@ class DMM(Channel):
         super().__post_init__()
         if self.bottom_detuning and self.bottom_detuning > 0:
             raise ValueError("bottom_detuning must be negative.")
-        if self.global_bottom_detuning:
-            if self.global_bottom_detuning > 0:
-                raise ValueError("global_bottom_detuning must be negative.")
+        if self.total_bottom_detuning:
+            if self.total_bottom_detuning > 0:
+                raise ValueError("total_bottom_detuning must be negative.")
             if (
                 self.bottom_detuning
-                and self.bottom_detuning < self.global_bottom_detuning
+                and self.bottom_detuning < self.total_bottom_detuning
             ):
                 raise ValueError(
-                    "global_bottom_detuning must be lower than"
+                    "total_bottom_detuning must be lower than"
                     " bottom_detuning."
                 )
 
@@ -89,7 +89,7 @@ class DMM(Channel):
     def _undefined_fields(self) -> list[str]:
         optional = [
             "bottom_detuning",
-            "global_bottom_detuning",
+            "total_bottom_detuning",
             "max_duration",
         ]
         return [field for field in optional if getattr(self, field) is None]
@@ -124,15 +124,15 @@ class DMM(Channel):
                 "The detunings on some atoms go below the local bottom "
                 f"detuning of the DMM ({self.bottom_detuning} rad/µs)."
             )
-        # Check that distributed detuning is above global_bottom_detuning
+        # Check that distributed detuning is above total_bottom_detuning
         if (
-            self.global_bottom_detuning is not None
+            self.total_bottom_detuning is not None
             and np.sum(detuning_map.weights) * min_round_detuning
-            < self.global_bottom_detuning
+            < self.total_bottom_detuning
         ):
             raise ValueError(
                 "The applied detuning goes below the global bottom detuning "
-                f"of the DMM ({self.global_bottom_detuning} rad/µs)."
+                f"of the DMM ({self.total_bottom_detuning} rad/µs)."
             )
 
 
