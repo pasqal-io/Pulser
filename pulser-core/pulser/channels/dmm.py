@@ -13,6 +13,7 @@
 # limitations under the License.
 """Defines the detuning map modulator."""
 from __future__ import annotations
+
 import warnings
 from dataclasses import dataclass, field
 from typing import Literal, Optional
