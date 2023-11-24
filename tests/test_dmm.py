@@ -308,14 +308,14 @@ class TestDMM:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "The applied detuning goes below the global bottom detuning "
+                "The applied detuning goes below the total bottom detuning "
                 f"of the DMM ({physical_dmm.total_bottom_detuning} rad/µs)"
             ),
         ):
             # local detunings match bottom_detuning, global don't
             physical_dmm.validate_pulse(too_low_pulse, det_map)
 
-        # Should be valid in a virtual DMM without global bottom detuning
-        virtual_dmm = DMM(bottom_detuning=-1)
-        assert virtual_dmm.is_virtual()
-        virtual_dmm.validate_pulse(too_low_pulse, det_map)
+        # Should be valid in a physical DMM without global bottom detuning
+        physical_dmm = DMM(bottom_detuning=-1)
+        assert not physical_dmm.is_virtual()
+        physical_dmm.validate_pulse(too_low_pulse, det_map)

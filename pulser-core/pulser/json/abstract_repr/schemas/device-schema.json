@@ -39,13 +39,6 @@
           "description": "Time taken to change the target (in ns).",
           "type": "null"
         },
-        "total_bottom_detuning": {
-          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
-          "type": [
-            "number",
-            "null"
-          ]
-        },
         "id": {
           "$ref": "#/definitions/ChannelId",
           "description": "The identifier of the channel within its device."
@@ -88,6 +81,13 @@
             "number",
             "null"
           ]
+        },
+        "total_bottom_detuning": {
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "required": [
@@ -97,7 +97,6 @@
         "clock_period",
         "eom_config",
         "fixed_retarget_t",
-        "total_bottom_detuning",
         "id",
         "max_abs_detuning",
         "max_amp",
@@ -1458,10 +1457,6 @@
           "description": "Time taken to change the target (in ns).",
           "type": "null"
         },
-        "total_bottom_detuning": {
-          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
-          "type": "number"
-        },
         "id": {
           "$ref": "#/definitions/ChannelId",
           "description": "The identifier of the channel within its device."
@@ -1501,6 +1496,13 @@
             "number",
             "null"
           ]
+        },
+        "total_bottom_detuning": {
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1510,7 +1512,6 @@
         "clock_period",
         "eom_config",
         "fixed_retarget_t",
-        "total_bottom_detuning",
         "id",
         "max_abs_detuning",
         "max_amp",
