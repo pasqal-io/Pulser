@@ -67,16 +67,14 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
-            - "dephasing": Random phase (Z) flip
-            - "depolarizing": Quantum noise where the state(rho) is
-              turned into a mixed state I/2 with probability p,
-              and left unchanged with probability 1-p.
+            - "dephasing": Random phase (Z) flip.
+            - "depolarizing": Quantum noise where the state (rho) is
+              turned into a mixed state I/2 at a rate gamma (in rad/µs).
             - "eff_noise": General effective noise channel defined by
-              the set of collapse operators **eff_noise_opers**
-              and the corresponding probability distribution
-              **eff_noise_probs**.
+              the set of collapse operators **eff_noise_opers** and the
+              corresponding rates **eff_noise_probs** (in rad/µs).
             - "doppler": Local atom detuning due to finite speed of the
-              atoms and Doppler effect with respect to laser frequency
+              atoms and Doppler effect with respect to laser frequency.
             - "amplitude": Gaussian damping due to finite laser waist
             - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
               **epsilon_prime**.
@@ -196,7 +194,7 @@ class SimConfig:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
         if "eff_noise" in self.noise:
             lines.append(
-                f"Effective noise distribution:       {self.eff_noise_probs}"
+                f"Effective noise rates:       {self.eff_noise_probs}"
             )
             lines.append(
                 f"Effective noise operators:       {self.eff_noise_opers}"
@@ -207,9 +205,9 @@ class SimConfig:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
             lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "dephasing" in self.noise:
-            lines.append(f"Dephasing probability: {self.dephasing_prob}")
+            lines.append(f"Dephasing rate: {self.dephasing_prob}")
         if "depolarizing" in self.noise:
-            lines.append(f"Depolarizing probability: {self.depolarizing_prob}")
+            lines.append(f"Depolarizing rate: {self.depolarizing_prob}")
         if solver_options:
             lines.append(
                 "Solver Options: \n" + f"{str(self.solver_options)[10:-1]}"

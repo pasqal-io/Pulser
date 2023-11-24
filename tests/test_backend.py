@@ -151,6 +151,16 @@ class TestNoiseModel:
         matrices["I3"] = np.eye(3)
         return matrices
 
+    def test_eff_noise_probs(self, matrices):
+        with pytest.raises(
+            ValueError, match="The provided rates must be greater than 0."
+        ):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_opers=[matrices["I"], matrices["X"]],
+                eff_noise_probs=[-1.0, 0.5],
+            )
+
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
             NoiseModel(noise_types=("eff_noise",), eff_noise_probs=[1.0])

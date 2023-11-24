@@ -67,10 +67,11 @@ class NoiseModel:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        dephasing_prob: The probability of a dephasing error occuring.
-        depolarizing_prob: The probability of a depolarizing error occuring.
-        eff_noise_probs: The probability associated to each effective noise
-            operator.
+        dephasing_prob: The rate of a dephasing error occuring (in rad/µs).
+        depolarizing_prob: The rate (in rad/µs) at which a depolarizing
+            error occurs.
+        eff_noise_probs: The rate associated to each effective noise operator
+            (in rad/µs).
         eff_noise_opers: The operators for the effective noise model.
     """
 
@@ -166,14 +167,8 @@ class NoiseModel:
                 "The general noise parameters have not been filled."
             )
 
-        prob_distr = np.array(self.eff_noise_probs)
-        lower_bound = np.any(prob_distr < 0.0)
-        upper_bound = np.any(prob_distr > 1.0)
-
-        if lower_bound or upper_bound:
-            raise ValueError(
-                "The distribution given is not a probability distribution."
-            )
+        if np.any(np.array(self.eff_noise_probs) < 0):
+            raise ValueError("The provided rates must be greater than 0.")
 
         # Check the validity of operators
         for operator in self.eff_noise_opers:
