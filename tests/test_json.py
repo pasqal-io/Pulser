@@ -243,6 +243,12 @@ def test_type_error():
         Sequence._deserialize(json.loads(s))
 
 
+def test_numpy_types():
+    assert encode_decode(np.array([12])[0]) == 12
+    assert encode_decode(np.array([np.pi])[0]) == np.pi
+    assert encode_decode(np.array(["abc"])[0]) == "abc"
+
+
 def test_deprecated_device_args():
     seq = Sequence(Register.square(1), MockDevice)
 
