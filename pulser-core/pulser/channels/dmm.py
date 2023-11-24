@@ -13,7 +13,7 @@
 # limitations under the License.
 """Defines the detuning map modulator."""
 from __future__ import annotations
-
+import warnings
 from dataclasses import dataclass, field
 from typing import Literal, Optional
 
@@ -33,7 +33,7 @@ class DMM(Channel):
     weights of a `DetuningMap`, thus providing a local control over the
     detuning. The detuning of the pulses added to a DMM has to be negative,
     between 0 and `bottom_detuning`, and the sum of the weights multiplied by
-    that detuning has to be blow `total_bottom_detuning`. Channel targeting
+    that detuning has to be below `total_bottom_detuning`. Channel targeting
     the transition between the ground and rydberg states, thus encoding the
     'ground-rydberg' basis.
 
@@ -56,8 +56,8 @@ class DMM(Channel):
             MHz.
     """
 
-    bottom_detuning: Optional[float] = field(default=None, init=True)
-    total_bottom_detuning: Optional[float] = field(default=None, init=True)
+    bottom_detuning: float | None = None
+    total_bottom_detuning: float | None = None
     addressing: Literal["Global"] = field(default="Global", init=False)
     max_abs_detuning: Optional[float] = field(default=None, init=False)
     max_amp: float = field(default=0, init=False)
@@ -89,10 +89,21 @@ class DMM(Channel):
     def _undefined_fields(self) -> list[str]:
         optional = [
             "bottom_detuning",
-            "total_bottom_detuning",
             "max_duration",
+            # TODO: "total_bottom_detuning"
         ]
         return [field for field in optional if getattr(self, field) is None]
+
+    def is_virtual(self) -> bool:
+        """Whether the channel is virtual (i.e. partially defined)."""
+        virtual_dmm = bool(self._undefined_fields())
+        if not virtual_dmm and self.total_bottom_detuning is None:
+            warnings.warn(
+                "`total_bottom_detuning` should be defined to define a"
+                " physical DMM.",
+                DeprecationWarning,
+            )
+        return virtual_dmm
 
     def validate_pulse(
         self,
@@ -131,7 +142,7 @@ class DMM(Channel):
             < self.total_bottom_detuning
         ):
             raise ValueError(
-                "The applied detuning goes below the global bottom detuning "
+                "The applied detuning goes below the total bottom detuning "
                 f"of the DMM ({self.total_bottom_detuning} rad/µs)."
             )
 

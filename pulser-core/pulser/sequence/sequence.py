@@ -613,7 +613,7 @@ class Sequence(Generic[DeviceType]):
             ``MockDevice`` DMM can be repeatedly declared if needed.
 
         Args:
-            detuning_map: A DetuningMap defining the amont of detuning each
+            detuning_map: A DetuningMap defining the amount of detuning each
                 atom receives.
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
@@ -647,8 +647,8 @@ class Sequence(Generic[DeviceType]):
         dmm_name = dmm_id
         if dmm_id in self.declared_channels:
             assert self._device.reusable_channels
-            dmm_name += (
-                f"_{''.join(self.declared_channels.keys()).count(dmm_id)}"
+            dmm_name = _get_dmm_name(
+                dmm_id, list(self.declared_channels.keys())
             )
 
         self._schedule[dmm_name] = _DMMSchedule(
@@ -2195,42 +2195,46 @@ class Sequence(Generic[DeviceType]):
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
+        # Get the channel object and its detuning map if the channel is a DMM
         channel_obj: Channel
+        # Detuning map is None if channel is not DMM
         detuning_map: DetuningMap | None = None
         if channel in self._schedule:
+            # channel name can refer to a Channel or a DMM object
+            # Get channel object
             channel_obj = self._schedule[channel].channel_obj
+            # Get its associated detuning map if channel is a DMM
             if isinstance(channel_obj, DMM):
+                # stored in _DMMSchedule with channel object
                 detuning_map = cast(
                     _DMMSchedule, self._schedule[channel]
                 ).detuning_map
         else:
+            # If channel name can't be found among _schedule keys, the
             # Sequence is parametrized and channel is a dmm_name
             dmm_id = _dmm_id_from_name(channel)
+            # Get channel object
             channel_obj = self.device.dmm_channels[dmm_id]
-            dmm_idx = -1
+            # Go over the calls to find the associated detuning map
+            declared_dmms: list[str] = []
             for call in self._calls[1:] + self._to_build_calls:
                 if (
                     call.name == "config_detuning_map"
                     or call.name == "config_slm_mask"
                 ):
-                    # Check whether dmm_name matches with channel
-                    (
-                        current_dmm,
-                        current_det_map,
-                    ) = self._get_dmm_id_detuning_map(call)
-                    if current_dmm == dmm_id:
-                        dmm_idx += 1
-                        current_dmm_name = (
-                            current_dmm
-                            if dmm_idx == 0
-                            else current_dmm + f"_{dmm_idx}"
-                        )
-                        if current_dmm_name == channel:
-                            detuning_map = current_det_map
-                            break
+                    # Extract dmm_id, detuning map of call
+                    call_id, call_det_map = self._get_dmm_id_detuning_map(call)
+                    # Quit if dmm_name of call matches with channel
+                    call_name = _get_dmm_name(call_id, declared_dmms)
+                    declared_dmms.append(call_name)
+                    if call_name == channel:
+                        detuning_map = call_det_map
+                        break
         if detuning_map is None:
+            # channel points to a Channel object
             channel_obj.validate_pulse(pulse)
         else:
+            # channel points to a DMM object
             cast(DMM, channel_obj).validate_pulse(pulse, detuning_map)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
