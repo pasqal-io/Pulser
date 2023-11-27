@@ -964,6 +964,26 @@ class TestSerialization:
             "rhs": 2,
         }
 
+    def test_numpy_types(self):
+        assert (
+            json.loads(
+                json.dumps(np.array([12345])[0], cls=AbstractReprEncoder)
+            )
+            == 12345
+        )
+        assert (
+            json.loads(
+                json.dumps(np.array([np.pi])[0], cls=AbstractReprEncoder)
+            )
+            == np.pi
+        )
+        assert (
+            json.loads(
+                json.dumps(np.array(["abc"])[0], cls=AbstractReprEncoder)
+            )
+            == "abc"
+        )
+
 
 def _get_serialized_seq(
     operations: list[dict] = [],

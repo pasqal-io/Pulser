@@ -1,6 +1,6 @@
 [flake8]
 docstring-convention = google
-exclude = ./build, ./docs
+exclude = ./build, ./docs, ./__venv__
 extend-ignore =
     # D105 Missing docstring in magic method
     D105,
