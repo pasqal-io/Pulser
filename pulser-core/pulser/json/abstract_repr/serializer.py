@@ -38,12 +38,14 @@ if TYPE_CHECKING:
 class AbstractReprEncoder(json.JSONEncoder):
     """The custom encoder for abstract representation of Pulser objects."""
 
-    def default(self, o: Any) -> Union[dict[str, Any], list[Any]]:
+    def default(self, o: Any) -> dict[str, Any] | list | int:
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_abstract_repr"):
             return cast(dict, o._to_abstract_repr())
         elif isinstance(o, np.ndarray):
             return cast(list, o.tolist())
+        elif isinstance(o, np.integer):
+            return int(o)
         elif isinstance(o, set):
             return list(o)
         else:

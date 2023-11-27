@@ -2,6 +2,7 @@
 .vscode
 .python-version
 .pytest_cache/
+.mypy_cache/
 .idea/
 .coverage
 .spyproject/
@@ -15,3 +16,4 @@ docs/build/
 dist/
 env*
 *.egg-info/
+__venv__/
