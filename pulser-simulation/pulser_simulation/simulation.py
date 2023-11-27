@@ -18,7 +18,7 @@ from __future__ import annotations
 import warnings
 from collections import Counter
 from collections.abc import Mapping
-from dataclasses import replace
+from dataclasses import asdict, replace
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
@@ -151,7 +151,9 @@ class QutipEmulator:
             self._register.qubits,
             device,
             sampling_rate,
-            config.to_noise_model() if config else NoiseModel(),
+            config.to_noise_model()
+            if config
+            else SimConfig().to_noise_model(),
         )
         # Initializing evaluation times
         self._eval_times_array: np.ndarray
@@ -241,8 +243,34 @@ class QutipEmulator:
                 " support simulation of noise types: "
                 f"{', '.join(not_supported)}."
             )
-        print("transformed", config.to_noise_model())
-        self._hamiltonian.add_config(config.to_noise_model())
+        noise_model = config.to_noise_model()
+        old_noise_set = set(self._hamiltonian.config.noise_types)
+        new_noise_set = old_noise_set.union(noise_model.noise_types)
+        diff_noise_set = new_noise_set - old_noise_set
+        # Create temporary param_dict to add noise parameters:
+        param_dict: dict[str, Any] = asdict(self._hamiltonian.config)
+        # Begin populating with added noise parameters:
+        param_dict["noise_types"] = tuple(new_noise_set)
+        if "SPAM" in diff_noise_set:
+            param_dict["state_prep_error"] = noise_model.state_prep_error
+            param_dict["p_false_pos"] = noise_model.p_false_pos
+            param_dict["p_false_neg"] = noise_model.p_false_neg
+        if "doppler" in diff_noise_set:
+            param_dict["temperature"] = noise_model.temperature
+        if "amplitude" in diff_noise_set:
+            param_dict["laser_waist"] = noise_model.laser_waist
+        if "dephasing" in diff_noise_set:
+            param_dict["dephasing_prob"] = noise_model.dephasing_prob
+        if "depolarizing" in diff_noise_set:
+            param_dict["depolarizing_prob"] = noise_model.depolarizing_prob
+        if "eff_noise" in diff_noise_set:
+            param_dict["eff_noise_opers"] = noise_model.eff_noise_opers
+            param_dict["eff_noise_probs"] = noise_model.eff_noise_probs
+        # update runs:
+        param_dict["runs"] = noise_model.runs
+        param_dict["samples_per_run"] = noise_model.samples_per_run
+        # set config with the new parameters:
+        self._hamiltonian.set_config(NoiseModel(**param_dict))
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -250,7 +278,7 @@ class QutipEmulator:
 
     def reset_config(self) -> None:
         """Resets configuration to default."""
-        self._hamiltonian.set_config(NoiseModel())
+        self._hamiltonian.set_config(SimConfig().to_noise_model())
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -366,6 +394,30 @@ class QutipEmulator:
             eval_times, [0.0, self._tot_duration / 1000]
         )
         self._eval_times_instruction = value
+
+    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+        """Creates an operator with non-trivial actions on some qubits.
+
+        Takes as argument a list of tuples ``[(operator_1, qubits_1),
+        (operator_2, qubits_2)...]``. Returns the operator given by the tensor
+        product of {``operator_i`` applied on ``qubits_i``} and Id on the rest.
+        ``(operator, 'global')`` returns the sum for all ``j`` of operator
+        applied at ``qubit_j`` and identity elsewhere.
+
+        Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
+        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
+
+        Args:
+            operations: List of tuples `(operator, qubits)`.
+                `operator` can be a ``qutip.Quobj`` or a string key for
+                ``self.op_matrix``. `qubits` is the list on which operator
+                will be applied. The qubits can be passed as their
+                index or their label in the register.
+
+        Returns:
+            The final operator.
+        """
+        return self._hamiltonian.build_operator(operations)
 
     def get_hamiltonian(self, time: float) -> qutip.Qobj:
         r"""Get the Hamiltonian created from the sequence at a fixed time.

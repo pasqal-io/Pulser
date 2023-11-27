@@ -262,15 +262,15 @@ def test_building_basis_and_projection_operators(seq, reg):
 
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
-        sim._hamiltonian.build_operator([("sigma_gg", ["target", "target"])])
+        sim.build_operator([("sigma_gg", ["target", "target"])])
     with pytest.raises(ValueError, match="not a valid operator"):
-        sim._hamiltonian.build_operator([("wrong", ["target"])])
+        sim.build_operator([("wrong", ["target"])])
     with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
-        sim._hamiltonian.build_operator([("sigma_gg", ["wrong"])])
+        sim.build_operator([("sigma_gg", ["wrong"])])
 
     # Check building operator with one operator
-    op_standard = sim._hamiltonian.build_operator([("sigma_gg", ["target"])])
-    op_one = sim._hamiltonian.build_operator(("sigma_gg", ["target"]))
+    op_standard = sim.build_operator([("sigma_gg", ["target"])])
+    op_one = sim.build_operator(("sigma_gg", ["target"]))
     assert np.linalg.norm(op_standard - op_one) < 1e-10
 
     # Global ground-rydberg
@@ -838,8 +838,6 @@ def test_add_config(matrices):
     )
     with pytest.raises(ValueError, match="is not a valid"):
         sim.add_config("bad_cfg")
-    with pytest.raises(ValueError, match="is not a valid"):
-        sim._hamiltonian.add_config("bad_cfg")
     config = SimConfig(
         noise=(
             "SPAM",
@@ -850,7 +848,6 @@ def test_add_config(matrices):
         eff_noise_probs=[0.4, 0.6],
         temperature=20000,
     )
-    print("init", config)
     sim.add_config(config)
     assert (
         "doppler" in sim.config.noise
@@ -1004,11 +1001,6 @@ def test_noisy_xy():
         NotImplementedError, match="simulation of noise types: amplitude"
     ):
         sim.add_config(SimConfig("amplitude"))
-
-    with pytest.raises(
-        NotImplementedError, match="simulation of noise types: amplitude"
-    ):
-        sim._hamiltonian.add_config(SimConfig("amplitude").to_noise_model())
 
 
 def test_mask_nopulses():
@@ -1208,7 +1200,7 @@ def test_effective_size_intersection():
             "atom2": True,
             "atom3": False,
         }
-        assert sim.get_hamiltonian(0) != 0 * sim._hamiltonian.build_operator(
+        assert sim.get_hamiltonian(0) != 0 * sim.build_operator(
             [("I", "global")]
         )
 
@@ -1242,7 +1234,7 @@ def test_effective_size_disjoint(channel_type):
     if channel_type == "mw_global":
         assert sim.get_hamiltonian(
             0
-        ) == 0.5 * amp * sim._hamiltonian.build_operator(
+        ) == 0.5 * amp * sim.build_operator(
             [(qutip.sigmax(), ["atom3"])]
         )
     else:

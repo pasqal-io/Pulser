@@ -19,8 +19,7 @@ import itertools
 import warnings
 from collections import defaultdict
 from collections.abc import Mapping
-from dataclasses import asdict
-from typing import Any, Union, cast
+from typing import Union, cast
 
 import numpy as np
 import qutip
@@ -230,60 +229,6 @@ class Hamiltonian:
             self._doppler_detune = {qid: 0.0 for qid in self._qid_index}
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
-
-    def add_config(self, config: NoiseModel) -> None:
-        """Updates the current configuration with parameters of another one.
-
-        Mostly useful when dealing with multiple noise types in different
-        configurations and wanting to merge these configurations together.
-        Adds simulation parameters to noises that weren't available in the
-        former NoiseModel. Noises specified in both NoiseModels will keep
-        former noise parameters.
-
-        Args:
-            config: NoiseModel to retrieve parameters from.
-        """
-        if not isinstance(config, NoiseModel):
-            raise ValueError(f"Object {config} is not a valid `NoiseModel`")
-
-        not_supported = (
-            set(config.noise_types) - SUPPORTED_NOISES[self._interaction]
-        )
-        if not_supported:
-            raise NotImplementedError(
-                f"Interaction mode '{self._interaction}' does not support "
-                f"simulation of noise types: {', '.join(not_supported)}."
-            )
-
-        old_noise_set = set(self.config.noise_types)
-        new_noise_set = old_noise_set.union(config.noise_types)
-        diff_noise_set = new_noise_set - old_noise_set
-        print(diff_noise_set)
-        # Create temporary param_dict to add noise parameters:
-        param_dict: dict[str, Any] = asdict(self._config)
-        # Begin populating with added noise parameters:
-        param_dict["noise_types"] = tuple(new_noise_set)
-        if "SPAM" in diff_noise_set:
-            param_dict["state_prep_error"] = config.state_prep_error
-            param_dict["p_false_pos"] = config.p_false_pos
-            param_dict["p_false_neg"] = config.p_false_neg
-        if "doppler" in diff_noise_set:
-            param_dict["temperature"] = config.temperature
-        if "amplitude" in diff_noise_set:
-            param_dict["laser_waist"] = config.laser_waist
-        if "dephasing" in diff_noise_set:
-            param_dict["dephasing_prob"] = config.dephasing_prob
-        if "depolarizing" in diff_noise_set:
-            param_dict["depolarizing_prob"] = config.depolarizing_prob
-        if "eff_noise" in diff_noise_set:
-            param_dict["eff_noise_opers"] = config.eff_noise_opers
-            param_dict["eff_noise_probs"] = config.eff_noise_probs
-        # update runs:
-        param_dict["runs"] = config.runs
-        param_dict["samples_per_run"] = config.samples_per_run
-
-        # set config with the new parameters:
-        self.set_config(NoiseModel(**param_dict))
 
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
