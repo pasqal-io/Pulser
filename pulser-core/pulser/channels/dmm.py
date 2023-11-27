@@ -15,14 +15,17 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass, field
-from typing import Literal, Optional
+from dataclasses import dataclass, field, fields
+from typing import Any, Literal, Optional
 
 import numpy as np
 
 from pulser.channels.base_channel import Channel
+from pulser.json.utils import get_dataclass_defaults
 from pulser.pulse import Pulse
 from pulser.register.weight_maps import DetuningMap
+
+OPTIONAL_ABSTR_DMM_FIELDS = ["total_bottom_detuning"]
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -100,8 +103,8 @@ class DMM(Channel):
         virtual_dmm = bool(self._undefined_fields())
         if not virtual_dmm and self.total_bottom_detuning is None:
             warnings.warn(
-                "`total_bottom_detuning` should be defined to define a"
-                " physical DMM.",
+                "From v0.17 and onwards, `total_bottom_detuning` must be"
+                " defined to define a physical DMM.",
                 DeprecationWarning,
             )
         return virtual_dmm
@@ -146,6 +149,15 @@ class DMM(Channel):
                 "The applied detuning goes below the total bottom detuning "
                 f"of the DMM ({self.total_bottom_detuning} rad/µs)."
             )
+
+    def _to_abstract_repr(self, id: str) -> dict[str, Any]:
+        all_fields = fields(self)
+        defaults = get_dataclass_defaults(all_fields)
+        params = super()._to_abstract_repr(id)
+        for p in OPTIONAL_ABSTR_DMM_FIELDS:
+            if params[p] == defaults[p]:
+                params.pop(p, None)
+        return params
 
 
 def _dmm_id_from_name(dmm_name: str) -> str:

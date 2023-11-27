@@ -51,7 +51,14 @@ class CloudFixture:
     mock_cloud_sdk: Any
 
 
-test_device = Chadoq2
+test_device = dataclasses.replace(
+    Chadoq2,
+    dmm_objects=(
+        dataclasses.replace(
+            Chadoq2.dmm_objects[0], total_bottom_detuning=-1000
+        ),
+    ),
+)
 virtual_device = test_device.to_virtual()
 
 

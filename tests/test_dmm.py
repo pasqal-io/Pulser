@@ -317,5 +317,6 @@ class TestDMM:
 
         # Should be valid in a physical DMM without global bottom detuning
         physical_dmm = DMM(bottom_detuning=-1)
-        assert not physical_dmm.is_virtual()
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards"):
+            assert not physical_dmm.is_virtual()
         physical_dmm.validate_pulse(too_low_pulse, det_map)

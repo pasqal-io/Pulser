@@ -538,10 +538,18 @@ def test_ising_mode(
 def test_switch_device_down(
     reg, det_map, devices, pulses, mappable_reg, parametrized
 ):
+    phys_Chadoq2 = dataclasses.replace(
+        Chadoq2,
+        dmm_objects=(
+            dataclasses.replace(
+                Chadoq2.dmm_objects[0], total_bottom_detuning=-2000
+            ),
+        ),
+    )
     # Device checkout
     seq = init_seq(
         reg,
-        Chadoq2,
+        phys_Chadoq2,
         "ising",
         "rydberg_global",
         None,
@@ -553,12 +561,12 @@ def test_switch_device_down(
         match="Switching a sequence to the same device"
         + " returns the sequence unchanged.",
     ):
-        seq.switch_device(Chadoq2)
+        seq.switch_device(phys_Chadoq2)
 
     # From sequence reusing channels to Device without reusable channels
     seq = init_seq(
         reg,
-        dataclasses.replace(Chadoq2.to_virtual(), reusable_channels=True),
+        dataclasses.replace(phys_Chadoq2.to_virtual(), reusable_channels=True),
         "global",
         "rydberg_global",
         None,
@@ -573,7 +581,7 @@ def test_switch_device_down(
         " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd raman_local
-        seq.switch_device(Chadoq2)
+        seq.switch_device(phys_Chadoq2)
 
     with pytest.raises(
         TypeError,
@@ -581,36 +589,37 @@ def test_switch_device_down(
         " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd raman_local
-        seq.switch_device(Chadoq2, strict=True)
+        seq.switch_device(phys_Chadoq2, strict=True)
 
     with pytest.raises(
         ValueError,
         match="No match for channel raman_1 with the" " same clock_period.",
     ):
-        # Can't find a match for the 2nd rydberg_local
-        seq.switch_device(
-            dataclasses.replace(
-                Chadoq2,
-                channel_objects=(
-                    Chadoq2.channels["rydberg_global"],
-                    dataclasses.replace(
-                        Chadoq2.channels["raman_local"], clock_period=10
+        with pytest.warns(DeprecationWarning, match="From v0.17"):
+            # Can't find a match for the 2nd rydberg_local
+            seq.switch_device(
+                dataclasses.replace(
+                    phys_Chadoq2,
+                    channel_objects=(
+                        Chadoq2.channels["rydberg_global"],
+                        dataclasses.replace(
+                            Chadoq2.channels["raman_local"], clock_period=10
+                        ),
+                        Chadoq2.channels["raman_local"],
                     ),
-                    Chadoq2.channels["raman_local"],
+                    channel_ids=(
+                        "rydberg_global",
+                        "rydberg_local",
+                        "rydberg_local1",
+                    ),
                 ),
-                channel_ids=(
-                    "rydberg_global",
-                    "rydberg_local",
-                    "rydberg_local1",
-                ),
-            ),
-            strict=True,
-        )
+                strict=True,
+            )
 
     # From sequence reusing DMMs to Device without reusable channels
     seq = init_seq(
         reg,
-        dataclasses.replace(Chadoq2.to_virtual(), reusable_channels=True),
+        dataclasses.replace(phys_Chadoq2.to_virtual(), reusable_channels=True),
         "global",
         "rydberg_global",
         None,
@@ -631,20 +640,20 @@ def test_switch_device_down(
         " right type, basis and addressing.",
     ):
         # Can't find a match for the 2nd dmm_0
-        seq.switch_device(Chadoq2)
+        seq.switch_device(phys_Chadoq2)
     # Strict switch imposes to have same bottom detuning for DMMs
     with pytest.raises(
         ValueError,
-        match="No match for channel dmm_0_1 with the" " same bottom_detuning.",
+        match="No match for channel dmm_0_1 with the same bottom_detuning.",
     ):
         # Can't find a match for the 1st dmm_0
         seq.switch_device(
             dataclasses.replace(
-                Chadoq2,
+                phys_Chadoq2,
                 dmm_objects=(
-                    Chadoq2.dmm_channels["dmm_0"],
+                    phys_Chadoq2.dmm_channels["dmm_0"],
                     dataclasses.replace(
-                        Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+                        phys_Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
                     ),
                 ),
             ),
@@ -658,11 +667,11 @@ def test_switch_device_down(
         # Can't find a match for the 1st dmm_0
         seq.switch_device(
             dataclasses.replace(
-                Chadoq2,
+                phys_Chadoq2,
                 dmm_objects=(
-                    Chadoq2.dmm_channels["dmm_0"],
+                    phys_Chadoq2.dmm_channels["dmm_0"],
                     dataclasses.replace(
-                        Chadoq2.dmm_channels["dmm_0"],
+                        phys_Chadoq2.dmm_channels["dmm_0"],
                         total_bottom_detuning=-500,
                     ),
                 ),

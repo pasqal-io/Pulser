@@ -61,9 +61,19 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
     "blackman_max": (BlackmanWaveform.from_max_val, ("max_val", "area")),
 }
 
+phys_Chadoq2 = replace(
+    Chadoq2,
+    name="phys_Chadoq2",
+    dmm_objects=(
+        replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
+    ),
+)
+
 
 class TestDevice:
-    @pytest.fixture(params=[Chadoq2, IroiseMVP, MockDevice, AnalogDevice])
+    @pytest.fixture(
+        params=[Chadoq2, phys_Chadoq2, IroiseMVP, MockDevice, AnalogDevice]
+    )
     def abstract_device(self, request):
         device = request.param
         return json.loads(device.to_abstract_repr())
@@ -82,8 +92,17 @@ class TestDevice:
         jsonschema.validate(instance=abstract_device, schema=device_schema)
 
     def test_roundtrip(self, abstract_device):
-        device = deserialize_device(json.dumps(abstract_device))
-        assert json.loads(device.to_abstract_repr()) == abstract_device
+        def _roundtrip(abstract_device):
+            device = deserialize_device(json.dumps(abstract_device))
+            assert json.loads(device.to_abstract_repr()) == abstract_device
+
+        if abstract_device["name"] == "Chadoq2":
+            with pytest.warns(
+                DeprecationWarning, match="From v0.17 and onwards"
+            ):
+                _roundtrip(abstract_device)
+        else:
+            _roundtrip(abstract_device)
 
     def test_exceptions(self, abstract_device, device_schema):
         def check_error_raised(
@@ -97,7 +116,13 @@ class TestDevice:
             assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause
 
-        good_device = deserialize_device(json.dumps(abstract_device))
+        if abstract_device["name"] == "Chadoq2":
+            with pytest.warns(
+                DeprecationWarning, match="From v0.17 and onwards"
+            ):
+                good_device = deserialize_device(json.dumps(abstract_device))
+        else:
+            good_device = deserialize_device(json.dumps(abstract_device))
 
         check_error_raised(
             abstract_device, TypeError, "'obj_str' must be a string"
@@ -1032,11 +1057,13 @@ def _get_expression(op: dict) -> Any:
 class TestDeserialization:
     def test_deserialize_device_and_channels(self) -> None:
         s = _get_serialized_seq()
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
+            deserialized_device = deserialize_device(json.dumps(s["device"]))
 
         # Check device
-        assert seq._device == deserialize_device(json.dumps(s["device"]))
+        assert seq._device == deserialized_device
 
         # Check channels
         assert len(seq.declared_channels) == len(s["channels"])
@@ -1055,8 +1082,9 @@ class TestDeserialization:
             )
         else:
             s = _get_serialized_seq()
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # Check register
         assert len(seq.register.qubits) == len(s["register"])
@@ -1085,8 +1113,9 @@ class TestDeserialization:
                 "slug": "test_layout",
             },
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         assert seq.is_register_mappable()
         qids = [q["qid"] for q in s["register"]]
@@ -1208,10 +1237,14 @@ class TestDeserialization:
             UserWarning, match="Building a non-parametrized sequence"
         ):
             _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            seq = Sequence.from_abstract_repr(json.dumps(s))
         if without_default:
             # Serialize and deserialize again, without the defaults
-            seq = Sequence.from_abstract_repr(seq.to_abstract_repr())
+            with pytest.warns(
+                DeprecationWarning, match="From v0.17 and onwards,"
+            ):
+                seq = Sequence.from_abstract_repr(seq.to_abstract_repr())
 
         # Check variables
         assert len(seq.declared_variables) == len(s["variables"])
@@ -1340,8 +1373,9 @@ class TestDeserialization:
                 }
             ]
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -1407,10 +1441,12 @@ class TestDeserialization:
 
     def test_deserialize_measurement(self):
         s = _get_serialized_seq()
-        _check_roundtrip(s)
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
         s["measurement"] = "ground-rydberg"
 
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         assert seq._measurement == s["measurement"]
 
@@ -1477,8 +1513,9 @@ class TestDeserialization:
                 "var2": {"type": "int", "value": [42]},
             },
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -1600,8 +1637,9 @@ class TestDeserialization:
                 "var2": {"type": "int", "value": [42]},
             },
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -1814,8 +1852,9 @@ class TestDeserialization:
                 "var_times": {"type": "float", "value": [0, 0.4, 0.8, 0.9]},
             },
         )
-        _check_roundtrip(s)
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
 
         seq_var1 = seq._variables["var1"]
         seq_var2 = seq._variables["var2"]
@@ -1931,13 +1970,13 @@ class TestDeserialization:
         # where a single value is expected. Still, all we want to
         # see is whether the parametrization of the operations
         # works as expected
-        if (
-            json_param["lhs"] != {"variable": "var1"}
-            and json_param["expression"] != "index"
-        ):
-            _check_roundtrip(s)
-
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+            if (
+                json_param["lhs"] != {"variable": "var1"}
+                and json_param["expression"] != "index"
+            ):
+                _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
         seq_var1 = seq._variables["var1"]
 
         # init + declare channels + 1 operation
@@ -2030,12 +2069,18 @@ class TestDeserialization:
             std_error = jsonschema.exceptions.ValidationError
             with patch("jsonschema.validate"):
                 with pytest.raises(AbstractReprError, match=msg):
-                    Sequence.from_abstract_repr(json.dumps(s))
+                    with pytest.warns(
+                        DeprecationWarning, match="From v0.17 and onwards,"
+                    ):
+                        Sequence.from_abstract_repr(json.dumps(s))
         else:
             std_error = AbstractReprError
             extra_params["match"] = msg
         with pytest.raises(std_error, **extra_params):
-            Sequence.from_abstract_repr(json.dumps(s))
+            with pytest.warns(
+                DeprecationWarning, match="From v0.17 and onwards,"
+            ):
+                Sequence.from_abstract_repr(json.dumps(s))
 
     def test_unknow_waveform(self):
         s = _get_serialized_seq(
@@ -2060,14 +2105,20 @@ class TestDeserialization:
             ]
         )
         with pytest.raises(jsonschema.exceptions.ValidationError):
-            Sequence.from_abstract_repr(json.dumps(s))
+            with pytest.warns(
+                DeprecationWarning, match="From v0.17 and onwards,"
+            ):
+                Sequence.from_abstract_repr(json.dumps(s))
 
         with pytest.raises(
             AbstractReprError,
             match="The object does not encode a known waveform.",
         ):
             with patch("jsonschema.validate"):
-                Sequence.from_abstract_repr(json.dumps(s))
+                with pytest.warns(
+                    DeprecationWarning, match="From v0.17 and onwards,"
+                ):
+                    Sequence.from_abstract_repr(json.dumps(s))
 
     @pytest.mark.parametrize("device", [Chadoq2, IroiseMVP, MockDevice])
     def test_legacy_device(self, device):

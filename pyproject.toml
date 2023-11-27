@@ -12,5 +12,4 @@ filterwarnings = [
     "error",
     # Except these particular warnings, which are ignored
     'ignore:A duration of \d+ ns is not a multiple of:UserWarning',
-    "ignore:`total_bottom_detuning` should be defined to:DeprecationWarning",
     ]
