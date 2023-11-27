@@ -1055,13 +1055,25 @@ def _get_expression(op: dict) -> Any:
 
 
 class TestDeserialization:
-    def test_deserialize_device_and_channels(self) -> None:
-        s = _get_serialized_seq()
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
+    @pytest.mark.parametrize("is_phys_Chadoq2", [True, False])
+    def test_deserialize_device_and_channels(self, is_phys_Chadoq2) -> None:
+        kwargs = {}
+        if is_phys_Chadoq2:
+            kwargs["device"] = json.loads(phys_Chadoq2.to_abstract_repr())
+        s = _get_serialized_seq(**kwargs)
+        if not is_phys_Chadoq2:
+            with pytest.warns(
+                DeprecationWarning, match="From v0.17 and onwards,"
+            ):
+                _check_roundtrip(s)
+                seq = Sequence.from_abstract_repr(json.dumps(s))
+                deserialized_device = deserialize_device(
+                    json.dumps(s["device"])
+                )
+        else:
             _check_roundtrip(s)
             seq = Sequence.from_abstract_repr(json.dumps(s))
             deserialized_device = deserialize_device(json.dumps(s["device"]))
-
         # Check device
         assert seq._device == deserialized_device
 
