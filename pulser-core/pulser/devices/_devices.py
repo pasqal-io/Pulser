@@ -22,7 +22,7 @@ from pulser.devices._device_datacls import Device
 from pulser.register.special_layouts import TriangularLatticeLayout
 
 with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
+    warnings.simplefilter("ignore", category=DeprecationWarning)
     Chadoq2 = Device(
         name="Chadoq2",
         dimensions=2,

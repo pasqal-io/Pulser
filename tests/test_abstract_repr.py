@@ -1076,20 +1076,18 @@ def _get_expression(op: dict) -> Any:
 
 class TestDeserialization:
     @pytest.mark.parametrize("is_phys_Chadoq2", [True, False])
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_device_and_channels(self, is_phys_Chadoq2) -> None:
         kwargs = {}
         if is_phys_Chadoq2:
             kwargs["device"] = json.loads(phys_Chadoq2.to_abstract_repr())
         s = _get_serialized_seq(**kwargs)
         if not is_phys_Chadoq2:
-            with pytest.warns(
-                DeprecationWarning, match="From v0.17 and onwards,"
-            ):
-                _check_roundtrip(s)
-                seq = Sequence.from_abstract_repr(json.dumps(s))
-                deserialized_device = deserialize_device(
-                    json.dumps(s["device"])
-                )
+            _check_roundtrip(s)
+            seq = Sequence.from_abstract_repr(json.dumps(s))
+            deserialized_device = deserialize_device(json.dumps(s["device"]))
         else:
             _check_roundtrip(s)
             seq = Sequence.from_abstract_repr(json.dumps(s))
@@ -1106,6 +1104,9 @@ class TestDeserialization:
     _coords = np.concatenate((_coords, -_coords))
 
     @pytest.mark.parametrize("layout_coords", [None, _coords])
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_register(self, layout_coords):
         if layout_coords is not None:
             reg_layout = RegisterLayout(layout_coords)
@@ -1114,9 +1115,8 @@ class TestDeserialization:
             )
         else:
             s = _get_serialized_seq()
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # Check register
         assert len(seq.register.qubits) == len(s["register"])
@@ -1136,6 +1136,9 @@ class TestDeserialization:
             assert "layout" not in s
             assert seq.register.layout is None
 
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_mappable_register(self):
         layout_coords = (5 * np.arange(8)).reshape((4, 2))
         s = _get_serialized_seq(
@@ -1145,9 +1148,8 @@ class TestDeserialization:
                 "slug": "test_layout",
             },
         )
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
 
         assert seq.is_register_mappable()
         qids = [q["qid"] for q in s["register"]]
@@ -1258,6 +1260,9 @@ class TestDeserialization:
         assert np.all(seq.magnetic_field == mag_field)
 
     @pytest.mark.parametrize("without_default", [True, False])
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_variables(self, without_default):
         s = _get_serialized_seq(
             variables={
@@ -1269,14 +1274,10 @@ class TestDeserialization:
             UserWarning, match="Building a non-parametrized sequence"
         ):
             _check_roundtrip(s)
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        seq = Sequence.from_abstract_repr(json.dumps(s))
         if without_default:
             # Serialize and deserialize again, without the defaults
-            with pytest.warns(
-                DeprecationWarning, match="From v0.17 and onwards,"
-            ):
-                seq = Sequence.from_abstract_repr(seq.to_abstract_repr())
+            seq = Sequence.from_abstract_repr(seq.to_abstract_repr())
 
         # Check variables
         assert len(seq.declared_variables) == len(s["variables"])
@@ -1391,6 +1392,9 @@ class TestDeserialization:
         ],
         ids=_get_kind,
     )
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_non_parametrized_waveform(self, wf_obj):
         s = _get_serialized_seq(
             operations=[
@@ -1405,9 +1409,8 @@ class TestDeserialization:
                 }
             ]
         )
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -1471,14 +1474,15 @@ class TestDeserialization:
             assert isinstance(wf, CustomWaveform)
             assert np.array_equal(wf._samples, wf_obj["samples"])
 
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_measurement(self):
         s = _get_serialized_seq()
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            _check_roundtrip(s)
+        _check_roundtrip(s)
         s["measurement"] = "ground-rydberg"
 
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        seq = Sequence.from_abstract_repr(json.dumps(s))
 
         assert seq._measurement == s["measurement"]
 
@@ -1537,6 +1541,9 @@ class TestDeserialization:
         ],
         ids=_get_op,
     )
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_parametrized_op(self, op):
         s = _get_serialized_seq(
             operations=[op],
@@ -1545,9 +1552,8 @@ class TestDeserialization:
                 "var2": {"type": "int", "value": [42]},
             },
         )
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -1661,6 +1667,9 @@ class TestDeserialization:
             ),
         ],
     )
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_parametrized_pulse(self, op, pulse_cls):
         s = _get_serialized_seq(
             operations=[op],
@@ -1669,9 +1678,8 @@ class TestDeserialization:
                 "var2": {"type": "int", "value": [42]},
             },
         )
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -1861,6 +1869,9 @@ class TestDeserialization:
         ],
         ids=_get_kind,
     )
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_parametrized_waveform(self, wf_obj):
         # var1,2 = duration 1000, 2000
         # var2,4 = value - 2, 5
@@ -1884,9 +1895,8 @@ class TestDeserialization:
                 "var_times": {"type": "float", "value": [0, 0.4, 0.8, 0.9]},
             },
         )
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
 
         seq_var1 = seq._variables["var1"]
         seq_var2 = seq._variables["var2"]
@@ -1972,6 +1982,9 @@ class TestDeserialization:
         ],
         ids=_get_expression,
     )
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_deserialize_param(self, json_param):
         s = _get_serialized_seq(
             operations=[
@@ -2002,13 +2015,12 @@ class TestDeserialization:
         # where a single value is expected. Still, all we want to
         # see is whether the parametrization of the operations
         # works as expected
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards,"):
-            if (
-                json_param["lhs"] != {"variable": "var1"}
-                and json_param["expression"] != "index"
-            ):
-                _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
+        if (
+            json_param["lhs"] != {"variable": "var1"}
+            and json_param["expression"] != "index"
+        ):
+            _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
         seq_var1 = seq._variables["var1"]
 
         # init + declare channels + 1 operation
@@ -2086,6 +2098,9 @@ class TestDeserialization:
         ],
         ids=["bad_var", "bad_param", "bad_exp"],
     )
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_param_exceptions(self, param, msg, patch_jsonschema):
         s = _get_serialized_seq(
             [
@@ -2101,19 +2116,16 @@ class TestDeserialization:
             std_error = jsonschema.exceptions.ValidationError
             with patch("jsonschema.validate"):
                 with pytest.raises(AbstractReprError, match=msg):
-                    with pytest.warns(
-                        DeprecationWarning, match="From v0.17 and onwards,"
-                    ):
-                        Sequence.from_abstract_repr(json.dumps(s))
+                    Sequence.from_abstract_repr(json.dumps(s))
         else:
             std_error = AbstractReprError
             extra_params["match"] = msg
         with pytest.raises(std_error, **extra_params):
-            with pytest.warns(
-                DeprecationWarning, match="From v0.17 and onwards,"
-            ):
-                Sequence.from_abstract_repr(json.dumps(s))
+            Sequence.from_abstract_repr(json.dumps(s))
 
+    @pytest.mark.filterwarnings(
+        "ignore:From v0.17 and onwards,.*:DeprecationWarning"
+    )
     def test_unknow_waveform(self):
         s = _get_serialized_seq(
             [
@@ -2137,20 +2149,14 @@ class TestDeserialization:
             ]
         )
         with pytest.raises(jsonschema.exceptions.ValidationError):
-            with pytest.warns(
-                DeprecationWarning, match="From v0.17 and onwards,"
-            ):
-                Sequence.from_abstract_repr(json.dumps(s))
+            Sequence.from_abstract_repr(json.dumps(s))
 
         with pytest.raises(
             AbstractReprError,
             match="The object does not encode a known waveform.",
         ):
             with patch("jsonschema.validate"):
-                with pytest.warns(
-                    DeprecationWarning, match="From v0.17 and onwards,"
-                ):
-                    Sequence.from_abstract_repr(json.dumps(s))
+                Sequence.from_abstract_repr(json.dumps(s))
 
     @pytest.mark.parametrize("device", [Chadoq2, IroiseMVP, MockDevice])
     def test_legacy_device(self, device):
