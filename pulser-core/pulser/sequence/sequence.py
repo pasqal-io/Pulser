@@ -2230,6 +2230,7 @@ class Sequence(Generic[DeviceType]):
                     if call_name == channel:
                         detuning_map = call_det_map
                         break
+            assert detuning_map is not None
         if detuning_map is None:
             # channel points to a Channel object
             channel_obj.validate_pulse(pulse)
