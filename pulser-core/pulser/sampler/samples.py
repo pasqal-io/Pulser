@@ -209,11 +209,41 @@ class ChannelSamples:
             The modulated channel samples.
         """
 
-        def masked(samples: np.ndarray, mask: np.ndarray) -> np.ndarray:
+        def masked(
+            samples: np.ndarray,
+            mask: np.ndarray,
+            keep_end_values: bool = False,
+        ) -> np.ndarray:
             new_samples = samples.copy()
             # Extend the mask to fit the size of the samples
             mask = np.pad(mask, (0, len(new_samples) - len(mask)), mode="edge")
-            new_samples[~mask] = 0
+            if keep_end_values:
+                # Extracts the contiguous masked regions as [ti, tf] pairs
+                masked_regions = (
+                    np.flatnonzero(
+                        np.diff(
+                            np.r_[
+                                np.int8(0), (~mask).view(np.int8), np.int8(0)
+                            ]
+                        )
+                    )
+                    .reshape(-1, 2)
+                    .tolist()
+                )
+                for reg in masked_regions:
+                    if not (delta := reg[1] - reg[0]):
+                        # Should never happen, added as a precaution
+                        continue  # pragma: no cover
+                    # Set the masked region to the final sample value
+                    new_samples[reg[0] : reg[1]] = samples[reg[1] - 1]
+                    if reg[0] > 0:
+                        # If not starting from 0, set the first half of
+                        # the region to the first sample value
+                        new_samples[reg[0] : reg[0] + delta // 2] = samples[
+                            reg[0]
+                        ]
+            else:
+                new_samples[~mask] = 0
             return new_samples
 
         new_samples: dict[str, np.ndarray] = {}
@@ -271,7 +301,10 @@ class ChannelSamples:
                     std_mask = ~(eom_mask + eom_buffers_mask)
                     # Adjusted detuning modulation during EOM buffers
                     modulated_buffer = buffer_ch_obj.modulate(
-                        key_samples, keep_ends=True
+                        # Makes detuning constant before and after EOM blocks
+                        # for a smooth transition
+                        masked(key_samples, ~std_mask, keep_end_values=True),
+                        keep_ends=True,
                     )
                 else:
                     std_mask = ~eom_mask
