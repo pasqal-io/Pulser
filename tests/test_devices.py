@@ -22,7 +22,7 @@ import pytest
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
-from pulser.devices import Chadoq2, Device, VirtualDevice
+from pulser.devices import Device, DigitalAnalogDevice, VirtualDevice
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -209,11 +209,11 @@ def test_valid_devices():
         assert isinstance(dev.channels, dict)
         with pytest.raises(FrozenInstanceError):
             dev.name = "something else"
-    assert Chadoq2 in pulser.devices._valid_devices
-    assert Chadoq2.supported_bases == {"digital", "ground-rydberg"}
+    assert DigitalAnalogDevice in pulser.devices._valid_devices
+    assert DigitalAnalogDevice.supported_bases == {"digital", "ground-rydberg"}
     with patch("sys.stdout"):
-        Chadoq2.print_specs()
-    assert Chadoq2.__repr__() == "Chadoq2"
+        DigitalAnalogDevice.print_specs()
+    assert DigitalAnalogDevice.__repr__() == "DigitalAnalogDevice"
 
 
 def test_change_rydberg_level():
@@ -243,20 +243,24 @@ def test_rydberg_blockade():
 
 def test_validate_register():
     with pytest.raises(ValueError, match="The number of atoms"):
-        Chadoq2.validate_register(Register.square(50))
+        DigitalAnalogDevice.validate_register(Register.square(50))
 
     coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
-        Chadoq2.validate_register(coords)
+        DigitalAnalogDevice.validate_register(coords)
     with pytest.raises(ValueError, match="at most 50 μm away from the center"):
-        Chadoq2.validate_register(Register.from_coordinates(coords))
+        DigitalAnalogDevice.validate_register(
+            Register.from_coordinates(coords)
+        )
 
     with pytest.raises(ValueError, match="at most 2D vectors"):
         coords = [(-10, 4, 0), (0, 0, 0)]
-        Chadoq2.validate_register(Register3D(dict(enumerate(coords))))
+        DigitalAnalogDevice.validate_register(
+            Register3D(dict(enumerate(coords)))
+        )
 
     with pytest.raises(ValueError, match="The minimal distance between atoms"):
-        Chadoq2.validate_register(
+        DigitalAnalogDevice.validate_register(
             Register.triangular_lattice(3, 4, spacing=3.9)
         )
 
@@ -264,36 +268,43 @@ def test_validate_register():
         ValueError, match="associated with an incompatible register layout"
     ):
         tri_layout = TriangularLatticeLayout(200, 20)
-        Chadoq2.validate_register(tri_layout.hexagonal_register(10))
+        DigitalAnalogDevice.validate_register(
+            tri_layout.hexagonal_register(10)
+        )
 
-    Chadoq2.validate_register(Register.rectangle(5, 10, spacing=5))
+    DigitalAnalogDevice.validate_register(Register.rectangle(5, 10, spacing=5))
 
 
 def test_validate_layout():
     coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
-        Chadoq2.validate_layout(Register.from_coordinates(coords))
+        DigitalAnalogDevice.validate_layout(Register.from_coordinates(coords))
     with pytest.raises(ValueError, match="at most 50 μm away from the center"):
-        Chadoq2.validate_layout(RegisterLayout(coords))
+        DigitalAnalogDevice.validate_layout(RegisterLayout(coords))
 
     with pytest.raises(ValueError, match="at most 2 dimensions"):
         coords = [(-10, 4, 0), (0, 0, 0)]
-        Chadoq2.validate_layout(RegisterLayout(coords))
+        DigitalAnalogDevice.validate_layout(RegisterLayout(coords))
 
     with pytest.raises(ValueError, match="The minimal distance between traps"):
-        Chadoq2.validate_layout(
-            TriangularLatticeLayout(12, Chadoq2.min_atom_distance - 1e-6)
+        DigitalAnalogDevice.validate_layout(
+            TriangularLatticeLayout(
+                12, DigitalAnalogDevice.min_atom_distance - 1e-6
+            )
         )
 
     valid_layout = RegisterLayout(
-        Register.square(int(np.sqrt(Chadoq2.max_atom_num * 2)))._coords
+        Register.square(
+            int(np.sqrt(DigitalAnalogDevice.max_atom_num * 2))
+        )._coords
     )
-    Chadoq2.validate_layout(valid_layout)
+    DigitalAnalogDevice.validate_layout(valid_layout)
 
     valid_tri_layout = TriangularLatticeLayout(
-        Chadoq2.max_atom_num * 2, Chadoq2.min_atom_distance
+        DigitalAnalogDevice.max_atom_num * 2,
+        DigitalAnalogDevice.min_atom_distance,
     )
-    Chadoq2.validate_layout(valid_tri_layout)
+    DigitalAnalogDevice.validate_layout(valid_tri_layout)
 
 
 @pytest.mark.parametrize(
@@ -304,7 +315,7 @@ def test_validate_layout():
     ],
 )
 def test_layout_filling(register):
-    assert Chadoq2.max_layout_filling == 0.5
+    assert DigitalAnalogDevice.max_layout_filling == 0.5
     assert register.layout.number_of_traps == 100
     with pytest.raises(
         ValueError,
@@ -314,7 +325,7 @@ def test_layout_filling(register):
             "On this device, this layout can hold at most 50 qubits."
         ),
     ):
-        Chadoq2.validate_layout_filling(register)
+        DigitalAnalogDevice.validate_layout_filling(register)
 
 
 def test_layout_filling_fail():
@@ -323,7 +334,7 @@ def test_layout_filling_fail():
         match="'validate_layout_filling' can only be called for"
         " registers with a register layout.",
     ):
-        Chadoq2.validate_layout_filling(Register.square(5))
+        DigitalAnalogDevice.validate_layout_filling(Register.square(5))
 
 
 def test_calibrated_layouts():
@@ -414,13 +425,13 @@ def test_convert_to_virtual():
 
 
 def test_device_params():
-    all_params = Chadoq2._params()
-    init_params = Chadoq2._params(init_only=True)
+    all_params = DigitalAnalogDevice._params()
+    init_params = DigitalAnalogDevice._params(init_only=True)
     assert set(all_params) - set(init_params) == {"reusable_channels"}
 
-    virtual_chadoq2 = Chadoq2.to_virtual()
-    all_virtual_params = virtual_chadoq2._params()
-    init_virtual_params = virtual_chadoq2._params(init_only=True)
+    virtual_DigitalAnalogDevice = DigitalAnalogDevice.to_virtual()
+    all_virtual_params = virtual_DigitalAnalogDevice._params()
+    init_virtual_params = virtual_DigitalAnalogDevice._params(init_only=True)
     assert all_virtual_params == init_virtual_params
     assert set(all_params) - set(all_virtual_params) == {
         "pre_calibrated_layouts"
@@ -433,7 +444,7 @@ def test_dmm_channels():
         match="A 'Device' instance cannot contain virtual channels."
         " For channel 'dmm_0', please define: 'bottom_detuning'",
     ):
-        replace(Chadoq2, dmm_objects=(DMM(),))
+        replace(DigitalAnalogDevice, dmm_objects=(DMM(),))
     dmm = DMM(
         bottom_detuning=-1,
         total_bottom_detuning=-100,
@@ -442,7 +453,7 @@ def test_dmm_channels():
         max_duration=1e6,
         mod_bandwidth=20,
     )
-    device = replace(Chadoq2, dmm_objects=(dmm,))
+    device = replace(DigitalAnalogDevice, dmm_objects=(dmm,))
     assert len(device.dmm_channels) == 1
     assert device.dmm_channels["dmm_0"] == dmm
     with pytest.raises(
@@ -453,7 +464,7 @@ def test_dmm_channels():
         ),
     ):
         device = replace(
-            Chadoq2,
+            DigitalAnalogDevice,
             dmm_objects=(dmm,),
             channel_objects=(Rydberg.Global(None, None),),
             channel_ids=("dmm_0",),

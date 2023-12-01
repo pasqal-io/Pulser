@@ -20,7 +20,7 @@ import pytest
 import qutip
 
 from pulser import Pulse, Register, Sequence
-from pulser.devices import Chadoq2, IroiseMVP, MockDevice
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
@@ -47,7 +47,7 @@ def seq(reg):
     pi_Y = Pulse.ConstantDetuning(
         BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
     )
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     # Declare Channels
     seq.declare_channel("ryd", "rydberg_local", "control1")
     seq.declare_channel("raman", "raman_local", "control1")
@@ -182,7 +182,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
 
     layout = RegisterLayout([[0, 0], [10, 10]])
     mapp_reg = layout.make_mappable_register(1)
-    seq_ = Sequence(mapp_reg, Chadoq2)
+    seq_ = Sequence(mapp_reg, DigitalAnalogDevice)
     assert seq_.is_register_mappable() and not seq_.is_parametrized()
     with pytest.raises(ValueError, match="needs to be built"):
         QutipEmulator.from_sequence(seq_)
@@ -266,7 +266,7 @@ def test_building_basis_and_projection_operators(seq, reg):
     assert np.linalg.norm(op_standard - op_one) < 1e-10
 
     # Global ground-rydberg
-    seq2 = Sequence(reg, Chadoq2)
+    seq2 = Sequence(reg, DigitalAnalogDevice)
     seq2.declare_channel("global", "rydberg_global")
     pi_pls = Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0.0, 0)
     seq2.add(pi_pls, "global")
@@ -284,7 +284,7 @@ def test_building_basis_and_projection_operators(seq, reg):
     )
 
     # Digital
-    seq2b = Sequence(reg, Chadoq2)
+    seq2b = Sequence(reg, DigitalAnalogDevice)
     seq2b.declare_channel("local", "raman_local", "target")
     seq2b.add(pi_pls, "local")
     sim2b = QutipEmulator.from_sequence(seq2b, sampling_rate=0.01)
@@ -301,7 +301,7 @@ def test_building_basis_and_projection_operators(seq, reg):
     )
 
     # Local ground-rydberg
-    seq2c = Sequence(reg, Chadoq2)
+    seq2c = Sequence(reg, DigitalAnalogDevice)
     seq2c.declare_channel("local_ryd", "rydberg_local", "target")
     seq2c.add(pi_pls, "local_ryd")
     sim2c = QutipEmulator.from_sequence(seq2c, sampling_rate=0.01)
@@ -321,12 +321,12 @@ def test_building_basis_and_projection_operators(seq, reg):
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("global", "mw_global")
     seq2.add(pi_pls, "global")
-    # seq2 cannot be run on Chadoq2 because it does not support mw
+    # seq2 cannot be run on DigitalAnalogDevice because it does not support mw
     with pytest.raises(
         ValueError,
         match="Bases used in samples should be supported by device.",
     ):
-        QutipEmulator(sampler.sample(seq2), seq2.register, Chadoq2)
+        QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
     sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01)
     assert sim2.basis_name == "XY"
     assert sim2.dim == 2
@@ -374,7 +374,7 @@ def test_get_hamiltonian():
     simple_reg = Register.from_coordinates([[10, 0], [0, 0]], prefix="atom")
     detun = 1.0
     rise = Pulse.ConstantDetuning(RampWaveform(1500, 0.0, 2.0), detun, 0.0)
-    simple_seq = Sequence(simple_reg, Chadoq2)
+    simple_seq = Sequence(simple_reg, DigitalAnalogDevice)
     simple_seq.declare_channel("ising", "rydberg_global")
     simple_seq.add(rise, "ising")
 
@@ -386,7 +386,8 @@ def test_get_hamiltonian():
     # Constant detuning, so |rr><rr| term is C_6/r^6 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
     assert np.isclose(
-        simple_ham[0, 0], Chadoq2.interaction_coeff / 10**6 - 2 * detun
+        simple_ham[0, 0],
+        DigitalAnalogDevice.interaction_coeff / 10**6 - 2 * detun,
     )
 
     np.random.seed(123)
@@ -424,7 +425,7 @@ def test_get_hamiltonian():
 
 def test_single_atom_simulation():
     one_reg = Register.from_coordinates([(0, 0)], "atom")
-    one_seq = Sequence(one_reg, Chadoq2)
+    one_seq = Sequence(one_reg, DigitalAnalogDevice)
     one_seq.declare_channel("ch0", "rydberg_global")
     one_seq.add(
         Pulse.ConstantDetuning(ConstantWaveform(16, 1.0), 1.0, 0), "ch0"
@@ -439,7 +440,7 @@ def test_single_atom_simulation():
 
 def test_add_max_step_and_delays():
     reg = Register.from_coordinates([(0, 0)])
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch", "rydberg_global")
     seq.delay(1500, "ch")
     seq.add(Pulse.ConstantDetuning(BlackmanWaveform(600, np.pi), 0, 0), "ch")
@@ -634,7 +635,7 @@ def test_eval_times(seq):
 def test_config():
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0), (0, 5)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
@@ -720,7 +721,7 @@ def test_noise_with_zero_epsilons(seq, matrices):
 def test_dephasing():
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
@@ -732,7 +733,7 @@ def test_dephasing():
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, Chadoq2)
+        seq2 = Sequence(reg, DigitalAnalogDevice)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
         sim = QutipEmulator.from_sequence(
@@ -745,7 +746,7 @@ def test_dephasing():
 def test_depolarizing():
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
@@ -759,7 +760,7 @@ def test_depolarizing():
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, Chadoq2)
+        seq2 = Sequence(reg, DigitalAnalogDevice)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
         sim = QutipEmulator.from_sequence(
@@ -772,7 +773,7 @@ def test_depolarizing():
 def test_eff_noise(matrices):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
@@ -796,7 +797,7 @@ def test_eff_noise(matrices):
     assert len(sim._collapse_ops) != 0
     with pytest.warns(UserWarning, match="first-order"):
         reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, Chadoq2)
+        seq2 = Sequence(reg, DigitalAnalogDevice)
         seq2.declare_channel("ch0", "rydberg_global")
         seq2.add(pulse, "ch0")
         sim = QutipEmulator.from_sequence(
@@ -812,7 +813,7 @@ def test_eff_noise(matrices):
 
 def test_add_config(matrices):
     reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0.0 * 2 * np.pi, 0)
@@ -858,7 +859,7 @@ def test_add_config(matrices):
 
 def test_concurrent_pulses():
     reg = Register({"q0": (0, 0)})
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
 
     seq.declare_channel("ch_local", "rydberg_local", initial_target="q0")
     seq.declare_channel("ch_global", "rydberg_global")
@@ -1020,7 +1021,7 @@ def test_mask_equals_remove_xy():
         ValueError,
         match="Samples use SLM mask but device does not have one.",
     ):
-        QutipEmulator(sampler.sample(seq_masked), reg_three, IroiseMVP)
+        QutipEmulator(sampler.sample(seq_masked), reg_three, AnalogDevice)
     # Simulation cannot be run on a register not defining "q2"
     with pytest.raises(
         ValueError,

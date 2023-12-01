@@ -106,9 +106,10 @@ Physical Devices
 Each `Device`` instance holds the characteristics of a physical device,
 which when associated with a :class:`pulser.Sequence` condition its development.
 
-.. autodata:: pulser.devices.Chadoq2
-
 .. autodata:: pulser.devices.AnalogDevice
+
+.. autodata:: pulser.devices.DigitalAnalogDevice
+
 
 
 Channels

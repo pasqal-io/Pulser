@@ -31,7 +31,7 @@ from pulser.backend.remote import (
     RemoteResultsError,
     SubmissionStatus,
 )
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.result import Result, SampledResult
 
 
@@ -246,7 +246,7 @@ def test_qpu_backend(sequence):
     ):
         QPUBackend(sequence, connection)
     with pytest.warns(DeprecationWarning, match="From v0.17"):
-        seq = sequence.switch_device(replace(Chadoq2, max_runs=10))
+        seq = sequence.switch_device(replace(DigitalAnalogDevice, max_runs=10))
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()

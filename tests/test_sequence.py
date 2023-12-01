@@ -26,7 +26,7 @@ import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.channels.dmm import DMM
-from pulser.devices import Chadoq2, IroiseMVP, MockDevice
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
@@ -59,7 +59,7 @@ def det_map(reg: Register):
 @pytest.fixture
 def device():
     return dataclasses.replace(
-        Chadoq2,
+        DigitalAnalogDevice,
         dmm_objects=(
             DMM(bottom_detuning=-70, total_bottom_detuning=-700),
             DMM(bottom_detuning=-100, total_bottom_detuning=-1000),
@@ -539,10 +539,10 @@ def test_switch_device_down(
     reg, det_map, devices, pulses, mappable_reg, parametrized
 ):
     phys_Chadoq2 = dataclasses.replace(
-        Chadoq2,
+        DigitalAnalogDevice,
         dmm_objects=(
             dataclasses.replace(
-                Chadoq2.dmm_objects[0], total_bottom_detuning=-2000
+                DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-2000
             ),
         ),
     )
@@ -601,11 +601,12 @@ def test_switch_device_down(
                 dataclasses.replace(
                     phys_Chadoq2,
                     channel_objects=(
-                        Chadoq2.channels["rydberg_global"],
+                        DigitalAnalogDevice.channels["rydberg_global"],
                         dataclasses.replace(
-                            Chadoq2.channels["raman_local"], clock_period=10
+                            DigitalAnalogDevice.channels["raman_local"],
+                            clock_period=10,
                         ),
-                        Chadoq2.channels["raman_local"],
+                        DigitalAnalogDevice.channels["raman_local"],
                     ),
                     channel_ids=(
                         "rydberg_global",
@@ -728,7 +729,7 @@ def test_switch_device_down(
         mappable_reg=mappable_reg,
     )
     for dev_ in (
-        Chadoq2,  # Different Channels type / basis
+        DigitalAnalogDevice,  # Different Channels type / basis
         devices[1],  # Different addressing channels
     ):
         with pytest.raises(
@@ -792,7 +793,7 @@ def test_switch_device_down(
         match="No match for channel digital"
         + " with the same min_retarget_interval.",
     ):
-        seq.switch_device(Chadoq2, True)
+        seq.switch_device(DigitalAnalogDevice, True)
 
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
@@ -814,7 +815,7 @@ def test_switch_device_up(
     # Device checkout
     seq = init_seq(
         reg,
-        Chadoq2,
+        DigitalAnalogDevice,
         "ising",
         "rydberg_global",
         None,
@@ -827,7 +828,10 @@ def test_switch_device_up(
         match="Switching a sequence to the same device returns the "
         "sequence unchanged",
     ):
-        assert seq.switch_device(Chadoq2)._device == Chadoq2
+        assert (
+            seq.switch_device(DigitalAnalogDevice)._device
+            == DigitalAnalogDevice
+        )
     # Test non-strict mode
     assert "ising" in seq.switch_device(devices[0]).declared_channels
 
@@ -931,7 +935,7 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
-        IroiseMVP,
+        dataclasses.replace(AnalogDevice, max_atom_num=28),
         "rydberg",
         "rydberg_global",
         [],
@@ -950,20 +954,22 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
     with pytest.warns(UserWarning, match=warns_msg), pytest.raises(
         TypeError, match=err_base + "with an EOM configuration."
     ):
-        seq.switch_device(Chadoq2)
+        seq.switch_device(DigitalAnalogDevice)
 
     ch_obj = seq.declared_channels["rydberg"]
     mod_eom_config = dataclasses.replace(
         ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
     )
     mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
-    mod_iroise = dataclasses.replace(IroiseMVP, channel_objects=(mod_ch_obj,))
+    mod_analog = dataclasses.replace(
+        AnalogDevice, channel_objects=(mod_ch_obj,), max_atom_num=28
+    )
     with pytest.raises(
         ValueError, match=err_base + "with the same EOM configuration."
     ):
-        seq.switch_device(mod_iroise, strict=True)
+        seq.switch_device(mod_analog, strict=True)
 
-    mod_seq = seq.switch_device(mod_iroise, strict=False)
+    mod_seq = seq.switch_device(mod_analog, strict=False)
     if parametrized:
         seq = seq.build(delay=120)
         mod_seq = mod_seq.build(delay=120)
@@ -1340,7 +1346,7 @@ def test_config_slm_mask(qubit_ids, device, det_map):
     is_str_qubit_id = isinstance(qubit_ids[0], str)
     seq = Sequence(reg, device)
     with pytest.raises(ValueError, match="does not have an SLM mask."):
-        seq_ = Sequence(reg, IroiseMVP)
+        seq_ = Sequence(reg, AnalogDevice)
         seq_.config_slm_mask(["q0" if is_str_qubit_id else 0])
 
     with pytest.raises(TypeError, match="must be castable to set"):
@@ -1771,7 +1777,7 @@ def test_hardware_constraints(reg, patch_plt_show):
 def test_mappable_register(det_map, patch_plt_show, with_dmm):
     layout = TriangularLatticeLayout(100, 5)
     mapp_reg = layout.make_mappable_register(10)
-    seq = Sequence(mapp_reg, Chadoq2)
+    seq = Sequence(mapp_reg, DigitalAnalogDevice)
     assert seq.is_register_mappable()
     assert isinstance(seq.get_register(), MappableRegister)
     with pytest.raises(
@@ -1917,7 +1923,7 @@ def test_parametrized_index_functions(
     register, build_params, index, expected_target
 ):
     phi = np.pi / 4
-    seq = Sequence(register, Chadoq2)
+    seq = Sequence(register, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
     index_var = seq.declare_variable("index", dtype=int)
@@ -1944,7 +1950,7 @@ def test_non_parametrized_index_functions_in_parametrized_context(
     register, build_params, index, expected_target
 ):
     phi = np.pi / 4
-    seq = Sequence(register, Chadoq2)
+    seq = Sequence(register, DigitalAnalogDevice)
     seq.declare_channel("ch0", "raman_local")
     phi_var = seq.declare_variable("phi_var", dtype=int)
 
@@ -1963,7 +1969,7 @@ def test_non_parametrized_index_functions_in_parametrized_context(
 def test_non_parametrized_non_mappable_register_index_functions(
     register, build_params, index, expected_target
 ):
-    seq = Sequence(register, Chadoq2)
+    seq = Sequence(register, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_local")
     seq.declare_channel("ch1", "raman_local")
     phi = np.pi / 4

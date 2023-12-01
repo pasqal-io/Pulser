@@ -19,13 +19,13 @@ import numpy as np
 import pytest
 
 from pulser import Pulse, Register, Sequence
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.parametrized import Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.waveforms import BlackmanWaveform
 
 reg = Register.rectangle(4, 3)
-device = Chadoq2
+device = DigitalAnalogDevice
 
 
 def test_var_declarations():

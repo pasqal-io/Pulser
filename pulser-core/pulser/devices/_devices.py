@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Definitions of real devices."""
+"""Examples of realistic devices."""
+import dataclasses
 import warnings
 
 import numpy as np
@@ -23,8 +24,8 @@ from pulser.register.special_layouts import TriangularLatticeLayout
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
-    Chadoq2 = Device(
-        name="Chadoq2",
+    DigitalAnalogDevice = Device(
+        name="DigitalAnalogDevice",
         dimensions=2,
         rydberg_level=70,
         max_atom_num=100,
@@ -71,32 +72,6 @@ with warnings.catch_warnings():
         ),
     )
 
-IroiseMVP = Device(
-    name="IroiseMVP",
-    dimensions=2,
-    rydberg_level=60,
-    max_atom_num=100,
-    max_radial_distance=60,
-    min_atom_distance=5,
-    channel_objects=(
-        Rydberg.Global(
-            max_abs_detuning=2 * np.pi * 4,
-            max_amp=2 * np.pi * 3,
-            clock_period=4,
-            min_duration=16,
-            max_duration=2**26,
-            mod_bandwidth=4,
-            eom_config=RydbergEOM(
-                limiting_beam=RydbergBeam.RED,
-                max_limiting_amp=40 * 2 * np.pi,
-                intermediate_detuning=700 * 2 * np.pi,
-                mod_bandwidth=24,
-                controlled_beams=(RydbergBeam.BLUE,),
-            ),
-        ),
-    ),
-)
-
 AnalogDevice = Device(
     name="AnalogDevice",
     dimensions=2,
@@ -124,4 +99,36 @@ AnalogDevice = Device(
         ),
     ),
     pre_calibrated_layouts=(TriangularLatticeLayout(61, 5),),
+)
+
+# Legacy devices (deprecated, should not be used in new sequences)
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    Chadoq2 = dataclasses.replace(DigitalAnalogDevice, name="Chadoq2")
+
+IroiseMVP = Device(
+    name="IroiseMVP",
+    dimensions=2,
+    rydberg_level=60,
+    max_atom_num=100,
+    max_radial_distance=60,
+    min_atom_distance=5,
+    channel_objects=(
+        Rydberg.Global(
+            max_abs_detuning=2 * np.pi * 4,
+            max_amp=2 * np.pi * 3,
+            clock_period=4,
+            min_duration=16,
+            max_duration=2**26,
+            mod_bandwidth=4,
+            eom_config=RydbergEOM(
+                limiting_beam=RydbergBeam.RED,
+                max_limiting_amp=40 * 2 * np.pi,
+                intermediate_detuning=700 * 2 * np.pi,
+                mod_bandwidth=24,
+                controlled_beams=(RydbergBeam.BLUE,),
+            ),
+        ),
+    ),
 )

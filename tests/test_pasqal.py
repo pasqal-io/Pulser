@@ -31,7 +31,7 @@ from pulser.backend.remote import (
     RemoteResults,
     SubmissionStatus,
 )
-from pulser.devices import Chadoq2
+from pulser.devices import DigitalAnalogDevice
 from pulser.register.special_layouts import SquareLatticeLayout
 from pulser.result import SampledResult
 from pulser.sequence import Sequence
@@ -52,10 +52,10 @@ class CloudFixture:
 
 
 test_device = dataclasses.replace(
-    Chadoq2,
+    DigitalAnalogDevice,
     dmm_objects=(
         dataclasses.replace(
-            Chadoq2.dmm_objects[0], total_bottom_detuning=-1000
+            DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-1000
         ),
     ),
 )
