@@ -28,7 +28,14 @@ import pytest
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
-from pulser.devices import AnalogDevice, Chadoq2, Device, IroiseMVP, MockDevice
+from pulser.devices import (
+    AnalogDevice,
+    Chadoq2,
+    Device,
+    DigitalAnalogDevice,
+    IroiseMVP,
+    MockDevice,
+)
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
     deserialize_device,
@@ -62,7 +69,7 @@ SPECIAL_WFS: dict[str, tuple[Callable, tuple[str, ...]]] = {
 }
 
 phys_Chadoq2 = replace(
-    Chadoq2,
+    DigitalAnalogDevice,
     name="phys_Chadoq2",
     dmm_objects=(
         replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
@@ -71,7 +78,9 @@ phys_Chadoq2 = replace(
 
 
 class TestDevice:
-    @pytest.fixture(params=[Chadoq2, phys_Chadoq2, MockDevice, AnalogDevice])
+    @pytest.fixture(
+        params=[DigitalAnalogDevice, phys_Chadoq2, MockDevice, AnalogDevice]
+    )
     def abstract_device(self, request):
         device = request.param
         return json.loads(device.to_abstract_repr())
@@ -94,7 +103,7 @@ class TestDevice:
             device = deserialize_device(json.dumps(abstract_device))
             assert json.loads(device.to_abstract_repr()) == abstract_device
 
-        if abstract_device["name"] == "Chadoq2":
+        if abstract_device["name"] == "DigitalAnalogDevice":
             with pytest.warns(
                 DeprecationWarning, match="From v0.17 and onwards"
             ):
@@ -114,7 +123,7 @@ class TestDevice:
             assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause
 
-        if abstract_device["name"] == "Chadoq2":
+        if abstract_device["name"] == "DigitalAnalogDevice":
             with pytest.warns(
                 DeprecationWarning, match="From v0.17 and onwards"
             ):
@@ -277,7 +286,7 @@ class TestSerialization:
     def triangular_lattice(self):
         return TriangularLatticeLayout(50, 6)
 
-    @pytest.fixture(params=[Chadoq2, MockDevice])
+    @pytest.fixture(params=[DigitalAnalogDevice, MockDevice])
     def sequence(self, request):
         qubits = {"control": (-2, 0), "target": (2, 0)}
         reg = Register(qubits)
@@ -310,7 +319,7 @@ class TestSerialization:
             CompositeWaveform(pi_2_wf, pi_2_wf), 0, 0
         )
 
-        max_val = Chadoq2.rabi_from_blockade(8)
+        max_val = DigitalAnalogDevice.rabi_from_blockade(8)
         two_pi_wf = BlackmanWaveform.from_max_val(max_val, amps[1])
         two_pi_pulse = Pulse.ConstantDetuning(two_pi_wf, 0, 0)
 
@@ -524,7 +533,7 @@ class TestSerialization:
         ],
     )
     def test_unknown_calls(self, call):
-        seq = Sequence(Register.square(2, prefix="q"), Chadoq2)
+        seq = Sequence(Register.square(2, prefix="q"), DigitalAnalogDevice)
         seq.declare_channel("ch0", "rydberg_global")
         seq._calls.append(call)
         with pytest.raises(
@@ -812,7 +821,9 @@ class TestSerialization:
         phase_kwargs = {} if use_default else dict(basis="ground-rydberg")
         measure_kwargs = {} if use_default else dict(basis="digital")
 
-        seq = Sequence(triangular_lattice.hexagonal_register(5), Chadoq2)
+        seq = Sequence(
+            triangular_lattice.hexagonal_register(5), DigitalAnalogDevice
+        )
         seq.declare_channel("ryd", "rydberg_global")
         seq.declare_channel("raman", "raman_local", initial_target="q0")
         seq.phase_shift(1, "q0", **phase_kwargs)
@@ -991,7 +1002,7 @@ def _get_serialized_seq(
     seq_dict = {
         "version": "1",
         "name": "John Doe",
-        "device": json.loads(Chadoq2.to_abstract_repr()),
+        "device": json.loads(DigitalAnalogDevice.to_abstract_repr()),
         "register": [
             {"name": "q0", "x": 0.0, "y": 2.0},
             {"name": "q42", "x": -2.0, "y": 9.0},
@@ -2156,13 +2167,23 @@ class TestDeserialization:
             with patch("jsonschema.validate"):
                 Sequence.from_abstract_repr(json.dumps(s))
 
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
-    @pytest.mark.parametrize("device", [Chadoq2, IroiseMVP, MockDevice])
-    def test_legacy_device(self, device):
+    @pytest.mark.parametrize(
+        "device, deprecated",
+        [(Chadoq2, True), (IroiseMVP, True), (MockDevice, False)],
+    )
+    def test_legacy_device(self, device, deprecated):
         s = _get_serialized_seq(
             device=device.name, channels={"global": "rydberg_global"}
         )
-        seq = Sequence.from_abstract_repr(json.dumps(s))
+        if deprecated:
+            # This is necessary because warnings.catch_warnings (being
+            # used in Sequence) overrides pytest.mark.filterwarnings
+            with pytest.warns(
+                DeprecationWarning, match="device has been deprecated"
+            ):
+                seq = Sequence.from_abstract_repr(json.dumps(s))
+        else:
+            seq = Sequence.from_abstract_repr(json.dumps(s))
         assert seq.device == device
 
     def test_bad_type(self):

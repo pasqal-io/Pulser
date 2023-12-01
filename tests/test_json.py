@@ -19,7 +19,7 @@ import pytest
 
 import pulser
 from pulser import Register, Register3D, Sequence
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.exceptions import SerializationError
 from pulser.json.supported import validate_serialization
@@ -53,7 +53,7 @@ def test_encoder():
 
 
 def test_device(mod_device):
-    assert encode_decode(Chadoq2) == Chadoq2
+    assert encode_decode(DigitalAnalogDevice) == DigitalAnalogDevice
     with pytest.raises(SerializationError):
         encode_decode(mod_device)
 
@@ -66,7 +66,7 @@ def test_virtual_device(mod_device):
 
 def test_register_2d():
     reg = Register({"c": (1, 2), "d": (8, 4)})
-    seq = Sequence(reg, device=Chadoq2)
+    seq = Sequence(reg, device=DigitalAnalogDevice)
     assert reg == encode_decode(seq).register
 
 
@@ -144,7 +144,7 @@ def test_mappable_register():
 
 def test_rare_cases(patch_plt_show):
     reg = Register.square(4)
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     var = seq.declare_variable("var")
 
     wf = BlackmanWaveform(var * 100 // 10, var)
@@ -181,7 +181,7 @@ def test_rare_cases(patch_plt_show):
 
 
 def test_support():
-    seq = Sequence(Register.square(2), Chadoq2)
+    seq = Sequence(Register.square(2), DigitalAnalogDevice)
     var = seq.declare_variable("var")
 
     obj_dict = BlackmanWaveform.from_max_val(1, var)._to_dict()
@@ -215,7 +215,7 @@ def test_support():
 
 def test_sequence_module():
     # Check that the sequence module is backwards compatible after refactoring
-    seq = Sequence(Register.square(2), Chadoq2)
+    seq = Sequence(Register.square(2), DigitalAnalogDevice)
 
     obj_dict = json.loads(seq._serialize())
     assert obj_dict["__module__"] == "pulser.sequence"
