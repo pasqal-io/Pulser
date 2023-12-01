@@ -20,7 +20,7 @@ import pytest
 import qutip
 
 from pulser import Pulse, Register, Sequence
-from pulser.devices import Chadoq2, IroiseMVP, MockDevice
+from pulser.devices import Chadoq2, AnalogDevice, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
@@ -1020,7 +1020,7 @@ def test_mask_equals_remove_xy():
         ValueError,
         match="Samples use SLM mask but device does not have one.",
     ):
-        QutipEmulator(sampler.sample(seq_masked), reg_three, IroiseMVP)
+        QutipEmulator(sampler.sample(seq_masked), reg_three, AnalogDevice)
     # Simulation cannot be run on a register not defining "q2"
     with pytest.raises(
         ValueError,

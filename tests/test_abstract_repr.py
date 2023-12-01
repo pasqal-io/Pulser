@@ -71,9 +71,7 @@ phys_Chadoq2 = replace(
 
 
 class TestDevice:
-    @pytest.fixture(
-        params=[Chadoq2, phys_Chadoq2, IroiseMVP, MockDevice, AnalogDevice]
-    )
+    @pytest.fixture(params=[Chadoq2, phys_Chadoq2, MockDevice, AnalogDevice])
     def abstract_device(self, request):
         device = request.param
         return json.loads(device.to_abstract_repr())
@@ -741,7 +739,7 @@ class TestSerialization:
     @pytest.mark.parametrize("correct_phase_drift", (False, True))
     def test_eom_mode(self, triangular_lattice, correct_phase_drift):
         reg = triangular_lattice.hexagonal_register(7)
-        seq = Sequence(reg, IroiseMVP)
+        seq = Sequence(reg, AnalogDevice)
         seq.declare_channel("ryd", "rydberg_global")
         det_off = seq.declare_variable("det_off", dtype=float)
         duration = seq.declare_variable("duration", dtype=int)
@@ -1755,7 +1753,7 @@ class TestDeserialization:
                 "duration": {"type": "int", "value": [100]},
                 "detuning_on": {"type": "int", "value": [0.0]},
             },
-            device=json.loads(IroiseMVP.to_abstract_repr()),
+            device=json.loads(AnalogDevice.to_abstract_repr()),
             channels={"global": "rydberg_global"},
         )
         if correct_phase_drift is None:
@@ -2158,6 +2156,7 @@ class TestDeserialization:
             with patch("jsonschema.validate"):
                 Sequence.from_abstract_repr(json.dumps(s))
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     @pytest.mark.parametrize("device", [Chadoq2, IroiseMVP, MockDevice])
     def test_legacy_device(self, device):
         s = _get_serialized_seq(

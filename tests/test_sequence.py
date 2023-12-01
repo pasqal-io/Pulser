@@ -26,7 +26,7 @@ import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.channels.dmm import DMM
-from pulser.devices import Chadoq2, IroiseMVP, MockDevice
+from pulser.devices import Chadoq2, AnalogDevice, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.base_register import BaseRegister
 from pulser.register.mappable_reg import MappableRegister
@@ -931,7 +931,7 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
-        IroiseMVP,
+        dataclasses.replace(AnalogDevice, max_atom_num=28),
         "rydberg",
         "rydberg_global",
         [],
@@ -957,13 +957,15 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
         ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
     )
     mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
-    mod_iroise = dataclasses.replace(IroiseMVP, channel_objects=(mod_ch_obj,))
+    mod_analog = dataclasses.replace(
+        AnalogDevice, channel_objects=(mod_ch_obj,), max_atom_num=28
+    )
     with pytest.raises(
         ValueError, match=err_base + "with the same EOM configuration."
     ):
-        seq.switch_device(mod_iroise, strict=True)
+        seq.switch_device(mod_analog, strict=True)
 
-    mod_seq = seq.switch_device(mod_iroise, strict=False)
+    mod_seq = seq.switch_device(mod_analog, strict=False)
     if parametrized:
         seq = seq.build(delay=120)
         mod_seq = mod_seq.build(delay=120)
@@ -1340,7 +1342,7 @@ def test_config_slm_mask(qubit_ids, device, det_map):
     is_str_qubit_id = isinstance(qubit_ids[0], str)
     seq = Sequence(reg, device)
     with pytest.raises(ValueError, match="does not have an SLM mask."):
-        seq_ = Sequence(reg, IroiseMVP)
+        seq_ = Sequence(reg, AnalogDevice)
         seq_.config_slm_mask(["q0" if is_str_qubit_id else 0])
 
     with pytest.raises(TypeError, match="must be castable to set"):

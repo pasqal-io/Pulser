@@ -121,6 +121,14 @@ class Sequence(Generic[DeviceType]):
                 f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
 
+        if device == devices.IroiseMVP:
+            warnings.warn(
+                "The 'IroiseMVP' device has been deprecated. For a similar "
+                "analog device consider using `AnalogDevice`.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
             device.validate_layout(register.layout)
