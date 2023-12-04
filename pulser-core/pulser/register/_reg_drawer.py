@@ -88,10 +88,7 @@ class RegDrawer:
         ):
             raise ValueError("masked qubits and dmm qubits must be the same.")
         elif masked_qubits:
-            dmm_qubits = {
-                masked_qubit: 1.0 / len(masked_qubits)
-                for masked_qubit in masked_qubits
-            }
+            dmm_qubits = {masked_qubit: 1.0 for masked_qubit in masked_qubits}
 
         if dmm_qubits:
             dmm_pos = []

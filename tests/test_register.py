@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from pulser import Register, Register3D
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import DigitalAnalogDevice, MockDevice
 
 
 def test_creation():
@@ -159,7 +159,7 @@ def test_hexagon():
 
 
 def test_max_connectivity():
-    device = Chadoq2
+    device = DigitalAnalogDevice
     max_atom_num = device.max_atom_num
     spacing = device.min_atom_distance
     crest_y = np.sqrt(3) / 2.0

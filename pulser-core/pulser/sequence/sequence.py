@@ -39,6 +39,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
+import pulser.devices as devices
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
@@ -120,6 +121,25 @@ class Sequence(Generic[DeviceType]):
             raise TypeError(
                 f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            if device == devices.Chadoq2:
+                warnings.warn(
+                    "The 'Chadoq2' device has been deprecated. For a "
+                    "similar device combining global and local addressing, "
+                    "consider using `DigitalAnalogDevice`.",
+                    category=DeprecationWarning,
+                    stacklevel=2,
+                )
+
+            if device == devices.IroiseMVP:
+                warnings.warn(
+                    "The 'IroiseMVP' device has been deprecated. For a "
+                    "similar analog device consider using `AnalogDevice`.",
+                    category=DeprecationWarning,
+                    stacklevel=2,
+                )
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
@@ -234,6 +254,25 @@ class Sequence(Generic[DeviceType]):
         """The atom register on which to apply the pulses."""
         return self._register if include_mappable else self.register
 
+    def _get_dmm_id_detuning_map(self, call: _Call) -> tuple[str, DetuningMap]:
+        dmm_id: str
+        det_map: DetuningMap
+        # Get DMM name
+        if "dmm_id" in call.kwargs:
+            dmm_id = call.kwargs["dmm_id"]
+        elif len(call.args) > 1:
+            dmm_id = call.args[1]
+        else:
+            dmm_id = "dmm_0"
+        # Get DetuningMap
+        if "detuning_map" in call.kwargs:
+            det_map = call.kwargs["detuning_map"]
+        elif isinstance(call.args[0], DetuningMap):
+            det_map = call.args[0]
+        else:  # SLM case:
+            det_map = self._slm_detuning_map(set(call.args[0]))
+        return (dmm_id, det_map)
+
     @property
     def declared_channels(self) -> dict[str, Channel]:
         """Channels declared in this Sequence."""
@@ -246,13 +285,7 @@ class Sequence(Generic[DeviceType]):
                 call.name == "config_slm_mask"
                 or call.name == "config_detuning_map"
             ):
-                dmm_id: str
-                if "dmm_id" in call.kwargs:
-                    dmm_id = call.kwargs["dmm_id"]
-                elif len(call.args) > 1:
-                    dmm_id = call.args[1]
-                else:
-                    dmm_id = "dmm_0"
+                (dmm_id, _) = self._get_dmm_id_detuning_map(call)
                 dmm_name = _get_dmm_name(
                     dmm_id, list(all_declared_channels.keys())
                 )
@@ -495,14 +528,16 @@ class Sequence(Generic[DeviceType]):
         # No parametrization -> Always stored as a regular call
         self._calls.append(_Call("set_magnetic_field", mag_vector, {}))
 
-    def _set_slm_mask_dmm(self, dmm_id: str, targets: set[QubitId]) -> None:
-        ntargets = len(targets)
-        detuning_map = self.register.define_detuning_map(
+    def _slm_detuning_map(self, targets: set[QubitId]) -> DetuningMap:
+        return self.register.define_detuning_map(
             {
-                qubit: (1 / ntargets if qubit in targets else 0)
+                qubit: (1.0 if qubit in targets else 0)
                 for qubit in self.register.qubit_ids
             }
         )
+
+    def _set_slm_mask_dmm(self, dmm_id: str, targets: set[QubitId]) -> None:
+        detuning_map = self._slm_detuning_map(targets)
         self._config_detuning_map(detuning_map, dmm_id)
         # Find the name of the dmm in the declared channels.
         for key in reversed(self.declared_channels.keys()):
@@ -538,7 +573,7 @@ class Sequence(Generic[DeviceType]):
         channel starting the earliest in the schedule.
 
         If the sequence is in Ising, the SLM Mask is a DetuningMap where
-        the detuning of each masked qubit is the same. DMM "dmm_id" is
+        the detuning of each masked qubit is 1.0. DMM "dmm_id" is
         configured using this Detuning Map, and modulated by a pulse having
         a large negative detuning and either a duration defined from pulses
         already present in the sequence (same as in XY mode) or by the first
@@ -598,8 +633,8 @@ class Sequence(Generic[DeviceType]):
             ``MockDevice`` DMM can be repeatedly declared if needed.
 
         Args:
-            detuning_map: A DetuningMap defining atoms to act on and bottom
-                detuning to modulate.
+            detuning_map: A DetuningMap defining the amount of detuning each
+                atom receives.
             dmm_id: How the channel is identified in the device.
                 See in ``Sequence.available_channels`` which DMM IDs are still
                 available (start by "dmm" ) and the associated description.
@@ -632,8 +667,8 @@ class Sequence(Generic[DeviceType]):
         dmm_name = dmm_id
         if dmm_id in self.declared_channels:
             assert self._device.reusable_channels
-            dmm_name += (
-                f"_{''.join(self.declared_channels.keys()).count(dmm_id)}"
+            dmm_name = _get_dmm_name(
+                dmm_id, list(self.declared_channels.keys())
             )
 
         self._schedule[dmm_name] = _DMMSchedule(
@@ -778,6 +813,7 @@ class Sequence(Generic[DeviceType]):
                 ]
                 if isinstance(old_ch_obj, DMM):
                     params_to_check.append("bottom_detuning")
+                    params_to_check.append("total_bottom_detuning")
                 if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
                     params_to_check.append("min_retarget_interval")
                 for param_ in params_to_check:
@@ -1907,12 +1943,20 @@ class Sequence(Generic[DeviceType]):
             bottom_detuning = cast(
                 DMM, self.declared_channels[self._slm_mask_dmm]
             ).bottom_detuning
+            total_bottom_detuning = cast(
+                DMM, self.declared_channels[self._slm_mask_dmm]
+            ).total_bottom_detuning
             min_det = -10 * max_amp
-            min_det = (
-                bottom_detuning
-                if (bottom_detuning and min_det < bottom_detuning)
-                else min_det
-            )
+            if bottom_detuning and min_det < bottom_detuning:
+                min_det = bottom_detuning
+            if (
+                total_bottom_detuning
+                and min_det * len(set(self._slm_mask_targets))
+                < total_bottom_detuning
+            ):
+                min_det = total_bottom_detuning / len(
+                    set(self._slm_mask_targets)
+                )
             cast(
                 _DMMSchedule, self._schedule[self._slm_mask_dmm]
             )._waiting_for_first_pulse = False
@@ -2171,13 +2215,48 @@ class Sequence(Generic[DeviceType]):
     def _validate_and_adjust_pulse(
         self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
     ) -> Pulse:
+        # Get the channel object and its detuning map if the channel is a DMM
         channel_obj: Channel
+        # Detuning map is None if channel is not DMM
+        detuning_map: DetuningMap | None = None
         if channel in self._schedule:
+            # channel name can refer to a Channel or a DMM object
+            # Get channel object
             channel_obj = self._schedule[channel].channel_obj
+            # Get its associated detuning map if channel is a DMM
+            if isinstance(channel_obj, DMM):
+                # stored in _DMMSchedule with channel object
+                detuning_map = cast(
+                    _DMMSchedule, self._schedule[channel]
+                ).detuning_map
         else:
+            # If channel name can't be found among _schedule keys, the
             # Sequence is parametrized and channel is a dmm_name
-            channel_obj = self.device.dmm_channels[_dmm_id_from_name(channel)]
-        channel_obj.validate_pulse(pulse)
+            dmm_id = _dmm_id_from_name(channel)
+            # Get channel object
+            channel_obj = self.device.dmm_channels[dmm_id]
+            # Go over the calls to find the associated detuning map
+            declared_dmms: list[str] = []
+            for call in self._calls[1:] + self._to_build_calls:
+                if (
+                    call.name == "config_detuning_map"
+                    or call.name == "config_slm_mask"
+                ):
+                    # Extract dmm_id, detuning map of call
+                    call_id, call_det_map = self._get_dmm_id_detuning_map(call)
+                    # Quit if dmm_name of call matches with channel
+                    call_name = _get_dmm_name(call_id, declared_dmms)
+                    declared_dmms.append(call_name)
+                    if call_name == channel:
+                        detuning_map = call_det_map
+                        break
+            assert detuning_map is not None
+        if detuning_map is None:
+            # channel points to a Channel object
+            channel_obj.validate_pulse(pulse)
+        else:
+            # channel points to a DMM object
+            cast(DMM, channel_obj).validate_pulse(pulse, detuning_map)
         _duration = channel_obj.validate_duration(pulse.duration)
         new_phase = pulse.phase + (phase_ref if phase_ref else 0)
         if _duration != pulse.duration:
