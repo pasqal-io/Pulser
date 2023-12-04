@@ -1231,9 +1231,7 @@ def test_effective_size_disjoint(channel_type):
         "atom3": False,
     }
     if channel_type == "mw_global":
-        assert sim.get_hamiltonian(
-            0
-        ) == 0.5 * amp * sim.build_operator(
+        assert sim.get_hamiltonian(0) == 0.5 * amp * sim.build_operator(
             [(qutip.sigmax(), ["atom3"])]
         )
     else:
