@@ -31,7 +31,7 @@ from pulser.backend.remote import (
     RemoteResultsError,
     SubmissionStatus,
 )
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.result import Result, SampledResult
 
 
@@ -219,7 +219,7 @@ class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
 
-    def submit(self, sequence, **kwargs) -> RemoteResults:
+    def submit(self, sequence, wait: bool = False, **kwargsn) -> RemoteResults:
         return RemoteResults("abcd", self)
 
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
@@ -245,8 +245,8 @@ def test_qpu_backend(sequence):
         TypeError, match="must be a real device, instance of 'Device'"
     ):
         QPUBackend(sequence, connection)
-
-    seq = sequence.switch_device(replace(Chadoq2, max_runs=10))
+    with pytest.warns(DeprecationWarning, match="From v0.17"):
+        seq = sequence.switch_device(replace(DigitalAnalogDevice, max_runs=10))
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()

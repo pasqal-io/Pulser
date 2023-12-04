@@ -98,7 +98,9 @@ class PasqalCloud(RemoteConnection):
             **kwargs,
         )
 
-    def submit(self, sequence: Sequence, **kwargs: Any) -> RemoteResults:
+    def submit(
+        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+    ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
         if not sequence.is_measured():
             bases = sequence.get_addressed_bases()
@@ -141,7 +143,7 @@ class PasqalCloud(RemoteConnection):
             jobs=job_params or [],  # type: ignore[arg-type]
             emulator=emulator,
             configuration=configuration,
-            wait=False,
+            wait=wait,
         )
 
         return RemoteResults(batch.id, self)

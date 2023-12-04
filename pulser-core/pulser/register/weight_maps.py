@@ -37,11 +37,9 @@ if TYPE_CHECKING:
 class WeightMap(Traps, RegDrawer):
     """Defines a generic map of weights on traps.
 
-    The sum of the provided weights must be equal to 1.
-
     Args:
         trap_coordinates: An array containing the coordinates of the traps.
-        weights: A list weights to associate to the traps.
+        weights: A list of weights (between 0 and 1) to associate to the traps.
     """
 
     weights: tuple[float, ...]
@@ -56,10 +54,10 @@ class WeightMap(Traps, RegDrawer):
         super().__init__(trap_coordinates, slug)
         if len(cast(list, trap_coordinates)) != len(weights):
             raise ValueError("Number of traps and weights don't match.")
-        if not np.all(np.array(weights) >= 0):
-            raise ValueError("All weights must be non-negative.")
-        if not np.isclose(sum(weights), 1.0, atol=1e-16):
-            raise ValueError("The sum of the weights should be 1.")
+        if not (
+            np.all(np.array(weights) >= 0) and np.all(np.array(weights) <= 1)
+        ):
+            raise ValueError("All weights must be between 0 and 1.")
         object.__setattr__(self, "weights", tuple(weights))
 
     @property
@@ -173,10 +171,11 @@ class WeightMap(Traps, RegDrawer):
 class DetuningMap(WeightMap):
     """Defines a DetuningMap.
 
-    A DetuningMap associates a detuning weight to the coordinates of a trap.
-    The sum of the provided weights must be equal to 1.
+    A DetuningMap associates a detuning weight (a value between 0 and 1)
+    to the coordinates of a trap.
 
     Args:
         trap_coordinates: An array containing the coordinates of the traps.
-        weights: A list of detuning weights to associate to the traps.
+        weights: A list of detuning weights (between 0 and 1) to associate
+            to the traps.
     """

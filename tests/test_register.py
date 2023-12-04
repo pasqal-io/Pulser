@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from pulser import Register, Register3D
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import DigitalAnalogDevice, MockDevice
 
 
 def test_creation():
@@ -159,7 +159,7 @@ def test_hexagon():
 
 
 def test_max_connectivity():
-    device = Chadoq2
+    device = DigitalAnalogDevice
     max_atom_num = device.max_atom_num
     spacing = device.min_atom_distance
     crest_y = np.sqrt(3) / 2.0
@@ -181,10 +181,8 @@ def test_max_connectivity():
     # Check spacing
     reg = Register.max_connectivity(max_atom_num, device, spacing=spacing)
     with pytest.raises(ValueError, match="Spacing "):
-        reg = Register.max_connectivity(
-            max_atom_num, device, spacing=spacing - 1.0
-        )
-
+        Register.max_connectivity(max_atom_num, device, spacing=spacing - 1.0)
+    reg = Register.max_connectivity(max_atom_num, MockDevice, spacing=spacing)
     with pytest.raises(
         NotImplementedError,
         match="Maximum connectivity layouts are not well defined for a "

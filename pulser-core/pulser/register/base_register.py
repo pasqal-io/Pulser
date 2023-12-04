@@ -214,8 +214,7 @@ class BaseRegister(ABC):
 
         Args:
             detuning_weights: A mapping between the IDs of the targeted qubits
-                and detuning weights (between 0 and 1, their sum must be equal
-                to 1).
+                and detuning weights (between 0 and 1).
             slug: An optional identifier for the detuning map.
 
         Returns:

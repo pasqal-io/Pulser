@@ -21,7 +21,7 @@
           "type": "string"
         },
         "bottom_detuning": {
-          "description": "Minimum possible detuning (in rad/µs), must be below zero.",
+          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"
@@ -77,6 +77,13 @@
         },
         "mod_bandwidth": {
           "description": "The modulation bandwidth at -3dB (50% reduction), in MHz.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_bottom_detuning": {
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"
@@ -1435,7 +1442,7 @@
           "type": "string"
         },
         "bottom_detuning": {
-          "description": "Minimum possible detuning (in rad/µs), must be below zero.",
+          "description": "Minimum possible detuning per trap (in rad/µs), must be below zero.",
           "type": "number"
         },
         "clock_period": {
@@ -1485,6 +1492,13 @@
         },
         "mod_bandwidth": {
           "description": "The modulation bandwidth at -3dB (50% reduction), in MHz.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_bottom_detuning": {
+          "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": [
             "number",
             "null"

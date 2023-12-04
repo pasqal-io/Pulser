@@ -20,7 +20,7 @@ import qutip
 from qutip.piqs import isdiagonal
 
 from pulser import Pulse, Register, Sequence
-from pulser.devices import Chadoq2, MockDevice
+from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.waveforms import BlackmanWaveform
 from pulser_simulation import QutipEmulator, SimConfig
 from pulser_simulation.simresults import CoherentResults, NoisyResults
@@ -42,7 +42,7 @@ def pi_pulse():
 
 @pytest.fixture
 def seq_no_meas(reg, pi_pulse):
-    seq = Sequence(reg, Chadoq2)
+    seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ryd", "rydberg_global")
     seq.add(pi_pulse, "ryd")
     return seq
@@ -140,7 +140,7 @@ def test_get_final_state(
         )
     )
 
-    seq_ = Sequence(reg, Chadoq2)
+    seq_ = Sequence(reg, DigitalAnalogDevice)
     seq_.declare_channel("ryd", "rydberg_global")
     seq_.declare_channel("ram", "raman_local", initial_target="A")
     seq_.add(pi_pulse, "ram")
@@ -176,7 +176,7 @@ def test_get_final_state(
 
 def test_get_final_state_noisy(reg, pi_pulse):
     np.random.seed(123)
-    seq_ = Sequence(reg, Chadoq2)
+    seq_ = Sequence(reg, DigitalAnalogDevice)
     seq_.declare_channel("ram", "raman_local", initial_target="A")
     seq_.add(pi_pulse, "ram")
     noisy_config = SimConfig(noise=("SPAM", "doppler"))
@@ -226,7 +226,7 @@ def test_expect(results, pi_pulse, reg):
     with pytest.raises(ValueError, match="Incompatible shape"):
         results.expect([np.array(3)])
     reg_single = Register.from_coordinates([(0, 0)], prefix="q")
-    seq_single = Sequence(reg_single, Chadoq2)
+    seq_single = Sequence(reg_single, DigitalAnalogDevice)
     seq_single.declare_channel("ryd", "rydberg_global")
     seq_single.add(pi_pulse, "ryd")
     sim_single = QutipEmulator.from_sequence(seq_single)
@@ -259,7 +259,7 @@ def test_expect(results, pi_pulse, reg):
         results_single._calc_pseudo_density(-1).full(),
         np.array([[1 - config.epsilon_prime, 0], [0, config.epsilon_prime]]),
     )
-    seq3dim = Sequence(reg, Chadoq2)
+    seq3dim = Sequence(reg, DigitalAnalogDevice)
     seq3dim.declare_channel("ryd", "rydberg_global")
     seq3dim.declare_channel("ram", "raman_local", initial_target="A")
     seq3dim.add(pi_pulse, "ram")

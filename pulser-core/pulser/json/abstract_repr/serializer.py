@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import inspect
 import json
-from collections.abc import Iterable
+from collections.abc import Collection
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union, cast
 
@@ -38,12 +38,14 @@ if TYPE_CHECKING:
 class AbstractReprEncoder(json.JSONEncoder):
     """The custom encoder for abstract representation of Pulser objects."""
 
-    def default(self, o: Any) -> Union[dict[str, Any], list[Any]]:
+    def default(self, o: Any) -> dict[str, Any] | list | int:
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_abstract_repr"):
             return cast(dict, o._to_abstract_repr())
         elif isinstance(o, np.ndarray):
             return cast(list, o.tolist())
+        elif isinstance(o, np.integer):
+            return int(o)
         elif isinstance(o, set):
             return list(o)
         else:
@@ -156,16 +158,16 @@ def serialize_abstract_sequence(
             res["variables"][var.name]["value"] = [var.dtype()] * var.size
 
     def unfold_targets(
-        target_ids: QubitId | Iterable[QubitId],
+        target_ids: QubitId | Collection[QubitId],
     ) -> QubitId | list[QubitId]:
         if isinstance(target_ids, (int, str)):
             return target_ids
 
-        targets = list(cast(Iterable, target_ids))
+        targets = list(cast(Collection, target_ids))
         return targets if len(targets) > 1 else targets[0]
 
     def convert_targets(
-        target_ids: Union[QubitId, Iterable[QubitId]],
+        target_ids: Union[QubitId, Collection[QubitId]],
         force_list_out: bool = False,
     ) -> Union[int, list[int]]:
         target_array = np.array(unfold_targets(target_ids))

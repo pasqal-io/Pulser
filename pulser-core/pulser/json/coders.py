@@ -30,7 +30,7 @@ from pulser.parametrized import Variable
 class PulserEncoder(JSONEncoder):
     """The custom encoder for Pulser objects."""
 
-    def default(self, o: Any) -> dict[str, Any]:
+    def default(self, o: Any) -> dict[str, Any] | int:
         """Handles JSON encoding of objects not supported by default."""
         if hasattr(o, "_to_dict"):
             return cast(dict, o._to_dict())
@@ -38,6 +38,8 @@ class PulserEncoder(JSONEncoder):
             return obj_to_dict(o, _build=False, _name=o.__name__)
         elif isinstance(o, np.ndarray):
             return obj_to_dict(o, o.tolist(), _name="array")
+        elif isinstance(o, np.integer):
+            return int(o)
         elif isinstance(o, set):
             return obj_to_dict(o, list(o))
         else:

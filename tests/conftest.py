@@ -74,8 +74,13 @@ def mod_device() -> Device:
             ),
         ),
         dmm_objects=(
-            DMM(bottom_detuning=-100),
-            DMM(clock_period=4, mod_bandwidth=4.0, bottom_detuning=-50),
+            DMM(bottom_detuning=-100, total_bottom_detuning=-10000),
+            DMM(
+                clock_period=4,
+                mod_bandwidth=4.0,
+                bottom_detuning=-50,
+                total_bottom_detuning=-5000,
+            ),
         ),
     )
 
