@@ -105,6 +105,45 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: 0})
 
+    @pytest.mark.parametrize("value", [-1e-9, 0.2, 1.0001])
+    @pytest.mark.parametrize(
+        "param",
+        [
+            "dephasing_rate",
+            "depolarizing_rate",
+            "dephasing_prob",
+            "depolarizing_prob",
+        ],
+    )
+    def test_init_rate_like(self, param, value):
+        def create_noise_model(param, value):
+            if "prob" in param:
+                with pytest.warns(
+                    DeprecationWarning,
+                    match=f"{param} is deprecated.",
+                ):
+                    return NoiseModel(**{param: value})
+            return NoiseModel(**{param: value})
+
+        if value < 0:
+            param_mess = (
+                "depolarizing_rate"
+                if "depolarizing" in param
+                else "dephasing_rate"
+            )
+            with pytest.raises(
+                ValueError,
+                match=f"'{param_mess}' must be None or greater "
+                f"than or equal to zero, not {value}.",
+            ):
+                create_noise_model(param, value)
+        else:
+            noise_model = create_noise_model(param, value)
+            if "depolarizing" in param:
+                assert noise_model.depolarizing_rate == value
+            elif "dephasing" in param:
+                assert noise_model.dephasing_rate == value
+
     @pytest.mark.parametrize("value", [-1e-9, 1.0001])
     @pytest.mark.parametrize(
         "param",
@@ -112,8 +151,6 @@ class TestNoiseModel:
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
-            "dephasing_prob",
-            "depolarizing_prob",
             "amp_sigma",
         ],
     )
@@ -158,18 +195,26 @@ class TestNoiseModel:
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I"], matrices["X"]],
-                eff_noise_probs=[-1.0, 0.5],
+                eff_noise_rates=[-1.0, 0.5],
+            )
+        with pytest.warns(
+            DeprecationWarning, match="eff_noise_probs is deprecated."
+        ):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_opers=[matrices["I"], matrices["X"]],
+                eff_noise_probs=[1.2, 0.5],
             )
 
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
-            NoiseModel(noise_types=("eff_noise",), eff_noise_probs=[1.0])
+            NoiseModel(noise_types=("eff_noise",), eff_noise_rates=[1.0])
         with pytest.raises(
-            TypeError, match="eff_noise_probs is a list of floats"
+            TypeError, match="eff_noise_rates is a list of floats"
         ):
             NoiseModel(
                 noise_types=("eff_noise",),
-                eff_noise_probs=["0.1"],
+                eff_noise_rates=["0.1"],
                 eff_noise_opers=[np.eye(2)],
             )
         with pytest.raises(
@@ -181,13 +226,13 @@ class TestNoiseModel:
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[2.0],
-                eff_noise_probs=[1.0],
+                eff_noise_rates=[1.0],
             )
         with pytest.raises(NotImplementedError, match="Operator's shape"):
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I3"]],
-                eff_noise_probs=[1.0],
+                eff_noise_rates=[1.0],
             )
 
 

@@ -117,23 +117,21 @@ class Hamiltonian:
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
             basis_check("dephasing")
-            # Probability of phase (Z) flip:
-            coeff = np.sqrt(config.dephasing_prob / 2)
+            coeff = np.sqrt(config.dephasing_rate / 2)
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "depolarizing" in config.noise_types:
             basis_check("dephasing")
-            # Probability of error occurrence
-            coeff = np.sqrt(config.depolarizing_prob / 4)
+            coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * qutip.sigmax())
             local_collapse_ops.append(coeff * qutip.sigmay())
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "eff_noise" in config.noise_types:
             basis_check("general")
-            for id, prob in enumerate(config.eff_noise_probs):
+            for id, rate in enumerate(config.eff_noise_rates):
                 local_collapse_ops.append(
-                    np.sqrt(prob) * config.eff_noise_opers[id]
+                    np.sqrt(rate) * config.eff_noise_opers[id]
                 )
 
         # Building collapse operators

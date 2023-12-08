@@ -694,7 +694,7 @@ def test_noise(seq, matrices):
             SimConfig(
                 noise="eff_noise",
                 eff_noise_opers=[matrices["I"]],
-                eff_noise_probs=[1.0],
+                eff_noise_rates=[1.0],
             )
         )
     assert sim2.config.spam_dict == {
@@ -780,7 +780,7 @@ def test_eff_noise(matrices):
         config=SimConfig(
             noise="eff_noise",
             eff_noise_opers=[matrices["Z"]],
-            eff_noise_probs=[0.025],
+            eff_noise_rates=[0.025],
         ),
     )
     sim_dph = QutipEmulator.from_sequence(
@@ -812,7 +812,7 @@ def test_add_config(matrices):
             "eff_noise",
         ),
         eff_noise_opers=[matrices["I"], matrices["X"]],
-        eff_noise_probs=[0.4, 0.6],
+        eff_noise_rates=[0.4, 0.6],
         temperature=20000,
     )
     sim.add_config(config)
@@ -954,9 +954,10 @@ def test_noisy_xy():
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
-        sim._hamiltonian.set_config(
-            SimConfig(("SPAM", "doppler")).to_noise_model()
-        )
+        with pytest.warns(DeprecationWarning, match="is_deprecated"):
+            sim._hamiltonian.set_config(
+                SimConfig(("SPAM", "doppler")).to_noise_model()
+            )
     sim.set_config(SimConfig("SPAM", eta=0.4))
     assert sim._hamiltonian._bad_atoms == {
         "atom0": True,
