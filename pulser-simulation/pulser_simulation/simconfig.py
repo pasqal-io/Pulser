@@ -32,6 +32,27 @@ KEFF = 8.7  # µm^-1
 
 T = TypeVar("T", bound="SimConfig")
 
+SUPPORTED_NOISES: dict = {
+    "ising": {
+        "dephasing",
+        "doppler",
+        "amplitude",
+        "SPAM",
+        "depolarizing",
+        "eff_noise",
+    },
+    "XY": {"SPAM"},
+}
+
+
+def doppler_sigma(temperature: float) -> float:
+    """Standard deviation for Doppler shifting due to thermal motion.
+
+    Arg:
+        temperature: The temperature in K.
+    """
+    return KEFF * sqrt(KB * temperature / MASS)
+
 
 @dataclass(frozen=True)
 class SimConfig:
@@ -160,7 +181,7 @@ class SimConfig:
     @property
     def doppler_sigma(self) -> float:
         """Standard deviation for Doppler shifting due to thermal motion."""
-        return KEFF * sqrt(KB * self.temperature / MASS)
+        return doppler_sigma(self.temperature)
 
     def __str__(self, solver_options: bool = False) -> str:
         lines = [
@@ -220,14 +241,4 @@ class SimConfig:
     @property
     def supported_noises(self) -> dict:
         """Return the noises implemented on pulser."""
-        return {
-            "ising": {
-                "dephasing",
-                "doppler",
-                "amplitude",
-                "SPAM",
-                "depolarizing",
-                "eff_noise",
-            },
-            "XY": {"SPAM"},
-        }
+        return SUPPORTED_NOISES
