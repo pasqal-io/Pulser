@@ -47,8 +47,8 @@ def validate_abstract_repr(
     obj = json.loads(obj_str)
     validate_args = dict(instance=obj, schema=SCHEMAS[name])
     if name == "sequence":
-        if DEPRECATED_JSONSCHEMA:
+        if DEPRECATED_JSONSCHEMA:  # pragma: no cover
             validate_args["resolver"] = RESOLVER
-        else:
+        else:  # pragma: no cover
             validate_args["registry"] = REGISTRY
     jsonschema.validate(**validate_args)
