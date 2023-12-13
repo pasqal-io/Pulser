@@ -44,7 +44,11 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
-from pulser.json.abstract_repr.validation import REGISTRY, RESOLVER, DEPRECATED_JSONSCHEMA
+from pulser.json.abstract_repr.validation import (
+    DEPRECATED_JSONSCHEMA,
+    REGISTRY,
+    RESOLVER,
+)
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
@@ -280,9 +284,13 @@ def validate_schema(instance):
         schema = json.load(f)
     if DEPRECATED_JSONSCHEMA:
         assert RESOLVER is not None
-        jsonschema.validate(instance=instance, schema=schema, resolver=RESOLVER)
+        jsonschema.validate(
+            instance=instance, schema=schema, resolver=RESOLVER
+        )
     else:
-        jsonschema.validate(instance=instance, schema=schema, registry=REGISTRY)
+        jsonschema.validate(
+            instance=instance, schema=schema, registry=REGISTRY
+        )
 
 
 class TestSerialization:

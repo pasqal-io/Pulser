@@ -21,11 +21,15 @@ from referencing import Registry, Resource
 
 from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
 
-DEPRECATED_JSONSCHEMA = version(jsonschema) == '4.17.3'
-RESOLVER = jsonschema.validators.RefResolver(
-    base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
-    referrer=SCHEMAS["sequence"],
-) if DEPRECATED_JSONSCHEMA else None
+DEPRECATED_JSONSCHEMA = version(jsonschema) == "4.17.3"
+RESOLVER = (
+    jsonschema.validators.RefResolver(
+        base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
+        referrer=SCHEMAS["sequence"],
+    )
+    if DEPRECATED_JSONSCHEMA
+    else None
+)
 REGISTRY: Registry = Registry().with_resources(
     [("device-schema.json", Resource.from_contents(SCHEMAS["device"]))]
 )
