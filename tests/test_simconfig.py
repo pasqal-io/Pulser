@@ -88,7 +88,7 @@ def test_eff_noise_opers(matrices):
             eff_noise_opers=[qeye(2)],
         )
     with pytest.raises(
-        ValueError, match="The general noise parameters have not been filled."
+        ValueError, match="The effective noise parameters have not been filled."
     ):
         SimConfig(noise=("eff_noise"))
     with pytest.raises(TypeError, match="is not a Qobj."):

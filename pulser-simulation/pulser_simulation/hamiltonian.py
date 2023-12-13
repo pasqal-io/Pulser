@@ -128,7 +128,7 @@ class Hamiltonian:
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "eff_noise" in config.noise_types:
-            basis_check("general")
+            basis_check("effective")
             for id, rate in enumerate(config.eff_noise_rates):
                 local_collapse_ops.append(
                     np.sqrt(rate) * config.eff_noise_opers[id]

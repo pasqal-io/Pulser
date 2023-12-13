@@ -118,6 +118,21 @@ class TestNoiseModel:
     def test_init_rate_like(self, param, value):
         def create_noise_model(param, value):
             if "prob" in param:
+                if value > 0:
+                    with pytest.raises(
+                        ValueError, match=f"{param}` must be equal."
+                    ):
+                        with pytest.warns(
+                            DeprecationWarning,
+                            match=f"{param} is deprecated.",
+                        ):
+                            NoiseModel(
+                                **{
+                                    param: value,
+                                    "dephasing_rate": value * 10,
+                                    "depolarizing_rate": value * 10,
+                                }
+                            )
                 with pytest.warns(
                     DeprecationWarning,
                     match=f"{param} is deprecated.",
@@ -206,6 +221,30 @@ class TestNoiseModel:
                 eff_noise_probs=[1.2, 0.5],
             )
 
+        with pytest.warns(
+            DeprecationWarning, match="eff_noise_probs is deprecated."
+        ):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_opers=[matrices["I"], matrices["X"]],
+                eff_noise_rates=[1.2, 0.5],
+                eff_noise_probs=[1.2, 0.5],
+            )
+
+        with pytest.raises(
+            ValueError,
+            match="If both defined, `eff_noise_rates` and `eff_noise_probs`",
+        ):
+            with pytest.warns(
+                DeprecationWarning, match="eff_noise_probs is deprecated."
+            ):
+                NoiseModel(
+                    noise_types=("eff_noise",),
+                    eff_noise_opers=[matrices["I"], matrices["X"]],
+                    eff_noise_probs=[1.4, 0.5],
+                    eff_noise_rates=[1.2, 0.5],
+                )
+
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
             NoiseModel(noise_types=("eff_noise",), eff_noise_rates=[1.0])
@@ -219,7 +258,7 @@ class TestNoiseModel:
             )
         with pytest.raises(
             ValueError,
-            match="The general noise parameters have not been filled.",
+            match="The effective noise parameters have not been filled.",
         ):
             NoiseModel(noise_types=("eff_noise",))
         with pytest.raises(TypeError, match="is not a Numpy array."):

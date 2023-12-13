@@ -70,15 +70,15 @@ class NoiseModel:
             deviation of a normal distribution centered in 1.
         dephasing_rate: The rate of a dephasing error occuring (in rad/µs).
         dephasing_prob: (Deprecated) The rate of a dephasing error occuring
-            (in rad/µs).
+            (in rad/µs). Use `dephasing_rate` instead.
         depolarizing_rate: The rate (in rad/µs) at which a depolarizing
             error occurs.
         depolarizing_prob: (Deprecated) The rate (in rad/µs) at which a
-            depolarizing error occurs.
+            depolarizing error occurs. Use `depolarizing_rate` instead.
         eff_noise_rates: The rate associated to each effective noise operator
             (in rad/µs).
         eff_noise_probs: (Deprecated) The rate associated to each effective
-            noise operator (in rad/µs).
+            noise operator (in rad/µs). Use `eff_noise_rate` instead.
         eff_noise_opers: The operators for the effective noise model.
     """
 
@@ -111,6 +111,16 @@ class NoiseModel:
                     DeprecationWarning,
                 )
                 if prob != rate:
+                    if (
+                        len(rate) > 0
+                        if noise == "eff_noise"
+                        else rate
+                        != self.__dataclass_fields__[rate_name].default
+                    ):
+                        raise ValueError(
+                            f"If both defined, `{rate_name}` and `{prob_name}`"
+                            " must be equal."
+                        )
                     warnings.warn(
                         f"Setting {rate_name} with the value from "
                         f"{prob_name}.",
@@ -203,7 +213,7 @@ class NoiseModel:
 
         if not self.eff_noise_opers or not self.eff_noise_rates:
             raise ValueError(
-                "The general noise parameters have not been filled."
+                "The effective noise parameters have not been filled."
             )
 
         if np.any(np.array(self.eff_noise_rates) < 0):
