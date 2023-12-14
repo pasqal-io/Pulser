@@ -288,6 +288,7 @@ def validate_schema(instance):
             instance=instance, schema=schema, resolver=RESOLVER
         )
     else:
+        assert RESOLVER is None
         jsonschema.validate(
             instance=instance, schema=schema, registry=REGISTRY
         )
