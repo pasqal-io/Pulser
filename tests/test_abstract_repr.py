@@ -45,7 +45,7 @@ from pulser.json.abstract_repr.serializer import (
     abstract_repr,
 )
 from pulser.json.abstract_repr.validation import (
-    DEPRECATED_JSONSCHEMA,
+    LEGACY_JSONSCHEMA,
     REGISTRY,
     RESOLVER,
 )
@@ -282,7 +282,7 @@ def validate_schema(instance):
         encoding="utf-8",
     ) as f:
         schema = json.load(f)
-    if DEPRECATED_JSONSCHEMA:
+    if LEGACY_JSONSCHEMA:
         assert RESOLVER is not None
         jsonschema.validate(
             instance=instance, schema=schema, resolver=RESOLVER
