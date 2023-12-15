@@ -13,13 +13,23 @@
 # limitations under the License.
 """Function for validation of JSON serialization to abstract representation."""
 import json
+from importlib.metadata import version
 from typing import Literal
 
 import jsonschema
 from referencing import Registry, Resource
 
-from pulser.json.abstract_repr import SCHEMAS
+from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
 
+LEGACY_JSONSCHEMA = "4.18" > version("jsonschema") >= "4.17.3"
+RESOLVER = (
+    jsonschema.validators.RefResolver(
+        base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
+        referrer=SCHEMAS["sequence"],
+    )
+    if LEGACY_JSONSCHEMA
+    else None
+)
 REGISTRY: Registry = Registry().with_resources(
     [("device-schema.json", Resource.from_contents(SCHEMAS["device"]))]
 )
@@ -37,5 +47,9 @@ def validate_abstract_repr(
     obj = json.loads(obj_str)
     validate_args = dict(instance=obj, schema=SCHEMAS[name])
     if name == "sequence":
-        validate_args["registry"] = REGISTRY
+        if LEGACY_JSONSCHEMA:  # pragma: no cover
+            validate_args["resolver"] = RESOLVER
+        else:  # pragma: no cover
+            assert RESOLVER is None
+            validate_args["registry"] = REGISTRY
     jsonschema.validate(**validate_args)
