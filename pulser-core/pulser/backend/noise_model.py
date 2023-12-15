@@ -100,6 +100,9 @@ class NoiseModel:
     eff_noise_probs: list[float] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        default_field_value = {
+            field.name: field.default for field in fields(self)
+        }
         for noise in ["dephasing", "depolarizing", "eff_noise"]:
             # Probability and rates should be the same
             prob_name = f"{noise}_prob{'s' if noise=='eff_noise' else ''}"
@@ -114,8 +117,7 @@ class NoiseModel:
                     if (
                         len(rate) > 0
                         if noise == "eff_noise"
-                        else rate
-                        != self.__dataclass_fields__[rate_name].default
+                        else rate != default_field_value[rate_name]
                     ):
                         raise ValueError(
                             f"If both defined, `{rate_name}` and `{prob_name}`"
