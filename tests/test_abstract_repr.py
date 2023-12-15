@@ -44,7 +44,11 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
-from pulser.json.abstract_repr.validation import REGISTRY
+from pulser.json.abstract_repr.validation import (
+    LEGACY_JSONSCHEMA,
+    REGISTRY,
+    RESOLVER,
+)
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
@@ -278,7 +282,16 @@ def validate_schema(instance):
         encoding="utf-8",
     ) as f:
         schema = json.load(f)
-    jsonschema.validate(instance=instance, schema=schema, registry=REGISTRY)
+    if LEGACY_JSONSCHEMA:
+        assert RESOLVER is not None
+        jsonschema.validate(
+            instance=instance, schema=schema, resolver=RESOLVER
+        )
+    else:
+        assert RESOLVER is None
+        jsonschema.validate(
+            instance=instance, schema=schema, registry=REGISTRY
+        )
 
 
 class TestSerialization:
