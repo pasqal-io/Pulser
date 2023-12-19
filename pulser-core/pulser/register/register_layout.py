@@ -92,7 +92,7 @@ class RegisterLayout(Traps, RegDrawer):
         ids = (
             qubit_ids if qubit_ids else [f"q{i}" for i in range(len(trap_ids))]
         )
-        coords = self._coords[list(trap_ids)]
+        coords = self._sorted_coords[list(trap_ids)]
         qubits = dict(zip(ids, coords))
 
         reg_class = Register3D if self.dimensionality == 3 else Register
@@ -242,7 +242,7 @@ class RegisterLayout(Traps, RegDrawer):
         # Allows for serialization of subclasses without a special _to_dict()
         return obj_to_dict(
             self,
-            self._trap_coordinates,
+            self._coords,
             slug=self.slug,
             _module=__name__,
             _name="RegisterLayout",

@@ -299,7 +299,7 @@ class BaseDevice(ABC):
                 "a pulser.Register3D instance."
             )
 
-        if register._dim > self.dimensions:
+        if register.dimensionality > self.dimensions:
             raise ValueError(
                 f"All qubit positions must be at most {self.dimensions}D "
                 "vectors."

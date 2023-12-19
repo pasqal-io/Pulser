@@ -33,6 +33,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
+from pulser.register._coordinates import CoordsCollection
 from pulser.register.weight_maps import DetuningMap
 
 if TYPE_CHECKING:
@@ -49,7 +50,7 @@ class _LayoutInfo(NamedTuple):
     trap_ids: tuple[int, ...]
 
 
-class BaseRegister(ABC):
+class BaseRegister(ABC, CoordsCollection):
     """The abstract class for a register."""
 
     @abstractmethod
@@ -64,9 +65,8 @@ class BaseRegister(ABC):
             raise ValueError(
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
+        super().__init__([np.array(v, dtype=float) for v in qubits.values()])
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
-        self._coords = [np.array(v, dtype=float) for v in qubits.values()]
-        self._dim = self._coords[0].size
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)
 
@@ -184,7 +184,7 @@ class BaseRegister(ABC):
     ) -> None:
         """Sets the RegisterLayout that originated this register."""
         trap_coords = register_layout.coords
-        if register_layout.dimensionality != self._dim:
+        if register_layout.dimensionality != self.dimensionality:
             raise ValueError(
                 "The RegisterLayout dimensionality is not the same as this "
                 "register's."
@@ -277,3 +277,15 @@ class BaseRegister(ABC):
                 for i, id in enumerate(self._ids)
             )
         )
+
+    def coords_hex_hash(self) -> str:
+        """Returns the idempotent hash of the coordinates.
+
+        Returns:
+            str: An hexstring encoding the hash.
+
+        Note:
+            This hash will be returned as an hexstring without
+            the '0x' prefix (unlike what is returned by 'hex()').
+        """
+        return self._safe_hash().hex()

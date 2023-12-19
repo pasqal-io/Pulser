@@ -42,8 +42,8 @@ class Register(BaseRegister, RegDrawer):
     def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
-        if any(c.shape != (self._dim,) for c in self._coords) or (
-            self._dim != 2
+        if any(c.shape != (self.dimensionality,) for c in self._coords) or (
+            self.dimensionality != 2
         ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 2."
@@ -280,6 +280,7 @@ class Register(BaseRegister, RegDrawer):
         Args:
             degrees: The angle of rotation in degrees.
         """
+        # TODO: Deprecate
         if self.layout is not None:
             raise TypeError(
                 "A register defined from a RegisterLayout cannot be rotated."
@@ -288,7 +289,7 @@ class Register(BaseRegister, RegDrawer):
         rot = np.array(
             [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
         )
-        self._coords = [rot @ v for v in self._coords]
+        object.__setattr__(self, "_coords", [rot @ v for v in self._coords])
 
     def draw(
         self,

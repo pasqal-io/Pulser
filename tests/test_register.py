@@ -442,3 +442,27 @@ def test_equality_function():
     assert_ineq(reg2, 10)
 
     assert_ineq(reg1, reg2)
+
+
+def test_coords_hash():
+    reg1 = Register.square(2, prefix="foo")
+    reg2 = Register.rectangle(2, 2, prefix="bar")
+    assert reg1 != reg2  # Ids are different
+    coords1 = list(reg1.qubits.values())
+    coords2 = list(reg2.qubits.values())
+    np.testing.assert_equal(coords1, coords2)  # But coords are the same
+    assert reg1.coords_hex_hash() == reg2.coords_hex_hash()
+
+    # Same coords but in inverse order
+    reg3 = Register.from_coordinates(coords1[::-1])
+    assert reg1.coords_hex_hash() == reg3.coords_hex_hash()
+
+    # Modify a coordinate below precision
+    coords1[0][0] += 1e-10
+    reg4 = Register.from_coordinates(coords1)
+    assert reg1.coords_hex_hash() == reg4.coords_hex_hash()
+
+    # Modify a coordinate above precision
+    coords1[0][1] += 1e-6
+    reg5 = Register.from_coordinates(coords1)
+    assert reg1.coords_hex_hash() != reg5.coords_hex_hash()
