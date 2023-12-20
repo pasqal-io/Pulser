@@ -469,7 +469,7 @@ class BaseDevice(ABC):
         return params
 
     def to_abstract_repr(self) -> str:
-        """Serializes the Sequence into an abstract JSON object."""
+        """Serializes the device into an abstract JSON object."""
         abstr_dev_str = json.dumps(self, cls=AbstractReprEncoder)
         validate_abstract_repr(abstr_dev_str, "device")
         return abstr_dev_str

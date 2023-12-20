@@ -15,8 +15,9 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,6 +26,11 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.register._patterns as patterns
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_abstract_register,
+)
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import stringify_qubit_ids
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
@@ -379,3 +385,27 @@ class Register(BaseRegister, RegDrawer):
             {"name": name, "x": x, "y": y}
             for name, (x, y) in zip(names, self._coords)
         ]
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the register into an abstract JSON object."""
+        abstr_reg: dict[str, Any] = dict(register=self._to_abstract_repr())
+        if self.layout is not None:
+            abstr_reg["layout"] = self.layout
+        abstr_reg_str = json.dumps(abstr_reg, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_reg_str, "register")
+        return abstr_reg_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> Register:
+        """Deserialize a register from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the register encoded
+                in the abstract JSON format..
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized register must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        return cast(Register, deserialize_abstract_register(obj_str))

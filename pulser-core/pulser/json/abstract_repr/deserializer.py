@@ -42,7 +42,6 @@ from pulser.json.utils import get_dataclass_defaults
 from pulser.parametrized import ParamObj, Variable
 from pulser.pulse import Pulse
 from pulser.register.mappable_reg import MappableRegister
-from pulser.register.register import Register
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import (
@@ -365,6 +364,19 @@ def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
         ) from e
 
 
+def _deserialize_register(
+    qubits: list[dict[str, Any]], layout: RegisterLayout | None
+) -> BaseRegister:
+    coords = [(q["x"], q["y"]) for q in qubits]
+    qubit_ids = [q["name"] for q in qubits]
+    if layout:
+        trap_ids = layout.get_traps_from_coordinates(*coords)
+        reg = layout.define_register(*trap_ids, qubit_ids=qubit_ids)
+    else:
+        reg = pulser.Register(dict(zip(qubit_ids, coords)))
+    return reg
+
+
 def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     device_cls: Type[Device] | Type[VirtualDevice] = (
         VirtualDevice if obj["is_virtual"] else Device
@@ -445,13 +457,7 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     qubits = obj["register"]
     if {"name", "x", "y"} == qubits[0].keys():
         # Regular register
-        coords = [(q["x"], q["y"]) for q in qubits]
-        qubit_ids = [q["name"] for q in qubits]
-        if layout:
-            trap_ids = layout.get_traps_from_coordinates(*coords)
-            reg = layout.define_register(*trap_ids, qubit_ids=qubit_ids)
-        else:
-            reg = Register(dict(zip(qubit_ids, coords)))
+        reg = _deserialize_register(qubits, layout)
     else:
         # Mappable register
         assert (
@@ -525,3 +531,33 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
         AbstractReprError,  # From _deserialize_device_object
     ) as e:
         raise DeserializeDeviceError from e
+
+
+def deserialize_abstract_layout(obj_str: str) -> RegisterLayout:
+    """Deserialize a layout from an abstract JSON object.
+
+    Args:
+        obj_str: the JSON string representing the layout encoded
+            in the abstract JSON format.
+
+    Returns:
+        The RegisterLayout instance.
+    """
+    validate_abstract_repr(obj_str, "layout")
+    return _deserialize_layout(json.loads(obj_str))
+
+
+def deserialize_abstract_register(obj_str: str) -> BaseRegister:
+    """Deserialize a register from an abstract JSON object.
+
+    Args:
+        obj_str: the JSON string representing the register encoded
+            in the abstract JSON format.
+
+    Returns:
+        The RegisterLayout instance.
+    """
+    validate_abstract_repr(obj_str, "register")
+    obj = json.loads(obj_str)
+    layout = _deserialize_layout(obj["layout"]) if "layout" in obj else None
+    return _deserialize_register(qubits=obj["register"], layout=layout)

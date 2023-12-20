@@ -77,6 +77,50 @@ phys_Chadoq2 = replace(
 )
 
 
+@pytest.mark.parametrize(
+    "layout",
+    [
+        RegisterLayout([[0, 0], [1, 1]]),
+        TriangularLatticeLayout(10, 10),
+        RegisterLayout([[10, 0], [1, 10]], slug="foo"),
+    ],
+)
+def test_layout(layout: RegisterLayout):
+    ser_layout_str = layout.to_abstract_repr()
+    ser_layout_obj = json.loads(ser_layout_str)
+    assert ser_layout_obj.get("slug", None) == layout.slug
+
+    re_layout = RegisterLayout.from_abstract_repr(ser_layout_str)
+    assert layout == re_layout
+
+    with pytest.raises(TypeError, match="must be given as a string"):
+        RegisterLayout.from_abstract_repr(ser_layout_obj)
+
+
+@pytest.mark.parametrize(
+    "reg",
+    [
+        Register.from_coordinates(np.array([[0, 0], [1, 1]]), prefix="q"),
+        TriangularLatticeLayout(10, 10).define_register(*[1, 2, 3]),
+    ],
+)
+def test_register(reg: Register):
+    ser_reg_str = reg.to_abstract_repr()
+    ser_reg_obj = json.loads(ser_reg_str)
+    if reg.layout:
+        assert ser_reg_obj["layout"] == json.loads(
+            reg.layout.to_abstract_repr()
+        )
+    else:
+        assert "layout" not in ser_reg_obj
+
+    re_reg = Register.from_abstract_repr(ser_reg_str)
+    assert reg == re_reg
+
+    with pytest.raises(TypeError, match="must be given as a string"):
+        Register.from_abstract_repr(ser_reg_obj)
+
+
 class TestDevice:
     @pytest.fixture(
         params=[DigitalAnalogDevice, phys_Chadoq2, MockDevice, AnalogDevice]
