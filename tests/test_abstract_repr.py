@@ -96,6 +96,13 @@ def test_layout(layout: RegisterLayout):
     with pytest.raises(TypeError, match="must be given as a string"):
         RegisterLayout.from_abstract_repr(ser_layout_obj)
 
+    # Check the validation catches invalid entries
+    with pytest.raises(
+        jsonschema.exceptions.ValidationError, match="is too long"
+    ):
+        ser_layout_obj["coordinates"].append([0, 0, 0])
+        RegisterLayout.from_abstract_repr(json.dumps(ser_layout_obj))
+
 
 @pytest.mark.parametrize(
     "reg",
@@ -119,6 +126,13 @@ def test_register(reg: Register):
 
     with pytest.raises(TypeError, match="must be given as a string"):
         Register.from_abstract_repr(ser_reg_obj)
+
+    # Check the validation catches invalid entries
+    with pytest.raises(
+        jsonschema.exceptions.ValidationError, match="'z' was unexpected"
+    ):
+        ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
+        Register.from_abstract_repr(json.dumps(ser_reg_obj))
 
 
 class TestDevice:
