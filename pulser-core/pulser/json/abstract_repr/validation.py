@@ -22,14 +22,6 @@ from referencing import Registry, Resource
 from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
 
 LEGACY_JSONSCHEMA = "4.18" > version("jsonschema") >= "4.17.3"
-RESOLVER = (
-    jsonschema.validators.RefResolver(
-        base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
-        referrer=SCHEMAS["sequence"],
-    )
-    if LEGACY_JSONSCHEMA
-    else None
-)
 
 REGISTRY: Registry = Registry(
     [
@@ -52,8 +44,10 @@ def validate_abstract_repr(
     obj = json.loads(obj_str)
     validate_args = dict(instance=obj, schema=SCHEMAS[name])
     if LEGACY_JSONSCHEMA:  # pragma: no cover
-        validate_args["resolver"] = RESOLVER
+        validate_args["resolver"] = jsonschema.validators.RefResolver(
+            base_uri=f"{SCHEMAS_PATH.resolve().as_uri()}/",
+            referrer=SCHEMAS[name],
+        )
     else:  # pragma: no cover
-        assert RESOLVER is None
         validate_args["registry"] = REGISTRY
     jsonschema.validate(**validate_args)
