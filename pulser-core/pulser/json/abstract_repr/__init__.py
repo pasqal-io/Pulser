@@ -17,7 +17,7 @@ from pathlib import Path
 
 SCHEMAS_PATH = Path(__file__).parent / "schemas"
 SCHEMAS = {}
-for obj_type in ("device", "sequence"):
+for obj_type in ("device", "sequence", "register", "layout"):
     with open(
         SCHEMAS_PATH / f"{obj_type}-schema.json", "r", encoding="utf-8"
     ) as f:

@@ -30,13 +30,18 @@ RESOLVER = (
     if LEGACY_JSONSCHEMA
     else None
 )
-REGISTRY: Registry = Registry().with_resources(
-    [("device-schema.json", Resource.from_contents(SCHEMAS["device"]))]
+
+REGISTRY: Registry = Registry(
+    [
+        ("device-schema.json", Resource.from_contents(SCHEMAS["device"])),
+        ("layout-schema.json", Resource.from_contents(SCHEMAS["layout"])),
+        ("register-schema.json", Resource.from_contents(SCHEMAS["register"])),
+    ]
 )
 
 
 def validate_abstract_repr(
-    obj_str: str, name: Literal["sequence", "device"]
+    obj_str: str, name: Literal["sequence", "device", "layout", "register"]
 ) -> None:
     """Validate the abstract representation of an object.
 
@@ -46,10 +51,9 @@ def validate_abstract_repr(
     """
     obj = json.loads(obj_str)
     validate_args = dict(instance=obj, schema=SCHEMAS[name])
-    if name == "sequence":
-        if LEGACY_JSONSCHEMA:  # pragma: no cover
-            validate_args["resolver"] = RESOLVER
-        else:  # pragma: no cover
-            assert RESOLVER is None
-            validate_args["registry"] = REGISTRY
+    if LEGACY_JSONSCHEMA:  # pragma: no cover
+        validate_args["resolver"] = RESOLVER
+    else:  # pragma: no cover
+        assert RESOLVER is None
+        validate_args["registry"] = REGISTRY
     jsonschema.validate(**validate_args)

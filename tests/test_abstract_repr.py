@@ -44,11 +44,7 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
-from pulser.json.abstract_repr.validation import (
-    LEGACY_JSONSCHEMA,
-    REGISTRY,
-    RESOLVER,
-)
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
@@ -89,18 +85,8 @@ class TestDevice:
         device = request.param
         return json.loads(device.to_abstract_repr())
 
-    @pytest.fixture
-    def device_schema(self):
-        with open(
-            "pulser-core/pulser/json/abstract_repr/schemas/device-schema.json",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            dev_schema = json.load(f)
-        return dev_schema
-
-    def test_device_schema(self, abstract_device, device_schema):
-        jsonschema.validate(instance=abstract_device, schema=device_schema)
+    def test_device_schema(self, abstract_device):
+        validate_abstract_repr(json.dumps(abstract_device), "device")
 
     def test_roundtrip(self, abstract_device):
         def _roundtrip(abstract_device):
@@ -115,7 +101,7 @@ class TestDevice:
         else:
             _roundtrip(abstract_device)
 
-    def test_exceptions(self, abstract_device, device_schema):
+    def test_exceptions(self, abstract_device):
         def check_error_raised(
             obj_str: str, original_err: Type[Exception], err_msg: str = ""
         ) -> Exception:
@@ -152,7 +138,7 @@ class TestDevice:
         invalid_dev = abstract_device.copy()
         invalid_dev["rydberg_level"] = "70"
         with pytest.raises(jsonschema.exceptions.ValidationError) as err:
-            jsonschema.validate(instance=invalid_dev, schema=device_schema)
+            validate_abstract_repr(json.dumps(invalid_dev), "device")
         check_error_raised(
             json.dumps(invalid_dev),
             jsonschema.exceptions.ValidationError,
@@ -275,23 +261,7 @@ class TestDevice:
 
 
 def validate_schema(instance):
-    with open(
-        "pulser-core/pulser/json/abstract_repr/schemas/"
-        "sequence-schema.json",
-        "r",
-        encoding="utf-8",
-    ) as f:
-        schema = json.load(f)
-    if LEGACY_JSONSCHEMA:
-        assert RESOLVER is not None
-        jsonschema.validate(
-            instance=instance, schema=schema, resolver=RESOLVER
-        )
-    else:
-        assert RESOLVER is None
-        jsonschema.validate(
-            instance=instance, schema=schema, registry=REGISTRY
-        )
+    validate_abstract_repr(json.dumps(instance), "sequence")
 
 
 class TestSerialization:
