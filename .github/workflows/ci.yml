@@ -59,6 +59,9 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8", "3.11"]
+        jsonschema-version:
+          - { legacy: true }
+          - { legacy: false }
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v3
@@ -67,5 +70,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           extra-packages: pytest
+      - name: Install legacy jsonschema
+        if: matrix.jsonschema-version.legacy
+        run: pip install jsonschema==4.17.3
       - name: Run the unit tests & generate coverage report
         run: pytest --cov --cov-fail-under=100
