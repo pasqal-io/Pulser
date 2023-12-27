@@ -694,7 +694,7 @@ def test_noise(seq, matrices):
             SimConfig(
                 noise="eff_noise",
                 eff_noise_opers=[matrices["I"]],
-                eff_noise_probs=[1.0],
+                eff_noise_rates=[1.0],
             )
         )
     assert sim2.config.spam_dict == {
@@ -747,16 +747,6 @@ def test_dephasing():
     )
     assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
     assert len(sim._hamiltonian._collapse_ops) != 0
-    with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, DigitalAnalogDevice)
-        seq2.declare_channel("ch0", "rydberg_global")
-        seq2.add(pulse, "ch0")
-        sim = QutipEmulator.from_sequence(
-            seq2,
-            sampling_rate=0.01,
-            config=SimConfig(noise="dephasing", dephasing_prob=0.5),
-        )
 
 
 def test_depolarizing():
@@ -774,16 +764,6 @@ def test_depolarizing():
     trace_2 = sim.run().states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
     assert len(sim._hamiltonian._collapse_ops) != 0
-    with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, DigitalAnalogDevice)
-        seq2.declare_channel("ch0", "rydberg_global")
-        seq2.add(pulse, "ch0")
-        sim = QutipEmulator.from_sequence(
-            seq2,
-            sampling_rate=0.01,
-            config=SimConfig(noise="depolarizing", depolarizing_prob=0.5),
-        )
 
 
 def test_eff_noise(matrices):
@@ -799,8 +779,8 @@ def test_eff_noise(matrices):
         sampling_rate=0.01,
         config=SimConfig(
             noise="eff_noise",
-            eff_noise_opers=[matrices["I"], matrices["Z"]],
-            eff_noise_probs=[0.975, 0.025],
+            eff_noise_opers=[matrices["Z"]],
+            eff_noise_rates=[0.025],
         ),
     )
     sim_dph = QutipEmulator.from_sequence(
@@ -811,20 +791,6 @@ def test_eff_noise(matrices):
         and sim.run().states[-1] == sim_dph.run().states[-1]
     )
     assert len(sim._hamiltonian._collapse_ops) != 0
-    with pytest.warns(UserWarning, match="first-order"):
-        reg = Register.from_coordinates([(0, 0), (0, 10)], prefix="q")
-        seq2 = Sequence(reg, DigitalAnalogDevice)
-        seq2.declare_channel("ch0", "rydberg_global")
-        seq2.add(pulse, "ch0")
-        sim = QutipEmulator.from_sequence(
-            seq2,
-            sampling_rate=0.01,
-            config=SimConfig(
-                noise="eff_noise",
-                eff_noise_opers=[matrices["I"], matrices["Z"]],
-                eff_noise_probs=[0.5, 0.5],
-            ),
-        )
 
 
 def test_add_config(matrices):
@@ -846,7 +812,7 @@ def test_add_config(matrices):
             "eff_noise",
         ),
         eff_noise_opers=[matrices["I"], matrices["X"]],
-        eff_noise_probs=[0.4, 0.6],
+        eff_noise_rates=[0.4, 0.6],
         temperature=20000,
     )
     sim.add_config(config)
@@ -988,9 +954,10 @@ def test_noisy_xy():
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
-        sim._hamiltonian.set_config(
-            SimConfig(("SPAM", "doppler")).to_noise_model()
-        )
+        with pytest.warns(DeprecationWarning, match="is_deprecated"):
+            sim._hamiltonian.set_config(
+                SimConfig(("SPAM", "doppler")).to_noise_model()
+            )
     sim.set_config(SimConfig("SPAM", eta=0.4))
     assert sim._hamiltonian._bad_atoms == {
         "atom0": True,
