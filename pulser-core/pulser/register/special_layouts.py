@@ -15,12 +15,15 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
+import pulser
 import pulser.register._patterns as patterns
 from pulser.json.utils import obj_to_dict
-from pulser.register import Register
 from pulser.register.register_layout import RegisterLayout
+
+if TYPE_CHECKING:
+    from pulser.register import Register
 
 
 class SquareLatticeLayout(RegisterLayout):
@@ -87,7 +90,8 @@ class SquareLatticeLayout(RegisterLayout):
         trap_ids = self.get_traps_from_coordinates(*points)
         qubit_ids = [f"{prefix}{i}" for i in range(len(trap_ids))]
         return cast(
-            Register, self.define_register(*trap_ids, qubit_ids=qubit_ids)
+            pulser.Register,
+            self.define_register(*trap_ids, qubit_ids=qubit_ids),
         )
 
     def _to_dict(self) -> dict[str, Any]:
@@ -132,7 +136,8 @@ class TriangularLatticeLayout(RegisterLayout):
         trap_ids = self.get_traps_from_coordinates(*points)
         qubit_ids = [f"{prefix}{i}" for i in range(len(trap_ids))]
         return cast(
-            Register, self.define_register(*trap_ids, qubit_ids=qubit_ids)
+            pulser.Register,
+            self.define_register(*trap_ids, qubit_ids=qubit_ids),
         )
 
     def rectangular_register(
@@ -160,7 +165,8 @@ class TriangularLatticeLayout(RegisterLayout):
         trap_ids = self.get_traps_from_coordinates(*points)
         qubit_ids = [f"{prefix}{i}" for i in range(len(trap_ids))]
         return cast(
-            Register, self.define_register(*trap_ids, qubit_ids=qubit_ids)
+            pulser.Register,
+            self.define_register(*trap_ids, qubit_ids=qubit_ids),
         )
 
     def _to_dict(self) -> dict[str, Any]:

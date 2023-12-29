@@ -1,0 +1,33 @@
+{
+  "$id": "layout-schema.json",
+  "$ref": "#/definitions/Layout",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Layout": {
+      "additionalProperties": false,
+      "description": "Layout with the positions of the traps. A selection of up to 50% of these traps makes up the Register.",
+      "properties": {
+        "coordinates": {
+          "description": "The trap coordinates in µm.",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "slug": {
+          "description": "An optional name for the layout.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "type": "object"
+    }
+  }
+}

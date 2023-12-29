@@ -299,7 +299,7 @@ class BaseDevice(ABC):
                 "a pulser.Register3D instance."
             )
 
-        if register._dim > self.dimensions:
+        if register.dimensionality > self.dimensions:
             raise ValueError(
                 f"All qubit positions must be at most {self.dimensions}D "
                 "vectors."
@@ -469,7 +469,7 @@ class BaseDevice(ABC):
         return params
 
     def to_abstract_repr(self) -> str:
-        """Serializes the Sequence into an abstract JSON object."""
+        """Serializes the device into an abstract JSON object."""
         abstr_dev_str = json.dumps(self, cls=AbstractReprEncoder)
         validate_abstract_repr(abstr_dev_str, "device")
         return abstr_dev_str
