@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Mapping
 from typing import Union, cast
@@ -106,95 +105,38 @@ class Hamiltonian:
         return self._config
 
     def _build_collapse_operators(self, config: NoiseModel) -> None:
-        kraus_ops = []
-        self._collapse_ops = []
-        if "dephasing" in config.noise_types:
+        def basis_check(noise_type: str) -> None:
+            """Checks if the basis allows for the use of noise."""
             if self.basis_name == "digital" or self.basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
-                    "Cannot include dephasing noise in digital- or all-basis."
+                    f"Cannot include {noise_type} "
+                    + "noise in digital- or all-basis."
                 )
-            # Probability of phase (Z) flip:
-            # First order in prob
-            prob = config.dephasing_prob / 2
-            n = self._size
-            if prob > 0.1 and n > 1:
-                warnings.warn(
-                    "The dephasing model is a first-order approximation in the"
-                    f" dephasing probability. p = {2*prob} is too large for "
-                    "realistic results.",
-                    stacklevel=2,
-                )
-            k = np.sqrt(prob * (1 - prob) ** (n - 1))
 
-            self._collapse_ops += [
-                np.sqrt((1 - prob) ** n)
-                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-            ]
-            kraus_ops.append(k * qutip.sigmaz())
+        local_collapse_ops = []
+        if "dephasing" in config.noise_types:
+            basis_check("dephasing")
+            coeff = np.sqrt(config.dephasing_rate / 2)
+            local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "depolarizing" in config.noise_types:
-            if self.basis_name == "digital" or self.basis_name == "all":
-                # Go back to previous config
-                raise NotImplementedError(
-                    "Cannot include depolarizing "
-                    + "noise in digital- or all-basis."
-                )
-            # Probability of error occurrence
-
-            prob = config.depolarizing_prob / 4
-            n = self._size
-            if prob > 0.1 and n > 1:
-                warnings.warn(
-                    "The depolarizing model is a first-order approximation"
-                    f" in the depolarizing probability. p = {4*prob}"
-                    " is too large for realistic results.",
-                    stacklevel=2,
-                )
-
-            k = np.sqrt((prob) * (1 - 3 * prob) ** (n - 1))
-            self._collapse_ops += [
-                np.sqrt((1 - 3 * prob) ** n)
-                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-            ]
-            kraus_ops.append(k * qutip.sigmax())
-            kraus_ops.append(k * qutip.sigmay())
-            kraus_ops.append(k * qutip.sigmaz())
+            basis_check("dephasing")
+            coeff = np.sqrt(config.depolarizing_rate / 4)
+            local_collapse_ops.append(coeff * qutip.sigmax())
+            local_collapse_ops.append(coeff * qutip.sigmay())
+            local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "eff_noise" in config.noise_types:
-            if self.basis_name == "digital" or self.basis_name == "all":
-                # Go back to previous config
-                raise NotImplementedError(
-                    "Cannot include general "
-                    + "noise in digital- or all-basis."
+            basis_check("effective")
+            for id, rate in enumerate(config.eff_noise_rates):
+                local_collapse_ops.append(
+                    np.sqrt(rate) * config.eff_noise_opers[id]
                 )
-            # Probability distribution of error occurences
-            n = self._size
-            m = len(config.eff_noise_opers)
-            if n > 1:
-                for i in range(1, m):
-                    prob_i = config.eff_noise_probs[i]
-                    if prob_i > 0.1:
-                        warnings.warn(
-                            "The effective noise model is a first-order"
-                            " approximation in the noise probability."
-                            f"p={prob_i} is large for realistic results.",
-                            stacklevel=2,
-                        )
-                        break
-            # Deriving Kraus operators
-            prob_id = config.eff_noise_probs[0]
-            self._collapse_ops += [
-                np.sqrt(prob_id**n)
-                * qutip.tensor([self.op_matrix["I"] for _ in range(n)])
-            ]
-            for i in range(1, m):
-                k = np.sqrt(config.eff_noise_probs[i] * prob_id ** (n - 1))
-                k_op = k * config.eff_noise_opers[i]
-                kraus_ops.append(k_op)
 
         # Building collapse operators
-        for operator in kraus_ops:
+        self._collapse_ops = []
+        for operator in local_collapse_ops:
             self._collapse_ops += [
                 self.build_operator([(operator, [qid])])
                 for qid in self._qid_index
