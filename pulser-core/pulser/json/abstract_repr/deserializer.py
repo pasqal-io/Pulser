@@ -555,7 +555,7 @@ def deserialize_abstract_register(obj_str: str) -> BaseRegister:
             in the abstract JSON format.
 
     Returns:
-        The RegisterLayout instance.
+        The Register instance.
     """
     validate_abstract_repr(obj_str, "register")
     obj = json.loads(obj_str)

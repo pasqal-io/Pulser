@@ -401,7 +401,7 @@ class Register(BaseRegister, RegDrawer):
 
         Args:
             obj_str (str): the JSON string representing the register encoded
-                in the abstract JSON format..
+                in the abstract JSON format.
         """
         if not isinstance(obj_str, str):
             raise TypeError(

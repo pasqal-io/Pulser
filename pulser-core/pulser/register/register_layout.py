@@ -95,7 +95,7 @@ class RegisterLayout(Traps, RegDrawer):
         ids = (
             qubit_ids if qubit_ids else [f"q{i}" for i in range(len(trap_ids))]
         )
-        coords = self._sorted_coords[list(trap_ids)]
+        coords = self.sorted_coords[list(trap_ids)]
         qubits = dict(zip(ids, coords))
 
         reg_class = (
