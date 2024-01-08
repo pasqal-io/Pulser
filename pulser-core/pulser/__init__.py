@@ -14,9 +14,12 @@
 
 """A pulse-level composer for neutral-atom quantum devices."""
 
-from pulser._version import __version__
-from pulser.pulse import Pulse
-from pulser.register import Register, Register3D
-from pulser.sequence import Sequence
+# Redundant imports are necessary to avoid errors with pyright
 
-from pulser.backend import QPUBackend  # isort: skip
+from pulser._version import __version__ as __version__
+from pulser.pulse import Pulse as Pulse
+from pulser.register import Register as Register
+from pulser.register import Register3D as Register3D
+from pulser.sequence import Sequence as Sequence
+
+from pulser.backend import QPUBackend as QPUBackend  # isort: skip
