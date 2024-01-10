@@ -79,11 +79,12 @@ class WeightMap(Traps, RegDrawer):
         coords_arr = self.sorted_coords
         weights_arr = self.sorted_weights
         for qid, pos in qubits.items():
-            dists = np.round(
-                np.linalg.norm(coords_arr - np.array(pos), axis=1),
-                decimals=COORD_PRECISION,
+            matches = np.argwhere(
+                np.all(
+                    np.isclose(coords_arr, pos, atol=10 ** (-COORD_PRECISION)),
+                    axis=1,
+                )
             )
-            matches = np.argwhere(dists == 0.0)
             qubit_weight_map[qid] = float(np.sum(weights_arr[matches]))
         return qubit_weight_map
 
