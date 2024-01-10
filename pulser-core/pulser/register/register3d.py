@@ -39,8 +39,8 @@ class Register3D(BaseRegister, RegDrawer):
     def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
-        if any(c.shape != (self._dim,) for c in self._coords) or (
-            self._dim != 3
+        if any(c.shape != (self.dimensionality,) for c in self._coords) or (
+            self.dimensionality != 3
         ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 3."

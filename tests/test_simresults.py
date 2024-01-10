@@ -111,7 +111,7 @@ def test_get_final_state(
     noisychannel, sim: QutipEmulator, results, reg, pi_pulse
 ):
     if noisychannel:
-        sim.add_config(SimConfig(noise="dephasing", dephasing_prob=0.01))
+        sim.add_config(SimConfig(noise="dephasing", dephasing_rate=0.01))
     _results = sim.run()
     assert isinstance(_results, CoherentResults)
     final_state = _results.get_final_state()

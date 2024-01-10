@@ -18,16 +18,16 @@ import hashlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-COORD_PRECISION = 6
+from pulser.register._coordinates import COORD_PRECISION, CoordsCollection
 
 
 @dataclass(init=False, eq=False, frozen=True)
-class Traps(ABC):
+class Traps(ABC, CoordsCollection):
     """Defines a unique set of traps.
 
     The traps are always sorted under the same convention: ascending order
@@ -38,7 +38,6 @@ class Traps(ABC):
         trap_coordinates: The coordinates of each trap.
     """
 
-    _trap_coordinates: ArrayLike
     slug: str | None
 
     def __init__(self, trap_coordinates: ArrayLike, slug: str | None = None):
@@ -65,7 +64,7 @@ class Traps(ABC):
             raise ValueError(
                 "All trap coordinates of a register layout must be unique."
             )
-        object.__setattr__(self, "_trap_coordinates", trap_coordinates)
+        object.__setattr__(self, "_coords", trap_coordinates)
         object.__setattr__(self, "slug", slug)
 
     @property
@@ -73,42 +72,14 @@ class Traps(ABC):
         """Mapping between trap IDs and coordinates."""
         return dict(enumerate(self.sorted_coords))
 
-    def _calc_sorting_order(self) -> np.ndarray:
-        """Calculates the unique order that sorts the coordinates."""
-        coords = np.array(self._trap_coordinates, dtype=float)
-        # Sorting the coordinates 1st left to right, 2nd bottom to top
-        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
-        dims = rounded_coords.shape[1]
-        sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
-        sorting = np.lexsort(tuple(sorter))
-        return cast(np.ndarray, sorting)
-
-    @cached_property  # Acts as an attribute in a frozen dataclass
-    def _coords(self) -> np.ndarray:
-        coords = np.array(self._trap_coordinates, dtype=float)
-        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
-        sorting = self._calc_sorting_order()
-        return cast(np.ndarray, rounded_coords[sorting])
-
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _coords_to_traps(self) -> dict[tuple[float, ...], int]:
         return {tuple(coord): id for id, coord in self.traps_dict.items()}
 
     @property
-    def sorted_coords(self) -> np.ndarray:
-        """The sorted trap coordinates."""
-        # Copies to prevent direct access to self._coords
-        return self._coords.copy()
-
-    @property
     def number_of_traps(self) -> int:
         """The number of traps in the layout."""
-        return len(self._coords)
-
-    @property
-    def dimensionality(self) -> int:
-        """The dimensionality of the layout (2 or 3)."""
-        return self._coords.shape[1]
+        return len(self._sorted_coords)
 
     def get_traps_from_coordinates(self, *coordinates: ArrayLike) -> list[int]:
         """Finds the trap ID for a given set of trap coordinates.
@@ -136,13 +107,7 @@ class Traps(ABC):
     @property
     @abstractmethod
     def _hash_object(self) -> hashlib._Hash:
-        # Include dimensionality because the array is flattened with tobytes()
-        hash_ = hashlib.sha256(bytes(self.dimensionality))
-        hash_.update(self.sorted_coords.tobytes())
-        return hash_
-
-    def _safe_hash(self) -> bytes:
-        return self._hash_object.digest()
+        return super()._hash_object
 
     def static_hash(self) -> str:
         """Returns the idempotent hash.

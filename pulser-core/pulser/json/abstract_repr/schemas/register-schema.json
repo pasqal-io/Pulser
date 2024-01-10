@@ -1,0 +1,57 @@
+{
+  "$id": "register-schema.json",
+  "$ref": "#/definitions/Register",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Atom": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/QubitId",
+          "description": "Name of the atom."
+        },
+        "x": {
+          "description": "x-position in µm",
+          "type": "number"
+        },
+        "y": {
+          "description": "y-position in µm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "Layout": {
+      "$ref": "layout-schema.json"
+    },
+    "QubitId": {
+      "description": "Name for a qubit.",
+      "type": "string"
+    },
+    "Register": {
+      "additionalProperties": false,
+      "properties": {
+        "layout": {
+          "$ref": "#/definitions/Layout",
+          "description": "The trap layout underlying the register."
+        },
+        "register": {
+          "description": "A 2D register containing a set of atoms.",
+          "items": {
+            "$ref": "#/definitions/Atom"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "register"
+      ],
+      "type": "object"
+    }
+  }
+}

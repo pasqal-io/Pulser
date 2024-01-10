@@ -44,11 +44,7 @@ from pulser.json.abstract_repr.serializer import (
     AbstractReprEncoder,
     abstract_repr,
 )
-from pulser.json.abstract_repr.validation import (
-    LEGACY_JSONSCHEMA,
-    REGISTRY,
-    RESOLVER,
-)
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
@@ -81,6 +77,64 @@ phys_Chadoq2 = replace(
 )
 
 
+@pytest.mark.parametrize(
+    "layout",
+    [
+        RegisterLayout([[0, 0], [1, 1]]),
+        TriangularLatticeLayout(10, 10),
+        RegisterLayout([[10, 0], [1, 10]], slug="foo"),
+    ],
+)
+def test_layout(layout: RegisterLayout):
+    ser_layout_str = layout.to_abstract_repr()
+    ser_layout_obj = json.loads(ser_layout_str)
+    assert ser_layout_obj.get("slug", None) == layout.slug
+
+    re_layout = RegisterLayout.from_abstract_repr(ser_layout_str)
+    assert layout == re_layout
+
+    with pytest.raises(TypeError, match="must be given as a string"):
+        RegisterLayout.from_abstract_repr(ser_layout_obj)
+
+    # Check the validation catches invalid entries
+    with pytest.raises(
+        jsonschema.exceptions.ValidationError, match="is too long"
+    ):
+        ser_layout_obj["coordinates"].append([0, 0, 0])
+        RegisterLayout.from_abstract_repr(json.dumps(ser_layout_obj))
+
+
+@pytest.mark.parametrize(
+    "reg",
+    [
+        Register.from_coordinates(np.array([[0, 0], [1, 1]]), prefix="q"),
+        TriangularLatticeLayout(10, 10).define_register(*[1, 2, 3]),
+    ],
+)
+def test_register(reg: Register):
+    ser_reg_str = reg.to_abstract_repr()
+    ser_reg_obj = json.loads(ser_reg_str)
+    if reg.layout:
+        assert ser_reg_obj["layout"] == json.loads(
+            reg.layout.to_abstract_repr()
+        )
+    else:
+        assert "layout" not in ser_reg_obj
+
+    re_reg = Register.from_abstract_repr(ser_reg_str)
+    assert reg == re_reg
+
+    with pytest.raises(TypeError, match="must be given as a string"):
+        Register.from_abstract_repr(ser_reg_obj)
+
+    # Check the validation catches invalid entries
+    with pytest.raises(
+        jsonschema.exceptions.ValidationError, match="'z' was unexpected"
+    ):
+        ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
+        Register.from_abstract_repr(json.dumps(ser_reg_obj))
+
+
 class TestDevice:
     @pytest.fixture(
         params=[DigitalAnalogDevice, phys_Chadoq2, MockDevice, AnalogDevice]
@@ -89,18 +143,8 @@ class TestDevice:
         device = request.param
         return json.loads(device.to_abstract_repr())
 
-    @pytest.fixture
-    def device_schema(self):
-        with open(
-            "pulser-core/pulser/json/abstract_repr/schemas/device-schema.json",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            dev_schema = json.load(f)
-        return dev_schema
-
-    def test_device_schema(self, abstract_device, device_schema):
-        jsonschema.validate(instance=abstract_device, schema=device_schema)
+    def test_device_schema(self, abstract_device):
+        validate_abstract_repr(json.dumps(abstract_device), "device")
 
     def test_roundtrip(self, abstract_device):
         def _roundtrip(abstract_device):
@@ -115,7 +159,7 @@ class TestDevice:
         else:
             _roundtrip(abstract_device)
 
-    def test_exceptions(self, abstract_device, device_schema):
+    def test_exceptions(self, abstract_device):
         def check_error_raised(
             obj_str: str, original_err: Type[Exception], err_msg: str = ""
         ) -> Exception:
@@ -152,7 +196,7 @@ class TestDevice:
         invalid_dev = abstract_device.copy()
         invalid_dev["rydberg_level"] = "70"
         with pytest.raises(jsonschema.exceptions.ValidationError) as err:
-            jsonschema.validate(instance=invalid_dev, schema=device_schema)
+            validate_abstract_repr(json.dumps(invalid_dev), "device")
         check_error_raised(
             json.dumps(invalid_dev),
             jsonschema.exceptions.ValidationError,
@@ -275,23 +319,7 @@ class TestDevice:
 
 
 def validate_schema(instance):
-    with open(
-        "pulser-core/pulser/json/abstract_repr/schemas/"
-        "sequence-schema.json",
-        "r",
-        encoding="utf-8",
-    ) as f:
-        schema = json.load(f)
-    if LEGACY_JSONSCHEMA:
-        assert RESOLVER is not None
-        jsonschema.validate(
-            instance=instance, schema=schema, resolver=RESOLVER
-        )
-    else:
-        assert RESOLVER is None
-        jsonschema.validate(
-            instance=instance, schema=schema, registry=REGISTRY
-        )
+    validate_abstract_repr(json.dumps(instance), "sequence")
 
 
 class TestSerialization:
