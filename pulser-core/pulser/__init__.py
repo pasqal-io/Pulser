@@ -17,9 +17,25 @@
 # Redundant imports are necessary to avoid errors with pyright
 
 from pulser._version import __version__ as __version__
-from pulser.pulse import Pulse as Pulse
-from pulser.register import Register as Register
-from pulser.register import Register3D as Register3D
-from pulser.sequence import Sequence as Sequence
+from pulser.pulse import Pulse
+from pulser.register import Register, Register3D
+from pulser.sequence import Sequence
 
-from pulser.backend import QPUBackend as QPUBackend  # isort: skip
+from pulser.backend import QPUBackend  # isort: skip
+
+# Public submodules
+__pulser_submodules__ = [
+    "backend",
+    "devices",
+    "register",
+    "sampler",
+    "waveforms",
+]
+
+__all__ = __pulser_submodules__ + [
+    "Pulse",
+    "Register",
+    "Register3D",
+    "Sequence",
+    "QPUBackend",
+]
