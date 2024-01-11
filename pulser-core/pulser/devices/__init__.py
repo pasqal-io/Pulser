@@ -34,3 +34,13 @@ _valid_devices: tuple[Device, ...] = (
     AnalogDevice,
     DigitalAnalogDevice,
 )
+
+__all__ = [
+    "Device",
+    "VirtualDevice",
+    "AnalogDevice",
+    "DigitalAnalogDevice",
+    "MockDevice",
+    "Chadoq2",
+    "IroiseMVP",
+]

@@ -40,6 +40,17 @@ from pulser.parametrized.decorators import parametrize
 if TYPE_CHECKING:
     from pulser.channels.base_channel import Channel
 
+__all__ = [
+    "Waveform",
+    "CompositeWaveform",
+    "CustomWaveform",
+    "ConstantWaveform",
+    "RampWaveform",
+    "BlackmanWaveform",
+    "InterpolatedWaveform",
+    "KaiserWaveform",
+]
+
 
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""

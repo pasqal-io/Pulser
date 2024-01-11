@@ -16,3 +16,5 @@
 from pulser.register.base_register import QubitId
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
+
+__all__ = ["QubitId", "Register", "Register3D"]

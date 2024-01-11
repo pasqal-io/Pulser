@@ -26,6 +26,8 @@ import numpy as np
 
 from pulser.register import QubitId
 
+__all__ = ["Result", "SampledResult", "Results", "ResultType"]
+
 
 @dataclass
 class Result(ABC):

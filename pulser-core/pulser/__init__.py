@@ -14,28 +14,48 @@
 
 """A pulse-level composer for neutral-atom quantum devices."""
 
-# Redundant imports are necessary to avoid errors with pyright
-
 from pulser._version import __version__ as __version__
+from pulser.waveforms import (
+    CompositeWaveform,
+    CustomWaveform,
+    ConstantWaveform,
+    RampWaveform,
+    BlackmanWaveform,
+    InterpolatedWaveform,
+    KaiserWaveform,
+)
 from pulser.pulse import Pulse
 from pulser.register import Register, Register3D
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.sequence import Sequence
+from pulser.backend import (
+    EmulatorConfig,
+    NoiseModel,
+    QPUBackend,
+)
 
-from pulser.backend import QPUBackend  # isort: skip
-
-# Public submodules
-__pulser_submodules__ = [
-    "backend",
-    "devices",
-    "register",
-    "sampler",
-    "waveforms",
-]
-
-__all__ = __pulser_submodules__ + [
+__all__ = [
+    # pulser.waveforms
+    "CompositeWaveform",
+    "CustomWaveform",
+    "ConstantWaveform",
+    "RampWaveform",
+    "BlackmanWaveform",
+    "InterpolatedWaveform",
+    "KaiserWaveform",
+    # pulser.pulse
     "Pulse",
+    # pulser.register
     "Register",
     "Register3D",
+    # pulser.devices
+    "AnalogDevice",
+    "DigitalAnalogDevice",
+    "MockDevice",
+    # pulser.sequence
     "Sequence",
+    # pulser.backends
+    "EmulatorConfig",
+    "NoiseModel",
     "QPUBackend",
 ]
