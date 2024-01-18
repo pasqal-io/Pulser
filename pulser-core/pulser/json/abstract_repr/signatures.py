@@ -19,7 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
-import numpy as np
+from pulser.math import CompBackend as np
 
 if TYPE_CHECKING:
     from pulser.parametrized.variable import Variable, VariableItem

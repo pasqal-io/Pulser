@@ -22,8 +22,6 @@ from collections.abc import Callable
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union, cast
 
-import numpy as np
-
 import pulser.parametrized
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.abstract_repr.signatures import (
@@ -33,6 +31,7 @@ from pulser.json.abstract_repr.signatures import (
 )
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.parametrized import Parametrized
 
 if TYPE_CHECKING:

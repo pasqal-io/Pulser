@@ -18,10 +18,9 @@ import warnings
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Optional
 
-import numpy as np
-
 from pulser.channels.base_channel import Channel
 from pulser.json.utils import get_dataclass_defaults
+from pulser.math import CompBackend as np
 from pulser.pulse import Pulse
 from pulser.register.weight_maps import DetuningMap
 

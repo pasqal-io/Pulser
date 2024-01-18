@@ -353,7 +353,17 @@ class Hamiltonian:
             The units are given so that the coefficient includes a
             1/hbar factor.
             """
-            dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
+            coord_q1 = (
+                self._qdict[q1].detach().numpy()
+                if hasattr(self._qdict[q1], "detach")
+                else self._qdict[q1]
+            )
+            coord_q2 = (
+                self._qdict[q2].detach().numpy()
+                if hasattr(self._qdict[q2], "detach")
+                else self._qdict[q2]
+            )
+            dist = np.linalg.norm(coord_q1 - coord_q2)
             U = 0.5 * self._device.interaction_coeff / dist**6
             return U * self.build_operator([("sigma_rr", [q1, q2])])
 
@@ -440,6 +450,11 @@ class Hamiltonian:
                     -0.5 * samples["det"],
                 ]
                 for op_id, coeff in zip(op_ids, coeffs):
+                    coeff = (
+                        coeff.detach().numpy()
+                        if hasattr(coeff, "detach")
+                        else coeff
+                    )
                     if np.any(coeff != 0):
                         # Build once global operators as they are needed
                         if op_id not in operators:

@@ -6,10 +6,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional, cast
 
-import numpy as np
-
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
+from pulser.math import CompBackend as np
 from pulser.register import QubitId
 from pulser.register.weight_maps import DetuningMap
 from pulser.sequence._basis_ref import _QubitRef
@@ -142,13 +141,13 @@ class ChannelSamples:
         new_detuning = np.pad(
             self.det,
             (0, extension),
-            constant_values=(final_detuning,),
             mode="constant",
+            constant_values=final_detuning,
         )
         new_phase = np.pad(
             self.phase,
             (0, extension),
-            mode="edge" if self.phase.size > 0 else "constant",
+            mode="edge" if self.phase.shape[0] > 0 else "constant",
         )
         return replace(self, amp=new_amp, det=new_detuning, phase=new_phase)
 
@@ -220,15 +219,27 @@ class ChannelSamples:
             if keep_end_values:
                 # Extracts the contiguous masked regions as [ti, tf] pairs
                 masked_regions = (
-                    np.flatnonzero(
-                        np.diff(
-                            np.r_[
-                                np.int8(0), (~mask).view(np.int8), np.int8(0)
-                            ]
+                    np.nonzero(
+                        np.ravel(
+                            np.diff(
+                                np.concatenate(
+                                    [
+                                        np.array([0], dtype=np.int8),
+                                        (~mask).view(np.int8),
+                                        np.array([0], dtype=np.int8),
+                                    ]
+                                )
+                            )
                         )
-                    )
-                    .reshape(-1, 2)
-                    .tolist()
+                    )[0]
+                    # np.flatnonzero(
+                    #     np.diff(
+                    #         np.r_[
+                    #             np.int8(0), (~mask).view(np.int8), np.int8(0)
+                    #         ]
+                    #     )
+                    # )
+                    .reshape(-1, 2).tolist()
                 )
                 for reg in masked_regions:
                     if not (delta := reg[1] - reg[0]):

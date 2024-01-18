@@ -24,13 +24,13 @@ from operator import itemgetter
 from typing import Any, Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 import pulser
 import pulser.json.abstract_repr as pulser_abstract_repr
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister

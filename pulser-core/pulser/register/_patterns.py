@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-import numpy as np
+from pulser.math import CompBackend as np
 
 
 def square_rect(rows: int, columns: int) -> np.ndarray:

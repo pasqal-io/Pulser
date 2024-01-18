@@ -21,11 +21,11 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Union, cast
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 import pulser
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 from pulser.waveforms import ConstantWaveform, Waveform

@@ -17,9 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal, Sequence, get_args
 
-import numpy as np
-
 from pulser.backend.noise_model import NoiseModel
+from pulser.math import CompBackend as np
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 

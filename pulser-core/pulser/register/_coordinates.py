@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import cast
 
-import numpy as np
+from pulser.math import CompBackend as np
 
 COORD_PRECISION = 6
 
@@ -34,23 +34,34 @@ class CoordsCollection:
     def sorted_coords(self) -> np.ndarray:
         """The sorted coordinates."""
         # Copies to prevent direct access to self._sorted_coords
-        return self._sorted_coords.copy()
+        return np.copy(self._sorted_coords)
 
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _sorted_coords(self) -> np.ndarray:
-        coords = np.array(self._coords, dtype=float)
+        coords = (
+            self._coords
+            if hasattr(self._coords, "detach")
+            else np.stack(self._coords)
+        )
         rounded_coords = np.round(coords, decimals=COORD_PRECISION)
         sorting = self._calc_sorting_order()
         return cast(np.ndarray, rounded_coords[sorting])
 
     def _calc_sorting_order(self) -> np.ndarray:
         """Calculates the unique order that sorts the coordinates."""
-        coords = np.array(self._coords, dtype=float)
+        coords = (
+            self._coords
+            if hasattr(self._coords, "detach")
+            else np.stack(self._coords)
+        )
         # Sorting the coordinates 1st left to right, 2nd bottom to top
         rounded_coords = np.round(coords, decimals=COORD_PRECISION)
         dims = rounded_coords.shape[1]
-        sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
+        sorter = [
+            rounded_coords[:, i].tolist() for i in range(dims - 1, -1, -1)
+        ]
         sorting = np.lexsort(tuple(sorter))
+
         return cast(np.ndarray, sorting)
 
     @property

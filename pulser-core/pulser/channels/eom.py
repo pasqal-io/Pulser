@@ -19,9 +19,8 @@ from enum import Flag
 from itertools import chain
 from typing import Any, cast
 
-import numpy as np
-
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
+from pulser.math import CompBackend as np
 
 # Conversion factor from modulation bandwith to rise time
 # For more info, see https://tinyurl.com/bdeumc8k

@@ -20,7 +20,6 @@ from collections.abc import Mapping
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
@@ -32,6 +31,7 @@ from pulser.json.abstract_repr.deserializer import (
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import stringify_qubit_ids
+from pulser.math import CompBackend as np
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 
@@ -352,7 +352,7 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
 
-        pos = np.array(self._coords)
+        pos = np.array(self._coords, dtype=float)
         if custom_ax is None:
             _, custom_ax = self._initialize_fig_axes(
                 pos,

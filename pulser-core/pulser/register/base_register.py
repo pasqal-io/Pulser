@@ -29,10 +29,10 @@ from typing import (
     cast,
 )
 
-import numpy as np
 from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.register._coordinates import CoordsCollection
 from pulser.register.weight_maps import DetuningMap
 
@@ -65,7 +65,13 @@ class BaseRegister(ABC, CoordsCollection):
             raise ValueError(
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
-        super().__init__([np.array(v, dtype=float) for v in qubits.values()])
+        super().__init__(
+            [
+                np.array(v, dtype=float) if not hasattr(v, "detach") else v
+                for v in qubits.values()
+            ]
+        )
+        # super().__init__([np.array(v, dtype=float)  for v in qubits.values()])
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)

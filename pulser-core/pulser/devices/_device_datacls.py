@@ -20,8 +20,7 @@ from collections import Counter
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, cast, get_args
 
-import numpy as np
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import squareform
 
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
@@ -29,6 +28,7 @@ from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
@@ -383,7 +383,7 @@ class BaseDevice(ABC):
             return cast(np.ndarray, np.logical_or(cond1, cond2))
 
         if len(coords) > 1:
-            distances = pdist(coords)  # Pairwise distance between atoms
+            distances = np.pdist(coords)  # Pairwise distance between atoms
             if np.any(invalid_dists(distances)):
                 sq_dists = squareform(distances)
                 mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
@@ -401,7 +401,7 @@ class BaseDevice(ABC):
     def _validate_radial_distance(
         self, ids: list[QubitId], coords: list[np.ndarray], kind: str
     ) -> None:
-        too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
+        too_far = np.norm(coords, axis=1) > self.max_radial_distance
         if np.any(too_far):
             raise ValueError(
                 f"All {kind} must be at most {self.max_radial_distance} μm "
@@ -429,7 +429,7 @@ class BaseDevice(ABC):
         self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
     ) -> None:
         ids = list(coords_dict.keys())
-        coords = list(coords_dict.values())
+        coords = np.stack(list(coords_dict.values()))
         if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
             and self.max_atom_num is None

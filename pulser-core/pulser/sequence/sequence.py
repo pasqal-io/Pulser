@@ -35,7 +35,6 @@ from typing import (
 
 import jsonschema
 import matplotlib.pyplot as plt
-import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
@@ -52,6 +51,7 @@ from pulser.json.abstract_repr.serializer import serialize_abstract_sequence
 from pulser.json.coders import PulserDecoder, PulserEncoder
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.parametrized import Parametrized, Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.pulse import Pulse
@@ -519,7 +519,7 @@ class Sequence(Generic[DeviceType]):
             )
 
         mag_vector = (bx, by, bz)
-        if np.linalg.norm(mag_vector) == 0.0:
+        if np.norm(mag_vector) == 0.0:
             raise ValueError(
                 "The magnetic field must have a magnitude greater than 0."
             )

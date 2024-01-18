@@ -21,7 +21,6 @@ from itertools import chain, combinations
 from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
@@ -31,6 +30,7 @@ import pulser
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
+from pulser.math import CompBackend as np
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
 from pulser.register.weight_maps import DetuningMap

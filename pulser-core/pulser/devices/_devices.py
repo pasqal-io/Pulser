@@ -15,11 +15,10 @@
 import dataclasses
 import warnings
 
-import numpy as np
-
 from pulser.channels import DMM, Raman, Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import Device
+from pulser.math import CompBackend as np
 from pulser.register.special_layouts import TriangularLatticeLayout
 
 with warnings.catch_warnings():

@@ -497,8 +497,22 @@ class QutipEmulator:
                 for ch_sample in self.samples_obj.samples_list
                 for slot in ch_sample.slots
                 if not (
-                    np.all(np.isclose(ch_sample.amp[slot.ti : slot.tf], 0))
-                    and np.all(np.isclose(ch_sample.det[slot.ti : slot.tf], 0))
+                    np.all(
+                        np.isclose(
+                            ch_sample.amp[slot.ti : slot.tf].detach().numpy()
+                            if hasattr(ch_sample.amp, "detach")
+                            else ch_sample.amp[slot.ti : slot.tf],
+                            0,
+                        )
+                    )
+                    and np.all(
+                        np.isclose(
+                            ch_sample.det[slot.ti : slot.tf]
+                            if hasattr(ch_sample.det, "detach")
+                            else ch_sample.det[slot.ti : slot.tf],
+                            0,
+                        )
+                    )
                 )
             ]
             if pulse_durations:

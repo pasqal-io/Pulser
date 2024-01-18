@@ -18,7 +18,7 @@ import warnings
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, get_args
 
-import numpy as np
+from pulser.math import CompBackend as np
 
 NOISE_TYPES = Literal[
     "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"

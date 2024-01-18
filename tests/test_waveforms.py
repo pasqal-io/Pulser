@@ -130,7 +130,8 @@ def test_first_last():
 
 def test_hash():
     assert hash(constant) == hash(tuple(np.full(100, -3)))
-    assert hash(ramp) == hash(tuple(np.linspace(5, 19, num=2000)))
+    arr = (np.arange(1, 2000 + 1) - 1) * (19 - 5) / (2000 - 1) + 5
+    assert hash(ramp) == hash(tuple(arr))
 
 
 def test_composite():

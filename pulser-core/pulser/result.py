@@ -22,8 +22,8 @@ from dataclasses import dataclass
 from typing import Any, TypeVar, overload
 
 import matplotlib.pyplot as plt
-import numpy as np
 
+from pulser.math import CompBackend as np
 from pulser.register import QubitId
 
 
@@ -77,7 +77,7 @@ class Result(ABC):
         Returns:
             Samples of bitstrings corresponding to measured quantum states.
         """
-        dist = np.random.multinomial(n_samples, self._weights())
+        dist = np.multinomial(n_samples, self._weights())
         return Counter(
             {
                 np.binary_repr(i, self._size): dist[i]

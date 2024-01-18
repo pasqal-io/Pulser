@@ -19,9 +19,9 @@ from collections.abc import Mapping
 from typing import Any, Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.math import CompBackend as np
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.register import Register
@@ -155,7 +155,7 @@ class Register3D(BaseRegister, RegDrawer):
 
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
-        u, s, vh = np.linalg.svd(coords - barycenter)
+        u, s, vh = np.svd(coords - barycenter)
         e_z = vh[2, :]
         perp_extent = [e_z.dot(r) for r in coords]
         width = np.ptp(perp_extent)

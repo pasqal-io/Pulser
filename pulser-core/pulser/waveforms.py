@@ -26,7 +26,6 @@ from types import FunctionType
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
 import matplotlib.pyplot as plt
-import numpy as np
 import scipy.interpolate as interpolate
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
@@ -34,6 +33,7 @@ from numpy.typing import ArrayLike
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
 
@@ -99,7 +99,7 @@ class Waveform(ABC):
         Returns:
             A numpy array with a value for each time step.
         """
-        return self._samples.copy()
+        return np.copy(self._samples)
 
     @property
     def first_value(self) -> float:
@@ -465,12 +465,12 @@ class ConstantWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        value: Union[float, Parametrized],
+        value: Union[float, np.ndarray, Parametrized],
     ):
         """Initializes a constant waveform."""
         super().__init__(duration)
-        value = cast(float, value)
-        self._value = float(value)
+        value = cast(np.ndarray, value)
+        self._value = value
 
     @property
     def duration(self) -> int:
@@ -484,7 +484,7 @@ class ConstantWaveform(Waveform):
         Returns:
             A numpy array with a value for each time step.
         """
-        return np.full(self.duration, self._value)
+        return np.ones(self.duration) * self._value
 
     def change_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.
@@ -504,12 +504,17 @@ class ConstantWaveform(Waveform):
         return abstract_repr("ConstantWaveform", self._duration, self._value)
 
     def __str__(self) -> str:
-        return f"{self._value:.3g} rad/µs"
+        # value = self._value.detach().numpy() if hasattr(self._value, "detach") else self._value
+        return f"{float(self._value):.3g} rad/µs"
 
     def __repr__(self) -> str:
+        value = (
+            self._value.detach().numpy()
+            if hasattr(self._value, "detach")
+            else self._value
+        )
         return (
-            f"ConstantWaveform({self._duration} ns, "
-            + f"{self._value:.3g} rad/µs)"
+            f"ConstantWaveform({self._duration} ns, " + f"{value:.3g} rad/µs)"
         )
 
     def __mul__(self, other: float) -> ConstantWaveform:
@@ -528,15 +533,15 @@ class RampWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        start: Union[float, Parametrized],
-        stop: Union[float, Parametrized],
+        start: Union[float, np.ndarray, Parametrized],
+        stop: Union[float, np.ndarray, Parametrized],
     ):
         """Initializes a ramp waveform."""
         super().__init__(duration)
-        start = cast(float, start)
-        self._start: float = float(start)
-        stop = cast(float, stop)
-        self._stop: float = float(stop)
+        start = cast(np.ndarray, start)
+        self._start: np.ndarray = start
+        stop = cast(np.ndarray, stop)
+        self._stop: np.ndarray = stop
 
     @property
     def duration(self) -> int:
@@ -550,10 +555,12 @@ class RampWaveform(Waveform):
         Returns:
             A numpy array with a value for each time step.
         """
-        return np.linspace(self._start, self._stop, num=self._duration)
+        return (np.arange(1, self._duration + 1) - 1) * (
+            self._stop - self._start
+        ) / (self._duration - 1) + self._start
 
     @property
-    def slope(self) -> float:
+    def slope(self) -> np.ndarray:
         r"""Slope of the ramp, in :math:`s^{-15}`."""
         return (self._stop - self._start) / self._duration
 
@@ -577,12 +584,26 @@ class RampWaveform(Waveform):
         )
 
     def __str__(self) -> str:
-        return f"Ramp({self._start:.3g}->{self._stop:.3g} rad/µs)"
+        # start = self._start.detach().numpy() if hasattr(self._start, "detach") else self._start
+        # stop = self._stop.detach().numpy() if hasattr(self._stop, "detach") else self._stop
+        return (
+            f"Ramp({float(self._start):.3g}->{float(self._stop):.3g} rad/µs)"
+        )
 
     def __repr__(self) -> str:
+        start = (
+            self._start.detach().numpy()
+            if hasattr(self._start, "detach")
+            else self._start
+        )
+        stop = (
+            self._stop.detach().numpy()
+            if hasattr(self._stop, "detach")
+            else self._stop
+        )
         return (
             f"RampWaveform({self._duration} ns, "
-            + f"{self._start:.3g}->{self._stop:.3g} rad/µs)"
+            + f"{start:.3g}->{stop:.3g} rad/µs)"
         )
 
     def __mul__(self, other: float) -> RampWaveform:
@@ -603,22 +624,23 @@ class BlackmanWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        area: Union[float, Parametrized],
+        area: Union[float, np.ndarray, Parametrized],
     ):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
         try:
-            self._area: float = float(cast(float, area))
+            float(area)
         except (TypeError, ValueError):
             raise TypeError(
                 "area needs to be castable to a float but "
                 f"type {type(area)} was provided."
             )
+        self._area: np.ndarray = cast(np.ndarray, area)
 
         self._norm_samples: np.ndarray = np.clip(
-            np.blackman(self._duration), 0, np.inf
+            np.blackman(self._duration), np.array(0.0), np.array(np.inf)
         )
-        self._scaling: float = (
+        self._scaling: np.ndarray = (
             self._area / float(np.sum(self._norm_samples)) / 1e-3
         )
 
@@ -626,8 +648,8 @@ class BlackmanWaveform(Waveform):
     @parametrize
     def from_max_val(
         cls,
-        max_val: Union[float, Parametrized],
-        area: Union[float, Parametrized],
+        max_val: Union[float, np.ndarray, Parametrized],
+        area: Union[float, np.ndarray, Parametrized],
     ) -> BlackmanWaveform:
         """Creates a Blackman waveform with a threshold on the maximum value.
 
@@ -642,8 +664,8 @@ class BlackmanWaveform(Waveform):
                 sign of `area`.
             area: The area under the waveform.
         """
-        max_val = cast(float, max_val)
-        area = cast(float, area)
+        max_val = cast(np.ndarray, max_val)
+        area = cast(np.ndarray, area)
         area_sign = np.sign(area)
         if np.sign(max_val) != area_sign:
             raise ValueError(
@@ -711,10 +733,16 @@ class BlackmanWaveform(Waveform):
         return abstract_repr("BlackmanWaveform", self._duration, self._area)
 
     def __str__(self) -> str:
-        return f"Blackman(Area: {self._area:.3g})"
+        # area = self._area.detach().numpy() if hasattr(self._area, "detach") else self._area
+        return f"Blackman(Area: {float(self._area):.3g})"
 
     def __repr__(self) -> str:
-        return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
+        area = (
+            self._area.detach().numpy()
+            if hasattr(self._area, "detach")
+            else self._area
+        )
+        return f"BlackmanWaveform({self._duration} ns, Area: {area:.3g})"
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
@@ -909,27 +937,29 @@ class KaiserWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        area: Union[float, Parametrized],
-        beta: Optional[Union[float, Parametrized]] = 14.0,
+        area: Union[float, np.ndarray, Parametrized],
+        beta: Optional[Union[float, np.ndarray, Parametrized]] = 14.0,
     ):
         """Initializes a Kaiser waveform."""
         super().__init__(duration)
 
         try:
-            self._area: float = float(cast(float, area))
+            float(area)
         except (TypeError, ValueError):
             raise TypeError(
                 "area needs to be castable to a float but "
                 f"type {type(area)} was provided."
             )
+        self._area: np.ndarray = cast(np.ndarray, area)
 
         try:
-            self._beta: float = float(cast(float, beta))
+            float(beta)
         except (TypeError, ValueError):
             raise TypeError(
                 "beta needs to be castable to a float but "
                 f"type {type(beta)} was provided."
             )
+        self._beta: np.ndarray = cast(np.ndarray, beta)
 
         if self._beta < 0.0:
             raise ValueError(
@@ -938,7 +968,7 @@ class KaiserWaveform(Waveform):
             )
 
         self._norm_samples: np.ndarray = np.clip(
-            np.kaiser(self._duration, self._beta), 0, np.inf
+            np.kaiser(self._duration, beta=float(self._beta)), 0, np.inf
         )
 
         self._scaling: float = (
@@ -949,9 +979,9 @@ class KaiserWaveform(Waveform):
     @parametrize
     def from_max_val(
         cls,
-        max_val: Union[float, Parametrized],
-        area: Union[float, Parametrized],
-        beta: Optional[Union[float, Parametrized]] = 14.0,
+        max_val: Union[float, np.ndarray, Parametrized],
+        area: Union[float, np.ndarray, Parametrized],
+        beta: Optional[Union[float, np.ndarray, Parametrized]] = 14.0,
     ) -> KaiserWaveform:
         """Creates a Kaiser waveform with a threshold on the maximum value.
 
@@ -968,9 +998,9 @@ class KaiserWaveform(Waveform):
             beta: The beta parameter of the Kaiser window.
                 The default value is 14.
         """
-        max_val = cast(float, max_val)
-        area = cast(float, area)
-        beta = cast(float, beta)
+        max_val = cast(np.ndarray, max_val)
+        area = cast(np.ndarray, area)
+        beta = cast(np.ndarray, beta)
 
         if np.sign(max_val) != np.sign(area):
             raise ValueError(
@@ -987,7 +1017,7 @@ class KaiserWaveform(Waveform):
         # Compute the ratio area / duration for a long duration
         # and use this value for a first guess of the best duration
 
-        ratio: float = max_val * np.sum(np.kaiser(100, beta)) / 100
+        ratio: float = max_val * np.sum(np.kaiser(100, beta=beta)) / 100
         duration_guess: int = int(area * 1000.0 / ratio)
 
         duration_best: int = 0
@@ -998,7 +1028,7 @@ class KaiserWaveform(Waveform):
 
             max_val_best: float = 0
             for duration in range(1, 16):
-                kaiser_temp = np.kaiser(duration, beta)
+                kaiser_temp = np.kaiser(duration, beta=beta)
                 scaling_temp = 1000 * area / np.sum(kaiser_temp)
                 max_val_temp = np.max(kaiser_temp) * scaling_temp
                 if max_val_best < max_val_temp <= max_val:
@@ -1008,7 +1038,7 @@ class KaiserWaveform(Waveform):
         else:
             # Start with a waveform based on the duration guess
 
-            kaiser_guess = np.kaiser(duration_guess, beta)
+            kaiser_guess = np.kaiser(duration_guess, beta=beta)
             scaling_guess = 1000 * area / np.sum(kaiser_guess)
             max_val_temp = np.max(kaiser_guess) * scaling_guess
 
@@ -1020,7 +1050,7 @@ class KaiserWaveform(Waveform):
 
             while np.sign(max_val_temp - max_val) == step:
                 duration += step
-                kaiser_temp = np.kaiser(duration, beta)
+                kaiser_temp = np.kaiser(duration, beta=beta)
                 scaling = 1000 * area / np.sum(kaiser_temp)
                 max_val_temp = np.max(kaiser_temp) * scaling
 
@@ -1068,15 +1098,35 @@ class KaiserWaveform(Waveform):
         )
 
     def __str__(self) -> str:
+        area = (
+            self._area.detach().numpy()
+            if hasattr(self._area, "detach")
+            else self._area
+        )
+        beta = (
+            self._beta.detach().numpy()
+            if hasattr(self._beta, "detach")
+            else self._beta
+        )
         return (
             f"Kaiser({self._duration} ns, "
-            f"Area: {self._area:.3g}, Beta: {self._beta:.3g})"
+            f"Area: {area:.3g}, Beta: {beta:.3g})"
         )
 
     def __repr__(self) -> str:
+        area = (
+            self._area.detach().numpy()
+            if hasattr(self._area, "detach")
+            else self._area
+        )
+        beta = (
+            self._beta.detach().numpy()
+            if hasattr(self._beta, "detach")
+            else self._beta
+        )
         return (
             f"KaiserWaveform(duration: {self._duration}, "
-            f"area: {self._area:.3g}, beta: {self._beta:.3g})"
+            f"area: {area:.3g}, beta: {beta:.3g})"
         )
 
     def __mul__(self, other: float) -> KaiserWaveform:

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Generator, Union
 
-import numpy as np
+from pulser.math import CompBackend as np
 
 
 class _QubitRef:

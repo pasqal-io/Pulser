@@ -20,10 +20,9 @@ import inspect
 from json import JSONDecoder, JSONEncoder
 from typing import Any, cast
 
-import numpy as np
-
 from pulser.json.supported import validate_serialization
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.parametrized import Variable
 
 

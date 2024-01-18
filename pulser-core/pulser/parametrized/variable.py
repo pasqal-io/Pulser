@@ -19,10 +19,10 @@ import collections.abc  # To use collections.abc.Sequence
 import dataclasses
 from typing import Any, Iterator, Optional, Union, cast
 
-import numpy as np
 from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
 

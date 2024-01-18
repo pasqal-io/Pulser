@@ -20,12 +20,11 @@ from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Literal, Optional, Type, TypeVar, cast
 
-import numpy as np
 from numpy.typing import ArrayLike
-from scipy.fft import fft, fftfreq, ifft
 
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.pulse import Pulse
 
 # Warnings of adjusted waveform duration appear just once
@@ -381,7 +380,7 @@ class Channel(ABC):
                 "The pulse's detuning values go out of the range "
                 "allowed for the chosen channel."
             )
-        avg_amp = np.average(pulse.amplitude.samples)
+        avg_amp = np.mean(pulse.amplitude.samples)
         if 0 < avg_amp < self.min_avg_amp:
             raise ValueError(
                 "The pulse's average amplitude is below the chosen "
@@ -463,9 +462,11 @@ class Channel(ABC):
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
         fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
-        freqs = fftfreq(input_samples.size)
+        freqs = np.fftfreq(input_samples.size)
         modulation = np.exp(-(freqs**2) / fc**2)
-        return cast(np.ndarray, ifft(fft(input_samples) * modulation).real)
+        return cast(
+            np.ndarray, np.ifft(np.fft(input_samples) * modulation).real
+        )
 
     def calc_modulation_buffer(
         self,

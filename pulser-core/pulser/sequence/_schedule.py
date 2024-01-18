@@ -19,10 +19,9 @@ from collections.abc import Iterator
 from dataclasses import dataclass, fields
 from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
-import numpy as np
-
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
+from pulser.math import CompBackend as np
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.register.weight_maps import DetuningMap

@@ -20,13 +20,12 @@ from collections.abc import Collection
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Union, cast
 
-import numpy as np
-
 import pulser
 from pulser.json.abstract_repr.signatures import SIGNATURES
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import stringify_qubit_ids
+from pulser.math import CompBackend as np
 
 if TYPE_CHECKING:
     from pulser.parametrized import Parametrized
@@ -173,7 +172,7 @@ def serialize_abstract_sequence(
         target_array = np.array(unfold_targets(target_ids))
         og_dim = target_array.ndim
         if og_dim == 0:
-            target_array = target_array[np.newaxis]
+            target_array = target_array[None]
         indices = seq.get_register(include_mappable=True).find_indices(
             target_array.tolist()
         )

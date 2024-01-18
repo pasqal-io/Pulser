@@ -21,11 +21,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Mapping, Optional, cast
 
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
+from pulser.math import CompBackend as np
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.traps import COORD_PRECISION, Traps
 

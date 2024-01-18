@@ -21,9 +21,10 @@ from itertools import combinations
 from typing import TYPE_CHECKING, Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib import collections as mc
 from scipy.spatial import KDTree
+
+from pulser.math import CompBackend as np
 
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
@@ -353,6 +354,7 @@ class RegDrawer:
         draw_half_radius: bool = False,
     ) -> np.ndarray:
         """Returns the dimensions of the register to be drawn."""
+        pos = np.array(pos, dtype=float)
         diffs = np.ptp(pos, axis=0)
         diffs[diffs < 9] *= 1.5
         diffs[diffs < 9] += 2

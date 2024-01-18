@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Any
 
-import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.math import CompBackend as np
 from pulser.register._coordinates import COORD_PRECISION, CoordsCollection
 
 
@@ -47,7 +47,11 @@ class Traps(ABC, CoordsCollection):
         )
 
         try:
-            coords_arr = np.array(trap_coordinates, dtype=float)
+            coords_arr = (
+                np.array(trap_coordinates, dtype=float)
+                if not hasattr(trap_coordinates, "detach")
+                else trap_coordinates
+            )
         except ValueError as e:
             raise array_type_error_msg from e
 
