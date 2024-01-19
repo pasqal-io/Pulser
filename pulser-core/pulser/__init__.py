@@ -34,6 +34,16 @@ from pulser.backend import (
     QPUBackend,
 )
 
+# Exposing relevant submodules
+from pulser import (
+    waveforms as waveforms,
+    channels as channels,
+    register as register,
+    devices as devices,
+    sampler as sampler,
+    backend as backend,
+)
+
 __all__ = [
     # pulser.waveforms
     "CompositeWaveform",
