@@ -16,3 +16,17 @@
 from pulser.register.base_register import QubitId
 from pulser.register.register import Register
 from pulser.register.register3d import Register3D
+from pulser.register.register_layout import RegisterLayout
+from pulser.register.special_layouts import (
+    SquareLatticeLayout,
+    TriangularLatticeLayout,
+)
+
+__all__ = [
+    "QubitId",
+    "Register",
+    "Register3D",
+    "RegisterLayout",
+    "SquareLatticeLayout",
+    "TriangularLatticeLayout",
+]

@@ -14,9 +14,58 @@
 
 """A pulse-level composer for neutral-atom quantum devices."""
 
-from pulser._version import __version__
+from pulser._version import __version__ as __version__
+from pulser.waveforms import (
+    CompositeWaveform,
+    CustomWaveform,
+    ConstantWaveform,
+    RampWaveform,
+    BlackmanWaveform,
+    InterpolatedWaveform,
+    KaiserWaveform,
+)
 from pulser.pulse import Pulse
 from pulser.register import Register, Register3D
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.sequence import Sequence
+from pulser.backend import (
+    EmulatorConfig,
+    NoiseModel,
+    QPUBackend,
+)
 
-from pulser.backend import QPUBackend  # isort: skip
+# Exposing relevant submodules
+from pulser import (
+    waveforms as waveforms,
+    channels as channels,
+    register as register,
+    devices as devices,
+    sampler as sampler,
+    backend as backend,
+)
+
+__all__ = [
+    # pulser.waveforms
+    "CompositeWaveform",
+    "CustomWaveform",
+    "ConstantWaveform",
+    "RampWaveform",
+    "BlackmanWaveform",
+    "InterpolatedWaveform",
+    "KaiserWaveform",
+    # pulser.pulse
+    "Pulse",
+    # pulser.register
+    "Register",
+    "Register3D",
+    # pulser.devices
+    "AnalogDevice",
+    "DigitalAnalogDevice",
+    "MockDevice",
+    # pulser.sequence
+    "Sequence",
+    # pulser.backends
+    "EmulatorConfig",
+    "NoiseModel",
+    "QPUBackend",
+]

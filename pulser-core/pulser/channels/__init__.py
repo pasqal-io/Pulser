@@ -15,3 +15,5 @@
 
 from pulser.channels.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
+
+__all__ = ["Microwave", "Raman", "Rydberg", "DMM"]
