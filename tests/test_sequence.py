@@ -595,7 +595,7 @@ def test_switch_device_down(
         ValueError,
         match="No match for channel raman_1 with the" " same clock_period.",
     ):
-        with pytest.warns(DeprecationWarning, match="From v0.17"):
+        with pytest.warns(DeprecationWarning, match="From v0.18"):
             # Can't find a match for the 2nd rydberg_local
             seq.switch_device(
                 dataclasses.replace(
