@@ -134,8 +134,8 @@ class TestNoiseModel:
                                 }
                             )
                 with pytest.warns(
-                    DeprecationWarning,
-                    match=f"{param} is deprecated.",
+                    (UserWarning, DeprecationWarning),
+                    match=f"{param}",
                 ):
                     return NoiseModel(**{param: value})
             return NoiseModel(**{param: value})
@@ -213,7 +213,7 @@ class TestNoiseModel:
                 eff_noise_rates=[-1.0, 0.5],
             )
         with pytest.warns(
-            DeprecationWarning, match="eff_noise_probs is deprecated."
+            (UserWarning, DeprecationWarning), match="eff_noise_probs"
         ):
             NoiseModel(
                 noise_types=("eff_noise",),

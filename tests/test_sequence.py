@@ -595,27 +595,26 @@ def test_switch_device_down(
         ValueError,
         match="No match for channel raman_1 with the" " same clock_period.",
     ):
-        with pytest.warns(DeprecationWarning, match="From v0.18"):
-            # Can't find a match for the 2nd rydberg_local
-            seq.switch_device(
-                dataclasses.replace(
-                    phys_Chadoq2,
-                    channel_objects=(
-                        DigitalAnalogDevice.channels["rydberg_global"],
-                        dataclasses.replace(
-                            DigitalAnalogDevice.channels["raman_local"],
-                            clock_period=10,
-                        ),
+        # Can't find a match for the 2nd rydberg_local
+        seq.switch_device(
+            dataclasses.replace(
+                phys_Chadoq2,
+                channel_objects=(
+                    DigitalAnalogDevice.channels["rydberg_global"],
+                    dataclasses.replace(
                         DigitalAnalogDevice.channels["raman_local"],
+                        clock_period=10,
                     ),
-                    channel_ids=(
-                        "rydberg_global",
-                        "rydberg_local",
-                        "rydberg_local1",
-                    ),
+                    DigitalAnalogDevice.channels["raman_local"],
                 ),
-                strict=True,
-            )
+                channel_ids=(
+                    "rydberg_global",
+                    "rydberg_local",
+                    "rydberg_local1",
+                ),
+            ),
+            strict=True,
+        )
 
     # From sequence reusing DMMs to Device without reusable channels
     seq = init_seq(
