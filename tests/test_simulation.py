@@ -954,7 +954,7 @@ def test_noisy_xy():
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
-        with pytest.warns(DeprecationWarning, match="is_deprecated"):
+        with pytest.warns(DeprecationWarning, match="is deprecated"):
             sim._hamiltonian.set_config(
                 SimConfig(("SPAM", "doppler")).to_noise_model()
             )
