@@ -175,8 +175,11 @@ def test_rare_cases(patch_plt_show):
     var_._assign(10)
     assert wf_.build() == BlackmanWaveform(100, 10)
 
-    rotated_reg = parametrize(Register.rotate)(reg, var)
-    with pytest.raises(NotImplementedError):
+    rotated_reg = parametrize(Register.rotated)(reg, var)
+    with pytest.raises(
+        NotImplementedError,
+        match="Instance or static method serialization is not supported.",
+    ):
         encode(rotated_reg)
 
 
