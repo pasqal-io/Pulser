@@ -305,7 +305,7 @@ def test_qpu_backend(sequence):
         TypeError, match="must be a real device, instance of 'Device'"
     ):
         QPUBackend(sequence, connection)
-    with pytest.warns(DeprecationWarning, match="From v0.17"):
+    with pytest.warns(DeprecationWarning, match="From v0.18"):
         seq = sequence.switch_device(replace(DigitalAnalogDevice, max_runs=10))
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
