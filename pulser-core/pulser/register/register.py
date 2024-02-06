@@ -281,35 +281,6 @@ class Register(BaseRegister, RegDrawer):
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
-    def rotate(self, degrees: float) -> None:
-        """Rotates the array around the origin by the given angle.
-
-        Warning:
-            Deprecated in v0.17 in favour of `Register.rotated()`. To be
-            removed in v0.18.
-
-        Args:
-            degrees: The angle of rotation in degrees.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(
-                "'Register.rotate()' has been deprecated and will be "
-                "removed in v0.18. Consider using `Register.rotated()` "
-                "instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-        if self.layout is not None:
-            raise TypeError(
-                "A register defined from a RegisterLayout cannot be rotated."
-            )
-        theta = np.deg2rad(degrees)
-        rot = np.array(
-            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
-        )
-        object.__setattr__(self, "_coords", [rot @ v for v in self._coords])
-
     def rotated(self, degrees: float) -> Register:
         """Makes a new rotated register.
 
