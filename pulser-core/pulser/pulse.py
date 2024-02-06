@@ -33,6 +33,8 @@ from pulser.waveforms import ConstantWaveform, Waveform
 if TYPE_CHECKING:
     from pulser.channels.base_channel import Channel
 
+__all__ = ["Pulse"]
+
 
 @dataclass(init=False, repr=False, frozen=True)
 class Pulse:

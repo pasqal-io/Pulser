@@ -14,8 +14,9 @@
 """Defines a noise model class for emulator backends."""
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field, fields
-from typing import Literal, get_args
+from typing import Any, Literal, get_args
 
 import numpy as np
 
@@ -38,14 +39,14 @@ class NoiseModel:
             options:
 
             - "dephasing": Random phase (Z) flip (parametrized
-              by `dephasing_prob`).
+              by `dephasing_rate`).
             - "depolarizing": Quantum noise where the state is
-              turned into a mixed state I/2 with probability
-              `depolarizing_prob`.
+              turned into a mixed state I/2 with rate
+              `depolarizing_rate`.
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
-              and the corresponding probability distribution
-              `eff_noise_probs`.
+              and the corresponding rates distribution
+              `eff_noise_rates`.
             - "doppler": Local atom detuning due to termal motion of the
               atoms and Doppler effect with respect to laser frequency.
               Parametrized by the `temperature` field.
@@ -67,12 +68,18 @@ class NoiseModel:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        dephasing_prob: The probability of a dephasing error occuring.
-        depolarizing_prob: The probability of a depolarizing error occuring.
-        eff_noise_probs: The probability associated to each effective noise
-            operator.
-        eff_noise_opers: The operators for the effective noise model. The
-            first operator must be the identity.
+        dephasing_rate: The rate of a dephasing error occuring (in rad/µs).
+        dephasing_prob: (Deprecated) The rate of a dephasing error occuring
+            (in rad/µs). Use `dephasing_rate` instead.
+        depolarizing_rate: The rate (in rad/µs) at which a depolarizing
+            error occurs.
+        depolarizing_prob: (Deprecated) The rate (in rad/µs) at which a
+            depolarizing error occurs. Use `depolarizing_rate` instead.
+        eff_noise_rates: The rate associated to each effective noise operator
+            (in rad/µs).
+        eff_noise_probs: (Deprecated) The rate associated to each effective
+            noise operator (in rad/µs). Use `eff_noise_rate` instead.
+        eff_noise_opers: The operators for the effective noise model.
     """
 
     noise_types: tuple[NOISE_TYPES, ...] = ()
@@ -84,12 +91,52 @@ class NoiseModel:
     temperature: float = 50.0
     laser_waist: float = 175.0
     amp_sigma: float = 5e-2
-    dephasing_prob: float = 0.05
-    depolarizing_prob: float = 0.05
-    eff_noise_probs: list[float] = field(default_factory=list)
+    dephasing_rate: float = 0.05
+    depolarizing_rate: float = 0.05
+    eff_noise_rates: list[float] = field(default_factory=list)
     eff_noise_opers: list[np.ndarray] = field(default_factory=list)
+    dephasing_prob: float | None = None
+    depolarizing_prob: float | None = None
+    eff_noise_probs: list[float] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        default_field_value = {
+            field.name: field.default for field in fields(self)
+        }
+        for noise in ["dephasing", "depolarizing", "eff_noise"]:
+            # Probability and rates should be the same
+            prob_name = f"{noise}_prob{'s' if noise=='eff_noise' else ''}"
+            rate_name = f"{noise}_rate{'s' if noise=='eff_noise' else ''}"
+            prob, rate = (getattr(self, prob_name), getattr(self, rate_name))
+            if len(prob) > 0 if noise == "eff_noise" else prob is not None:
+                warnings.warn(
+                    f"{prob_name} is deprecated. Use {rate_name} instead.",
+                    DeprecationWarning,
+                )
+                if prob != rate:
+                    if (
+                        len(rate) > 0
+                        if noise == "eff_noise"
+                        else rate != default_field_value[rate_name]
+                    ):
+                        raise ValueError(
+                            f"If both defined, `{rate_name}` and `{prob_name}`"
+                            " must be equal."
+                        )
+                    warnings.warn(
+                        f"Setting {rate_name} with the value from "
+                        f"{prob_name}.",
+                        UserWarning,
+                    )
+                    self._change_attribute(rate_name, prob)
+            self._change_attribute(prob_name, getattr(self, rate_name))
+        assert self.dephasing_prob == self.dephasing_rate
+        assert self.depolarizing_prob == self.depolarizing_rate
+        assert self.eff_noise_probs == self.eff_noise_rates
+        positive = {
+            "dephasing_rate",
+            "depolarizing_rate",
+        }
         strict_positive = {
             "runs",
             "samples_per_run",
@@ -100,8 +147,6 @@ class NoiseModel:
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
-            "dephasing_prob",
-            "depolarizing_prob",
             "amp_sigma",
         }
         # The two share no common terms
@@ -111,6 +156,9 @@ class NoiseModel:
             is_valid = True
             param = f.name
             value = getattr(self, param)
+            if param in positive:
+                is_valid = value is None or value >= 0
+                comp = "None or greater than or equal to zero"
             if param in strict_positive:
                 is_valid = value > 0
                 comp = "greater than zero"
@@ -125,6 +173,9 @@ class NoiseModel:
 
         self._check_noise_types()
         self._check_eff_noise()
+
+    def _change_attribute(self, attr_name: str, new_value: Any) -> None:
+        object.__setattr__(self, attr_name, new_value)
 
     def _check_noise_types(self) -> None:
         for noise_type in self.noise_types:
@@ -145,37 +196,30 @@ class NoiseModel:
             )
 
     def _check_eff_noise(self) -> None:
-        if len(self.eff_noise_opers) != len(self.eff_noise_probs):
+        if len(self.eff_noise_opers) != len(self.eff_noise_rates):
             raise ValueError(
                 f"The operators list length({len(self.eff_noise_opers)}) "
-                "and probabilities list length"
-                f"({len(self.eff_noise_probs)}) must be equal."
+                "and rates list length"
+                f"({len(self.eff_noise_rates)}) must be equal."
             )
-        for prob in self.eff_noise_probs:
-            if not isinstance(prob, float):
+        for rate in self.eff_noise_rates:
+            if not isinstance(rate, float):
                 raise TypeError(
-                    "eff_noise_probs is a list of floats,"
-                    f" it must not contain a {type(prob)}."
+                    "eff_noise_rates is a list of floats,"
+                    f" it must not contain a {type(rate)}."
                 )
 
         if "eff_noise" not in self.noise_types:
             # Stop here if effective noise is not selected
             return
 
-        if not self.eff_noise_opers or not self.eff_noise_probs:
+        if not self.eff_noise_opers or not self.eff_noise_rates:
             raise ValueError(
-                "The general noise parameters have not been filled."
+                "The effective noise parameters have not been filled."
             )
 
-        prob_distr = np.array(self.eff_noise_probs)
-        lower_bound = np.any(prob_distr < 0.0)
-        upper_bound = np.any(prob_distr > 1.0)
-        sum_p = not np.isclose(sum(prob_distr), 1.0)
-
-        if sum_p or lower_bound or upper_bound:
-            raise ValueError(
-                "The distribution given is not a probability distribution."
-            )
+        if np.any(np.array(self.eff_noise_rates) < 0):
+            raise ValueError("The provided rates must be greater than 0.")
 
         # Check the validity of operators
         for operator in self.eff_noise_opers:
@@ -186,20 +230,3 @@ class NoiseModel:
                 raise NotImplementedError(
                     "Operator's shape must be (2,2) " f"not {operator.shape}."
                 )
-        # Identity position
-        identity = np.eye(2)
-        if np.any(self.eff_noise_opers[0] != identity):
-            raise NotImplementedError(
-                "You must put the identity matrix at the "
-                "beginning of the operator list."
-            )
-        # Completeness relation checking
-        sum_op = np.zeros((2, 2), dtype=complex)
-        for prob, op in zip(self.eff_noise_probs, self.eff_noise_opers):
-            sum_op += prob * op @ op.conj().transpose()
-
-        if not np.all(np.isclose(sum_op, identity)):
-            raise ValueError(
-                "The completeness relation is not verified."
-                f" Ended up with {sum_op} instead of {identity}."
-            )

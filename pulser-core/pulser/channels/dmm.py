@@ -103,7 +103,7 @@ class DMM(Channel):
         virtual_dmm = bool(self._undefined_fields())
         if not virtual_dmm and self.total_bottom_detuning is None:
             warnings.warn(
-                "From v0.17 and onwards, `total_bottom_detuning` must be"
+                "From v0.18 and onwards, `total_bottom_detuning` must be"
                 " defined to define a physical DMM.",
                 DeprecationWarning,
             )

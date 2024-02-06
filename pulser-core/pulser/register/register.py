@@ -15,8 +15,10 @@
 
 from __future__ import annotations
 
+import json
+import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,6 +27,11 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.register._patterns as patterns
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_abstract_register,
+)
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import stringify_qubit_ids
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
@@ -42,8 +49,8 @@ class Register(BaseRegister, RegDrawer):
     def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
-        if any(c.shape != (self._dim,) for c in self._coords) or (
-            self._dim != 2
+        if any(c.shape != (self.dimensionality,) for c in self._coords) or (
+            self.dimensionality != 2
         ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 2."
@@ -277,9 +284,22 @@ class Register(BaseRegister, RegDrawer):
     def rotate(self, degrees: float) -> None:
         """Rotates the array around the origin by the given angle.
 
+        Warning:
+            Deprecated in v0.17 in favour of `Register.rotated()`. To be
+            removed in v0.18.
+
         Args:
             degrees: The angle of rotation in degrees.
         """
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                "'Register.rotate()' has been deprecated and will be "
+                "removed in v0.18. Consider using `Register.rotated()` "
+                "instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
         if self.layout is not None:
             raise TypeError(
                 "A register defined from a RegisterLayout cannot be rotated."
@@ -288,7 +308,34 @@ class Register(BaseRegister, RegDrawer):
         rot = np.array(
             [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
         )
-        self._coords = [rot @ v for v in self._coords]
+        object.__setattr__(self, "_coords", [rot @ v for v in self._coords])
+
+    def rotated(self, degrees: float) -> Register:
+        """Makes a new rotated register.
+
+        All coordinates are rotated counter-clockwise around the origin.
+
+        Args:
+            degrees: The angle of rotation in degrees.
+
+        Returns:
+            Register: A new register rotated around the origin by the given
+            angle.
+        """
+        theta = np.deg2rad(degrees)
+        rot = np.array(
+            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
+        )
+        if self.layout is not None:
+            warnings.warn(
+                "The rotated register won't have an associated "
+                "'RegisterLayout'.",
+                stacklevel=2,
+            )
+
+        return Register(
+            dict(zip(self.qubit_ids, [rot @ v for v in self._coords]))
+        )
 
     def draw(
         self,
@@ -378,3 +425,27 @@ class Register(BaseRegister, RegDrawer):
             {"name": name, "x": x, "y": y}
             for name, (x, y) in zip(names, self._coords)
         ]
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the register into an abstract JSON object."""
+        abstr_reg: dict[str, Any] = dict(register=self._to_abstract_repr())
+        if self.layout is not None:
+            abstr_reg["layout"] = self.layout
+        abstr_reg_str = json.dumps(abstr_reg, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_reg_str, "register")
+        return abstr_reg_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> Register:
+        """Deserialize a register from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the register encoded
+                in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized register must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        return cast(Register, deserialize_abstract_register(obj_str))

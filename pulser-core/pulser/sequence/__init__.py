@@ -13,4 +13,4 @@
 # limitations under the License.
 """Module containing the sequence class definition."""
 
-from pulser.sequence.sequence import Sequence
+from pulser.sequence.sequence import Sequence as Sequence

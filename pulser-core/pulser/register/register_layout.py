@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
@@ -25,12 +26,14 @@ from typing import Any, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
+import pulser
+import pulser.json.abstract_repr as pulser_abstract_repr
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
-from pulser.register.register import Register
-from pulser.register.register3d import Register3D
 from pulser.register.traps import Traps
 from pulser.register.weight_maps import DetuningMap
 
@@ -92,10 +95,12 @@ class RegisterLayout(Traps, RegDrawer):
         ids = (
             qubit_ids if qubit_ids else [f"q{i}" for i in range(len(trap_ids))]
         )
-        coords = self._coords[list(trap_ids)]
+        coords = self.sorted_coords[list(trap_ids)]
         qubits = dict(zip(ids, coords))
 
-        reg_class = Register3D if self.dimensionality == 3 else Register
+        reg_class = (
+            pulser.Register3D if self.dimensionality == 3 else pulser.Register
+        )
         reg = reg_class(qubits, layout=self, trap_ids=trap_ids)
         return reg
 
@@ -242,7 +247,7 @@ class RegisterLayout(Traps, RegDrawer):
         # Allows for serialization of subclasses without a special _to_dict()
         return obj_to_dict(
             self,
-            self._trap_coordinates,
+            self._coords,
             slug=self.slug,
             _module=__name__,
             _name="RegisterLayout",
@@ -253,3 +258,27 @@ class RegisterLayout(Traps, RegDrawer):
         if self.slug is not None:
             d["slug"] = self.slug
         return d
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the layout into an abstract JSON object."""
+        abstr_layout_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_layout_str, "layout")
+        return abstr_layout_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> RegisterLayout:
+        """Deserialize a layout from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the layout encoded
+                in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized layout must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        # Avoids circular imports
+        return pulser_abstract_repr.deserializer.deserialize_abstract_layout(
+            obj_str
+        )

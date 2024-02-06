@@ -69,3 +69,7 @@ jobs:
           extra-packages: pytest
       - name: Run the unit tests & generate coverage report
         run: pytest --cov --cov-fail-under=100
+      - name: Test validation with legacy jsonschema
+        run: |
+          pip install jsonschema==4.17.3
+          pytest tests/test_abstract_repr.py

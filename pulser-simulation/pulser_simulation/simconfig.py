@@ -32,6 +32,27 @@ KEFF = 8.7  # µm^-1
 
 T = TypeVar("T", bound="SimConfig")
 
+SUPPORTED_NOISES: dict = {
+    "ising": {
+        "dephasing",
+        "doppler",
+        "amplitude",
+        "SPAM",
+        "depolarizing",
+        "eff_noise",
+    },
+    "XY": {"SPAM"},
+}
+
+
+def doppler_sigma(temperature: float) -> float:
+    """Standard deviation for Doppler shifting due to thermal motion.
+
+    Arg:
+        temperature: The temperature in K.
+    """
+    return KEFF * sqrt(KB * temperature / MASS)
+
 
 @dataclass(frozen=True)
 class SimConfig:
@@ -46,16 +67,14 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
-            - "dephasing": Random phase (Z) flip
-            - "depolarizing": Quantum noise where the state(rho) is
-              turned into a mixed state I/2 with probability p,
-              and left unchanged with probability 1-p.
+            - "dephasing": Random phase (Z) flip.
+            - "depolarizing": Quantum noise where the state (rho) is
+              turned into a mixed state I/2 at a rate gamma (in rad/µs).
             - "eff_noise": General effective noise channel defined by
-              the set of collapse operators **eff_noise_opers**
-              and the corresponding probability distribution
-              **eff_noise_probs**.
+              the set of collapse operators **eff_noise_opers** and the
+              corresponding rates **eff_noise_rates** (in rad/µs).
             - "doppler": Local atom detuning due to finite speed of the
-              atoms and Doppler effect with respect to laser frequency
+              atoms and Doppler effect with respect to laser frequency.
             - "amplitude": Gaussian damping due to finite laser waist
             - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
               **epsilon_prime**.
@@ -85,11 +104,14 @@ class SimConfig:
     eta: float = 0.005
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
-    dephasing_prob: float = 0.05
-    depolarizing_prob: float = 0.05
-    eff_noise_probs: list[float] = field(default_factory=list, repr=False)
+    dephasing_rate: float = 0.05
+    depolarizing_rate: float = 0.05
+    eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
+    dephasing_prob: float | None = None
+    depolarizing_prob: float | None = None
+    eff_noise_probs: list[float] = field(default_factory=list, repr=False)
 
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
@@ -104,10 +126,13 @@ class SimConfig:
             eta=noise_model.state_prep_error,
             epsilon=noise_model.p_false_pos,
             epsilon_prime=noise_model.p_false_neg,
+            dephasing_rate=noise_model.dephasing_rate,
+            depolarizing_rate=noise_model.depolarizing_rate,
+            eff_noise_rates=noise_model.eff_noise_rates,
+            eff_noise_opers=list(map(qutip.Qobj, noise_model.eff_noise_opers)),
             dephasing_prob=noise_model.dephasing_prob,
             depolarizing_prob=noise_model.depolarizing_prob,
             eff_noise_probs=noise_model.eff_noise_probs,
-            eff_noise_opers=list(map(qutip.Qobj, noise_model.eff_noise_opers)),
         )
 
     def to_noise_model(self) -> NoiseModel:
@@ -122,10 +147,13 @@ class SimConfig:
             temperature=self.temperature * 1e6,  # Converts back to µK
             laser_waist=self.laser_waist,
             amp_sigma=self.amp_sigma,
+            dephasing_rate=self.dephasing_rate,
+            depolarizing_rate=self.depolarizing_rate,
+            eff_noise_rates=self.eff_noise_rates,
+            eff_noise_opers=[op.full() for op in self.eff_noise_opers],
             dephasing_prob=self.dephasing_prob,
             depolarizing_prob=self.depolarizing_prob,
             eff_noise_probs=self.eff_noise_probs,
-            eff_noise_opers=[op.full() for op in self.eff_noise_opers],
         )
 
     def __post_init__(self) -> None:
@@ -146,7 +174,12 @@ class SimConfig:
         self._check_eff_noise_opers_type()
 
         # Runs the noise model checks
-        self.to_noise_model()
+        noise_model = self.to_noise_model()
+        # Update rates and probs
+        for noise in ["dephasing", "depolarizing", "eff_noise"]:
+            for qty in ["prob", "rate"]:
+                attr = f"{noise}_{qty}{'s' if noise=='eff_noise' else ''}"
+                self._change_attribute(attr, getattr(noise_model, attr))
 
     @property
     def spam_dict(self) -> dict[str, float]:
@@ -160,7 +193,7 @@ class SimConfig:
     @property
     def doppler_sigma(self) -> float:
         """Standard deviation for Doppler shifting due to thermal motion."""
-        return KEFF * sqrt(KB * self.temperature / MASS)
+        return doppler_sigma(self.temperature)
 
     def __str__(self, solver_options: bool = False) -> str:
         lines = [
@@ -175,7 +208,7 @@ class SimConfig:
             lines.append(f"SPAM dictionary:       {self.spam_dict}")
         if "eff_noise" in self.noise:
             lines.append(
-                f"Effective noise distribution:       {self.eff_noise_probs}"
+                f"Effective noise rates:       {self.eff_noise_rates}"
             )
             lines.append(
                 f"Effective noise operators:       {self.eff_noise_opers}"
@@ -186,9 +219,9 @@ class SimConfig:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
             lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "dephasing" in self.noise:
-            lines.append(f"Dephasing probability: {self.dephasing_prob}")
+            lines.append(f"Dephasing rate: {self.dephasing_rate}")
         if "depolarizing" in self.noise:
-            lines.append(f"Depolarizing probability: {self.depolarizing_prob}")
+            lines.append(f"Depolarizing rate: {self.depolarizing_rate}")
         if solver_options:
             lines.append(
                 "Solver Options: \n" + f"{str(self.solver_options)[10:-1]}"
@@ -220,14 +253,4 @@ class SimConfig:
     @property
     def supported_noises(self) -> dict:
         """Return the noises implemented on pulser."""
-        return {
-            "ising": {
-                "dephasing",
-                "doppler",
-                "amplitude",
-                "SPAM",
-                "depolarizing",
-                "eff_noise",
-            },
-            "XY": {"SPAM"},
-        }
+        return SUPPORTED_NOISES

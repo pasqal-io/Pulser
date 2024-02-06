@@ -20,6 +20,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
+import pulser
 from pulser.channels.dmm import DMM
 from pulser.pulse import Pulse
 from pulser.register.base_register import BaseRegister
@@ -105,6 +106,19 @@ class TestDetuningMap:
             **qid_weight_map,
             2: 0.0,
         }
+
+        tri_layout = TriangularLatticeLayout(100, spacing=5)
+        sites = [31, 53, 39, 62, 43, 49, 42, 37, 48, 44, 55, 50]
+        labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]
+        weights = [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        positions = np.array([tri_layout.traps_dict[i] for i in sites])
+        reg = pulser.Register.from_coordinates(
+            positions, labels=labels, center=True
+        )
+        det_map = reg.define_detuning_map(dict(zip(labels, weights)))
+        qubit_weight_map = det_map.get_qubit_weight_map(reg.qubits)
+        assert qubit_weight_map == dict(zip(labels, weights))
 
     def test_hash(self, det_map, det_dict, layout):
         disordered_det_dict = {
@@ -317,6 +331,6 @@ class TestDMM:
 
         # Should be valid in a physical DMM without global bottom detuning
         physical_dmm = DMM(bottom_detuning=-1)
-        with pytest.warns(DeprecationWarning, match="From v0.17 and onwards"):
+        with pytest.warns(DeprecationWarning, match="From v0.18 and onwards"):
             assert not physical_dmm.is_virtual()
         physical_dmm.validate_pulse(too_low_pulse, det_map)

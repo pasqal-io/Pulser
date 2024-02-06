@@ -105,6 +105,60 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: 0})
 
+    @pytest.mark.parametrize("value", [-1e-9, 0.2, 1.0001])
+    @pytest.mark.parametrize(
+        "param",
+        [
+            "dephasing_rate",
+            "depolarizing_rate",
+            "dephasing_prob",
+            "depolarizing_prob",
+        ],
+    )
+    def test_init_rate_like(self, param, value):
+        def create_noise_model(param, value):
+            if "prob" in param:
+                if value > 0:
+                    with pytest.raises(
+                        ValueError, match=f"{param}` must be equal."
+                    ):
+                        with pytest.warns(
+                            DeprecationWarning,
+                            match=f"{param} is deprecated.",
+                        ):
+                            NoiseModel(
+                                **{
+                                    param: value,
+                                    "dephasing_rate": value * 10,
+                                    "depolarizing_rate": value * 10,
+                                }
+                            )
+                with pytest.warns(
+                    (UserWarning, DeprecationWarning),
+                    match=f"{param}",
+                ):
+                    return NoiseModel(**{param: value})
+            return NoiseModel(**{param: value})
+
+        if value < 0:
+            param_mess = (
+                "depolarizing_rate"
+                if "depolarizing" in param
+                else "dephasing_rate"
+            )
+            with pytest.raises(
+                ValueError,
+                match=f"'{param_mess}' must be None or greater "
+                f"than or equal to zero, not {value}.",
+            ):
+                create_noise_model(param, value)
+        else:
+            noise_model = create_noise_model(param, value)
+            if "depolarizing" in param:
+                assert noise_model.depolarizing_rate == value
+            elif "dephasing" in param:
+                assert noise_model.dephasing_rate == value
+
     @pytest.mark.parametrize("value", [-1e-9, 1.0001])
     @pytest.mark.parametrize(
         "param",
@@ -112,8 +166,6 @@ class TestNoiseModel:
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
-            "dephasing_prob",
-            "depolarizing_prob",
             "amp_sigma",
         ],
     )
@@ -151,67 +203,75 @@ class TestNoiseModel:
         matrices["I3"] = np.eye(3)
         return matrices
 
-    @pytest.mark.parametrize(
-        "prob_distr",
-        [
-            [-1.0, 0.5],
-            [0.5, 2.0],
-            [0.3, 0.2],
-        ],
-    )
-    def test_eff_noise_probs(self, prob_distr, matrices):
+    def test_eff_noise_probs(self, matrices):
         with pytest.raises(
-            ValueError, match="is not a probability distribution."
+            ValueError, match="The provided rates must be greater than 0."
         ):
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I"], matrices["X"]],
-                eff_noise_probs=prob_distr,
+                eff_noise_rates=[-1.0, 0.5],
             )
-
-    def test_eff_noise_opers(self, matrices):
-        with pytest.raises(ValueError, match="The operators list length"):
-            NoiseModel(noise_types=("eff_noise",), eff_noise_probs=[1.0])
-        with pytest.raises(
-            TypeError, match="eff_noise_probs is a list of floats"
+        with pytest.warns(
+            (UserWarning, DeprecationWarning), match="eff_noise_probs"
         ):
             NoiseModel(
                 noise_types=("eff_noise",),
-                eff_noise_probs=["0.1"],
+                eff_noise_opers=[matrices["I"], matrices["X"]],
+                eff_noise_probs=[1.2, 0.5],
+            )
+
+        with pytest.warns(
+            DeprecationWarning, match="eff_noise_probs is deprecated."
+        ):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_opers=[matrices["I"], matrices["X"]],
+                eff_noise_rates=[1.2, 0.5],
+                eff_noise_probs=[1.2, 0.5],
+            )
+
+        with pytest.raises(
+            ValueError,
+            match="If both defined, `eff_noise_rates` and `eff_noise_probs`",
+        ):
+            with pytest.warns(
+                DeprecationWarning, match="eff_noise_probs is deprecated."
+            ):
+                NoiseModel(
+                    noise_types=("eff_noise",),
+                    eff_noise_opers=[matrices["I"], matrices["X"]],
+                    eff_noise_probs=[1.4, 0.5],
+                    eff_noise_rates=[1.2, 0.5],
+                )
+
+    def test_eff_noise_opers(self, matrices):
+        with pytest.raises(ValueError, match="The operators list length"):
+            NoiseModel(noise_types=("eff_noise",), eff_noise_rates=[1.0])
+        with pytest.raises(
+            TypeError, match="eff_noise_rates is a list of floats"
+        ):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_rates=["0.1"],
                 eff_noise_opers=[np.eye(2)],
             )
         with pytest.raises(
             ValueError,
-            match="The general noise parameters have not been filled.",
+            match="The effective noise parameters have not been filled.",
         ):
             NoiseModel(noise_types=("eff_noise",))
         with pytest.raises(TypeError, match="is not a Numpy array."):
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[2.0],
-                eff_noise_probs=[1.0],
+                eff_noise_rates=[1.0],
             )
         with pytest.raises(NotImplementedError, match="Operator's shape"):
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I3"]],
-                eff_noise_probs=[1.0],
-            )
-        with pytest.raises(
-            NotImplementedError, match="You must put the identity matrix"
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["X"], matrices["I"]],
-                eff_noise_probs=[0.5, 0.5],
-            )
-        with pytest.raises(
-            ValueError, match="The completeness relation is not"
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I"], matrices["Zh"]],
-                eff_noise_probs=[0.5, 0.5],
+                eff_noise_rates=[1.0],
             )
 
 
@@ -245,7 +305,7 @@ def test_qpu_backend(sequence):
         TypeError, match="must be a real device, instance of 'Device'"
     ):
         QPUBackend(sequence, connection)
-    with pytest.warns(DeprecationWarning, match="From v0.17"):
+    with pytest.warns(DeprecationWarning, match="From v0.18"):
         seq = sequence.switch_device(replace(DigitalAnalogDevice, max_runs=10))
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
