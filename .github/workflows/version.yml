@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out base branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.ref }}
       - name: Get old version
@@ -19,7 +19,7 @@ jobs:
           echo "Old version: $old_version"
           echo "old_version=$old_version" >> $GITHUB_ENV
       - name: Check out head branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Get new version
         run: |
           new_version="$(head -1 VERSION.txt)"
