@@ -11,13 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
-import pulser
 from pulser import Register, Register3D
 from pulser.devices import DigitalAnalogDevice, MockDevice
 
@@ -277,17 +275,7 @@ def test_rotation():
     rot_reg = reg.rotated(45)
     new_coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
     np.testing.assert_allclose(rot_reg._coords, new_coords_, atol=1e-15)
-
     assert rot_reg != reg
-
-    assert pulser.__version__ <= "0.18", "Remove 'Register.rotate()'."
-    with pytest.warns(
-        DeprecationWarning,
-        match=re.escape("'Register.rotate()' has been deprecated"),
-    ):
-        reg.rotate(45)
-    assert np.all(np.isclose(reg._coords, new_coords_))
-    assert reg == rot_reg
 
 
 draw_params = [
