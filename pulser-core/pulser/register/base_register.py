@@ -65,13 +65,8 @@ class BaseRegister(ABC, CoordsCollection):
             raise ValueError(
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
-        super().__init__(
-            [
-                np.array(v, dtype=float) if not hasattr(v, "detach") else v
-                for v in qubits.values()
-            ]
-        )
-        # super().__init__([np.array(v, dtype=float)  for v in qubits.values()])
+ 
+        super().__init__([np.array(v, dtype=float)  for v in qubits.values()])
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)
@@ -164,7 +159,7 @@ class BaseRegister(ABC, CoordsCollection):
             A register with qubits placed on the given coordinates.
         """
         if center:
-            coords = coords - np.mean(coords, axis=0)  # Centers the array
+            coords = coords - np.mean(coords, axis=0, dtype=float)  # Centers the array
         if prefix is not None:
             pre = str(prefix)
             qubits = {pre + str(i): pos for i, pos in enumerate(coords)}

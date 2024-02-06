@@ -49,6 +49,21 @@ SUPPORTED_NUMPY = (
     "tan",
 )
 
+SUPPORTED_TORCH = (
+    "tensor",
+    "round",  
+    "round_",
+    "ceil",
+    "floor",
+    "sqrt",
+    "exp",
+    "log2",
+    "log",
+    "sin",
+    "cos",
+    "tan",
+)
+
 SUPPORTS_SUBMODULE = (
     "Pulse",
     "BlackmanWaveform",
@@ -62,6 +77,7 @@ SUPPORTED_MODULES = {
     "_operator": SUPPORTED_OPERATORS,
     "operator": SUPPORTED_OPERATORS,
     "numpy": SUPPORTED_NUMPY,
+    "torch": SUPPORTED_TORCH,
     "pulser.register.register": ("Register",),
     "pulser.register.register3d": ("Register3D",),
     "pulser.register.register_layout": ("RegisterLayout",),

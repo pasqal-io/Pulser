@@ -49,8 +49,6 @@ class Traps(ABC, CoordsCollection):
         try:
             coords_arr = (
                 np.array(trap_coordinates, dtype=float)
-                if not hasattr(trap_coordinates, "detach")
-                else trap_coordinates
             )
         except ValueError as e:
             raise array_type_error_msg from e
@@ -64,7 +62,7 @@ class Traps(ABC, CoordsCollection):
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
             )
 
-        if len(np.unique(trap_coordinates, axis=0)) != shape[0]:
+        if len(np.unique(np.array(trap_coordinates), axis=0)) != shape[0]:
             raise ValueError(
                 "All trap coordinates of a register layout must be unique."
             )
@@ -78,7 +76,7 @@ class Traps(ABC, CoordsCollection):
 
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _coords_to_traps(self) -> dict[tuple[float, ...], int]:
-        return {tuple(coord): id for id, coord in self.traps_dict.items()}
+        return {tuple(coord.tolist()): id for id, coord in self.traps_dict.items()}
 
     @property
     def number_of_traps(self) -> int:
@@ -98,8 +96,10 @@ class Traps(ABC, CoordsCollection):
         rounded_coords = np.round(
             np.array(coordinates), decimals=COORD_PRECISION
         )
+
+        
         for coord, rounded in zip(coordinates, rounded_coords):
-            key = tuple(rounded)
+            key = tuple(rounded.tolist())
             if key not in self._coords_to_traps:
                 raise ValueError(
                     f"The coordinate '{coord!s}' is not a part of the "

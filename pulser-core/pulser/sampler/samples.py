@@ -161,7 +161,7 @@ class ChannelSamples:
 
     def _generate_std_samples(self) -> ChannelSamples:
         new_samples = {
-            key: getattr(self, key).copy() for key in ("amp", "det")
+            key: np.copy(getattr(self, key)) for key in ("amp", "det")
         }
         for block in self.eom_blocks:
             region = slice(block.ti, block.tf)
@@ -213,7 +213,7 @@ class ChannelSamples:
             mask: np.ndarray,
             keep_end_values: bool = False,
         ) -> np.ndarray:
-            new_samples = samples.copy()
+            new_samples = np.copy(samples)
             # Extend the mask to fit the size of the samples
             mask = np.pad(mask, (0, len(new_samples) - len(mask)), mode="edge")
             if keep_end_values:
@@ -232,13 +232,6 @@ class ChannelSamples:
                             )
                         )
                     )[0]
-                    # np.flatnonzero(
-                    #     np.diff(
-                    #         np.r_[
-                    #             np.int8(0), (~mask).view(np.int8), np.int8(0)
-                    #         ]
-                    #     )
-                    # )
                     .reshape(-1, 2).tolist()
                 )
                 for reg in masked_regions:
@@ -260,7 +253,7 @@ class ChannelSamples:
         new_samples: dict[str, np.ndarray] = {}
 
         eom_samples = {
-            key: getattr(self, key).copy() for key in ("amp", "det")
+            key: np.copy(getattr(self, key)) for key in ("amp", "det")
         }
 
         if self.eom_blocks:
@@ -268,7 +261,7 @@ class ChannelSamples:
             # Note: self.duration already includes the fall time
             eom_mask = np.zeros(self.duration, dtype=bool)
             # Extension of the EOM mask outside of the EOM interval
-            eom_mask_ext = eom_mask.copy()
+            eom_mask_ext = np.copy(eom_mask)
             eom_fall_time = 2 * cast(BaseEOM, channel_obj.eom_config).rise_time
             for block in self.eom_blocks:
                 # If block.tf is None, uses the full duration as the tf
@@ -371,9 +364,11 @@ class ChannelSamples:
                 # Extend shortest arrays to match the longest before summing
                 new_samples[key] = sample_arrs[-1]
                 for arr in sample_arrs[:-1]:
+                    n1 = sample_arrs[-1].numel() if hasattr(sample_arrs[-1], "detach") else sample_arrs[-1].size
+                    n2 = arr.numel() if hasattr(arr, "detach") else arr.size
                     arr = np.pad(
                         arr,
-                        (0, sample_arrs[-1].size - arr.size),
+                        (0, n1 - n2),
                     )
                     new_samples[key] = new_samples[key] + arr
 

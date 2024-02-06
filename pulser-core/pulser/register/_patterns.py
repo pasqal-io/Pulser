@@ -26,7 +26,7 @@ def square_rect(rows: int, columns: int) -> np.ndarray:
     Returns:
         The coordinates of the points in the pattern.
     """
-    points = np.mgrid[:columns, :rows].transpose().reshape(-1, 2)
+    points = np.transpose(np.mgrid[:columns, :rows]).reshape(-1, 2)
     # Centering
     points = points - np.ceil([columns / 2, rows / 2]) + 1
     return points

@@ -478,6 +478,11 @@ class Hamiltonian:
                         -0.5 * samples_q["det"],
                     ]
                     for coeff, op_id in zip(coeffs, op_ids):
+                        coeff = (
+                            coeff.detach().numpy()
+                            if hasattr(coeff, "detach")
+                            else coeff
+                        )
                         if np.any(coeff != 0):
                             if op_id not in operators[q_id]:
                                 operators[q_id][op_id] = self.build_operator(

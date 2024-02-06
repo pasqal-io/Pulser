@@ -482,7 +482,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             ti = last.tf
             retarget = cast(int, channel_obj.min_retarget_interval)
             elapsed = ti - self[channel].last_target()
-            delta = cast(int, np.clip(retarget - elapsed, 0, retarget))
+            delta = cast(int, np.clip(np.array(retarget - elapsed), 0, retarget))
             if channel_obj.fixed_retarget_t:
                 delta = max(delta, channel_obj.fixed_retarget_t)
             if delta != 0:

@@ -323,6 +323,7 @@ class Waveform(ABC):
             samples = np.pad(samples, 1)
             # Repeats the times on the edges once
             ts = np.pad(ts, 1, mode="edge")
+        samples = samples.detach().numpy() if hasattr(samples, "detach") else samples
 
         if color:
             color_dict = {"color": color}
@@ -508,13 +509,13 @@ class ConstantWaveform(Waveform):
         return f"{float(self._value):.3g} rad/µs"
 
     def __repr__(self) -> str:
-        value = (
-            self._value.detach().numpy()
-            if hasattr(self._value, "detach")
-            else self._value
-        )
+        # value = (
+        #     self._value.detach().numpy()
+        #     if hasattr(self._value, "detach")
+        #     else self._value
+        # )
         return (
-            f"ConstantWaveform({self._duration} ns, " + f"{value:.3g} rad/µs)"
+            f"ConstantWaveform({self._duration} ns, " + f"{float(self._value):.3g} rad/µs)"
         )
 
     def __mul__(self, other: float) -> ConstantWaveform:
@@ -591,19 +592,19 @@ class RampWaveform(Waveform):
         )
 
     def __repr__(self) -> str:
-        start = (
-            self._start.detach().numpy()
-            if hasattr(self._start, "detach")
-            else self._start
-        )
-        stop = (
-            self._stop.detach().numpy()
-            if hasattr(self._stop, "detach")
-            else self._stop
-        )
+        # start = (
+        #     self._start.detach().numpy()
+        #     if hasattr(self._start, "detach")
+        #     else self._start
+        # )
+        # stop = (
+        #     self._stop.detach().numpy()
+        #     if hasattr(self._stop, "detach")
+        #     else self._stop
+        # )
         return (
             f"RampWaveform({self._duration} ns, "
-            + f"{start:.3g}->{stop:.3g} rad/µs)"
+            + f"{float(self._start):.3g}->{float(self._stop):.3g} rad/µs)"
         )
 
     def __mul__(self, other: float) -> RampWaveform:
@@ -737,12 +738,12 @@ class BlackmanWaveform(Waveform):
         return f"Blackman(Area: {float(self._area):.3g})"
 
     def __repr__(self) -> str:
-        area = (
-            self._area.detach().numpy()
-            if hasattr(self._area, "detach")
-            else self._area
-        )
-        return f"BlackmanWaveform({self._duration} ns, Area: {area:.3g})"
+        # area = (
+        #     self._area.detach().numpy()
+        #     if hasattr(self._area, "detach")
+        #     else self._area
+        # )
+        return f"BlackmanWaveform({self._duration} ns, Area: {float(self._area):.3g})"
 
     def __mul__(self, other: float) -> BlackmanWaveform:
         return BlackmanWaveform(self._duration, self._area * float(other))
@@ -810,7 +811,7 @@ class InterpolatedWaveform(Waveform):
         interp_cls = getattr(interpolate, interpolator)
         self._data_pts = np.array(
             [
-                (round(t), v)
+                (np.round(t), v)
                 for t, v in zip(
                     self._times * (self._duration - 1), self._values
                 )
@@ -833,10 +834,10 @@ class InterpolatedWaveform(Waveform):
     @cached_property
     def _samples(self) -> np.ndarray:
         """The value at each time step that describes the waveform."""
-        samples = self._interp_func(np.arange(self._duration))
+        samples = np.array(self._interp_func(np.arange(self._duration)))
         value_range = np.max(np.abs(samples))
         decimals = int(
-            min(np.finfo(samples.dtype).precision - np.log10(value_range), 9)
+            min(-int(np.log10(np.finfo(samples.dtype).resolution)) - np.log10(value_range), 9)
         )  # Reduces decimal values below 9 for large ranges
         return cast(np.ndarray, np.round(samples, decimals=decimals))
 
@@ -850,7 +851,7 @@ class InterpolatedWaveform(Waveform):
     @property
     def data_points(self) -> np.ndarray:
         """Points (t[ns], value[rad/µs]) that define the interpolation."""
-        return self._data_pts.copy()
+        return np.copy(self._data_pts)
 
     def change_duration(self, new_duration: int) -> InterpolatedWaveform:
         """Returns a new waveform with modified duration.
@@ -1098,35 +1099,35 @@ class KaiserWaveform(Waveform):
         )
 
     def __str__(self) -> str:
-        area = (
-            self._area.detach().numpy()
-            if hasattr(self._area, "detach")
-            else self._area
-        )
-        beta = (
-            self._beta.detach().numpy()
-            if hasattr(self._beta, "detach")
-            else self._beta
-        )
+        # area = (
+        #     self._area.detach().numpy()
+        #     if hasattr(self._area, "detach")
+        #     else self._area
+        # )
+        # beta = (
+        #     self._beta.detach().numpy()
+        #     if hasattr(self._beta, "detach")
+        #     else self._beta
+        # )
         return (
             f"Kaiser({self._duration} ns, "
-            f"Area: {area:.3g}, Beta: {beta:.3g})"
+            f"Area: {float(self._area):.3g}, Beta: {float(self._beta):.3g})"
         )
 
     def __repr__(self) -> str:
-        area = (
-            self._area.detach().numpy()
-            if hasattr(self._area, "detach")
-            else self._area
-        )
-        beta = (
-            self._beta.detach().numpy()
-            if hasattr(self._beta, "detach")
-            else self._beta
-        )
+        # area = (
+        #     self._area.detach().numpy()
+        #     if hasattr(self._area, "detach")
+        #     else self._area
+        # )
+        # beta = (
+        #     self._beta.detach().numpy()
+        #     if hasattr(self._beta, "detach")
+        #     else self._beta
+        # )
         return (
             f"KaiserWaveform(duration: {self._duration}, "
-            f"area: {area:.3g}, beta: {beta:.3g})"
+            f"area: {float(self._area):.3g}, beta: {float(self._beta):.3g})"
         )
 
     def __mul__(self, other: float) -> KaiserWaveform:

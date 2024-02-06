@@ -587,6 +587,8 @@ def _draw_channel_content(
         ch_eom_end_buffers = data[ch].eom_end_buffers
         basis = ch_obj.basis
         ys = ch_data.get_input_curves()
+        ys = [y.detach().numpy() if hasattr(y, "detach") else y for y in ys]
+
         ys_mod = [()] * 3
         yseff = [()] * 3
         draw_output = draw_modulation and (
@@ -1046,20 +1048,20 @@ def _draw_qubit_content(
                 sub_ax.set_xlabel(f"t ({unit})", fontsize=12)
             # Define the y axis
             max_val = np.max(
-                [
+                np.array([
                     local_data
                     for local_data in list(
                         cast(list, qubit_data[data_index])[i].values()
                     )
-                ]
+                ])
             )
             min_val = np.min(
-                [
+                np.array([
                     local_data
                     for local_data in list(
                         cast(list, qubit_data[data_index])[i].values()
                     )
-                ]
+                ])
             )
             if i == 0:
                 max_val = 1 if max_val == 0 else max_val

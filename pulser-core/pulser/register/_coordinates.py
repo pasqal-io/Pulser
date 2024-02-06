@@ -38,22 +38,15 @@ class CoordsCollection:
 
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _sorted_coords(self) -> np.ndarray:
-        coords = (
-            self._coords
-            if hasattr(self._coords, "detach")
-            else np.stack(self._coords)
-        )
+        coords = np.stack([np.array(c) for c in self._coords])
         rounded_coords = np.round(coords, decimals=COORD_PRECISION)
         sorting = self._calc_sorting_order()
         return cast(np.ndarray, rounded_coords[sorting])
 
     def _calc_sorting_order(self) -> np.ndarray:
         """Calculates the unique order that sorts the coordinates."""
-        coords = (
-            self._coords
-            if hasattr(self._coords, "detach")
-            else np.stack(self._coords)
-        )
+        coords = np.stack([np.array(c) for c in self._coords])
+        
         # Sorting the coordinates 1st left to right, 2nd bottom to top
         rounded_coords = np.round(coords, decimals=COORD_PRECISION)
         dims = rounded_coords.shape[1]
@@ -68,7 +61,8 @@ class CoordsCollection:
     def _hash_object(self) -> hashlib._Hash:
         # Include dimensionality because the array is flattened with tobytes()
         hash_ = hashlib.sha256(bytes(self.dimensionality))
-        hash_.update(self.sorted_coords.tobytes())
+        sorted_coords = self.sorted_coords.detach().numpy() if hasattr(self.sorted_coords, "detach") else self.sorted_coords
+        hash_.update(sorted_coords.tobytes())
         return hash_
 
     def _safe_hash(self) -> bytes:

@@ -462,7 +462,8 @@ class Channel(ABC):
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
         fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
-        freqs = np.fftfreq(input_samples.size)
+        size = input_samples.numel() if hasattr(input_samples, "detach") else input_samples.size
+        freqs = np.fftfreq(size)
         modulation = np.exp(-(freqs**2) / fc**2)
         return cast(
             np.ndarray, np.ifft(np.fft(input_samples) * modulation).real

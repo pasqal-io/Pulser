@@ -147,7 +147,6 @@ class CompBackend:
 
     @classmethod
     def load_lib(self):
-        # from pulser_diff.comp_backends import COMP_BACKEND
         if COMP_BACKEND == "torch":
             lib = importlib.import_module("torch")
         elif COMP_BACKEND == "numpy":
@@ -168,7 +167,15 @@ class CompBackend:
     def array(self) -> Callable:
         lib = self.load_lib()
         if COMP_BACKEND == "torch":
-            return lib.tensor
+
+            def _array(t: list | lib.Tensor, dtype: None = None) -> lib.Tensor:
+                if isinstance(t, (list, tuple)):
+                    t = lib.stack([lib.as_tensor(el, dtype=dtype) for el in t])
+                else:
+                    t = lib.as_tensor(t, dtype=dtype)
+                return t
+
+            return _array
         elif COMP_BACKEND == "numpy":
             return lib.array
 
@@ -237,7 +244,7 @@ class CompBackend:
         lib = self.load_lib()
         if COMP_BACKEND == "torch":
 
-            def _norm(t: lib.Tensor, axis: int) -> lib.Tensor:
+            def _norm(t: lib.Tensor, axis: int = 0) -> lib.Tensor:
                 return lib.linalg.norm(
                     lib.as_tensor(t, dtype=lib.float64), dim=axis
                 )
@@ -265,12 +272,38 @@ class CompBackend:
         lib = self.load_lib()
         if COMP_BACKEND == "torch":
 
-            def _all(t: lib.Tensor) -> lib.Tensor:
-                return lib.all(lib.as_tensor(t, dtype=lib.float64))
+            def _all(t: lib.Tensor, axis: int = 0) -> lib.Tensor:
+                return lib.all(lib.as_tensor(t, dtype=lib.float64), dim=axis)
 
             return _all
         elif COMP_BACKEND == "numpy":
             return lib.all
+        
+    @classmethod
+    @property
+    def log10(self) -> Callable:
+        lib = self.load_lib()
+        if COMP_BACKEND == "torch":
+
+            def _log10(t: lib.Tensor) -> lib.Tensor:
+                return lib.log10(lib.as_tensor(t, dtype=lib.float64))
+
+            return _log10
+        elif COMP_BACKEND == "numpy":
+            return lib.log10
+        
+    @classmethod
+    @property
+    def nonzero(self) -> Callable:
+        lib = self.load_lib()
+        if COMP_BACKEND == "torch":
+
+            def _nonzero(t: lib.Tensor) -> lib.Tensor:
+                return lib.nonzero(lib.as_tensor(t, dtype=lib.float64), as_tuple=True)
+
+            return _nonzero
+        elif COMP_BACKEND == "numpy":
+            return lib.nonzero
 
     @classmethod
     @property
@@ -343,7 +376,14 @@ class CompBackend:
     def multinomial(self) -> Callable:
         lib = self.load_lib()
         if COMP_BACKEND == "torch":
-            return lib.multinomial
+
+            def _multinomial(n: int, t: lib.Tensor) -> lib.Tensor:
+                out = lib.multinomial(lib.as_tensor(t), n, replacement=True).unique(return_counts=True)
+                distr = lib.zeros(len(t), dtype=int)
+                distr[out[0]] = out[1]
+                return distr
+
+            return _multinomial
         elif COMP_BACKEND == "numpy":
             return lib.random.multinomial
 
@@ -428,6 +468,58 @@ class CompBackend:
             return _cos
         elif COMP_BACKEND == "numpy":
             return lib.cos
+        
+    @classmethod
+    @property
+    def deg2rad(self) -> Callable:
+        lib = self.load_lib()
+        if COMP_BACKEND == "torch":
+
+            def _deg2rad(t: lib.Tensor) -> lib.Tensor:
+                return lib.deg2rad(lib.as_tensor(t))
+
+            return _deg2rad
+        elif COMP_BACKEND == "numpy":
+            return lib.deg2rad
+        
+    @classmethod
+    @property
+    def sign(self) -> Callable:
+        lib = self.load_lib()
+        if COMP_BACKEND == "torch":
+
+            def _sign(t: lib.Tensor) -> lib.Tensor:
+                return lib.sign(lib.as_tensor(t))
+
+            return _sign
+        elif COMP_BACKEND == "numpy":
+            return lib.sign
+        
+    @classmethod
+    @property
+    def diff(self) -> Callable:
+        lib = self.load_lib()
+        if COMP_BACKEND == "torch":
+
+            def _diff(t: lib.Tensor) -> lib.Tensor:
+                return lib.diff(lib.as_tensor(t))
+
+            return _diff
+        elif COMP_BACKEND == "numpy":
+            return lib.diff
+        
+    @classmethod
+    @property
+    def log(self) -> Callable:
+        lib = self.load_lib()
+        if COMP_BACKEND == "torch":
+
+            def _log(t: lib.Tensor) -> lib.Tensor:
+                return lib.log(lib.as_tensor(t))
+
+            return _log
+        elif COMP_BACKEND == "numpy":
+            return lib.log
 
     @classmethod
     @property
@@ -577,18 +669,6 @@ class CompBackend:
 
     @classmethod
     @property
-    def diff(self) -> Callable:
-        lib = self.load_lib()
-        return lib.diff
-
-    @classmethod
-    @property
-    def nonzero(self) -> Callable:
-        lib = self.load_lib()
-        return lib.nonzero
-
-    @classmethod
-    @property
     def ravel(self) -> Callable:
         lib = self.load_lib()
         return lib.ravel
@@ -628,12 +708,6 @@ class CompBackend:
     def logical_not(self) -> Callable:
         lib = self.load_lib()
         return lib.logical_not
-
-    @classmethod
-    @property
-    def deg2rad(self) -> Callable:
-        lib = self.load_lib()
-        return lib.deg2rad
 
     @classmethod
     @property
@@ -694,12 +768,6 @@ class CompBackend:
     def mean(self) -> Callable:
         lib = self.load_lib()
         return lib.mean
-
-    @classmethod
-    @property
-    def log(self) -> Callable:
-        lib = self.load_lib()
-        return lib.log
 
     @classmethod
     @property
@@ -805,21 +873,9 @@ class CompBackend:
 
     @classmethod
     @property
-    def sign(self) -> Callable:
-        lib = self.load_lib()
-        return lib.sign
-
-    @classmethod
-    @property
     def inf(self) -> Callable:
         lib = self.load_lib()
         return lib.inf
-
-    @classmethod
-    @property
-    def log10(self) -> Callable:
-        lib = self.load_lib()
-        return lib.log10
 
     @classmethod
     @property

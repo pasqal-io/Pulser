@@ -139,7 +139,8 @@ class WeightMap(Traps, RegDrawer):
     def _hash_object(self) -> hashlib._Hash:
         hash_ = super()._hash_object
         # Include the weights and the type in the hash
-        hash_.update(self.sorted_weights.tobytes())
+        sorted_weights = self.sorted_weights.detach().numpy() if hasattr(self.sorted_weights, "detach") else self.sorted_weights
+        hash_.update(sorted_weights.tobytes())
         hash_.update(type(self).__name__.encode())
         return hash_
 

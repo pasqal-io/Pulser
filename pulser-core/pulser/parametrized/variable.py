@@ -73,8 +73,10 @@ class Variable(Parametrized, OpSupport):
     def _validate_value(
         self, value: Union[ArrayLike, float, int]
     ) -> np.ndarray:
-        val = np.array(value, dtype=self.dtype, ndmin=1)
-        if val.size != self.size:
+        val = np.array(value, dtype=self.dtype)
+        if len(val.shape) == 0:
+            val = val[None]
+        if (val.numel() if hasattr(val, "detach") else val.size) != self.size:
             raise ValueError(
                 f"Can't assign array of size {val.size} to "
                 + f"variable of size {self.size}."

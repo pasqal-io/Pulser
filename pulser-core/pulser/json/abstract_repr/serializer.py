@@ -169,6 +169,7 @@ def serialize_abstract_sequence(
         target_ids: Union[QubitId, Collection[QubitId]],
         force_list_out: bool = False,
     ) -> Union[int, list[int]]:
+        print(unfold_targets(target_ids))
         target_array = np.array(unfold_targets(target_ids))
         og_dim = target_array.ndim
         if og_dim == 0:
