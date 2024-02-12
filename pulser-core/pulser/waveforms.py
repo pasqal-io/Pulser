@@ -533,7 +533,7 @@ class RampWaveform(Waveform):
     Args:
         duration: The waveform duration (in ns).
         start: The value (in rad/µs) at the initial sample.
-        stop: The value (in rad/µs) at the initial sample.
+        stop: The value (in rad/µs) at the final sample.
     """
 
     def __init__(
