@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Pulser + flake8 install
         uses: ./.github/workflows/pulser-setup
         with:
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Pulser + black install
         uses: ./.github/workflows/pulser-setup
         with:
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Pulser + isort install
         uses: ./.github/workflows/pulser-setup
         with:
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Pulser + mypy install
         uses: ./.github/workflows/pulser-setup
         with:
@@ -61,7 +61,7 @@ jobs:
         python-version: ["3.8", "3.11"]
     steps:
       - name: Check out Pulser
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Pulser + pytest install
         uses: ./.github/workflows/pulser-setup
         with:
