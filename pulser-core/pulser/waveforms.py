@@ -533,7 +533,7 @@ class RampWaveform(Waveform):
     Args:
         duration: The waveform duration (in ns).
         start: The initial value (in rad/µs).
-        stop: The final value (in rad/µs).
+        stop: The final value at duration - 1 (in rad/µs).
     """
 
     def __init__(
@@ -566,7 +566,7 @@ class RampWaveform(Waveform):
     @property
     def slope(self) -> float:
         r"""Slope of the ramp, in :math:`s^{-15}`."""
-        return (self._stop - self._start) / self._duration
+        return (self._stop - self._start) / (self._duration - 1)
 
     def change_duration(self, new_duration: int) -> RampWaveform:
         """Returns a new waveform with modified duration.
