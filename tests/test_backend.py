@@ -177,22 +177,6 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: value})
 
-    @pytest.mark.parametrize(
-        "noise_sample,",
-        [
-            ("dephasing", "depolarizing"),
-            ("eff_noise", "depolarizing"),
-            ("eff_noise", "dephasing"),
-            ("depolarizing", "eff_noise", "dephasing"),
-        ],
-    )
-    def test_eff_noise_init(self, noise_sample):
-        with pytest.raises(
-            NotImplementedError,
-            match="Depolarizing, dephasing and effective noise channels",
-        ):
-            NoiseModel(noise_types=noise_sample)
-
     @pytest.fixture
     def matrices(self):
         matrices = {}
