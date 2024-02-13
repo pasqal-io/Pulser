@@ -958,8 +958,8 @@ def test_noisy_xy(matrices, masked_qubit):
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
     seq = Sequence(simple_reg, MockDevice)
     seq.declare_channel("ch0", "mw_global")
-    if masked_qubit is not None:
-        seq.config_slm_mask([masked_qubit])
+    if masked_qubit[0] is not None:
+        seq.config_slm_mask([masked_qubit[0]])
     seq.add(rise, "ch0")
 
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
@@ -1009,12 +1009,7 @@ def test_noisy_xy(matrices, masked_qubit):
         "atom2": True,
         "atom3": False,
     }
-    samples = sim.run().sample_final_state()
-    assert samples == Counter(
-        {"0000": 500, "0101": 500}
-        if masked_qubit in [None, "atom0"]
-        else {"0000": 500, "0101": 500}
-    )
+    assert sim.run().sample_final_state() == Counter(masked_qubit[1])
 
 
 def test_mask_nopulses():
