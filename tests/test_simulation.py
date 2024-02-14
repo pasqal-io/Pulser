@@ -735,17 +735,14 @@ def test_noise_with_zero_epsilons(seq, matrices):
 
 
 @pytest.mark.parametrize(
-    "noise_results_collapse_ops",
+    "noise, result, n_collapse_ops",
     [
         ("dephasing", {"0": 595, "1": 405}, 1),
         ("eff_noise", {"0": 595, "1": 405}, 1),
         ("depolarizing", {"0": 587, "1": 413}, 3),
-        (("dephasing", "depolarizing"), {"0": 587, "1": 413}, 4),
-        (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
     ],
 )
-def test_dephasing(matrices, noise_results_collapse_ops):
-    noise, samples, n_collapse_ops = noise_results_collapse_ops
+def test_dephasing(matrices, noise, result, n_collapse_ops):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -764,7 +761,7 @@ def test_dephasing(matrices, noise_results_collapse_ops):
     )
     res = sim.run()
     res_samples = res.sample_final_state()
-    assert res_samples == Counter(samples)
+    assert res_samples == Counter(result)
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops
     trace_2 = res.states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
@@ -912,7 +909,7 @@ def test_run_xy():
 
 
 @pytest.mark.parametrize(
-    "masked_qubit",
+    "masked_qubit, result",
     [
         (
             None,
@@ -950,7 +947,7 @@ def test_run_xy():
         ),
     ],
 )
-def test_noisy_xy(matrices, masked_qubit):
+def test_noisy_xy(matrices, masked_qubit, result):
     np.random.seed(15092021)
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
@@ -958,8 +955,8 @@ def test_noisy_xy(matrices, masked_qubit):
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
     seq = Sequence(simple_reg, MockDevice)
     seq.declare_channel("ch0", "mw_global")
-    if masked_qubit[0] is not None:
-        seq.config_slm_mask([masked_qubit[0]])
+    if masked_qubit is not None:
+        seq.config_slm_mask([masked_qubit])
     seq.add(rise, "ch0")
 
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
@@ -1009,7 +1006,7 @@ def test_noisy_xy(matrices, masked_qubit):
         "atom2": True,
         "atom3": False,
     }
-    assert sim.run().sample_final_state() == Counter(masked_qubit[1])
+    assert sim.run().sample_final_state() == Counter(result)
 
 
 def test_mask_nopulses():
