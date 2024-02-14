@@ -185,15 +185,6 @@ class NoiseModel:
                     + "Valid noise types: "
                     + ", ".join(get_args(NOISE_TYPES))
                 )
-        dephasing_on = "dephasing" in self.noise_types
-        depolarizing_on = "depolarizing" in self.noise_types
-        eff_noise_on = "eff_noise" in self.noise_types
-        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
-        if eff_noise_conflict:
-            raise NotImplementedError(
-                "Depolarizing, dephasing and effective noise channels"
-                "cannot be simultaneously selected."
-            )
 
     def _check_eff_noise(self) -> None:
         if len(self.eff_noise_opers) != len(self.eff_noise_rates):
