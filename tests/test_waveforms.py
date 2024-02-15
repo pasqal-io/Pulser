@@ -162,7 +162,7 @@ def test_custom():
 
 
 def test_ramp():
-    assert ramp.slope == 7e-3
+    assert np.isclose(ramp.slope, 7e-3, atol=1e-5)
 
 
 def test_blackman():

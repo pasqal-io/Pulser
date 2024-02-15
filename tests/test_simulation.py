@@ -734,39 +734,15 @@ def test_noise_with_zero_epsilons(seq, matrices):
     assert sim.run().sample_final_state() == sim2.run().sample_final_state()
 
 
-def test_dephasing():
-    np.random.seed(123)
-    reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, DigitalAnalogDevice)
-    seq.declare_channel("ch0", "rydberg_global")
-    duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
-    seq.add(pulse, "ch0")
-    sim = QutipEmulator.from_sequence(
-        seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
-    )
-    assert sim.run().sample_final_state() == Counter({"0": 595, "1": 405})
-    assert len(sim._hamiltonian._collapse_ops) != 0
-
-
-def test_depolarizing():
-    np.random.seed(123)
-    reg = Register.from_coordinates([(0, 0)], prefix="q")
-    seq = Sequence(reg, DigitalAnalogDevice)
-    seq.declare_channel("ch0", "rydberg_global")
-    duration = 2500
-    pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
-    seq.add(pulse, "ch0")
-    sim = QutipEmulator.from_sequence(
-        seq, sampling_rate=0.01, config=SimConfig(noise="depolarizing")
-    )
-    assert sim.run().sample_final_state() == Counter({"0": 587, "1": 413})
-    trace_2 = sim.run().states[-1] ** 2
-    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
-    assert len(sim._hamiltonian._collapse_ops) != 0
-
-
-def test_eff_noise(matrices):
+@pytest.mark.parametrize(
+    "noise, result, n_collapse_ops",
+    [
+        ("dephasing", {"0": 595, "1": 405}, 1),
+        ("eff_noise", {"0": 595, "1": 405}, 1),
+        ("depolarizing", {"0": 587, "1": 413}, 3),
+    ],
+)
+def test_dephasing(matrices, noise, result, n_collapse_ops):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -778,19 +754,17 @@ def test_eff_noise(matrices):
         seq,
         sampling_rate=0.01,
         config=SimConfig(
-            noise="eff_noise",
+            noise=noise,
             eff_noise_opers=[matrices["Z"]],
             eff_noise_rates=[0.025],
         ),
     )
-    sim_dph = QutipEmulator.from_sequence(
-        seq, sampling_rate=0.01, config=SimConfig(noise="dephasing")
-    )
-    assert (
-        sim._hamiltonian._collapse_ops == sim_dph._hamiltonian._collapse_ops
-        and sim.run().states[-1] == sim_dph.run().states[-1]
-    )
-    assert len(sim._hamiltonian._collapse_ops) != 0
+    res = sim.run()
+    res_samples = res.sample_final_state()
+    assert res_samples == Counter(result)
+    assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops
+    trace_2 = res.states[-1] ** 2
+    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
 
 
 def test_add_config(matrices):
@@ -934,17 +908,58 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-def test_noisy_xy():
+@pytest.mark.parametrize(
+    "masked_qubit, result",
+    [
+        (
+            None,
+            {
+                "0000": 837,
+                "0100": 62,
+                "0001": 42,
+                "0010": 28,
+                "1000": 19,
+                "0101": 12,
+            },
+        ),
+        (
+            "atom0",
+            {
+                "0000": 792,
+                "0001": 79,
+                "0100": 50,
+                "0010": 29,
+                "0110": 27,
+                "1000": 13,
+                "0101": 10,
+            },
+        ),
+        (
+            "atom1",
+            {
+                "0000": 648,
+                "0001": 214,
+                "0010": 78,
+                "0011": 24,
+                "1001": 23,
+                "1000": 13,
+            },
+        ),
+    ],
+)
+def test_noisy_xy(matrices, masked_qubit, result):
     np.random.seed(15092021)
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
     amp = 3.0
     rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
-    simple_seq = Sequence(simple_reg, MockDevice)
-    simple_seq.declare_channel("ch0", "mw_global")
-    simple_seq.add(rise, "ch0")
+    seq = Sequence(simple_reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    if masked_qubit is not None:
+        seq.config_slm_mask([masked_qubit])
+    seq.add(rise, "ch0")
 
-    sim = QutipEmulator.from_sequence(simple_seq, sampling_rate=0.01)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
@@ -958,6 +973,32 @@ def test_noisy_xy():
             sim._hamiltonian.set_config(
                 SimConfig(("SPAM", "doppler")).to_noise_model()
             )
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: amplitude"
+    ):
+        sim.add_config(SimConfig("amplitude"))
+
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: dephasing"
+    ):
+        sim.add_config(SimConfig("dephasing"))
+
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: depolarizing"
+    ):
+        sim.add_config(SimConfig("depolarizing"))
+
+    with pytest.raises(
+        NotImplementedError, match="simulation of noise types: eff_noise"
+    ):
+        sim.add_config(
+            config=SimConfig(
+                noise="eff_noise",
+                eff_noise_opers=[matrices["Z"]],
+                eff_noise_rates=[0.025],
+            ),
+        )
+    # SPAM simulation is implemented:
     sim.set_config(SimConfig("SPAM", eta=0.4))
     assert sim._hamiltonian._bad_atoms == {
         "atom0": True,
@@ -965,10 +1006,7 @@ def test_noisy_xy():
         "atom2": True,
         "atom3": False,
     }
-    with pytest.raises(
-        NotImplementedError, match="simulation of noise types: amplitude"
-    ):
-        sim.add_config(SimConfig("amplitude"))
+    assert sim.run().sample_final_state() == Counter(result)
 
 
 def test_mask_nopulses():

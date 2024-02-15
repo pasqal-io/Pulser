@@ -514,7 +514,9 @@ class QutipEmulator:
             }
             if self.config.eta > 0 and self.initial_state != qutip.tensor(
                 [
-                    self._hamiltonian.basis["g"]
+                    self._hamiltonian.basis[
+                        "u" if self._hamiltonian._interaction == "XY" else "g"
+                    ]
                     for _ in range(self._hamiltonian._size)
                 ]
             ):
