@@ -972,7 +972,10 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         "atom2": True,
         "atom3": False,
     }
-    assert len(sim._hamiltonian._collapse_ops) // 4 == n_collapse_ops
+    assert (
+        len(sim._hamiltonian._collapse_ops) // len(simple_reg.qubits)
+        == n_collapse_ops
+    )
     assert sim.run().sample_final_state() == Counter(result)
 
 
