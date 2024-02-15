@@ -740,9 +740,11 @@ def test_noise_with_zero_epsilons(seq, matrices):
         ("dephasing", {"0": 595, "1": 405}, 1),
         ("eff_noise", {"0": 595, "1": 405}, 1),
         ("depolarizing", {"0": 587, "1": 413}, 3),
+        (("dephasing", "depolarizing"), {"0": 587, "1": 413}, 4),
+        (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
     ],
 )
-def test_dephasing(matrices, noise, result, n_collapse_ops):
+def test_noises(matrices, noise, result, n_collapse_ops):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -908,58 +910,35 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
+res1 = {"0000": 892, "1000": 47, "0100": 25, "0001": 19, "0010": 17}
+res2 = {"0000": 962, "0010": 13, "1000": 13, "0100": 12}
+res3 = {"0000": 904, "0100": 43, "0010": 24, "1000": 19, "0001": 10}
+res4 = {"0000": 969, "0001": 18, "1000": 13}
+
+
 @pytest.mark.parametrize(
-    "masked_qubit, result",
+    "masked_qubit, noise, result, n_collapse_ops",
     [
-        (
-            None,
-            {
-                "0000": 837,
-                "0100": 62,
-                "0001": 42,
-                "0010": 28,
-                "1000": 19,
-                "0101": 12,
-            },
-        ),
-        (
-            "atom0",
-            {
-                "0000": 792,
-                "0001": 79,
-                "0100": 50,
-                "0010": 29,
-                "0110": 27,
-                "1000": 13,
-                "0101": 10,
-            },
-        ),
-        (
-            "atom1",
-            {
-                "0000": 648,
-                "0001": 214,
-                "0010": 78,
-                "0011": 24,
-                "1001": 23,
-                "1000": 13,
-            },
-        ),
+        (None, "dephasing", res1, 1),
+        (None, "eff_noise", res1, 1),
+        (None, "depolarizing", res2, 3),
+        ("atom0", "dephasing", res3, 1),
+        ("atom1", "dephasing", res4, 1),
     ],
 )
-def test_noisy_xy(matrices, masked_qubit, result):
+def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     np.random.seed(15092021)
     simple_reg = Register.square(2, prefix="atom")
     detun = 1.0
     amp = 3.0
-    rise = Pulse.ConstantPulse(1500, amp, detun, 0.0)
+    rise = Pulse.ConstantPulse(100, amp, detun, 0.0)
     seq = Sequence(simple_reg, MockDevice)
     seq.declare_channel("ch0", "mw_global")
     if masked_qubit is not None:
         seq.config_slm_mask([masked_qubit])
     seq.add(rise, "ch0")
 
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.1)
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
@@ -978,34 +957,25 @@ def test_noisy_xy(matrices, masked_qubit, result):
     ):
         sim.add_config(SimConfig("amplitude"))
 
-    with pytest.raises(
-        NotImplementedError, match="simulation of noise types: dephasing"
-    ):
-        sim.add_config(SimConfig("dephasing"))
-
-    with pytest.raises(
-        NotImplementedError, match="simulation of noise types: depolarizing"
-    ):
-        sim.add_config(SimConfig("depolarizing"))
-
-    with pytest.raises(
-        NotImplementedError, match="simulation of noise types: eff_noise"
-    ):
-        sim.add_config(
-            config=SimConfig(
-                noise="eff_noise",
-                eff_noise_opers=[matrices["Z"]],
-                eff_noise_rates=[0.025],
-            ),
-        )
     # SPAM simulation is implemented:
-    sim.set_config(SimConfig("SPAM", eta=0.4))
+    sim.set_config(
+        SimConfig(
+            ("SPAM", noise),
+            eta=0.4,
+            eff_noise_opers=[matrices["Z"]],
+            eff_noise_rates=[0.025],
+        )
+    )
     assert sim._hamiltonian._bad_atoms == {
         "atom0": True,
         "atom1": False,
         "atom2": True,
         "atom3": False,
     }
+    assert (
+        len(sim._hamiltonian._collapse_ops) // len(simple_reg.qubits)
+        == n_collapse_ops
+    )
     assert sim.run().sample_final_state() == Counter(result)
 
 
