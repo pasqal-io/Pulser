@@ -37,38 +37,48 @@ def reg():
     return Register(q_dict)
 
 
+duration = 1000
+pi_pulse = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+twopi_pulse = Pulse.ConstantDetuning(
+    BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
+)
+pi_Y_pulse = Pulse.ConstantDetuning(
+    BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
+)
+
+
 @pytest.fixture
-def seq(reg):
-    duration = 1000
-    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
-    twopi = Pulse.ConstantDetuning(
-        BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
-    )
-    pi_Y = Pulse.ConstantDetuning(
-        BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
-    )
+def seq_digital(reg):
     seq = Sequence(reg, DigitalAnalogDevice)
     # Declare Channels
-    seq.declare_channel("ryd", "rydberg_local", "control1")
     seq.declare_channel("raman", "raman_local", "control1")
 
     # Prepare state 'hhh':
-    seq.add(pi_Y, "raman")
+    seq.add(pi_Y_pulse, "raman")
     seq.target("target", "raman")
-    seq.add(pi_Y, "raman")
+    seq.add(pi_Y_pulse, "raman")
     seq.target("control2", "raman")
-    seq.add(pi_Y, "raman")
+    seq.add(pi_Y_pulse, "raman")
+    return seq
 
+
+@pytest.fixture
+def seq(seq_digital):
     # Write CCZ sequence:
-    seq.add(pi, "ryd", protocol="wait-for-all")
+    with pytest.warns(
+        UserWarning, match="Building a non-parametrized sequence"
+    ):
+        seq = seq_digital.build()
+    seq.declare_channel("ryd", "rydberg_local", "control1")
+    seq.add(pi_pulse, "ryd", protocol="wait-for-all")
     seq.target("control2", "ryd")
-    seq.add(pi, "ryd")
+    seq.add(pi_pulse, "ryd")
     seq.target("target", "ryd")
-    seq.add(twopi, "ryd")
+    seq.add(twopi_pulse, "ryd")
     seq.target("control2", "ryd")
-    seq.add(pi, "ryd")
+    seq.add(pi_pulse, "ryd")
     seq.target("control1", "ryd")
-    seq.add(pi, "ryd")
+    seq.add(pi_pulse, "ryd")
 
     # Add a ConstantWaveform part to testout the drawing procedure
     seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
@@ -744,9 +754,10 @@ def test_noise_with_zero_epsilons(seq, matrices):
         (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
     ],
 )
-def test_noises(matrices, noise, result, n_collapse_ops):
+def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0)], prefix="q")
+    # Test with Rydberg Sequence
     seq = Sequence(reg, DigitalAnalogDevice)
     seq.declare_channel("ch0", "rydberg_global")
     duration = 2500
@@ -765,6 +776,60 @@ def test_noises(matrices, noise, result, n_collapse_ops):
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops
+    trace_2 = res.states[-1] ** 2
+    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+
+
+depo_res = {
+    "111": 821,
+    "110": 61,
+    "011": 59,
+    "101": 48,
+    "100": 5,
+    "001": 3,
+    "010": 3,
+}
+deph_depo_res = {
+    "111": 806,
+    "110": 65,
+    "011": 63,
+    "101": 52,
+    "100": 6,
+    "001": 4,
+    "010": 3,
+    "000": 1,
+}
+eff_deph_res = {"111": 958, "110": 19, "011": 12, "101": 11}
+
+
+@pytest.mark.parametrize(
+    "noise, result, n_collapse_ops",
+    [
+        ("dephasing", {"111": 978, "110": 11, "011": 6, "101": 5}, 1),
+        ("eff_noise", {"111": 978, "110": 11, "011": 6, "101": 5}, 1),
+        ("depolarizing", depo_res, 3),
+        (("dephasing", "depolarizing"), deph_depo_res, 4),
+        (("eff_noise", "dephasing"), eff_deph_res, 2),
+    ],
+)
+def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
+    np.random.seed(123)
+    # Test with Digital Sequence
+    sim = QutipEmulator.from_sequence(
+        seq_digital,  # resulting state should be hhh
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise=noise,
+            eff_noise_opers=[matrices["Z"]],
+            eff_noise_rates=[0.025],
+        ),
+    )
+    res = sim.run()
+    res_samples = res.sample_final_state()
+    assert res_samples == Counter(result)
+    assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops * len(
+        seq_digital.register.qubits
+    )
     trace_2 = res.states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
 
