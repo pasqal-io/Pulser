@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import re
 from dataclasses import FrozenInstanceError
 
 import numpy as np
@@ -87,26 +88,41 @@ def test_var(a, b):
     assert np.all(var_.build() == np.array([1, 2]))
 
     with pytest.raises(TypeError, match="Invalid key type"):
-        b[[0, 1]]
+        b[{0, 1}]
+    with pytest.raises(TypeError, match="Invalid index type"):
+        b[[0.0, -1.0]]
     with pytest.raises(IndexError):
         b[2]
+    with pytest.raises(IndexError):
+        b[[-3, 1]]
 
 
 def test_varitem(a, b, d):
     a0 = a[0]
     b1 = b[1]
     b01 = b[100::-1]
+    b01_2 = b[[-1, -2]]
+    b01_3 = b[(1, 0)]
     d0 = d[0]
     assert b01.variables == {"b": b}
     assert str(a0) == "a[0]"
     assert str(b1) == "b[1]"
     assert str(b01) == "b[100::-1]"
+    assert str(b01_2) == "b[[-1, -2]]"
+    assert str(b01_3) == "b[[1, 0]]"
     assert str(d0) == "d[0]"
     assert b1.build() == 1
     assert np.all(b01.build() == np.array([1, -1]))
     assert d0.build() == 0.5
     with pytest.raises(FrozenInstanceError):
         b1.key = 0
+    np.testing.assert_equal(b01.build(), b01_2.build())
+    np.testing.assert_equal(b01_2.build(), b01_3.build())
+    with pytest.raises(
+        TypeError, match=re.escape("len() of unsized variable item 'b[1]'")
+    ):
+        len(b1)
+    assert len(b01) == len(b01_2) == len(b01_3) == b.size == 2
 
 
 def test_paramobj(bwf, t, a, b):
