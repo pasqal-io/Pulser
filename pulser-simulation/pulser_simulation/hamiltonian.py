@@ -107,11 +107,10 @@ class Hamiltonian:
     def _build_collapse_operators(self, config: NoiseModel) -> None:
         def basis_check(noise_type: str) -> None:
             """Checks if the basis allows for the use of noise."""
-            if self.basis_name == "digital" or self.basis_name == "all":
+            if self.basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
-                    f"Cannot include {noise_type} "
-                    + "noise in digital- or all-basis."
+                    f"Cannot include {noise_type} noise in all-basis."
                 )
 
         local_collapse_ops = []
@@ -121,7 +120,7 @@ class Hamiltonian:
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "depolarizing" in config.noise_types:
-            basis_check("dephasing")
+            basis_check("depolarizing")
             coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * qutip.sigmax())
             local_collapse_ops.append(coeff * qutip.sigmay())
