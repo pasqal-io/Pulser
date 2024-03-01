@@ -700,6 +700,25 @@ class TestSerialization:
             times=[0.0, 0.5, 1.0],
         )
 
+        ser_inv_list_var_items = {
+            "expression": "index",
+            "lhs": {"variable": "list_var"},
+            "rhs": [2, 1, 0],
+        }
+        s = json.dumps(
+            InterpolatedWaveform(var, list_var[::-1]), cls=AbstractReprEncoder
+        )
+        assert json.loads(s) == dict(
+            kind="interpolated",
+            duration=ser_var,
+            values=ser_inv_list_var_items,
+            times=[0.0, 0.5, 1.0],
+        )
+        assert s == json.dumps(
+            InterpolatedWaveform(var, list_var[[2, 1, 0]]),
+            cls=AbstractReprEncoder,
+        )
+
         err_msg = (
             "An InterpolatedWaveform with 'values' of unknown length "
             "and unspecified 'times' can't be serialized to the abstract"
@@ -2023,6 +2042,16 @@ class TestDeserialization:
             {"expression": "cos", "lhs": var1},
             {"expression": "tan", "lhs": {"variable": "var1"}},
             {"expression": "index", "lhs": {"variable": "var1"}, "rhs": 0},
+            {
+                "expression": "index",
+                "lhs": {"variable": "var2"},
+                "rhs": [1, 2],
+            },
+            {
+                "expression": "index",
+                "lhs": {"variable": "var2"},
+                "rhs": [4, 2, 0],
+            },
             {"expression": "add", "lhs": var1, "rhs": 0.5},
             {"expression": "sub", "lhs": {"variable": "var1"}, "rhs": 0.5},
             {"expression": "mul", "lhs": {"variable": "var1"}, "rhs": 0.5},
@@ -2058,6 +2087,7 @@ class TestDeserialization:
             ],
             variables={
                 "var1": {"type": "float", "value": [1.5]},
+                "var2": {"type": "int", "value": [0, 1, 2, 3, 4]},
             },
         )
         # Note: If built, some of these sequences will be invalid
@@ -2072,6 +2102,7 @@ class TestDeserialization:
             _check_roundtrip(s)
         seq = Sequence.from_abstract_repr(json.dumps(s))
         seq_var1 = seq._variables["var1"]
+        seq_var2 = seq._variables["var2"]
 
         # init + declare channels + 1 operation
         offset = 1 + len(s["channels"])
@@ -2111,7 +2142,10 @@ class TestDeserialization:
             assert param == np.tan(seq_var1)
 
         if expression == "index":
-            assert param == seq_var1[rhs]
+            if json_param["lhs"] == {"variable": "var1"}:
+                assert param == seq_var1[rhs]
+            else:
+                assert param == seq_var2[rhs]
         if expression == "add":
             assert param == seq_var1[0] + rhs
         if expression == "sub":

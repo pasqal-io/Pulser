@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-import collections.abc  # To use collections.abc.Sequence
+import collections.abc as abc  # To use collections.abc.Sequence
 import dataclasses
 from typing import Any, Iterator, Optional, Union, cast
 
@@ -99,14 +99,36 @@ class Variable(Parametrized, OpSupport):
     def __str__(self) -> str:
         return self.name
 
-    def __getitem__(self, key: Union[int, slice]) -> VariableItem:
-        if not isinstance(key, (int, slice)):
+    def __getitem__(
+        self, key: Union[int, slice, abc.Sequence[int]]
+    ) -> VariableItem:
+        if not isinstance(key, (int, slice, abc.Sequence)):
             raise TypeError(f"Invalid key type {type(key)} for '{self.name}'.")
-        if isinstance(key, int):
-            if not -self.size <= key < self.size:
-                raise IndexError(f"{key} outside of range for '{self.name}'.")
+        bad_ind = None
+        if isinstance(key, int) and not -self.size <= key < self.size:
+            bad_ind = key
+        elif isinstance(key, abc.Sequence):
+            for ind_ in key:
+                if not isinstance(ind_, int):
+                    raise TypeError(
+                        f"Invalid index type {type(ind_)} for variable "
+                        f"'{self.name}'."
+                    )
+                if not -self.size <= ind_ < self.size:
+                    bad_ind = ind_
+                    break
+            else:
+                key = list(key)
+        if bad_ind is not None:
+            raise IndexError(
+                f"Index {bad_ind} out of bounds for variable '{self.name}' "
+                f"with size {self.size}."
+            )
 
         return VariableItem(self, key)
+
+    # NOTE: __len__ cannot be defined because it makes numpy.ufuncs convert a
+    # Variable into an array of VariableItem's
 
     def __iter__(self) -> Iterator[VariableItem]:
         for i in range(self.size):
@@ -118,7 +140,7 @@ class VariableItem(Parametrized, OpSupport):
     """Stores access to items of a variable with multiple values."""
 
     var: Variable
-    key: Union[int, slice]
+    key: Union[int, slice, abc.Sequence[int]]
 
     @property
     def variables(self) -> dict[str, Variable]:
@@ -127,7 +149,10 @@ class VariableItem(Parametrized, OpSupport):
 
     def build(self) -> Union[ArrayLike, float, int]:
         """Return the variable's item(s) values."""
-        return cast(collections.abc.Sequence, self.var.build())[self.key]
+        built_var = cast(abc.Sequence, self.var.build())
+        if isinstance(self.key, abc.Sequence):
+            return [built_var[k] for k in self.key]
+        return built_var[self.key]
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
@@ -135,7 +160,11 @@ class VariableItem(Parametrized, OpSupport):
         )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
-        indices = list(range(self.var.size))[self.key]
+        indices: int | list[int]
+        if isinstance(self.key, abc.Sequence):
+            indices = list(self.key)
+        else:
+            indices = list(range(self.var.size))[self.key]
         return {"expression": "index", "lhs": self.var, "rhs": indices}
 
     def __str__(self) -> str:
@@ -148,3 +177,8 @@ class VariableItem(Parametrized, OpSupport):
         else:
             key_str = str(self.key)
         return f"{str(self.var)}[{key_str}]"
+
+    def __len__(self) -> int:
+        if isinstance(self.key, int):
+            raise TypeError(f"len() of unsized variable item '{self!s}'.")
+        return len(np.arange(self.var.size)[self.key])
