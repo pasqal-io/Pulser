@@ -32,7 +32,7 @@ from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
-from pulser.register.traps import COORD_PRECISION
+from pulser.register.traps import COORD_DECIMAL_PRECISION
 
 DIMENSIONS = Literal[2, 3]
 
@@ -375,11 +375,11 @@ class BaseDevice(ABC):
     ) -> None:
         def invalid_dists(dists: np.ndarray) -> np.ndarray:
             cond1 = dists - self.min_atom_distance < -(
-                10 ** (-COORD_PRECISION)
+                10 ** (-COORD_DECIMAL_PRECISION)
             )
             # Ensures there are no identical traps when
             # min_atom_distance = 0
-            cond2 = dists < 10 ** (-COORD_PRECISION)
+            cond2 = dists < 10 ** (-COORD_DECIMAL_PRECISION)
             return cast(np.ndarray, np.logical_or(cond1, cond2))
 
         if len(coords) > 1:
@@ -394,7 +394,7 @@ class BaseDevice(ABC):
                 raise ValueError(
                     f"The minimal distance between {kind} in this device "
                     f"({self.min_atom_distance} µm) is not respected "
-                    f"(up to a precision of 1e{-COORD_PRECISION} µm) "
+                    f"(up to a precision of 1e{-COORD_DECIMAL_PRECISION} µm) "
                     f"for the pairs: {bad_qbt_pairs}"
                 )
 

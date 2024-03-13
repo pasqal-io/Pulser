@@ -24,7 +24,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
-from pulser.register._coordinates import COORD_PRECISION, CoordsCollection
+from pulser.register._coordinates import COORD_DECIMAL_PRECISION, CoordsCollection
 
 
 @dataclass(init=False, eq=False, frozen=True)
@@ -83,7 +83,7 @@ class Traps(ABC, CoordsCollection):
     def get_traps_from_coordinates(
         self,
         *coordinates: ArrayLike,
-        decimals: float = COORD_PRECISION,
+        decimals: float = COORD_DECIMAL_PRECISION,
     ) -> list[int]:
         """Finds the trap ID for a given set of trap coordinates.
 
