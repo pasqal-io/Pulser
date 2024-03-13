@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines a set of traps from their coordinates."""
+
 from __future__ import annotations
 
 import hashlib
@@ -56,9 +57,7 @@ class Traps(ABC, CoordsCollection):
             raise array_type_error_msg
 
         if shape[1] not in (2, 3):
-            raise ValueError(
-                f"Each coordinate must be of size 2 or 3, not {shape[1]}."
-            )
+            raise ValueError(f"Each coordinate must be of size 2 or 3, not {shape[1]}.")
 
         if len(np.unique(trap_coordinates, axis=0)) != shape[0]:
             raise ValueError(
