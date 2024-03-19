@@ -799,7 +799,11 @@ def test_add_config(matrices):
     assert sim.config.temperature == 20000.0e-6
     sim.set_config(SimConfig(noise="doppler", laser_waist=175.0))
     sim.add_config(
-        SimConfig(noise=("SPAM", "amplitude", "dephasing"), laser_waist=172.0)
+        SimConfig(
+            noise=("SPAM", "amplitude", "dephasing"),
+            laser_waist=172.0,
+            amp_sigma=1e-2,
+        )
     )
     assert (
         "amplitude" in sim.config.noise
@@ -807,6 +811,7 @@ def test_add_config(matrices):
         and "SPAM" in sim.config.noise
     )
     assert sim.config.laser_waist == 172.0
+    assert sim.config.amp_sigma == 1e-2
     sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     sim.add_config(SimConfig(noise="depolarizing"))
     assert "depolarizing" in sim.config.noise
