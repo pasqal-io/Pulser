@@ -507,7 +507,7 @@ class QutipEmulator:
 
         solv_ops = qutip.Options(**options)
 
-        meas_errors: Optional[Mapping[str, float]] = 
+        meas_errors: Optional[Mapping[str, float]] = None
         if "SPAM" in self.config.noise:
             meas_errors = {
                 k: self.config.spam_dict[k]
