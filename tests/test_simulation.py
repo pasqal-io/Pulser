@@ -37,38 +37,48 @@ def reg():
     return Register(q_dict)
 
 
+duration = 1000
+pi_pulse = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+twopi_pulse = Pulse.ConstantDetuning(
+    BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
+)
+pi_Y_pulse = Pulse.ConstantDetuning(
+    BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
+)
+
+
 @pytest.fixture
-def seq(reg):
-    duration = 1000
-    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
-    twopi = Pulse.ConstantDetuning(
-        BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
-    )
-    pi_Y = Pulse.ConstantDetuning(
-        BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
-    )
+def seq_digital(reg):
     seq = Sequence(reg, DigitalAnalogDevice)
     # Declare Channels
-    seq.declare_channel("ryd", "rydberg_local", "control1")
     seq.declare_channel("raman", "raman_local", "control1")
 
     # Prepare state 'hhh':
-    seq.add(pi_Y, "raman")
+    seq.add(pi_Y_pulse, "raman")
     seq.target("target", "raman")
-    seq.add(pi_Y, "raman")
+    seq.add(pi_Y_pulse, "raman")
     seq.target("control2", "raman")
-    seq.add(pi_Y, "raman")
+    seq.add(pi_Y_pulse, "raman")
+    return seq
 
+
+@pytest.fixture
+def seq(seq_digital):
     # Write CCZ sequence:
-    seq.add(pi, "ryd", protocol="wait-for-all")
+    with pytest.warns(
+        UserWarning, match="Building a non-parametrized sequence"
+    ):
+        seq = seq_digital.build()
+    seq.declare_channel("ryd", "rydberg_local", "control1")
+    seq.add(pi_pulse, "ryd", protocol="wait-for-all")
     seq.target("control2", "ryd")
-    seq.add(pi, "ryd")
+    seq.add(pi_pulse, "ryd")
     seq.target("target", "ryd")
-    seq.add(twopi, "ryd")
+    seq.add(twopi_pulse, "ryd")
     seq.target("control2", "ryd")
-    seq.add(pi, "ryd")
+    seq.add(pi_pulse, "ryd")
     seq.target("control1", "ryd")
-    seq.add(pi, "ryd")
+    seq.add(pi_pulse, "ryd")
 
     # Add a ConstantWaveform part to testout the drawing procedure
     seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
@@ -799,7 +809,11 @@ def test_add_config(matrices):
     assert sim.config.temperature == 20000.0e-6
     sim.set_config(SimConfig(noise="doppler", laser_waist=175.0))
     sim.add_config(
-        SimConfig(noise=("SPAM", "amplitude", "dephasing"), laser_waist=172.0)
+        SimConfig(
+            noise=("SPAM", "amplitude", "dephasing"),
+            laser_waist=172.0,
+            amp_sigma=1e-2,
+        )
     )
     assert (
         "amplitude" in sim.config.noise
@@ -807,6 +821,7 @@ def test_add_config(matrices):
         and "SPAM" in sim.config.noise
     )
     assert sim.config.laser_waist == 172.0
+    assert sim.config.amp_sigma == 1e-2
     sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     sim.add_config(SimConfig(noise="depolarizing"))
     assert "depolarizing" in sim.config.noise
