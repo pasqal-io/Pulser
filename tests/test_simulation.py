@@ -37,48 +37,38 @@ def reg():
     return Register(q_dict)
 
 
-duration = 1000
-pi_pulse = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
-twopi_pulse = Pulse.ConstantDetuning(
-    BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
-)
-pi_Y_pulse = Pulse.ConstantDetuning(
-    BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
-)
-
-
 @pytest.fixture
-def seq_digital(reg):
+def seq(reg):
+    duration = 1000
+    pi = Pulse.ConstantDetuning(BlackmanWaveform(duration, np.pi), 0.0, 0)
+    twopi = Pulse.ConstantDetuning(
+        BlackmanWaveform(duration, 2 * np.pi), 0.0, 0
+    )
+    pi_Y = Pulse.ConstantDetuning(
+        BlackmanWaveform(duration, np.pi), 0.0, -np.pi / 2
+    )
     seq = Sequence(reg, DigitalAnalogDevice)
     # Declare Channels
+    seq.declare_channel("ryd", "rydberg_local", "control1")
     seq.declare_channel("raman", "raman_local", "control1")
 
     # Prepare state 'hhh':
-    seq.add(pi_Y_pulse, "raman")
+    seq.add(pi_Y, "raman")
     seq.target("target", "raman")
-    seq.add(pi_Y_pulse, "raman")
+    seq.add(pi_Y, "raman")
     seq.target("control2", "raman")
-    seq.add(pi_Y_pulse, "raman")
-    return seq
+    seq.add(pi_Y, "raman")
 
-
-@pytest.fixture
-def seq(seq_digital):
     # Write CCZ sequence:
-    with pytest.warns(
-        UserWarning, match="Building a non-parametrized sequence"
-    ):
-        seq = seq_digital.build()
-    seq.declare_channel("ryd", "rydberg_local", "control1")
-    seq.add(pi_pulse, "ryd", protocol="wait-for-all")
+    seq.add(pi, "ryd", protocol="wait-for-all")
     seq.target("control2", "ryd")
-    seq.add(pi_pulse, "ryd")
+    seq.add(pi, "ryd")
     seq.target("target", "ryd")
-    seq.add(twopi_pulse, "ryd")
+    seq.add(twopi, "ryd")
     seq.target("control2", "ryd")
-    seq.add(pi_pulse, "ryd")
+    seq.add(pi, "ryd")
     seq.target("control1", "ryd")
-    seq.add(pi_pulse, "ryd")
+    seq.add(pi, "ryd")
 
     # Add a ConstantWaveform part to testout the drawing procedure
     seq.add(Pulse.ConstantPulse(duration, 1, 0, 0), "ryd")
