@@ -270,6 +270,7 @@ class QutipEmulator:
             param_dict["temperature"] = noise_model.temperature
         if "amplitude" in diff_noise_set:
             param_dict["laser_waist"] = noise_model.laser_waist
+            param_dict["amp_sigma"] = noise_model.amp_sigma
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_prob"] = noise_model.dephasing_prob
             param_dict["dephasing_rate"] = noise_model.dephasing_rate
