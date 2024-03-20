@@ -269,7 +269,7 @@ class NoisyResults(SimulationResults):
                 result when doing the simulation.
         """
         if "all" in basis_name or "digital" in basis_name:
-            basis_name_ = "digital"  
+            basis_name_ = "digital"
         elif "ground-rydberg" in basis_name:
             basis_name_ = "ground-rydberg"
         else:
