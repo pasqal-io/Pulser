@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pulser.channels import DMM, Microwave, Raman, Rydberg
+from pulser.channels import DMM, Microwave, Raman, Rydberg, RydbergError
 from pulser.devices._device_datacls import VirtualDevice
 
 MockDevice = VirtualDevice(
@@ -30,6 +30,7 @@ MockDevice = VirtualDevice(
         Raman.Global(None, None, max_duration=None),
         Raman.Local(None, None, max_duration=None),
         Microwave.Global(None, None, max_duration=None),
+        RydbergError(),
     ),
     dmm_objects=(DMM(),),
 )

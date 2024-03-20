@@ -167,10 +167,15 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self._hamiltonian.basis_name in {"digital", "all"}:
+            if self.basis_name in {
+                "digital",
+                "digital_with_error",
+                "all",
+                "all_with_error",
+            }:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self._hamiltonian.basis_name
+                self._meas_basis = self.basis_name
         self.set_initial_state("all-ground")
 
     @property
@@ -197,6 +202,14 @@ class QutipEmulator:
     def basis(self) -> dict[str, Any]:
         """The basis in which result is expressed."""
         return self._hamiltonian.basis
+
+    @property
+    def op_matrix(self) -> dict[str, qutip.Qobj]:
+        r"""Projectors onto basis states.
+
+        `sigma_ab` is :math:`a \odot b.T` with a and b basis states.
+        """
+        return self._hamiltonian.op_matrix
 
     @property
     def config(self) -> SimConfig:
@@ -270,6 +283,7 @@ class QutipEmulator:
             param_dict["temperature"] = noise_model.temperature
         if "amplitude" in diff_noise_set:
             param_dict["laser_waist"] = noise_model.laser_waist
+            param_dict["amp_sigma"] = noise_model.amp_sigma
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_prob"] = noise_model.dephasing_prob
             param_dict["dephasing_rate"] = noise_model.dephasing_rate
@@ -320,7 +334,7 @@ class QutipEmulator:
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
                 [
-                    self._hamiltonian.basis[
+                    self.basis[
                         "u" if self._hamiltonian._interaction == "XY" else "g"
                     ]
                     for _ in range(self._hamiltonian._size)
@@ -423,13 +437,13 @@ class QutipEmulator:
         applied at ``qubit_j`` and identity elsewhere.
 
         Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
-        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
+        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`.
 
         Args:
             operations: List of tuples `(operator, qubits)`.
-                `operator` can be a ``qutip.Quobj`` or a string key for
-                ``self.op_matrix``. `qubits` is the list on which operator
-                will be applied. The qubits can be passed as their
+                `operator` can be a ``qutip.Quobj`` or a string contained in
+                the keys of ``self.op_matrix``. `qubits` is the list on which
+                operator will be applied. The qubits can be passed as their
                 index or their label in the register.
 
         Returns:
@@ -514,7 +528,7 @@ class QutipEmulator:
             }
             if self.config.eta > 0 and self.initial_state != qutip.tensor(
                 [
-                    self._hamiltonian.basis[
+                    self.basis[
                         "u" if self._hamiltonian._interaction == "XY" else "g"
                     ]
                     for _ in range(self._hamiltonian._size)
@@ -562,14 +576,14 @@ class QutipEmulator:
                     tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self._hamiltonian.basis_name,
+                    self._meas_basis in self.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
                 self._hamiltonian._size,
-                self._hamiltonian.basis_name,
+                self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -645,7 +659,7 @@ class QutipEmulator:
         return NoisyResults(
             results,
             self._hamiltonian._size,
-            self._hamiltonian.basis_name,
+            self.basis_name,
             self._eval_times_array,
             n_measures,
         )

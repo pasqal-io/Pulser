@@ -62,7 +62,13 @@ class QutipResult(Result):
 
     @property
     def _basis_name(self) -> str:
-        if self._dim > 2:
+        if self._dim == 4:
+            return "all_with_error"
+        if self._dim == 3:
+            if self.meas_basis == "ground-rydberg":
+                return "ground-rydberg_with_error"
+            if self.meas_basis == "digital" and self.matching_meas_basis:
+                return "digital_with_error"
             return "all"
         if self.meas_basis == "XY":
             return "XY"
@@ -164,7 +170,7 @@ class QutipResult(Result):
             full = state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))])[0])
             state *= np.exp(-1j * global_ph)
-        if self._dim != 3:
+        if self._dim == 2:
             if reduce_to_basis not in [None, self._basis_name]:
                 raise TypeError(
                     f"Can't reduce a system in {self._basis_name}"
@@ -172,7 +178,7 @@ class QutipResult(Result):
                 )
         elif reduce_to_basis is not None:
             if is_density_matrix:  # pragma: no cover
-                # Not tested as noise in digital or all basis not implemented
+                # TODO
                 raise NotImplementedError(
                     "Reduce to basis not implemented for density matrix"
                     " states."
@@ -188,8 +194,9 @@ class QutipResult(Result):
                 )
             ex_inds = [
                 i
-                for i in range(3**self._size)
-                if ex_state in np.base_repr(i, base=3).zfill(self._size)
+                for i in range(self._dim**self._size)
+                if ex_state
+                in np.base_repr(i, base=self._dim).zfill(self._size)
             ]
             ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
             if not np.all(np.isclose(ex_probs, 0, atol=tol)):

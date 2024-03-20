@@ -23,7 +23,7 @@ from typing import Any, Literal, cast, get_args
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
-from pulser.channels.base_channel import Channel
+from pulser.channels.base_channel import Channel, States, STATES_RANK
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -248,6 +248,14 @@ class BaseDevice(ABC):
     def supported_bases(self) -> set[str]:
         """Available electronic transitions for control and measurement."""
         return {ch.basis for ch in self.channel_objects}
+
+    @property
+    def supported_states(self) -> set[States]:
+        """Available states in their order of appearances."""
+        all_states = set().union(
+            *(set(ch.eigenstates) for ch in self.channel_objects)
+        )
+        return set(STATES_RANK).intersection(all_states)
 
     @property
     def interaction_coeff(self) -> float:

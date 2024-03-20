@@ -8,7 +8,12 @@ from typing import TYPE_CHECKING, Optional, cast
 
 import numpy as np
 
-from pulser.channels.base_channel import Channel
+from pulser.channels.base_channel import (
+    Channel,
+    States,
+    EIGENSTATES,
+    STATES_RANK,
+)
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
 from pulser.register.weight_maps import DetuningMap
@@ -413,14 +418,27 @@ class SequenceSamples:
 
     @property
     def used_bases(self) -> set[str]:
-        """The bases with non-zero pulses."""
+        """The bases effectively used.
+
+        The bases that are not the "error" basis are considered as used if
+        they contain non-zero pulses. If declared, the "error" basis is
+        considered as used.
+        """
         return {
             ch_obj.basis
             for ch_obj, ch_samples in zip(
                 self._ch_objs.values(), self.samples_list
             )
-            if not ch_samples.is_empty()
+            if not ch_samples.is_empty() or ch_obj.basis == "error"
         }
+
+    @property
+    def used_eigenstates(self) -> list[States]:
+        """The eigenstates associated to the used bases."""
+        all_eigenstates = set().union(
+            *(EIGENSTATES[basis] for basis in self.used_bases)
+        )
+        return list(set(STATES_RANK).intersection(all_eigenstates))
 
     @property
     def _in_xy(self) -> bool:
