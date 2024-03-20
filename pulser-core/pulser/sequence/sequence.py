@@ -42,10 +42,10 @@ import pulser
 import pulser.devices as devices
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import (
-    Channel,
     EIGENSTATES,
-    States,
     STATES_RANK,
+    Channel,
+    States,
 )
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergEOM
