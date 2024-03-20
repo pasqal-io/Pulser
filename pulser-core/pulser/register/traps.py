@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines a set of traps from their coordinates."""
+
 from __future__ import annotations
 
 import hashlib
@@ -23,7 +24,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
-from pulser.register._coordinates import COORD_PRECISION, CoordsCollection
+from pulser.register._coordinates import COORD_DECIMAL_PRECISION, CoordsCollection
 
 
 @dataclass(init=False, eq=False, frozen=True)
@@ -56,9 +57,7 @@ class Traps(ABC, CoordsCollection):
             raise array_type_error_msg
 
         if shape[1] not in (2, 3):
-            raise ValueError(
-                f"Each coordinate must be of size 2 or 3, not {shape[1]}."
-            )
+            raise ValueError(f"Each coordinate must be of size 2 or 3, not {shape[1]}.")
 
         if len(np.unique(trap_coordinates, axis=0)) != shape[0]:
             raise ValueError(
@@ -81,19 +80,23 @@ class Traps(ABC, CoordsCollection):
         """The number of traps in the layout."""
         return len(self._sorted_coords)
 
-    def get_traps_from_coordinates(self, *coordinates: ArrayLike) -> list[int]:
+    def get_traps_from_coordinates(
+        self,
+        *coordinates: ArrayLike,
+        decimals: float = COORD_DECIMAL_PRECISION,
+    ) -> list[int]:
         """Finds the trap ID for a given set of trap coordinates.
 
         Args:
             coordinates: The coordinates to return the trap IDs.
+            decimals: The numerical precision used to match coordinates
+                to traps.
 
         Returns:
             The list of trap IDs corresponding to the coordinates.
         """
         traps = []
-        rounded_coords = np.round(
-            np.array(coordinates), decimals=COORD_PRECISION
-        )
+        rounded_coords = np.round(np.array(coordinates), decimals=decimals)
         for coord, rounded in zip(coordinates, rounded_coords):
             key = tuple(rounded)
             if key not in self._coords_to_traps:

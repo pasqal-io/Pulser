@@ -8,7 +8,7 @@ from typing import cast
 
 import numpy as np
 
-COORD_PRECISION = 6
+COORD_DECIMAL_PRECISION = 6
 
 
 @dataclass(eq=False, frozen=True)
@@ -39,7 +39,7 @@ class CoordsCollection:
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _sorted_coords(self) -> np.ndarray:
         coords = np.array(self._coords, dtype=float)
-        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
+        rounded_coords = np.round(coords, decimals=COORD_DECIMAL_PRECISION)
         sorting = self._calc_sorting_order()
         return cast(np.ndarray, rounded_coords[sorting])
 
@@ -47,7 +47,7 @@ class CoordsCollection:
         """Calculates the unique order that sorts the coordinates."""
         coords = np.array(self._coords, dtype=float)
         # Sorting the coordinates 1st left to right, 2nd bottom to top
-        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
+        rounded_coords = np.round(coords, decimals=COORD_DECIMAL_PRECISION)
         dims = rounded_coords.shape[1]
         sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
         sorting = np.lexsort(tuple(sorter))

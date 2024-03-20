@@ -27,7 +27,7 @@ from numpy.typing import ArrayLike
 
 from pulser.json.utils import obj_to_dict
 from pulser.register._reg_drawer import RegDrawer
-from pulser.register.traps import COORD_PRECISION, Traps
+from pulser.register.traps import COORD_DECIMAL_PRECISION, Traps
 
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
@@ -81,7 +81,7 @@ class WeightMap(Traps, RegDrawer):
         for qid, pos in qubits.items():
             matches = np.argwhere(
                 np.all(
-                    np.isclose(coords_arr, pos, atol=10 ** (-COORD_PRECISION)),
+                    np.isclose(coords_arr, pos, atol=10 ** (-COORD_DECIMAL_PRECISION)),
                     axis=1,
                 )
             )
