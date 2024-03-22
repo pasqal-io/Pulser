@@ -112,13 +112,6 @@ def test_register_definition(layout, layout3d):
     ):
         reg2d._validate_layout(layout, (0, 1))
 
-    with pytest.raises(TypeError, match="cannot be rotated"):
-        with pytest.warns(
-            DeprecationWarning,
-            match=re.escape("'Register.rotate()' has been deprecated"),
-        ):
-            reg2d.rotate(30)
-
     with pytest.warns(
         UserWarning, match="won't have an associated 'RegisterLayout'"
     ):
