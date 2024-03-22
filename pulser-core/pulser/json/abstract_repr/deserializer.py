@@ -23,7 +23,7 @@ import jsonschema.exceptions
 
 import pulser
 import pulser.devices as devices
-from pulser.channels import DMM, Microwave, Raman, Rydberg
+from pulser.channels import DMM, Microwave, Raman, Rydberg, RydbergError
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import (
     OPTIONAL_ABSTR_EOM_FIELDS,
@@ -339,6 +339,8 @@ def _deserialize_channel(obj: dict[str, Any]) -> Channel:
         channel_cls = Raman
     elif obj["basis"] == "XY":
         channel_cls = Microwave
+    elif obj["basis"] == "error":
+        channel_cls = RydbergError
     # No other basis allowed by the schema
 
     channel_fields = dataclasses.fields(channel_cls)

@@ -91,14 +91,14 @@ class RydbergError(Channel):
     """
 
     addressing: Literal["Global"] = field(default="Global", init=False)
-    max_abs_detuning: Optional[float] = field(default=None, init=False)
+    max_abs_detuning: Optional[float] = field(default=0, init=False)
     max_amp: float = field(default=0, init=False)
     min_retarget_interval: Optional[int] = field(default=None, init=False)
     fixed_retarget_t: Optional[int] = field(default=None, init=False)
     max_targets: Optional[int] = field(default=None, init=False)
     clock_period: int = field(default=1, init=False)  # ns
     min_duration: int = field(default=1, init=False)  # ns
-    max_duration: int = field(default=int(1e8), init=False)  # ns
+    max_duration: int = field(default=None, init=False)  # ns
     min_avg_amp: int = field(default=0, init=False)
     mod_bandwidth: Optional[float] = field(default=None, init=False)  # MHz
 

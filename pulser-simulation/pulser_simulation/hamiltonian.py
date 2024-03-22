@@ -323,10 +323,12 @@ class Hamiltonian:
             for i, b in enumerate(self.samples_obj.used_eigenstates)
         }
         self.op_matrix = {"I": qutip.qeye(self.dim)}
-        for proj in itertools.combinations(list(self.basis.keys()), 2):
-            self.op_matrix["sigma_" + proj[0] + proj[1]] = (
-                self.basis[proj[0]] * self.basis[proj[1]].dag()
-            )
+        for proj0 in self.samples_obj.used_eigenstates:
+            for proj1 in self.samples_obj.used_eigenstates:
+                proj_name = "sigma_" + proj0 + proj1
+                self.op_matrix[proj_name] = (
+                    self.basis[proj0] * self.basis[proj1].dag()
+                )
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.

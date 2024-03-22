@@ -1,4 +1,5 @@
 {
+  "$id": "sequence-schema.json",
   "$ref": "#/definitions/PulserSequence",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
@@ -30,7 +31,8 @@
       "enum": [
         "ground-rydberg",
         "digital",
-        "XY"
+        "XY",
+        "error"
       ],
       "type": "string"
     },
@@ -155,9 +157,6 @@
         "samples"
       ],
       "type": "object"
-    },
-    "Device": {
-      "$ref": "device-schema.json"
     },
     "ExprArgument": {
       "anyOf": [
@@ -353,9 +352,6 @@
         "beta"
       ],
       "type": "object"
-    },
-    "Layout": {
-      "$ref": "layout-schema.json"
     },
     "MappableQubit": {
       "additionalProperties": false,
@@ -806,13 +802,13 @@
                   "$ref": "#/definitions/HardcodedDevice"
                 },
                 {
-                  "$ref": "#/definitions/Device"
+                  "$ref": "device-schema.json"
                 }
               ],
               "description": "A valid device in which to execute the Sequence"
             },
             "layout": {
-              "$ref": "#/definitions/Layout",
+              "$ref": "layout-schema.json",
               "description": "The trap layout underlying the register."
             },
             "magnetic_field": {
@@ -903,13 +899,13 @@
                   "$ref": "#/definitions/HardcodedDevice"
                 },
                 {
-                  "$ref": "#/definitions/Device"
+                  "$ref": "device-schema.json"
                 }
               ],
               "description": "A valid device in which to execute the Sequence"
             },
             "layout": {
-              "$ref": "#/definitions/Layout",
+              "$ref": "layout-schema.json",
               "description": "The trap layout underlying the register."
             },
             "magnetic_field": {
