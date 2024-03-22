@@ -480,9 +480,7 @@ def test_run(seq, patch_plt_show):
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian._size)]
     )
-    good_initial_qobj_no_dims = qutip.basis(
-        sim.dim**sim._hamiltonian._size, 2
-    )
+    good_initial_qobj_no_dims = qutip.basis(sim.dim**sim._hamiltonian._size, 2)
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"

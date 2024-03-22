@@ -1,4 +1,5 @@
 """Dataclasses for storing and processing the samples."""
+
 from __future__ import annotations
 
 import itertools
