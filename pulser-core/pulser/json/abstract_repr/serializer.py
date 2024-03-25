@@ -271,14 +271,16 @@ def serialize_abstract_sequence(
         elif call.name == "align":
             operations.append({"op": "align", "channels": list(call.args)})
         elif call.name == "delay":
-            data = get_all_args(("duration", "channel"), call)
-            operations.append(
-                {
-                    "op": "delay",
-                    "channel": data["channel"],
-                    "time": data["duration"],
-                }
-            )
+            data = get_all_args(("duration", "channel", "at_rest"), call)
+            data = remove_kwarg_if_default(data, "delay", "at_rest")
+            op_dict = {
+                "op": "delay",
+                "channel": data["channel"],
+                "time": data["duration"],
+            }
+            if "at_rest" in data:
+                op_dict["at_rest"] = data["at_rest"]
+            operations.append(op_dict)
         elif call.name == "measure":
             data = get_all_args(("basis",), call)
             res["measurement"] = data["basis"]

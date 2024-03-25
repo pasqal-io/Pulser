@@ -208,6 +208,30 @@ class Pulse:
         )
         return aligned_start_extra_time + end_extra_time
 
+    def get_full_duration(
+        self, channel: Channel, in_eom_mode: bool = False
+    ) -> int:
+        """Calculates the pulse's full duration after output modulation.
+
+        The full duration of a pulse is the total time between the start of
+        the input signal and the end of the output signal, as shown in
+        the sequence.
+
+        Args:
+            channel: The pulse executing the channel.
+            in_eom_mode: Whether the pulse is executed in EOM mode.
+        """
+        if not isinstance(channel, pulser.channels.base_channel.Channel):
+            raise TypeError(
+                "'channel' must be a channel object instance, not "
+                f"{type(channel)}."
+            )
+        if in_eom_mode and not channel.supports_eom():
+            raise ValueError(
+                "The given channel does not support EOM mode operation."
+            )
+        return self.duration + self.fall_time(channel, in_eom_mode)
+
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
             self,

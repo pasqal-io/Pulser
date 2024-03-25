@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import dataclasses
+
 import numpy as np
 import pytest
 
@@ -76,7 +78,8 @@ def test_draw(patch_plt_show):
     pls_.draw()
 
 
-def test_fall_time():
+@pytest.fixture
+def eom_channel():
     eom_config = RydbergEOM(
         mod_bandwidth=24,
         max_limiting_amp=100,
@@ -84,12 +87,35 @@ def test_fall_time():
         intermediate_detuning=700,
         controlled_beams=tuple(RydbergBeam),
     )
-    assert eom_config.rise_time == 20
-    channel = Rydberg.Global(
-        None, None, mod_bandwidth=4, eom_config=eom_config
-    )
-    assert channel.rise_time == 120
+    return Rydberg.Global(None, None, mod_bandwidth=4, eom_config=eom_config)
+
+
+def test_fall_time(eom_channel):
+    assert eom_channel.eom_config.rise_time == 20
+    assert eom_channel.rise_time == 120
 
     pulse = Pulse.ConstantPulse(1000, 1, 0, 0)
-    assert pulse.fall_time(channel, in_eom_mode=False) == 240
-    assert pulse.fall_time(channel, in_eom_mode=True) == 40
+    assert pulse.fall_time(eom_channel, in_eom_mode=False) == 240
+    assert pulse.fall_time(eom_channel, in_eom_mode=True) == 40
+
+
+def test_full_duration(eom_channel):
+    with pytest.raises(TypeError, match="must be a channel object instance"):
+        pls.get_full_duration("eom_channel")
+
+    channel1 = Rydberg.Global(None, None)
+    assert not channel1.supports_eom()
+    with pytest.raises(
+        ValueError, match="does not support EOM mode operation"
+    ):
+        pls.get_full_duration(channel1, in_eom_mode=True)
+
+    assert pls.get_full_duration(channel1) == pls.duration
+    channel2 = dataclasses.replace(channel1, mod_bandwidth=4)
+    assert pls.get_full_duration(channel2) == pls.duration + pls.fall_time(
+        channel2
+    )
+
+    assert pls.get_full_duration(
+        eom_channel, in_eom_mode=True
+    ) == pls.duration + pls.fall_time(eom_channel, in_eom_mode=True)
