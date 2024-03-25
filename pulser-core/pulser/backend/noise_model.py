@@ -217,7 +217,3 @@ class NoiseModel:
             # type checking
             if not isinstance(operator, np.ndarray):
                 raise TypeError(f"{operator} is not a Numpy array.")
-            if operator.shape != (2, 2):
-                raise NotImplementedError(
-                    "Operator's shape must be (2,2) " f"not {operator.shape}."
-                )
