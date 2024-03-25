@@ -214,6 +214,7 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
         seq.delay(
             duration=_deserialize_parameter(op["time"], vars),
             channel=op["channel"],
+            at_rest=op.get("at_rest", False),
         )
     elif op["op"] == "phase_shift":
         seq.phase_shift_index(

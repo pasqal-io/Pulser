@@ -1401,14 +1401,17 @@ class Sequence(Generic[DeviceType]):
         self,
         duration: Union[int, Parametrized],
         channel: str,
+        at_rest: bool = False,
     ) -> None:
         """Idles a given channel for a specific duration.
 
         Args:
             duration: Time to delay (in ns).
             channel: The channel's name provided when declared.
+            at_rest: Whether to wait until the previous pulse on the
+                channel has finished (including output modulation).
         """
-        self._delay(duration, channel)
+        self._delay(duration, channel, at_rest)
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
@@ -2118,10 +2121,17 @@ class Sequence(Generic[DeviceType]):
         return ids
 
     @seq_decorators.block_if_measured
-    def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
+    def _delay(
+        self,
+        duration: Union[int, Parametrized],
+        channel: str,
+        at_rest: bool = False,
+    ) -> None:
         self._validate_channel(channel, block_if_slm=True)
         if self.is_parametrized():
             return
+        if at_rest:
+            self._schedule.wait_for_fall(channel)
         self._schedule.add_delay(cast(int, duration), channel)
 
     def _phase_shift(
