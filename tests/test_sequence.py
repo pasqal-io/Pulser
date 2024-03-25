@@ -1054,12 +1054,18 @@ def test_delay(reg, device, at_rest):
     # At rest will have no effect
     assert seq.declared_channels["ch0"].mod_bandwidth is None
     seq.delay(388, "ch0", at_rest)
-    assert seq._last("ch0") == _TimeSlot("delay", 100, 488, {"q19"})
+    assert seq._last("ch0") == (
+        last_slot := _TimeSlot("delay", 100, 488, {"q19"})
+    )
+    seq.delay(0, "ch0", at_rest)
+    # A delay of 0 is not added to the schedule
+    assert seq._last("ch0") == last_slot
 
 
+@pytest.mark.parametrize("delay_duration", [200, 0])
 @pytest.mark.parametrize("at_rest", [True, False])
 @pytest.mark.parametrize("in_eom", [True, False])
-def test_delay_at_rest(in_eom, at_rest):
+def test_delay_at_rest(in_eom, at_rest, delay_duration):
     seq = Sequence(Register.square(2, 5), AnalogDevice)
     seq.declare_channel("ryd", "rydberg_global")
     assert (ch_obj := seq.declared_channels["ryd"]).mod_bandwidth is not None
@@ -1070,7 +1076,6 @@ def test_delay_at_rest(in_eom, at_rest):
         seq.add_eom_pulse("ryd", pulse.duration, 0)
     else:
         seq.add(pulse, "ryd")
-    delay_duration = 200
     assert (extra_delay := pulse.fall_time(ch_obj, in_eom_mode=in_eom)) > 0
     seq.delay(delay_duration, "ryd", at_rest=at_rest)
     assert seq.get_duration() == pulse.duration + delay_duration + (

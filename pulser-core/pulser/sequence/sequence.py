@@ -1409,7 +1409,8 @@ class Sequence(Generic[DeviceType]):
             duration: Time to delay (in ns).
             channel: The channel's name provided when declared.
             at_rest: Whether to wait until the previous pulse on the
-                channel has finished (including output modulation).
+                channel has finished (including output modulation) before
+                starting the delay.
         """
         self._delay(duration, channel, at_rest)
 
@@ -2132,6 +2133,8 @@ class Sequence(Generic[DeviceType]):
             return
         if at_rest:
             self._schedule.wait_for_fall(channel)
+        if not duration:
+            return
         self._schedule.add_delay(cast(int, duration), channel)
 
     def _phase_shift(
