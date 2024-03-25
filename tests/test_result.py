@@ -62,7 +62,7 @@ def test_qutip_result():
         atom_order=("q0", "q1"),
         meas_basis="ground-rydberg",
         state=qutrit_state,
-        matching_meas_basis=True,
+        matching_meas_basis=False,
     )
     assert result.sampling_dist == {"10": 1.0}
     assert result.sampling_errors == {"10": 0.0}

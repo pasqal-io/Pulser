@@ -107,7 +107,7 @@ class Hamiltonian:
     def _build_collapse_operators(self, config: NoiseModel) -> None:
         def basis_check(noise_type: str) -> None:
             """Checks if the basis allows for the use of noise."""
-            if self.basis_name == "all":
+            if self.basis_name == "all" or "_with_error" in self.basis_name:
                 # Go back to previous config
                 raise NotImplementedError(
                     f"Cannot include {noise_type} noise in all-basis."
@@ -127,8 +127,12 @@ class Hamiltonian:
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "eff_noise" in config.noise_types:
-            basis_check("effective")
             for id, rate in enumerate(config.eff_noise_rates):
+                if config.eff_noise_opers[id].shape != (self.dim, self.dim):
+                    raise ValueError(
+                        "Effective noise operator should be of shape "
+                        f"{(self.dim, self.dim)}, see basis :{self.basis}."
+                    )
                 local_collapse_ops.append(
                     np.sqrt(rate) * config.eff_noise_opers[id]
                 )
@@ -301,35 +305,30 @@ class Hamiltonian:
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
-        if self._interaction == "XY":
-            self.basis_name = "XY"
-            self.dim = 2
-            basis = ["u", "d"]
-            projectors = ["uu", "du", "ud", "dd"]
-        else:
-            if "digital" not in self.samples_obj.used_bases:
-                self.basis_name = "ground-rydberg"
-                self.dim = 2
-                basis = ["r", "g"]
-                projectors = ["gr", "rr", "gg"]
-            elif "ground-rydberg" not in self.samples_obj.used_bases:
-                self.basis_name = "digital"
-                self.dim = 2
-                basis = ["g", "h"]
-                projectors = ["hg", "hh", "gg"]
+        effective_bases = self.samples_obj.used_bases - {"error"}
+        if len(effective_bases) == 0:
+            if self.samples_obj._in_xy:
+                self.basis_name = "XY"
             else:
-                self.basis_name = "all"  # All three states
-                self.dim = 3
-                basis = ["r", "g", "h"]
-                projectors = ["gr", "hg", "rr", "gg", "hh"]
-
-        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
+                self.basis_name = "ground-rydberg"
+        elif len(effective_bases) == 1:
+            self.basis_name = list(effective_bases)[0]
+        else:
+            self.basis_name = "all"  # All three rydberg states
+        if "error" in self.samples_obj.used_bases:
+            self.basis_name += "_with_error"
+        self.dim = len(self.samples_obj.eigenbasis)
+        self.basis = {
+            b: qutip.basis(self.dim, i)
+            for i, b in enumerate(self.samples_obj.eigenbasis)
+        }
         self.op_matrix = {"I": qutip.qeye(self.dim)}
-
-        for proj in projectors:
-            self.op_matrix["sigma_" + proj] = (
-                self.basis[proj[0]] * self.basis[proj[1]].dag()
-            )
+        for proj0 in self.samples_obj.eigenbasis:
+            for proj1 in self.samples_obj.eigenbasis:
+                proj_name = "sigma_" + proj0 + proj1
+                self.op_matrix[proj_name] = (
+                    self.basis[proj0] * self.basis[proj1].dag()
+                )
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
@@ -431,6 +430,8 @@ class Hamiltonian:
                 op_ids = ["sigma_hg", "sigma_gg"]
             elif basis == "XY":
                 op_ids = ["sigma_du", "sigma_uu"]
+            elif basis == "error":
+                op_ids = ["sigma_gx", "sigma_xx"]
 
             terms = []
             if addr == "Global":
@@ -479,7 +480,7 @@ class Hamiltonian:
         qobj_list = []
         # Time independent term:
         effective_size = self._size - sum(self._bad_atoms.values())
-        if self.basis_name != "digital" and effective_size > 1:
+        if "digital" not in self.basis_name and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
             if (

@@ -26,9 +26,6 @@
       ],
       "type": "object"
     },
-    "Layout": {
-      "$ref": "layout-schema.json"
-    },
     "QubitId": {
       "description": "Name for a qubit.",
       "type": "string"
@@ -37,7 +34,7 @@
       "additionalProperties": false,
       "properties": {
         "layout": {
-          "$ref": "#/definitions/Layout",
+          "$ref": "layout-schema.json",
           "description": "The trap layout underlying the register."
         },
         "register": {

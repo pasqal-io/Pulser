@@ -686,6 +686,38 @@ def test_config():
 
 
 def test_noise(seq, matrices):
+    # Test with zero epsilon
+    np.random.seed(3)
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
+    sim2 = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
+        ),
+    )
+    assert sim2.config.spam_dict == {
+        "eta": 0,
+        "epsilon": 0.0,
+        "epsilon_prime": 0.0,
+    }
+    assert sim.run().sample_final_state() == sim2.run().sample_final_state()
+
+    # Test with effective noise
+    with pytest.raises(NotImplementedError, match="Cannot include"):
+        sim2.set_config(SimConfig(noise="dephasing"))
+    with pytest.raises(NotImplementedError, match="Cannot include"):
+        sim2.set_config(SimConfig(noise="depolarizing"))
+    sim2.set_config(
+        SimConfig(
+            noise="eff_noise",
+            eff_noise_opers=[sim2.op_matrix["I"]],
+            eff_noise_rates=[1.0],
+        )
+    )
+    assert sim.run().sample_final_state() == sim2.run().sample_final_state()
+
+    # Test with other epsilon
     np.random.seed(3)
     sim2 = QutipEmulator.from_sequence(
         seq, sampling_rate=0.01, config=SimConfig(noise=("SPAM"), eta=0.9)
@@ -693,18 +725,7 @@ def test_noise(seq, matrices):
     assert sim2.run().sample_final_state() == Counter(
         {"000": 857, "110": 73, "100": 70}
     )
-    with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(SimConfig(noise="dephasing"))
-    with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(SimConfig(noise="depolarizing"))
-    with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(
-            SimConfig(
-                noise="eff_noise",
-                eff_noise_opers=[matrices["I"]],
-                eff_noise_rates=[1.0],
-            )
-        )
+
     assert sim2.config.spam_dict == {
         "eta": 0.9,
         "epsilon": 0.01,
@@ -720,26 +741,6 @@ def test_noise(seq, matrices):
                 assert np.all(
                     sim2._hamiltonian.samples["Local"][basis][t][qty] == 0.0
                 )
-
-
-def test_noise_with_zero_epsilons(seq, matrices):
-    np.random.seed(3)
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
-
-    sim2 = QutipEmulator.from_sequence(
-        seq,
-        sampling_rate=0.01,
-        config=SimConfig(
-            noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
-        ),
-    )
-    assert sim2.config.spam_dict == {
-        "eta": 0,
-        "epsilon": 0.0,
-        "epsilon_prime": 0.0,
-    }
-
-    assert sim.run().sample_final_state() == sim2.run().sample_final_state()
 
 
 @pytest.mark.parametrize(
