@@ -323,9 +323,11 @@ class Sequence(Generic[DeviceType]):
             return all_channels
         else:
             occupied_ch_ids = [
-                self._schedule[ch_name].channel_id
-                if ch_name in self._schedule
-                else _dmm_id_from_name(ch_name)
+                (
+                    self._schedule[ch_name].channel_id
+                    if ch_name in self._schedule
+                    else _dmm_id_from_name(ch_name)
+                )
                 for ch_name in self.declared_channels.keys()
             ]
             return {
@@ -463,12 +465,12 @@ class Sequence(Generic[DeviceType]):
         """Returns the bases addressed by the declared channels."""
         return tuple(self._basis_ref)
 
-    def get_addressed_states(self) -> tuple[States, ...]:
+    def get_addressed_states(self) -> list[States]:
         """Returns the bases addressed by the declared channels."""
         all_states = set().union(
             *(set(EIGENSTATES[basis]) for basis in self.get_addressed_bases())
         )
-        return tuple(set(STATES_RANK).intersection(all_states))
+        return [state for state in STATES_RANK if state in all_states]
 
     @seq_decorators.screen
     def current_phase_ref(

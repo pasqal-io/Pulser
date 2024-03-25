@@ -307,24 +307,24 @@ class Hamiltonian:
         """Determine dimension, basis and projector operators."""
         effective_bases = self.samples_obj.used_bases - {"error"}
         if len(effective_bases) == 0:
-            raise ValueError(
-                "Simulation is not supported for a Sequence with only "
-                "an error channel."
-            )
-        if len(effective_bases) == 1:
+            if self.samples_obj._in_xy:
+                self.basis_name = "XY"
+            else:
+                self.basis_name = "ground-rydberg"
+        elif len(effective_bases) == 1:
             self.basis_name = list(effective_bases)[0]
         else:
-            self.basis_name = "all"  # All three states
+            self.basis_name = "all"  # All three rydberg states
         if "error" in self.samples_obj.used_bases:
             self.basis_name += "_with_error"
-        self.dim = len(self.samples_obj.used_eigenstates)
+        self.dim = len(self.samples_obj.eigenbasis)
         self.basis = {
             b: qutip.basis(self.dim, i)
-            for i, b in enumerate(self.samples_obj.used_eigenstates)
+            for i, b in enumerate(self.samples_obj.eigenbasis)
         }
         self.op_matrix = {"I": qutip.qeye(self.dim)}
-        for proj0 in self.samples_obj.used_eigenstates:
-            for proj1 in self.samples_obj.used_eigenstates:
+        for proj0 in self.samples_obj.eigenbasis:
+            for proj1 in self.samples_obj.eigenbasis:
                 proj_name = "sigma_" + proj0 + proj1
                 self.op_matrix[proj_name] = (
                     self.basis[proj0] * self.basis[proj1].dag()

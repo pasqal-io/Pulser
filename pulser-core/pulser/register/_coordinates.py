@@ -1,4 +1,5 @@
 """Defines a collection of coordinates."""
+
 from __future__ import annotations
 
 import hashlib

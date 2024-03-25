@@ -1,4 +1,5 @@
 """Dataclasses for storing and processing the samples."""
+
 from __future__ import annotations
 
 import itertools
@@ -433,12 +434,17 @@ class SequenceSamples:
         }
 
     @property
-    def used_eigenstates(self) -> list[States]:
-        """The eigenstates associated to the used bases."""
-        all_eigenstates = set().union(
+    def eigenbasis(self) -> list[States]:
+        """The eigenstates used for simulation."""
+        if len(self.used_bases - {"error"}) == 0:
+            basis = EIGENSTATES["XY" if self._in_xy else "ground-rydberg"]
+            if "error" in self.used_bases:
+                basis += [EIGENSTATES["error"][-1]]
+            return basis
+        all_states = set().union(
             *(EIGENSTATES[basis] for basis in self.used_bases)
         )
-        return list(set(STATES_RANK).intersection(all_eigenstates))
+        return [state for state in STATES_RANK if state in all_states]
 
     @property
     def _in_xy(self) -> bool:

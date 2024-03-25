@@ -118,9 +118,11 @@ def triangular_hex(n_points: int) -> np.ndarray:
                 for side in range(6)
                 for atom in range(
                     1,
-                    min_atoms_per_side + 2
-                    if points_left > sides_order[side]
-                    else min_atoms_per_side + 1,
+                    (
+                        min_atoms_per_side + 2
+                        if points_left > sides_order[side]
+                        else min_atoms_per_side + 1
+                    ),
                 )
             ],
             dtype=float,

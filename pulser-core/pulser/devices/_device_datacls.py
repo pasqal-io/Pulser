@@ -75,6 +75,7 @@ class BaseDevice(ABC):
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
     """
+
     name: str
     dimensions: DIMENSIONS
     rydberg_level: int
@@ -250,12 +251,12 @@ class BaseDevice(ABC):
         return {ch.basis for ch in self.channel_objects}
 
     @property
-    def supported_states(self) -> set[States]:
+    def supported_states(self) -> list[States]:
         """Available states in their order of appearances."""
         all_states = set().union(
             *(set(ch.eigenstates) for ch in self.channel_objects)
         )
-        return set(STATES_RANK).intersection(all_states)
+        return [state for state in STATES_RANK if state in all_states]
 
     @property
     def interaction_coeff(self) -> float:
@@ -516,6 +517,7 @@ class Device(BaseDevice):
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
+
     max_atom_num: int
     max_radial_distance: int
     pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
@@ -638,15 +640,17 @@ class Device(BaseDevice):
                         + f" {ch.max_amp:.4g} rad/µs"
                     ),
                     (
-                        "\t"
-                        + r"- Maximum :math:`|\delta|`:"
-                        + f" {ch.max_abs_detuning:.4g} rad/µs"
-                    )
-                    if not isinstance(ch, DMM)
-                    else (
-                        "\t"
-                        + r"- Bottom :math:`|\delta|`:"
-                        + f" {ch.bottom_detuning:.4g} rad/µs"
+                        (
+                            "\t"
+                            + r"- Maximum :math:`|\delta|`:"
+                            + f" {ch.max_abs_detuning:.4g} rad/µs"
+                        )
+                        if not isinstance(ch, DMM)
+                        else (
+                            "\t"
+                            + r"- Bottom :math:`|\delta|`:"
+                            + f" {ch.bottom_detuning:.4g} rad/µs"
+                        )
                     ),
                     f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
                 ]
@@ -711,6 +715,7 @@ class VirtualDevice(BaseDevice):
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """
+
     min_atom_distance: float = 0
     max_atom_num: int | None = None
     max_radial_distance: int | None = None
