@@ -98,7 +98,7 @@ class RydbergError(Channel):
     max_targets: Optional[int] = field(default=None, init=False)
     clock_period: int = field(default=1, init=False)  # ns
     min_duration: int = field(default=1, init=False)  # ns
-    max_duration: int = field(default=None, init=False)  # ns
+    max_duration: int | None = field(default=None, init=False)  # ns
     min_avg_amp: int = field(default=0, init=False)
     mod_bandwidth: Optional[float] = field(default=None, init=False)  # MHz
 
@@ -106,3 +106,7 @@ class RydbergError(Channel):
     def basis(self) -> Literal["error"]:
         """The addressed basis name."""
         return "error"
+
+    def default_id(self) -> str:
+        """Generates the default ID for indexing this channel in a Device."""
+        return "rydberg_error"
