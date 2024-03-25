@@ -318,9 +318,11 @@ class Sequence(Generic[DeviceType]):
             return all_channels
         else:
             occupied_ch_ids = [
-                self._schedule[ch_name].channel_id
-                if ch_name in self._schedule
-                else _dmm_id_from_name(ch_name)
+                (
+                    self._schedule[ch_name].channel_id
+                    if ch_name in self._schedule
+                    else _dmm_id_from_name(ch_name)
+                )
                 for ch_name in self.declared_channels.keys()
             ]
             return {
