@@ -62,16 +62,20 @@ class QutipResult(Result):
 
     @property
     def _basis_name(self) -> str:
+        if self.meas_basis == "XY":
+            return "XY"
         if self._dim == 4:
             return "all_with_error"
         if self._dim == 3:
-            if self.meas_basis == "ground-rydberg":
+            if (
+                self.meas_basis == "ground-rydberg"
+                and self.matching_meas_basis
+            ):
                 return "ground-rydberg_with_error"
             if self.meas_basis == "digital" and self.matching_meas_basis:
                 return "digital_with_error"
             return "all"
-        if self.meas_basis == "XY":
-            return "XY"
+
         if not self.matching_meas_basis:
             return (
                 "digital"
