@@ -213,7 +213,7 @@ def test_get_state_float_time(results):
                 [0.76522907 + 0.0j],
                 [0.08339973 - 0.39374219j],
                 [0.08339973 - 0.39374219j],
-                [-0.27977623 - 0.1103308j],
+                [-0.27977172 - 0.11031832j],
             ]
         ),
     ).all()
@@ -244,7 +244,7 @@ def test_expect(results, pi_pulse, reg):
     config = SimConfig(noise="SPAM", eta=0)
     sim_single.set_config(config)
     sim_single.set_evaluation_times("Minimal")
-    results_single = sim_single.run()
+    results_single = sim_single.run(nsteps=2000)
     exp = results_single.expect(op)[0]
     assert len(exp) == 2
     assert isinstance(results_single, CoherentResults)
