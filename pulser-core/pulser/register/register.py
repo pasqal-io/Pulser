@@ -89,7 +89,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a rectangular array.
+        """Initializes the register with the qubits in a rectangular array with a square lattice.
 
         Args:
             rows: Number of rows.
