@@ -497,17 +497,17 @@ class QutipEmulator:
             end_point = ch_sample.duration - 1
             min_variations: list[int] = []
             for sample in (ch_sample.amp, ch_sample.det):
-                # Find the indices at which the sample varies
-                variations_indices: np.ndarray = np.concatenate(
-                    [
-                        np.array([-1]),
-                        np.nonzero(np.diff(sample)),
-                        np.array([end_point]),
-                    ],
-                    axis=None,
+                min_variations.append(
+                    int(
+                        np.min(
+                            np.diff(
+                                np.nonzero(np.diff(sample)),
+                                prepend=-1,
+                                append=end_point,
+                            )
+                        )
+                    )
                 )
-                # Find the differences between two indices at which sample varies
-                min_variations.append(int(np.min(np.diff(variations_indices))))
 
             return min(min_variations)
 
@@ -520,6 +520,10 @@ class QutipEmulator:
                     ]
                 )
                 / 1000
+            )
+        if "nsteps" not in options:
+            options["nsteps"] = max(
+                1000, self._tot_duration // options["max_step"]
             )
         solv_ops = qutip.Options(**options)
 

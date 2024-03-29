@@ -244,7 +244,7 @@ def test_expect(results, pi_pulse, reg):
     config = SimConfig(noise="SPAM", eta=0)
     sim_single.set_config(config)
     sim_single.set_evaluation_times("Minimal")
-    results_single = sim_single.run(nsteps=2000)
+    results_single = sim_single.run()
     exp = results_single.expect(op)[0]
     assert len(exp) == 2
     assert isinstance(results_single, CoherentResults)
