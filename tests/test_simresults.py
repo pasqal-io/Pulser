@@ -19,9 +19,13 @@ import pytest
 import qutip
 from qutip.piqs import isdiagonal
 
-from pulser import Pulse, Register, Sequence
+from pulser import AnalogDevice, Pulse, Register, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
-from pulser.waveforms import BlackmanWaveform
+from pulser.waveforms import (
+    BlackmanWaveform,
+    CompositeWaveform,
+    ConstantWaveform,
+)
 from pulser_simulation import QutipEmulator, SimConfig
 from pulser_simulation.simresults import CoherentResults, NoisyResults
 
@@ -213,7 +217,7 @@ def test_get_state_float_time(results):
                 [0.76522907 + 0.0j],
                 [0.08339973 - 0.39374219j],
                 [0.08339973 - 0.39374219j],
-                [-0.27977623 - 0.1103308j],
+                [-0.27977172 - 0.11031832j],
             ]
         ),
     ).all()
@@ -386,3 +390,23 @@ def test_results_xy(reg, pi_pulse):
     # Check that measurement projectors are correct
     assert results_._meas_projector(0) == qutip.basis(2, 0).proj()
     assert results_._meas_projector(1) == qutip.basis(2, 1).proj()
+
+
+def test_false_positive():
+    """Breaks for pulser version < v0.18."""
+    seq = Sequence(Register.square(2, 5), AnalogDevice)
+    seq.declare_channel("ryd_glob", "rydberg_global")
+    seq.add(
+        Pulse.ConstantDetuning(
+            CompositeWaveform(
+                ConstantWaveform(2500, 0.0),
+                BlackmanWaveform(1000, np.pi),
+                ConstantWaveform(500, 0.0),
+            ),
+            0,
+            0,
+        ),
+        channel="ryd_glob",
+    )
+    sim = QutipEmulator.from_sequence(seq)
+    assert sim.run().get_final_state() != sim.initial_state

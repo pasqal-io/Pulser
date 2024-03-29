@@ -32,7 +32,7 @@ from pulser.backend.noise_model import NoiseModel
 from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
-from pulser.sampler.samples import SequenceSamples
+from pulser.sampler.samples import ChannelSamples, SequenceSamples
 from pulser.sequence._seq_drawer import draw_samples, draw_sequence
 from pulser_simulation.hamiltonian import Hamiltonian
 from pulser_simulation.qutip_result import QutipResult
@@ -492,19 +492,39 @@ class QutipEmulator:
 
                 .. _docs: https://bit.ly/3il9A2u
         """
-        if "max_step" not in options:
-            pulse_durations = [
-                slot.tf - slot.ti
-                for ch_sample in self.samples_obj.samples_list
-                for slot in ch_sample.slots
-                if not (
-                    np.all(np.isclose(ch_sample.amp[slot.ti : slot.tf], 0))
-                    and np.all(np.isclose(ch_sample.det[slot.ti : slot.tf], 0))
-                )
-            ]
-            if pulse_durations:
-                options["max_step"] = 0.5 * min(pulse_durations) / 1000
 
+        def get_min_variation(ch_sample: ChannelSamples) -> int:
+            end_point = ch_sample.duration - 1
+            min_variations: list[int] = []
+            for sample in (ch_sample.amp, ch_sample.det):
+                min_variations.append(
+                    int(
+                        np.min(
+                            np.diff(
+                                np.nonzero(np.diff(sample)),
+                                prepend=-1,
+                                append=end_point,
+                            )
+                        )
+                    )
+                )
+
+            return min(min_variations)
+
+        if "max_step" not in options:
+            options["max_step"] = (
+                min(
+                    [
+                        get_min_variation(ch_sample)
+                        for ch_sample in self.samples_obj.samples_list
+                    ]
+                )
+                / 1000
+            )
+        if "nsteps" not in options:
+            options["nsteps"] = max(
+                1000, self._tot_duration // options["max_step"]
+            )
         solv_ops = qutip.Options(**options)
 
         meas_errors: Optional[Mapping[str, float]] = None
