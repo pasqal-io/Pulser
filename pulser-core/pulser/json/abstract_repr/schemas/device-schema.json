@@ -181,7 +181,7 @@
             "pre_calibrated_layouts": {
               "description": "Register layouts already calibrated on the device.",
               "items": {
-                "$ref": "#/definitions/Layout"
+                "$ref": "layout-schema.json"
               },
               "type": "array"
             },
@@ -355,7 +355,56 @@
                   "type": "null"
                 },
                 {
-                  "$ref": "#/definitions/RydbergEOM"
+                  "additionalProperties": false,
+                  "properties": {
+                    "controlled_beams": {
+                      "description": "The beams that can be switched on/off with an EOM.",
+                      "items": {
+                        "enum": [
+                          "RED",
+                          "BLUE"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "custom_buffer_time": {
+                      "description": "A custom wait time to enforce during EOM buffers.",
+                      "type": "number"
+                    },
+                    "intermediate_detuning": {
+                      "description": "The detuning between the two beams, in rad/µs.",
+                      "type": "number"
+                    },
+                    "limiting_beam": {
+                      "description": "The beam with the smallest amplitude range.",
+                      "enum": [
+                        "RED",
+                        "BLUE"
+                      ],
+                      "type": "string"
+                    },
+                    "max_limiting_amp": {
+                      "description": "The maximum amplitude the limiting beam can reach, in rad/µs.",
+                      "type": "number"
+                    },
+                    "mod_bandwidth": {
+                      "description": "The EOM modulation bandwidth at -3dB (50% reduction), in MHz.",
+                      "type": "number"
+                    },
+                    "multiple_beam_control": {
+                      "description": "Whether both EOMs can be used simultaneously or not.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "mod_bandwidth",
+                    "limiting_beam",
+                    "max_limiting_amp",
+                    "intermediate_detuning",
+                    "controlled_beams"
+                  ],
+                  "type": "object"
                 }
               ],
               "description": "Configuration of an associated EOM."
@@ -632,7 +681,56 @@
                   "type": "null"
                 },
                 {
-                  "$ref": "#/definitions/RydbergEOM"
+                  "additionalProperties": false,
+                  "properties": {
+                    "controlled_beams": {
+                      "description": "The beams that can be switched on/off with an EOM.",
+                      "items": {
+                        "enum": [
+                          "RED",
+                          "BLUE"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "custom_buffer_time": {
+                      "description": "A custom wait time to enforce during EOM buffers.",
+                      "type": "number"
+                    },
+                    "intermediate_detuning": {
+                      "description": "The detuning between the two beams, in rad/µs.",
+                      "type": "number"
+                    },
+                    "limiting_beam": {
+                      "description": "The beam with the smallest amplitude range.",
+                      "enum": [
+                        "RED",
+                        "BLUE"
+                      ],
+                      "type": "string"
+                    },
+                    "max_limiting_amp": {
+                      "description": "The maximum amplitude the limiting beam can reach, in rad/µs.",
+                      "type": "number"
+                    },
+                    "mod_bandwidth": {
+                      "description": "The EOM modulation bandwidth at -3dB (50% reduction), in MHz.",
+                      "type": "number"
+                    },
+                    "multiple_beam_control": {
+                      "description": "Whether both EOMs can be used simultaneously or not.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "mod_bandwidth",
+                    "limiting_beam",
+                    "max_limiting_amp",
+                    "intermediate_detuning",
+                    "controlled_beams"
+                  ],
+                  "type": "object"
                 }
               ],
               "description": "Configuration of an associated EOM."
@@ -899,9 +997,6 @@
       ],
       "description": "A Channel that can be physical or virtual."
     },
-    "Layout": {
-      "$ref": "layout-schema.json"
-    },
     "PhysicalChannel": {
       "anyOf": [
         {
@@ -926,7 +1021,56 @@
                   "type": "null"
                 },
                 {
-                  "$ref": "#/definitions/RydbergEOM"
+                  "additionalProperties": false,
+                  "properties": {
+                    "controlled_beams": {
+                      "description": "The beams that can be switched on/off with an EOM.",
+                      "items": {
+                        "enum": [
+                          "RED",
+                          "BLUE"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "custom_buffer_time": {
+                      "description": "A custom wait time to enforce during EOM buffers.",
+                      "type": "number"
+                    },
+                    "intermediate_detuning": {
+                      "description": "The detuning between the two beams, in rad/µs.",
+                      "type": "number"
+                    },
+                    "limiting_beam": {
+                      "description": "The beam with the smallest amplitude range.",
+                      "enum": [
+                        "RED",
+                        "BLUE"
+                      ],
+                      "type": "string"
+                    },
+                    "max_limiting_amp": {
+                      "description": "The maximum amplitude the limiting beam can reach, in rad/µs.",
+                      "type": "number"
+                    },
+                    "mod_bandwidth": {
+                      "description": "The EOM modulation bandwidth at -3dB (50% reduction), in MHz.",
+                      "type": "number"
+                    },
+                    "multiple_beam_control": {
+                      "description": "Whether both EOMs can be used simultaneously or not.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "mod_bandwidth",
+                    "limiting_beam",
+                    "max_limiting_amp",
+                    "intermediate_detuning",
+                    "controlled_beams"
+                  ],
+                  "type": "object"
                 }
               ],
               "description": "Configuration of an associated EOM."
@@ -1176,7 +1320,56 @@
                   "type": "null"
                 },
                 {
-                  "$ref": "#/definitions/RydbergEOM"
+                  "additionalProperties": false,
+                  "properties": {
+                    "controlled_beams": {
+                      "description": "The beams that can be switched on/off with an EOM.",
+                      "items": {
+                        "enum": [
+                          "RED",
+                          "BLUE"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "custom_buffer_time": {
+                      "description": "A custom wait time to enforce during EOM buffers.",
+                      "type": "number"
+                    },
+                    "intermediate_detuning": {
+                      "description": "The detuning between the two beams, in rad/µs.",
+                      "type": "number"
+                    },
+                    "limiting_beam": {
+                      "description": "The beam with the smallest amplitude range.",
+                      "enum": [
+                        "RED",
+                        "BLUE"
+                      ],
+                      "type": "string"
+                    },
+                    "max_limiting_amp": {
+                      "description": "The maximum amplitude the limiting beam can reach, in rad/µs.",
+                      "type": "number"
+                    },
+                    "mod_bandwidth": {
+                      "description": "The EOM modulation bandwidth at -3dB (50% reduction), in MHz.",
+                      "type": "number"
+                    },
+                    "multiple_beam_control": {
+                      "description": "Whether both EOMs can be used simultaneously or not.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "mod_bandwidth",
+                    "limiting_beam",
+                    "max_limiting_amp",
+                    "intermediate_detuning",
+                    "controlled_beams"
+                  ],
+                  "type": "object"
                 }
               ],
               "description": "Configuration of an associated EOM."
@@ -1497,57 +1690,6 @@
         "min_duration",
         "min_retarget_interval",
         "mod_bandwidth"
-      ],
-      "type": "object"
-    },
-    "RydbergBeam": {
-      "enum": [
-        "RED",
-        "BLUE"
-      ],
-      "type": "string"
-    },
-    "RydbergEOM": {
-      "additionalProperties": false,
-      "properties": {
-        "controlled_beams": {
-          "description": "The beams that can be switched on/off with an EOM.",
-          "items": {
-            "$ref": "#/definitions/RydbergBeam"
-          },
-          "type": "array"
-        },
-        "custom_buffer_time": {
-          "description": "A custom wait time to enforce during EOM buffers.",
-          "type": "number"
-        },
-        "intermediate_detuning": {
-          "description": "The detuning between the two beams, in rad/µs.",
-          "type": "number"
-        },
-        "limiting_beam": {
-          "$ref": "#/definitions/RydbergBeam",
-          "description": "The beam with the smallest amplitude range."
-        },
-        "max_limiting_amp": {
-          "description": "The maximum amplitude the limiting beam can reach, in rad/µs.",
-          "type": "number"
-        },
-        "mod_bandwidth": {
-          "description": "The EOM modulation bandwidth at -3dB (50% reduction), in MHz.",
-          "type": "number"
-        },
-        "multiple_beam_control": {
-          "description": "Whether both EOMs can be used simultaneously or not.",
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "mod_bandwidth",
-        "limiting_beam",
-        "max_limiting_amp",
-        "intermediate_detuning",
-        "controlled_beams"
       ],
       "type": "object"
     }

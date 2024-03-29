@@ -805,19 +805,7 @@ class TestSerialization:
         ]
         assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
-    @pytest.mark.parametrize(
-        "delay_at_rest",
-        (
-            False,
-            pytest.param(
-                True,
-                marks=pytest.mark.xfail(
-                    reason="Schema not up-to-date",
-                    raises=AbstractReprError,
-                ),
-            ),
-        ),
-    )
+    @pytest.mark.parametrize("delay_at_rest", (False, True))
     @pytest.mark.parametrize("correct_phase_drift", (False, True))
     def test_eom_mode(
         self, triangular_lattice, correct_phase_drift, delay_at_rest
@@ -1392,23 +1380,12 @@ class TestDeserialization:
             {"op": "target", "target": 2, "channel": "digital"},
             {"op": "target", "target": [1, 2], "channel": "digital"},
             {"op": "delay", "time": 500, "channel": "global"},
-            pytest.param(
-                {
-                    "op": "delay",
-                    "time": 500,
-                    "channel": "global",
-                    "at_rest": True,
-                },
-                marks=pytest.mark.xfail(
-                    reason="Schema not up-to-date",
-                    raises=jsonschema.ValidationError,
-                ),
-            ),
+            {"op": "delay", "time": 500, "channel": "global", "at_rest": True},
             {"op": "align", "channels": ["digital", "global"]},
             {
                 "op": "align",
                 "channels": ["digital", "global"],
-                "at_rest": True,
+                "at_rest": False,
             },
             {
                 "op": "phase_shift",
@@ -1458,6 +1435,7 @@ class TestDeserialization:
         elif op["op"] == "align":
             assert c.name == "align"
             assert c.args == tuple(op["channels"])
+            assert c.kwargs.get("at_rest", True) == op.get("at_rest", True)
         elif op["op"] == "delay":
             assert c.name == "delay"
             assert c.kwargs["duration"] == op["time"]
@@ -1629,18 +1607,12 @@ class TestDeserialization:
                 "channel": "digital",
             },
             {"op": "delay", "time": var2, "channel": "global"},
-            pytest.param(
-                {
-                    "op": "delay",
-                    "time": var2,
-                    "channel": "global",
-                    "at_rest": True,
-                },
-                marks=pytest.mark.xfail(
-                    reason="Schema not up-to-date",
-                    raises=jsonschema.ValidationError,
-                ),
-            ),
+            {
+                "op": "delay",
+                "time": var2,
+                "channel": "global",
+                "at_rest": True,
+            },
             {
                 "op": "phase_shift",
                 "phi": var1,
