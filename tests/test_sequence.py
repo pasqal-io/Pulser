@@ -1699,7 +1699,8 @@ def test_draw_register_det_maps(reg, ch_name, patch_plt_show):
     seq3d.draw(draw_register=True, draw_detuning_maps=True)
 
 
-def test_hardware_constraints(reg, patch_plt_show):
+@pytest.mark.parametrize("align_at_rest", [True, False])
+def test_hardware_constraints(reg, align_at_rest, patch_plt_show):
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
@@ -1780,10 +1781,10 @@ def test_hardware_constraints(reg, patch_plt_show):
     assert seq._schedule["ch0"][-1].ti == seq._schedule["ch0"][-2].tf
 
     tf_ = seq.get_duration("ch0")
-    seq.align("ch0", "ch1")
+    seq.align("ch0", "ch1", at_rest=align_at_rest)
     fall_time = black_pls.fall_time(rydberg_global)
     assert seq.get_duration() == seq._schedule["ch0"].adjust_duration(
-        tf_ + fall_time
+        tf_ + fall_time * align_at_rest
     )
 
     with pytest.raises(ValueError, match="'mode' must be one of"):

@@ -269,7 +269,10 @@ def serialize_abstract_sequence(
                 }
             )
         elif call.name == "align":
-            operations.append({"op": "align", "channels": list(call.args)})
+            optional = remove_kwarg_if_default(call.kwargs, "align", "at_rest")
+            operations.append(
+                {"op": "align", "channels": list(call.args), **optional}
+            )
         elif call.name == "delay":
             data = get_all_args(("duration", "channel", "at_rest"), call)
             data = remove_kwarg_if_default(data, "delay", "at_rest")

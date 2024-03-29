@@ -1411,6 +1411,10 @@ class Sequence(Generic[DeviceType]):
             at_rest: Whether to wait until the previous pulse on the
                 channel has finished (including output modulation) before
                 starting the delay.
+
+        Note:
+            Delays added automatically by other instructions will generally
+            take into account the output modulation.
         """
         self._delay(duration, channel, at_rest)
 
@@ -1508,7 +1512,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
-    def align(self, *channels: str) -> None:
+    def align(self, *channels: str, at_rest: bool = True) -> None:
         """Aligns multiple channels in time.
 
         Introduces delays that align the provided channels with the one that
@@ -1518,6 +1522,8 @@ class Sequence(Generic[DeviceType]):
         Args:
             channels: The names of the channels to align, as given upon
                 declaration.
+            at_rest: Whether to consider the output modulation of a channel's
+                contents when determining that it has finished.
         """
         ch_set = set(channels)
         # channels have to be a subset of the declared channels
@@ -1535,7 +1541,7 @@ class Sequence(Generic[DeviceType]):
             return
 
         last_ts = {
-            id: self.get_duration(id, include_fall_time=True)
+            id: self.get_duration(id, include_fall_time=at_rest)
             for id in channels
         }
         tf = max(last_ts.values())

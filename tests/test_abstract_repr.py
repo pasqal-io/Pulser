@@ -1406,6 +1406,11 @@ class TestDeserialization:
             ),
             {"op": "align", "channels": ["digital", "global"]},
             {
+                "op": "align",
+                "channels": ["digital", "global"],
+                "at_rest": True,
+            },
+            {
                 "op": "phase_shift",
                 "phi": 42,
                 "targets": [0, 2],
