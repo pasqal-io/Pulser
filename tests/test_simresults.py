@@ -408,6 +408,5 @@ def test_false_positive():
         ),
         channel="ryd_glob",
     )
-    seq.draw()
     sim = QutipEmulator.from_sequence(seq)
     assert sim.run().get_final_state() != sim.initial_state
