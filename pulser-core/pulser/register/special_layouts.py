@@ -30,31 +30,30 @@ from scipy.spatial.distance import cdist
 
 
 class RectangularLatticeLayout(RegisterLayout):
-    """A RegisterLayout with a rectangular lattice pattern in a rectangular
-    shape.
+    """RegisterLayout with rectangular lattice pattern in a rectangular shape.
 
     Args:
         rows: The number of rows of traps.
         columns: The number of columns of traps.
-        x_spacing: Horizontal distance between neighbouring traps (in µm).
-        y_spacing: Vertical distance between neighbouring traps (in µm)
+        col_spacing: Horizontal distance between neighbouring traps (in µm).
+        row_spacing: Vertical distance between neighbouring traps (in µm)
     """
 
     def __init__(
-        self, rows: int, columns: int, x_spacing: float, y_spacing: float
+        self, rows: int, columns: int, col_spacing: float, row_spacing: float
     ):
         """Initializes a RectangularLatticeLayout."""
         self._rows = int(rows)
         self._columns = int(columns)
-        self._x_spacing = float(x_spacing)
-        self._y_spacing = float(y_spacing)
+        self._col_spacing = float(col_spacing)
+        self._row_spacing = float(row_spacing)
         slug = (
-            f"RectangularLatticeLayout(Shape : {self._rows}x{self._columns}, "
-            f"Lattice pattern : {self._x_spacing}x{self._y_spacing}µm)"
+            f"RectangularLatticeLayout({self._rows}x{self._columns}, "
+            f"{self._col_spacing}x{self._row_spacing}µm)"
         )
         self._traps = patterns.square_rect(self._rows, self._columns)
-        self._traps[:, 0] = self._traps[:, 0] * self._x_spacing
-        self._traps[:, 1] = self._traps[:, 1] * self._y_spacing
+        self._traps[:, 0] = self._traps[:, 0] * self._col_spacing
+        self._traps[:, 1] = self._traps[:, 1] * self._row_spacing
         super().__init__(
             trap_coordinates=self._traps,
             slug=slug,
@@ -98,8 +97,8 @@ class RectangularLatticeLayout(RegisterLayout):
                 f"{self._rows}x{self._columns} RectangularLatticeLayout."
             )
         points = patterns.square_rect(rows, columns)
-        points[:, 0] = points[:, 0] * self._x_spacing
-        points[:, 1] = points[:, 1] * self._y_spacing
+        points[:, 0] = points[:, 0] * self._col_spacing
+        points[:, 1] = points[:, 1] * self._row_spacing
         trap_ids = self.get_traps_from_coordinates(*points)
         qubit_ids = [f"{prefix}{i}" for i in range(len(trap_ids))]
         return cast(
@@ -109,7 +108,8 @@ class RectangularLatticeLayout(RegisterLayout):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
-            self, self._rows, self._columns, self._x_spacing, self._y_spacing
+            self, self._rows, self._columns, self._col_spacing,
+            self._row_spacing
         )
 
 
@@ -127,9 +127,16 @@ class SquareLatticeLayout(RectangularLatticeLayout):
         self._rows = int(rows)
         self._columns = int(columns)
         self._spacing = float(spacing)
+        self._col_spacing = self._spacing
+        self._row_spacing = self._spacing
         super().__init__(
             self._rows, self._columns, self._spacing, self._spacing
         )
+        slug = (
+            f"SquareLatticeLayout({self._rows}x{self._columns}, "
+            f"{self._spacing}µm)"
+        )
+        object.__setattr__(self, "slug", slug)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._rows, self._columns, self._spacing)
@@ -211,8 +218,7 @@ class TriangularLatticeLayout(RegisterLayout):
 
 
 class TriangularLatticeLayoutRectShape(RegisterLayout):
-    """A RegisterLayout with a triangular lattice pattern in a rectangular
-    shape.
+    """RegisterLayout with a triangular lattice pattern in a rectangular shape.
 
     Args:
         n_traps: The number of traps in the layout.
@@ -252,8 +258,8 @@ class RandomLayout(RegisterLayout):
         min_spacing: float = 5,
         max_iter: int = 1000,
     ):
-        """Initializes a random layout"""
-        self._pts = []
+        """Initializes a random layout."""
+        self._pts : np.ndarray = []
         self._n_traps = int(n_traps)
         self._min_spacing = float(min_spacing)
         i = 0

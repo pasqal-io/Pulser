@@ -194,17 +194,17 @@ def test_square_lattice_layout():
 
 
 def test_rectangular_lattice_layout():
-    rectangle = RectangularLatticeLayout(9, 7, 5, 5)
+    rectangle = RectangularLatticeLayout(9, 7, 2, 4)
     assert (
         str(rectangle)
-        == "RectangularLatticeLayout(Shape : 9x7, Lattice pattern : 5.0x5.0µm)"
+        == "RectangularLatticeLayout(9x7, 2.0x4.0µm)"
     )
-    assert rectangle.square_register(3) == Register.square(
-        3, spacing=5, prefix="q"
+    assert rectangle.square_register(3) == Register.rectangle_rect_lattice(
+        3, 3, col_spacing=2, row_spacing=4, prefix="q"
     )
     # An even number of atoms on the side won't align the center with an atom
-    assert rectangle.square_register(4) != Register.square(
-        4, spacing=5, prefix="q"
+    assert rectangle.square_register(4) != Register.rectangle_rect_lattice(
+        4, 4, col_spacing=2, row_spacing=4, prefix="q"
     )
     with pytest.raises(ValueError, match="'8x8' array doesn't fit"):
         rectangle.square_register(8)

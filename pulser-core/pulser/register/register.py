@@ -89,7 +89,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a rectangular array with a square lattice.
+        """Initializes register, qubits in a rectangular array, square lattice.
 
         Args:
             rows: Number of rows.
@@ -124,6 +124,55 @@ class Register(BaseRegister, RegDrawer):
             )
 
         coords = patterns.square_rect(rows, columns) * spacing
+
+        return cls.from_coordinates(coords, center=True, prefix=prefix)
+
+    @classmethod
+    def rectangle_rect_lattice(
+        cls,
+        rows: int,
+        columns: int,
+        row_spacing: float = 4.0,
+        col_spacing: float = 2.0,
+        prefix: Optional[str] = None,
+    ) -> Register:
+        """Initializes register, qubits in rectangle array, rectangle lattice.
+
+        Args:
+            rows: Number of rows.
+            columns: Number of columns.
+            row_spacing: The distance between rows in μm.
+            col_spacing: The distance between columns in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
+
+        Returns:
+            Register, qubits placed in a rectangular array, rectangle lattice.
+        """
+        # Check rows
+        if rows < 1:
+            raise ValueError(
+                f"The number of rows (`rows` = {rows})"
+                " must be greater than or equal to 1."
+            )
+
+        # Check columns
+        if columns < 1:
+            raise ValueError(
+                f"The number of columns (`columns` = {columns})"
+                " must be greater than or equal to 1."
+            )
+
+        # Check spacing
+        if row_spacing <= 0.0 or col_spacing <= 0.0:
+            raise ValueError(
+                "Spacing between atoms must be greater than 0."
+            )
+
+        coords = patterns.square_rect(rows, columns)
+        coords[:, 0] = coords[:, 0]*col_spacing
+        coords[:, 1] = coords[:, 1]*row_spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
