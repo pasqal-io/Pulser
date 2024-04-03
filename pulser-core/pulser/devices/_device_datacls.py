@@ -75,6 +75,7 @@ class BaseDevice(ABC):
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
     """
+
     name: str
     dimensions: DIMENSIONS
     rydberg_level: int
@@ -508,6 +509,7 @@ class Device(BaseDevice):
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
+
     max_atom_num: int
     max_radial_distance: int
     pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
@@ -630,15 +632,17 @@ class Device(BaseDevice):
                         + f" {ch.max_amp:.4g} rad/µs"
                     ),
                     (
-                        "\t"
-                        + r"- Maximum :math:`|\delta|`:"
-                        + f" {ch.max_abs_detuning:.4g} rad/µs"
-                    )
-                    if not isinstance(ch, DMM)
-                    else (
-                        "\t"
-                        + r"- Bottom :math:`|\delta|`:"
-                        + f" {ch.bottom_detuning:.4g} rad/µs"
+                        (
+                            "\t"
+                            + r"- Maximum :math:`|\delta|`:"
+                            + f" {ch.max_abs_detuning:.4g} rad/µs"
+                        )
+                        if not isinstance(ch, DMM)
+                        else (
+                            "\t"
+                            + r"- Bottom :math:`|\delta|`:"
+                            + f" {ch.bottom_detuning:.4g} rad/µs"
+                        )
                     ),
                     f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
                 ]
@@ -703,6 +707,7 @@ class VirtualDevice(BaseDevice):
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """
+
     min_atom_distance: float = 0
     max_atom_num: int | None = None
     max_radial_distance: int | None = None

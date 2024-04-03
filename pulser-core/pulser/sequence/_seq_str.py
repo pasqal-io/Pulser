@@ -63,10 +63,12 @@ def seq_to_str(sequence: Sequence) -> str:
                     full += dmm_det_line.format(
                         ts.ti,
                         ts.tf,
-                        ts.type.detuning
-                        if not seq.is_detuned_delay(ts.type)
-                        else "{:.3g} rad/µs".format(
-                            cast(float, ts.type.detuning[0])
+                        (
+                            ts.type.detuning
+                            if not seq.is_detuned_delay(ts.type)
+                            else "{:.3g} rad/µs".format(
+                                cast(float, ts.type.detuning[0])
+                            )
                         ),
                         tgt_txt,
                     )

@@ -75,7 +75,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/noisy_sim
    tutorials/spam
    tutorials/laser_noise
-   tutorials/kraus_ops
+   tutorials/effective_noise
 
 .. toctree::
    :maxdepth: 1

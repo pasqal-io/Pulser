@@ -325,9 +325,11 @@ def gather_qubit_data(
                         if sub_target != set():
                             pad_times = (
                                 0 if times == "initial" else target[0],
-                                0
-                                if times == "initial"
-                                else total_duration - target[1],
+                                (
+                                    0
+                                    if times == "initial"
+                                    else total_duration - target[1]
+                                ),
                             )
                             qubit_data[i][tuple(sub_target)] = (
                                 w
@@ -935,11 +937,13 @@ def _draw_qubit_content(
     draw_data = {"input": draw_input, "modulated": draw_modulation}
     n_data = sum(list(draw_data.values()))
     qubit_data = [
-        gather_qubit_data(
-            sampled_seq, data, register, (data_name == "modulated")
+        (
+            gather_qubit_data(
+                sampled_seq, data, register, (data_name == "modulated")
+            )
+            if to_draw
+            else None
         )
-        if to_draw
-        else None
         for data_name, to_draw in draw_data.items()
     ]
     # Figure composed of 2 subplots (input, modulated) each composed

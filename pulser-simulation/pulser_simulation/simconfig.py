@@ -34,14 +34,19 @@ T = TypeVar("T", bound="SimConfig")
 
 SUPPORTED_NOISES: dict = {
     "ising": {
-        "dephasing",
-        "doppler",
         "amplitude",
+        "dephasing",
+        "depolarizing",
+        "doppler",
+        "eff_noise",
         "SPAM",
+    },
+    "XY": {
+        "dephasing",
         "depolarizing",
         "eff_noise",
+        "SPAM",
     },
-    "XY": {"SPAM"},
 }
 
 
