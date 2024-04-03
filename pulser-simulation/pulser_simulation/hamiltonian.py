@@ -24,6 +24,7 @@ import numpy as np
 import qutip
 
 from pulser.backend.noise_model import NoiseModel
+from pulser.channels.base_channel import STATES_RANK
 from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
@@ -162,7 +163,7 @@ class Hamiltonian:
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
         if not hasattr(self, "basis_name"):
-            self._build_basis_and_op_matrices()
+            self._build_basis_and_op_matrices(cfg)
         self._build_collapse_operators(cfg)
         self._config = cfg
         if not (
@@ -303,28 +304,33 @@ class Hamiltonian:
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
-    def _build_basis_and_op_matrices(self) -> None:
+    def _build_basis_and_op_matrices(self, cfg: NoiseModel) -> None:
         """Determine dimension, basis and projector operators."""
-        effective_bases = self.samples_obj.used_bases - {"error"}
-        if len(effective_bases) == 0:
+        if len(self.samples_obj.used_bases) == 0:
             if self.samples_obj._in_xy:
                 self.basis_name = "XY"
             else:
                 self.basis_name = "ground-rydberg"
-        elif len(effective_bases) == 1:
-            self.basis_name = list(effective_bases)[0]
+        elif len(self.samples_obj.used_bases) == 1:
+            self.basis_name = list(self.samples_obj.used_bases)[0]
         else:
             self.basis_name = "all"  # All three rydberg states
-        if "error" in self.samples_obj.used_bases:
+        eigenbasis = self.samples_obj.eigenbasis
+
+        if "err_state" in cfg.noise_types:
             self.basis_name += "_with_error"
-        self.dim = len(self.samples_obj.eigenbasis)
+            eigenbasis.append("x")
+        self.eigenbasis = [
+            state for state in STATES_RANK if state in eigenbasis
+        ]
+
+        self.dim = len(self.eigenbasis)
         self.basis = {
-            b: qutip.basis(self.dim, i)
-            for i, b in enumerate(self.samples_obj.eigenbasis)
+            b: qutip.basis(self.dim, i) for i, b in enumerate(self.eigenbasis)
         }
         self.op_matrix = {"I": qutip.qeye(self.dim)}
-        for proj0 in self.samples_obj.eigenbasis:
-            for proj1 in self.samples_obj.eigenbasis:
+        for proj0 in self.eigenbasis:
+            for proj1 in self.eigenbasis:
                 proj_name = "sigma_" + proj0 + proj1
                 self.op_matrix[proj_name] = (
                     self.basis[proj0] * self.basis[proj1].dag()
@@ -430,8 +436,6 @@ class Hamiltonian:
                 op_ids = ["sigma_hg", "sigma_gg"]
             elif basis == "XY":
                 op_ids = ["sigma_du", "sigma_uu"]
-            elif basis == "error":
-                op_ids = ["sigma_gx", "sigma_xx"]
 
             terms = []
             if addr == "Global":

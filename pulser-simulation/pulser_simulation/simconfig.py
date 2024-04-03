@@ -24,7 +24,13 @@ import qutip
 from pulser.backend.noise_model import NoiseModel
 
 NOISE_TYPES = Literal[
-    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"
+    "doppler",
+    "amplitude",
+    "SPAM",
+    "dephasing",
+    "depolarizing",
+    "eff_noise",
+    "err_state",
 ]
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
@@ -40,6 +46,7 @@ SUPPORTED_NOISES: dict = {
         "doppler",
         "eff_noise",
         "SPAM",
+        "garbage",
     },
     "XY": {
         "dephasing",
@@ -72,6 +79,10 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
+            - "err_state": Adds an error state 'x' to the computational
+              basis, that can interact with the other states via an
+              effective noise channel. Incompatible with dephasing and
+              depolarizing noise channels.
             - "dephasing": Random phase (Z) flip.
             - "depolarizing": Quantum noise where the state (rho) is
               turned into a mixed state I/2 at a rate gamma (in rad/µs).

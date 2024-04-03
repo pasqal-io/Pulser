@@ -31,8 +31,7 @@
       "enum": [
         "ground-rydberg",
         "digital",
-        "XY",
-        "error"
+        "XY"
       ],
       "type": "string"
     },
@@ -407,6 +406,9 @@
       "additionalProperties": false,
       "description": "Aligns multiple channels in time.\n\nIntroduces delays that align the provided channels with the one that finished the latest, such that the next action added to any of them will start right after the latest channel has finished.",
       "properties": {
+        "at_rest": {
+          "type": "boolean"
+        },
         "channels": {
           "items": {
             "$ref": "#/definitions/ChannelName"
@@ -477,6 +479,10 @@
       "additionalProperties": false,
       "description": "Adds extra fixed delay before starting the pulse.",
       "properties": {
+        "at_rest": {
+          "description": "Whether to wait for the previous pulse to finish before applying the delay.",
+          "type": "boolean"
+        },
         "channel": {
           "$ref": "#/definitions/ChannelName",
           "description": "Channel on which to insert a delay"

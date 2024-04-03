@@ -1441,7 +1441,7 @@ class Sequence(Generic[DeviceType]):
                 the available options, "error" basis not being valid).
         """
         available = (
-            self._device.supported_bases - {"XY", "error"}
+            self._device.supported_bases - {"XY"}
             if not self._in_xy
             else {"XY"}
         )

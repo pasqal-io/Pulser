@@ -251,12 +251,6 @@ class TestNoiseModel:
                 eff_noise_opers=[2.0],
                 eff_noise_rates=[1.0],
             )
-        with pytest.raises(NotImplementedError, match="Operator's shape"):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I3"]],
-                eff_noise_rates=[1.0],
-            )
 
 
 class _MockConnection(RemoteConnection):

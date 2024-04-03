@@ -419,28 +419,20 @@ class SequenceSamples:
 
     @property
     def used_bases(self) -> set[str]:
-        """The bases effectively used.
-
-        The bases that are not the "error" basis are considered as used if
-        they contain non-zero pulses. If declared, the "error" basis is
-        considered as used.
-        """
+        """The bases with non-zero pulses."""
         return {
             ch_obj.basis
             for ch_obj, ch_samples in zip(
                 self._ch_objs.values(), self.samples_list
             )
-            if not ch_samples.is_empty() or ch_obj.basis == "error"
+            if not ch_samples.is_empty()
         }
 
     @property
     def eigenbasis(self) -> list[States]:
         """The eigenstates used for simulation."""
-        if len(self.used_bases - {"error"}) == 0:
-            basis = EIGENSTATES["XY" if self._in_xy else "ground-rydberg"]
-            if "error" in self.used_bases:
-                basis += [EIGENSTATES["error"][-1]]
-            return basis
+        if len(self.used_bases) == 0:
+            return EIGENSTATES["XY" if self._in_xy else "ground-rydberg"]
         all_states = set().union(
             *(EIGENSTATES[basis] for basis in self.used_bases)
         )

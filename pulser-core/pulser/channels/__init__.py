@@ -13,7 +13,7 @@
 # limitations under the License.
 """The various hardware channel types."""
 
-from pulser.channels.channels import Microwave, Raman, Rydberg, RydbergError
+from pulser.channels.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
 
-__all__ = ["Microwave", "Raman", "Rydberg", "RydbergError", "DMM"]
+__all__ = ["Microwave", "Raman", "Rydberg", "DMM"]

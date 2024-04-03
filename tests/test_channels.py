@@ -139,6 +139,10 @@ def test_device_channels():
                 assert ch.max_targets >= 1
                 assert ch.max_targets == int(ch.max_targets)
 
+def test_eigenstates():
+    assert Raman.Global(None, None).eigenstates == ["g", "h"]
+    assert Rydberg.Global(None, None).eigenstates == ["r", "g"]
+    assert Microwave.Global(None, None).eigenstates == ["u", "d"]
 
 def test_validate_duration():
     ch = Rydberg.Local(20, 10, min_duration=16, max_duration=1000)

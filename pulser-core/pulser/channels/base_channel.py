@@ -42,7 +42,6 @@ STATES_RANK = get_args(States)
 EIGENSTATES: dict[str, list[States]] = {
     "ground-rydberg": ["r", "g"],
     "digital": ["g", "h"],
-    "error": ["g", "x"],
     "XY": ["u", "d"],
 }
 
@@ -110,7 +109,7 @@ class Channel(ABC):
     def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
         """Internal parameters and their valid options."""
         return dict(
-            name=("Rydberg", "Raman", "Microwave", "DMM", "RydbergError"),
+            name=("Rydberg", "Raman", "Microwave", "DMM"),
             basis=tuple(EIGENSTATES.keys()),
             addressing=("Local", "Global"),
         )
