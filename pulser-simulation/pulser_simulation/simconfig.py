@@ -46,7 +46,7 @@ SUPPORTED_NOISES: dict = {
         "doppler",
         "eff_noise",
         "SPAM",
-        "garbage",
+        "err_state",
     },
     "XY": {
         "dephasing",

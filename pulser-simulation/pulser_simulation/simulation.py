@@ -29,6 +29,7 @@ from numpy.typing import ArrayLike
 import pulser.sampler as sampler
 from pulser import Sequence
 from pulser.backend.noise_model import NoiseModel
+from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
@@ -174,6 +175,8 @@ class QutipEmulator:
                 "all_with_error",
             }:
                 self._meas_basis = "digital"
+            elif self.basis_name == "ground-rydberg_with_error":
+                self._meas_basis = "ground-rydberg"
             else:
                 self._meas_basis = self.basis_name
         self.set_initial_state("all-ground")
@@ -210,6 +213,11 @@ class QutipEmulator:
         `sigma_ab` is :math:`a \odot b.T` with a and b basis states.
         """
         return self._hamiltonian.op_matrix
+
+    @property
+    def eigenbasis(self) -> list[States]:
+        """The computational basis used in the simulation."""
+        return self._hamiltonian.eigenbasis
 
     @property
     def config(self) -> SimConfig:
@@ -577,7 +585,15 @@ class QutipEmulator:
             ):
                 result = qutip.mesolve(
                     self._hamiltonian._hamiltonian,
-                    self.initial_state,
+                    (
+                        self.initial_state
+                        if not (
+                            "SPAM" in self.config.noise
+                            and self._hamiltonian.with_err
+                        )
+                        else self.config.eta * self.op_matrix["sigma_gg"]
+                        + (1 - self.config.eta) * self.initial_state
+                    ),
                     self._eval_times_array,
                     self._hamiltonian._collapse_ops,
                     progress_bar=p_bar,
@@ -611,10 +627,15 @@ class QutipEmulator:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
+            {"dephasing", "SPAM", "depolarizing", "eff_noise", "err_state"}
         ):
-            # If there is "SPAM", the preparation errors must be zero
-            if "SPAM" not in self.config.noise or self.config.eta == 0:
+            # If there is no "SPAM" or if error state is to be taken into
+            # account, the preparation errors must be zero
+            if (
+                "SPAM" not in self.config.noise
+                or self.config.eta == 0
+                or self._hamiltonian.with_err
+            ):
                 return _run_solver()
 
             else:

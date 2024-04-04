@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import itertools
+import warnings
 from collections import defaultdict
 from collections.abc import Mapping
 from typing import Union, cast
@@ -30,6 +31,100 @@ from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
 
+
+def build_operator(
+    sampled_seq: SequenceSamples,
+    qubits: dict[QubitId, np.ndarray],
+    operations: Union[list, tuple],
+    with_err: bool = False,
+    op_matrix: dict[str, qutip.Qobj] | None = None,
+) -> qutip.Qobj:
+    r"""Creates an operator with non-trivial actions on some qubits.
+
+    Takes as argument a list of tuples ``[(operator_1, qubits_1),
+    (operator_2, qubits_2), ...]``. Returns the operator given by the tensor
+    product of {``operator_i`` applied on ``qubits_i``} and Id on the rest.
+    ``(operator, 'global')`` returns the sum for all ``j`` of operator
+    applied at ``qubit_j`` and identity elsewhere.
+
+    `operator` can be a ``qutip.Quobj`` or a string key for ``op_matrix``. If
+    ``op_matrix`` is undefined, this string can be "I" or "sigma_{a}{b}" with
+    a, b elements of the computational basis (sampled_seq.eigenbasis with "x"
+    if with_err is True) and ``sigma_{ab} = a * b^\dagger``.
+    `qubits` is the list on which operator will be applied. The qubits can be
+    passed as their index or their label in the register.
+
+    Example for 4 qubits labelled ["q0", "q1", "q2", "q3"]:
+        - ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`.
+        - ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`.
+        - ``[(X, ["q0"])]`` returns ``XIII`` on ["q0", "q1", "q2", "q3"].
+        - ``[(sigma_gg, ["q0"])]`` applies ``sigma_ggIII``.
+
+    Args:
+        sampled_seq: The SequenceSamples to consider. Provides the
+            computational basis in which the operators are defined.
+        qubits: A dict of {label: position} whose labels can be used in
+            operations.
+        operations: List of tuples `(operator, qubits)`.
+        with_err: Whether or not to include an error state (adds a "x" state
+            to the computational basis of sampled_seq). Only used if op_matrix
+            is None.
+        op_matrix: A dict of operators and their labels. If None, it is
+            computed and is composed of all the projectors on the
+            computational basis (with error state if with_err is True) and "I".
+
+
+    Returns:
+        The final operator.
+    """
+    if op_matrix is None:
+        eigenstates = sampled_seq.eigenbasis
+        if with_err:
+            eigenstates.append("x")
+        eigenbasis = [state for state in STATES_RANK if state in eigenstates]
+
+        dim = len(eigenbasis)
+        basis = {b: qutip.basis(dim, i) for i, b in enumerate(eigenbasis)}
+        op_matrix = {"I": qutip.qeye(dim)}
+        for proj0 in eigenbasis:
+            for proj1 in eigenbasis:
+                proj_name = "sigma_" + proj0 + proj1
+                op_matrix[proj_name] = basis[proj0] * basis[proj1].dag()
+
+    op_list = [op_matrix["I"] for j in range(len(qubits))]
+    _qid_index = {qid: i for i, qid in enumerate(qubits)}
+    if not isinstance(operations, list):
+        operations = [operations]
+
+    for operator, qids in operations:
+        if qids == "global":
+            return sum(
+                build_operator(
+                    sampled_seq,
+                    qubits,
+                    [(operator, [q_id])],
+                    with_err,
+                    op_matrix,
+                )
+                for q_id in qubits
+            )
+        else:
+            qids_set = set(qids)
+            if len(qids_set) < len(qubits):
+                raise ValueError("Duplicate atom ids in argument list.")
+            if not qids_set.issubset(qubits.keys()):
+                raise ValueError(
+                    "Invalid qubit names: " f"{qids_set - qubits.keys()}"
+                )
+            if isinstance(operator, str):
+                try:
+                    operator = op_matrix[operator]
+                except KeyError:
+                    raise ValueError(f"{operator} is not a valid operator")
+            for qubit in qubits:
+                k = _qid_index[qubit]
+                op_list[k] = operator
+    return qutip.tensor(list(map(qutip.Qobj, op_list)))
 
 class Hamiltonian:
     r"""Generates Hamiltonian from a sampled sequence and noise.
@@ -59,6 +154,7 @@ class Hamiltonian:
         self._sampling_rate = sampling_rate
 
         # Type hints for attributes defined outside of __init__
+        self.with_err: bool
         self.basis_name: str
         self._config: NoiseModel
         self.op_matrix: dict[str, qutip.Qobj]
@@ -162,13 +258,30 @@ class Hamiltonian:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        if not hasattr(self, "basis_name"):
-            self._build_basis_and_op_matrices(cfg)
+        with_err = False
+        if "err_state" in cfg.noise_types:
+            if "eff_noise" in cfg.noise_types and not cfg.eff_noise_opers:
+                with_err = True
+            else:
+                warnings.warn(
+                    "Error state is asked to be taken into account but no "
+                    "effective noise is provided, hence it has no effect on "
+                    "the simulation."
+                )
+        if not hasattr(self, "basis_name") and (
+            not hasattr(self, "with_err")
+            or (hasattr(self, "with_err") and self.with_err != with_err)
+        ):
+            self.with_err = with_err
+            self._build_basis_and_op_matrices()
         self._build_collapse_operators(cfg)
         self._config = cfg
-        if not (
-            "SPAM" in self.config.noise_types
-            and self.config.state_prep_error > 0
+        if (
+            not (
+                "SPAM" in self.config.noise_types
+                and self.config.state_prep_error > 0
+            )
+            or self.with_err
         ):
             self._bad_atoms = {qid: False for qid in self._qid_index}
         if "doppler" not in self.config.noise_types:
@@ -284,18 +397,22 @@ class Hamiltonian:
     def _update_noise(self) -> None:
         """Updates noise random parameters.
 
-        Used at the start of each run. If SPAM isn't in chosen noises, all
-        atoms are set to be correctly prepared.
+        Used at the start of each run. If SPAM isn't in chosen noises or if
+        the error state is asked to be taken into account, all atoms are set
+        to be correctly prepared.
         """
         if (
             "SPAM" in self.config.noise_types
             and self.config.state_prep_error > 0
         ):
-            dist = (
-                np.random.uniform(size=len(self._qid_index))
-                < self.config.state_prep_error
-            )
-            self._bad_atoms = dict(zip(self._qid_index, dist))
+            if self.with_err:
+                self._bad_atoms = {qid: False for qid in self._qid_index}
+            else:
+                dist = (
+                    np.random.uniform(size=len(self._qid_index))
+                    < self.config.state_prep_error
+                )
+                self._bad_atoms = dict(zip(self._qid_index, dist))
         if "doppler" in self.config.noise_types:
             detune = np.random.normal(
                 0,
@@ -304,7 +421,7 @@ class Hamiltonian:
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
-    def _build_basis_and_op_matrices(self, cfg: NoiseModel) -> None:
+    def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
         if len(self.samples_obj.used_bases) == 0:
             if self.samples_obj._in_xy:
@@ -317,7 +434,7 @@ class Hamiltonian:
             self.basis_name = "all"  # All three rydberg states
         eigenbasis = self.samples_obj.eigenbasis
 
-        if "err_state" in cfg.noise_types:
+        if self.with_err:
             self.basis_name += "_with_error"
             eigenbasis.append("x")
         self.eigenbasis = [
