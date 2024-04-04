@@ -209,11 +209,15 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             channel=op["channel"],
         )
     elif op["op"] == "align":
-        seq.align(*op["channels"])
+        seq.align(
+            *op["channels"],
+            at_rest=op.get("at_rest", True),
+        )
     elif op["op"] == "delay":
         seq.delay(
             duration=_deserialize_parameter(op["time"], vars),
             channel=op["channel"],
+            at_rest=op.get("at_rest", False),
         )
     elif op["op"] == "phase_shift":
         seq.phase_shift_index(
