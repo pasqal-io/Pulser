@@ -126,6 +126,7 @@ def build_operator(
                 op_list[k] = operator
     return qutip.tensor(list(map(qutip.Qobj, op_list)))
 
+
 class Hamiltonian:
     r"""Generates Hamiltonian from a sampled sequence and noise.
 
