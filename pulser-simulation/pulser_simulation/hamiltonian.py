@@ -36,8 +36,8 @@ def build_operator(
     sampled_seq: SequenceSamples,
     qubits: dict[QubitId, np.ndarray],
     operations: Union[list, tuple],
-    with_err: bool = False,
     op_matrix: dict[str, qutip.Qobj] | None = None,
+    with_err: bool = False,
 ) -> qutip.Qobj:
     r"""Creates an operator with non-trivial actions on some qubits.
 
@@ -66,12 +66,12 @@ def build_operator(
         qubits: A dict of {label: position} whose labels can be used in
             operations.
         operations: List of tuples `(operator, qubits)`.
-        with_err: Whether or not to include an error state (adds a "x" state
-            to the computational basis of sampled_seq). Only used if op_matrix
-            is None.
         op_matrix: A dict of operators and their labels. If None, it is
             computed and is composed of all the projectors on the
             computational basis (with error state if with_err is True) and "I".
+        with_err: Whether or not to include an error state (adds a "x" state
+            to the computational basis of sampled_seq). Only used if op_matrix
+            is None.
 
 
     Returns:
@@ -103,14 +103,14 @@ def build_operator(
                     sampled_seq,
                     qubits,
                     [(operator, [q_id])],
-                    with_err,
                     op_matrix,
+                    with_err,
                 )
                 for q_id in qubits
             )
         else:
             qids_set = set(qids)
-            if len(qids_set) < len(qubits):
+            if len(qids_set) < len(qids):
                 raise ValueError("Duplicate atom ids in argument list.")
             if not qids_set.issubset(qubits.keys()):
                 raise ValueError(
@@ -121,7 +121,7 @@ def build_operator(
                     operator = op_matrix[operator]
                 except KeyError:
                     raise ValueError(f"{operator} is not a valid operator")
-            for qubit in qubits:
+            for qubit in qids:
                 k = _qid_index[qubit]
                 op_list[k] = operator
     return qutip.tensor(list(map(qutip.Qobj, op_list)))
@@ -365,35 +365,13 @@ class Hamiltonian:
         Returns:
             The final operator.
         """
-        op_list = [self.op_matrix["I"] for j in range(self._size)]
-
-        if not isinstance(operations, list):
-            operations = [operations]
-
-        for operator, qubits in operations:
-            if qubits == "global":
-                return sum(
-                    self.build_operator([(operator, [q_id])])
-                    for q_id in self._qdict
-                )
-            else:
-                qubits_set = set(qubits)
-                if len(qubits_set) < len(qubits):
-                    raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(self._qdict.keys()):
-                    raise ValueError(
-                        "Invalid qubit names: "
-                        f"{qubits_set - self._qdict.keys()}"
-                    )
-                if isinstance(operator, str):
-                    try:
-                        operator = self.op_matrix[operator]
-                    except KeyError:
-                        raise ValueError(f"{operator} is not a valid operator")
-                for qubit in qubits:
-                    k = self._qid_index[qubit]
-                    op_list[k] = operator
-        return qutip.tensor(list(map(qutip.Qobj, op_list)))
+        return build_operator(
+            self.samples_obj,
+            self._qdict,
+            operations,
+            self.op_matrix,
+            self.with_err,
+        )
 
     def _update_noise(self) -> None:
         """Updates noise random parameters.
