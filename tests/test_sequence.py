@@ -84,12 +84,15 @@ def test_channel_declaration(reg, device):
     seq = Sequence(reg, device)
     available_channels = set(seq.available_channels)
     assert seq.get_addressed_bases() == ()
+    assert seq.get_addressed_states() == []
     with pytest.raises(ValueError, match="Name starting by 'dmm_'"):
         seq.declare_channel("dmm_1_2", "raman")
     seq.declare_channel("ch0", "rydberg_global")
     assert seq.get_addressed_bases() == ("ground-rydberg",)
+    assert seq.get_addressed_states() == ["r", "g"]
     seq.declare_channel("ch1", "raman_local")
     assert seq.get_addressed_bases() == ("ground-rydberg", "digital")
+    assert seq.get_addressed_states() == ["r", "g", "h"]
     with pytest.raises(ValueError, match="No channel"):
         seq.declare_channel("ch2", "raman")
     with pytest.raises(ValueError, match="not available"):
@@ -128,6 +131,8 @@ def test_channel_declaration(reg, device):
         match="cannot work simultaneously with the declared 'Microwave'",
     ):
         seq2.declare_channel("ch3", "rydberg_global")
+    assert seq2.get_addressed_bases() == ("XY",)
+    assert seq2.get_addressed_states() == ["u", "d"]
 
 
 def test_dmm_declaration(reg, device, det_map):
