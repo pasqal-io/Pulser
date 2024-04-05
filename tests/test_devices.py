@@ -22,7 +22,12 @@ import pytest
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
-from pulser.devices import Device, DigitalAnalogDevice, VirtualDevice
+from pulser.devices import (
+    Device,
+    DigitalAnalogDevice,
+    VirtualDevice,
+    MockDevice,
+)
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -186,6 +191,30 @@ def test_default_channel_ids(test_params):
         "raman_global",
         "mw_global",
     )
+
+
+@pytest.mark.parametrize(
+    "channels, states",
+    [
+        ((Rydberg.Local(None, None),), ["r", "g"]),
+        ((Raman.Local(None, None),), ["g", "h"]),
+        (DigitalAnalogDevice.channel_objects, ["r", "g", "h"]),
+        (
+            (
+                Microwave.Global(None, None),
+                Raman.Global(None, None),
+            ),
+            ["u", "d", "g", "h"],
+        ),
+        ((Microwave.Global(None, None),), ["u", "d"]),
+        (MockDevice.channel_objects, ["u", "d", "r", "g", "h"]),
+    ],
+)
+def test_eigenstates(test_params, channels, states):
+    test_params["interaction_coeff_xy"] = 10000.0
+    test_params["channel_objects"] = channels
+    dev = VirtualDevice(**test_params)
+    assert dev.supported_states == states
 
 
 def test_tuple_conversion(test_params):
