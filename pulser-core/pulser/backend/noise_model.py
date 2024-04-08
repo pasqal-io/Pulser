@@ -21,7 +21,7 @@ from typing import Any, Literal, get_args
 import numpy as np
 
 NOISE_TYPES = Literal[
-    "err_state",
+    "leakage",
     "doppler",
     "amplitude",
     "SPAM",
@@ -43,7 +43,7 @@ class NoiseModel:
     Args:
         noise_types: Noise types to include in the emulation. Available
             options:
-            - "err_state": Adds an error state 'x' to the computational
+            - "leakage": Adds an error state 'x' to the computational
               basis, that can interact with the other states via an
               effective noise channel. Incompatible with dephasing and
               depolarizing noise channels.
@@ -182,8 +182,8 @@ class NoiseModel:
 
         self._check_noise_types()
 
-        # Can't define "dephasing", "depolarizing" with "err_state"
-        if "err_state" in self.noise_types and (
+        # Can't define "dephasing", "depolarizing" with "leakage"
+        if "leakage" in self.noise_types and (
             "dephasing" in self.noise_types
             or "depolarizing" in self.noise_types
         ):

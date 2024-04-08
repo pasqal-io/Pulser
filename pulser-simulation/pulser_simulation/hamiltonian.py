@@ -260,7 +260,7 @@ class Hamiltonian:
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
         with_err = False
-        if "err_state" in cfg.noise_types:
+        if "leakage" in cfg.noise_types:
             if "eff_noise" in cfg.noise_types and not cfg.eff_noise_opers:
                 with_err = True
             else:

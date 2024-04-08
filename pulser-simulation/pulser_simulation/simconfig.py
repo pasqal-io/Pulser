@@ -30,7 +30,7 @@ NOISE_TYPES = Literal[
     "dephasing",
     "depolarizing",
     "eff_noise",
-    "err_state",
+    "leakage",
 ]
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
@@ -46,7 +46,7 @@ SUPPORTED_NOISES: dict = {
         "doppler",
         "eff_noise",
         "SPAM",
-        "err_state",
+        "leakage",
     },
     "XY": {
         "dephasing",
@@ -79,7 +79,7 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
-            - "err_state": Adds an error state 'x' to the computational
+            - "leakage": Adds an error state 'x' to the computational
               basis, that can interact with the other states via an
               effective noise channel. Incompatible with dephasing and
               depolarizing noise channels.
