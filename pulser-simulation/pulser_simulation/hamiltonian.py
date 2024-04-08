@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Mapping
 from typing import Union, cast
@@ -37,7 +36,7 @@ def build_operator(
     qubits: dict[QubitId, np.ndarray],
     operations: Union[list, tuple],
     op_matrix: dict[str, qutip.Qobj] | None = None,
-    with_err: bool = False,
+    with_leakage: bool = False,
 ) -> qutip.Qobj:
     r"""Creates an operator with non-trivial actions on some qubits.
 
@@ -50,7 +49,7 @@ def build_operator(
     `operator` can be a ``qutip.Quobj`` or a string key for ``op_matrix``. If
     ``op_matrix`` is undefined, this string can be "I" or "sigma_{a}{b}" with
     a, b elements of the computational basis (sampled_seq.eigenbasis with "x"
-    if with_err is True) and ``sigma_{ab} = a * b^\dagger``.
+    if with_leakage is True) and ``sigma_{ab} = a * b^\dagger``.
     `qubits` is the list on which operator will be applied. The qubits can be
     passed as their index or their label in the register.
 
@@ -67,11 +66,11 @@ def build_operator(
             operations.
         operations: List of tuples `(operator, qubits)`.
         op_matrix: A dict of operators and their labels. If None, it is
-            computed and is composed of all the projectors on the
-            computational basis (with error state if with_err is True) and "I".
-        with_err: Whether or not to include an error state (adds a "x" state
-            to the computational basis of sampled_seq). Only used if op_matrix
-            is None.
+            composed of all the projectors on the computational basis
+            (with error state if with_leakage is True) and "I".
+        with_leakage: Whether or not to include an error state (adds a "x"
+            state to the computational basis of sampled_seq). Only used if
+            op_matrix is None.
 
 
     Returns:
@@ -79,7 +78,7 @@ def build_operator(
     """
     if op_matrix is None:
         eigenstates = sampled_seq.eigenbasis
-        if with_err:
+        if with_leakage:
             eigenstates.append("x")
         eigenbasis = [state for state in STATES_RANK if state in eigenstates]
 
@@ -104,7 +103,7 @@ def build_operator(
                     qubits,
                     [(operator, [q_id])],
                     op_matrix,
-                    with_err,
+                    with_leakage,
                 )
                 for q_id in qubits
             )
@@ -155,7 +154,7 @@ class Hamiltonian:
         self._sampling_rate = sampling_rate
 
         # Type hints for attributes defined outside of __init__
-        self.with_err: bool
+        self.with_leakage: bool
         self.basis_name: str
         self._config: NoiseModel
         self.op_matrix: dict[str, qutip.Qobj]
@@ -205,7 +204,7 @@ class Hamiltonian:
     def _build_collapse_operators(self, config: NoiseModel) -> None:
         def basis_check(noise_type: str) -> None:
             """Checks if the basis allows for the use of noise."""
-            if self.basis_name == "all" or "_with_error" in self.basis_name:
+            if self.basis_name == "all" or self.with_leakage:
                 # Go back to previous config
                 raise NotImplementedError(
                     f"Cannot include {noise_type} noise in all-basis."
@@ -259,21 +258,15 @@ class Hamiltonian:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        with_err = False
-        if "leakage" in cfg.noise_types:
-            if "eff_noise" in cfg.noise_types and not cfg.eff_noise_opers:
-                with_err = True
-            else:
-                warnings.warn(
-                    "Error state is asked to be taken into account but no "
-                    "effective noise is provided, hence it has no effect on "
-                    "the simulation."
-                )
+        with_leakage = "leakage" in cfg.noise_types
         if not hasattr(self, "basis_name") and (
-            not hasattr(self, "with_err")
-            or (hasattr(self, "with_err") and self.with_err != with_err)
+            not hasattr(self, "with_leakage")
+            or (
+                hasattr(self, "with_leakage")
+                and self.with_leakage != with_leakage
+            )
         ):
-            self.with_err = with_err
+            self.with_leakage = with_leakage
             self._build_basis_and_op_matrices()
         self._build_collapse_operators(cfg)
         self._config = cfg
@@ -282,7 +275,7 @@ class Hamiltonian:
                 "SPAM" in self.config.noise_types
                 and self.config.state_prep_error > 0
             )
-            or self.with_err
+            or self.with_leakage
         ):
             self._bad_atoms = {qid: False for qid in self._qid_index}
         if "doppler" not in self.config.noise_types:
@@ -370,7 +363,7 @@ class Hamiltonian:
             self._qdict,
             operations,
             self.op_matrix,
-            self.with_err,
+            self.with_leakage,
         )
 
     def _update_noise(self) -> None:
@@ -384,7 +377,7 @@ class Hamiltonian:
             "SPAM" in self.config.noise_types
             and self.config.state_prep_error > 0
         ):
-            if self.with_err:
+            if self.with_leakage:
                 self._bad_atoms = {qid: False for qid in self._qid_index}
             else:
                 dist = (
@@ -413,7 +406,7 @@ class Hamiltonian:
             self.basis_name = "all"  # All three rydberg states
         eigenbasis = self.samples_obj.eigenbasis
 
-        if self.with_err:
+        if self.with_leakage:
             self.basis_name += "_with_error"
             eigenbasis.append("x")
         self.eigenbasis = [

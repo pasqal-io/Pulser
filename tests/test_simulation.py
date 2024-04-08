@@ -24,7 +24,12 @@ from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
-from pulser_simulation import QutipEmulator, SimConfig, Simulation
+from pulser_simulation import (
+    QutipEmulator,
+    SimConfig,
+    Simulation,
+    build_operator,
+)
 
 
 @pytest.fixture
@@ -247,28 +252,62 @@ def test_extraction_of_sequences(seq):
                         ).all()
 
 
-def test_building_basis_and_projection_operators(seq, reg):
+@pytest.mark.parametrize(
+    "with_leakage, config",
+    [
+        (False, SimConfig()),
+        (
+            True,
+            SimConfig(
+                noise=("leakage", "eff_noise"),
+                eff_noise_rates=[0.0],
+                eff_noise_opers=[qutip.qeye(3)],
+            ),
+        ),
+    ],
+)
+def test_building_basis_and_projection_operators(
+    seq, reg, with_leakage, config
+):
+    def proj(dim, idx1, idx2):
+        return qutip.basis(dim, idx1) * qutip.basis(dim, idx2).dag()
+
     # All three levels:
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
-    assert sim.basis_name == "all"
-    assert sim.dim == 3
-    assert sim.basis == {
-        "r": qutip.basis(3, 0),
-        "g": qutip.basis(3, 1),
-        "h": qutip.basis(3, 2),
+    config_4lvls = SimConfig(
+        noise=("leakage", "eff_noise"),
+        eff_noise_rates=[0.0],
+        eff_noise_opers=[qutip.qeye(4)],
+    )
+    if with_leakage:
+        with pytest.raises(
+            ValueError, match="Effective noise operator should be of shape"
+        ):
+            sim = QutipEmulator.from_sequence(seq, config=config)
+    sim = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.01,
+        config=config_4lvls if with_leakage else config,
+    )
+    assert sim._hamiltonian.with_leakage == with_leakage
+    assert sim.basis_name == "all" + ("_with_error" if with_leakage else "")
+    dim = 3 + int(with_leakage)
+    assert sim.dim == dim
+    basis = {
+        "r": qutip.basis(dim, 0),
+        "g": qutip.basis(dim, 1),
+        "h": qutip.basis(dim, 2),
     }
-    assert (
-        sim._hamiltonian.op_matrix["sigma_rr"]
-        == qutip.basis(3, 0) * qutip.basis(3, 0).dag()
-    )
-    assert (
-        sim._hamiltonian.op_matrix["sigma_gr"]
-        == qutip.basis(3, 1) * qutip.basis(3, 0).dag()
-    )
-    assert (
-        sim._hamiltonian.op_matrix["sigma_hg"]
-        == qutip.basis(3, 2) * qutip.basis(3, 1).dag()
-    )
+    if with_leakage:
+        basis["x"] = qutip.basis(dim, 3)
+    assert sim.basis == basis
+    assert sim.eigenbasis == list(basis.keys())
+    assert sim.op_matrix["sigma_rr"] == proj(dim, 0, 0)
+    assert sim.op_matrix["sigma_gr"] == proj(dim, 1, 0)
+    assert sim.op_matrix["sigma_hg"] == proj(dim, 2, 1)
+    if with_leakage:
+        assert sim.op_matrix["sigma_xg"] == proj(dim, 3, 1)
+    else:
+        assert "sigma_xg" not in sim.op_matrix
 
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
@@ -283,57 +322,95 @@ def test_building_basis_and_projection_operators(seq, reg):
     op_one = sim.build_operator(("sigma_gg", ["target"]))
     assert np.linalg.norm(op_standard - op_one) < 1e-10
 
+    op_standard = build_operator(
+        sim.samples_obj,
+        reg.qubits,
+        [("sigma_gg", ["target"])],
+        with_leakage=with_leakage,
+    )
+    op_one = build_operator(
+        sim.samples_obj,
+        reg.qubits,
+        ("sigma_gg", ["target"]),
+        with_leakage=with_leakage,
+    )
+    assert np.linalg.norm(op_standard - op_one) < 1e-10
     # Global ground-rydberg
     seq2 = Sequence(reg, DigitalAnalogDevice)
     seq2.declare_channel("global", "rydberg_global")
     pi_pls = Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0.0, 0)
     seq2.add(pi_pls, "global")
-    sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01)
-    assert sim2.basis_name == "ground-rydberg"
-    assert sim2.dim == 2
-    assert sim2.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
-    assert (
-        sim2._hamiltonian.op_matrix["sigma_rr"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    with pytest.raises(
+        ValueError, match="Effective noise operator should be of shape"
+    ):
+        sim2 = QutipEmulator.from_sequence(
+            seq2, sampling_rate=0.01, config=config_4lvls
+        )
+    sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01, config=config)
+    assert sim2.basis_name == "ground-rydberg" + (
+        "_with_error" if with_leakage else ""
     )
-    assert (
-        sim2._hamiltonian.op_matrix["sigma_gr"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
-    )
+    dim = 2 + int(with_leakage)
+    assert sim2.dim == dim
+    basis = {"r": qutip.basis(dim, 0), "g": qutip.basis(dim, 1)}
+    if with_leakage:
+        basis["x"] = qutip.basis(dim, 2)
+    assert sim2.basis == basis
+    assert sim.eigenbasis == list(basis.keys())
+    assert sim2.op_matrix["sigma_rr"] == proj(dim, 0, 0)
+    assert sim2.op_matrix["sigma_gr"] == proj(dim, 1, 0)
+    if with_leakage:
+        assert sim2.op_matrix["sigma_gx"] == proj(dim, 1, 2)
+    else:
+        assert "sigma_gx" not in sim.op_matrix
 
     # Digital
     seq2b = Sequence(reg, DigitalAnalogDevice)
     seq2b.declare_channel("local", "raman_local", "target")
     seq2b.add(pi_pls, "local")
-    sim2b = QutipEmulator.from_sequence(seq2b, sampling_rate=0.01)
-    assert sim2b.basis_name == "digital"
-    assert sim2b.dim == 2
-    assert sim2b.basis == {"g": qutip.basis(2, 0), "h": qutip.basis(2, 1)}
-    assert (
-        sim2b._hamiltonian.op_matrix["sigma_gg"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    sim2b = QutipEmulator.from_sequence(
+        seq2b, sampling_rate=0.01, config=config
     )
-    assert (
-        sim2b._hamiltonian.op_matrix["sigma_hg"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    assert sim2b.basis_name == "digital" + (
+        "_with_error" if with_leakage else ""
     )
+    dim = 2 + int(with_leakage)
+    assert sim2b.dim == dim
+    basis = {"g": qutip.basis(dim, 0), "h": qutip.basis(dim, 1)}
+    if with_leakage:
+        basis["x"] = qutip.basis(dim, 2)
+    assert sim2b.basis == basis
+    assert sim.eigenbasis == list(basis.keys())
+    assert sim2b.op_matrix["sigma_gg"] == proj(dim, 0, 0)
+    assert sim2b.op_matrix["sigma_hg"] == proj(dim, 1, 0)
+    if with_leakage:
+        assert sim2b.op_matrix["sigma_xg"] == proj(dim, 2, 0)
+    else:
+        assert "sigma_xg" not in sim2b.op_matrix
 
     # Local ground-rydberg
     seq2c = Sequence(reg, DigitalAnalogDevice)
     seq2c.declare_channel("local_ryd", "rydberg_local", "target")
     seq2c.add(pi_pls, "local_ryd")
-    sim2c = QutipEmulator.from_sequence(seq2c, sampling_rate=0.01)
-    assert sim2c.basis_name == "ground-rydberg"
-    assert sim2c.dim == 2
-    assert sim2c.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
-    assert (
-        sim2c._hamiltonian.op_matrix["sigma_rr"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+    sim2c = QutipEmulator.from_sequence(
+        seq2c, sampling_rate=0.01, config=config
     )
-    assert (
-        sim2c._hamiltonian.op_matrix["sigma_gr"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+    assert sim2c.basis_name == "ground-rydberg" + (
+        "_with_error" if with_leakage else ""
     )
+    dim = 2 + int(with_leakage)
+    assert sim2c.dim == dim
+    basis = {"r": qutip.basis(dim, 0), "g": qutip.basis(dim, 1)}
+    if with_leakage:
+        basis["x"] = qutip.basis(dim, 2)
+    assert sim2c.basis == basis
+    assert sim.eigenbasis == list(basis.keys())
+    assert sim2c.op_matrix["sigma_rr"] == proj(dim, 0, 0)
+    assert sim2c.op_matrix["sigma_gr"] == proj(dim, 1, 0)
+    if with_leakage:
+        assert sim2c.op_matrix["sigma_xr"] == proj(dim, 2, 0)
+    else:
+        assert "sigma_xr" not in sim2b.op_matrix
 
     # Global XY
     seq2 = Sequence(reg, MockDevice)
@@ -345,22 +422,24 @@ def test_building_basis_and_projection_operators(seq, reg):
         match="Bases used in samples should be supported by device.",
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
+    with pytest.raises(
+        NotImplementedError,
+        match="Interaction mode 'XY' does not support",
+    ):
+        config = SimConfig(
+            noise=("leakage", "eff_noise"),
+            eff_noise_rates=[0.0],
+            eff_noise_opers=[qutip.qeye(4)],
+        )
+        sim2 = QutipEmulator.from_sequence(seq2, config=config)
     sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01)
     assert sim2.basis_name == "XY"
     assert sim2.dim == 2
     assert sim2.basis == {"u": qutip.basis(2, 0), "d": qutip.basis(2, 1)}
-    assert (
-        sim2._hamiltonian.op_matrix["sigma_uu"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
-    )
-    assert (
-        sim2._hamiltonian.op_matrix["sigma_du"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
-    )
-    assert (
-        sim2._hamiltonian.op_matrix["sigma_ud"]
-        == qutip.basis(2, 0) * qutip.basis(2, 1).dag()
-    )
+    assert sim.eigenbasis == list(basis.keys())
+    assert sim2.op_matrix["sigma_uu"] == proj(2, 0, 0)
+    assert sim2.op_matrix["sigma_du"] == proj(2, 1, 0)
+    assert sim2.op_matrix["sigma_ud"] == proj(2, 0, 1)
 
 
 def test_empty_sequences(reg):

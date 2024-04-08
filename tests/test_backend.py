@@ -252,6 +252,27 @@ class TestNoiseModel:
                 eff_noise_rates=[1.0],
             )
 
+    def test_leakage(self):
+        with pytest.raises(
+            ValueError,
+            match="Dephasing and depolarizing channels can't be defined",
+        ):
+            NoiseModel(noise_types=("leakage", "dephasing"))
+        with pytest.raises(
+            ValueError,
+            match="Dephasing and depolarizing channels can't be defined",
+        ):
+            NoiseModel(noise_types=("leakage", "depolarizing"))
+        with pytest.raises(
+            ValueError,
+            match="Dephasing and depolarizing channels can't be defined",
+        ):
+            NoiseModel(noise_types=("leakage", "depolarizing", "dephasing"))
+        with pytest.raises(
+            ValueError, match="Effective noise must be included in noise types"
+        ):
+            NoiseModel(noise_types=("leakage",))
+
 
 class _MockConnection(RemoteConnection):
     def __init__(self):

@@ -589,7 +589,7 @@ class QutipEmulator:
                         self.initial_state
                         if not (
                             "SPAM" in self.config.noise
-                            and self._hamiltonian.with_err
+                            and self._hamiltonian.with_leakage
                         )
                         else self.config.eta * self.op_matrix["sigma_gg"]
                         + (1 - self.config.eta) * self.initial_state
@@ -634,7 +634,7 @@ class QutipEmulator:
             if (
                 "SPAM" not in self.config.noise
                 or self.config.eta == 0
-                or self._hamiltonian.with_err
+                or self._hamiltonian.with_leakage
             ):
                 return _run_solver()
 
