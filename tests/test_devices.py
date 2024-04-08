@@ -25,8 +25,8 @@ from pulser.channels.dmm import DMM
 from pulser.devices import (
     Device,
     DigitalAnalogDevice,
-    VirtualDevice,
     MockDevice,
+    VirtualDevice,
 )
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout

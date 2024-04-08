@@ -83,9 +83,17 @@ def test_init_error(seq_rydberg):
 
 
 @pytest.mark.parametrize("local_only", [True, False])
-def test_delay_only(local_only):
+@pytest.mark.parametrize(
+    "channel_name, basis",
+    [
+        ("rydberg_global", "ground-rydberg"),
+        ("raman_global", "digital"),
+        ("mw_global", "XY"),
+    ],
+)
+def test_delay_only(local_only, channel_name, basis):
     seq_ = pulser.Sequence(pulser.Register({"q0": (0, 0)}), MockDevice)
-    seq_.declare_channel("ch0", "rydberg_global")
+    seq_.declare_channel("ch0", channel_name)
     seq_.delay(16, "ch0")
     samples = sample(seq_)
     assert samples.channel_samples["ch0"].initial_targets == {"q0"}
@@ -97,15 +105,17 @@ def test_delay_only(local_only):
     }
     if local_only:
         expected = {
-            "Local": {"ground-rydberg": {"q0": qty_dict}},
+            "Local": {basis: {"q0": qty_dict}},
             "Global": dict(),
         }
     else:
-        expected = {"Global": {"ground-rydberg": qty_dict}, "Local": dict()}
+        expected = {"Global": {basis: qty_dict}, "Local": dict()}
 
     assert_nested_dict_equality(
         samples.to_nested_dict(all_local=local_only), expected
     )
+    assert samples.used_bases == set()
+    assert samples.eigenbasis == ["u", "d"] if basis == "XY" else ["r", "g"]
 
 
 def test_one_pulse_sampling():
@@ -120,10 +130,13 @@ def test_one_pulse_sampling():
     seq.add(Pulse(amp_wf, det_wf, phase), "ch0")
     seq.measure()
 
-    got = sample(seq).to_nested_dict()["Global"]["ground-rydberg"]
+    samples = sample(seq)
+    got = samples.to_nested_dict()["Global"]["ground-rydberg"]
     want = (amp_wf.samples, det_wf.samples, np.ones(N) * phase)
     for i, key in enumerate(["amp", "det", "phase"]):
         np.testing.assert_array_equal(got[key], want[i])
+    assert samples.used_bases == {"ground-rydberg"}
+    assert samples.eigenbasis == ["r", "g"]
 
 
 def test_table_sequence(seqs):
@@ -342,9 +355,11 @@ def test_SLM_samples():
     }
     want["Global"]["XY"]["amp"][200:400] = a_samples
     want["Local"]["XY"]["superman"]["amp"][0:200] = a_samples
-
-    got = sample(seq).to_nested_dict()
+    samples = sample(seq)
+    got = samples.to_nested_dict()
     assert_nested_dict_equality(got, want)
+    assert samples.used_bases == {"XY"}
+    assert samples.eigenbasis == ["u", "d"]
 
     seq = seq_with_SLM("rydberg_global")
     with pytest.raises(ValueError, match="'qubits' must be defined"):
@@ -365,9 +380,11 @@ def test_SLM_samples():
     want["Local"]["ground-rydberg"]["batman"]["det"][0:200] = np.full_like(
         a_samples, -10 * np.max(a_samples)
     )
-
-    got = sample(seq).to_nested_dict()
+    samples = sample(seq)
+    got = samples.to_nested_dict()
     assert_nested_dict_equality(got, want)
+    assert samples.used_bases == {"ground-rydberg"}
+    assert samples.eigenbasis == ["r", "g"]
 
 
 def test_SLM_against_simulation():
