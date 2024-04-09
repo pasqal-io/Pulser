@@ -356,7 +356,7 @@ def test_building_basis_and_projection_operators(
     if with_leakage:
         basis["x"] = qutip.basis(dim, 2)
     assert sim2.basis == basis
-    assert sim.eigenbasis == list(basis.keys())
+    assert sim2.eigenbasis == list(basis.keys())
     assert sim2.op_matrix["sigma_rr"] == proj(dim, 0, 0)
     assert sim2.op_matrix["sigma_gr"] == proj(dim, 1, 0)
     if with_leakage:
@@ -380,7 +380,7 @@ def test_building_basis_and_projection_operators(
     if with_leakage:
         basis["x"] = qutip.basis(dim, 2)
     assert sim2b.basis == basis
-    assert sim.eigenbasis == list(basis.keys())
+    assert sim2b.eigenbasis == list(basis.keys())
     assert sim2b.op_matrix["sigma_gg"] == proj(dim, 0, 0)
     assert sim2b.op_matrix["sigma_hg"] == proj(dim, 1, 0)
     if with_leakage:
@@ -404,7 +404,7 @@ def test_building_basis_and_projection_operators(
     if with_leakage:
         basis["x"] = qutip.basis(dim, 2)
     assert sim2c.basis == basis
-    assert sim.eigenbasis == list(basis.keys())
+    assert sim2c.eigenbasis == list(basis.keys())
     assert sim2c.op_matrix["sigma_rr"] == proj(dim, 0, 0)
     assert sim2c.op_matrix["sigma_gr"] == proj(dim, 1, 0)
     if with_leakage:
@@ -436,7 +436,7 @@ def test_building_basis_and_projection_operators(
     assert sim2.basis_name == "XY"
     assert sim2.dim == 2
     assert sim2.basis == {"u": qutip.basis(2, 0), "d": qutip.basis(2, 1)}
-    assert sim.eigenbasis == list(basis.keys())
+    assert sim2.eigenbasis == ["u", "d"]
     assert sim2.op_matrix["sigma_uu"] == proj(2, 0, 0)
     assert sim2.op_matrix["sigma_du"] == proj(2, 1, 0)
     assert sim2.op_matrix["sigma_ud"] == proj(2, 0, 1)
@@ -569,7 +569,9 @@ def test_run(seq, patch_plt_show):
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian._size)]
     )
-    good_initial_qobj_no_dims = qutip.basis(sim.dim**sim._hamiltonian._size, 2)
+    good_initial_qobj_no_dims = qutip.basis(
+        sim.dim**sim._hamiltonian._size, 2
+    )
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
@@ -614,6 +616,21 @@ def test_run(seq, patch_plt_show):
         sim.run(progress_bar=1)
 
     sim.set_config(SimConfig("SPAM", eta=0.1))
+    with pytest.raises(
+        NotImplementedError,
+        match="Can't combine state preparation errors with an initial state "
+        "different from the ground.",
+    ):
+        sim.run()
+
+    sim.set_config(
+        SimConfig(
+            ("leakage", "SPAM", "eff_noise"),
+            eta=0.1,
+            eff_noise_opers=[qutip.qeye(3)],
+            eff_noise_rates=[0.0],
+        )
+    )
     with pytest.raises(
         NotImplementedError,
         match="Can't combine state preparation errors with an initial state "
