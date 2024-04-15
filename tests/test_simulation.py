@@ -837,6 +837,29 @@ def test_noise(seq, matrices):
                 assert np.all(
                     sim2._hamiltonian.samples["Local"][basis][t][qty] == 0.0
                 )
+    # Test with leakage
+    np.random.seed(3)
+    sim3 = QutipEmulator.from_sequence(
+        seq,
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise=("SPAM", "leakage", "eff_noise"),
+            eta=0.9,
+            eff_noise_opers=[qutip.qeye(4)],
+            eff_noise_rates=[0.0],
+        ),
+    )
+    assert sim3.run().sample_final_state() == Counter(
+        {"000": 857, "110": 73, "100": 70}
+    )
+
+    assert sim3.config.spam_dict == {
+        "eta": 0.9,
+        "epsilon": 0.01,
+        "epsilon_prime": 0.05,
+    }
+    assert sim3._hamiltonian.samples["Global"] == {}
+    assert not any(sim2._hamiltonian._bad_atoms.values())
 
 
 @pytest.mark.parametrize(

@@ -57,7 +57,7 @@ class SimulationResults(ABC, Results[ResultType]):
         """
         self._dim = 3 if basis_name == "all" else 2
         self._size = size
-        if basis_name not in {"ground-rydberg", "digital", "all", "XY"}:
+        if basis_name not in {"ground-rydberg", "digital", "all", "XY", "ground-rydberg_with_error", "digital_with_error", "all_with_error", "XY_with_error"}:
             raise ValueError(
                 "`basis_name` must be 'ground-rydberg', 'digital', 'all' or "
                 "'XY'."

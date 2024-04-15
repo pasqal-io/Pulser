@@ -591,7 +591,13 @@ class QutipEmulator:
                             "SPAM" in self.config.noise
                             and self._hamiltonian.with_leakage
                         )
-                        else self.config.eta * self.op_matrix["sigma_gg"]
+                        else self.config.eta
+                        * qutip.tensor(
+                            [
+                                self.basis["x"]
+                                for _ in range(self._hamiltonian._size)
+                            ]
+                        )
                         + (1 - self.config.eta) * self.initial_state
                     ),
                     self._eval_times_array,
