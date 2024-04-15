@@ -1560,13 +1560,11 @@ def test_draw_slm_mask_in_ising(
         )
     seq1.draw(mode, draw_qubit_det=draw_qubit_det, draw_interp_pts=False)
     seq1.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
-    # Same function with add is longer
-    seq1.add(Pulse.ConstantAmplitude(0, RampWaveform(300, -10, 0), 0), "dmm_0")
     # pulse is added on rydberg global with a delay (protocol is "min-delay")
     seq1.add(pulse1, "ryd_glob")  # slm pulse between 0 and 400
     seq1.add(pulse2, "ryd_glob")
     seq1.config_slm_mask(targets)
-    mask_time = 700 + 2 * mymockdevice.channels["rydberg_global"].rise_time
+    mask_time = 400 + 2 * mymockdevice.channels["rydberg_global"].rise_time
     assert seq1._slm_mask_time == [0, mask_time]
     assert seq1._schedule["dmm_0_1"].slots[1].type == Pulse.ConstantPulse(
         mask_time, 0, -100, 0
@@ -2268,3 +2266,15 @@ def test_max_duration(reg, mod_device):
         seq.delay(16, "ch0")
     with catch_statement:
         seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
+
+
+def test_add_to_dmm_fails(reg, device, det_map):
+    seq = Sequence(reg, device)
+    seq.config_detuning_map(det_map, "dmm_0")
+    pulse = Pulse.ConstantPulse(100, 0, -1, 0)
+    with pytest.raises(ValueError, match="can't be used on a DMM"):
+        seq.add(pulse, "dmm_0")
+
+    seq.declare_channel("ryd", "rydberg_global")
+    with pytest.raises(ValueError, match="not the name of a DMM channel"):
+        seq.add_dmm_detuning(pulse.detuning, "ryd")
