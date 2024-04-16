@@ -1318,6 +1318,11 @@ class Sequence(Generic[DeviceType]):
             block_eom_mode=True,
             block_if_slm=channel.startswith("dmm_"),
         )
+        if isinstance(self.declared_channels[channel], DMM):
+            raise ValueError(
+                "`Sequence.add()` can't be used on a DMM channel. "
+                "Use `Sequence.add_dmm_detuning()` instead."
+            )
         self._add(pulse, channel, protocol)
 
     @seq_decorators.store
@@ -1329,11 +1334,11 @@ class Sequence(Generic[DeviceType]):
         dmm_name: str,
         protocol: PROTOCOLS = "no-delay",
     ) -> None:
-        """Add a waveform to the detuning of a dmm.
+        """Add a waveform to the detuning of a DMM.
 
         Args:
-            waveform: The waveform to add to the detuning of the dmm.
-            dmm_name: The id of the dmm to modulate.
+            waveform: The waveform to add to the detuning of the DMM.
+            dmm_name: The name of the DMM channel to modulate.
             protocol: Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
                 of having multiple channels act on the same target
@@ -1348,6 +1353,8 @@ class Sequence(Generic[DeviceType]):
                   latest pulse.
         """
         self._validate_channel(dmm_name, block_if_slm=True)
+        if not isinstance(self.declared_channels[dmm_name], DMM):
+            raise ValueError(f"'{dmm_name}' is not the name of a DMM channel.")
         self._add(
             Pulse.ConstantAmplitude(0, waveform, 0),
             dmm_name,
