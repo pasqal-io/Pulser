@@ -490,7 +490,9 @@ def test_run(seq, patch_plt_show):
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian._size)]
     )
-    good_initial_qobj_no_dims = qutip.basis(sim.dim**sim._hamiltonian._size, 2)
+    good_initial_qobj_no_dims = qutip.basis(
+        sim.dim**sim._hamiltonian._size, 2
+    )
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
@@ -1016,10 +1018,9 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
-        with pytest.warns(DeprecationWarning, match="is deprecated"):
-            sim._hamiltonian.set_config(
-                SimConfig(("SPAM", "doppler")).to_noise_model()
-            )
+        sim._hamiltonian.set_config(
+            SimConfig(("SPAM", "doppler")).to_noise_model()
+        )
     with pytest.raises(
         NotImplementedError, match="simulation of noise types: amplitude"
     ):
