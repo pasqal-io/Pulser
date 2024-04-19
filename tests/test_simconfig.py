@@ -51,8 +51,7 @@ def test_init():
     )
     config = SimConfig(noise="depolarizing")
     assert config.temperature == 5e-5
-    with pytest.warns(DeprecationWarning, match="is deprecated"):
-        assert config.to_noise_model().temperature == 50
+    assert config.to_noise_model().temperature == 50
     str_config = config.__str__(True)
     assert "depolarizing" in str_config
     config = SimConfig(
@@ -122,7 +121,6 @@ def test_from_noise_model():
         p_false_pos=0.1,
         state_prep_error=0.05,
     )
-    with pytest.warns(DeprecationWarning, match="is deprecated"):
-        assert SimConfig.from_noise_model(noise_model) == SimConfig(
-            noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.05
-        )
+    assert SimConfig.from_noise_model(noise_model) == SimConfig(
+        noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.05
+    )

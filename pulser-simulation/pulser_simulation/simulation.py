@@ -272,15 +272,12 @@ class QutipEmulator:
             param_dict["laser_waist"] = noise_model.laser_waist
             param_dict["amp_sigma"] = noise_model.amp_sigma
         if "dephasing" in diff_noise_set:
-            param_dict["dephasing_prob"] = noise_model.dephasing_prob
             param_dict["dephasing_rate"] = noise_model.dephasing_rate
         if "depolarizing" in diff_noise_set:
-            param_dict["depolarizing_prob"] = noise_model.depolarizing_prob
             param_dict["depolarizing_rate"] = noise_model.depolarizing_rate
         if "eff_noise" in diff_noise_set:
             param_dict["eff_noise_opers"] = noise_model.eff_noise_opers
             param_dict["eff_noise_rates"] = noise_model.eff_noise_rates
-            param_dict["eff_noise_probs"] = noise_model.eff_noise_probs
         # update runs:
         param_dict["runs"] = noise_model.runs
         param_dict["samples_per_run"] = noise_model.samples_per_run
