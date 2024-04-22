@@ -14,7 +14,6 @@
 """Defines the QutipBackend class."""
 from __future__ import annotations
 
-import warnings
 from typing import Any
 
 from pulser import Sequence
@@ -44,9 +43,7 @@ class QutipBackend(Backend):
                 f"not {type(config)}."
             )
         self._config = config
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
-            simconfig = SimConfig.from_noise_model(self._config.noise_model)
+        simconfig = SimConfig.from_noise_model(self._config.noise_model)
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,
