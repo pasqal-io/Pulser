@@ -263,6 +263,8 @@ class QutipEmulator:
             param_dict["amp_sigma"] = noise_model.amp_sigma
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_rate"] = noise_model.dephasing_rate
+        if "relaxation" in diff_noise_set:
+            param_dict["relaxation_rate"] = noise_model.relaxation_rate
         if "depolarizing" in diff_noise_set:
             param_dict["depolarizing_rate"] = noise_model.depolarizing_rate
         if "eff_noise" in diff_noise_set:
@@ -542,6 +544,7 @@ class QutipEmulator:
 
             if (
                 "dephasing" in self.config.noise
+                or "relaxation" in self.config.noise
                 or "depolarizing" in self.config.noise
                 or "eff_noise" in self.config.noise
             ):
@@ -581,7 +584,7 @@ class QutipEmulator:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
+            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise"}
         ):
             # If there is "SPAM", the preparation errors must be zero
             if "SPAM" not in self.config.noise or self.config.eta == 0:

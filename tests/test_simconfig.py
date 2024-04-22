@@ -49,11 +49,13 @@ def test_init():
         and "100" in str_config
         and "Solver Options" in str_config
     )
-    config = SimConfig(noise="depolarizing")
+    config = SimConfig(noise=("depolarizing", "relaxation"))
     assert config.temperature == 5e-5
     assert config.to_noise_model().temperature == 50
     str_config = config.__str__(True)
-    assert "depolarizing" in str_config
+    assert "depolarizing" in str_config and "relaxation" in str_config
+    assert f"Depolarizing rate: {config.depolarizing_rate}" in str_config
+    assert f"Relaxation rate: {config.relaxation_rate}" in str_config
     config = SimConfig(
         noise="eff_noise",
         eff_noise_opers=[qeye(2), sigmax()],

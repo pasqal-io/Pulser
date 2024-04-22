@@ -20,7 +20,13 @@ from typing import Literal, get_args
 import numpy as np
 
 NOISE_TYPES = Literal[
-    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"
+    "doppler",
+    "amplitude",
+    "SPAM",
+    "dephasing",
+    "relaxation",
+    "depolarizing",
+    "eff_noise",
 ]
 
 
@@ -39,6 +45,8 @@ class NoiseModel:
 
             - "dephasing": Random phase (Z) flip (parametrized
               by `dephasing_rate`).
+            - "relaxation": Noise due to a decay from the Rydberg to
+              the ground state (parametrized by `relaxation_rate`).
             - "depolarizing": Quantum noise where the state is
               turned into a mixed state I/2 with rate
               `depolarizing_rate`.
@@ -67,11 +75,14 @@ class NoiseModel:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        dephasing_rate: The rate of a dephasing error occuring (in rad/µs).
-        depolarizing_rate: The rate (in rad/µs) at which a depolarizing
+        dephasing_rate: The rate of a dephasing error occuring (in 1/µs).
+            Corresponds to 1/T2.
+        relaxation_rate: The rate of relaxation from the Rydberg to the
+            ground state (in 1/µs). Corresponds to 1/T1.
+        depolarizing_rate: The rate (in 1/µs) at which a depolarizing
             error occurs.
         eff_noise_rates: The rate associated to each effective noise operator
-            (in rad/µs).
+            (in 1/µs).
         eff_noise_opers: The operators for the effective noise model.
     """
 
@@ -85,6 +96,7 @@ class NoiseModel:
     laser_waist: float = 175.0
     amp_sigma: float = 5e-2
     dephasing_rate: float = 0.05
+    relaxation_rate: float = 0.01
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list)
     eff_noise_opers: list[np.ndarray] = field(default_factory=list)
@@ -92,6 +104,7 @@ class NoiseModel:
     def __post_init__(self) -> None:
         positive = {
             "dephasing_rate",
+            "relaxation_rate",
             "depolarizing_rate",
         }
         strict_positive = {

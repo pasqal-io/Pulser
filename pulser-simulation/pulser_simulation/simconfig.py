@@ -17,15 +17,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from math import sqrt
-from typing import Any, Literal, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
-from pulser.backend.noise_model import NoiseModel
+from pulser.backend.noise_model import NOISE_TYPES, NoiseModel
 
-NOISE_TYPES = Literal[
-    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"
-]
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
 KEFF = 8.7  # µm^-1
@@ -36,6 +33,7 @@ SUPPORTED_NOISES: dict = {
     "ising": {
         "amplitude",
         "dephasing",
+        "relaxation",
         "depolarizing",
         "doppler",
         "eff_noise",
@@ -73,6 +71,7 @@ class SimConfig:
             noise types:
 
             - "dephasing": Random phase (Z) flip.
+            - "relaxation": Relaxation from the Rydberg to the ground state.
             - "depolarizing": Quantum noise where the state (rho) is
               turned into a mixed state I/2 at a rate gamma (in rad/µs).
             - "eff_noise": General effective noise channel defined by
@@ -110,6 +109,7 @@ class SimConfig:
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
     dephasing_rate: float = 0.05
+    relaxation_rate: float = 0.01
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
@@ -129,6 +129,7 @@ class SimConfig:
             epsilon=noise_model.p_false_pos,
             epsilon_prime=noise_model.p_false_neg,
             dephasing_rate=noise_model.dephasing_rate,
+            relaxation_rate=noise_model.relaxation_rate,
             depolarizing_rate=noise_model.depolarizing_rate,
             eff_noise_rates=noise_model.eff_noise_rates,
             eff_noise_opers=list(map(qutip.Qobj, noise_model.eff_noise_opers)),
@@ -147,6 +148,7 @@ class SimConfig:
             laser_waist=self.laser_waist,
             amp_sigma=self.amp_sigma,
             dephasing_rate=self.dephasing_rate,
+            relaxation_rate=self.relaxation_rate,
             depolarizing_rate=self.depolarizing_rate,
             eff_noise_rates=self.eff_noise_rates,
             eff_noise_opers=[op.full() for op in self.eff_noise_opers],
@@ -211,6 +213,8 @@ class SimConfig:
             lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
         if "dephasing" in self.noise:
             lines.append(f"Dephasing rate: {self.dephasing_rate}")
+        if "relaxation" in self.noise:
+            lines.append(f"Relaxation rate: {self.relaxation_rate}")
         if "depolarizing" in self.noise:
             lines.append(f"Depolarizing rate: {self.depolarizing_rate}")
         if solver_options:
