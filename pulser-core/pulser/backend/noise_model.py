@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from typing import Literal, get_args
+from typing import Any, Literal, get_args
 
 import numpy as np
 
@@ -175,3 +175,7 @@ class NoiseModel:
                 raise NotImplementedError(
                     "Operator's shape must be (2,2) " f"not {operator.shape}."
                 )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        # TODO: Write once the JSON schema is defined
+        pass

@@ -18,7 +18,7 @@ import json
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, cast, get_args, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, cast, get_args
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -40,7 +40,12 @@ if TYPE_CHECKING:
 
 DIMENSIONS = Literal[2, 3]
 
-ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs", "dmm_objects")
+ALWAYS_OPTIONAL_PARAMS = (
+    "max_sequence_duration",
+    "max_runs",
+    "dmm_objects",
+    "default_noise_model",
+)
 PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 
 
@@ -78,6 +83,9 @@ class BaseDevice(ABC):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
     """
 
     name: str
@@ -514,6 +522,9 @@ class Device(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
@@ -712,6 +723,9 @@ class VirtualDevice(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """
