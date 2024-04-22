@@ -63,6 +63,7 @@ class EmulatorConfig(BackendConfig):
 
             - "all-ground" for all atoms in the ground state
             - An array of floats with a shape compatible with the system
+
         with_modulation: Whether to emulate the sequence with the programmed
             input or the expected output.
         noise_model: An optional noise model to emulate the sequence with.

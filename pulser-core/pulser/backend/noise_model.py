@@ -30,8 +30,8 @@ class NoiseModel:
 
     Select the desired noise types in `noise_types` and, if necessary,
     modifiy the default values of related parameters.
-    Non-specified parameters will have reasonable default value which
-    is only taken into account when the related noise type is selected.
+    Non-specified parameters will have reasonable default values which
+    are only taken into account when the related noise type is selected.
 
     Args:
         noise_types: Noise types to include in the emulation. Available
@@ -40,7 +40,7 @@ class NoiseModel:
             - "dephasing": Random phase (Z) flip (parametrized
               by `dephasing_rate`).
             - "depolarizing": Quantum noise where the state is
-              turned into a mixed state I/2 with rate
+              turned into the maximally mixed state with rate
               `depolarizing_rate`.
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`

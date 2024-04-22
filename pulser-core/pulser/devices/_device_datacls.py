@@ -18,11 +18,12 @@ import json
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, cast, get_args
+from typing import Any, Literal, cast, get_args, TYPE_CHECKING
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
+import pulser
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
@@ -33,6 +34,9 @@ from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.traps import COORD_PRECISION
+
+if TYPE_CHECKING:
+    from pulser.backend import NoiseModel
 
 DIMENSIONS = Literal[2, 3]
 
@@ -91,6 +95,7 @@ class BaseDevice(ABC):
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
+    default_noise_model: NoiseModel | None = None
 
     def __post_init__(self) -> None:
         def type_check(
@@ -217,6 +222,9 @@ class BaseDevice(ABC):
                 "'interaction_coeff_xy' must be a 'float',"
                 f" not '{type(self.interaction_coeff_xy)}'."
             )
+
+        if self.default_noise_model is not None:
+            type_check("default_noise", pulser.NoiseModel)
 
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
