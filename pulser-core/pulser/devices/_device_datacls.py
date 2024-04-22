@@ -232,7 +232,7 @@ class BaseDevice(ABC):
             )
 
         if self.default_noise_model is not None:
-            type_check("default_noise", pulser.NoiseModel)
+            type_check("default_noise_model", pulser.NoiseModel)
 
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):

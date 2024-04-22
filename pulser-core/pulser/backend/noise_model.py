@@ -176,6 +176,6 @@ class NoiseModel:
                     "Operator's shape must be (2,2) " f"not {operator.shape}."
                 )
 
-    def _to_abstract_repr(self) -> dict[str, Any]:
+    def _to_abstract_repr(self) -> dict[str, Any]:  # type: ignore
         # TODO: Write once the JSON schema is defined
         pass
