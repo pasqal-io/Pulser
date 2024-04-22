@@ -1016,10 +1016,9 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
-        with pytest.warns(DeprecationWarning, match="is deprecated"):
-            sim._hamiltonian.set_config(
-                SimConfig(("SPAM", "doppler")).to_noise_model()
-            )
+        sim._hamiltonian.set_config(
+            SimConfig(("SPAM", "doppler")).to_noise_model()
+        )
     with pytest.raises(
         NotImplementedError, match="simulation of noise types: amplitude"
     ):

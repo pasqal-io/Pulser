@@ -114,9 +114,6 @@ class SimConfig:
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
-    dephasing_prob: float | None = None
-    depolarizing_prob: float | None = None
-    eff_noise_probs: list[float] = field(default_factory=list, repr=False)
 
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
@@ -135,9 +132,6 @@ class SimConfig:
             depolarizing_rate=noise_model.depolarizing_rate,
             eff_noise_rates=noise_model.eff_noise_rates,
             eff_noise_opers=list(map(qutip.Qobj, noise_model.eff_noise_opers)),
-            dephasing_prob=noise_model.dephasing_prob,
-            depolarizing_prob=noise_model.depolarizing_prob,
-            eff_noise_probs=noise_model.eff_noise_probs,
         )
 
     def to_noise_model(self) -> NoiseModel:
@@ -156,9 +150,6 @@ class SimConfig:
             depolarizing_rate=self.depolarizing_rate,
             eff_noise_rates=self.eff_noise_rates,
             eff_noise_opers=[op.full() for op in self.eff_noise_opers],
-            dephasing_prob=self.dephasing_prob,
-            depolarizing_prob=self.depolarizing_prob,
-            eff_noise_probs=self.eff_noise_probs,
         )
 
     def __post_init__(self) -> None:
@@ -179,12 +170,7 @@ class SimConfig:
         self._check_eff_noise_opers_type()
 
         # Runs the noise model checks
-        noise_model = self.to_noise_model()
-        # Update rates and probs
-        for noise in ["dephasing", "depolarizing", "eff_noise"]:
-            for qty in ["prob", "rate"]:
-                attr = f"{noise}_{qty}{'s' if noise=='eff_noise' else ''}"
-                self._change_attribute(attr, getattr(noise_model, attr))
+        self.to_noise_model()
 
     @property
     def spam_dict(self) -> dict[str, float]:
