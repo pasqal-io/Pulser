@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """A module gathering all available backends."""
+from __future__ import annotations
 
 import importlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Type
 
 from pulser.backend.abc import Backend
 
@@ -36,7 +37,7 @@ _BACKENDS = {
 __all__: list[str] = []
 
 
-def __getattr__(name: str) -> Backend:
+def __getattr__(name: str) -> Type[Backend]:
     if name not in _BACKENDS:
         raise AttributeError(f"Module {__name__!r} has no attribute {name!r}.")
     try:
