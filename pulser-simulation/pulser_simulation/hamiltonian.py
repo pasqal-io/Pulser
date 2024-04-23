@@ -119,6 +119,16 @@ class Hamiltonian:
             coeff = np.sqrt(config.dephasing_rate / 2)
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
+        if "relaxation" in config.noise_types:
+            coeff = np.sqrt(config.relaxation_rate)
+            try:
+                local_collapse_ops.append(coeff * self.op_matrix["sigma_gr"])
+            except KeyError:
+                raise ValueError(
+                    "'relaxation' noise requires addressing of the"
+                    " 'ground-rydberg' basis."
+                )
+
         if "depolarizing" in config.noise_types:
             basis_check("depolarizing")
             coeff = np.sqrt(config.depolarizing_rate / 4)
@@ -175,7 +185,7 @@ class Hamiltonian:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
         if set(self.config.noise_types).issubset(
-            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
+            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise"}
         ):
             local_noises = (
                 "SPAM" in self.config.noise_types

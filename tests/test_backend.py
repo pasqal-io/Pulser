@@ -110,54 +110,26 @@ class TestNoiseModel:
         "param",
         [
             "dephasing_rate",
+            "relaxation_rate",
             "depolarizing_rate",
-            "dephasing_prob",
-            "depolarizing_prob",
         ],
     )
     def test_init_rate_like(self, param, value):
-        def create_noise_model(param, value):
-            if "prob" in param:
-                if value > 0:
-                    with pytest.raises(
-                        ValueError, match=f"{param}` must be equal."
-                    ):
-                        with pytest.warns(
-                            DeprecationWarning,
-                            match=f"{param} is deprecated.",
-                        ):
-                            NoiseModel(
-                                **{
-                                    param: value,
-                                    "dephasing_rate": value * 10,
-                                    "depolarizing_rate": value * 10,
-                                }
-                            )
-                with pytest.warns(
-                    (UserWarning, DeprecationWarning),
-                    match=f"{param}",
-                ):
-                    return NoiseModel(**{param: value})
-            return NoiseModel(**{param: value})
-
         if value < 0:
-            param_mess = (
-                "depolarizing_rate"
-                if "depolarizing" in param
-                else "dephasing_rate"
-            )
             with pytest.raises(
                 ValueError,
-                match=f"'{param_mess}' must be None or greater "
+                match=f"'{param}' must be None or greater "
                 f"than or equal to zero, not {value}.",
             ):
-                create_noise_model(param, value)
+                NoiseModel(**{param: value})
         else:
-            noise_model = create_noise_model(param, value)
+            noise_model = NoiseModel(**{param: value})
             if "depolarizing" in param:
                 assert noise_model.depolarizing_rate == value
             elif "dephasing" in param:
                 assert noise_model.dephasing_rate == value
+            elif "relaxation" in param:
+                assert noise_model.relaxation_rate == value
 
     @pytest.mark.parametrize("value", [-1e-9, 1.0001])
     @pytest.mark.parametrize(
@@ -187,7 +159,7 @@ class TestNoiseModel:
         matrices["I3"] = np.eye(3)
         return matrices
 
-    def test_eff_noise_probs(self, matrices):
+    def test_eff_noise_rates(self, matrices):
         with pytest.raises(
             ValueError, match="The provided rates must be greater than 0."
         ):
@@ -196,38 +168,6 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I"], matrices["X"]],
                 eff_noise_rates=[-1.0, 0.5],
             )
-        with pytest.warns(
-            (UserWarning, DeprecationWarning), match="eff_noise_probs"
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I"], matrices["X"]],
-                eff_noise_probs=[1.2, 0.5],
-            )
-
-        with pytest.warns(
-            DeprecationWarning, match="eff_noise_probs is deprecated."
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I"], matrices["X"]],
-                eff_noise_rates=[1.2, 0.5],
-                eff_noise_probs=[1.2, 0.5],
-            )
-
-        with pytest.raises(
-            ValueError,
-            match="If both defined, `eff_noise_rates` and `eff_noise_probs`",
-        ):
-            with pytest.warns(
-                DeprecationWarning, match="eff_noise_probs is deprecated."
-            ):
-                NoiseModel(
-                    noise_types=("eff_noise",),
-                    eff_noise_opers=[matrices["I"], matrices["X"]],
-                    eff_noise_probs=[1.4, 0.5],
-                    eff_noise_rates=[1.2, 0.5],
-                )
 
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
