@@ -48,5 +48,5 @@ def __getattr__(name: str) -> Type[Backend]:
     except ModuleNotFoundError:
         raise AttributeError(
             f"{name!r} requires the {_BACKENDS[name]!r} package. To install "
-            f"it, run `pip install {name}`."
+            f"it, run `pip install {_BACKENDS[name]}`."
         )

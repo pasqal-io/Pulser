@@ -26,7 +26,8 @@ def test_missing_package(monkeypatch, backend, missing_package):
     monkeypatch.setitem(sys.modules, missing_package, None)
     with pytest.raises(
         AttributeError,
-        match=f"{backend!r} requires the {missing_package!r} package",
+        match=f"{backend!r} requires the {missing_package!r} package. "
+        f"To install it, run `pip install {missing_package}`",
     ):
         getattr(pulser.backends, backend)
 
