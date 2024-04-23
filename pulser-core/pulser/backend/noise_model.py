@@ -53,7 +53,7 @@ class NoiseModel:
               turned into a mixed state I/2 with rate `depolarizing_rate`.
               While it does not describe a physical phenomenon, it is a
               commonly used tool to test the system under a uniform
-              combination of phase and amplitude noise.
+              combination of phase flip (Z) and bit flip (X) errors.
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
               and the corresponding rates distribution
