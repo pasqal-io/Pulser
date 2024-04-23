@@ -50,10 +50,10 @@ class NoiseModel:
               by `dephasing_rate`), commonly characterized experimentally
               by the T2 time.
             - "depolarizing": Quantum noise where the state is
-              turned into the maximally mixed state with rate 
-              `depolarizing_rate`. While it does not describe a physical 
-              phenomenon, it is a commonly used tool to test the system 
-              under a uniform combination of phase flip (Z) and 
+              turned into the maximally mixed state with rate
+              `depolarizing_rate`. While it does not describe a physical
+              phenomenon, it is a commonly used tool to test the system
+              under a uniform combination of phase flip (Z) and
               bit flip (X) errors.
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
