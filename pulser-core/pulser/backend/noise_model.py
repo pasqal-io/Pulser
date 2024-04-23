@@ -43,12 +43,12 @@ class NoiseModel:
         noise_types: Noise types to include in the emulation. Available
             options:
 
-            - "dephasing": Random phase (Z) flip (parametrized
-              by `dephasing_rate`), commonly characterized experimentally
-              by the T2 time.
             - "relaxation": Noise due to a decay from the Rydberg to
               the ground state (parametrized by `relaxation_rate`), commonly
               characterized experimentally by the T1 time.
+            - "dephasing": Random phase (Z) flip (parametrized
+              by `dephasing_rate`), commonly characterized experimentally
+              by the T2 time.
             - "depolarizing": Quantum noise where the state is
               turned into a mixed state I/2 with rate `depolarizing_rate`.
               While it does not describe a physical phenomenon, it is a
@@ -79,10 +79,10 @@ class NoiseModel:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        dephasing_rate: The rate of a dephasing error occuring (in 1/µs).
-            Corresponds to 1/T2.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
+        dephasing_rate: The rate of a dephasing error occuring (in 1/µs).
+            Corresponds to 1/T2.
         depolarizing_rate: The rate (in 1/µs) at which a depolarizing
             error occurs.
         eff_noise_rates: The rate associated to each effective noise operator
@@ -99,8 +99,8 @@ class NoiseModel:
     temperature: float = 50.0
     laser_waist: float = 175.0
     amp_sigma: float = 5e-2
-    dephasing_rate: float = 0.05
     relaxation_rate: float = 0.01
+    dephasing_rate: float = 0.05
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list)
     eff_noise_opers: list[np.ndarray] = field(default_factory=list)

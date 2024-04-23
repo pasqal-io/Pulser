@@ -70,8 +70,8 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
-            - "dephasing": Random phase (Z) flip.
             - "relaxation": Relaxation from the Rydberg to the ground state.
+            - "dephasing": Random phase (Z) flip.
             - "depolarizing": Quantum noise where the state (rho) is
               turned into a mixed state I/2 at a rate gamma (in rad/µs).
             - "eff_noise": General effective noise channel defined by
@@ -108,8 +108,8 @@ class SimConfig:
     eta: float = 0.005
     epsilon: float = 0.01
     epsilon_prime: float = 0.05
-    dephasing_rate: float = 0.05
     relaxation_rate: float = 0.01
+    dephasing_rate: float = 0.05
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
@@ -211,10 +211,10 @@ class SimConfig:
         if "amplitude" in self.noise:
             lines.append(f"Laser waist:           {self.laser_waist}μm")
             lines.append(f"Amplitude standard dev.:  {self.amp_sigma}")
-        if "dephasing" in self.noise:
-            lines.append(f"Dephasing rate: {self.dephasing_rate}")
         if "relaxation" in self.noise:
             lines.append(f"Relaxation rate: {self.relaxation_rate}")
+        if "dephasing" in self.noise:
+            lines.append(f"Dephasing rate: {self.dephasing_rate}")
         if "depolarizing" in self.noise:
             lines.append(f"Depolarizing rate: {self.depolarizing_rate}")
         if solver_options:
