@@ -110,19 +110,15 @@ class TestNoiseModel:
         "param",
         [
             "dephasing_rate",
+            "relaxation_rate",
             "depolarizing_rate",
         ],
     )
     def test_init_rate_like(self, param, value):
         if value < 0:
-            param_mess = (
-                "depolarizing_rate"
-                if "depolarizing" in param
-                else "dephasing_rate"
-            )
             with pytest.raises(
                 ValueError,
-                match=f"'{param_mess}' must be None or greater "
+                match=f"'{param}' must be None or greater "
                 f"than or equal to zero, not {value}.",
             ):
                 NoiseModel(**{param: value})
@@ -132,6 +128,8 @@ class TestNoiseModel:
                 assert noise_model.depolarizing_rate == value
             elif "dephasing" in param:
                 assert noise_model.dephasing_rate == value
+            elif "relaxation" in param:
+                assert noise_model.relaxation_rate == value
 
     @pytest.mark.parametrize("value", [-1e-9, 1.0001])
     @pytest.mark.parametrize(
