@@ -44,12 +44,16 @@ class NoiseModel:
             options:
 
             - "dephasing": Random phase (Z) flip (parametrized
-              by `dephasing_rate`).
+              by `dephasing_rate`), commonly characterized experimentally
+              by the T2 time.
             - "relaxation": Noise due to a decay from the Rydberg to
-              the ground state (parametrized by `relaxation_rate`).
+              the ground state (parametrized by `relaxation_rate`), commonly
+              characterized experimentally by the T1 time.
             - "depolarizing": Quantum noise where the state is
-              turned into a mixed state I/2 with rate
-              `depolarizing_rate`.
+              turned into a mixed state I/2 with rate `depolarizing_rate`.
+              While it does not describe a physical phenomenon, it is a
+              commonly used tool to test the system under a uniform
+              combination of phase and amplitude noise.
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
               and the corresponding rates distribution
