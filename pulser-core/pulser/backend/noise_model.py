@@ -20,7 +20,13 @@ from typing import Any, Literal, get_args
 import numpy as np
 
 NOISE_TYPES = Literal[
-    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"
+    "doppler",
+    "amplitude",
+    "SPAM",
+    "dephasing",
+    "relaxation",
+    "depolarizing",
+    "eff_noise",
 ]
 
 
@@ -37,11 +43,18 @@ class NoiseModel:
         noise_types: Noise types to include in the emulation. Available
             options:
 
+            - "relaxation": Noise due to a decay from the Rydberg to
+              the ground state (parametrized by `relaxation_rate`), commonly
+              characterized experimentally by the T1 time.
             - "dephasing": Random phase (Z) flip (parametrized
-              by `dephasing_rate`).
+              by `dephasing_rate`), commonly characterized experimentally
+              by the T2 time.
             - "depolarizing": Quantum noise where the state is
-              turned into the maximally mixed state with rate
-              `depolarizing_rate`.
+              turned into the maximally mixed state with rate 
+              `depolarizing_rate`. While it does not describe a physical 
+              phenomenon, it is a commonly used tool to test the system 
+              under a uniform combination of phase flip (Z) and 
+              bit flip (X) errors.
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
               and the corresponding rates distribution
@@ -67,11 +80,14 @@ class NoiseModel:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        dephasing_rate: The rate of a dephasing error occuring (in rad/µs).
-        depolarizing_rate: The rate (in rad/µs) at which a depolarizing
+        relaxation_rate: The rate of relaxation from the Rydberg to the
+            ground state (in 1/µs). Corresponds to 1/T1.
+        dephasing_rate: The rate of a dephasing error occuring (in 1/µs).
+            Corresponds to 1/T2.
+        depolarizing_rate: The rate (in 1/µs) at which a depolarizing
             error occurs.
         eff_noise_rates: The rate associated to each effective noise operator
-            (in rad/µs).
+            (in 1/µs).
         eff_noise_opers: The operators for the effective noise model.
     """
 
@@ -84,6 +100,7 @@ class NoiseModel:
     temperature: float = 50.0
     laser_waist: float = 175.0
     amp_sigma: float = 5e-2
+    relaxation_rate: float = 0.01
     dephasing_rate: float = 0.05
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list)
@@ -92,6 +109,7 @@ class NoiseModel:
     def __post_init__(self) -> None:
         positive = {
             "dephasing_rate",
+            "relaxation_rate",
             "depolarizing_rate",
         }
         strict_positive = {

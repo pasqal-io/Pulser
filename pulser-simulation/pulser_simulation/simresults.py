@@ -52,7 +52,7 @@ class SimulationResults(ABC, Results[ResultType]):
             size: The number of atoms in the register.
             basis_name: The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all').
-            sim_times: Array of times (µs) when simulation results are
+            sim_times: Array of times (in µs) when simulation results are
                 returned.
         """
         self._dim = 3 if basis_name == "all" else 2
@@ -132,7 +132,7 @@ class SimulationResults(ABC, Results[ResultType]):
         """Returns the result of multiple measurements at time t.
 
         Args:
-            t: Time at which the state is sampled.
+            t: Time at which the state is sampled (in µs).
             n_samples: Number of samples to return.
             t_tol: Tolerance for the difference between t and
                 closest time.
@@ -291,7 +291,7 @@ class NoisyResults(SimulationResults):
             way of computing expectation values of observables.
 
         Args:
-            t: Time (µs) at which to return the state.
+            t: Time (in µs) at which to return the state.
             t_tol: Tolerance for the difference between t and
                 closest time.
 
@@ -423,7 +423,7 @@ class CoherentResults(SimulationResults):
         """Get the state at time t of the simulation.
 
         Args:
-            t: Time (µs) at which to return the state.
+            t: Time (in µs) at which to return the state.
             reduce_to_basis: Reduces the full state vector
                 to the given basis ("ground-rydberg" or "digital"), if the
                 population of the states to be ignored is negligible. Doesn't
@@ -515,7 +515,7 @@ class CoherentResults(SimulationResults):
         """Returns the result of multiple measurements at time t.
 
         Args:
-            t: Time at which the state is sampled.
+            t: Time (in µs) at which the state is sampled.
             n_samples: Number of samples to return.
             t_tol: Tolerance for the difference between t and
                 closest time.
