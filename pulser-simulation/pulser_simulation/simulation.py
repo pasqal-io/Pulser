@@ -263,6 +263,9 @@ class QutipEmulator:
             param_dict["amp_sigma"] = noise_model.amp_sigma
         if "dephasing" in diff_noise_set:
             param_dict["dephasing_rate"] = noise_model.dephasing_rate
+            param_dict["hyperfine_dephasing_rate"] = (
+                noise_model.hyperfine_dephasing_rate
+            )
         if "relaxation" in diff_noise_set:
             param_dict["relaxation_rate"] = noise_model.relaxation_rate
         if "depolarizing" in diff_noise_set:

@@ -110,6 +110,7 @@ class TestNoiseModel:
         "param",
         [
             "dephasing_rate",
+            "hyperfine_dephasing_rate",
             "relaxation_rate",
             "depolarizing_rate",
         ],
@@ -124,12 +125,7 @@ class TestNoiseModel:
                 NoiseModel(**{param: value})
         else:
             noise_model = NoiseModel(**{param: value})
-            if "depolarizing" in param:
-                assert noise_model.depolarizing_rate == value
-            elif "dephasing" in param:
-                assert noise_model.dephasing_rate == value
-            elif "relaxation" in param:
-                assert noise_model.relaxation_rate == value
+            assert getattr(noise_model, param) == value
 
     @pytest.mark.parametrize("value", [-1e-9, 1.0001])
     @pytest.mark.parametrize(

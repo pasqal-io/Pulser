@@ -48,7 +48,7 @@ class NoiseModel:
               characterized experimentally by the T1 time.
             - "dephasing": Random phase (Z) flip (parametrized
               by `dephasing_rate`), commonly characterized experimentally
-              by the T2 time.
+              by the T2* time.
             - "depolarizing": Quantum noise where the state is
               turned into a mixed state I/2 with rate `depolarizing_rate`.
               While it does not describe a physical phenomenon, it is a
@@ -81,8 +81,11 @@ class NoiseModel:
             deviation of a normal distribution centered in 1.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
-        dephasing_rate: The rate of a dephasing error occuring (in 1/µs).
-            Corresponds to 1/T2.
+        dephasing_rate: The rate of a dephasing occuring (in 1/µs) when a
+            Rydberg state is involved in the superposition. Corresponds
+            to 1/T2*.
+        hyperfine_dephasing_rate: The rate of dephasing occuring (in 1/µs)
+            between hyperfine ground states.
         depolarizing_rate: The rate (in 1/µs) at which a depolarizing
             error occurs.
         eff_noise_rates: The rate associated to each effective noise operator
@@ -101,6 +104,7 @@ class NoiseModel:
     amp_sigma: float = 5e-2
     relaxation_rate: float = 0.01
     dephasing_rate: float = 0.05
+    hyperfine_dephasing_rate: float = 1e-3
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list)
     eff_noise_opers: list[np.ndarray] = field(default_factory=list)
@@ -108,6 +112,7 @@ class NoiseModel:
     def __post_init__(self) -> None:
         positive = {
             "dephasing_rate",
+            "hyperfine_dephasing_rate",
             "relaxation_rate",
             "depolarizing_rate",
         }
