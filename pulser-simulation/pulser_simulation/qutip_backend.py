@@ -19,7 +19,7 @@ from typing import Any
 from pulser import Sequence
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
-from pulser.backend.noise_model import NoiseModel
+from pulser.noise_model import NoiseModel
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import SimulationResults
 from pulser_simulation.simulation import QutipEmulator

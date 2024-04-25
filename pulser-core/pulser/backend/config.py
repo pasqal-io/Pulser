@@ -19,7 +19,7 @@ from typing import Any, Literal, Sequence, get_args
 
 import numpy as np
 
-from pulser.backend.noise_model import NoiseModel
+from pulser.noise_model import NoiseModel
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 

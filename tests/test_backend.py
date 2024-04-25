@@ -23,7 +23,6 @@ import pytest
 import pulser
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
-from pulser.backend.noise_model import NoiseModel
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     RemoteConnection,
@@ -32,6 +31,7 @@ from pulser.backend.remote import (
     SubmissionStatus,
 )
 from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.noise_model import NoiseModel
 from pulser.result import Result, SampledResult
 
 

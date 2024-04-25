@@ -27,7 +27,6 @@ import numpy as np
 import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
-from pulser.backend import NoiseModel
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
@@ -48,6 +47,7 @@ from pulser.json.abstract_repr.serializer import (
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
+from pulser.noise_model import NoiseModel
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem

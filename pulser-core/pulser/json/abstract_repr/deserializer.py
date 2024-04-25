@@ -56,7 +56,7 @@ from pulser.waveforms import (
 )
 
 if TYPE_CHECKING:
-    from pulser.backend import NoiseModel
+    from pulser.noise_model import NoiseModel
     from pulser.register.base_register import BaseRegister
     from pulser.sequence import Sequence
 

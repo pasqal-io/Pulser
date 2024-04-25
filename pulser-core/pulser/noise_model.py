@@ -25,6 +25,8 @@ import pulser.json.abstract_repr as pulser_abstract_repr
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 
+__all__ = ["NoiseModel"]
+
 NOISE_TYPES = Literal[
     "doppler",
     "amplitude",

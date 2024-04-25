@@ -23,8 +23,8 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
-from pulser.backend.noise_model import NoiseModel
 from pulser.devices._device_datacls import BaseDevice
+from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
