@@ -110,6 +110,7 @@ class SimConfig:
     epsilon_prime: float = 0.05
     relaxation_rate: float = 0.01
     dephasing_rate: float = 0.05
+    hyperfine_dephasing_rate: float = 1e-3
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
@@ -129,6 +130,7 @@ class SimConfig:
             epsilon=noise_model.p_false_pos,
             epsilon_prime=noise_model.p_false_neg,
             dephasing_rate=noise_model.dephasing_rate,
+            hyperfine_dephasing_rate=noise_model.hyperfine_dephasing_rate,
             relaxation_rate=noise_model.relaxation_rate,
             depolarizing_rate=noise_model.depolarizing_rate,
             eff_noise_rates=noise_model.eff_noise_rates,
@@ -148,6 +150,7 @@ class SimConfig:
             laser_waist=self.laser_waist,
             amp_sigma=self.amp_sigma,
             dephasing_rate=self.dephasing_rate,
+            hyperfine_dephasing_rate=self.hyperfine_dephasing_rate,
             relaxation_rate=self.relaxation_rate,
             depolarizing_rate=self.depolarizing_rate,
             eff_noise_rates=self.eff_noise_rates,
@@ -214,7 +217,10 @@ class SimConfig:
         if "relaxation" in self.noise:
             lines.append(f"Relaxation rate: {self.relaxation_rate}")
         if "dephasing" in self.noise:
-            lines.append(f"Dephasing rate: {self.dephasing_rate}")
+            lines.append(
+                f"Dephasing rate: {self.dephasing_rate} (Rydberg), "
+                f"{self.hyperfine_dephasing_rate} (Hyperfine)"
+            )
         if "depolarizing" in self.noise:
             lines.append(f"Depolarizing rate: {self.depolarizing_rate}")
         if solver_options:
