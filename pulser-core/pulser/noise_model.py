@@ -161,7 +161,7 @@ class NoiseModel:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
         def to_tuple(obj: tuple) -> tuple:
-            if isinstance(obj, (tuple | list | np.ndarray)):
+            if isinstance(obj, (tuple, list, np.ndarray)):
                 obj = tuple(to_tuple(el) for el in obj)
             return obj
 
