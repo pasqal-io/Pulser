@@ -1330,6 +1330,11 @@ class Sequence(Generic[DeviceType]):
             block_eom_mode=True,
             block_if_slm=channel.startswith("dmm_"),
         )
+        if isinstance(self.declared_channels[channel], DMM):
+            raise ValueError(
+                "`Sequence.add()` can't be used on a DMM channel. "
+                "Use `Sequence.add_dmm_detuning()` instead."
+            )
         self._add(pulse, channel, protocol)
 
     @seq_decorators.store
@@ -1341,11 +1346,11 @@ class Sequence(Generic[DeviceType]):
         dmm_name: str,
         protocol: PROTOCOLS = "no-delay",
     ) -> None:
-        """Add a waveform to the detuning of a dmm.
+        """Add a waveform to the detuning of a DMM.
 
         Args:
-            waveform: The waveform to add to the detuning of the dmm.
-            dmm_name: The id of the dmm to modulate.
+            waveform: The waveform to add to the detuning of the DMM.
+            dmm_name: The name of the DMM channel to modulate.
             protocol: Stipulates how to deal with
                 eventual conflicts with other channels, specifically in terms
                 of having multiple channels act on the same target
@@ -1360,6 +1365,8 @@ class Sequence(Generic[DeviceType]):
                   latest pulse.
         """
         self._validate_channel(dmm_name, block_if_slm=True)
+        if not isinstance(self.declared_channels[dmm_name], DMM):
+            raise ValueError(f"'{dmm_name}' is not the name of a DMM channel.")
         self._add(
             Pulse.ConstantAmplitude(0, waveform, 0),
             dmm_name,
@@ -1413,14 +1420,22 @@ class Sequence(Generic[DeviceType]):
         self,
         duration: Union[int, Parametrized],
         channel: str,
+        at_rest: bool = False,
     ) -> None:
         """Idles a given channel for a specific duration.
 
         Args:
             duration: Time to delay (in ns).
             channel: The channel's name provided when declared.
+            at_rest: Whether to wait until the previous pulse on the
+                channel has finished (including output modulation) before
+                starting the delay.
+
+        Note:
+            Delays added automatically by other instructions will generally
+            take into account the output modulation.
         """
-        self._delay(duration, channel)
+        self._delay(duration, channel, at_rest)
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
@@ -1517,7 +1532,7 @@ class Sequence(Generic[DeviceType]):
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
-    def align(self, *channels: str) -> None:
+    def align(self, *channels: str, at_rest: bool = True) -> None:
         """Aligns multiple channels in time.
 
         Introduces delays that align the provided channels with the one that
@@ -1527,6 +1542,8 @@ class Sequence(Generic[DeviceType]):
         Args:
             channels: The names of the channels to align, as given upon
                 declaration.
+            at_rest: Whether to consider the output modulation of a channel's
+                contents when determining that it has finished.
         """
         ch_set = set(channels)
         # channels have to be a subset of the declared channels
@@ -1544,7 +1561,7 @@ class Sequence(Generic[DeviceType]):
             return
 
         last_ts = {
-            id: self.get_duration(id, include_fall_time=True)
+            id: self.get_duration(id, include_fall_time=at_rest)
             for id in channels
         }
         tf = max(last_ts.values())
@@ -2131,9 +2148,18 @@ class Sequence(Generic[DeviceType]):
         return ids
 
     @seq_decorators.block_if_measured
-    def _delay(self, duration: Union[int, Parametrized], channel: str) -> None:
+    def _delay(
+        self,
+        duration: Union[int, Parametrized],
+        channel: str,
+        at_rest: bool = False,
+    ) -> None:
         self._validate_channel(channel, block_if_slm=True)
         if self.is_parametrized():
+            return
+        if at_rest:
+            self._schedule.wait_for_fall(channel)
+        if not duration:
             return
         self._schedule.add_delay(cast(int, duration), channel)
 

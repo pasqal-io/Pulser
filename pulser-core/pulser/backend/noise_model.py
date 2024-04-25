@@ -14,9 +14,8 @@
 """Defines a noise model class for emulator backends."""
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, get_args
+from typing import Literal, get_args
 
 import numpy as np
 
@@ -26,7 +25,9 @@ NOISE_TYPES = Literal[
     "amplitude",
     "SPAM",
     "dephasing",
+    "relaxation",
     "depolarizing",
+   
     "eff_noise",
 ]
 
@@ -48,11 +49,17 @@ class NoiseModel:
               effective noise channel. Must be defined with an effective
               noise channel, but is incompatible with dephasing and
               depolarizing noise channels.
+            - "relaxation": Noise due to a decay from the Rydberg to
+              the ground state (parametrized by `relaxation_rate`), commonly
+              characterized experimentally by the T1 time.
             - "dephasing": Random phase (Z) flip (parametrized
-              by `dephasing_rate`).
+              by `dephasing_rate`), commonly characterized experimentally
+              by the T2* time.
             - "depolarizing": Quantum noise where the state is
-              turned into a mixed state I/2 with rate
-              `depolarizing_rate`.
+              turned into a mixed state I/2 with rate `depolarizing_rate`.
+              While it does not describe a physical phenomenon, it is a
+              commonly used tool to test the system under a uniform
+              combination of phase flip (Z) and bit flip (X) errors.
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
               and the corresponding rates distribution
@@ -78,17 +85,18 @@ class NoiseModel:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        dephasing_rate: The rate of a dephasing error occuring (in rad/µs).
-        dephasing_prob: (Deprecated) The rate of a dephasing error occuring
-            (in rad/µs). Use `dephasing_rate` instead.
-        depolarizing_rate: The rate (in rad/µs) at which a depolarizing
+        relaxation_rate: The rate of relaxation from the Rydberg to the
+            ground state (in 1/µs). Corresponds to 1/T1.
+        dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
+            Rydberg state superpostion. Only used if a Rydberg state is
+            involved. Corresponds to 1/T2*.
+        hyperfine_dephasing_rate: The rate of dephasing occuring (in 1/µs)
+            between hyperfine ground states. Only used if the hyperfine
+            state is involved.
+        depolarizing_rate: The rate (in 1/µs) at which a depolarizing
             error occurs.
-        depolarizing_prob: (Deprecated) The rate (in rad/µs) at which a
-            depolarizing error occurs. Use `depolarizing_rate` instead.
         eff_noise_rates: The rate associated to each effective noise operator
-            (in rad/µs).
-        eff_noise_probs: (Deprecated) The rate associated to each effective
-            noise operator (in rad/µs). Use `eff_noise_rate` instead.
+            (in 1/µs).
         eff_noise_opers: The operators for the effective noise model.
     """
 
@@ -101,50 +109,18 @@ class NoiseModel:
     temperature: float = 50.0
     laser_waist: float = 175.0
     amp_sigma: float = 5e-2
+    relaxation_rate: float = 0.01
     dephasing_rate: float = 0.05
+    hyperfine_dephasing_rate: float = 1e-3
     depolarizing_rate: float = 0.05
     eff_noise_rates: list[float] = field(default_factory=list)
     eff_noise_opers: list[np.ndarray] = field(default_factory=list)
-    dephasing_prob: float | None = None
-    depolarizing_prob: float | None = None
-    eff_noise_probs: list[float] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        default_field_value = {
-            field.name: field.default for field in fields(self)
-        }
-        for noise in ["dephasing", "depolarizing", "eff_noise"]:
-            # Probability and rates should be the same
-            prob_name = f"{noise}_prob{'s' if noise=='eff_noise' else ''}"
-            rate_name = f"{noise}_rate{'s' if noise=='eff_noise' else ''}"
-            prob, rate = (getattr(self, prob_name), getattr(self, rate_name))
-            if len(prob) > 0 if noise == "eff_noise" else prob is not None:
-                warnings.warn(
-                    f"{prob_name} is deprecated. Use {rate_name} instead.",
-                    DeprecationWarning,
-                )
-                if prob != rate:
-                    if (
-                        len(rate) > 0
-                        if noise == "eff_noise"
-                        else rate != default_field_value[rate_name]
-                    ):
-                        raise ValueError(
-                            f"If both defined, `{rate_name}` and `{prob_name}`"
-                            " must be equal."
-                        )
-                    warnings.warn(
-                        f"Setting {rate_name} with the value from "
-                        f"{prob_name}.",
-                        UserWarning,
-                    )
-                    self._change_attribute(rate_name, prob)
-            self._change_attribute(prob_name, getattr(self, rate_name))
-        assert self.dephasing_prob == self.dephasing_rate
-        assert self.depolarizing_prob == self.depolarizing_rate
-        assert self.eff_noise_probs == self.eff_noise_rates
         positive = {
             "dephasing_rate",
+            "hyperfine_dephasing_rate",
+            "relaxation_rate",
             "depolarizing_rate",
         }
         strict_positive = {
@@ -184,9 +160,6 @@ class NoiseModel:
         self._check_noise_types()
         self._check_leakage_noise()
         self._check_eff_noise()
-
-    def _change_attribute(self, attr_name: str, new_value: Any) -> None:
-        object.__setattr__(self, attr_name, new_value)
 
     def _check_noise_types(self) -> None:
         for noise_type in self.noise_types:

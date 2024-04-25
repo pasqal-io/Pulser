@@ -867,9 +867,10 @@ def test_noise(seq, matrices):
     "noise, result, n_collapse_ops",
     [
         ("dephasing", {"0": 595, "1": 405}, 1),
+        ("relaxation", {"0": 595, "1": 405}, 1),
         ("eff_noise", {"0": 595, "1": 405}, 1),
         ("depolarizing", {"0": 587, "1": 413}, 3),
-        (("dephasing", "depolarizing"), {"0": 587, "1": 413}, 4),
+        (("dephasing", "depolarizing", "relaxation"), {"0": 587, "1": 413}, 5),
         (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
         (("eff_noise", "leakage"), {"0": 572, "1": 428}, 1),
     ],
@@ -912,6 +913,25 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops
     trace_2 = res.states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+
+
+def test_relaxation_noise():
+    seq = Sequence(Register({"q0": (0, 0)}), MockDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0, 0), "ryd")
+    seq.delay(10000, "ryd")
+
+    sim = QutipEmulator.from_sequence(seq)
+    sim.add_config(SimConfig(noise="relaxation", relaxation_rate=0.1))
+    res = sim.run()
+    start_samples = res.sample_state(1)
+    ryd_pop = start_samples["1"]
+    assert ryd_pop > start_samples.get("0", 0)
+    # The Rydberg state population gradually decays
+    for t_ in range(2, 10):
+        new_ryd_pop = res.sample_state(t_)["1"]
+        assert new_ryd_pop < ryd_pop
+        ryd_pop = new_ryd_pop
 
 
 depo_res = {
@@ -968,12 +988,20 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         sampling_rate=0.01,
         config=SimConfig(
             noise=noise,
+            hyperfine_dephasing_rate=0.05,
             eff_noise_opers=[
                 matrices["Z"] if "leakage" not in noise else proj_g - proj_x
             ],
             eff_noise_rates=[0.025],
         ),
     )
+
+    with pytest.raises(
+        ValueError,
+        match="'relaxation' noise requires addressing of the 'ground-rydberg'",
+    ):
+        sim.set_config(SimConfig(noise="relaxation"))
+
     res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
@@ -1168,10 +1196,9 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
-        with pytest.warns(DeprecationWarning, match="is deprecated"):
-            sim._hamiltonian.set_config(
-                SimConfig(("SPAM", "doppler")).to_noise_model()
-            )
+        sim._hamiltonian.set_config(
+            SimConfig(("SPAM", "doppler")).to_noise_model()
+        )
     with pytest.raises(
         NotImplementedError, match="simulation of noise types: amplitude"
     ):

@@ -147,13 +147,9 @@ class QutipEmulator:
                 "`sampling_rate` is too small, less than 4 data points."
             )
         # Sets the config as well as builds the hamiltonian
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
-            noise_model: NoiseModel = (
-                config.to_noise_model()
-                if config
-                else SimConfig().to_noise_model()
-            )
+        noise_model: NoiseModel = (
+            config.to_noise_model() if config else SimConfig().to_noise_model()
+        )
         self._hamiltonian = Hamiltonian(
             self.samples_obj,
             self._register.qubits,
@@ -222,9 +218,7 @@ class QutipEmulator:
     @property
     def config(self) -> SimConfig:
         """The current configuration, as a SimConfig instance."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
-            return SimConfig.from_noise_model(self._hamiltonian.config)
+        return SimConfig.from_noise_model(self._hamiltonian.config)
 
     def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
@@ -244,9 +238,7 @@ class QutipEmulator:
                 " support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
-            self._hamiltonian.set_config(cfg.to_noise_model())
+        self._hamiltonian.set_config(cfg.to_noise_model())
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
@@ -273,9 +265,7 @@ class QutipEmulator:
                 " support simulation of noise types: "
                 f"{', '.join(not_supported)}."
             )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
-            noise_model = config.to_noise_model()
+        noise_model = config.to_noise_model()
         old_noise_set = set(self._hamiltonian.config.noise_types)
         new_noise_set = old_noise_set.union(noise_model.noise_types)
         diff_noise_set = new_noise_set - old_noise_set
@@ -293,22 +283,22 @@ class QutipEmulator:
             param_dict["laser_waist"] = noise_model.laser_waist
             param_dict["amp_sigma"] = noise_model.amp_sigma
         if "dephasing" in diff_noise_set:
-            param_dict["dephasing_prob"] = noise_model.dephasing_prob
             param_dict["dephasing_rate"] = noise_model.dephasing_rate
+            param_dict["hyperfine_dephasing_rate"] = (
+                noise_model.hyperfine_dephasing_rate
+            )
+        if "relaxation" in diff_noise_set:
+            param_dict["relaxation_rate"] = noise_model.relaxation_rate
         if "depolarizing" in diff_noise_set:
-            param_dict["depolarizing_prob"] = noise_model.depolarizing_prob
             param_dict["depolarizing_rate"] = noise_model.depolarizing_rate
         if "eff_noise" in diff_noise_set:
             param_dict["eff_noise_opers"] = noise_model.eff_noise_opers
             param_dict["eff_noise_rates"] = noise_model.eff_noise_rates
-            param_dict["eff_noise_probs"] = noise_model.eff_noise_probs
         # update runs:
         param_dict["runs"] = noise_model.runs
         param_dict["samples_per_run"] = noise_model.samples_per_run
         # set config with the new parameters:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
-            self._hamiltonian.set_config(NoiseModel(**param_dict))
+        self._hamiltonian.set_config(NoiseModel(**param_dict))
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -316,9 +306,7 @@ class QutipEmulator:
 
     def reset_config(self) -> None:
         """Resets configuration to default."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
-            self._hamiltonian.set_config(SimConfig().to_noise_model())
+        self._hamiltonian.set_config(SimConfig().to_noise_model())
 
     @property
     def initial_state(self) -> qutip.Qobj:
@@ -580,6 +568,7 @@ class QutipEmulator:
 
             if (
                 "dephasing" in self.config.noise
+                or "relaxation" in self.config.noise
                 or "depolarizing" in self.config.noise
                 or "eff_noise" in self.config.noise
             ):
@@ -633,7 +622,7 @@ class QutipEmulator:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "SPAM", "depolarizing", "eff_noise", "leakage"}
+            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise", "leakage"}
         ):
             # If there is no "SPAM" or if error state is to be taken into
             # account, the preparation errors must be zero

@@ -1046,7 +1046,8 @@ def test_target(reg, device):
         seq2.target({"q3", "q1", "q2"}, "ch0")
 
 
-def test_delay(reg, device):
+@pytest.mark.parametrize("at_rest", [True, False])
+def test_delay(reg, device, at_rest):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local")
     with pytest.raises(ValueError, match="Use the name of a declared channel"):
@@ -1054,8 +1055,37 @@ def test_delay(reg, device):
     with pytest.raises(ValueError, match="channel has no target"):
         seq.delay(100, "ch0")
     seq.target("q19", "ch0")
-    seq.delay(388, "ch0")
-    assert seq._last("ch0") == _TimeSlot("delay", 0, 388, {"q19"})
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
+    # At rest will have no effect
+    assert seq.declared_channels["ch0"].mod_bandwidth is None
+    seq.delay(388, "ch0", at_rest)
+    assert seq._last("ch0") == (
+        last_slot := _TimeSlot("delay", 100, 488, {"q19"})
+    )
+    seq.delay(0, "ch0", at_rest)
+    # A delay of 0 is not added to the schedule
+    assert seq._last("ch0") == last_slot
+
+
+@pytest.mark.parametrize("delay_duration", [200, 0])
+@pytest.mark.parametrize("at_rest", [True, False])
+@pytest.mark.parametrize("in_eom", [True, False])
+def test_delay_at_rest(in_eom, at_rest, delay_duration):
+    seq = Sequence(Register.square(2, 5), AnalogDevice)
+    seq.declare_channel("ryd", "rydberg_global")
+    assert (ch_obj := seq.declared_channels["ryd"]).mod_bandwidth is not None
+    pulse = Pulse.ConstantPulse(100, 1, 0, 0)
+    assert pulse.duration == 100
+    if in_eom:
+        seq.enable_eom_mode("ryd", 1, 0, 0)
+        seq.add_eom_pulse("ryd", pulse.duration, 0)
+    else:
+        seq.add(pulse, "ryd")
+    assert (extra_delay := pulse.fall_time(ch_obj, in_eom_mode=in_eom)) > 0
+    seq.delay(delay_duration, "ryd", at_rest=at_rest)
+    assert seq.get_duration() == pulse.duration + delay_duration + (
+        extra_delay * at_rest
+    )
 
 
 def test_delay_min_duration(reg, device):
@@ -1535,13 +1565,11 @@ def test_draw_slm_mask_in_ising(
         )
     seq1.draw(mode, draw_qubit_det=draw_qubit_det, draw_interp_pts=False)
     seq1.add_dmm_detuning(RampWaveform(300, -10, 0), "dmm_0")
-    # Same function with add is longer
-    seq1.add(Pulse.ConstantAmplitude(0, RampWaveform(300, -10, 0), 0), "dmm_0")
     # pulse is added on rydberg global with a delay (protocol is "min-delay")
     seq1.add(pulse1, "ryd_glob")  # slm pulse between 0 and 400
     seq1.add(pulse2, "ryd_glob")
     seq1.config_slm_mask(targets)
-    mask_time = 700 + 2 * mymockdevice.channels["rydberg_global"].rise_time
+    mask_time = 400 + 2 * mymockdevice.channels["rydberg_global"].rise_time
     assert seq1._slm_mask_time == [0, mask_time]
     assert seq1._schedule["dmm_0_1"].slots[1].type == Pulse.ConstantPulse(
         mask_time, 0, -100, 0
@@ -1674,7 +1702,8 @@ def test_draw_register_det_maps(reg, ch_name, patch_plt_show):
     seq3d.draw(draw_register=True, draw_detuning_maps=True)
 
 
-def test_hardware_constraints(reg, patch_plt_show):
+@pytest.mark.parametrize("align_at_rest", [True, False])
+def test_hardware_constraints(reg, align_at_rest, patch_plt_show):
     rydberg_global = Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
@@ -1755,10 +1784,10 @@ def test_hardware_constraints(reg, patch_plt_show):
     assert seq._schedule["ch0"][-1].ti == seq._schedule["ch0"][-2].tf
 
     tf_ = seq.get_duration("ch0")
-    seq.align("ch0", "ch1")
+    seq.align("ch0", "ch1", at_rest=align_at_rest)
     fall_time = black_pls.fall_time(rydberg_global)
     assert seq.get_duration() == seq._schedule["ch0"].adjust_duration(
-        tf_ + fall_time
+        tf_ + fall_time * align_at_rest
     )
 
     with pytest.raises(ValueError, match="'mode' must be one of"):
@@ -2242,3 +2271,15 @@ def test_max_duration(reg, mod_device):
         seq.delay(16, "ch0")
     with catch_statement:
         seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch0")
+
+
+def test_add_to_dmm_fails(reg, device, det_map):
+    seq = Sequence(reg, device)
+    seq.config_detuning_map(det_map, "dmm_0")
+    pulse = Pulse.ConstantPulse(100, 0, -1, 0)
+    with pytest.raises(ValueError, match="can't be used on a DMM"):
+        seq.add(pulse, "dmm_0")
+
+    seq.declare_channel("ryd", "rydberg_global")
+    with pytest.raises(ValueError, match="not the name of a DMM channel"):
+        seq.add_dmm_detuning(pulse.detuning, "ryd")

@@ -805,8 +805,11 @@ class TestSerialization:
         ]
         assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
+    @pytest.mark.parametrize("delay_at_rest", (False, True))
     @pytest.mark.parametrize("correct_phase_drift", (False, True))
-    def test_eom_mode(self, triangular_lattice, correct_phase_drift):
+    def test_eom_mode(
+        self, triangular_lattice, correct_phase_drift, delay_at_rest
+    ):
         reg = triangular_lattice.hexagonal_register(7)
         seq = Sequence(reg, AnalogDevice)
         seq.declare_channel("ryd", "rydberg_global")
@@ -822,16 +825,20 @@ class TestSerialization:
         seq.add_eom_pulse(
             "ryd", duration, 0.0, correct_phase_drift=correct_phase_drift
         )
-        seq.delay(duration, "ryd")
+        seq.delay(duration, "ryd", at_rest=delay_at_rest)
         seq.disable_eom_mode("ryd", correct_phase_drift)
 
         abstract = json.loads(seq.to_abstract_repr())
         validate_schema(abstract)
 
-        extra_kwargs = (
+        extra_eom_kwargs = (
             dict(correct_phase_drift=correct_phase_drift)
             if correct_phase_drift
             else {}
+        )
+
+        extra_delay_kwargs = (
+            dict(at_rest=delay_at_rest) if delay_at_rest else {}
         )
 
         assert abstract["operations"][0] == {
@@ -846,7 +853,7 @@ class TestSerialization:
                     "rhs": 0,
                 },
             },
-            **extra_kwargs,
+            **extra_eom_kwargs,
         }
 
         ser_duration = {
@@ -863,7 +870,16 @@ class TestSerialization:
                 "post_phase_shift": 0.0,
                 "protocol": "min-delay",
             },
-            **extra_kwargs,
+            **extra_eom_kwargs,
+        }
+
+        assert abstract["operations"][2] == {
+            **{
+                "op": "delay",
+                "channel": "ryd",
+                "time": ser_duration,
+            },
+            **extra_delay_kwargs,
         }
 
         assert abstract["operations"][3] == {
@@ -871,7 +887,7 @@ class TestSerialization:
                 "op": "disable_eom_mode",
                 "channel": "ryd",
             },
-            **extra_kwargs,
+            **extra_eom_kwargs,
         }
 
     @pytest.mark.parametrize("use_default", [True, False])
@@ -1364,7 +1380,13 @@ class TestDeserialization:
             {"op": "target", "target": 2, "channel": "digital"},
             {"op": "target", "target": [1, 2], "channel": "digital"},
             {"op": "delay", "time": 500, "channel": "global"},
+            {"op": "delay", "time": 500, "channel": "global", "at_rest": True},
             {"op": "align", "channels": ["digital", "global"]},
+            {
+                "op": "align",
+                "channels": ["digital", "global"],
+                "at_rest": False,
+            },
             {
                 "op": "phase_shift",
                 "phi": 42,
@@ -1413,10 +1435,12 @@ class TestDeserialization:
         elif op["op"] == "align":
             assert c.name == "align"
             assert c.args == tuple(op["channels"])
+            assert c.kwargs.get("at_rest", True) == op.get("at_rest", True)
         elif op["op"] == "delay":
             assert c.name == "delay"
             assert c.kwargs["duration"] == op["time"]
             assert c.kwargs["channel"] == op["channel"]
+            assert c.kwargs.get("at_rest", False) == op.get("at_rest", False)
         elif op["op"] == "phase_shift":
             assert c.name == "phase_shift_index"
             assert c.args == tuple([op["phi"], *op["targets"]])
@@ -1584,6 +1608,12 @@ class TestDeserialization:
             },
             {"op": "delay", "time": var2, "channel": "global"},
             {
+                "op": "delay",
+                "time": var2,
+                "channel": "global",
+                "at_rest": True,
+            },
+            {
                 "op": "phase_shift",
                 "phi": var1,
                 "targets": [2, var1],
@@ -1642,6 +1672,7 @@ class TestDeserialization:
             assert c.name == "delay"
             assert c.kwargs["channel"] == op["channel"]
             assert isinstance(c.kwargs["duration"], VariableItem)
+            assert c.kwargs.get("at_rest", False) == op.get("at_rest", False)
         elif op["op"] == "phase_shift":
             assert c.name == "phase_shift_index"
             # phi is variable
