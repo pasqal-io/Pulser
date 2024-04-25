@@ -18,11 +18,9 @@ from pulser.register.register import Register
 from pulser.register.register3d import Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
-    RectangularLatticeLayout,
     SquareLatticeLayout,
     TriangularLatticeLayout,
-    TriangularLatticeLayoutRectShape,
-    RandomLayout,
+    RectangularLatticeLayout,
 )
 
 __all__ = [
@@ -32,6 +30,5 @@ __all__ = [
     "RegisterLayout",
     "SquareLatticeLayout",
     "TriangularLatticeLayout",
-    "TriangularLatticeLayoutRectShape",
-    "RandomLayout",
+    "RectangularLatticeLayout",
 ]

@@ -69,6 +69,7 @@ SUPPORTED_MODULES = {
         "RectangularLatticeLayout",
         "SquareLatticeLayout",
         "TriangularLatticeLayout",
+        # "RectangularLatticeLayout",
     ),
     "pulser.register.mappable_reg": ("MappableRegister",),
     "pulser.register.weight_maps": ("DetuningMap",),

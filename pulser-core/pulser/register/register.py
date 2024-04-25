@@ -89,7 +89,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes register, qubits in a rectangular array, square lattice.
+        """Creates a rectangular array of qubits on a square lattice.
 
         Args:
             rows: Number of rows.
@@ -102,33 +102,10 @@ class Register(BaseRegister, RegDrawer):
         Returns:
             A register with qubits placed in a rectangular array.
         """
-        # Check rows
-        if rows < 1:
-            raise ValueError(
-                f"The number of rows (`rows` = {rows})"
-                " must be greater than or equal to 1."
-            )
-
-        # Check columns
-        if columns < 1:
-            raise ValueError(
-                f"The number of columns (`columns` = {columns})"
-                " must be greater than or equal to 1."
-            )
-
-        # Check spacing
-        if spacing <= 0.0:
-            raise ValueError(
-                f"Spacing between atoms (`spacing` = {spacing})"
-                " must be greater than 0."
-            )
-
-        coords = patterns.square_rect(rows, columns) * spacing
-
-        return cls.from_coordinates(coords, center=True, prefix=prefix)
+        return cls.rectangular_lattice(rows, columns, spacing, spacing, prefix)
 
     @classmethod
-    def rectangle_rect_lattice(
+    def rectangular_lattice(
         cls,
         rows: int,
         columns: int,
@@ -136,7 +113,7 @@ class Register(BaseRegister, RegDrawer):
         col_spacing: float = 2.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes register, qubits in rectangle array, rectangle lattice.
+        """Creates a rectangular array of qubits on a rectangular lattice.
 
         Args:
             rows: Number of rows.
@@ -148,7 +125,8 @@ class Register(BaseRegister, RegDrawer):
                 (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
 
         Returns:
-            Register, qubits placed in a rectangular array, rectangle lattice.
+            Register with qubits placed in a rectangular array on a
+            rectangular lattice.
         """
         # Check rows
         if rows < 1:
@@ -166,13 +144,11 @@ class Register(BaseRegister, RegDrawer):
 
         # Check spacing
         if row_spacing <= 0.0 or col_spacing <= 0.0:
-            raise ValueError(
-                "Spacing between atoms must be greater than 0."
-            )
+            raise ValueError("Spacing between atoms must be greater than 0.")
 
         coords = patterns.square_rect(rows, columns)
-        coords[:, 0] = coords[:, 0]*col_spacing
-        coords[:, 1] = coords[:, 1]*row_spacing
+        coords[:, 0] = coords[:, 0] * col_spacing
+        coords[:, 1] = coords[:, 1] * row_spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 

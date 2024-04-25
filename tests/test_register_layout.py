@@ -22,11 +22,9 @@ import pytest
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
-    RandomLayout,
     RectangularLatticeLayout,
     SquareLatticeLayout,
     TriangularLatticeLayout,
-    TriangularLatticeLayoutRectShape,
 )
 
 
@@ -195,15 +193,12 @@ def test_square_lattice_layout():
 
 def test_rectangular_lattice_layout():
     rectangle = RectangularLatticeLayout(9, 7, 2, 4)
-    assert (
-        str(rectangle)
-        == "RectangularLatticeLayout(9x7, 2.0x4.0µm)"
-    )
-    assert rectangle.square_register(3) == Register.rectangle_rect_lattice(
+    assert str(rectangle) == "RectangularLatticeLayout(9x7, 2.0x4.0µm)"
+    assert rectangle.square_register(3) == Register.rectangular_lattice(
         3, 3, col_spacing=2, row_spacing=4, prefix="q"
     )
     # An even number of atoms on the side won't align the center with an atom
-    assert rectangle.square_register(4) != Register.rectangle_rect_lattice(
+    assert rectangle.square_register(4) != Register.rectangular_lattice(
         4, 4, col_spacing=2, row_spacing=4, prefix="q"
     )
     with pytest.raises(ValueError, match="'8x8' array doesn't fit"):
@@ -241,16 +236,6 @@ def test_triangular_lattice_layout():
     assert tri.rectangular_register(5, 5) != Register.triangular_lattice(
         5, 5, spacing=5, prefix="q"
     )
-
-
-def test_triangular_lattice_layout_rect_shape():
-    tri = TriangularLatticeLayoutRectShape(10, 4, 5)
-    assert str(tri) == "TriangularLatticeLayoutRectshape(4x10, 5.0µm)"
-
-
-def test_random_layout():
-    rand = RandomLayout(50, max_iter=10000, min_spacing=4)
-    assert str(rand) == "RandomLayout(50 traps, min spacing 4.0µm)"
 
 
 def test_mappable_register_creation():

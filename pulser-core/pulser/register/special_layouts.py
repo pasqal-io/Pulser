@@ -25,9 +25,6 @@ from pulser.register.register_layout import RegisterLayout
 if TYPE_CHECKING:
     from pulser.register import Register
 
-import numpy as np
-from scipy.spatial.distance import cdist
-
 
 class RectangularLatticeLayout(RegisterLayout):
     """RegisterLayout with rectangular lattice pattern in a rectangular shape.
@@ -108,8 +105,11 @@ class RectangularLatticeLayout(RegisterLayout):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
-            self, self._rows, self._columns, self._col_spacing,
-            self._row_spacing
+            self,
+            self._rows,
+            self._columns,
+            self._col_spacing,
+            self._row_spacing,
         )
 
 
@@ -215,75 +215,3 @@ class TriangularLatticeLayout(RegisterLayout):
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self.number_of_traps, self._spacing)
-
-
-class TriangularLatticeLayoutRectShape(RegisterLayout):
-    """RegisterLayout with a triangular lattice pattern in a rectangular shape.
-
-    Args:
-        n_traps: The number of traps in the layout.
-        spacing: The distance between neighbouring traps (in µm).
-    """
-
-    def __init__(self, columns: int, rows: int, spacing: float = 5):
-        """Initializes a TriangularLatticeLayout."""
-        self._spacing = float(spacing)
-        self._columns = int(columns)
-        self._rows = int(rows)
-        slug = (
-            f"TriangularLatticeLayoutRectshape({self._rows}x{self._columns}, "
-            f"{self._spacing}µm)"
-        )
-        super().__init__(
-            patterns.triangular_rect(self._rows, self._columns)
-            * self._spacing,
-            slug=slug,
-        )
-
-
-class RandomLayout(RegisterLayout):
-    """A RegisterLayout generated randomly.
-
-    Args :
-        n_traps : the number of traps in the layout
-        radius : radius defining the working area
-        min_dist : minimum distance between traps
-        max_iter = maximum number of iterations to compute the random layout
-    """
-
-    def __init__(
-        self,
-        n_traps: int,
-        radius: float = 35,
-        min_spacing: float = 5,
-        max_iter: int = 1000,
-    ):
-        """Initializes a random layout."""
-        self._pts : np.ndarray = []
-        self._n_traps = int(n_traps)
-        self._min_spacing = float(min_spacing)
-        i = 0
-        while len(self._pts) < n_traps and i < max_iter:
-            pt_x = np.random.uniform(low=-radius, high=radius, size=1)
-            pt_y = np.random.uniform(low=-radius, high=radius, size=1)
-            pt = np.stack([pt_x, pt_y], axis=1)
-            if not self._pts and pt_x**2 + pt_y**2 <= radius**2:
-                self._pts.append(pt)
-                continue
-            if len(self._pts) == 0:
-                continue
-            dist = cdist(np.concatenate(self._pts), pt)
-            if pt_x**2 + pt_y**2 <= radius**2 and np.all(
-                dist > self._min_spacing
-            ):
-                self._pts.append(pt)
-            i += 1
-        if len(self._pts) < n_traps:
-            raise ValueError(
-                "Could not compute random traps in max iterations"
-            )
-        slug = (
-            f"RandomLayout({self._n_traps} traps, "
-            f"min spacing {self._min_spacing}µm)"
-        )
-        super().__init__(trap_coordinates=np.concatenate(self._pts), slug=slug)
