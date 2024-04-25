@@ -116,8 +116,12 @@ class Hamiltonian:
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
             basis_check("dephasing")
-            coeff = np.sqrt(config.dephasing_rate / 2)
-            local_collapse_ops.append(coeff * qutip.sigmaz())
+            rate = (
+                config.hyperfine_dephasing_rate
+                if self.basis_name == "digital"
+                else config.dephasing_rate
+            )
+            local_collapse_ops.append(np.sqrt(rate / 2) * qutip.sigmaz())
 
         if "relaxation" in config.noise_types:
             coeff = np.sqrt(config.relaxation_rate)
