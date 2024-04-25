@@ -838,6 +838,7 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         sampling_rate=0.01,
         config=SimConfig(
             noise=noise,
+            hyperfine_dephasing_rate=0.05,
             eff_noise_opers=[matrices["Z"]],
             eff_noise_rates=[0.025],
         ),
