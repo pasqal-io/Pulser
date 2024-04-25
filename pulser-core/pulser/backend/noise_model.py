@@ -108,8 +108,8 @@ class NoiseModel:
     dephasing_rate: float = 0.05
     hyperfine_dephasing_rate: float = 1e-3
     depolarizing_rate: float = 0.05
-    eff_noise_rates: list[float] = field(default_factory=list)
-    eff_noise_opers: list[np.ndarray] = field(default_factory=list)
+    eff_noise_rates: tuple[float, ...] = field(default_factory=tuple)
+    eff_noise_opers: tuple[np.ndarray, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         positive = {
@@ -154,6 +154,11 @@ class NoiseModel:
 
         self._check_noise_types()
         self._check_eff_noise()
+
+        # Turn lists into tuples
+        for f in fields(self):
+            if f.name == "noise_types" or "eff_noise" in f.name:
+                object.__setattr__(self, f.name, tuple(getattr(self, f.name)))
 
     def _check_noise_types(self) -> None:
         for noise_type in self.noise_types:
