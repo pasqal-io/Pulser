@@ -18,6 +18,7 @@ from dataclasses import dataclass, field, fields
 from typing import Any, Literal, get_args
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 NOISE_TYPES = Literal[
     "doppler",
@@ -109,7 +110,7 @@ class NoiseModel:
     hyperfine_dephasing_rate: float = 1e-3
     depolarizing_rate: float = 0.05
     eff_noise_rates: tuple[float, ...] = field(default_factory=tuple)
-    eff_noise_opers: tuple[np.ndarray, ...] = field(default_factory=tuple)
+    eff_noise_opers: tuple[ArrayLike, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         positive = {
@@ -152,13 +153,20 @@ class NoiseModel:
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
-        self._check_noise_types()
-        self._check_eff_noise()
+        def to_tuple(obj: tuple) -> tuple:
+            if isinstance(obj, (tuple | list | np.ndarray)):
+                obj = tuple(to_tuple(el) for el in obj)
+            return obj
 
-        # Turn lists into tuples
+        # Turn lists and arrays into tuples
         for f in fields(self):
             if f.name == "noise_types" or "eff_noise" in f.name:
-                object.__setattr__(self, f.name, tuple(getattr(self, f.name)))
+                object.__setattr__(
+                    self, f.name, to_tuple(getattr(self, f.name))
+                )
+
+        self._check_noise_types()
+        self._check_eff_noise()
 
     def _check_noise_types(self) -> None:
         for noise_type in self.noise_types:
@@ -196,13 +204,20 @@ class NoiseModel:
             raise ValueError("The provided rates must be greater than 0.")
 
         # Check the validity of operators
-        for operator in self.eff_noise_opers:
+        for op in self.eff_noise_opers:
             # type checking
-            if not isinstance(operator, np.ndarray):
-                raise TypeError(f"{operator} is not a Numpy array.")
+            try:
+                operator = np.array(op, dtype=complex)
+            except Exception:
+                raise TypeError(
+                    f"Operator {op!r} is not castable to a Numpy array."
+                )
+            if operator.ndim != 2:
+                raise ValueError(f"Operator '{op!r}' is not a 2D array.")
+
             if operator.shape != (2, 2):
                 raise NotImplementedError(
-                    "Operator's shape must be (2,2) " f"not {operator.shape}."
+                    f"Operator's shape must be (2,2) not {operator.shape}."
                 )
 
     def _to_abstract_repr(self) -> dict[str, Any]:  # type: ignore

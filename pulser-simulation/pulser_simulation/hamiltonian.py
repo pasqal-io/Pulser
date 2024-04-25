@@ -144,7 +144,7 @@ class Hamiltonian:
             basis_check("effective")
             for id, rate in enumerate(config.eff_noise_rates):
                 local_collapse_ops.append(
-                    np.sqrt(rate) * config.eff_noise_opers[id]
+                    np.sqrt(rate) * np.array(config.eff_noise_opers[id])
                 )
 
         # Building collapse operators
