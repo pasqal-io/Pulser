@@ -28,6 +28,7 @@ REGISTRY: Registry = Registry(
         ("device-schema.json", Resource.from_contents(SCHEMAS["device"])),
         ("layout-schema.json", Resource.from_contents(SCHEMAS["layout"])),
         ("register-schema.json", Resource.from_contents(SCHEMAS["register"])),
+        ("noise-schema.json", Resource.from_contents(SCHEMAS["noise"])),
     ]
 )
 

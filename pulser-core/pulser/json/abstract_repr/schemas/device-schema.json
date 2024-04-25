@@ -123,6 +123,10 @@
               },
               "type": "array"
             },
+            "default_noise_model": {
+              "$ref": "noise-schema.json",
+              "description": "An optional noise model characterizing the default noise of the device."
+            },
             "dimensions": {
               "description": "The maximum dimension of the supported trap arrays.",
               "enum": [
@@ -233,6 +237,10 @@
                 "$ref": "#/definitions/GenericChannel"
               },
               "type": "array"
+            },
+            "default_noise_model": {
+              "$ref": "noise-schema.json",
+              "description": "An optional noise model characterizing the default noise of the device."
             },
             "dimensions": {
               "description": "The maximum dimension of the supported trap arrays.",
