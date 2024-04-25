@@ -76,6 +76,14 @@ phys_Chadoq2 = replace(
     dmm_objects=(
         replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
     ),
+    default_noise_model=NoiseModel(
+        noise_types=("SPAM", "relaxation", "dephasing"),
+        p_false_pos=0.02,
+        p_false_neg=0.01,
+        state_prep_error=0.0,  # To avoid Hamiltonian resampling
+        relaxation_rate=0.01,
+        dephasing_rate=0.2,
+    ),
 )
 
 
@@ -1196,14 +1204,10 @@ class TestDeserialization:
         if is_phys_Chadoq2:
             kwargs["device"] = json.loads(phys_Chadoq2.to_abstract_repr())
         s = _get_serialized_seq(**kwargs)
-        if not is_phys_Chadoq2:
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-            deserialized_device = deserialize_device(json.dumps(s["device"]))
-        else:
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-            deserialized_device = deserialize_device(json.dumps(s["device"]))
+
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        deserialized_device = deserialize_device(json.dumps(s["device"]))
         # Check device
         assert seq._device == deserialized_device
 
