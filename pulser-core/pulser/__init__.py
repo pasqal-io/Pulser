@@ -42,6 +42,7 @@ from pulser import (
     devices as devices,
     sampler as sampler,
     backend as backend,
+    backends as backends,
 )
 
 __all__ = [
