@@ -81,11 +81,12 @@ class NoiseModel:
             deviation of a normal distribution centered in 1.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
-        dephasing_rate: The rate of a dephasing occuring (in 1/µs) when a
-            Rydberg state is involved in the superposition. Corresponds
-            to 1/T2*.
+        dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
+            Rydberg state superpostion. Only used if a Rydberg state is
+            involved. Corresponds to 1/T2*.
         hyperfine_dephasing_rate: The rate of dephasing occuring (in 1/µs)
-            between hyperfine ground states.
+            between hyperfine ground states. Only used if the hyperfine
+            state is involved.
         depolarizing_rate: The rate (in 1/µs) at which a depolarizing
             error occurs.
         eff_noise_rates: The rate associated to each effective noise operator
