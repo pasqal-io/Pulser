@@ -15,13 +15,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import cast
 
 import numpy as np
 import qutip
 
 from pulser.register import QubitId
 from pulser.result import Result
+
+SIM_BASIS = {
+    "ground-rydberg": ["r", "g"],
+    "digital": ["g", "h"],
+    "all": ["r", "g", "h"],
+    "XY": ["u", "d"],
+    "ground-rydberg_with_error": ["r", "g", "x"],
+    "digital_with_error": ["g", "h", "x"],
+    "all_with_error": ["r", "g", "h", "x"],
+    "XY_with_error": ["u", "d", "x"],
+}
 
 
 @dataclass
@@ -85,7 +96,7 @@ class QutipResult(Result):
         return self.meas_basis
 
     def _weights(self) -> np.ndarray:
-        n = self._size
+        size = self._size
         if not self.state.isket:
             probs = np.abs(self.state.diag())
         else:
@@ -97,49 +108,45 @@ class QutipResult(Result):
                 # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
                 # In the XY and digital bases, the order is canonical
-                weights = (
-                    probs[::-1]
-                    if self.meas_basis == "ground-rydberg"
-                    else probs
+                return cast(
+                    np.ndarray,
+                    (
+                        probs[::-1]
+                        if self.meas_basis == "ground-rydberg"
+                        else probs
+                    ),
                 )
-            else:
-                # Only 000...000 is measured
-                weights = np.zeros(probs.size)
-                weights[0] = 1.0
+            # Only 000...000 is measured
+            weights = np.zeros(probs.size)
+            weights[0] = 1.0
+            return weights
 
-        elif self._dim == 3:
-            if self.meas_basis == "ground-rydberg":
-                one_state = 0  # 1 = |r>
-                ex_one = slice(1, 3)
-            elif self.meas_basis == "digital":
-                one_state = 2  # 1 = |h>
-                ex_one = slice(0, 2)
-            else:
-                raise RuntimeError(
-                    f"Unknown measurement basis '{self.meas_basis}' "
-                    "for a three-level system.'"
-                )
-            probs = probs.reshape([3] * n)
-            weights = np.zeros(2**n)
-            for dec_val in range(2**n):
-                ind: list[Union[int, slice]] = []
-                for v in np.binary_repr(dec_val, width=n):
-                    if v == "0":
-                        ind.append(ex_one)
-                    else:
-                        ind.append(one_state)
-                # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
-                # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
-                # We sum all probabilites that correspond to measuring
-                # 11010, namely hhghg, hhrhg, hhghr, hhrhr
-                weights[dec_val] = np.sum(probs[tuple(ind)])
-        else:
-            raise NotImplementedError(
-                "Cannot sample system with single-atom state vectors of "
-                "dimension > 3."
+        # 1 = |r> if ground-rydberg, |h> if digital
+        if self.meas_basis not in ["ground-rydberg", "digital"]:
+            raise RuntimeError(
+                f"Unknown measurement basis '{self.meas_basis}' "
+                "for a three-level system.'"
             )
+        one_state = "r" if self.meas_basis == "ground-rydberg" else "h"
+        one_state_idx = SIM_BASIS[self._basis_name].index(one_state)
+        ex_one = [i for i in range(self._dim) if i != one_state_idx]
+        probs = probs.reshape([self._dim] * size)
+        weights = np.zeros(2**size)
+        for dec_val in range(2**size):
+            ind = []
+            for v in np.binary_repr(dec_val, width=size):
+                if v == "0":
+                    ind.append(ex_one)
+                else:
+                    ind.append([one_state_idx])
+            # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
+            # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
+            # We sum all probabilites that correspond to measuring
+            # 11010, namely hhghg, hhrhg, hhghr, hhrhr
+            weights[dec_val] = np.sum(probs[np.ix_(*ind)])
         # Takes care of numerical artefacts in case sum(weights) != 1
-        return cast(np.ndarray, weights / sum(weights))
+        norm_weights = cast(np.ndarray, weights / sum(weights))
+        return norm_weights
 
     def get_state(
         self,

@@ -29,7 +29,7 @@ from numpy.typing import ArrayLike
 from qutip.piqs import isdiagonal
 
 from pulser.result import Results, ResultType, SampledResult
-from pulser_simulation.qutip_result import QutipResult
+from pulser_simulation.qutip_result import SIM_BASIS, QutipResult
 
 
 class SimulationResults(ABC, Results[ResultType]):
@@ -51,18 +51,18 @@ class SimulationResults(ABC, Results[ResultType]):
         Args:
             size: The number of atoms in the register.
             basis_name: The basis indicating the addressed atoms after
-                the pulse sequence ('ground-rydberg', 'digital' or 'all').
+                the pulse sequence ('ground-rydberg', 'digital', 'all' or one
+                of these 3 basis with the suffix "_with_error").
             sim_times: Array of times (µs) when simulation results are
                 returned.
         """
-        self._dim = 3 if basis_name == "all" else 2
         self._size = size
-        if basis_name not in {"ground-rydberg", "digital", "all", "XY", "ground-rydberg_with_error", "digital_with_error", "all_with_error", "XY_with_error"}:
+        if basis_name not in SIM_BASIS:
             raise ValueError(
-                "`basis_name` must be 'ground-rydberg', 'digital', 'all' or "
-                "'XY'."
+                f"`basis_name` must be in {list(SIM_BASIS.values())}."
             )
         self._basis_name = basis_name
+        self._dim = len(SIM_BASIS[self._basis_name])
         self._sim_times = sim_times
 
     @property
@@ -217,11 +217,13 @@ class SimulationResults(ABC, Results[ResultType]):
         Args:
             state_n: The measured state (0 or 1).
         """
-        if self._basis_name == "ground-rydberg":
+        if state_n not in [0, 1]:
+            raise ValueError("state_n must be 0 or 1.")
+        if self._basis_name in "ground-rydberg":
             # 0 = |g>; 1 = |r>
-            return qutip.basis(2, 1 - state_n).proj()
+            return qutip.basis(self._dim, 1 - state_n).proj()
 
-        return qutip.basis(2, state_n).proj()
+        return qutip.basis(self._dim, state_n).proj()
 
 
 class NoisyResults(SimulationResults):
@@ -251,7 +253,7 @@ class NoisyResults(SimulationResults):
             than 2 for NoisyResults objects.
             This is not the case for a CoherentResults object, containing
             states in Hilbert space, but NoisyResults contains a probability
-            distribution of bitstrings, not atomic states
+            distribution of bitstrings, not atomic states.
 
         Args:
             run_output: Each Counter contains the
@@ -261,8 +263,8 @@ class NoisyResults(SimulationResults):
             size: The number of atoms in the register.
             basis_name: Basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
-                makes no sense after projection on bitstrings). Defaults to
-                'digital' if given value 'all'.
+                or basis "_with_error" makes no sense after projection on
+                bitstrings). Defaults to 'digital' if given value 'all'.
             sim_times: Times at which Simulation object returned
                 the results.
             n_measures: Number of measurements needed to compute this
@@ -272,6 +274,8 @@ class NoisyResults(SimulationResults):
             basis_name_ = "digital"
         elif "ground-rydberg" in basis_name:
             basis_name_ = "ground-rydberg"
+        elif "XY" in basis_name:
+            basis_name_ = basis_name
         else:
             basis_name_ = basis_name
         super().__init__(size, basis_name_, sim_times)
@@ -380,25 +384,27 @@ class CoherentResults(SimulationResults):
                 simulated.
             size: The number of atoms in the register.
             basis_name: The basis indicating the addressed atoms after
-                the pulse sequence ('ground-rydberg', 'digital' or 'all').
+                the pulse sequence ('ground-rydberg', 'digital', 'all' or
+                one of these basis with the suffix "_with_error").
             sim_times: Times at which Simulation object returned the
                 results.
             meas_basis: The basis in which a sampling measurement
-                is desired.
+                is desired (must be in "ground-rydberg" or "digital").
             meas_errors: If measurement errors
                 are involved, give them in a dictionary with "epsilon" and
                 "epsilon_prime".
         """
         super().__init__(size, basis_name, sim_times)
-        if self._basis_name == "all":
+        if "all" in self._basis_name:
             if meas_basis not in {"ground-rydberg", "digital"}:
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg' or 'digital'."
                 )
         else:
-            if meas_basis != self._basis_name:
+            if meas_basis not in self._basis_name:
+                print(meas_basis, self._basis_name)
                 raise ValueError(
-                    "`meas_basis` and `basis_name` must have the same value."
+                    "`meas_basis` must be contained in `basis_name`."
                 )
         self._meas_basis = meas_basis
         self._results = tuple(run_output)
@@ -504,12 +510,13 @@ class CoherentResults(SimulationResults):
             # ground-rydberg
             good = (
                 1 - state_n
-                if self._basis_name == "ground-rydberg"
+                if self._basis_name in "ground-rydberg"
                 else state_n
             )
+            dim = len(SIM_BASIS[self._basis_name])
             return (
-                qutip.basis(2, good).proj() * (1 - err_param)
-                + qutip.basis(2, 1 - good).proj() * err_param
+                qutip.basis(dim, good).proj() * (1 - err_param)
+                + qutip.basis(dim, 1 - good).proj() * err_param
             )
         # Returns normal projectors in the absence of measurement errors
         return super()._meas_projector(state_n)

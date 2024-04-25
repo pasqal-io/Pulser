@@ -30,6 +30,7 @@ from pulser_simulation import (
     Simulation,
     build_operator,
 )
+from pulser_simulation.simresults import CoherentResults
 
 
 @pytest.fixture
@@ -569,9 +570,7 @@ def test_run(seq, patch_plt_show):
     good_initial_qobj = qutip.tensor(
         [qutip.basis(sim.dim, 0) for _ in range(sim._hamiltonian._size)]
     )
-    good_initial_qobj_no_dims = qutip.basis(
-        sim.dim**sim._hamiltonian._size, 2
-    )
+    good_initial_qobj_no_dims = qutip.basis(sim.dim**sim._hamiltonian._size, 2)
 
     with pytest.raises(
         ValueError, match="Incompatible shape of initial state"
@@ -849,8 +848,10 @@ def test_noise(seq, matrices):
             eff_noise_rates=[0.0],
         ),
     )
-    assert sim3.run().sample_final_state() == Counter(
-        {"000": 857, "110": 73, "100": 70}
+    res = sim3.run()
+    assert isinstance(res, CoherentResults)
+    assert res.sample_final_state() == Counter(
+        {"000": 965, "111": 13, "100": 9, "010": 8, "001": 5}
     )
 
     assert sim3.config.spam_dict == {
@@ -859,7 +860,7 @@ def test_noise(seq, matrices):
         "epsilon_prime": 0.05,
     }
     assert sim3._hamiltonian.samples["Global"] == {}
-    assert not any(sim2._hamiltonian._bad_atoms.values())
+    assert not any(sim3._hamiltonian._bad_atoms.values())
 
 
 @pytest.mark.parametrize(
@@ -870,6 +871,7 @@ def test_noise(seq, matrices):
         ("depolarizing", {"0": 587, "1": 413}, 3),
         (("dephasing", "depolarizing"), {"0": 587, "1": 413}, 4),
         (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
+        (("eff_noise", "leakage"), {"0": 572, "1": 428}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -881,12 +883,26 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
     duration = 2500
     pulse = Pulse.ConstantPulse(duration, np.pi, 0, 0)
     seq.add(pulse, "ch0")
+    proj_g = build_operator(
+        sampler.sample(seq),
+        reg.qubits,
+        [("sigma_gg", "global")],
+        with_leakage=True,
+    )
+    proj_x = build_operator(
+        sampler.sample(seq),
+        reg.qubits,
+        [("sigma_xx", "global")],
+        with_leakage=True,
+    )
     sim = QutipEmulator.from_sequence(
         seq,
         sampling_rate=0.01,
         config=SimConfig(
             noise=noise,
-            eff_noise_opers=[matrices["Z"]],
+            eff_noise_opers=[
+                matrices["Z"] if "leakage" not in noise else proj_x - proj_g
+            ],
             eff_noise_rates=[0.025],
         ),
     )
@@ -918,6 +934,7 @@ deph_depo_res = {
     "000": 1,
 }
 eff_deph_res = {"111": 958, "110": 19, "011": 12, "101": 11}
+eff_leakage_res = {"111": 996, "011": 2, "101": 1, "110": 1}
 
 
 @pytest.mark.parametrize(
@@ -928,17 +945,32 @@ eff_deph_res = {"111": 958, "110": 19, "011": 12, "101": 11}
         ("depolarizing", depo_res, 3),
         (("dephasing", "depolarizing"), deph_depo_res, 4),
         (("eff_noise", "dephasing"), eff_deph_res, 2),
+        (("eff_noise", "leakage"), eff_leakage_res, 1),
     ],
 )
 def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     np.random.seed(123)
     # Test with Digital Sequence
+    proj_g = build_operator(
+        sampler.sample(seq_digital),
+        {"q0": 0.0},
+        [("sigma_gg", "global")],
+        with_leakage=True,
+    )
+    proj_x = build_operator(
+        sampler.sample(seq_digital),
+        {"q0": 0.0},
+        [("sigma_xx", "global")],
+        with_leakage=True,
+    )
     sim = QutipEmulator.from_sequence(
         seq_digital,  # resulting state should be hhh
         sampling_rate=0.01,
         config=SimConfig(
             noise=noise,
-            eff_noise_opers=[matrices["Z"]],
+            eff_noise_opers=[
+                matrices["Z"] if "leakage" not in noise else proj_g - proj_x
+            ],
             eff_noise_rates=[0.025],
         ),
     )
@@ -1165,6 +1197,30 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         == n_collapse_ops
     )
     assert sim.run().sample_final_state() == Counter(result)
+
+
+def test_xy_with_leakage():
+    np.random.seed(15092021)
+    simple_reg = Register.square(2, prefix="atom")
+    detun = 1.0
+    amp = 3.0
+    rise = Pulse.ConstantPulse(100, amp, detun, 0.0)
+    seq = Sequence(simple_reg, MockDevice)
+    seq.declare_channel("ch0", "mw_global")
+    seq.add(rise, "ch0")
+    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.1)
+    with pytest.raises(
+        NotImplementedError,
+        match="Interaction mode 'XY' does not support simulation",
+    ):
+        sim.set_config(
+            SimConfig(
+                ("SPAM", "eff_noise", "leakage"),
+                eta=0.4,
+                eff_noise_opers=[qutip.qeye(3)],
+                eff_noise_rates=[0.0],
+            )
+        )
 
 
 def test_mask_nopulses():

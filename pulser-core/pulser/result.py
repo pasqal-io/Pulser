@@ -79,7 +79,12 @@ class Result(ABC):
         Returns:
             Samples of bitstrings corresponding to measured quantum states.
         """
-        dist = np.random.multinomial(n_samples, self._weights())
+        try:
+            dist = np.random.multinomial(n_samples, self._weights())
+        except ValueError:
+            dist = np.random.multinomial(
+                n_samples, np.round(self._weights(), 15)
+            )
         return Counter(
             {
                 np.binary_repr(i, self._size): dist[i]
