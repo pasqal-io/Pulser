@@ -14,4 +14,5 @@ per-file-ignores =
   # F401 Module imported but unused
   tests/*: D100, D101, D102, D103
   __init__.py: F401
+  pulser-core/pulser/backends.py: F401
   setup.py: D100
