@@ -3,6 +3,23 @@
   "$ref": "#/definitions/NoiseModel",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "ComplexNumber": {
+      "additionalProperties": false,
+      "description": "A complex number.",
+      "properties": {
+        "imag": {
+          "type": "number"
+        },
+        "real": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "real",
+        "imag"
+      ],
+      "type": "object"
+    },
     "NoiseModel": {
       "additionalProperties": false,
       "description": "Specifies the noise model parameters for emulation.",
@@ -25,7 +42,14 @@
               {
                 "items": {
                   "items": {
-                    "type": "number"
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "$ref": "#/definitions/ComplexNumber"
+                      }
+                    ]
                   },
                   "type": "array"
                 },

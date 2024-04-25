@@ -14,11 +14,16 @@
 """Defines a noise model class for emulator backends."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
+import json
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Literal, get_args
 
 import numpy as np
 from numpy.typing import ArrayLike
+
+import pulser.json.abstract_repr as pulser_abstract_repr
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 
 NOISE_TYPES = Literal[
     "doppler",
@@ -220,6 +225,36 @@ class NoiseModel:
                     f"Operator's shape must be (2,2) not {operator.shape}."
                 )
 
-    def _to_abstract_repr(self) -> dict[str, Any]:  # type: ignore
-        # TODO: Write once the JSON schema is defined
-        pass
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        all_fields = asdict(self)
+        eff_noise_rates = all_fields.pop("eff_noise_rates")
+        eff_noise_opers = all_fields.pop("eff_noise_opers")
+        all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+        return all_fields
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the noise model into an abstract JSON object."""
+        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_str, "noise")
+        return abstr_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> NoiseModel:
+        """Deserialize a noise model from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the noise model
+                encoded in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized noise model must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+
+        # Avoids circular imports
+        return (
+            pulser_abstract_repr.deserializer.deserialize_abstract_noise_model(
+                obj_str
+            )
+        )

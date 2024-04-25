@@ -22,10 +22,12 @@ from typing import Any, Type
 from unittest.mock import patch
 
 import jsonschema
+import jsonschema.exceptions
 import numpy as np
 import pytest
 
 from pulser import Pulse, Register, Register3D, Sequence, devices
+from pulser.backend import NoiseModel
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
@@ -133,6 +135,31 @@ def test_register(reg: Register):
     ):
         ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
         Register.from_abstract_repr(json.dumps(ser_reg_obj))
+
+
+@pytest.mark.parametrize(
+    "noise_model",
+    [
+        NoiseModel(),
+        NoiseModel(
+            noise_types=("eff_noise",),
+            eff_noise_rates=(0.1,),
+            eff_noise_opers=(((0, -1j), (1j, 0)),),
+        ),
+    ],
+)
+def test_noise_model(noise_model: NoiseModel):
+    ser_noise_model_str = noise_model.to_abstract_repr()
+    re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
+    assert noise_model == re_noise_model
+
+    ser_noise_model_obj = json.loads(ser_noise_model_str)
+    with pytest.raises(TypeError, match="must be given as a string"):
+        NoiseModel.from_abstract_repr(ser_noise_model_obj)
+
+    ser_noise_model_obj["noise_types"].append("foo")
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        NoiseModel.from_abstract_repr(json.dumps(ser_noise_model_obj))
 
 
 class TestDevice:
