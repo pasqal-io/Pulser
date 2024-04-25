@@ -388,6 +388,8 @@ def test_results_xy(reg, pi_pulse):
     )
 
     # Check that measurement projectors are correct
+    with pytest.raises(ValueError, match="state_n must be 0 or 1"):
+        results_._meas_projector(2)
     assert results_._meas_projector(0) == qutip.basis(2, 0).proj()
     assert results_._meas_projector(1) == qutip.basis(2, 1).proj()
 

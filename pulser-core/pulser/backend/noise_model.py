@@ -27,7 +27,6 @@ NOISE_TYPES = Literal[
     "dephasing",
     "relaxation",
     "depolarizing",
-   
     "eff_noise",
 ]
 

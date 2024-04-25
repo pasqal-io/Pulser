@@ -622,7 +622,14 @@ class QutipEmulator:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise", "leakage"}
+            {
+                "dephasing",
+                "relaxation",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+                "leakage",
+            }
         ):
             # If there is no "SPAM" or if error state is to be taken into
             # account, the preparation errors must be zero
