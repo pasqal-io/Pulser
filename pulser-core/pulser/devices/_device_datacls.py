@@ -65,7 +65,7 @@ class BaseDevice(ABC):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rybderg_level: The value of the principal quantum number :math:`n`
+        rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -515,7 +515,7 @@ class Device(BaseDevice):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rybderg_level: The value of the principal quantum number :math:`n`
+        rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -731,7 +731,7 @@ class VirtualDevice(BaseDevice):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rybderg_level: The value of the principal quantum number :math:`n`
+        rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
