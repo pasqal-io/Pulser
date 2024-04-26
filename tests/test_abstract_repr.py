@@ -307,9 +307,18 @@ class TestDevice:
         )
         assert isinstance(prev_err.__cause__, ValueError)
 
-    @pytest.mark.parametrize("field", ["max_sequence_duration", "max_runs"])
-    def test_optional_device_fields(self, field):
-        device = replace(MockDevice, **{field: 1000})
+    @pytest.mark.parametrize(
+        "og_device, field, value",
+        [
+            (MockDevice, "max_sequence_duration", 1000),
+            (MockDevice, "max_runs", 100),
+            (MockDevice, "requires_layout", True),
+            (AnalogDevice, "requires_layout", False),
+            (AnalogDevice, "accepts_new_layouts", False),
+        ],
+    )
+    def test_optional_device_fields(self, og_device, field, value):
+        device = replace(og_device, **{field: value})
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
 
