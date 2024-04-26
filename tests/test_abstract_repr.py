@@ -312,18 +312,9 @@ class TestDevice:
         [
             (MockDevice, "max_sequence_duration", 1000),
             (MockDevice, "max_runs", 100),
-            pytest.param(
-                MockDevice, "requires_layout", True, marks=pytest.mark.xfail
-            ),
-            pytest.param(
-                AnalogDevice, "requires_layout", False, marks=pytest.mark.xfail
-            ),
-            pytest.param(
-                AnalogDevice,
-                "accepts_new_layouts",
-                False,
-                marks=pytest.mark.xfail,
-            ),
+            (MockDevice, "requires_layout", True),
+            (AnalogDevice, "requires_layout", False),
+            (AnalogDevice, "accepts_new_layouts", False),
         ],
     )
     def test_optional_device_fields(self, og_device, field, value):
