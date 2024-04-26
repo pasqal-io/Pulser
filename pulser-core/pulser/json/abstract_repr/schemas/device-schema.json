@@ -116,6 +116,10 @@
             "$schema": {
               "type": "string"
             },
+            "accepts_new_layouts": {
+              "description": "Whether registers built from register layouts that are not already calibrated are accepted.  Only enforced in QPU execution.",
+              "type": "boolean"
+            },
             "channels": {
               "description": "The available channels on the device.",
               "items": {
@@ -188,6 +192,10 @@
                 "$ref": "layout-schema.json"
               },
               "type": "array"
+            },
+            "requires_layout": {
+              "description": "Whether the register used in the sequence must be created from a register layout.  Only enforced in QPU execution.",
+              "type": "boolean"
             },
             "reusable_channels": {
               "const": false,
@@ -302,6 +310,10 @@
             "name": {
               "description": "A unique name for the device.",
               "type": "string"
+            },
+            "requires_layout": {
+              "description": "Whether the register used in the sequence must be created from a register layout.  Only enforced in QPU execution.",
+              "type": "boolean"
             },
             "reusable_channels": {
               "description": "Whether each channel can be declared multiple times on the same pulse sequence.",
