@@ -28,6 +28,7 @@ from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
+    RectangularLatticeLayout,
 )
 from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import BlackmanWaveform
@@ -91,6 +92,11 @@ def test_layout():
     new_square_layout = encode_decode(square_layout)
     assert new_square_layout == square_layout
     assert type(new_square_layout) is SquareLatticeLayout
+
+    rectangular_layout = RectangularLatticeLayout(8, 10, 6, 5)
+    new_rectangular_layout = encode_decode(rectangular_layout)
+    assert new_rectangular_layout == rectangular_layout
+    assert type(new_rectangular_layout) is RectangularLatticeLayout
 
 
 def test_register_from_layout():
