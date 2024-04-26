@@ -13,8 +13,9 @@
 # limitations under the License.
 """Classes for backend execution."""
 
+import pulser.noise_model as noise_model  # For backwards compat
 from pulser.backend.config import EmulatorConfig
-from pulser.backend.noise_model import NoiseModel
+from pulser.noise_model import NoiseModel  # For backwards compat
 from pulser.backend.qpu import QPUBackend
 
 __all__ = ["EmulatorConfig", "NoiseModel", "QPUBackend"]

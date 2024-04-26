@@ -13,6 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+import dataclasses
+
 import numpy as np
 import pytest
 import qutip
@@ -23,7 +25,7 @@ from pulser.waveforms import BlackmanWaveform
 from pulser_simulation import SimConfig
 from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.qutip_result import QutipResult
-from pulser_simulation.simresults import CoherentResults
+from pulser_simulation.simresults import CoherentResults, NoisyResults
 
 
 @pytest.fixture
@@ -53,3 +55,17 @@ def test_qutip_backend(sequence):
     final_state = final_result.get_state()
     assert final_state == results.get_final_state()
     np.testing.assert_allclose(final_state.full(), [[0], [1]], atol=1e-5)
+
+
+def test_with_default_noise(sequence):
+    spam_noise = pulser.NoiseModel(noise_types=("SPAM",))
+    new_device = dataclasses.replace(
+        MockDevice, default_noise_model=spam_noise
+    )
+    new_seq = sequence.switch_device(new_device)
+    backend = QutipBackend(
+        new_seq, config=pulser.EmulatorConfig(prefer_device_noise_model=True)
+    )
+    new_results = backend.run()
+    assert isinstance(new_results, NoisyResults)
+    assert backend._sim_obj.config == SimConfig.from_noise_model(spam_noise)

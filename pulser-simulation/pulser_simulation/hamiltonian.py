@@ -23,8 +23,8 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
-from pulser.backend.noise_model import NoiseModel
 from pulser.devices._device_datacls import BaseDevice
+from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
@@ -144,7 +144,7 @@ class Hamiltonian:
             basis_check("effective")
             for id, rate in enumerate(config.eff_noise_rates):
                 local_collapse_ops.append(
-                    np.sqrt(rate) * config.eff_noise_opers[id]
+                    np.sqrt(rate) * np.array(config.eff_noise_opers[id])
                 )
 
         # Building collapse operators

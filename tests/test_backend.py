@@ -23,7 +23,6 @@ import pytest
 import pulser
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
-from pulser.backend.noise_model import NoiseModel
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     RemoteConnection,
@@ -32,6 +31,7 @@ from pulser.backend.remote import (
     SubmissionStatus,
 )
 from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.noise_model import NoiseModel
 from pulser.result import Result, SampledResult
 
 
@@ -150,6 +150,7 @@ class TestNoiseModel:
         matrices = {}
         matrices["I"] = np.eye(2)
         matrices["X"] = np.ones((2, 2)) - np.eye(2)
+        matrices["Y"] = np.array([[0, -1j], [1j, 0]])
         matrices["Zh"] = 0.5 * np.array([[1, 0], [0, -1]])
         matrices["ket"] = np.array([[1.0], [2.0]])
         matrices["I3"] = np.eye(3)
@@ -181,7 +182,13 @@ class TestNoiseModel:
             match="The effective noise parameters have not been filled.",
         ):
             NoiseModel(noise_types=("eff_noise",))
-        with pytest.raises(TypeError, match="is not a Numpy array."):
+        with pytest.raises(TypeError, match="not castable to a Numpy array"):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_rates=[2.0],
+                eff_noise_opers=[{(1.0, 0), (0.0, -1)}],
+            )
+        with pytest.raises(ValueError, match="is not a 2D array."):
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[2.0],
@@ -193,6 +200,21 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I3"]],
                 eff_noise_rates=[1.0],
             )
+
+    def test_eq(self, matrices):
+        final_fields = dict(
+            noise_types=("SPAM", "eff_noise"),
+            eff_noise_rates=(0.1, 0.4),
+            eff_noise_opers=(((0, 1), (1, 0)), ((0, -1j), (1j, 0))),
+        )
+        noise_model = NoiseModel(
+            noise_types=["SPAM", "eff_noise"],
+            eff_noise_rates=[0.1, 0.4],
+            eff_noise_opers=[matrices["X"], matrices["Y"]],
+        )
+        assert noise_model == NoiseModel(**final_fields)
+        for param in final_fields:
+            assert final_fields[param] == getattr(noise_model, param)
 
 
 class _MockConnection(RemoteConnection):

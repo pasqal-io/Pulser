@@ -22,6 +22,7 @@ from typing import Any, Type
 from unittest.mock import patch
 
 import jsonschema
+import jsonschema.exceptions
 import numpy as np
 import pytest
 
@@ -46,6 +47,7 @@ from pulser.json.abstract_repr.serializer import (
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
+from pulser.noise_model import NoiseModel
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem
@@ -73,6 +75,14 @@ phys_Chadoq2 = replace(
     name="phys_Chadoq2",
     dmm_objects=(
         replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
+    ),
+    default_noise_model=NoiseModel(
+        noise_types=("SPAM", "relaxation", "dephasing"),
+        p_false_pos=0.02,
+        p_false_neg=0.01,
+        state_prep_error=0.0,  # To avoid Hamiltonian resampling
+        relaxation_rate=0.01,
+        dephasing_rate=0.2,
     ),
 )
 
@@ -133,6 +143,31 @@ def test_register(reg: Register):
     ):
         ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
         Register.from_abstract_repr(json.dumps(ser_reg_obj))
+
+
+@pytest.mark.parametrize(
+    "noise_model",
+    [
+        NoiseModel(),
+        NoiseModel(
+            noise_types=("eff_noise",),
+            eff_noise_rates=(0.1,),
+            eff_noise_opers=(((0, -1j), (1j, 0)),),
+        ),
+    ],
+)
+def test_noise_model(noise_model: NoiseModel):
+    ser_noise_model_str = noise_model.to_abstract_repr()
+    re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
+    assert noise_model == re_noise_model
+
+    ser_noise_model_obj = json.loads(ser_noise_model_str)
+    with pytest.raises(TypeError, match="must be given as a string"):
+        NoiseModel.from_abstract_repr(ser_noise_model_obj)
+
+    ser_noise_model_obj["noise_types"].append("foo")
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        NoiseModel.from_abstract_repr(json.dumps(ser_noise_model_obj))
 
 
 class TestDevice:
@@ -1169,14 +1204,10 @@ class TestDeserialization:
         if is_phys_Chadoq2:
             kwargs["device"] = json.loads(phys_Chadoq2.to_abstract_repr())
         s = _get_serialized_seq(**kwargs)
-        if not is_phys_Chadoq2:
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-            deserialized_device = deserialize_device(json.dumps(s["device"]))
-        else:
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-            deserialized_device = deserialize_device(json.dumps(s["device"]))
+
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        deserialized_device = deserialize_device(json.dumps(s["device"]))
         # Check device
         assert seq._device == deserialized_device
 

@@ -29,6 +29,7 @@ from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
+from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
@@ -36,7 +37,12 @@ from pulser.register.traps import COORD_PRECISION
 
 DIMENSIONS = Literal[2, 3]
 
-ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs", "dmm_objects")
+ALWAYS_OPTIONAL_PARAMS = (
+    "max_sequence_duration",
+    "max_runs",
+    "dmm_objects",
+    "default_noise_model",
+)
 PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 
 
@@ -74,6 +80,9 @@ class BaseDevice(ABC):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
     """
 
     name: str
@@ -91,6 +100,7 @@ class BaseDevice(ABC):
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
+    default_noise_model: NoiseModel | None = None
 
     def __post_init__(self) -> None:
         def type_check(
@@ -217,6 +227,9 @@ class BaseDevice(ABC):
                 "'interaction_coeff_xy' must be a 'float',"
                 f" not '{type(self.interaction_coeff_xy)}'."
             )
+
+        if self.default_noise_model is not None:
+            type_check("default_noise_model", NoiseModel)
 
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
@@ -506,6 +519,9 @@ class Device(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
     """
@@ -704,6 +720,9 @@ class VirtualDevice(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """

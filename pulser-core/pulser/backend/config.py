@@ -19,7 +19,7 @@ from typing import Any, Literal, Sequence, get_args
 
 import numpy as np
 
-from pulser.backend.noise_model import NoiseModel
+from pulser.noise_model import NoiseModel
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
@@ -63,15 +63,22 @@ class EmulatorConfig(BackendConfig):
 
             - "all-ground" for all atoms in the ground state
             - An array of floats with a shape compatible with the system
+
         with_modulation: Whether to emulate the sequence with the programmed
             input or the expected output.
+        prefer_device_noise_model: If the sequence's device has a default noise
+            model, this option signals the backend to prefer it over the noise
+            model given with this configuration.
         noise_model: An optional noise model to emulate the sequence with.
+            Ignored if the sequence's device has default noise model and
+            `prefer_device_noise_model=True`.
     """
 
     sampling_rate: float = 1.0
     evaluation_times: float | Sequence[float] | EVAL_TIMES_LITERAL = "Full"
     initial_state: Literal["all-ground"] | Sequence[complex] = "all-ground"
     with_modulation: bool = False
+    prefer_device_noise_model: bool = False
     noise_model: NoiseModel = field(default_factory=NoiseModel)
 
     def __post_init__(self) -> None:

@@ -116,12 +116,20 @@
             "$schema": {
               "type": "string"
             },
+            "accepts_new_layouts": {
+              "description": "Whether registers built from register layouts that are not already calibrated are accepted.  Only enforced in QPU execution.",
+              "type": "boolean"
+            },
             "channels": {
               "description": "The available channels on the device.",
               "items": {
                 "$ref": "#/definitions/PhysicalChannel"
               },
               "type": "array"
+            },
+            "default_noise_model": {
+              "$ref": "noise-schema.json",
+              "description": "An optional noise model characterizing the default noise of the device."
             },
             "dimensions": {
               "description": "The maximum dimension of the supported trap arrays.",
@@ -185,6 +193,10 @@
               },
               "type": "array"
             },
+            "requires_layout": {
+              "description": "Whether the register used in the sequence must be created from a register layout.  Only enforced in QPU execution.",
+              "type": "boolean"
+            },
             "reusable_channels": {
               "const": false,
               "description": "Whether each channel can be declared multiple times on the same pulse sequence.",
@@ -233,6 +245,10 @@
                 "$ref": "#/definitions/GenericChannel"
               },
               "type": "array"
+            },
+            "default_noise_model": {
+              "$ref": "noise-schema.json",
+              "description": "An optional noise model characterizing the default noise of the device."
             },
             "dimensions": {
               "description": "The maximum dimension of the supported trap arrays.",
@@ -294,6 +310,10 @@
             "name": {
               "description": "A unique name for the device.",
               "type": "string"
+            },
+            "requires_layout": {
+              "description": "Whether the register used in the sequence must be created from a register layout.  Only enforced in QPU execution.",
+              "type": "boolean"
             },
             "reusable_channels": {
               "description": "Whether each channel can be declared multiple times on the same pulse sequence.",

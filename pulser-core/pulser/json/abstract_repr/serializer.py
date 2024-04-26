@@ -48,6 +48,8 @@ class AbstractReprEncoder(json.JSONEncoder):
             return int(o)
         elif isinstance(o, set):
             return list(o)
+        elif isinstance(o, complex):
+            return dict(real=o.real, imag=o.imag)
         else:
             return cast(dict, json.JSONEncoder.default(self, o))
 

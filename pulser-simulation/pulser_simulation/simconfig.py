@@ -21,7 +21,7 @@ from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
-from pulser.backend.noise_model import NOISE_TYPES, NoiseModel
+from pulser.noise_model import NOISE_TYPES, NoiseModel
 
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
@@ -133,7 +133,7 @@ class SimConfig:
             hyperfine_dephasing_rate=noise_model.hyperfine_dephasing_rate,
             relaxation_rate=noise_model.relaxation_rate,
             depolarizing_rate=noise_model.depolarizing_rate,
-            eff_noise_rates=noise_model.eff_noise_rates,
+            eff_noise_rates=list(noise_model.eff_noise_rates),
             eff_noise_opers=list(map(qutip.Qobj, noise_model.eff_noise_opers)),
         )
 
@@ -153,8 +153,8 @@ class SimConfig:
             hyperfine_dephasing_rate=self.hyperfine_dephasing_rate,
             relaxation_rate=self.relaxation_rate,
             depolarizing_rate=self.depolarizing_rate,
-            eff_noise_rates=self.eff_noise_rates,
-            eff_noise_opers=[op.full() for op in self.eff_noise_opers],
+            eff_noise_rates=tuple(self.eff_noise_rates),
+            eff_noise_opers=tuple(op.full() for op in self.eff_noise_opers),
         )
 
     def __post_init__(self) -> None:

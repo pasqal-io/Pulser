@@ -14,10 +14,18 @@
 """Defines a noise model class for emulator backends."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
-from typing import Literal, get_args
+import json
+from dataclasses import asdict, dataclass, field, fields
+from typing import Any, Literal, get_args
 
 import numpy as np
+from numpy.typing import ArrayLike
+
+import pulser.json.abstract_repr as pulser_abstract_repr
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
+
+__all__ = ["NoiseModel"]
 
 NOISE_TYPES = Literal[
     "doppler",
@@ -36,36 +44,43 @@ class NoiseModel:
 
     Select the desired noise types in `noise_types` and, if necessary,
     modifiy the default values of related parameters.
-    Non-specified parameters will have reasonable default value which
-    is only taken into account when the related noise type is selected.
+    Non-specified parameters will have reasonable default values which
+    are only taken into account when the related noise type is selected.
 
     Args:
-        noise_types: Noise types to include in the emulation. Available
-            options:
+        noise_types: Noise types to include in the emulation.
+            Available options:
 
             - "relaxation": Noise due to a decay from the Rydberg to
               the ground state (parametrized by `relaxation_rate`), commonly
               characterized experimentally by the T1 time.
+
             - "dephasing": Random phase (Z) flip (parametrized
               by `dephasing_rate`), commonly characterized experimentally
               by the T2* time.
+
             - "depolarizing": Quantum noise where the state is
-              turned into a mixed state I/2 with rate `depolarizing_rate`.
-              While it does not describe a physical phenomenon, it is a
-              commonly used tool to test the system under a uniform
-              combination of phase flip (Z) and bit flip (X) errors.
+              turned into the maximally mixed state with rate
+              `depolarizing_rate`. While it does not describe a physical
+              phenomenon, it is a commonly used tool to test the system
+              under a uniform combination of phase flip (Z) and
+              bit flip (X) errors.
+
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
               and the corresponding rates distribution
               `eff_noise_rates`.
+
             - "doppler": Local atom detuning due to termal motion of the
               atoms and Doppler effect with respect to laser frequency.
               Parametrized by the `temperature` field.
+
             - "amplitude": Gaussian damping due to finite laser waist and
-                laser amplitude fluctuations. Parametrized by `laser_waist`
-                and `amp_sigma`.
-            - "SPAM": SPAM errors. Parametrized by `state_prep_error`,
-                `p_false_pos` and `p_false_neg`.
+              laser amplitude fluctuations. Parametrized by `laser_waist`
+              and `amp_sigma`.
+
+            - "SPAM": SPAM errors. Parametrized by
+              `state_prep_error`, `p_false_pos` and `p_false_neg`.
 
         runs: Number of runs needed (each run draws a new random noise).
         samples_per_run: Number of samples per noisy run. Useful for
@@ -107,8 +122,8 @@ class NoiseModel:
     dephasing_rate: float = 0.05
     hyperfine_dephasing_rate: float = 1e-3
     depolarizing_rate: float = 0.05
-    eff_noise_rates: list[float] = field(default_factory=list)
-    eff_noise_opers: list[np.ndarray] = field(default_factory=list)
+    eff_noise_rates: tuple[float, ...] = field(default_factory=tuple)
+    eff_noise_opers: tuple[ArrayLike, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         positive = {
@@ -151,6 +166,18 @@ class NoiseModel:
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
+        def to_tuple(obj: tuple) -> tuple:
+            if isinstance(obj, (tuple, list, np.ndarray)):
+                obj = tuple(to_tuple(el) for el in obj)
+            return obj
+
+        # Turn lists and arrays into tuples
+        for f in fields(self):
+            if f.name == "noise_types" or "eff_noise" in f.name:
+                object.__setattr__(
+                    self, f.name, to_tuple(getattr(self, f.name))
+                )
+
         self._check_noise_types()
         self._check_eff_noise()
 
@@ -190,11 +217,52 @@ class NoiseModel:
             raise ValueError("The provided rates must be greater than 0.")
 
         # Check the validity of operators
-        for operator in self.eff_noise_opers:
+        for op in self.eff_noise_opers:
             # type checking
-            if not isinstance(operator, np.ndarray):
-                raise TypeError(f"{operator} is not a Numpy array.")
+            try:
+                operator = np.array(op, dtype=complex)
+            except Exception:
+                raise TypeError(
+                    f"Operator {op!r} is not castable to a Numpy array."
+                )
+            if operator.ndim != 2:
+                raise ValueError(f"Operator '{op!r}' is not a 2D array.")
+
             if operator.shape != (2, 2):
                 raise NotImplementedError(
-                    "Operator's shape must be (2,2) " f"not {operator.shape}."
+                    f"Operator's shape must be (2,2) not {operator.shape}."
                 )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        all_fields = asdict(self)
+        eff_noise_rates = all_fields.pop("eff_noise_rates")
+        eff_noise_opers = all_fields.pop("eff_noise_opers")
+        all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+        return all_fields
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the noise model into an abstract JSON object."""
+        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_str, "noise")
+        return abstr_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> NoiseModel:
+        """Deserialize a noise model from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the noise model
+                encoded in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized noise model must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+
+        # Avoids circular imports
+        return (
+            pulser_abstract_repr.deserializer.deserialize_abstract_noise_model(
+                obj_str
+            )
+        )
