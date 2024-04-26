@@ -26,9 +26,9 @@ from pulser.json.supported import validate_serialization
 from pulser.parametrized.decorators import parametrize
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
+    RectangularLatticeLayout,
     SquareLatticeLayout,
     TriangularLatticeLayout,
-    RectangularLatticeLayout,
 )
 from pulser.register.weight_maps import DetuningMap
 from pulser.waveforms import BlackmanWaveform

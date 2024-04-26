@@ -84,6 +84,24 @@ def test_creation():
         Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
 
 
+def test_rectangular_lattice():
+    # Check rows
+    with pytest.raises(ValueError, match="The number of rows"):
+        Register.rectangular_lattice(0, 2, 3, 4)
+
+    # Check columns
+    with pytest.raises(ValueError, match="The number of columns"):
+        Register.rectangular_lattice(2, 0, 3, 4)
+
+    # Check row spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register.rectangular_lattice(2, 2, 0.0, 5)
+
+    # Check col spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register.rectangular_lattice(2, 2, 3, 0.0)
+
+
 def test_rectangle():
     # Check rows
     with pytest.raises(ValueError, match="The number of rows"):
