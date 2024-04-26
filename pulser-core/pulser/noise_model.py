@@ -48,33 +48,39 @@ class NoiseModel:
     are only taken into account when the related noise type is selected.
 
     Args:
-        noise_types: Noise types to include in the emulation. Available
-            options:
+        noise_types: Noise types to include in the emulation.
+            Available options:
 
             - "relaxation": Noise due to a decay from the Rydberg to
               the ground state (parametrized by `relaxation_rate`), commonly
               characterized experimentally by the T1 time.
+
             - "dephasing": Random phase (Z) flip (parametrized
               by `dephasing_rate`), commonly characterized experimentally
               by the T2* time.
+
             - "depolarizing": Quantum noise where the state is
               turned into the maximally mixed state with rate
               `depolarizing_rate`. While it does not describe a physical
               phenomenon, it is a commonly used tool to test the system
               under a uniform combination of phase flip (Z) and
               bit flip (X) errors.
+
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
               and the corresponding rates distribution
               `eff_noise_rates`.
+
             - "doppler": Local atom detuning due to termal motion of the
               atoms and Doppler effect with respect to laser frequency.
               Parametrized by the `temperature` field.
+
             - "amplitude": Gaussian damping due to finite laser waist and
-                laser amplitude fluctuations. Parametrized by `laser_waist`
-                and `amp_sigma`.
-            - "SPAM": SPAM errors. Parametrized by `state_prep_error`,
-                `p_false_pos` and `p_false_neg`.
+              laser amplitude fluctuations. Parametrized by `laser_waist`
+              and `amp_sigma`.
+
+            - "SPAM": SPAM errors. Parametrized by
+              `state_prep_error`, `p_false_pos` and `p_false_neg`.
 
         runs: Number of runs needed (each run draws a new random noise).
         samples_per_run: Number of samples per noisy run. Useful for
