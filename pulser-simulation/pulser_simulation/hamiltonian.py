@@ -23,8 +23,8 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
-from pulser.backend.noise_model import NoiseModel
 from pulser.devices._device_datacls import BaseDevice
+from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
@@ -107,21 +107,34 @@ class Hamiltonian:
     def _build_collapse_operators(self, config: NoiseModel) -> None:
         def basis_check(noise_type: str) -> None:
             """Checks if the basis allows for the use of noise."""
-            if self.basis_name == "digital" or self.basis_name == "all":
+            if self.basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
-                    f"Cannot include {noise_type} "
-                    + "noise in digital- or all-basis."
+                    f"Cannot include {noise_type} noise in all-basis."
                 )
 
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
             basis_check("dephasing")
-            coeff = np.sqrt(config.dephasing_rate / 2)
-            local_collapse_ops.append(coeff * qutip.sigmaz())
+            rate = (
+                config.hyperfine_dephasing_rate
+                if self.basis_name == "digital"
+                else config.dephasing_rate
+            )
+            local_collapse_ops.append(np.sqrt(rate / 2) * qutip.sigmaz())
+
+        if "relaxation" in config.noise_types:
+            coeff = np.sqrt(config.relaxation_rate)
+            try:
+                local_collapse_ops.append(coeff * self.op_matrix["sigma_gr"])
+            except KeyError:
+                raise ValueError(
+                    "'relaxation' noise requires addressing of the"
+                    " 'ground-rydberg' basis."
+                )
 
         if "depolarizing" in config.noise_types:
-            basis_check("dephasing")
+            basis_check("depolarizing")
             coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * qutip.sigmax())
             local_collapse_ops.append(coeff * qutip.sigmay())
@@ -131,7 +144,7 @@ class Hamiltonian:
             basis_check("effective")
             for id, rate in enumerate(config.eff_noise_rates):
                 local_collapse_ops.append(
-                    np.sqrt(rate) * config.eff_noise_opers[id]
+                    np.sqrt(rate) * np.array(config.eff_noise_opers[id])
                 )
 
         # Building collapse operators
@@ -176,7 +189,7 @@ class Hamiltonian:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
         if set(self.config.noise_types).issubset(
-            {"dephasing", "SPAM", "depolarizing", "eff_noise"}
+            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise"}
         ):
             local_noises = (
                 "SPAM" in self.config.noise_types

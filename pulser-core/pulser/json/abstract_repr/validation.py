@@ -28,12 +28,14 @@ REGISTRY: Registry = Registry(
         ("device-schema.json", Resource.from_contents(SCHEMAS["device"])),
         ("layout-schema.json", Resource.from_contents(SCHEMAS["layout"])),
         ("register-schema.json", Resource.from_contents(SCHEMAS["register"])),
+        ("noise-schema.json", Resource.from_contents(SCHEMAS["noise"])),
     ]
 )
 
 
 def validate_abstract_repr(
-    obj_str: str, name: Literal["sequence", "device", "layout", "register"]
+    obj_str: str,
+    name: Literal["sequence", "device", "layout", "register", "noise"],
 ) -> None:
     """Validate the abstract representation of an object.
 

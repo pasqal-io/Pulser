@@ -22,6 +22,7 @@ from typing import Any, Type
 from unittest.mock import patch
 
 import jsonschema
+import jsonschema.exceptions
 import numpy as np
 import pytest
 
@@ -46,6 +47,7 @@ from pulser.json.abstract_repr.serializer import (
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
+from pulser.noise_model import NoiseModel
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem
@@ -73,6 +75,14 @@ phys_Chadoq2 = replace(
     name="phys_Chadoq2",
     dmm_objects=(
         replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
+    ),
+    default_noise_model=NoiseModel(
+        noise_types=("SPAM", "relaxation", "dephasing"),
+        p_false_pos=0.02,
+        p_false_neg=0.01,
+        state_prep_error=0.0,  # To avoid Hamiltonian resampling
+        relaxation_rate=0.01,
+        dephasing_rate=0.2,
     ),
 )
 
@@ -133,6 +143,31 @@ def test_register(reg: Register):
     ):
         ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
         Register.from_abstract_repr(json.dumps(ser_reg_obj))
+
+
+@pytest.mark.parametrize(
+    "noise_model",
+    [
+        NoiseModel(),
+        NoiseModel(
+            noise_types=("eff_noise",),
+            eff_noise_rates=(0.1,),
+            eff_noise_opers=(((0, -1j), (1j, 0)),),
+        ),
+    ],
+)
+def test_noise_model(noise_model: NoiseModel):
+    ser_noise_model_str = noise_model.to_abstract_repr()
+    re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
+    assert noise_model == re_noise_model
+
+    ser_noise_model_obj = json.loads(ser_noise_model_str)
+    with pytest.raises(TypeError, match="must be given as a string"):
+        NoiseModel.from_abstract_repr(ser_noise_model_obj)
+
+    ser_noise_model_obj["noise_types"].append("foo")
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        NoiseModel.from_abstract_repr(json.dumps(ser_noise_model_obj))
 
 
 class TestDevice:
@@ -272,9 +307,18 @@ class TestDevice:
         )
         assert isinstance(prev_err.__cause__, ValueError)
 
-    @pytest.mark.parametrize("field", ["max_sequence_duration", "max_runs"])
-    def test_optional_device_fields(self, field):
-        device = replace(MockDevice, **{field: 1000})
+    @pytest.mark.parametrize(
+        "og_device, field, value",
+        [
+            (MockDevice, "max_sequence_duration", 1000),
+            (MockDevice, "max_runs", 100),
+            (MockDevice, "requires_layout", True),
+            (AnalogDevice, "requires_layout", False),
+            (AnalogDevice, "accepts_new_layouts", False),
+        ],
+    )
+    def test_optional_device_fields(self, og_device, field, value):
+        device = replace(og_device, **{field: value})
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
 
@@ -805,8 +849,11 @@ class TestSerialization:
         ]
         assert abstract["variables"]["var"] == dict(type="int", value=[0])
 
+    @pytest.mark.parametrize("delay_at_rest", (False, True))
     @pytest.mark.parametrize("correct_phase_drift", (False, True))
-    def test_eom_mode(self, triangular_lattice, correct_phase_drift):
+    def test_eom_mode(
+        self, triangular_lattice, correct_phase_drift, delay_at_rest
+    ):
         reg = triangular_lattice.hexagonal_register(7)
         seq = Sequence(reg, AnalogDevice)
         seq.declare_channel("ryd", "rydberg_global")
@@ -822,16 +869,20 @@ class TestSerialization:
         seq.add_eom_pulse(
             "ryd", duration, 0.0, correct_phase_drift=correct_phase_drift
         )
-        seq.delay(duration, "ryd")
+        seq.delay(duration, "ryd", at_rest=delay_at_rest)
         seq.disable_eom_mode("ryd", correct_phase_drift)
 
         abstract = json.loads(seq.to_abstract_repr())
         validate_schema(abstract)
 
-        extra_kwargs = (
+        extra_eom_kwargs = (
             dict(correct_phase_drift=correct_phase_drift)
             if correct_phase_drift
             else {}
+        )
+
+        extra_delay_kwargs = (
+            dict(at_rest=delay_at_rest) if delay_at_rest else {}
         )
 
         assert abstract["operations"][0] == {
@@ -846,7 +897,7 @@ class TestSerialization:
                     "rhs": 0,
                 },
             },
-            **extra_kwargs,
+            **extra_eom_kwargs,
         }
 
         ser_duration = {
@@ -863,7 +914,16 @@ class TestSerialization:
                 "post_phase_shift": 0.0,
                 "protocol": "min-delay",
             },
-            **extra_kwargs,
+            **extra_eom_kwargs,
+        }
+
+        assert abstract["operations"][2] == {
+            **{
+                "op": "delay",
+                "channel": "ryd",
+                "time": ser_duration,
+            },
+            **extra_delay_kwargs,
         }
 
         assert abstract["operations"][3] == {
@@ -871,7 +931,7 @@ class TestSerialization:
                 "op": "disable_eom_mode",
                 "channel": "ryd",
             },
-            **extra_kwargs,
+            **extra_eom_kwargs,
         }
 
     @pytest.mark.parametrize("use_default", [True, False])
@@ -1153,14 +1213,10 @@ class TestDeserialization:
         if is_phys_Chadoq2:
             kwargs["device"] = json.loads(phys_Chadoq2.to_abstract_repr())
         s = _get_serialized_seq(**kwargs)
-        if not is_phys_Chadoq2:
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-            deserialized_device = deserialize_device(json.dumps(s["device"]))
-        else:
-            _check_roundtrip(s)
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-            deserialized_device = deserialize_device(json.dumps(s["device"]))
+
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        deserialized_device = deserialize_device(json.dumps(s["device"]))
         # Check device
         assert seq._device == deserialized_device
 
@@ -1364,7 +1420,13 @@ class TestDeserialization:
             {"op": "target", "target": 2, "channel": "digital"},
             {"op": "target", "target": [1, 2], "channel": "digital"},
             {"op": "delay", "time": 500, "channel": "global"},
+            {"op": "delay", "time": 500, "channel": "global", "at_rest": True},
             {"op": "align", "channels": ["digital", "global"]},
+            {
+                "op": "align",
+                "channels": ["digital", "global"],
+                "at_rest": False,
+            },
             {
                 "op": "phase_shift",
                 "phi": 42,
@@ -1413,10 +1475,12 @@ class TestDeserialization:
         elif op["op"] == "align":
             assert c.name == "align"
             assert c.args == tuple(op["channels"])
+            assert c.kwargs.get("at_rest", True) == op.get("at_rest", True)
         elif op["op"] == "delay":
             assert c.name == "delay"
             assert c.kwargs["duration"] == op["time"]
             assert c.kwargs["channel"] == op["channel"]
+            assert c.kwargs.get("at_rest", False) == op.get("at_rest", False)
         elif op["op"] == "phase_shift":
             assert c.name == "phase_shift_index"
             assert c.args == tuple([op["phi"], *op["targets"]])
@@ -1584,6 +1648,12 @@ class TestDeserialization:
             },
             {"op": "delay", "time": var2, "channel": "global"},
             {
+                "op": "delay",
+                "time": var2,
+                "channel": "global",
+                "at_rest": True,
+            },
+            {
                 "op": "phase_shift",
                 "phi": var1,
                 "targets": [2, var1],
@@ -1642,6 +1712,7 @@ class TestDeserialization:
             assert c.name == "delay"
             assert c.kwargs["channel"] == op["channel"]
             assert isinstance(c.kwargs["duration"], VariableItem)
+            assert c.kwargs.get("at_rest", False) == op.get("at_rest", False)
         elif op["op"] == "phase_shift":
             assert c.name == "phase_shift_index"
             # phi is variable

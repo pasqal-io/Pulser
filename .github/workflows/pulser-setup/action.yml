@@ -4,19 +4,19 @@ inputs:
   python-version:
     description: Python version
     required: false
-    default: '3.9'
+    default: "3.9"
   extra-packages:
     description: Extra packages to install (give to grep)
     required: false
-    default: ''
+    default: ""
 runs:
-  using: 'composite'
-  steps: 
+  using: "composite"
+  steps:
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-        cache: 'pip'
+        cache: "pip"
     - name: Install Pulser
       shell: bash
       run: |

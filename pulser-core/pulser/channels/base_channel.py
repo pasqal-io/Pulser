@@ -75,7 +75,7 @@ class Channel(ABC):
     clock_period: int = 1  # ns
     min_duration: int = 1  # ns
     max_duration: Optional[int] = int(1e8)  # ns
-    min_avg_amp: int = 0
+    min_avg_amp: float = 0
     mod_bandwidth: Optional[float] = None  # MHz
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
 

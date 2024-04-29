@@ -1,0 +1,131 @@
+{
+  "$id": "noise-schema.json",
+  "$ref": "#/definitions/NoiseModel",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ComplexNumber": {
+      "additionalProperties": false,
+      "description": "A complex number.",
+      "properties": {
+        "imag": {
+          "type": "number"
+        },
+        "real": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "real",
+        "imag"
+      ],
+      "type": "object"
+    },
+    "NoiseModel": {
+      "additionalProperties": false,
+      "description": "Specifies the noise model parameters for emulation.",
+      "properties": {
+        "amp_sigma": {
+          "type": "number"
+        },
+        "dephasing_rate": {
+          "type": "number"
+        },
+        "depolarizing_rate": {
+          "type": "number"
+        },
+        "eff_noise": {
+          "items": {
+            "items": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "$ref": "#/definitions/ComplexNumber"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "hyperfine_dephasing_rate": {
+          "type": "number"
+        },
+        "laser_waist": {
+          "type": "number"
+        },
+        "noise_types": {
+          "items": {
+            "$ref": "#/definitions/NoiseType"
+          },
+          "type": "array"
+        },
+        "p_false_neg": {
+          "type": "number"
+        },
+        "p_false_pos": {
+          "type": "number"
+        },
+        "relaxation_rate": {
+          "type": "number"
+        },
+        "runs": {
+          "type": "number"
+        },
+        "samples_per_run": {
+          "type": "number"
+        },
+        "state_prep_error": {
+          "type": "number"
+        },
+        "temperature": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "noise_types",
+        "runs",
+        "samples_per_run",
+        "state_prep_error",
+        "p_false_pos",
+        "p_false_neg",
+        "temperature",
+        "laser_waist",
+        "amp_sigma",
+        "relaxation_rate",
+        "dephasing_rate",
+        "hyperfine_dephasing_rate",
+        "depolarizing_rate",
+        "eff_noise"
+      ],
+      "type": "object"
+    },
+    "NoiseType": {
+      "enum": [
+        "doppler",
+        "amplitude",
+        "SPAM",
+        "relaxation",
+        "dephasing",
+        "depolarizing",
+        "leakage",
+        "eff_noise"
+      ],
+      "type": "string"
+    }
+  }
+}

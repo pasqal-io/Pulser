@@ -56,6 +56,7 @@ from pulser.waveforms import (
 )
 
 if TYPE_CHECKING:
+    from pulser.noise_model import NoiseModel
     from pulser.register.base_register import BaseRegister
     from pulser.sequence import Sequence
 
@@ -209,11 +210,15 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             channel=op["channel"],
         )
     elif op["op"] == "align":
-        seq.align(*op["channels"])
+        seq.align(
+            *op["channels"],
+            at_rest=op.get("at_rest", True),
+        )
     elif op["op"] == "delay":
         seq.delay(
             duration=_deserialize_parameter(op["time"], vars),
             channel=op["channel"],
+            at_rest=op.get("at_rest", False),
         )
     elif op["op"] == "phase_shift":
         seq.phase_shift_index(
@@ -377,6 +382,28 @@ def _deserialize_register(
     return reg
 
 
+def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
+
+    def convert_complex(obj: list | tuple) -> list:
+        if isinstance(obj, (list, tuple)):
+            return [convert_complex(e) for e in obj]
+        elif isinstance(obj, dict):
+            return obj["real"] + 1j * obj["imag"]
+        else:
+            return obj
+
+    eff_noise_rates = []
+    eff_noise_opers = []
+    for rate, oper in noise_model_obj.pop("eff_noise"):
+        eff_noise_rates.append(rate)
+        eff_noise_opers.append(convert_complex(oper))
+    return pulser.NoiseModel(
+        **noise_model_obj,
+        eff_noise_rates=tuple(eff_noise_rates),
+        eff_noise_opers=tuple(eff_noise_opers),
+    )
+
+
 def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
     device_cls: Type[Device] | Type[VirtualDevice] = (
         VirtualDevice if obj["is_virtual"] else Device
@@ -408,6 +435,8 @@ def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:
             params[key] = tuple(
                 _deserialize_layout(layout) for layout in obj[key]
             )
+        elif param.name == "default_noise_model":
+            params[param.name] = _deserialize_noise_model(obj[param.name])
         else:
             params[param.name] = obj[param.name]
     try:
@@ -561,3 +590,17 @@ def deserialize_abstract_register(obj_str: str) -> BaseRegister:
     obj = json.loads(obj_str)
     layout = _deserialize_layout(obj["layout"]) if "layout" in obj else None
     return _deserialize_register(qubits=obj["register"], layout=layout)
+
+
+def deserialize_abstract_noise_model(obj_str: str) -> NoiseModel:
+    """Deserialize a noise model from an abstract JSON object.
+
+    Args:
+        obj_str: the JSON string representing the noise model encoded
+            in the abstract JSON format.
+
+    Returns:
+        The NoiseModel instance.
+    """
+    validate_abstract_repr(obj_str, "noise")
+    return _deserialize_noise_model(json.loads(obj_str))

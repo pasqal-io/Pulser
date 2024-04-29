@@ -22,6 +22,7 @@ import pytest
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
+    RectangularLatticeLayout,
     SquareLatticeLayout,
     TriangularLatticeLayout,
 )
@@ -112,13 +113,6 @@ def test_register_definition(layout, layout3d):
     ):
         reg2d._validate_layout(layout, (0, 1))
 
-    with pytest.raises(TypeError, match="cannot be rotated"):
-        with pytest.warns(
-            DeprecationWarning,
-            match=re.escape("'Register.rotate()' has been deprecated"),
-        ):
-            reg2d.rotate(30)
-
     with pytest.warns(
         UserWarning, match="won't have an associated 'RegisterLayout'"
     ):
@@ -195,6 +189,22 @@ def test_square_lattice_layout():
     )
     with pytest.raises(ValueError, match="'10x3' array doesn't fit"):
         square.rectangular_register(10, 3)
+
+
+def test_rectangular_lattice_layout():
+    rectangle = RectangularLatticeLayout(9, 7, 2, 4)
+    assert str(rectangle) == "RectangularLatticeLayout(9x7, 2.0x4.0µm)"
+    assert rectangle.square_register(3) == Register.rectangular_lattice(
+        3, 3, col_spacing=2, row_spacing=4, prefix="q"
+    )
+    # An even number of atoms on the side won't align the center with an atom
+    assert rectangle.square_register(4) != Register.rectangular_lattice(
+        4, 4, col_spacing=2, row_spacing=4, prefix="q"
+    )
+    with pytest.raises(ValueError, match="'8x8' array doesn't fit"):
+        rectangle.square_register(8)
+    with pytest.raises(ValueError, match="'10x3' array doesn't fit"):
+        rectangle.rectangular_register(10, 3)
 
 
 def test_triangular_lattice_layout():

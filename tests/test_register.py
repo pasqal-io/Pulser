@@ -11,13 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
-import pulser
 from pulser import Register, Register3D
 from pulser.devices import DigitalAnalogDevice, MockDevice
 
@@ -84,6 +82,24 @@ def test_creation():
         ValueError, match="must only be 'layout' and 'trap_ids'"
     ):
         Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
+
+
+def test_rectangular_lattice():
+    # Check rows
+    with pytest.raises(ValueError, match="The number of rows"):
+        Register.rectangular_lattice(0, 2, 3, 4)
+
+    # Check columns
+    with pytest.raises(ValueError, match="The number of columns"):
+        Register.rectangular_lattice(2, 0, 3, 4)
+
+    # Check row spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register.rectangular_lattice(2, 2, 0.0, 5)
+
+    # Check col spacing
+    with pytest.raises(ValueError, match="Spacing"):
+        Register.rectangular_lattice(2, 2, 3, 0.0)
 
 
 def test_rectangle():
@@ -277,17 +293,7 @@ def test_rotation():
     rot_reg = reg.rotated(45)
     new_coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
     np.testing.assert_allclose(rot_reg._coords, new_coords_, atol=1e-15)
-
     assert rot_reg != reg
-
-    assert pulser.__version__ <= "0.18", "Remove 'Register.rotate()'."
-    with pytest.warns(
-        DeprecationWarning,
-        match=re.escape("'Register.rotate()' has been deprecated"),
-    ):
-        reg.rotate(45)
-    assert np.all(np.isclose(reg._coords, new_coords_))
-    assert reg == rot_reg
 
 
 draw_params = [

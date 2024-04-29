@@ -23,7 +23,6 @@ import pytest
 import pulser
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
-from pulser.backend.noise_model import NoiseModel
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     RemoteConnection,
@@ -32,6 +31,7 @@ from pulser.backend.remote import (
     SubmissionStatus,
 )
 from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.noise_model import NoiseModel
 from pulser.result import Result, SampledResult
 
 
@@ -110,54 +110,22 @@ class TestNoiseModel:
         "param",
         [
             "dephasing_rate",
+            "hyperfine_dephasing_rate",
+            "relaxation_rate",
             "depolarizing_rate",
-            "dephasing_prob",
-            "depolarizing_prob",
         ],
     )
     def test_init_rate_like(self, param, value):
-        def create_noise_model(param, value):
-            if "prob" in param:
-                if value > 0:
-                    with pytest.raises(
-                        ValueError, match=f"{param}` must be equal."
-                    ):
-                        with pytest.warns(
-                            DeprecationWarning,
-                            match=f"{param} is deprecated.",
-                        ):
-                            NoiseModel(
-                                **{
-                                    param: value,
-                                    "dephasing_rate": value * 10,
-                                    "depolarizing_rate": value * 10,
-                                }
-                            )
-                with pytest.warns(
-                    (UserWarning, DeprecationWarning),
-                    match=f"{param}",
-                ):
-                    return NoiseModel(**{param: value})
-            return NoiseModel(**{param: value})
-
         if value < 0:
-            param_mess = (
-                "depolarizing_rate"
-                if "depolarizing" in param
-                else "dephasing_rate"
-            )
             with pytest.raises(
                 ValueError,
-                match=f"'{param_mess}' must be None or greater "
+                match=f"'{param}' must be None or greater "
                 f"than or equal to zero, not {value}.",
             ):
-                create_noise_model(param, value)
+                NoiseModel(**{param: value})
         else:
-            noise_model = create_noise_model(param, value)
-            if "depolarizing" in param:
-                assert noise_model.depolarizing_rate == value
-            elif "dephasing" in param:
-                assert noise_model.dephasing_rate == value
+            noise_model = NoiseModel(**{param: value})
+            assert getattr(noise_model, param) == value
 
     @pytest.mark.parametrize("value", [-1e-9, 1.0001])
     @pytest.mark.parametrize(
@@ -177,33 +145,18 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: value})
 
-    @pytest.mark.parametrize(
-        "noise_sample,",
-        [
-            ("dephasing", "depolarizing"),
-            ("eff_noise", "depolarizing"),
-            ("eff_noise", "dephasing"),
-            ("depolarizing", "eff_noise", "dephasing"),
-        ],
-    )
-    def test_eff_noise_init(self, noise_sample):
-        with pytest.raises(
-            NotImplementedError,
-            match="Depolarizing, dephasing and effective noise channels",
-        ):
-            NoiseModel(noise_types=noise_sample)
-
     @pytest.fixture
     def matrices(self):
         matrices = {}
         matrices["I"] = np.eye(2)
         matrices["X"] = np.ones((2, 2)) - np.eye(2)
+        matrices["Y"] = np.array([[0, -1j], [1j, 0]])
         matrices["Zh"] = 0.5 * np.array([[1, 0], [0, -1]])
         matrices["ket"] = np.array([[1.0], [2.0]])
         matrices["I3"] = np.eye(3)
         return matrices
 
-    def test_eff_noise_probs(self, matrices):
+    def test_eff_noise_rates(self, matrices):
         with pytest.raises(
             ValueError, match="The provided rates must be greater than 0."
         ):
@@ -212,38 +165,6 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I"], matrices["X"]],
                 eff_noise_rates=[-1.0, 0.5],
             )
-        with pytest.warns(
-            (UserWarning, DeprecationWarning), match="eff_noise_probs"
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I"], matrices["X"]],
-                eff_noise_probs=[1.2, 0.5],
-            )
-
-        with pytest.warns(
-            DeprecationWarning, match="eff_noise_probs is deprecated."
-        ):
-            NoiseModel(
-                noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I"], matrices["X"]],
-                eff_noise_rates=[1.2, 0.5],
-                eff_noise_probs=[1.2, 0.5],
-            )
-
-        with pytest.raises(
-            ValueError,
-            match="If both defined, `eff_noise_rates` and `eff_noise_probs`",
-        ):
-            with pytest.warns(
-                DeprecationWarning, match="eff_noise_probs is deprecated."
-            ):
-                NoiseModel(
-                    noise_types=("eff_noise",),
-                    eff_noise_opers=[matrices["I"], matrices["X"]],
-                    eff_noise_probs=[1.4, 0.5],
-                    eff_noise_rates=[1.2, 0.5],
-                )
 
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
@@ -261,7 +182,13 @@ class TestNoiseModel:
             match="The effective noise parameters have not been filled.",
         ):
             NoiseModel(noise_types=("eff_noise",))
-        with pytest.raises(TypeError, match="is not a Numpy array."):
+        with pytest.raises(TypeError, match="not castable to a Numpy array"):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_rates=[2.0],
+                eff_noise_opers=[{(1.0, 0), (0.0, -1)}],
+            )
+        with pytest.raises(ValueError, match="is not a 2D array."):
             NoiseModel(
                 noise_types=("eff_noise",),
                 eff_noise_opers=[2.0],
@@ -273,6 +200,21 @@ class TestNoiseModel:
                 eff_noise_opers=[matrices["I3"]],
                 eff_noise_rates=[1.0],
             )
+
+    def test_eq(self, matrices):
+        final_fields = dict(
+            noise_types=("SPAM", "eff_noise"),
+            eff_noise_rates=(0.1, 0.4),
+            eff_noise_opers=(((0, 1), (1, 0)), ((0, -1j), (1j, 0))),
+        )
+        noise_model = NoiseModel(
+            noise_types=["SPAM", "eff_noise"],
+            eff_noise_rates=[0.1, 0.4],
+            eff_noise_opers=[matrices["X"], matrices["Y"]],
+        )
+        assert noise_model == NoiseModel(**final_fields)
+        for param in final_fields:
+            assert final_fields[param] == getattr(noise_model, param)
 
 
 class _MockConnection(RemoteConnection):

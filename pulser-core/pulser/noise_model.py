@@ -14,14 +14,27 @@
 """Defines a noise model class for emulator backends."""
 from __future__ import annotations
 
-import warnings
-from dataclasses import dataclass, field, fields
+import json
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Literal, get_args
 
 import numpy as np
+from numpy.typing import ArrayLike
+
+import pulser.json.abstract_repr as pulser_abstract_repr
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
+
+__all__ = ["NoiseModel"]
 
 NOISE_TYPES = Literal[
-    "doppler", "amplitude", "SPAM", "dephasing", "depolarizing", "eff_noise"
+    "doppler",
+    "amplitude",
+    "SPAM",
+    "dephasing",
+    "relaxation",
+    "depolarizing",
+    "eff_noise",
 ]
 
 
@@ -31,30 +44,43 @@ class NoiseModel:
 
     Select the desired noise types in `noise_types` and, if necessary,
     modifiy the default values of related parameters.
-    Non-specified parameters will have reasonable default value which
-    is only taken into account when the related noise type is selected.
+    Non-specified parameters will have reasonable default values which
+    are only taken into account when the related noise type is selected.
 
     Args:
-        noise_types: Noise types to include in the emulation. Available
-            options:
+        noise_types: Noise types to include in the emulation.
+            Available options:
+
+            - "relaxation": Noise due to a decay from the Rydberg to
+              the ground state (parametrized by `relaxation_rate`), commonly
+              characterized experimentally by the T1 time.
 
             - "dephasing": Random phase (Z) flip (parametrized
-              by `dephasing_rate`).
+              by `dephasing_rate`), commonly characterized experimentally
+              by the T2* time.
+
             - "depolarizing": Quantum noise where the state is
-              turned into a mixed state I/2 with rate
-              `depolarizing_rate`.
+              turned into the maximally mixed state with rate
+              `depolarizing_rate`. While it does not describe a physical
+              phenomenon, it is a commonly used tool to test the system
+              under a uniform combination of phase flip (Z) and
+              bit flip (X) errors.
+
             - "eff_noise": General effective noise channel defined by
               the set of collapse operators `eff_noise_opers`
               and the corresponding rates distribution
               `eff_noise_rates`.
+
             - "doppler": Local atom detuning due to termal motion of the
               atoms and Doppler effect with respect to laser frequency.
               Parametrized by the `temperature` field.
+
             - "amplitude": Gaussian damping due to finite laser waist and
-                laser amplitude fluctuations. Parametrized by `laser_waist`
-                and `amp_sigma`.
-            - "SPAM": SPAM errors. Parametrized by `state_prep_error`,
-                `p_false_pos` and `p_false_neg`.
+              laser amplitude fluctuations. Parametrized by `laser_waist`
+              and `amp_sigma`.
+
+            - "SPAM": SPAM errors. Parametrized by
+              `state_prep_error`, `p_false_pos` and `p_false_neg`.
 
         runs: Number of runs needed (each run draws a new random noise).
         samples_per_run: Number of samples per noisy run. Useful for
@@ -68,17 +94,18 @@ class NoiseModel:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        dephasing_rate: The rate of a dephasing error occuring (in rad/µs).
-        dephasing_prob: (Deprecated) The rate of a dephasing error occuring
-            (in rad/µs). Use `dephasing_rate` instead.
-        depolarizing_rate: The rate (in rad/µs) at which a depolarizing
+        relaxation_rate: The rate of relaxation from the Rydberg to the
+            ground state (in 1/µs). Corresponds to 1/T1.
+        dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
+            Rydberg state superpostion. Only used if a Rydberg state is
+            involved. Corresponds to 1/T2*.
+        hyperfine_dephasing_rate: The rate of dephasing occuring (in 1/µs)
+            between hyperfine ground states. Only used if the hyperfine
+            state is involved.
+        depolarizing_rate: The rate (in 1/µs) at which a depolarizing
             error occurs.
-        depolarizing_prob: (Deprecated) The rate (in rad/µs) at which a
-            depolarizing error occurs. Use `depolarizing_rate` instead.
         eff_noise_rates: The rate associated to each effective noise operator
-            (in rad/µs).
-        eff_noise_probs: (Deprecated) The rate associated to each effective
-            noise operator (in rad/µs). Use `eff_noise_rate` instead.
+            (in 1/µs).
         eff_noise_opers: The operators for the effective noise model.
     """
 
@@ -91,50 +118,18 @@ class NoiseModel:
     temperature: float = 50.0
     laser_waist: float = 175.0
     amp_sigma: float = 5e-2
+    relaxation_rate: float = 0.01
     dephasing_rate: float = 0.05
+    hyperfine_dephasing_rate: float = 1e-3
     depolarizing_rate: float = 0.05
-    eff_noise_rates: list[float] = field(default_factory=list)
-    eff_noise_opers: list[np.ndarray] = field(default_factory=list)
-    dephasing_prob: float | None = None
-    depolarizing_prob: float | None = None
-    eff_noise_probs: list[float] = field(default_factory=list)
+    eff_noise_rates: tuple[float, ...] = field(default_factory=tuple)
+    eff_noise_opers: tuple[ArrayLike, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
-        default_field_value = {
-            field.name: field.default for field in fields(self)
-        }
-        for noise in ["dephasing", "depolarizing", "eff_noise"]:
-            # Probability and rates should be the same
-            prob_name = f"{noise}_prob{'s' if noise=='eff_noise' else ''}"
-            rate_name = f"{noise}_rate{'s' if noise=='eff_noise' else ''}"
-            prob, rate = (getattr(self, prob_name), getattr(self, rate_name))
-            if len(prob) > 0 if noise == "eff_noise" else prob is not None:
-                warnings.warn(
-                    f"{prob_name} is deprecated. Use {rate_name} instead.",
-                    DeprecationWarning,
-                )
-                if prob != rate:
-                    if (
-                        len(rate) > 0
-                        if noise == "eff_noise"
-                        else rate != default_field_value[rate_name]
-                    ):
-                        raise ValueError(
-                            f"If both defined, `{rate_name}` and `{prob_name}`"
-                            " must be equal."
-                        )
-                    warnings.warn(
-                        f"Setting {rate_name} with the value from "
-                        f"{prob_name}.",
-                        UserWarning,
-                    )
-                    self._change_attribute(rate_name, prob)
-            self._change_attribute(prob_name, getattr(self, rate_name))
-        assert self.dephasing_prob == self.dephasing_rate
-        assert self.depolarizing_prob == self.depolarizing_rate
-        assert self.eff_noise_probs == self.eff_noise_rates
         positive = {
             "dephasing_rate",
+            "hyperfine_dephasing_rate",
+            "relaxation_rate",
             "depolarizing_rate",
         }
         strict_positive = {
@@ -171,11 +166,20 @@ class NoiseModel:
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
+        def to_tuple(obj: tuple) -> tuple:
+            if isinstance(obj, (tuple, list, np.ndarray)):
+                obj = tuple(to_tuple(el) for el in obj)
+            return obj
+
+        # Turn lists and arrays into tuples
+        for f in fields(self):
+            if f.name == "noise_types" or "eff_noise" in f.name:
+                object.__setattr__(
+                    self, f.name, to_tuple(getattr(self, f.name))
+                )
+
         self._check_noise_types()
         self._check_eff_noise()
-
-    def _change_attribute(self, attr_name: str, new_value: Any) -> None:
-        object.__setattr__(self, attr_name, new_value)
 
     def _check_noise_types(self) -> None:
         for noise_type in self.noise_types:
@@ -185,15 +189,6 @@ class NoiseModel:
                     + "Valid noise types: "
                     + ", ".join(get_args(NOISE_TYPES))
                 )
-        dephasing_on = "dephasing" in self.noise_types
-        depolarizing_on = "depolarizing" in self.noise_types
-        eff_noise_on = "eff_noise" in self.noise_types
-        eff_noise_conflict = dephasing_on + depolarizing_on + eff_noise_on > 1
-        if eff_noise_conflict:
-            raise NotImplementedError(
-                "Depolarizing, dephasing and effective noise channels"
-                "cannot be simultaneously selected."
-            )
 
     def _check_eff_noise(self) -> None:
         if len(self.eff_noise_opers) != len(self.eff_noise_rates):
@@ -222,11 +217,52 @@ class NoiseModel:
             raise ValueError("The provided rates must be greater than 0.")
 
         # Check the validity of operators
-        for operator in self.eff_noise_opers:
+        for op in self.eff_noise_opers:
             # type checking
-            if not isinstance(operator, np.ndarray):
-                raise TypeError(f"{operator} is not a Numpy array.")
+            try:
+                operator = np.array(op, dtype=complex)
+            except Exception:
+                raise TypeError(
+                    f"Operator {op!r} is not castable to a Numpy array."
+                )
+            if operator.ndim != 2:
+                raise ValueError(f"Operator '{op!r}' is not a 2D array.")
+
             if operator.shape != (2, 2):
                 raise NotImplementedError(
-                    "Operator's shape must be (2,2) " f"not {operator.shape}."
+                    f"Operator's shape must be (2,2) not {operator.shape}."
                 )
+
+    def _to_abstract_repr(self) -> dict[str, Any]:
+        all_fields = asdict(self)
+        eff_noise_rates = all_fields.pop("eff_noise_rates")
+        eff_noise_opers = all_fields.pop("eff_noise_opers")
+        all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
+        return all_fields
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the noise model into an abstract JSON object."""
+        abstr_str = json.dumps(self, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_str, "noise")
+        return abstr_str
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> NoiseModel:
+        """Deserialize a noise model from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the noise model
+                encoded in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized noise model must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+
+        # Avoids circular imports
+        return (
+            pulser_abstract_repr.deserializer.deserialize_abstract_noise_model(
+                obj_str
+            )
+        )

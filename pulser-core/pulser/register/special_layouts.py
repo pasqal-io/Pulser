@@ -26,26 +26,33 @@ if TYPE_CHECKING:
     from pulser.register import Register
 
 
-class SquareLatticeLayout(RegisterLayout):
-    """A RegisterLayout with a square lattice pattern in a rectangular shape.
+class RectangularLatticeLayout(RegisterLayout):
+    """RegisterLayout with rectangular lattice pattern in a rectangular shape.
 
     Args:
         rows: The number of rows of traps.
         columns: The number of columns of traps.
-        spacing: The distance between neighbouring traps (in µm).
+        col_spacing: Horizontal distance between neighbouring traps (in µm).
+        row_spacing: Vertical distance between neighbouring traps (in µm)
     """
 
-    def __init__(self, rows: int, columns: int, spacing: float):
-        """Initializes a SquareLatticeLayout."""
+    def __init__(
+        self, rows: int, columns: int, col_spacing: float, row_spacing: float
+    ):
+        """Initializes a RectangularLatticeLayout."""
         self._rows = int(rows)
         self._columns = int(columns)
-        self._spacing = float(spacing)
+        self._col_spacing = float(col_spacing)
+        self._row_spacing = float(row_spacing)
         slug = (
-            f"SquareLatticeLayout({self._rows}x{self._columns}, "
-            f"{self._spacing}µm)"
+            f"RectangularLatticeLayout({self._rows}x{self._columns}, "
+            f"{self._col_spacing}x{self._row_spacing}µm)"
         )
+        self._traps = patterns.square_rect(self._rows, self._columns)
+        self._traps[:, 0] = self._traps[:, 0] * self._col_spacing
+        self._traps[:, 1] = self._traps[:, 1] * self._row_spacing
         super().__init__(
-            patterns.square_rect(self._rows, self._columns) * self._spacing,
+            trap_coordinates=self._traps,
             slug=slug,
         )
 
@@ -84,15 +91,52 @@ class SquareLatticeLayout(RegisterLayout):
         if rows > self._rows or columns > self._columns:
             raise ValueError(
                 f"A '{rows}x{columns}' array doesn't fit a "
-                f"{self._rows}x{self._columns} SquareLatticeLayout."
+                f"{self._rows}x{self._columns} RectangularLatticeLayout."
             )
-        points = patterns.square_rect(rows, columns) * self._spacing
+        points = patterns.square_rect(rows, columns)
+        points[:, 0] = points[:, 0] * self._col_spacing
+        points[:, 1] = points[:, 1] * self._row_spacing
         trap_ids = self.get_traps_from_coordinates(*points)
         qubit_ids = [f"{prefix}{i}" for i in range(len(trap_ids))]
         return cast(
             pulser.Register,
             self.define_register(*trap_ids, qubit_ids=qubit_ids),
         )
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(
+            self,
+            self._rows,
+            self._columns,
+            self._col_spacing,
+            self._row_spacing,
+        )
+
+
+class SquareLatticeLayout(RectangularLatticeLayout):
+    """A RegisterLayout with a square lattice pattern in a rectangular shape.
+
+    Args:
+        rows: The number of rows of traps.
+        columns: The number of columns of traps.
+        spacing: The distance between neighbouring traps (in µm).
+    """
+
+    def __init__(self, rows: int, columns: int, spacing: float):
+        """Initializes a SquareLatticeLayout."""
+        self._rows = int(rows)
+        self._columns = int(columns)
+        self._spacing = float(spacing)
+        self._col_spacing = self._spacing
+        self._row_spacing = self._spacing
+        super().__init__(
+            self._rows, self._columns, self._spacing, self._spacing
+        )
+        slug = (
+            f"SquareLatticeLayout({self._rows}x{self._columns}, "
+            f"{self._spacing}µm)"
+        )
+        object.__setattr__(self, "slug", slug)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(self, self._rows, self._columns, self._spacing)
