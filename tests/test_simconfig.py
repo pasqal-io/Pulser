@@ -15,7 +15,7 @@
 import pytest
 from qutip import Qobj, qeye, sigmax, sigmaz
 
-from pulser.backend.noise_model import NoiseModel
+from pulser.noise_model import NoiseModel
 from pulser_simulation.simconfig import SimConfig, doppler_sigma
 
 

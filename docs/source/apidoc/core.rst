@@ -110,7 +110,10 @@ which when associated with a :class:`pulser.Sequence` condition its development.
 
 .. autodata:: pulser.devices.DigitalAnalogDevice
 
-
+Noise Model
+--------------
+.. automodule:: pulser.noise_model
+  :members:
 
 Channels
 ---------------------

@@ -19,6 +19,7 @@ from typing import Any
 from pulser import Sequence
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
+from pulser.noise_model import NoiseModel
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simresults import SimulationResults
 from pulser_simulation.simulation import QutipEmulator
@@ -43,7 +44,12 @@ class QutipBackend(Backend):
                 f"not {type(config)}."
             )
         self._config = config
-        simconfig = SimConfig.from_noise_model(self._config.noise_model)
+        noise_model: None | NoiseModel = None
+        if self._config.prefer_device_noise_model:
+            noise_model = sequence.device.default_noise_model
+        simconfig = SimConfig.from_noise_model(
+            noise_model or self._config.noise_model
+        )
         self._sim_obj = QutipEmulator.from_sequence(
             sequence,
             sampling_rate=self._config.sampling_rate,

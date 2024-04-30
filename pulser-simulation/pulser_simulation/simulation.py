@@ -28,9 +28,9 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
-from pulser.backend.noise_model import NoiseModel
 from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
+from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
 from pulser.sampler.samples import ChannelSamples, SequenceSamples

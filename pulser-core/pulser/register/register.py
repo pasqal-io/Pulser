@@ -89,7 +89,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a rectangular array.
+        """Creates a rectangular array of qubits on a square lattice.
 
         Args:
             rows: Number of rows.
@@ -101,6 +101,32 @@ class Register(BaseRegister, RegDrawer):
 
         Returns:
             A register with qubits placed in a rectangular array.
+        """
+        return cls.rectangular_lattice(rows, columns, spacing, spacing, prefix)
+
+    @classmethod
+    def rectangular_lattice(
+        cls,
+        rows: int,
+        columns: int,
+        row_spacing: float = 4.0,
+        col_spacing: float = 2.0,
+        prefix: Optional[str] = None,
+    ) -> Register:
+        """Creates a rectangular array of qubits on a rectangular lattice.
+
+        Args:
+            rows: Number of rows.
+            columns: Number of columns.
+            row_spacing: The distance between rows in μm.
+            col_spacing: The distance between columns in μm.
+            prefix: The prefix for the qubit ids. If defined, each qubit
+                id starts with the prefix, followed by an int from 0 to N-1
+                (e.g. prefix='q' -> IDs: 'q0', 'q1', 'q2', ...)
+
+        Returns:
+            Register with qubits placed in a rectangular array on a
+            rectangular lattice.
         """
         # Check rows
         if rows < 1:
@@ -117,13 +143,12 @@ class Register(BaseRegister, RegDrawer):
             )
 
         # Check spacing
-        if spacing <= 0.0:
-            raise ValueError(
-                f"Spacing between atoms (`spacing` = {spacing})"
-                " must be greater than 0."
-            )
+        if row_spacing <= 0.0 or col_spacing <= 0.0:
+            raise ValueError("Spacing between atoms must be greater than 0.")
 
-        coords = patterns.square_rect(rows, columns) * spacing
+        coords = patterns.square_rect(rows, columns)
+        coords[:, 0] = coords[:, 0] * col_spacing
+        coords[:, 1] = coords[:, 1] * row_spacing
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 

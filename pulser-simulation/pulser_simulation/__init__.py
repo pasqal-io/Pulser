@@ -13,7 +13,7 @@
 # limitations under the License.
 """Classes for classical emulation of a Sequence."""
 
-from pulser.backend import EmulatorConfig, NoiseModel
+from pulser import EmulatorConfig, NoiseModel
 
 from pulser_simulation._version import __version__ as __version__
 from pulser_simulation.qutip_backend import QutipBackend

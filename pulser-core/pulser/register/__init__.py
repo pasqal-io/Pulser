@@ -20,6 +20,7 @@ from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
     SquareLatticeLayout,
     TriangularLatticeLayout,
+    RectangularLatticeLayout,
 )
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "RegisterLayout",
     "SquareLatticeLayout",
     "TriangularLatticeLayout",
+    "RectangularLatticeLayout",
 ]

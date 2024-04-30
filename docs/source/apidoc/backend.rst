@@ -12,6 +12,11 @@ QPU
 Emulators
 ----------
 
+Configuration
+^^^^^^^^^^^^^^
+.. autoclass:: pulser.EmulatorConfig
+   :members:
+
 Local
 ^^^^^^^
 .. autoclass:: pulser_simulation.QutipBackend

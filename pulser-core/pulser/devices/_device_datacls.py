@@ -29,6 +29,7 @@ from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
+from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
@@ -36,7 +37,16 @@ from pulser.register.traps import COORD_PRECISION
 
 DIMENSIONS = Literal[2, 3]
 
-ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs", "dmm_objects")
+ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs")
+OPTIONAL_IN_ABSTR_REPR = tuple(
+    list(ALWAYS_OPTIONAL_PARAMS)
+    + [
+        "dmm_objects",
+        "default_noise_model",
+        "requires_layout",
+        "accepts_new_layouts",
+    ]
+)
 PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 
 
@@ -55,7 +65,7 @@ class BaseDevice(ABC):
         dmm_objects: The DMM subclass instances specifying each channel in the
             device. They are referenced by their order in the list, with the ID
             "dmm_[index in dmm_objects]".
-        rybderg_level: The value of the principal quantum number :math:`n`
+        rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -74,6 +84,11 @@ class BaseDevice(ABC):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
     """
 
     name: str
@@ -87,10 +102,12 @@ class BaseDevice(ABC):
     max_layout_filling: float = 0.5
     max_sequence_duration: int | None = None
     max_runs: int | None = None
+    requires_layout: bool = False
     reusable_channels: bool = field(default=False, init=False)
     channel_ids: tuple[str, ...] | None = None
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
+    default_noise_model: NoiseModel | None = None
 
     def __post_init__(self) -> None:
         def type_check(
@@ -217,6 +234,9 @@ class BaseDevice(ABC):
                 "'interaction_coeff_xy' must be a 'float',"
                 f" not '{type(self.interaction_coeff_xy)}'."
             )
+
+        if self.default_noise_model is not None:
+            type_check("default_noise_model", NoiseModel)
 
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
@@ -459,8 +479,8 @@ class BaseDevice(ABC):
     def _to_abstract_repr(self) -> dict[str, Any]:
         defaults = get_dataclass_defaults(fields(self))
         params = self._params()
-        for p in ALWAYS_OPTIONAL_PARAMS:
-            if params[p] == defaults[p]:
+        for p in OPTIONAL_IN_ABSTR_REPR:
+            if p in params and params[p] == defaults[p]:
                 params.pop(p, None)
         # Delete parameters of PARAMS_WITH_ABSTR_REPR in params
         for p in PARAMS_WITH_ABSTR_REPR:
@@ -495,7 +515,15 @@ class Device(BaseDevice):
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
-        rybderg_level : The value of the principal quantum number :math:`n`
+        channel_objects: The Channel subclass instances specifying each
+            channel in the device.
+        channel_ids: Custom IDs for each channel object. When defined,
+            an ID must be given for each channel. If not defined, the IDs are
+            generated internally based on the channels' names and addressing.
+        dmm_objects: The DMM subclass instances specifying each channel in the
+            device. They are referenced by their order in the list, with the ID
+            "dmm_[index in dmm_objects]".
+        rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -514,15 +542,25 @@ class Device(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
         pre_calibrated_layouts: RegisterLayout instances that are already
             available on the Device.
+        accepts_new_layouts: Whether registers built from register layouts
+            that are not already calibrated are accepted. Only enforced in
+            QPU execution.
     """
 
     max_atom_num: int
     max_radial_distance: int
+    requires_layout: bool = True
     pre_calibrated_layouts: tuple[RegisterLayout, ...] = field(
         default_factory=tuple
     )
+    accepts_new_layouts: bool = True
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -693,7 +731,15 @@ class VirtualDevice(BaseDevice):
     Attributes:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
-        rybderg_level : The value of the principal quantum number :math:`n`
+        channel_objects: The Channel subclass instances specifying each
+            channel in the device.
+        channel_ids: Custom IDs for each channel object. When defined,
+            an ID must be given for each channel. If not defined, the IDs are
+            generated internally based on the channels' names and addressing.
+        dmm_objects: The DMM subclass instances specifying each channel in the
+            device. They are referenced by their order in the list, with the ID
+            "dmm_[index in dmm_objects]".
+        rydberg_level: The value of the principal quantum number :math:`n`
             when the Rydberg level used is of the form
             :math:`|nS_{1/2}, m_j = +1/2\rangle`.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -712,6 +758,11 @@ class VirtualDevice(BaseDevice):
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
             for backend execution.
+        default_noise_model: An optional noise model characterizing the default
+            noise of the device. Can be used by emulator backends that support
+            noise.
+        requires_layout: Whether the register used in the sequence must be
+            created from a register layout. Only enforced in QPU execution.
         reusable_channels: Whether each channel can be declared multiple times
             on the same pulse sequence.
     """

@@ -448,6 +448,7 @@ def test_convert_to_virtual():
     ).to_virtual() == VirtualDevice(
         supports_slm_mask=False,
         reusable_channels=False,
+        requires_layout=True,
         dmm_objects=(),
         **params,
     )
@@ -463,7 +464,8 @@ def test_device_params():
     init_virtual_params = virtual_DigitalAnalogDevice._params(init_only=True)
     assert all_virtual_params == init_virtual_params
     assert set(all_params) - set(all_virtual_params) == {
-        "pre_calibrated_layouts"
+        "pre_calibrated_layouts",
+        "accepts_new_layouts",
     }
 
 

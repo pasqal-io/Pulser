@@ -66,6 +66,7 @@ SUPPORTED_MODULES = {
     "pulser.register.register3d": ("Register3D",),
     "pulser.register.register_layout": ("RegisterLayout",),
     "pulser.register.special_layouts": (
+        "RectangularLatticeLayout",
         "SquareLatticeLayout",
         "TriangularLatticeLayout",
     ),
