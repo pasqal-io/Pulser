@@ -31,6 +31,7 @@ import scipy.interpolate as interpolate
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
@@ -481,7 +482,7 @@ class ConstantWaveform(Waveform):
         """Initializes a constant waveform."""
         super().__init__(duration)
         value = cast(float, value)
-        self._value = float(value)
+        self._value = value
 
     @property
     def duration(self) -> int:
@@ -489,13 +490,13 @@ class ConstantWaveform(Waveform):
         return self._duration
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
             A numpy array with a value for each time step.
         """
-        return np.full(self.duration, self._value)
+        return pm.AbstractArray(self._value) * np.ones(self.duration)
 
     def change_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.

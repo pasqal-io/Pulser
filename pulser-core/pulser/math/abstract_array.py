@@ -79,6 +79,22 @@ class AbstractArray:
             )
         return np.asarray(self._array)
 
+    def copy(self) -> AbstractArray:
+        """Makes a copy itself."""
+        return AbstractArray(
+            self._array.clone() if self.is_tensor else self._array.copy()
+        )
+
+    @property
+    def size(self) -> int:
+        """The number of elements in the array."""
+        return int(np.prod(self._array.shape))
+
+    @property
+    def real(self) -> AbstractArray:
+        """The real part of each element in the array."""
+        return AbstractArray(self._array.real)
+
     def __array__(self, dtype: Any = None) -> np.ndarray:
         return self._array.__array__(dtype)
 
@@ -160,6 +176,15 @@ class AbstractArray:
 
     def __getitem__(self, indices: Any) -> AbstractArray:
         return AbstractArray(self._array[indices])
+
+    def __setitem__(self, indices: Any, values: AbstractArrayLike) -> None:
+        array, values = self._binary_operands(values)
+        array[indices] = values
+        self._array = array
+        del self.is_tensor  # Clears cache
+
+    def __len__(self) -> int:
+        return len(self._array)
 
 
 AbstractArrayLike = ArrayLike | AbstractArray

@@ -22,8 +22,8 @@ from typing import Any, Literal, Optional, Type, TypeVar, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.fft import fft, fftfreq, ifft
 
+import pulser.math as pm
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 from pulser.pulse import Pulse
@@ -334,7 +334,6 @@ class Channel(ABC):
                 "duration needs to be castable to an int but "
                 "type %s was provided" % type(duration)
             )
-
         if duration < self.min_duration:
             raise ValueError(
                 "duration has to be at least " + f"{self.min_duration} ns."
@@ -366,22 +365,24 @@ class Channel(ABC):
                 f"'pulse' must be of type Pulse, not of type {type(pulse)}."
             )
 
-        if self.max_amp is not None and np.any(
-            pulse.amplitude.samples > self.max_amp
-        ):
+        amp_samples_np = pulse.amplitude.samples.as_array(detach=True)
+        if self.max_amp is not None and np.any(amp_samples_np > self.max_amp):
             raise ValueError(
                 "The pulse's amplitude goes over the maximum "
                 "value allowed for the chosen channel."
             )
         if self.max_abs_detuning is not None and np.any(
-            np.round(np.abs(pulse.detuning.samples), decimals=6)
+            np.round(
+                np.abs(pulse.detuning.samples.as_array(detach=True)),
+                decimals=6,
+            )
             > self.max_abs_detuning
         ):
             raise ValueError(
                 "The pulse's detuning values go out of the range "
                 "allowed for the chosen channel."
             )
-        avg_amp = np.average(pulse.amplitude.samples)
+        avg_amp = np.average(amp_samples_np)
         if 0 < avg_amp < self.min_avg_amp:
             raise ValueError(
                 "The pulse's average amplitude is below the chosen "
@@ -434,11 +435,11 @@ class Channel(ABC):
             mod_padding = self._modulation_padding
 
         if keep_ends:
-            samples = np.pad(
+            samples = pm.pad(
                 input_samples, mod_padding + self.rise_time, mode="edge"
             )
         else:
-            samples = np.pad(input_samples, mod_padding)
+            samples = pm.pad(input_samples, mod_padding)
         mod_samples = self.apply_modulation(samples, mod_bandwidth)
         if keep_ends:
             # Cut off the extra ends
@@ -463,9 +464,11 @@ class Channel(ABC):
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
         fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
-        freqs = fftfreq(input_samples.size)
+        freqs = pm.fftfreq(input_samples.size)
         modulation = np.exp(-(freqs**2) / fc**2)
-        return cast(np.ndarray, ifft(fft(input_samples) * modulation).real)
+        return cast(
+            np.ndarray, pm.ifft(pm.fft(input_samples) * modulation).real
+        )
 
     def calc_modulation_buffer(
         self,
@@ -499,8 +502,11 @@ class Channel(ABC):
                     f"The channel {self} doesn't have a modulation bandwidth."
                 )
             tr = self.rise_time
-        samples = np.pad(input_samples, tr)
-        diffs = np.abs(samples - mod_samples) <= max_allowed_diff
+        samples = pm.pad(input_samples, tr)
+        diffs = (
+            abs(samples - mod_samples).as_array(detach=True)
+            <= max_allowed_diff
+        )
         try:
             # Finds the last index in the start buffer that's below the max
             # allowed diff. Considers that the waveform could start at the next
