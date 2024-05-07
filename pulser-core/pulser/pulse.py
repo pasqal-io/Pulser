@@ -103,7 +103,7 @@ class Pulse:
             raise ValueError(
                 "The duration of detuning and amplitude waveforms must match."
             )
-        if np.any(amplitude.samples < 0):
+        if np.any(amplitude.samples.as_array(detach=True) < 0):
             raise ValueError(
                 "All samples of an amplitude waveform must be "
                 "greater than or equal to zero."

@@ -21,6 +21,7 @@ from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
 
+import pulser.math as pm
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam
@@ -150,7 +151,11 @@ class _ChannelSchedule:
         # Keep only pulse slots
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
         dt = self.get_duration()
-        amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
+        amp, det, phase = (
+            pm.AbstractArray(np.zeros(dt)),
+            pm.AbstractArray(np.zeros(dt)),
+            pm.AbstractArray(np.zeros(dt)),
+        )
         slots: list[_PulseTargetSlot] = []
         target_time_slots: list[_TimeSlot] = [
             s for s in self.slots if s.type == "target"
