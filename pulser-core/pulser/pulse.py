@@ -113,7 +113,7 @@ class Pulse:
         object.__setattr__(self, "amplitude", amplitude)
         object.__setattr__(self, "detuning", detuning)
         assert not isinstance(phase, Parametrized)
-        if len(phase_ := pm.AbstractArray(phase, dtype=float)) != 1:
+        if (phase_ := pm.AbstractArray(phase, dtype=float)).ndim != 0:
             raise ValueError(f"'phase' must be a single float, not {phase!r}.")
         object.__setattr__(self, "phase", phase_ % (2 * np.pi))
         post_phase_shift = cast(float, post_phase_shift)
@@ -323,15 +323,15 @@ class Pulse:
         return (
             f"Pulse(Amp={self.amplitude!s} rad/µs, "
             f"Detuning={self.detuning!s} rad/µs, "
-            f"Phase={self.phase:.3g})"
+            f"Phase={float(self.phase):.3g})"
         )
 
     def __repr__(self) -> str:
         return (
             f"Pulse(amp={self.amplitude!r} rad/µs, "
             f"detuning={self.detuning!r} rad/µs, "
-            f"phase={self.phase:.3g}, "
-            f"post_phase_shift={self.post_phase_shift:.3g})"
+            f"phase={float(self.phase):.3g}, "
+            f"post_phase_shift={float(self.post_phase_shift):.3g})"
         )
 
     def __eq__(self, other: Any) -> bool:
@@ -350,7 +350,7 @@ class Pulse:
         return bool(
             self.amplitude == other.amplitude
             and self.detuning == other.detuning
-            and check_phase_eq(self.phase, other.phase)
+            and check_phase_eq(float(self.phase), float(other.phase))
             and check_phase_eq(self.post_phase_shift, other.post_phase_shift)
         )
 

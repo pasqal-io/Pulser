@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from pulser.channels import DMM
 from pulser.pulse import Pulse
@@ -67,14 +67,14 @@ def seq_to_str(sequence: Sequence) -> str:
                             f"{ts.type.detuning!s} rad/µs"
                             if not seq.is_detuned_delay(ts.type)
                             else "{:.3g} rad/µs".format(
-                                cast(float, ts.type.detuning[0])
+                                float(ts.type.detuning[0])
                             )
                         ),
                         tgt_txt,
                     )
                 elif seq.is_detuned_delay(ts.type):
                     det = ts.type.detuning[0]
-                    full += det_delay_line.format(ts.ti, ts.tf, det)
+                    full += det_delay_line.format(ts.ti, ts.tf, float(det))
                 else:
                     full += pulse_line.format(ts.ti, ts.tf, ts.type, tgt_txt)
             elif ts.type == "target":

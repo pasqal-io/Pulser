@@ -21,7 +21,6 @@ from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Literal, Optional, Type, TypeVar, cast
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM

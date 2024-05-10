@@ -150,7 +150,7 @@ def sum(a: AbstractArrayLike) -> AbstractArray:
 
 
 def concatenate(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
-    abst_arrs = map(AbstractArray, arrs)
+    abst_arrs = tuple(map(AbstractArray, arrs))
     if any(a.is_tensor for a in abst_arrs):
         return AbstractArray(torch.cat([a.as_tensor() for a in abst_arrs]))
     return AbstractArray(np.concatenate([a.as_array() for a in abst_arrs]))

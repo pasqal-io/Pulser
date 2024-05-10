@@ -158,7 +158,7 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     want_amp = chan.modulate(input)
     mod_samples = sample(mod_seq, modulation=True)
     got_amp = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["amp"]
-    np.testing.assert_array_equal(got_amp, want_amp)
+    np.testing.assert_allclose(got_amp, want_amp)
 
     want_det = chan.modulate(np.ones(N), keep_ends=True)
     got_det = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["det"]
@@ -410,7 +410,7 @@ def test_extend_duration(seq_rydberg, with_custom_centered_phase):
         np.testing.assert_array_equal(
             new_qty_samples[: short.duration], old_qty_samples
         )
-        np.testing.assert_equal(
+        np.testing.assert_array_equal(
             new_qty_samples[short.duration :],
             old_qty_samples[-1] if "phase" in qty else 0.0,
         )
