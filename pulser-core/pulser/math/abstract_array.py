@@ -20,7 +20,7 @@ import operator
 from typing import Any, cast
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, DTypeLike
 
 try:
     import torch
@@ -35,15 +35,18 @@ class AbstractArray:
         array: The array to store.
     """
 
-    def __init__(self, array: AbstractArrayLike):
+    def __init__(self, array: AbstractArrayLike, dtype: DTypeLike = None):
         """Initializes a new AbstractArray."""
         self._array: np.ndarray | torch.Tensor
         if isinstance(array, AbstractArray):
             self._array = array._array
         elif self.has_torch() and type(array) is torch.Tensor:
-            self._array = array
+            self._array = torch.as_tensor(
+                array,
+                dtype=dtype,  # type: ignore[arg-type]
+            )
         else:
-            self._array = np.asarray(array, dtype=float)
+            self._array = np.asarray(array, dtype=dtype)
 
     @staticmethod
     @functools.lru_cache
@@ -115,15 +118,15 @@ class AbstractArray:
 
     def __round__(self, decimals: int = 0) -> AbstractArray:
         return AbstractArray(
-            torch.round(cast(torch.Tensor, self._array), decimals)
+            torch.round(cast(torch.Tensor, self._array), decimals=decimals)
             if self.is_tensor
-            else np.round(cast(np.ndarray, self._array), decimals)
+            else np.round(cast(np.ndarray, self._array), decimals=decimals)
         )
 
     def __int__(self) -> int:
         return int(self._array)
 
-    def __float__(self) -> int:
+    def __float__(self) -> float:
         return float(self._array)
 
     def _binary_operands(

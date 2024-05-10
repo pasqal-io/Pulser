@@ -18,12 +18,14 @@ from __future__ import annotations
 import functools
 import itertools
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.typing import ArrayLike
 
 import pulser
+import pulser.math as pm
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
@@ -75,7 +77,7 @@ class Pulse:
 
     amplitude: Waveform = field(init=False)
     detuning: Waveform = field(init=False)
-    phase: float = field(init=False)
+    phase: pm.AbstractArray = field(init=False)
     post_phase_shift: float = field(default=0.0, init=False)
 
     def __new__(cls, *args, **kwargs):  # type: ignore
@@ -88,10 +90,10 @@ class Pulse:
 
     def __init__(
         self,
-        amplitude: Union[Waveform, Parametrized],
-        detuning: Union[Waveform, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        amplitude: Waveform | Parametrized,
+        detuning: Waveform | Parametrized,
+        phase: float | ArrayLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ):
         """Initializes a new Pulse."""
         if not (
@@ -110,8 +112,10 @@ class Pulse:
             )
         object.__setattr__(self, "amplitude", amplitude)
         object.__setattr__(self, "detuning", detuning)
-        phase = cast(float, phase)
-        object.__setattr__(self, "phase", float(phase) % (2 * np.pi))
+        assert not isinstance(phase, Parametrized)
+        if len(phase_ := pm.AbstractArray(phase, dtype=float)) != 1:
+            raise ValueError(f"'phase' must be a single float, not {phase!r}.")
+        object.__setattr__(self, "phase", phase_ % (2 * np.pi))
         post_phase_shift = cast(float, post_phase_shift)
         object.__setattr__(
             self, "post_phase_shift", float(post_phase_shift) % (2 * np.pi)
@@ -126,10 +130,10 @@ class Pulse:
     @parametrize
     def ConstantDetuning(
         cls,
-        amplitude: Union[Waveform, Parametrized],
-        detuning: Union[float, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        amplitude: Waveform | Parametrized,
+        detuning: float | ArrayLike | Parametrized,
+        phase: float | ArrayLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Creates a Pulse with an amplitude waveform and a constant detuning.
 
@@ -149,10 +153,10 @@ class Pulse:
     @parametrize
     def ConstantAmplitude(
         cls,
-        amplitude: Union[float, Parametrized],
-        detuning: Union[Waveform, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        amplitude: float | ArrayLike | Parametrized,
+        detuning: Waveform | Parametrized,
+        phase: float | ArrayLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
 
@@ -171,11 +175,11 @@ class Pulse:
     @classmethod
     def ConstantPulse(
         cls,
-        duration: Union[int, Parametrized],
-        amplitude: Union[float, Parametrized],
-        detuning: Union[float, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        duration: int | Parametrized,
+        amplitude: float | ArrayLike | Parametrized,
+        detuning: float | ArrayLike | Parametrized,
+        phase: float | ArrayLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
