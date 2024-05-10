@@ -400,10 +400,10 @@ class Channel(ABC):
 
     def modulate(
         self,
-        input_samples: np.ndarray,
+        input_samples: pm.AbstractArrayLike,
         keep_ends: bool = False,
         eom: bool = False,
-    ) -> np.ndarray:
+    ) -> pm.AbstractArray:
         """Modulates the input according to the channel's modulation bandwidth.
 
         Args:
@@ -429,7 +429,7 @@ class Channel(ABC):
                 " 'Channel.modulate()' returns the 'input_samples' unchanged.",
                 stacklevel=2,
             )
-            return input_samples
+            return pm.AbstractArray(input_samples)
         else:
             mod_bandwidth = self.mod_bandwidth
             mod_padding = self._modulation_padding
@@ -448,8 +448,8 @@ class Channel(ABC):
 
     @staticmethod
     def apply_modulation(
-        input_samples: np.ndarray, mod_bandwidth: float
-    ) -> np.ndarray:
+        input_samples: pm.AbstractArrayLike, mod_bandwidth: float
+    ) -> pm.AbstractArray:
         """Applies the modulation transfer fuction to the input samples.
 
         Note:
@@ -463,17 +463,16 @@ class Channel(ABC):
         """
         # The cutoff frequency (fc) and the modulation transfer function
         # are defined in https://tinyurl.com/bdeumc8k
+        input_samples = pm.AbstractArray(input_samples)
         fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
         freqs = pm.fftfreq(input_samples.size)
         modulation = np.exp(-(freqs**2) / fc**2)
-        return cast(
-            np.ndarray, pm.ifft(pm.fft(input_samples) * modulation).real
-        )
+        return pm.ifft(pm.fft(input_samples) * modulation).real
 
     def calc_modulation_buffer(
         self,
-        input_samples: ArrayLike,
-        mod_samples: ArrayLike,
+        input_samples: pm.AbstractArrayLike,
+        mod_samples: pm.AbstractArrayLike,
         max_allowed_diff: float = 1e-2,
         eom: bool = False,
     ) -> tuple[int, int]:

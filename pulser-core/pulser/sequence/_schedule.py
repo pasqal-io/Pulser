@@ -398,7 +398,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         protocol: str,
         phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
-        def corrected_phase(tf: int) -> float:
+        def corrected_phase(tf: int) -> pm.AbstractArray:
             phase_drift = (
                 phase_drift_params.calc_phase_drift(tf)
                 if phase_drift_params
@@ -543,12 +543,12 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         return current_max_t
 
-    def _get_last_pulse_phase(self, channel: str) -> float:
+    def _get_last_pulse_phase(self, channel: str) -> pm.AbstractArray:
         try:
             last_pulse = cast(Pulse, self[channel].last_pulse_slot().type)
             phase = last_pulse.phase
         except RuntimeError:
-            phase = 0.0
+            phase = pm.AbstractArray(0.0)
         return phase
 
     def _check_duration(self, t: int) -> None:

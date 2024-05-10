@@ -437,7 +437,7 @@ class CustomWaveform(Waveform):
 
     def __init__(self, samples: ArrayLike):
         """Initializes a custom waveform."""
-        samples_arr = pm.AbstractArray(samples)
+        samples_arr = pm.AbstractArray(samples, dtype=float)
         self._samples_arr: pm.AbstractArray = samples_arr
         super().__init__(len(samples_arr))
 
@@ -488,7 +488,7 @@ class ConstantWaveform(Waveform):
         super().__init__(duration)
         assert not isinstance(value, Parametrized)
         _cast_check(float, value, "value")
-        self._value = pm.AbstractArray(value)
+        self._value = pm.AbstractArray(value, dtype=float)
 
     @property
     def duration(self) -> int:
@@ -555,8 +555,8 @@ class RampWaveform(Waveform):
         assert not isinstance(stop, Parametrized)
         _cast_check(float, start, "start")
         _cast_check(float, stop, "stop")
-        self._start = pm.AbstractArray(start)
-        self._stop = pm.AbstractArray(stop)
+        self._start = pm.AbstractArray(start, dtype=float)
+        self._stop = pm.AbstractArray(stop, dtype=float)
 
     @property
     def duration(self) -> int:
@@ -638,7 +638,7 @@ class BlackmanWaveform(Waveform):
         super().__init__(duration)
         assert not isinstance(area, Parametrized)
         _cast_check(float, area, "area")
-        self._area = pm.AbstractArray(area)
+        self._area = pm.AbstractArray(area, dtype=float)
 
         self._norm_samples = pm.clip(np.blackman(self._duration), 0, np.inf)
         self._scaling = self._area / pm.sum(self._norm_samples) * 1e3
@@ -673,7 +673,7 @@ class BlackmanWaveform(Waveform):
             )
 
         # Deal only with positive areas
-        area = pm.AbstractArray(area) * float(area_sign)
+        area = pm.AbstractArray(area, dtype=float) * float(area_sign)
         max_val *= float(area_sign)
 
         # A normalized Blackman waveform has an area of 0.42 * duration
@@ -942,7 +942,7 @@ class KaiserWaveform(Waveform):
 
         assert not isinstance(area, Parametrized)
         _cast_check(float, area, "area")
-        self._area = pm.AbstractArray(area)
+        self._area = pm.AbstractArray(area, dtype=float)
 
         beta = cast(float, beta)
         # This makes sure 'beta' is not a tensor that requires grad
@@ -995,7 +995,7 @@ class KaiserWaveform(Waveform):
             )
 
         # All computations will be done on a positive area
-        area = pm.AbstractArray(area)
+        area = pm.AbstractArray(area, dtype=float)
         is_negative: bool = area_float < 0
         if is_negative:
             area_float = -area_float

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Optional, cast
 
 import numpy as np
 
+import pulser.math as pm
 from pulser.channels.base_channel import Channel
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
@@ -90,9 +91,9 @@ class _SlmMask:
 class ChannelSamples:
     """Gathers samples of a channel."""
 
-    amp: np.ndarray
-    det: np.ndarray
-    phase: np.ndarray
+    amp: pm.AbstractArray
+    det: pm.AbstractArray
+    phase: pm.AbstractArray
     slots: list[_PulseTargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
     eom_start_buffers: list[tuple[int, int]] = field(default_factory=list)
@@ -134,19 +135,19 @@ class ChannelSamples:
         if extension < 0:
             raise ValueError("Can't extend samples to a lower duration.")
 
-        new_amp = np.pad(self.amp, (0, extension))
+        new_amp = pm.pad(self.amp, (0, extension))
         # When in EOM mode, we need to keep the detuning at detuning_off
         if self.eom_blocks and self.eom_blocks[-1].tf is None:
             final_detuning = self.eom_blocks[-1].detuning_off
         else:
             final_detuning = 0.0
-        new_detuning = np.pad(
+        new_detuning = pm.pad(
             self.det,
             (0, extension),
             constant_values=(final_detuning,),
             mode="constant",
         )
-        new_phase = np.pad(
+        new_phase = pm.pad(
             self.phase,
             (0, extension),
             mode="edge" if self.phase.size > 0 else "constant",
@@ -159,7 +160,11 @@ class ChannelSamples:
         The channel is considered empty if all amplitude and detuning
         samples are zero.
         """
-        return np.count_nonzero(self.amp) + np.count_nonzero(self.det) == 0
+        return (
+            np.count_nonzero(self.amp.as_array(detach=True))
+            + np.count_nonzero(self.det.as_array(detach=True))
+            == 0
+        )
 
     def _generate_std_samples(self) -> ChannelSamples:
         new_samples = {
@@ -211,10 +216,10 @@ class ChannelSamples:
         """
 
         def masked(
-            samples: np.ndarray,
+            samples: pm.AbstractArray,
             mask: np.ndarray,
             keep_end_values: bool = False,
-        ) -> np.ndarray:
+        ) -> pm.AbstractArray:
             new_samples = samples.copy()
             # Extend the mask to fit the size of the samples
             mask = np.pad(mask, (0, len(new_samples) - len(mask)), mode="edge")
@@ -247,9 +252,9 @@ class ChannelSamples:
                 new_samples[~mask] = 0
             return new_samples
 
-        new_samples: dict[str, np.ndarray] = {}
+        new_samples: dict[str, pm.AbstractArray] = {}
 
-        eom_samples = {
+        eom_samples: dict[str, pm.AbstractArray] = {
             key: getattr(self, key).copy() for key in ("amp", "det")
         }
 
@@ -309,7 +314,9 @@ class ChannelSamples:
                     )
                 else:
                     std_mask = ~eom_mask
-                    modulated_buffer = np.zeros_like(modulated_std)
+                    modulated_buffer = pm.AbstractArray(
+                        np.zeros_like(modulated_std)
+                    )
 
                 std = masked(modulated_std, std_mask)
                 buffers = masked(
@@ -337,10 +344,11 @@ class ChannelSamples:
                     # such that the modulation starts off from that value
                     # We then remove the extra value after modulation
                     if eom_mask[0]:
-                        samples_ = np.insert(
+                        samples_ = pm.pad(
                             samples_,
-                            0,
-                            self.eom_blocks[0].detuning_off,
+                            (1, 0),
+                            "constant",
+                            constant_values=self.eom_blocks[0].detuning_off,
                         )
                     # Finally, the modified EOM samples are modulated
                     modulated_eom = channel_obj.modulate(
@@ -361,7 +369,7 @@ class ChannelSamples:
                 # Extend shortest arrays to match the longest before summing
                 new_samples[key] = sample_arrs[-1]
                 for arr in sample_arrs[:-1]:
-                    arr = np.pad(
+                    arr = pm.pad(
                         arr,
                         (0, sample_arrs[-1].size - arr.size),
                     )

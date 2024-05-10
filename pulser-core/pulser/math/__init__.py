@@ -23,7 +23,7 @@ import scipy.fft
 
 from pulser.math.abstract_array import (
     AbstractArray as AbstractArray,
-    AbstractArrayLike,
+    AbstractArrayLike as AbstractArrayLike,
 )
 
 try:
@@ -150,17 +150,17 @@ def sum(a: AbstractArrayLike) -> AbstractArray:
 
 
 def concatenate(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
-    arrs = map(AbstractArray, arrs)
-    if any(a.is_tensor for a in arrs):
-        return AbstractArray(torch.cat([a.as_tensor() for a in arrs]))
-    return AbstractArray(np.concatenate([a.as_array() for a in arrs]))
+    abst_arrs = map(AbstractArray, arrs)
+    if any(a.is_tensor for a in abst_arrs):
+        return AbstractArray(torch.cat([a.as_tensor() for a in abst_arrs]))
+    return AbstractArray(np.concatenate([a.as_array() for a in abst_arrs]))
 
 
 def clip(
     a: AbstractArrayLike, min: AbstractArrayLike, max: AbstractArrayLike
 ) -> AbstractArray:
     a, min, max = map(AbstractArray, (a, min, max))
-    if any(arr.is_tensor() for arr in (a, min, max)):
+    if any(arr.is_tensor for arr in (a, min, max)):
         return AbstractArray(
             torch.clip(a.as_tensor(), min.as_tensor(), max.as_tensor())
         )
