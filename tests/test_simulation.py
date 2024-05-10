@@ -216,35 +216,35 @@ def test_extraction_of_sequences(seq):
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
                     samples = sim._hamiltonian.samples[addr][basis]
-                    assert (
+                    assert np.all(
                         samples["amp"][slot.ti : slot.tf]
                         == slot.type.amplitude.samples
-                    ).all()
-                    assert (
+                    )
+                    assert np.all(
                         samples["det"][slot.ti : slot.tf]
                         == slot.type.detuning.samples
-                    ).all()
-                    assert (
+                    )
+                    assert np.all(
                         samples["phase"][slot.ti : slot.tf] == slot.type.phase
-                    ).all()
+                    )
 
         elif addr == "Local":
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
                     for qubit in slot.targets:  # TO DO: multiaddressing??
                         samples = sim._hamiltonian.samples[addr][basis][qubit]
-                        assert (
+                        assert np.all(
                             samples["amp"][slot.ti : slot.tf]
                             == slot.type.amplitude.samples
-                        ).all()
-                        assert (
+                        )
+                        assert np.all(
                             samples["det"][slot.ti : slot.tf]
                             == slot.type.detuning.samples
-                        ).all()
-                        assert (
+                        )
+                        assert np.all(
                             samples["phase"][slot.ti : slot.tf]
                             == slot.type.phase
-                        ).all()
+                        )
 
 
 def test_building_basis_and_projection_operators(seq, reg):
@@ -415,7 +415,7 @@ def test_get_hamiltonian():
         simple_seq, config=SimConfig(noise="doppler", temperature=20000)
     )
     simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
-    assert np.isclose(
+    np.testing.assert_allclose(
         simple_ham_noise.full(),
         np.array(
             [
@@ -440,7 +440,7 @@ def test_get_hamiltonian():
                 [0.0 + 0.0j, 0.09606404 + 0.0j, 0.09606404 + 0.0j, 0.0 + 0.0j],
             ]
         ),
-    ).all()
+    )
 
 
 def test_single_atom_simulation():

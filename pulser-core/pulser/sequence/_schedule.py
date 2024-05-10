@@ -96,7 +96,7 @@ class _ChannelSchedule:
     @staticmethod
     def is_detuned_delay(pulse: Pulse) -> bool:
         """Tells if a pulse is actually a delay with a constant detuning."""
-        return (
+        return bool(
             isinstance(pulse, Pulse)
             and isinstance(pulse.amplitude, ConstantWaveform)
             and pulse.amplitude[0] == 0.0

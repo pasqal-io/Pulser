@@ -1153,7 +1153,12 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
                         reconstructed_wf = wf_cls(
                             *(op[wf][qty] for qty in wf_args)
                         )
-                        op[wf] = reconstructed_wf._to_abstract_repr()
+                        op[wf] = json.loads(
+                            json.dumps(
+                                reconstructed_wf._to_abstract_repr(),
+                                cls=AbstractReprEncoder,
+                            )
+                        )
         elif "eom" in op["op"] and not op.get("correct_phase_drift"):
             # Remove correct_phase_drift when at default, since the
             # roundtrip will delete it

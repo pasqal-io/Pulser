@@ -515,7 +515,7 @@ def _draw_channel_content(
         elif value == 0:
             return "0"  # pragma: no cover - just for safety
         else:
-            return rf"{value:.2g}$\pi$"
+            return rf"{float(value):.2g}$\pi$"
 
     data = gather_data(sampled_seq, shown_duration)
     n_channels = len(sampled_seq.channels)
@@ -692,7 +692,7 @@ def _draw_channel_content(
                 area_fmt = (
                     r"A: $\pi$"
                     if round(area_val, 2) == 1
-                    else rf"A: {area_val:.2g}$\pi$"
+                    else rf"A: {float(area_val):.2g}$\pi$"
                 )
                 if not print_phase:
                     txt = area_fmt

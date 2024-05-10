@@ -23,7 +23,7 @@ import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, Tuple, TypeVar, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -733,7 +733,7 @@ class BlackmanWaveform(Waveform):
         return abstract_repr("BlackmanWaveform", self._duration, self._area)
 
     def __str__(self) -> str:
-        return f"Blackman(Area: {self._area:.3g})"
+        return f"Blackman(Area: {float(self._area):.3g})"
 
     def __repr__(self) -> str:
         return (

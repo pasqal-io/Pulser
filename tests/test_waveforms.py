@@ -46,7 +46,7 @@ kaiser = KaiserWaveform(40, np.pi)
 
 
 def test_duration():
-    with pytest.raises(TypeError, match="needs to be castable to an int"):
+    with pytest.raises(TypeError, match="needs to be castable to int"):
         ConstantWaveform("s", -1)
         RampWaveform([0, 1, 3], 1, 0)
 
@@ -309,7 +309,7 @@ def test_kaiser():
 
     # Check multiplication
     wf_multiplication = wf * 2
-    assert (wf_multiplication.samples == wf.samples * 2).all()
+    assert np.all(wf_multiplication.samples == wf.samples * 2)
 
     # Check area and max_val must have matching signs
     with pytest.raises(ValueError, match="must have matching signs"):
@@ -386,31 +386,31 @@ def test_get_item():
 
         # Check with slices
 
-        assert (wf[0:duration] == samples).all()
-        assert (wf[0:-1] == samples[0:-1]).all()
-        assert (wf[0:] == samples).all()
-        assert (wf[-1:] == samples[-1:]).all()
-        assert (wf[:duration] == samples).all()
-        assert (wf[:] == samples).all()
-        assert (
+        assert np.all(wf[0:duration] == samples)
+        assert np.all(wf[0:-1] == samples[0:-1])
+        assert np.all(wf[0:] == samples)
+        assert np.all(wf[-1:] == samples[-1:])
+        assert np.all(wf[:duration] == samples)
+        assert np.all(wf[:] == samples)
+        assert np.all(
             wf[duration14:duration34] == samples[duration14:duration34]
-        ).all()
-        assert (
+        )
+        assert np.all(
             wf[-duration34:-duration14] == samples[-duration34:-duration14]
-        ).all()
+        )
 
         # Check with out of bounds slices
-        assert (wf[: duration * 2] == samples).all()
-        assert (wf[-duration * 2 :] == samples).all()
-        assert (wf[-duration * 2 : duration * 2] == samples).all()
-        assert (
+        assert np.all(wf[: duration * 2] == samples)
+        assert np.all(wf[-duration * 2 :] == samples)
+        assert np.all(wf[-duration * 2 : duration * 2] == samples)
+        assert np.all(
             wf[duration // 2 : duration * 2]
             == samples[duration // 2 : duration * 2]
-        ).all()
-        assert (
+        )
+        assert np.all(
             wf[-duration * 2 : duration // 2]
             == samples[-duration * 2 : duration // 2]
-        ).all()
+        )
         assert wf[2:1].size == 0
         assert wf[duration * 2 :].size == 0
         assert wf[duration * 2 : duration * 3].size == 0

@@ -22,6 +22,8 @@ from typing import Any, cast
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 
+from pulser.json.utils import obj_to_dict
+
 try:
     import torch
 except ImportError:
@@ -96,6 +98,11 @@ class AbstractArray:
         return int(np.prod(self._array.shape))
 
     @property
+    def ndim(self) -> int:
+        """The number of dimensions in the array."""
+        return self._array.ndim
+
+    @property
     def real(self) -> AbstractArray:
         """The real part of each element in the array."""
         return AbstractArray(self._array.real)
@@ -129,6 +136,9 @@ class AbstractArray:
     def __float__(self) -> float:
         return float(self._array)
 
+    def __bool__(self) -> bool:
+        return bool(self._array)
+
     def _binary_operands(
         self, other: AbstractArrayLike
     ) -> tuple[np.ndarray, np.ndarray] | tuple[torch.Tensor, torch.Tensor]:
@@ -136,6 +146,26 @@ class AbstractArray:
         if self.is_tensor or other.is_tensor:
             return self.as_tensor(), other.as_tensor()
         return self.as_array(), other.as_array()
+
+    # Comparison operators
+
+    def __lt__(self, other: AbstractArrayLike) -> AbstractArray:
+        return AbstractArray(operator.lt(*self._binary_operands(other)))
+
+    def __le__(self, other: AbstractArrayLike) -> AbstractArray:
+        return AbstractArray(operator.le(*self._binary_operands(other)))
+
+    def __gt__(self, other: AbstractArrayLike) -> AbstractArray:
+        return AbstractArray(operator.gt(*self._binary_operands(other)))
+
+    def __ge__(self, other: AbstractArrayLike) -> AbstractArray:
+        return AbstractArray(operator.ge(*self._binary_operands(other)))
+
+    def __eq__(self, other: Any) -> AbstractArray:  # type: ignore[override]
+        return AbstractArray(operator.eq(*self._binary_operands(other)))
+
+    def __ne__(self, other: Any) -> AbstractArray:  # type: ignore[override]
+        return AbstractArray(operator.ne(*self._binary_operands(other)))
 
     # Binary operators
     def __add__(self, other: AbstractArrayLike, /) -> AbstractArray:
@@ -203,6 +233,12 @@ class AbstractArray:
 
     def __len__(self) -> int:
         return len(self._array)
+
+    def _to_dict(self) -> dict[str, Any]:
+        return obj_to_dict(self, self.as_array())
+
+    def _to_abstract_repr(self) -> Any:
+        return self.as_array().tolist()
 
 
 AbstractArrayLike = ArrayLike | AbstractArray
