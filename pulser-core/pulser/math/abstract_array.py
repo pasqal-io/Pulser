@@ -43,7 +43,7 @@ class AbstractArray:
         elif self.has_torch() and type(array) is torch.Tensor:
             self._array = array
         else:
-            self._array = np.asarray(array)
+            self._array = np.asarray(array, dtype=float)
 
     @staticmethod
     @functools.lru_cache
@@ -82,7 +82,9 @@ class AbstractArray:
     def copy(self) -> AbstractArray:
         """Makes a copy itself."""
         return AbstractArray(
-            self._array.clone() if self.is_tensor else self._array.copy()
+            cast(torch.Tensor, self._array).clone()
+            if self.is_tensor
+            else cast(np.ndarray, self._array).copy()
         )
 
     @property
@@ -110,6 +112,19 @@ class AbstractArray:
 
     def __abs__(self) -> AbstractArray:
         return AbstractArray(cast(ArrayLike, abs(self._array)))
+
+    def __round__(self, decimals: int = 0) -> AbstractArray:
+        return AbstractArray(
+            torch.round(cast(torch.Tensor, self._array), decimals)
+            if self.is_tensor
+            else np.round(cast(np.ndarray, self._array), decimals)
+        )
+
+    def __int__(self) -> int:
+        return int(self._array)
+
+    def __float__(self) -> int:
+        return float(self._array)
 
     def _binary_operands(
         self, other: AbstractArrayLike
@@ -179,7 +194,7 @@ class AbstractArray:
 
     def __setitem__(self, indices: Any, values: AbstractArrayLike) -> None:
         array, values = self._binary_operands(values)
-        array[indices] = values
+        array[indices] = values  # type: ignore[assignment]
         self._array = array
         del self.is_tensor  # Clears cache
 
