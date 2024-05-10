@@ -15,6 +15,9 @@
 """Custom implementation of math and array functions."""
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import cast
+
 import numpy as np
 import scipy.fft
 
@@ -38,6 +41,13 @@ def sin(a: AbstractArrayLike, /) -> AbstractArray:
     return AbstractArray(np.sin(a.as_array()))
 
 
+def cos(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.cos(a.as_tensor()))
+    return AbstractArray(np.cos(a.as_array()))
+
+
 def pad(
     a: AbstractArrayLike,
     pad_width: tuple | int,
@@ -46,34 +56,30 @@ def pad(
 ) -> AbstractArray:
     a = AbstractArray(a)
     if a.is_tensor:
+        t = cast(torch.Tensor, a._array)
         if mode == "constant":
-            if isinstance(pad_width, int) and isinstance(
-                constant_values, (int, float)
-            ):
+            if isinstance(pad_width, int):
+                if isinstance(constant_values, (int, float)):
+                    out = torch.nn.functional.pad(
+                        t,
+                        (pad_width, pad_width),
+                        "constant",
+                        constant_values,
+                    )
+                else:
+                    out = torch.nn.functional.pad(
+                        t, (pad_width, 0), "constant", constant_values[0]
+                    )
+                    out = torch.nn.functional.pad(
+                        out, (0, pad_width), "constant", constant_values[1]
+                    )
+            elif isinstance(constant_values, (int, float)):
                 out = torch.nn.functional.pad(
-                    a._array,
-                    (pad_width, pad_width),
-                    "constant",
-                    constant_values,
-                )
-            elif isinstance(pad_width, tuple) and isinstance(
-                constant_values, (int, float)
-            ):
-                out = torch.nn.functional.pad(
-                    a._array, pad_width, "constant", constant_values
-                )
-            elif isinstance(pad_width, int) and isinstance(
-                constant_values, tuple
-            ):
-                out = torch.nn.functional.pad(
-                    a._array, (pad_width, 0), "constant", constant_values[0]
-                )
-                out = torch.nn.functional.pad(
-                    out, (0, pad_width), "constant", constant_values[1]
+                    t, pad_width, "constant", constant_values
                 )
             else:
                 out = torch.nn.functional.pad(
-                    a._array,
+                    t,
                     (pad_width[0], 0),
                     "constant",
                     constant_values[0],
@@ -86,28 +92,22 @@ def pad(
                 )
         elif mode == "edge":
             if isinstance(pad_width, (int, float)):
-                out = torch.nn.functional.pad(
-                    a._array, (pad_width, 0), "constant", a._array[0]
-                )
-                out = torch.nn.functional.pad(
-                    out, (0, pad_width), "constant", a._array[-1]
-                )
-            else:
-                out = torch.nn.functional.pad(
-                    a._array, (pad_width[0], 0), "constant", a._array[0]
-                )
-                out = torch.nn.functional.pad(
-                    out, (0, pad_width[1]), "constant", a._array[-1]
-                )
+                pad_width = (pad_width, pad_width)
+            out = torch.nn.functional.pad(
+                t, (pad_width[0], 0), "constant", cast(float, t[0])
+            )
+            out = torch.nn.functional.pad(
+                out, (0, pad_width[1]), "constant", cast(float, t[-1])
+            )
         return AbstractArray(out)
-    if mode == "constant":
-        return AbstractArray(
-            np.pad(a._array, pad_width, mode, constant_values=constant_values)
-        )
-    elif mode == "edge":
-        return AbstractArray(
-            np.pad(a._array, pad_width, mode, constant_values=constant_values)
-        )
+
+    arr = cast(np.ndarray, a._array)
+    kwargs = (
+        dict(constant_values=constant_values) if mode == "constant" else {}
+    )
+    return AbstractArray(
+        np.pad(arr, pad_width, mode, **kwargs),  # type: ignore[call-overload]
+    )
 
 
 def fft(a: AbstractArrayLike) -> AbstractArray:
@@ -126,3 +126,42 @@ def ifft(a: AbstractArrayLike) -> AbstractArray:
 
 def fftfreq(n: int) -> AbstractArray:
     return AbstractArray(scipy.fft.fftfreq(n))
+
+
+def ceil(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.ceil(a.as_tensor()))
+    return AbstractArray(np.ceil(a.as_array()))
+
+
+def floor(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.floor(a.as_tensor()))
+    return AbstractArray(np.floor(a.as_array()))
+
+
+def sum(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.sum(a.as_tensor()))
+    return AbstractArray(np.sum(a.as_array()))
+
+
+def concatenate(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
+    arrs = map(AbstractArray, arrs)
+    if any(a.is_tensor for a in arrs):
+        return AbstractArray(torch.cat([a.as_tensor() for a in arrs]))
+    return AbstractArray(np.concatenate([a.as_array() for a in arrs]))
+
+
+def clip(
+    a: AbstractArrayLike, min: AbstractArrayLike, max: AbstractArrayLike
+) -> AbstractArray:
+    a, min, max = map(AbstractArray, (a, min, max))
+    if any(arr.is_tensor() for arr in (a, min, max)):
+        return AbstractArray(
+            torch.clip(a.as_tensor(), min.as_tensor(), max.as_tensor())
+        )
+    return AbstractArray(np.clip(a.as_array(), min.as_array(), max.as_array()))
