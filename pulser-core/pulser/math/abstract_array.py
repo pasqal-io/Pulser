@@ -65,9 +65,11 @@ class AbstractArray:
         """Casts the data type of the array contents."""
         if self.is_tensor:
             return AbstractArray(
-                cast(torch.Tensor, self._array).to(dtype=dtype)
+                cast(torch.Tensor, self._array).to(
+                    dtype=dtype  # type: ignore[arg-type]
+                )
             )
-        return AbstractArray(cast(np.ndarray, self._array.astype(dtype)))
+        return AbstractArray(cast(np.ndarray, self._array).astype(dtype))
 
     def as_tensor(self) -> torch.Tensor:
         """Converts the stored array to a torch Tensor."""
