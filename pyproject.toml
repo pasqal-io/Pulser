@@ -4,7 +4,7 @@ line-length = 79
 [tool.isort]
 profile = "black"
 line_length = 79
-skip = ["__venv__", "__init__.py"]
+skip = ["__venv*__", "__init__.py"]
 src_paths = ["pulser-core", "pulser-simulation", "pulser-pasqal"]
 
 [tool.pytest.ini_options]
