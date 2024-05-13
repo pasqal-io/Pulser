@@ -34,6 +34,13 @@ except ImportError:
 # Custom function definitions
 
 
+def exp(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.exp(a.as_tensor()))
+    return AbstractArray(np.exp(a.as_array()))
+
+
 def sin(a: AbstractArrayLike, /) -> AbstractArray:
     a = AbstractArray(a)
     if a.is_tensor:
@@ -126,6 +133,10 @@ def ifft(a: AbstractArrayLike) -> AbstractArray:
 
 def fftfreq(n: int) -> AbstractArray:
     return AbstractArray(scipy.fft.fftfreq(n))
+
+
+def round(a: AbstractArrayLike, decimals: int = 0) -> AbstractArray:
+    return round(AbstractArray(a), decimals=decimals)
 
 
 def ceil(a: AbstractArrayLike) -> AbstractArray:

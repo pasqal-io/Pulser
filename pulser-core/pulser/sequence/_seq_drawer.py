@@ -28,6 +28,7 @@ from matplotlib.figure import Figure
 from scipy.interpolate import CubicSpline
 
 import pulser
+import pulser.math as pm
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
@@ -162,7 +163,10 @@ class ChannelDrawContent:
         self, samples: ChannelSamples
     ) -> list[np.ndarray]:
         return [
-            getattr(samples, self._samples_from_curves[qty])
+            cast(
+                pm.AbstractArray,
+                getattr(samples, self._samples_from_curves[qty]),
+            ).as_array(detach=True)
             for qty in CURVES_ORDER
         ]
 

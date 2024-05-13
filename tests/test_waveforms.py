@@ -84,11 +84,11 @@ def test_change_duration():
 
 
 def test_samples():
-    assert np.all(constant.samples == -3)
+    assert np.all(constant.samples.as_array() == -3)
     bm_samples = np.clip(np.blackman(40), 0, np.inf)
     bm_samples *= np.pi / np.sum(bm_samples) / 1e-3
     comp_samples = np.concatenate([bm_samples, np.full(100, -3), arb_samples])
-    assert np.all(np.isclose(composite.samples, comp_samples))
+    assert np.all(np.isclose(composite.samples.as_array(), comp_samples))
 
 
 def test_integral():
@@ -232,10 +232,14 @@ def test_interpolated():
         dt, [0, 1], interpolator="interp1d", kind="linear"
     )
     assert isinstance(interp_wf.interp_function, interp1d)
-    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 1.0, num=dt))
+    np.testing.assert_allclose(
+        interp_wf.samples.as_array(), np.linspace(0, 1.0, num=dt)
+    )
 
     interp_wf *= 2
-    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 2.0, num=dt))
+    np.testing.assert_allclose(
+        interp_wf.samples.as_array(), np.linspace(0, 2.0, num=dt)
+    )
 
     wf_str = "InterpolatedWaveform(Points: (0, 0), (999, 2)"
     assert str(interp_wf) == wf_str + ")"
@@ -246,14 +250,16 @@ def test_interpolated():
         dt, vals, interpolator="interp1d", kind="quadratic"
     )
     np.testing.assert_allclose(
-        interp_wf2.samples, np.linspace(0, 1, num=dt) ** 2, atol=1e-3
+        interp_wf2.samples.as_array(),
+        np.linspace(0, 1, num=dt) ** 2,
+        atol=1e-3,
     )
 
     # Test rounding when range of values is large
     wf = InterpolatedWaveform(
         1000, times=[0.0, 0.5, 1.0], values=[0, 2.6e7, 0]
     )
-    assert np.all(wf.samples >= 0)
+    assert np.all((wf.samples >= 0).as_array())
 
 
 def test_kaiser():
@@ -262,6 +268,7 @@ def test_kaiser():
     beta: float = 14.0
 
     wf: KaiserWaveform = KaiserWaveform(duration, area, beta)
+    wf_samples = wf.samples.as_array()
 
     # Check type error on area
     with pytest.raises(TypeError):
@@ -284,17 +291,19 @@ def test_kaiser():
     kaiser_beta_14: np.ndarray = np.kaiser(duration, 14.0)
     kaiser_beta_14 *= area / float(np.sum(kaiser_beta_14)) / 1e-3
     np.testing.assert_allclose(
-        wf_default_beta.samples, kaiser_beta_14, atol=1e-3
+        wf_default_beta.samples.as_array(), kaiser_beta_14, atol=1e-3
     )
 
     # Check area
-    assert np.isclose(np.sum(wf.samples), area * 1000.0)
+    assert np.isclose(np.sum(wf_samples), area * 1000.0)
 
     # Check duration change
     new_duration = duration * 2
     wf_change_duration = wf.change_duration(new_duration)
     assert wf_change_duration.samples.size == new_duration
-    assert np.isclose(np.sum(wf.samples), np.sum(wf_change_duration.samples))
+    assert np.isclose(
+        np.sum(wf_samples), np.sum(wf_change_duration.samples.as_array())
+    )
 
     # Check __str__
     assert str(wf) == (
@@ -309,7 +318,7 @@ def test_kaiser():
 
     # Check multiplication
     wf_multiplication = wf * 2
-    assert np.all(wf_multiplication.samples == wf.samples * 2)
+    assert np.all(wf_multiplication.samples == wf_samples * 2)
 
     # Check area and max_val must have matching signs
     with pytest.raises(ValueError, match="must have matching signs"):
@@ -319,11 +328,11 @@ def test_kaiser():
     for max_val in range(1, 501, 50):
         for beta in range(1, 20):
             wf = KaiserWaveform.from_max_val(max_val, area, beta)
-            assert np.isclose(np.sum(wf.samples), area * 1000.0)
-            assert np.max(wf.samples) <= max_val
+            assert np.isclose(np.sum(wf.samples.as_array()), area * 1000.0)
+            assert np.max(wf.samples.as_array()) <= max_val
             wf = KaiserWaveform.from_max_val(-max_val, -area, beta)
-            assert np.isclose(np.sum(wf.samples), -area * 1000.0)
-            assert np.min(wf.samples) >= -max_val
+            assert np.isclose(np.sum(wf.samples.as_array()), -area * 1000.0)
+            assert np.min(wf.samples.as_array()) >= -max_val
 
 
 def test_ops():
@@ -423,7 +432,7 @@ def test_modulation():
         2 * np.pi * 2.5,
         mod_bandwidth=4,  # MHz
     )
-    mod_samples = constant.modulated_samples(rydberg_global)
+    mod_samples = constant.modulated_samples(rydberg_global).as_array()
     assert np.all(mod_samples == rydberg_global.modulate(constant.samples))
     assert constant.modulation_buffers(rydberg_global) == (
         rydberg_global.rise_time,

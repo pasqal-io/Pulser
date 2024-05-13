@@ -316,7 +316,14 @@ class Waveform(ABC):
         elif self.duration != other.duration:
             return False
         else:
-            return bool(np.all(np.isclose(self.samples, other.samples)))
+            return bool(
+                np.all(
+                    np.isclose(
+                        self.samples.as_array(detach=True),
+                        other.samples.as_array(detach=True),
+                    )
+                )
+            )
 
     def __hash__(self) -> int:
         return hash(tuple(self.samples.as_array(detach=True)))

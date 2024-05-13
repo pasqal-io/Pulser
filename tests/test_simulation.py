@@ -1356,7 +1356,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
     seq.add(pulse1, "ch1")
     seq.add(pulse1, "ch0")
     ch1_obj = seq.declared_channels["ch1"]
-    pulse1_mod_samples = ch1_obj.modulate(pulse1.amplitude.samples)
+    pulse1_mod_samples = ch1_obj.modulate(pulse1.amplitude.samples).as_array()
     mod_dt = pulse1.duration + pulse1.fall_time(ch1_obj)
     assert pulse1_mod_samples.size == mod_dt
 
@@ -1384,7 +1384,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
             sim._hamiltonian._doppler_detune[qid],
         )
         np.testing.assert_allclose(
-            raman_samples[qid]["phase"][time_slice], pulse1.phase
+            raman_samples[qid]["phase"][time_slice], float(pulse1.phase)
         )
 
     def pos_factor(qid):
@@ -1408,7 +1408,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
             sim._hamiltonian._doppler_detune[qid],
         )
         np.testing.assert_allclose(
-            rydberg_samples[qid]["phase"][time_slice], pulse1.phase
+            rydberg_samples[qid]["phase"][time_slice], float(pulse1.phase)
         )
     with pytest.warns(
         DeprecationWarning, match="The `Simulation` class is deprecated"

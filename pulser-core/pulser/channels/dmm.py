@@ -124,7 +124,7 @@ class DMM(Channel):
                 (defaults to a detuning map with weight 1.0).
         """
         super().validate_pulse(pulse)
-        round_detuning = np.round(pulse.detuning.samples, decimals=6)
+        round_detuning = round(pulse.detuning.samples, 6).as_array(detach=True)
         # Check that detuning is negative
         if np.any(round_detuning > 0):
             raise ValueError("The detuning in a DMM must not be positive.")

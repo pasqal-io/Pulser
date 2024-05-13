@@ -155,12 +155,12 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     blackman = np.clip(np.blackman(N), 0, np.inf)
     input = (np.pi / 2) / (np.sum(blackman) / N) * blackman
 
-    want_amp = chan.modulate(input)
+    want_amp = chan.modulate(input).as_array()
     mod_samples = sample(mod_seq, modulation=True)
     got_amp = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["amp"]
     np.testing.assert_allclose(got_amp, want_amp)
 
-    want_det = chan.modulate(np.ones(N), keep_ends=True)
+    want_det = chan.modulate(np.ones(N), keep_ends=True).as_array()
     got_det = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["det"]
     np.testing.assert_array_equal(got_det, want_det)
 
@@ -176,8 +176,8 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
 
     for qty in ("amp", "det", "phase"):
         np.testing.assert_array_equal(
-            getattr(input_ch_samples.modulate(chan), qty),
-            getattr(output_ch_samples, qty),
+            getattr(input_ch_samples.modulate(chan), qty).as_array(),
+            getattr(output_ch_samples, qty).as_array(),
         )
 
 
@@ -277,11 +277,13 @@ def test_eom_modulation(mod_device, disable_eom):
         want = eom_output + aom_output
 
         # Check that modulation through sample() = sample() + modulation
-        got = getattr(mod_samples.channel_samples["ch0"], qty)
-        alt_got = getattr(input_samples.modulate(chan, full_duration), qty)
+        got = getattr(mod_samples.channel_samples["ch0"], qty).as_array()
+        alt_got = getattr(
+            input_samples.modulate(chan, full_duration), qty
+        ).as_array()
         np.testing.assert_array_equal(got, alt_got)
-
-        np.testing.assert_allclose(want, got, atol=1e-10)
+        print(qty)
+        np.testing.assert_allclose(want.as_array(), got, atol=1e-10)
 
 
 def test_seq_with_DMM_and_map_reg():
@@ -397,8 +399,8 @@ def test_extend_duration(seq_rydberg):
     extended_short = short.extend_duration(long.duration)
     assert extended_short.duration == long.duration
     for qty in ("amp", "det", "phase"):
-        new_qty_samples = getattr(extended_short, qty)
-        old_qty_samples = getattr(short, qty)
+        new_qty_samples = getattr(extended_short, qty).as_array()
+        old_qty_samples = getattr(short, qty).as_array()
         np.testing.assert_array_equal(
             new_qty_samples[: short.duration], old_qty_samples
         )
@@ -446,7 +448,7 @@ def test_phase_sampling(mod_device):
     expected_phase[transition3_4:] = 4.0
 
     got_phase = sample(seq).channel_samples["ch0"].phase
-    np.testing.assert_array_equal(expected_phase, got_phase)
+    np.testing.assert_array_equal(expected_phase, got_phase.as_array())
 
 
 @pytest.mark.parametrize("modulation", [True, False])

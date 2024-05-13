@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast
 
 import numpy as np
 
@@ -35,9 +35,9 @@ def _prepare_dict(N: int, in_xy: bool = False) -> dict:
 
     def new_qty_dict() -> dict:
         return {
-            _AMP: np.zeros(N),
-            _DET: np.zeros(N),
-            _PHASE: np.zeros(N),
+            _AMP: pm.AbstractArray(np.zeros(N)),
+            _DET: pm.AbstractArray(np.zeros(N)),
+            _PHASE: pm.AbstractArray(np.zeros(N)),
         }
 
     def new_qdict() -> dict:
@@ -381,7 +381,9 @@ class ChannelSamples:
 
         new_samples["phase"] = channel_obj.modulate(self.phase, keep_ends=True)
         for key in new_samples:
-            new_samples[key] = new_samples[key][slice(0, max_duration)]
+            new_samples[key] = new_samples[key].astype(float)[
+                slice(0, max_duration)
+            ]
         return replace(self, **new_samples)
 
 
@@ -451,7 +453,11 @@ class SequenceSamples:
             ],
         )
 
-    def to_nested_dict(self, all_local: bool = False) -> dict:
+    def to_nested_dict(
+        self,
+        all_local: bool = False,
+        samples_type: Literal["abstract", "array", "tensor"] | None = "array",
+    ) -> dict:
         """Format in the nested dictionary form.
 
         This is the format expected by `pulser_simulation.Simulation()`.
@@ -465,6 +471,13 @@ class SequenceSamples:
             addressing ('Global' or 'Local'), the targeted basis
             and, in the 'Local' case, the targeted qubit.
         """
+        _samples_type_options = ("abstract", "array", "tensor")
+        if samples_type not in _samples_type_options:
+            raise ValueError(
+                f"'samples_type' must be one of {_samples_type_options!r}, "
+                f"not {samples_type!r}."
+            )
+
         d = _prepare_dict(self.max_duration, in_xy=self._in_xy)
         for chname, samples in zip(self.channels, self.samples_list):
             cs = (
@@ -514,7 +527,25 @@ class SequenceSamples:
                         )
                         d[_LOCAL][basis][t][_PHASE][times] += cs.phase[times]
 
-        return _default_to_regular(d)
+        regular_dict = _default_to_regular(d)
+
+        def cast_arrays(arr_dict: dict) -> dict:
+            for k in arr_dict:
+                if isinstance(arr_dict[k], dict):
+                    arr_dict[k] = cast_arrays(arr_dict[k])
+                    continue
+                assert isinstance(arr := arr_dict[k], pm.AbstractArray)
+                arr_dict[k] = (
+                    arr.as_tensor()
+                    if samples_type == "tensor"
+                    else arr.as_array(detach=True)
+                )
+            return arr_dict
+
+        if samples_type != "abstract":
+            regular_dict = cast_arrays(regular_dict)
+
+        return regular_dict
 
     def __repr__(self) -> str:
         blocks = [
