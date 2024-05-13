@@ -28,6 +28,7 @@ from matplotlib.figure import Figure
 from scipy.interpolate import CubicSpline
 
 import pulser
+import pulser.math as pm
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
@@ -166,7 +167,10 @@ class ChannelDrawContent:
     ) -> list[np.ndarray]:
         curves = []
         for qty in CURVES_ORDER:
-            qty_arr = getattr(samples, self._samples_from_curves[qty])
+            qty_arr = cast(
+                pm.AbstractArray,
+                getattr(samples, self._samples_from_curves[qty]),
+            ).as_array(detach=True)
             if "phase" in qty:
                 qty_arr = qty_arr / (2 * np.pi)
             curves.append(qty_arr)

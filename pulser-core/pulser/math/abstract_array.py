@@ -61,6 +61,14 @@ class AbstractArray:
         """Whether the stored array is a tensor."""
         return self.has_torch() and type(self._array) is torch.Tensor
 
+    def astype(self, dtype: DTypeLike) -> AbstractArray:
+        """Casts the data type of the array contents."""
+        if self.is_tensor:
+            return AbstractArray(
+                cast(torch.Tensor, self._array).to(dtype=dtype)
+            )
+        return AbstractArray(cast(np.ndarray, self._array.astype(dtype)))
+
     def as_tensor(self) -> torch.Tensor:
         """Converts the stored array to a torch Tensor."""
         if not self.has_torch():
@@ -73,14 +81,9 @@ class AbstractArray:
         Args:
             detach: Whether to detach before converting.
         """
-        if detach:
+        if detach and self.is_tensor:
             return cast(
-                np.ndarray,
-                (
-                    cast(torch.Tensor, self._array).detach().numpy()
-                    if self.is_tensor
-                    else np.array(self._array)
-                ),
+                np.ndarray, cast(torch.Tensor, self._array).detach().numpy()
             )
         return np.asarray(self._array)
 
@@ -123,7 +126,7 @@ class AbstractArray:
     def __abs__(self) -> AbstractArray:
         return AbstractArray(cast(ArrayLike, abs(self._array)))
 
-    def __round__(self, decimals: int = 0) -> AbstractArray:
+    def __round__(self, decimals: int = 0, /) -> AbstractArray:
         return AbstractArray(
             torch.round(cast(torch.Tensor, self._array), decimals=decimals)
             if self.is_tensor

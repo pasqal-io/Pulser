@@ -465,7 +465,7 @@ class Channel(ABC):
         input_samples = pm.AbstractArray(input_samples)
         fc = mod_bandwidth * 1e-3 / np.sqrt(np.log(2))
         freqs = pm.fftfreq(input_samples.size)
-        modulation = np.exp(-(freqs**2) / fc**2)
+        modulation = pm.exp(-(freqs**2) / fc**2)
         return pm.ifft(pm.fft(input_samples) * modulation).real
 
     def calc_modulation_buffer(
