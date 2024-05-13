@@ -16,4 +16,4 @@ docs/build/
 dist/
 env*
 *.egg-info/
-__venv__/
+__venv*__/
