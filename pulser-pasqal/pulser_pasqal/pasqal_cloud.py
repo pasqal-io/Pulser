@@ -29,6 +29,7 @@ from pasqal_cloud.device.configuration import (
 )
 
 from pulser import Sequence
+from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
     JobParams,
@@ -117,17 +118,30 @@ class PasqalCloud(RemoteConnection):
         job_params: list[JobParams] = _make_json_compatible(
             kwargs.get("job_params", [])
         )
-        if emulator is None:
+        mimic_qpu: bool = kwargs.get("mimic_qpu", False)
+        if emulator is None or mimic_qpu:
             available_devices = self.fetch_available_devices()
-            # TODO: Could be better to check if the devices are
-            # compatible, even if not exactly equal
-            if sequence.device not in available_devices.values():
+            if sequence.device.name not in available_devices:
                 raise ValueError(
                     "The device used in the sequence does not match any "
                     "of the devices currently available through the remote "
                     "connection."
                 )
-            # TODO: Validate the register layout
+            if sequence.device != (
+                new_device := available_devices[sequence.device.name]
+            ):
+                try:
+                    sequence = sequence.switch_device(new_device, strict=True)
+                except Exception as e:
+                    raise ValueError(
+                        "The sequence cannot be recreated with the latest "
+                        "device specs. Please fetch the latest specs with "
+                        "`PasqalCloud.fetch_available_specs()` and rebuild "
+                        "the sequence."
+                    ) from e
+
+                # Validate the sequence with the new device
+                Backend.validate_sequence(sequence, mimic_qpu=True)
 
         if sequence.is_parametrized() or sequence.is_register_mappable():
             for params in job_params:
@@ -135,7 +149,9 @@ class PasqalCloud(RemoteConnection):
                 sequence.build(**vars)
 
         configuration = self._convert_configuration(
-            config=kwargs.get("config", None), emulator=emulator
+            config=kwargs.get("config", None),
+            emulator=emulator,
+            strict_validation=mimic_qpu,
         )
         create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
         batch = create_batch_fn(
@@ -192,6 +208,7 @@ class PasqalCloud(RemoteConnection):
         self,
         config: EmulatorConfig | None,
         emulator: pasqal_cloud.EmulatorType | None,
+        strict_validation: bool = False,
     ) -> pasqal_cloud.BaseConfig | None:
         """Converts a backend configuration into a pasqal_cloud.BaseConfig."""
         if emulator is None or config is None:
@@ -209,4 +226,6 @@ class PasqalCloud(RemoteConnection):
         if emulator == pasqal_cloud.EmulatorType.EMU_TN:
             pasqal_config_kwargs["dt"] = 1.0 / config.sampling_rate
 
-        return emu_cls(**pasqal_config_kwargs)
+        return emu_cls(
+            strict_validation=strict_validation, **pasqal_config_kwargs
+        )

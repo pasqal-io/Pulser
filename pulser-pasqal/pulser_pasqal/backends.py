@@ -44,9 +44,10 @@ class PasqalEmulator(RemoteBackend):
         sequence: pulser.Sequence,
         connection: PasqalCloud,
         config: EmulatorConfig | None = None,
+        mimic_qpu: bool = False,
     ) -> None:
         """Initializes a new Pasqal emulator backend."""
-        super().__init__(sequence, connection)
+        super().__init__(sequence, connection, mimic_qpu=mimic_qpu)
         config_ = config or self.default_config
         self._validate_config(config_)
         self._config = config_
@@ -92,6 +93,7 @@ class PasqalEmulator(RemoteBackend):
             emulator=self.emulator,
             config=self._config,
             wait=wait,
+            mimic_qpu=self._mimic_qpu,
         )
 
     def _validate_config(self, config: EmulatorConfig) -> None:
@@ -131,6 +133,8 @@ class EmuTNBackend(PasqalEmulator):
         connection: An open PasqalCloud connection.
         config: An EmulatorConfig to configure the backend. If not provided,
             the default configuration is used.
+        mimic_qpu: Whether to mimic the validations necessary for
+            execution on a QPU.
     """
 
     emulator = pasqal_cloud.EmulatorType.EMU_TN
@@ -153,6 +157,8 @@ class EmuFreeBackend(PasqalEmulator):
         connection: An open PasqalCloud connection.
         config: An EmulatorConfig to configure the backend. If not provided,
             the default configuration is used.
+        mimic_qpu: Whether to mimic the validations necessary for
+            execution on a QPU.
     """
 
     emulator = pasqal_cloud.EmulatorType.EMU_FREE

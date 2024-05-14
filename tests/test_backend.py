@@ -32,12 +32,13 @@ from pulser.backend.remote import (
 )
 from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.noise_model import NoiseModel
+from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
 
 
 @pytest.fixture
 def sequence() -> pulser.Sequence:
-    reg = pulser.Register.square(2, spacing=5, prefix="q")
+    reg = SquareLatticeLayout(5, 5, 5).square_register(2)
     seq = pulser.Sequence(reg, MockDevice)
     seq.declare_channel("rydberg_global", "rydberg_global")
     seq.add(pulser.Pulse.ConstantPulse(1000, 1, -1, 0), "rydberg_global")

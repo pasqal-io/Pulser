@@ -59,7 +59,9 @@ test_device = dataclasses.replace(
         ),
     ),
 )
-virtual_device = test_device.to_virtual()
+virtual_device = dataclasses.replace(
+    test_device.to_virtual(), name="test-virtual"
+)
 
 
 @pytest.fixture

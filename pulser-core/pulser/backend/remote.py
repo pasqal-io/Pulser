@@ -131,15 +131,18 @@ class RemoteBackend(Backend):
             backend accessible via a remote connection.
         connection: The remote connection through which the jobs
             are executed.
+        mimic_qpu: Whether to mimic the validations necessary for
+            execution on a QPU.
     """
 
     def __init__(
         self,
         sequence: Sequence,
         connection: RemoteConnection,
+        mimic_qpu: bool = False,
     ) -> None:
         """Starts a new remote backend instance."""
-        super().__init__(sequence)
+        super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(connection, RemoteConnection):
             raise TypeError(
                 "'connection' must be a valid RemoteConnection instance."

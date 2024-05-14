@@ -17,12 +17,29 @@ from __future__ import annotations
 from typing import cast
 
 from pulser import Sequence
-from pulser.backend.remote import JobParams, RemoteBackend, RemoteResults
-from pulser.devices import Device
+from pulser.backend.remote import (
+    JobParams,
+    RemoteBackend,
+    RemoteConnection,
+    RemoteResults,
+)
 
 
 class QPUBackend(RemoteBackend):
-    """Backend for sequence execution on a QPU."""
+    """Backend for sequence execution on a QPU.
+
+    Args:
+        sequence: A Sequence or a list of Sequences to execute on a
+            backend accessible via a remote connection.
+        connection: The remote connection through which the jobs
+            are executed.
+    """
+
+    def __init__(
+        self, sequence: Sequence, connection: RemoteConnection
+    ) -> None:
+        """Starts a new QPU backend instance."""
+        super().__init__(sequence, connection, mimic_qpu=True)
 
     def run(
         self, job_params: list[JobParams] | None = None, wait: bool = False
@@ -64,16 +81,3 @@ class QPUBackend(RemoteBackend):
             self._sequence, job_params=job_params, wait=wait
         )
         return cast(RemoteResults, results)
-
-    def validate_sequence(self, sequence: Sequence) -> None:
-        """Validates a sequence prior to submission.
-
-        Args:
-            sequence: The sequence to validate.
-        """
-        super().validate_sequence(sequence)
-        if not isinstance(sequence.device, Device):
-            raise TypeError(
-                "To be sent to a QPU, the device of the sequence "
-                "must be a real device, instance of 'Device'."
-            )
