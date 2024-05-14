@@ -80,7 +80,9 @@ AnalogDevice = Device(
     max_radial_distance=35,
     min_atom_distance=5,
     max_sequence_duration=4000,
-    # TODO: Define max_runs
+    max_runs=200,
+    requires_layout=True,
+    accepts_new_layouts=False,
     channel_objects=(
         Rydberg.Global(
             max_abs_detuning=2 * np.pi * 20,

@@ -62,6 +62,7 @@ class Backend(ABC):
             )
         if (
             not device.accepts_new_layouts
+            and layout is not None
             and layout not in device.pre_calibrated_layouts
         ):
             raise ValueError(

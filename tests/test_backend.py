@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import re
 import typing
-from dataclasses import replace
 
 import pytest
 
@@ -29,14 +28,14 @@ from pulser.backend.remote import (
     RemoteResultsError,
     SubmissionStatus,
 )
-from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.devices import AnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
 
 
 @pytest.fixture
 def sequence() -> pulser.Sequence:
-    reg = SquareLatticeLayout(5, 5, 5).square_register(2)
+    reg = pulser.Register.square(2, spacing=5, prefix="q")
     seq = pulser.Sequence(reg, MockDevice)
     seq.declare_channel("rydberg_global", "rydberg_global")
     seq.add(pulser.Pulse.ConstantPulse(1000, 1, -1, 0), "rydberg_global")
@@ -117,8 +116,21 @@ def test_qpu_backend(sequence):
         TypeError, match="must be a real device, instance of 'Device'"
     ):
         QPUBackend(sequence, connection)
-    with pytest.warns(DeprecationWarning, match="From v0.18"):
-        seq = sequence.switch_device(replace(DigitalAnalogDevice, max_runs=10))
+
+    with pytest.warns(
+        UserWarning, match="device with a different Rydberg level"
+    ):
+        seq = sequence.switch_device(AnalogDevice)
+    with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
+        QPUBackend(seq, connection)
+    seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
+    with pytest.raises(
+        ValueError, match="does not accept new register layouts"
+    ):
+        QPUBackend(seq, connection)
+    seq = seq.switch_register(
+        AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
+    )
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
@@ -131,10 +143,10 @@ def test_qpu_backend(sequence):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "All 'runs' must be below the maximum allowed by the device (10)"
+            "All 'runs' must be below the maximum allowed by the device"
         ),
     ):
-        qpu_backend.run(job_params=[{"runs": 11}])
+        qpu_backend.run(job_params=[{"runs": 1000}])
 
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
