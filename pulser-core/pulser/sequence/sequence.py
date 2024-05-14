@@ -684,6 +684,24 @@ class Sequence(Generic[DeviceType]):
         # DMM has Global addressing
         self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
 
+    def switch_register(
+        self, new_register: BaseRegister | MappableRegister
+    ) -> Sequence:
+        """Replicate the sequence with a different register.
+
+        Args:
+            new_register: The new register to give the sequence.
+
+        Returns:
+            The sequence with the new register.
+        """
+        new_seq = type(self)(register=new_register, device=self._device)
+        # Copy the variables to the new sequence
+        new_seq._variables = self.declared_variables
+        for call in self._calls[1:] + self._to_build_calls:
+            getattr(new_seq, call.name)(*call.args, **call.kwargs)
+        return new_seq
+
     def switch_device(
         self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:

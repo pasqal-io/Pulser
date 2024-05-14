@@ -535,6 +535,64 @@ def test_ising_mode(
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
+def test_switch_register(reg, mappable_reg, parametrized):
+    pulse = Pulse.ConstantPulse(1000, 1, -1, 2)
+    seq = init_seq(
+        reg,
+        DigitalAnalogDevice,
+        "raman",
+        "raman_local",
+        [pulse],
+        initial_target="q0",
+        parametrized=parametrized,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="given ids have to be qubit ids declared in this sequence's"
+        " register",
+    ):
+        seq.switch_register(Register(dict(q1=(0, 0), qN=(10, 10))))
+
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(pulse, "ryd", protocol="no-delay")
+
+    if mappable_reg:
+        new_reg = TriangularLatticeLayout(10, 5).make_mappable_register(2)
+    else:
+        new_reg = Register(dict(q0=(0, 0), foo=(10, 10)))
+
+    new_seq = seq.switch_register(new_reg)
+    assert seq.declared_variables or not parametrized
+    assert seq.declared_variables == new_seq.declared_variables
+    assert new_seq.is_parametrized() == parametrized
+    assert new_seq.is_register_mappable() == mappable_reg
+    assert new_seq._calls[1:] == seq._calls[1:]  # Excludes __init__
+    assert new_seq._to_build_calls == seq._to_build_calls
+
+    build_kwargs = {}
+    if parametrized:
+        build_kwargs["delay"] = 120
+    if mappable_reg:
+        build_kwargs["qubits"] = {"q0": 1, "q1": 4}
+    if build_kwargs:
+        new_seq = new_seq.build(**build_kwargs)
+
+    assert isinstance(
+        (raman_pulse_slot := new_seq._schedule["raman"][1]).type, Pulse
+    )
+    assert raman_pulse_slot.type == pulse
+    assert raman_pulse_slot.targets == {"q0"}
+
+    assert isinstance(
+        (rydberg_pulse_slot := new_seq._schedule["ryd"][1]).type, Pulse
+    )
+    assert rydberg_pulse_slot.type == pulse
+    assert rydberg_pulse_slot.targets == set(new_reg.qubit_ids)
+
+
+@pytest.mark.parametrize("mappable_reg", [False, True])
+@pytest.mark.parametrize("parametrized", [False, True])
 def test_switch_device_down(
     reg, det_map, devices, pulses, mappable_reg, parametrized
 ):
