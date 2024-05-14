@@ -29,8 +29,8 @@ from pasqal_cloud.device.configuration import (
 )
 
 from pulser import Sequence
-from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
+from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     JobParams,
     RemoteConnection,
@@ -139,10 +139,10 @@ class PasqalCloud(RemoteConnection):
                         "`PasqalCloud.fetch_available_specs()` and rebuild "
                         "the sequence."
                     ) from e
-
                 # Validate the sequence with the new device
-                Backend.validate_sequence(sequence, mimic_qpu=True)
+                QPUBackend.validate_sequence(sequence, mimic_qpu=True)
 
+            QPUBackend.validate_job_params(job_params, new_device.max_runs)
         if sequence.is_parametrized() or sequence.is_register_mappable():
             for params in job_params:
                 vars = params.get("variables", {})
@@ -208,7 +208,7 @@ class PasqalCloud(RemoteConnection):
         self,
         config: EmulatorConfig | None,
         emulator: pasqal_cloud.EmulatorType | None,
-        strict_validation: bool = False,
+        **custom_config_kwargs: Any,
     ) -> pasqal_cloud.BaseConfig | None:
         """Converts a backend configuration into a pasqal_cloud.BaseConfig."""
         if emulator is None or config is None:
@@ -226,6 +226,5 @@ class PasqalCloud(RemoteConnection):
         if emulator == pasqal_cloud.EmulatorType.EMU_TN:
             pasqal_config_kwargs["dt"] = 1.0 / config.sampling_rate
 
-        return emu_cls(
-            strict_validation=strict_validation, **pasqal_config_kwargs
-        )
+        pasqal_config_kwargs.update(custom_config_kwargs)
+        return emu_cls(**pasqal_config_kwargs)
