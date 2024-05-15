@@ -132,11 +132,12 @@ def fixt(mock_batch):
         mock_cloud_sdk_class.assert_not_called()
 
 
+@pytest.mark.parametrize("mimic_qpu", [False, True])
 @pytest.mark.parametrize(
     "emulator", [None, EmulatorType.EMU_TN, EmulatorType.EMU_FREE]
 )
 @pytest.mark.parametrize("parametrized", [True, False])
-def test_submit(fixt, parametrized, emulator, seq, mock_job):
+def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
     with pytest.raises(
         ValueError,
         match="The measurement basis can't be implicitly determined for a "
@@ -149,7 +150,7 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
     seq.delay(t if parametrized else 100, "rydberg_global")
     assert seq.is_parametrized() == parametrized
 
-    if not emulator:
+    if not emulator or mimic_qpu:
         seq2 = seq.switch_device(virtual_device)
         with pytest.raises(
             ValueError,
@@ -157,11 +158,37 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
             "of the devices currently available through the remote "
             "connection.",
         ):
-            fixt.pasqal_cloud.submit(seq2, job_params=[dict(runs=10)])
+            fixt.pasqal_cloud.submit(
+                seq2, job_params=[dict(runs=10)], mimic_qpu=mimic_qpu
+            )
+        mod_test_device = dataclasses.replace(test_device, max_atom_num=1000)
+        seq3 = seq.switch_device(mod_test_device).switch_register(
+            pulser.Register.square(11, spacing=5)
+        )
+        with pytest.raises(
+            ValueError,
+            match="sequence cannot be recreated with the latest "
+            "device specs",
+        ):
+            fixt.pasqal_cloud.submit(
+                seq3, job_params=[dict(runs=10)], mimic_qpu=mimic_qpu
+            )
+        seq4 = seq3.switch_register(pulser.Register.square(4, spacing=5))
+        # The sequence goes through QPUBackend.validate_sequence()
+        with pytest.raises(
+            ValueError, match="defined from a `RegisterLayout`"
+        ):
+            fixt.pasqal_cloud.submit(
+                seq4, job_params=[dict(runs=10)], mimic_qpu=mimic_qpu
+            )
 
-    assert fixt.pasqal_cloud.fetch_available_devices() == {
-        test_device.name: test_device
-    }
+        # And it goes through QPUBackend.validate_job_params()
+        with pytest.raises(
+            ValueError,
+            match="must specify 'runs'",
+        ):
+            fixt.pasqal_cloud.submit(seq, job_params=[{}], mimic_qpu=mimic_qpu)
+
     if parametrized:
         with pytest.raises(
             TypeError, match="Did not receive values for variables"
@@ -169,6 +196,7 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
             fixt.pasqal_cloud.submit(
                 seq.build(qubits={"q0": 1, "q1": 2, "q2": 4, "q3": 3}),
                 job_params=[{"runs": 10}],
+                mimic_qpu=mimic_qpu,
             )
 
     assert not seq.is_measured()
@@ -179,12 +207,20 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
     if emulator is None:
         sdk_config = None
     elif emulator == EmulatorType.EMU_FREE:
-        sdk_config = EmuFreeConfig(with_noise=False)
+        sdk_config = EmuFreeConfig(
+            with_noise=False, strict_validation=mimic_qpu
+        )
     else:
-        sdk_config = EmuTNConfig(dt=2, extra_config={"with_noise": False})
+        sdk_config = EmuTNConfig(
+            dt=2,
+            extra_config={"with_noise": False},
+            strict_validation=mimic_qpu,
+        )
 
     assert (
-        fixt.pasqal_cloud._convert_configuration(config, emulator)
+        fixt.pasqal_cloud._convert_configuration(
+            config, emulator, strict_validation=mimic_qpu
+        )
         == sdk_config
     )
 
@@ -203,6 +239,7 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
         job_params=job_params,
         emulator=emulator,
         config=config,
+        mimic_qpu=mimic_qpu,
     )
     assert not seq.is_measured()
     seq.measure(basis="ground-rydberg")
@@ -285,17 +322,26 @@ def test_emulators_init(fixt, seq, emu_cls, monkeypatch):
     ):
         emu_cls(seq, RemoteConnection())
 
+    # With mimic_qpu=True
+    with pytest.raises(TypeError, match="must be a real device"):
+        emu_cls(
+            seq.switch_device(virtual_device),
+            fixt.pasqal_cloud,
+            mimic_qpu=True,
+        )
 
+
+@pytest.mark.parametrize("mimic_qpu", [True, False])
 @pytest.mark.parametrize("parametrized", [True, False])
 @pytest.mark.parametrize("emu_cls", [EmuTNBackend, EmuFreeBackend])
-def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
+def test_emulators_run(fixt, seq, emu_cls, parametrized: bool, mimic_qpu):
     seq.declare_channel("rydberg_global", "rydberg_global")
     t = seq.declare_variable("t", dtype=int)
     seq.delay(t if parametrized else 100, "rydberg_global")
     assert seq.is_parametrized() == parametrized
     seq.measure(basis="ground-rydberg")
 
-    emu = emu_cls(seq, fixt.pasqal_cloud)
+    emu = emu_cls(seq, fixt.pasqal_cloud, mimic_qpu=mimic_qpu)
 
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         emu.run()
@@ -320,10 +366,10 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
     sdk_config: EmuTNConfig | EmuFreeConfig
     if isinstance(emu, EmuTNBackend):
         emulator_type = EmulatorType.EMU_TN
-        sdk_config = EmuTNConfig(dt=10)
+        sdk_config = EmuTNConfig(dt=10, strict_validation=mimic_qpu)
     else:
         emulator_type = EmulatorType.EMU_FREE
-        sdk_config = EmuFreeConfig()
+        sdk_config = EmuFreeConfig(strict_validation=mimic_qpu)
     fixt.mock_cloud_sdk.create_batch.assert_called_once()
     fixt.mock_cloud_sdk.create_batch.assert_called_once_with(
         serialized_sequence=seq.to_abstract_repr(),

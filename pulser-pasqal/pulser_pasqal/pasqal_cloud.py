@@ -208,7 +208,7 @@ class PasqalCloud(RemoteConnection):
         self,
         config: EmulatorConfig | None,
         emulator: pasqal_cloud.EmulatorType | None,
-        **custom_config_kwargs: Any,
+        strict_validation: bool = False,
     ) -> pasqal_cloud.BaseConfig | None:
         """Converts a backend configuration into a pasqal_cloud.BaseConfig."""
         if emulator is None or config is None:
@@ -226,5 +226,5 @@ class PasqalCloud(RemoteConnection):
         if emulator == pasqal_cloud.EmulatorType.EMU_TN:
             pasqal_config_kwargs["dt"] = 1.0 / config.sampling_rate
 
-        pasqal_config_kwargs.update(custom_config_kwargs)
+        pasqal_config_kwargs["strict_validation"] = strict_validation
         return emu_cls(**pasqal_config_kwargs)
