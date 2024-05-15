@@ -121,23 +121,29 @@ class PasqalCloud(RemoteConnection):
         mimic_qpu: bool = kwargs.get("mimic_qpu", False)
         if emulator is None or mimic_qpu:
             available_devices = self.fetch_available_devices()
-            if sequence.device.name not in available_devices:
+            available_device_names = {
+                dev.name: key for key, dev in available_devices.items()
+            }
+            err_suffix = (
+                " Please fetch the latest devices with "
+                "`PasqalCloud.fetch_available_devices()` and rebuild "
+                "the sequence with one of the options."
+            )
+            if (name := sequence.device.name) not in available_device_names:
                 raise ValueError(
                     "The device used in the sequence does not match any "
                     "of the devices currently available through the remote "
-                    "connection."
+                    "connection." + err_suffix
                 )
             if sequence.device != (
-                new_device := available_devices[sequence.device.name]
+                new_device := available_devices[available_device_names[name]]
             ):
                 try:
                     sequence = sequence.switch_device(new_device, strict=True)
                 except Exception as e:
                     raise ValueError(
                         "The sequence cannot be recreated with the latest "
-                        "device specs. Please fetch the latest specs with "
-                        "`PasqalCloud.fetch_available_specs()` and rebuild "
-                        "the sequence."
+                        "device specs." + err_suffix
                     ) from e
                 # Validate the sequence with the new device
                 QPUBackend.validate_sequence(sequence, mimic_qpu=True)
