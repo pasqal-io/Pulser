@@ -700,7 +700,8 @@ class Sequence(Generic[DeviceType]):
         Warns:
             UserWarning: If the sequence is configuring a detuning map, a
             warning is raised to remind the user that the detuning map is
-            unchanged and might no longer be aligend with the new register.
+            unchanged and might no longer be aligned with the qubits in
+            the new register.
 
         Args:
             new_register: The new register to give the sequence.
