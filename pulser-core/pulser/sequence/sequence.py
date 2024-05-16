@@ -684,6 +684,45 @@ class Sequence(Generic[DeviceType]):
         # DMM has Global addressing
         self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
 
+    def switch_register(
+        self, new_register: BaseRegister | MappableRegister
+    ) -> Sequence:
+        """Replicate the sequence with a different register.
+
+        The new sequence is reconstructed with the provided register by
+        replicating all the instructions used to build the original sequence.
+        This means that operations referecing specific qubits IDs
+        (eg. `Sequence.target()`) expect to find the same qubit IDs in the new
+        register. By the same token, switching from a register to a mappable
+        register might fail if one of the instructions does not work with
+        mappable registers (e.g. `Sequence.configure_slm_mask()`).
+
+        Warns:
+            UserWarning: If the sequence is configuring a detuning map, a
+            warning is raised to remind the user that the detuning map is
+            unchanged and might no longer be aligned with the qubits in
+            the new register.
+
+        Args:
+            new_register: The new register to give the sequence.
+
+        Returns:
+            The sequence with the new register.
+        """
+        new_seq = type(self)(register=new_register, device=self._device)
+        # Copy the variables to the new sequence
+        new_seq._variables = self.declared_variables
+        for call in self._calls[1:] + self._to_build_calls:
+            if call.name == "config_detuning_map":
+                warnings.warn(
+                    "Switching the register of a sequence that configures"
+                    " a detuning map. Please ensure that the new qubit"
+                    " positions are still aligned.",
+                    stacklevel=2,
+                )
+            getattr(new_seq, call.name)(*call.args, **call.kwargs)
+        return new_seq
+
     def switch_device(
         self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:
