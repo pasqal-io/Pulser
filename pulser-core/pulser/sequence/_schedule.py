@@ -23,6 +23,7 @@ import numpy as np
 
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
+from pulser.channels.eom import RydbergBeam
 from pulser.pulse import Pulse
 from pulser.register.base_register import QubitId
 from pulser.register.weight_maps import DetuningMap
@@ -45,7 +46,8 @@ class _EOMSettings:
     detuning_on: float
     detuning_off: float
     ti: int
-    tf: Optional[int] = None
+    tf: int | None = None
+    switching_beams: tuple[RydbergBeam, ...] = ()
 
 
 @dataclass
@@ -337,6 +339,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         amp_on: float,
         detuning_on: float,
         detuning_off: float,
+        switching_beams: tuple[RydbergBeam, ...] = (),
         _skip_buffer: bool = False,
     ) -> None:
         channel_obj = self[channel_id].channel_obj
@@ -368,6 +371,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             detuning_on=detuning_on,
             detuning_off=detuning_off,
             ti=self[channel_id][-1].tf,
+            switching_beams=switching_beams,
         )
 
         self[channel_id].eom_blocks.append(eom_settings)
