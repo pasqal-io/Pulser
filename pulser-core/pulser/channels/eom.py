@@ -26,7 +26,11 @@ from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 # Conversion factor from modulation bandwith to rise time
 # For more info, see https://tinyurl.com/bdeumc8k
 MODBW_TO_TR = 0.48
-OPTIONAL_ABSTR_EOM_FIELDS = ("multiple_beam_control", "custom_buffer_time")
+OPTIONAL_ABSTR_EOM_FIELDS = (
+    "multiple_beam_control",
+    "custom_buffer_time",
+    "red_shift_coeff",
+)
 
 
 class RydbergBeam(Flag):
@@ -132,6 +136,7 @@ class _RydbergEOM:
 @dataclass(frozen=True)
 class _RydbergEOMDefaults:
     multiple_beam_control: bool = True
+    red_shift_coeff: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -149,11 +154,17 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         custom_buffer_time: A custom wait time to enforce during EOM buffers.
         multiple_beam_control: Whether both EOMs can be used simultaneously.
             Ignored when only one beam can be controlled.
+        red_shift_coeff: The weight coefficient of the red beam's contribution
+            to the lightshift.
     """
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        for param in ["max_limiting_amp", "intermediate_detuning"]:
+        for param in [
+            "max_limiting_amp",
+            "intermediate_detuning",
+            "red_shift_coeff",
+        ]:
             value = getattr(self, param)
             if value <= 0.0:
                 raise ValueError(
@@ -302,7 +313,7 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     ) -> float:
         # lightshift = (rabi_blue**2 - rabi_red**2) / 4 * int_detuning
         rabi_freqs = self._rabi_freq_per_beam(rabi_frequency)
-        bias = {RydbergBeam.RED: -1, RydbergBeam.BLUE: 1}
+        bias = {RydbergBeam.RED: -self.red_shift_coeff, RydbergBeam.BLUE: 1}
         # beam off -> beam_rabi_freq = 0
         return sum(bias[beam] * rabi_freqs[beam] ** 2 for beam in beams_on) / (
             4 * self.intermediate_detuning
@@ -311,16 +322,25 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     def _rabi_freq_per_beam(
         self, rabi_frequency: float
     ) -> dict[RydbergBeam, float]:
+        shift_factor = np.sqrt(
+            self.red_shift_coeff
+            if self.limiting_beam == RydbergBeam.RED
+            else 1 / self.red_shift_coeff
+        )
         # rabi_freq = (rabi_red * rabi_blue) / (2 * int_detuning)
-        limit_rabi_freq = self.max_limiting_amp**2 / (
-            2 * self.intermediate_detuning
+        limit_rabi_freq = (
+            shift_factor
+            * self.max_limiting_amp**2
+            / (2 * self.intermediate_detuning)
         )
         # limit_rabi_freq is the maximum effective rabi frequency value
-        # below which the rabi frequency of both beams can be matched
+        # below which the lightshift can be zero
         if rabi_frequency <= limit_rabi_freq:
-            # Both beams the same rabi_freq
-            beam_amp = np.sqrt(2 * rabi_frequency * self.intermediate_detuning)
-            return {beam: beam_amp for beam in RydbergBeam}
+            base_amp = np.sqrt(2 * rabi_frequency * self.intermediate_detuning)
+            return {
+                RydbergBeam.BLUE: base_amp * self.red_shift_coeff**0.25,
+                RydbergBeam.RED: base_amp * self.red_shift_coeff ** (-0.25),
+            }
 
         # The limiting beam is at its maximum amplitude while the other
         # has the necessary amplitude to reach the desired effective rabi freq

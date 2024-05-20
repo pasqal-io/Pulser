@@ -352,6 +352,22 @@ class TestDevice:
                     custom_buffer_time=500,
                 ),
             ),
+            pytest.param(
+                Rydberg.Global(
+                    None,
+                    None,
+                    mod_bandwidth=5,
+                    eom_config=RydbergEOM(
+                        max_limiting_amp=10,
+                        mod_bandwidth=20,
+                        limiting_beam=RydbergBeam.RED,
+                        intermediate_detuning=1000,
+                        controlled_beams=tuple(RydbergBeam),
+                        red_shift_coeff=1.4,
+                    ),
+                ),
+                marks=pytest.mark.xfail(reason="Needes new schema"),
+            ),
         ],
     )
     def test_optional_channel_fields(self, ch_obj):
