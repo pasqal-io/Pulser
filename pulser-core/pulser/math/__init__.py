@@ -55,6 +55,13 @@ def cos(a: AbstractArrayLike, /) -> AbstractArray:
     return AbstractArray(np.cos(a.as_array()))
 
 
+def count_nonzero(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.count_nonzero(a.as_tensor()))
+    return AbstractArray(np.count_nonzero(a.as_array()))
+
+
 def pad(
     a: AbstractArrayLike,
     pad_width: tuple | int,
@@ -101,10 +108,10 @@ def pad(
             if isinstance(pad_width, (int, float)):
                 pad_width = (pad_width, pad_width)
             out = torch.nn.functional.pad(
-                t, (pad_width[0], 0), "constant", cast(float, t[0])
+                t, (pad_width[0], 0), "constant", float(t[0])
             )
             out = torch.nn.functional.pad(
-                out, (0, pad_width[1]), "constant", cast(float, t[-1])
+                out, (0, pad_width[1]), "constant", float(t[-1])
             )
         return AbstractArray(out)
 

@@ -103,10 +103,7 @@ class Pulse:
             )
         object.__setattr__(self, "amplitude", amplitude)
         object.__setattr__(self, "detuning", detuning)
-        assert not isinstance(phase, Parametrized)
-        if (phase_ := pm.AbstractArray(phase, dtype=float)).ndim != 0:
-            raise ValueError(f"'phase' must be a single float, not {phase!r}.")
-        object.__setattr__(self, "phase", phase_ % (2 * np.pi))
+        object.__setattr__(self, "phase", cast(float, phase) % (2 * np.pi))
         post_phase_shift = cast(float, post_phase_shift)
         object.__setattr__(
             self, "post_phase_shift", float(post_phase_shift) % (2 * np.pi)

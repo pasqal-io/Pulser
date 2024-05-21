@@ -144,8 +144,8 @@ class ChannelSamples:
         new_detuning = pm.pad(
             self.det,
             (0, extension),
-            constant_values=(final_detuning,),
             mode="constant",
+            constant_values=final_detuning,
         )
         new_phase = pm.pad(
             self.phase,

@@ -509,7 +509,9 @@ class ConstantWaveform(Waveform):
         Returns:
             A numpy array with a value for each time step.
         """
-        return self._value * np.ones(self.duration)
+        res = self._value * np.ones(self.duration)
+        # print(res)
+        return res
 
     def change_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.

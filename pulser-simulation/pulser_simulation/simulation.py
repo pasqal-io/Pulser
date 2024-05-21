@@ -484,7 +484,7 @@ class QutipEmulator:
         def get_min_variation(ch_sample: ChannelSamples) -> int:
             end_point = ch_sample.duration - 1
             min_variations: list[int] = []
-            for sample in (ch_sample.amp, ch_sample.det):
+            for sample in (ch_sample.amp.as_array(), ch_sample.det.as_array()):
                 min_variations.append(
                     int(
                         np.min(
