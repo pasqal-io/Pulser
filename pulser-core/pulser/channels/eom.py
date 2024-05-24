@@ -29,6 +29,7 @@ MODBW_TO_TR = 0.48
 OPTIONAL_ABSTR_EOM_FIELDS = (
     "multiple_beam_control",
     "custom_buffer_time",
+    "blue_shift_coeff",
     "red_shift_coeff",
 )
 
@@ -136,6 +137,7 @@ class _RydbergEOM:
 @dataclass(frozen=True)
 class _RydbergEOMDefaults:
     multiple_beam_control: bool = True
+    blue_shift_coeff: float = 1.0
     red_shift_coeff: float = 1.0
 
 
@@ -154,6 +156,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         custom_buffer_time: A custom wait time to enforce during EOM buffers.
         multiple_beam_control: Whether both EOMs can be used simultaneously.
             Ignored when only one beam can be controlled.
+        blue_shift_coeff: The weight coefficient of the blue beam's
+            contribution to the lightshift.
         red_shift_coeff: The weight coefficient of the red beam's contribution
             to the lightshift.
     """
@@ -163,6 +167,7 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         for param in [
             "max_limiting_amp",
             "intermediate_detuning",
+            "blue_shift_coeff",
             "red_shift_coeff",
         ]:
             value = getattr(self, param)
@@ -313,7 +318,10 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     ) -> float:
         # lightshift = (rabi_blue**2 - rabi_red**2) / 4 * int_detuning
         rabi_freqs = self._rabi_freq_per_beam(rabi_frequency)
-        bias = {RydbergBeam.RED: -self.red_shift_coeff, RydbergBeam.BLUE: 1}
+        bias = {
+            RydbergBeam.RED: -self.red_shift_coeff,
+            RydbergBeam.BLUE: self.blue_shift_coeff,
+        }
         # beam off -> beam_rabi_freq = 0
         return sum(bias[beam] * rabi_freqs[beam] ** 2 for beam in beams_on) / (
             4 * self.intermediate_detuning
@@ -323,9 +331,9 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         self, rabi_frequency: float
     ) -> dict[RydbergBeam, float]:
         shift_factor = np.sqrt(
-            self.red_shift_coeff
+            self.red_shift_coeff / self.blue_shift_coeff
             if self.limiting_beam == RydbergBeam.RED
-            else 1 / self.red_shift_coeff
+            else self.blue_shift_coeff / self.red_shift_coeff
         )
         # rabi_freq = (rabi_red * rabi_blue) / (2 * int_detuning)
         limit_rabi_freq = (
@@ -337,9 +345,10 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         # below which the lightshift can be zero
         if rabi_frequency <= limit_rabi_freq:
             base_amp = np.sqrt(2 * rabi_frequency * self.intermediate_detuning)
+            sqrt_shift_factor = np.sqrt(shift_factor)
             return {
-                RydbergBeam.BLUE: base_amp * self.red_shift_coeff**0.25,
-                RydbergBeam.RED: base_amp * self.red_shift_coeff ** (-0.25),
+                self.limiting_beam: base_amp / sqrt_shift_factor,
+                ~self.limiting_beam: base_amp * sqrt_shift_factor,
             }
 
         # The limiting beam is at its maximum amplitude while the other

@@ -366,7 +366,23 @@ class TestDevice:
                         red_shift_coeff=1.4,
                     ),
                 ),
-                marks=pytest.mark.xfail(reason="Needes new schema"),
+                marks=pytest.mark.xfail(reason="Needs new schema"),
+            ),
+            pytest.param(
+                Rydberg.Global(
+                    None,
+                    None,
+                    mod_bandwidth=5,
+                    eom_config=RydbergEOM(
+                        max_limiting_amp=10,
+                        mod_bandwidth=20,
+                        limiting_beam=RydbergBeam.RED,
+                        intermediate_detuning=1000,
+                        controlled_beams=tuple(RydbergBeam),
+                        blue_shift_coeff=1.4,
+                    ),
+                ),
+                marks=pytest.mark.xfail(reason="Needs new schema"),
             ),
         ],
     )

@@ -40,6 +40,8 @@ def params():
         ("intermediate_detuning", 0),
         ("custom_buffer_time", 0.1),
         ("custom_buffer_time", 0),
+        ("blue_shift_coeff", -1e-3),
+        ("blue_shift_coeff", 0),
         ("red_shift_coeff", -1.1),
         ("red_shift_coeff", 0),
     ],
@@ -97,17 +99,20 @@ def test_bad_controlled_beam(params):
 
 
 @pytest.mark.parametrize("limiting_beam", list(RydbergBeam))
+@pytest.mark.parametrize("blue_shift_coeff", [0.5, 1.0, 2.0])
 @pytest.mark.parametrize("red_shift_coeff", [0.5, 1.0, 1.8])
 @pytest.mark.parametrize("multiple_beam_control", [True, False])
 @pytest.mark.parametrize("limit_amp_fraction", [0.5, 2])
 def test_detuning_off(
     limiting_beam,
+    blue_shift_coeff,
     red_shift_coeff,
     multiple_beam_control,
     limit_amp_fraction,
     params,
 ):
     params["multiple_beam_control"] = multiple_beam_control
+    params["blue_shift_coeff"] = blue_shift_coeff
     params["red_shift_coeff"] = red_shift_coeff
     params["limiting_beam"] = limiting_beam
     eom = RydbergEOM(**params)
@@ -115,9 +120,9 @@ def test_detuning_off(
         params["max_limiting_amp"] ** 2
         / (2 * params["intermediate_detuning"])
         * np.sqrt(
-            red_shift_coeff
+            red_shift_coeff / blue_shift_coeff
             if limiting_beam == RydbergBeam.RED
-            else 1 / red_shift_coeff
+            else blue_shift_coeff / red_shift_coeff
         )
     )
     amp = limit_amp_fraction * limit_amp
@@ -137,9 +142,9 @@ def test_detuning_off(
             limit_amp_ if limiting_beam == RydbergBeam.BLUE else non_limit_amp
         )
         # The offset to have resonance when the pulse is on is -lightshift
-        return -(blue_amp**2 - red_shift_coeff * red_amp**2) / (
-            4 * params["intermediate_detuning"]
-        )
+        return -(
+            blue_shift_coeff * blue_amp**2 - red_shift_coeff * red_amp**2
+        ) / (4 * params["intermediate_detuning"])
 
     # Case where the EOM pulses are resonant
     detuning_on = 0.0
