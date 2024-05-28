@@ -89,7 +89,7 @@ class AbstractArray:
             )
         return np.asarray(self._array)
 
-    def as_list(self) -> list:
+    def tolist(self) -> list:
         """Converts the stored array to a Python list."""
         return self._array.tolist()
 

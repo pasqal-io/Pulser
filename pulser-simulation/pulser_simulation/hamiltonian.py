@@ -54,7 +54,7 @@ class Hamiltonian:
     ) -> None:
         """Instantiates a Hamiltonian object."""
         self.samples_obj = samples_obj
-        self._qdict = {k: v.as_array() for k, v in qdict.items()}
+        self._qdict = {k: v.as_array(detach=True) for k, v in qdict.items()}
         self._device = device
         self._sampling_rate = sampling_rate
 

@@ -265,7 +265,7 @@ class BaseRegister(ABC, CoordsCollection):
         return obj_to_dict(
             self,
             cls_dict,
-            [qubit_coords.as_list() for qubit_coords in self._coords],
+            [qubit_coords.tolist() for qubit_coords in self._coords],
             False,
             None,
             self._ids,

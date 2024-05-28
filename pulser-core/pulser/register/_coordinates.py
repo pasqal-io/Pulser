@@ -42,23 +42,21 @@ class CoordsCollection:
         return self._sorted_coords.copy()
 
     @cached_property
-    def rounded_coords(self) -> pm.AbstractArray:
+    def _rounded_coords(self) -> pm.AbstractArray:
         coords = pm.vstack(cast(Sequence[AbstractArrayLike], self._coords))
         return pm.round(coords, decimals=COORD_PRECISION)
 
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _sorted_coords(self) -> pm.AbstractArray:
-        sorting = self._calc_sorting_order(self.rounded_coords)
-        return self.rounded_coords[sorting]
+        sorting = self._calc_sorting_order()
+        return self._rounded_coords[sorting]
 
-    def _calc_sorting_order(
-        self, rounded_coords: pm.AbstractArray
-    ) -> np.ndarray:
+    def _calc_sorting_order(self) -> np.ndarray:
         """Calculates the unique order that sorts the coordinates."""
         # Sorting the coordinates 1st left to right, 2nd bottom to top
-        dims = rounded_coords.shape[1]
+        dims = self._rounded_coords.shape[1]
         sorter = [
-            rounded_coords.as_array(detach=True)[:, i]
+            self._rounded_coords.as_array(detach=True)[:, i]
             for i in range(dims - 1, -1, -1)
         ]
         sorting = np.lexsort(tuple(sorter))

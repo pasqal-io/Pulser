@@ -70,7 +70,7 @@ class WeightMap(Traps, RegDrawer):
     @property
     def sorted_weights(self) -> np.ndarray:
         """The weights sorted to match the sorted trap coordinates."""
-        sorting = self._calc_sorting_order(self.rounded_coords)
+        sorting = self._calc_sorting_order()
         return cast(np.ndarray, np.array(self.weights)[sorting])
 
     def get_qubit_weight_map(
