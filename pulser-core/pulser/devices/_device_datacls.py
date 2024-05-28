@@ -21,8 +21,9 @@ from dataclasses import dataclass, field, fields
 from typing import Any, Literal, cast, get_args
 
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import squareform
 
+import pulser.math as pm
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
@@ -404,9 +405,11 @@ class BaseDevice(ABC):
             return cast(np.ndarray, np.logical_or(cond1, cond2))
 
         if len(coords) > 1:
-            distances = pdist(coords)  # Pairwise distance between atoms
-            if np.any(invalid_dists(distances)):
-                sq_dists = squareform(distances)
+            distances = pm.pdist(
+                pm.vstack(coords)
+            )  # Pairwise distance between atoms
+            if np.any(invalid_dists(distances.as_array(detach=True))):
+                sq_dists = squareform(distances.as_array(detach=True))
                 mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
                 bad_pairs = np.argwhere(
                     np.logical_and(invalid_dists(sq_dists), mask)

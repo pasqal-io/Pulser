@@ -143,7 +143,7 @@ def fftfreq(n: int) -> AbstractArray:
 
 
 def round(a: AbstractArrayLike, decimals: int = 0) -> AbstractArray:
-    return round(AbstractArray(a), decimals=decimals)
+    return AbstractArray(a).__round__(decimals)
 
 
 def ceil(a: AbstractArrayLike) -> AbstractArray:
@@ -167,11 +167,25 @@ def sum(a: AbstractArrayLike) -> AbstractArray:
     return AbstractArray(np.sum(a.as_array()))
 
 
+def pdist(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.nn.functional.pdist(a.as_tensor()))
+    return AbstractArray(scipy.spatial.distance.pdist(a.as_array()))
+
+
 def concatenate(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
     abst_arrs = tuple(map(AbstractArray, arrs))
     if any(a.is_tensor for a in abst_arrs):
         return AbstractArray(torch.cat([a.as_tensor() for a in abst_arrs]))
     return AbstractArray(np.concatenate([a.as_array() for a in abst_arrs]))
+
+
+def vstack(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
+    abst_arrs = tuple(map(AbstractArray, arrs))
+    if any(a.is_tensor for a in abst_arrs):
+        return AbstractArray(torch.vstack([a.as_tensor() for a in abst_arrs]))
+    return AbstractArray(np.vstack([a.as_array() for a in abst_arrs]))
 
 
 def clip(
