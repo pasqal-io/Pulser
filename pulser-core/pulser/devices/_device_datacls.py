@@ -382,7 +382,7 @@ class BaseDevice(ABC):
                 f"{max_qubits} qubits."
             )
 
-    def _validate_atom_number(self, coords: list[np.ndarray]) -> None:
+    def _validate_atom_number(self, coords: list[pm.AbstractArray]) -> None:
         max_atom_num = cast(int, self.max_atom_num)
         if len(coords) > max_atom_num:
             raise ValueError(
@@ -393,7 +393,7 @@ class BaseDevice(ABC):
             )
 
     def _validate_atom_distance(
-        self, ids: list[QubitId], coords: list[np.ndarray], kind: str
+        self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
     ) -> None:
         def invalid_dists(dists: np.ndarray) -> np.ndarray:
             cond1 = dists - self.min_atom_distance < -(
@@ -423,7 +423,7 @@ class BaseDevice(ABC):
                 )
 
     def _validate_radial_distance(
-        self, ids: list[QubitId], coords: list[np.ndarray], kind: str
+        self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
     ) -> None:
         too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
         if np.any(too_far):
@@ -450,7 +450,7 @@ class BaseDevice(ABC):
         }
 
     def _validate_coords(
-        self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
+        self, coords_dict: dict[QubitId, pm.AbstractArray], kind: str = "atoms"
     ) -> None:
         ids = list(coords_dict.keys())
         coords = list(coords_dict.values())

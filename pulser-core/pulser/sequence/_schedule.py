@@ -275,7 +275,7 @@ class _DMMSchedule(_ChannelSchedule):
     def get_samples(
         self,
         ignore_detuned_delay_phase: bool = True,
-        qubits: dict[QubitId, np.ndarray] | None = None,
+        qubits: dict[QubitId, pm.AbstractArray] | None = None,
     ) -> DMMSamples:
         ch_samples = super().get_samples(
             ignore_detuned_delay_phase=ignore_detuned_delay_phase

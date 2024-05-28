@@ -89,6 +89,10 @@ class AbstractArray:
             )
         return np.asarray(self._array)
 
+    def as_list(self) -> list:
+        """Converts the stored array to a Python list."""
+        return self._array.tolist()
+
     def copy(self) -> AbstractArray:
         """Makes a copy itself."""
         return AbstractArray(
@@ -241,9 +245,9 @@ class AbstractArray:
         self._array = array
         del self.is_tensor  # Clears cache
 
-    def __iter__(self) -> Generator:
-        for i in self._array:
-            yield i
+    def __iter__(self) -> Generator[AbstractArray, None, None]:
+        for i in range(self.__len__()):
+            yield self.__getitem__(i)
 
     def __len__(self) -> int:
         return len(self._array)

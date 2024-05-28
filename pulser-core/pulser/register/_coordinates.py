@@ -41,12 +41,15 @@ class CoordsCollection:
         # Copies to prevent direct access to self._sorted_coords
         return self._sorted_coords.copy()
 
+    @cached_property
+    def rounded_coords(self) -> pm.AbstractArray:
+        coords = pm.vstack(cast(Sequence[AbstractArrayLike], self._coords))
+        return pm.round(coords, decimals=COORD_PRECISION)
+
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _sorted_coords(self) -> pm.AbstractArray:
-        coords = pm.vstack(cast(Sequence[AbstractArrayLike], self._coords))
-        rounded_coords = pm.round(coords, decimals=COORD_PRECISION)
-        sorting = self._calc_sorting_order(rounded_coords)
-        return rounded_coords[sorting]
+        sorting = self._calc_sorting_order(self.rounded_coords)
+        return self.rounded_coords[sorting]
 
     def _calc_sorting_order(
         self, rounded_coords: pm.AbstractArray

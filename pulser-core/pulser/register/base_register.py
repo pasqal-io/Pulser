@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
+from collections.abc import Sequence
 from collections.abc import Sequence as abcSequence
 from typing import (
     TYPE_CHECKING,
@@ -34,6 +35,7 @@ from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.json.utils import obj_to_dict
+from pulser.math.abstract_array import AbstractArrayLike
 from pulser.register._coordinates import CoordsCollection
 from pulser.register.weight_maps import DetuningMap
 
@@ -86,9 +88,14 @@ class BaseRegister(ABC, CoordsCollection):
             self._layout_info = _LayoutInfo(layout, trap_ids)
 
     @property
-    def qubits(self) -> dict[QubitId, np.ndarray]:
+    def qubits(self) -> dict[QubitId, pm.AbstractArray]:
         """Dictionary of the qubit names and their position coordinates."""
-        return dict(zip(self._ids, self._coords))
+        return dict(
+            zip(
+                self._ids,
+                pm.vstack(cast(Sequence[AbstractArrayLike], self._coords)),
+            )
+        )
 
     @property
     def qubit_ids(self) -> tuple[QubitId, ...]:
@@ -258,7 +265,7 @@ class BaseRegister(ABC, CoordsCollection):
         return obj_to_dict(
             self,
             cls_dict,
-            [np.ndarray.tolist(qubit_coords) for qubit_coords in self._coords],
+            [qubit_coords.as_list() for qubit_coords in self._coords],
             False,
             None,
             self._ids,

@@ -395,7 +395,7 @@ class DMMSamples(ChannelSamples):
     # Although these shouldn't have a default, in this way we can
     # subclass ChannelSamples
     detuning_map: DetuningMap | None = None
-    qubits: dict[QubitId, np.ndarray] = field(default_factory=dict)
+    qubits: dict[QubitId, pm.AbstractArray] = field(default_factory=dict)
 
 
 @dataclass

@@ -40,6 +40,7 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.devices as devices
+import pulser.math as pm
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
@@ -214,7 +215,7 @@ class Sequence(Generic[DeviceType]):
             self._set_slm_mask_dmm(self._slm_mask_dmm, self._slm_mask_targets)
 
     @property
-    def qubit_info(self) -> dict[QubitId, np.ndarray]:
+    def qubit_info(self) -> dict[QubitId, pm.AbstractArray]:
         """Dictionary with the qubit's IDs and positions."""
         if self.is_register_mappable():
             raise RuntimeError(
