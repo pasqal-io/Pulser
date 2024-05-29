@@ -55,7 +55,7 @@ class AbstractArray:
         else:
             self._array = np.asarray(array, dtype=dtype)
 
-        if force_array:
+        if force_array and self._array.ndim == 0:
             self._array = self._array[None]
 
     @staticmethod
