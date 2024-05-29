@@ -28,7 +28,12 @@ from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
 from pulser.parametrized.decorators import parametrize
-from pulser.waveforms import ConstantWaveform, Waveform
+from pulser.waveforms import (
+    ConstantWaveform,
+    CustomWaveform,
+    RampWaveform,
+    Waveform,
+)
 
 if TYPE_CHECKING:
     from pulser.channels.base_channel import Channel
@@ -48,6 +53,8 @@ class Pulse:
     If either quantity is constant throughout the entire pulse, use the
     ``ConstantDetuning``, ``ConstantAmplitude`` or ``ConstantPulse`` class
     method to create it.
+    If defining the pulse's phase modulation is preferred over its frequency
+    modulation, use ``Pulse.ArbitraryPhase()``.
 
     Note:
         We define the ``amplitude`` of a pulse to be its Rabi frequency,
@@ -55,8 +62,8 @@ class Pulse:
         :math:`\delta`, also in rad/µs.
 
     Args:
-        amplitude: The pulse amplitude waveform.
-        detuning: The pulse detuning waveform.
+        amplitude: The pulse amplitude waveform (in rad/µs).
+        detuning: The pulse detuning waveform (in rad/µs).
         phase: The pulse phase (in radians).
         post_phase_shift: Optionally lets you add a phase
             shift(in rads) immediately after the end of the pulse. This allows
@@ -125,7 +132,7 @@ class Pulse:
         """Creates a Pulse with an amplitude waveform and a constant detuning.
 
         Args:
-            amplitude: The pulse amplitude waveform.
+            amplitude: The pulse amplitude waveform (in rad/µs).
             detuning: The detuning value (in rad/µs).
             phase: The pulse phase (in radians).
             post_phase_shift: Optionally lets you add a
@@ -149,7 +156,7 @@ class Pulse:
 
         Args:
             amplitude: The pulse amplitude value (in rad/µs).
-            detuning: The pulse detuning waveform.
+            detuning: The pulse detuning waveform (in rad/µs).
             phase: The pulse phase (in radians).
             post_phase_shift: Optionally lets you add a
                 phase shift (in rads) immediately after the end of the pulse.
@@ -181,6 +188,45 @@ class Pulse:
         amplitude_wf = ConstantWaveform(duration, amplitude)
         detuning_wf = ConstantWaveform(duration, detuning)
         return cls(amplitude_wf, detuning_wf, phase, post_phase_shift)
+
+    @classmethod
+    @parametrize
+    def ArbitraryPhase(
+        cls,
+        amplitude: Waveform | Parametrized,
+        phase: Waveform | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
+    ) -> Pulse:
+        """Pulse with an arbitrary phase waveform.
+
+        The detuning waveform is the derivative of the phase waveform while the
+        phase offset is simply the phase at the beginning of the waveform. In
+        the detuning waveform calculation, it is always assumed that the
+        detuning is the same in the first two samples.
+
+        Args:
+            amplitude: The amplitude waveform (in rad/µs).
+            phase: The phase waveform (in rads).
+            post_phase_shift: Optionally lets you add a
+                phase shift (in rads) immediately after the end of the pulse.
+        """
+        if not isinstance(phase, Waveform):
+            raise TypeError(
+                f"'phase' must be a waveform, not of type {type(phase)}."
+            )
+        phase_0 = phase.first_value
+        detuning: Waveform
+        if isinstance(phase, ConstantWaveform):
+            detuning = ConstantWaveform(phase.duration, 0.0)
+        elif isinstance(phase, RampWaveform):
+            detuning = ConstantWaveform(phase.duration, phase.slope * 1e3)
+        else:
+            detuning_samples = np.diff(phase.samples) * 1e3  # rad/ns -> rad/µs
+            # Use the same value in the first two detuning samples
+            detuning = CustomWaveform(
+                np.pad(detuning_samples, (1, 0), mode="edge")
+            )
+        return cls(amplitude, detuning, phase_0, post_phase_shift)
 
     def draw(self) -> None:
         """Draws the pulse's amplitude and frequency waveforms."""
@@ -252,15 +298,17 @@ class Pulse:
 
     def __str__(self) -> str:
         return (
-            f"Pulse(Amp={self.amplitude!s}, Detuning={self.detuning!s}, "
+            f"Pulse(Amp={self.amplitude!s} rad/µs, "
+            f"Detuning={self.detuning!s} rad/µs, "
             f"Phase={self.phase:.3g})"
         )
 
     def __repr__(self) -> str:
         return (
-            f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, "
-            + f"phase={self.phase:.3g}, "
-            + f"post_phase_shift={self.post_phase_shift:.3g})"
+            f"Pulse(amp={self.amplitude!r} rad/µs, "
+            f"detuning={self.detuning!r} rad/µs, "
+            f"phase={self.phase:.3g}, "
+            f"post_phase_shift={self.post_phase_shift:.3g})"
         )
 
 

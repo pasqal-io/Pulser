@@ -1343,7 +1343,7 @@ def test_str(reg, device, mod_device, det_map):
         f"\n\nChannel: dmm_0\nt: 0 | Initial targets: {targets} "
         "| Phase Reference: 0.0 "
         f"\nt: 0->100 | Detuning: -10 rad/µs | Targets: {targets}"
-        f"\nt: 100->200 | Detuning: Ramp(-10->0 rad/µs) | Targets: {targets}"
+        f"\nt: 100->200 | Detuning: Ramp(-10->0) rad/µs | Targets: {targets}"
     )
 
     measure_msg = "\n\nMeasured in basis: digital"
