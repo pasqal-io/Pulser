@@ -22,7 +22,9 @@ from typing import Any, Iterator, Optional, Union, cast
 import numpy as np
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.utils import obj_to_dict
+from pulser.math import AbstractArrayLike
 from pulser.parametrized import Parametrized
 from pulser.parametrized.paramobj import OpSupport
 
@@ -71,9 +73,10 @@ class Variable(Parametrized, OpSupport):
         object.__setattr__(self, "_count", self._count + 1)
 
     def _validate_value(
-        self, value: Union[ArrayLike, float, int]
-    ) -> np.ndarray:
-        val = np.array(value, dtype=self.dtype, ndmin=1)
+        self, value: Union[AbstractArrayLike, float, int]
+    ) -> pm.AbstractArray:
+        val = pm.AbstractArray(value)
+        # val = np.array(value, dtype=self.dtype, ndmin=1)
         if val.size != self.size:
             raise ValueError(
                 f"Can't assign array of size {val.size} to "

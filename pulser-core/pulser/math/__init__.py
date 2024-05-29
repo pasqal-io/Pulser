@@ -41,6 +41,27 @@ def exp(a: AbstractArrayLike, /) -> AbstractArray:
     return AbstractArray(np.exp(a.as_array()))
 
 
+def sqrt(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.sqrt(a.as_tensor()))
+    return AbstractArray(np.sqrt(a.as_array()))
+
+
+def log2(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.log2(a.as_tensor()))
+    return AbstractArray(np.log2(a.as_array()))
+
+
+def log(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.log(a.as_tensor()))
+    return AbstractArray(np.log(a.as_array()))
+
+
 def sin(a: AbstractArrayLike, /) -> AbstractArray:
     a = AbstractArray(a)
     if a.is_tensor:
@@ -53,6 +74,13 @@ def cos(a: AbstractArrayLike, /) -> AbstractArray:
     if a.is_tensor:
         return AbstractArray(torch.cos(a.as_tensor()))
     return AbstractArray(np.cos(a.as_array()))
+
+
+def tan(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.tan(a.as_tensor()))
+    return AbstractArray(np.tan(a.as_array()))
 
 
 def count_nonzero(a: AbstractArrayLike, /) -> AbstractArray:
