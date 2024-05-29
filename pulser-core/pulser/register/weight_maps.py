@@ -32,6 +32,8 @@ from pulser.register.traps import COORD_PRECISION, Traps
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
 
+import pulser.math as pm
+
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
 class WeightMap(Traps, RegDrawer):
@@ -72,7 +74,7 @@ class WeightMap(Traps, RegDrawer):
         return cast(np.ndarray, np.array(self.weights)[sorting])
 
     def get_qubit_weight_map(
-        self, qubits: Mapping[QubitId, np.ndarray]
+        self, qubits: Mapping[QubitId, pm.AbstractArray]
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
         qubit_weight_map = {}
@@ -159,7 +161,8 @@ class WeightMap(Traps, RegDrawer):
             traps=[
                 {"weight": weight, "x": x, "y": y}
                 for weight, (x, y) in zip(
-                    self.sorted_weights, self.sorted_coords
+                    self.sorted_weights,
+                    self.sorted_coords,
                 )
             ]
         )

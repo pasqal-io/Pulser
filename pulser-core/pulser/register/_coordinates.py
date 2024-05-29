@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from typing import cast
 
 import numpy as np
+
+import pulser.math as pm
+from pulser.math.abstract_array import AbstractArrayLike
 
 COORD_PRECISION = 6
 
@@ -24,7 +28,7 @@ class CoordsCollection:
         _coords: The coordinates.
     """
 
-    _coords: np.ndarray | list
+    _coords: pm.AbstractArray | list
 
     @property
     def dimensionality(self) -> int:
@@ -32,25 +36,27 @@ class CoordsCollection:
         return self._sorted_coords.shape[1]
 
     @property
-    def sorted_coords(self) -> np.ndarray:
+    def sorted_coords(self) -> pm.AbstractArray:
         """The sorted coordinates."""
         # Copies to prevent direct access to self._sorted_coords
         return self._sorted_coords.copy()
 
+    @cached_property
+    def _rounded_coords(self) -> pm.AbstractArray:
+        coords = pm.vstack(cast(Sequence[AbstractArrayLike], self._coords))
+        return pm.round(coords, decimals=COORD_PRECISION)
+
     @cached_property  # Acts as an attribute in a frozen dataclass
-    def _sorted_coords(self) -> np.ndarray:
-        coords = np.array(self._coords, dtype=float)
-        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
+    def _sorted_coords(self) -> pm.AbstractArray:
         sorting = self._calc_sorting_order()
-        return cast(np.ndarray, rounded_coords[sorting])
+        return self._rounded_coords[sorting]
 
     def _calc_sorting_order(self) -> np.ndarray:
         """Calculates the unique order that sorts the coordinates."""
-        coords = np.array(self._coords, dtype=float)
         # Sorting the coordinates 1st left to right, 2nd bottom to top
-        rounded_coords = np.round(coords, decimals=COORD_PRECISION)
-        dims = rounded_coords.shape[1]
-        sorter = [rounded_coords[:, i] for i in range(dims - 1, -1, -1)]
+        dims = self._rounded_coords.shape[1]
+        arr = self._rounded_coords.as_array(detach=True)
+        sorter = [arr[:, i] for i in range(dims - 1, -1, -1)]
         sorting = np.lexsort(tuple(sorter))
         return cast(np.ndarray, sorting)
 
@@ -58,7 +64,7 @@ class CoordsCollection:
     def _hash_object(self) -> hashlib._Hash:
         # Include dimensionality because the array is flattened with tobytes()
         hash_ = hashlib.sha256(bytes(self.dimensionality))
-        hash_.update(self.sorted_coords.tobytes())
+        hash_.update(self.sorted_coords.as_array(detach=True).tobytes())
         return hash_
 
     def _safe_hash(self) -> bytes:

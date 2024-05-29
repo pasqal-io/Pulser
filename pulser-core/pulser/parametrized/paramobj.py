@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
+import pulser.math as pm
 import pulser.parametrized
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.abstract_repr.signatures import (
@@ -50,10 +51,10 @@ class OpSupport:
         return ParamObj(operator.abs, self)
 
     def __ceil__(self) -> ParamObj:
-        return ParamObj(np.ceil, self)
+        return ParamObj(pm.ceil, self)
 
     def __floor__(self) -> ParamObj:
-        return ParamObj(np.floor, self)
+        return ParamObj(pm.floor, self)
 
     def __round__(self, n: int = 0) -> ParamObj:
         return cast(ParamObj, (self * 10**n).rint() / 10**n)
@@ -61,35 +62,35 @@ class OpSupport:
     def rint(self) -> ParamObj:
         """Rounds the value to the nearest int."""
         # Defined because np.round looks for 'rint'
-        return ParamObj(np.round, self)
+        return ParamObj(pm.round, self)
 
     def sqrt(self) -> ParamObj:
         """Calculates the square root of the object."""
-        return ParamObj(np.sqrt, self)
+        return ParamObj(pm.sqrt, self)
 
     def exp(self) -> ParamObj:
         """Calculates the exponential of the object."""
-        return ParamObj(np.exp, self)
+        return ParamObj(pm.exp, self)
 
     def log2(self) -> ParamObj:
         """Calculates the base-2 logarithm of the object."""
-        return ParamObj(np.log2, self)
+        return ParamObj(pm.log2, self)
 
     def log(self) -> ParamObj:
         """Calculates the natural logarithm of the object."""
-        return ParamObj(np.log, self)
+        return ParamObj(pm.log, self)
 
     def sin(self) -> ParamObj:
         """Calculates the trigonometric sine of the object."""
-        return ParamObj(np.sin, self)
+        return ParamObj(pm.sin, self)
 
     def cos(self) -> ParamObj:
         """Calculates the trigonometric cosine of the object."""
-        return ParamObj(np.cos, self)
+        return ParamObj(pm.cos, self)
 
     def tan(self) -> ParamObj:
         """Calculates the trigonometric tangent of the object."""
-        return ParamObj(np.tan, self)
+        return ParamObj(pm.tan, self)
 
     # Binary operators
     def __add__(self, other: Union[int, float], /) -> ParamObj:

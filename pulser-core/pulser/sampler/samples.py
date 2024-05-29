@@ -172,8 +172,8 @@ class ChannelSamples:
         new_detuning = pm.pad(
             self.det,
             (0, extension),
-            constant_values=(final_detuning,),
             mode="constant",
+            constant_values=final_detuning,
         )
         new_phase = pm.pad(
             self.phase,
@@ -440,7 +440,7 @@ class DMMSamples(ChannelSamples):
     # Although these shouldn't have a default, in this way we can
     # subclass ChannelSamples
     detuning_map: DetuningMap | None = None
-    qubits: dict[QubitId, np.ndarray] = field(default_factory=dict)
+    qubits: dict[QubitId, pm.AbstractArray] = field(default_factory=dict)
 
 
 @dataclass

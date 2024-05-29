@@ -41,6 +41,27 @@ def exp(a: AbstractArrayLike, /) -> AbstractArray:
     return AbstractArray(np.exp(a.as_array()))
 
 
+def sqrt(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.sqrt(a.as_tensor()))
+    return AbstractArray(np.sqrt(a.as_array()))
+
+
+def log2(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.log2(a.as_tensor()))
+    return AbstractArray(np.log2(a.as_array()))
+
+
+def log(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.log(a.as_tensor()))
+    return AbstractArray(np.log(a.as_array()))
+
+
 def sin(a: AbstractArrayLike, /) -> AbstractArray:
     a = AbstractArray(a)
     if a.is_tensor:
@@ -53,6 +74,20 @@ def cos(a: AbstractArrayLike, /) -> AbstractArray:
     if a.is_tensor:
         return AbstractArray(torch.cos(a.as_tensor()))
     return AbstractArray(np.cos(a.as_array()))
+
+
+def tan(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.tan(a.as_tensor()))
+    return AbstractArray(np.tan(a.as_array()))
+
+
+def count_nonzero(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.count_nonzero(a.as_tensor()))
+    return AbstractArray(np.count_nonzero(a.as_array()))
 
 
 def pad(
@@ -101,10 +136,10 @@ def pad(
             if isinstance(pad_width, (int, float)):
                 pad_width = (pad_width, pad_width)
             out = torch.nn.functional.pad(
-                t, (pad_width[0], 0), "constant", cast(float, t[0])
+                t, (pad_width[0], 0), "constant", float(t[0])
             )
             out = torch.nn.functional.pad(
-                out, (0, pad_width[1]), "constant", cast(float, t[-1])
+                out, (0, pad_width[1]), "constant", float(t[-1])
             )
         return AbstractArray(out)
 
@@ -136,7 +171,7 @@ def fftfreq(n: int) -> AbstractArray:
 
 
 def round(a: AbstractArrayLike, decimals: int = 0) -> AbstractArray:
-    return round(AbstractArray(a), decimals=decimals)
+    return AbstractArray(a).__round__(decimals)
 
 
 def ceil(a: AbstractArrayLike) -> AbstractArray:
@@ -160,11 +195,25 @@ def sum(a: AbstractArrayLike) -> AbstractArray:
     return AbstractArray(np.sum(a.as_array()))
 
 
+def pdist(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.nn.functional.pdist(a.as_tensor()))
+    return AbstractArray(scipy.spatial.distance.pdist(a.as_array()))
+
+
 def concatenate(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
     abst_arrs = tuple(map(AbstractArray, arrs))
     if any(a.is_tensor for a in abst_arrs):
         return AbstractArray(torch.cat([a.as_tensor() for a in abst_arrs]))
     return AbstractArray(np.concatenate([a.as_array() for a in abst_arrs]))
+
+
+def vstack(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
+    abst_arrs = tuple(map(AbstractArray, arrs))
+    if any(a.is_tensor for a in abst_arrs):
+        return AbstractArray(torch.vstack([a.as_tensor() for a in abst_arrs]))
+    return AbstractArray(np.vstack([a.as_array() for a in abst_arrs]))
 
 
 def clip(

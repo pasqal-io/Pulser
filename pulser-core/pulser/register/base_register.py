@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
+from collections.abc import Sequence
 from collections.abc import Sequence as abcSequence
 from typing import (
     TYPE_CHECKING,
@@ -33,9 +34,11 @@ from typing import (
 import numpy as np
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import obj_to_dict
+from pulser.math.abstract_array import AbstractArrayLike
 from pulser.register._coordinates import CoordsCollection
 from pulser.register.weight_maps import DetuningMap
 
@@ -68,7 +71,9 @@ class BaseRegister(ABC, CoordsCollection):
             raise ValueError(
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
-        super().__init__([np.array(v, dtype=float) for v in qubits.values()])
+        super().__init__(
+            [pm.AbstractArray(v, dtype=float) for v in qubits.values()]
+        )
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)
@@ -86,9 +91,14 @@ class BaseRegister(ABC, CoordsCollection):
             self._layout_info = _LayoutInfo(layout, trap_ids)
 
     @property
-    def qubits(self) -> dict[QubitId, np.ndarray]:
+    def qubits(self) -> dict[QubitId, pm.AbstractArray]:
         """Dictionary of the qubit names and their position coordinates."""
-        return dict(zip(self._ids, self._coords))
+        return dict(
+            zip(
+                self._ids,
+                pm.vstack(cast(Sequence[AbstractArrayLike], self._coords)),
+            )
+        )
 
     @property
     def qubit_ids(self) -> tuple[QubitId, ...]:
@@ -258,7 +268,7 @@ class BaseRegister(ABC, CoordsCollection):
         return obj_to_dict(
             self,
             cls_dict,
-            [np.ndarray.tolist(qubit_coords) for qubit_coords in self._coords],
+            [qubit_coords.tolist() for qubit_coords in self._coords],
             False,
             None,
             self._ids,

@@ -17,7 +17,7 @@ from __future__ import annotations
 import functools
 import importlib.util
 import operator
-from typing import Any, cast
+from typing import Any, Generator, cast
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
@@ -37,18 +37,26 @@ class AbstractArray:
         array: The array to store.
     """
 
-    def __init__(self, array: AbstractArrayLike, dtype: DTypeLike = None):
+    def __init__(
+        self,
+        array: AbstractArrayLike,
+        dtype: DTypeLike = None,
+        force_array: bool = False,
+    ):
         """Initializes a new AbstractArray."""
         self._array: np.ndarray | torch.Tensor
         if isinstance(array, AbstractArray):
             self._array = array._array
-        elif self.has_torch() and type(array) is torch.Tensor:
+        elif self.has_torch() and isinstance(array, torch.Tensor):
             self._array = torch.as_tensor(
                 array,
                 dtype=dtype,  # type: ignore[arg-type]
             )
         else:
             self._array = np.asarray(array, dtype=dtype)
+
+        if force_array and self._array.ndim == 0:
+            self._array = self._array[None]
 
     @staticmethod
     @functools.lru_cache
@@ -59,7 +67,7 @@ class AbstractArray:
     @functools.cached_property
     def is_tensor(self) -> bool:
         """Whether the stored array is a tensor."""
-        return self.has_torch() and type(self._array) is torch.Tensor
+        return self.has_torch() and isinstance(self._array, torch.Tensor)
 
     def astype(self, dtype: DTypeLike) -> AbstractArray:
         """Casts the data type of the array contents."""
@@ -89,6 +97,10 @@ class AbstractArray:
             )
         return np.asarray(self._array)
 
+    def tolist(self) -> list:
+        """Converts the stored array to a Python list."""
+        return self._array.tolist()
+
     def copy(self) -> AbstractArray:
         """Makes a copy itself."""
         return AbstractArray(
@@ -106,6 +118,11 @@ class AbstractArray:
     def ndim(self) -> int:
         """The number of dimensions in the array."""
         return self._array.ndim
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        """Shape of the array."""
+        return self._array.shape
 
     @property
     def real(self) -> AbstractArray:
@@ -235,6 +252,10 @@ class AbstractArray:
         array[indices] = values  # type: ignore[assignment]
         self._array = array
         del self.is_tensor  # Clears cache
+
+    def __iter__(self) -> Generator[AbstractArray, None, None]:
+        for i in range(self.__len__()):
+            yield self.__getitem__(i)
 
     def __len__(self) -> int:
         return len(self._array)

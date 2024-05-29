@@ -54,7 +54,7 @@ class RegisterLayout(Traps, RegDrawer):
     @property
     def coords(self) -> np.ndarray:
         """A shorthand for 'sorted_coords'."""
-        return self.sorted_coords
+        return self.sorted_coords.as_array(detach=True)
 
     def define_register(
         self, *trap_ids: int, qubit_ids: Optional[abcSequence[QubitId]] = None
