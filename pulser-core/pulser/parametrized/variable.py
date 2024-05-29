@@ -75,8 +75,7 @@ class Variable(Parametrized, OpSupport):
     def _validate_value(
         self, value: Union[AbstractArrayLike, float, int]
     ) -> pm.AbstractArray:
-        val = pm.AbstractArray(value)
-        # val = np.array(value, dtype=self.dtype, ndmin=1)
+        val = pm.AbstractArray(value, dtype=self.dtype, force_array=True)
         if val.size != self.size:
             raise ValueError(
                 f"Can't assign array of size {val.size} to "

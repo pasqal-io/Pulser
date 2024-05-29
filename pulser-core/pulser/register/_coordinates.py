@@ -55,10 +55,8 @@ class CoordsCollection:
         """Calculates the unique order that sorts the coordinates."""
         # Sorting the coordinates 1st left to right, 2nd bottom to top
         dims = self._rounded_coords.shape[1]
-        sorter = [
-            self._rounded_coords.as_array(detach=True)[:, i]
-            for i in range(dims - 1, -1, -1)
-        ]
+        arr = self._rounded_coords.as_array(detach=True)
+        sorter = [arr[:, i] for i in range(dims - 1, -1, -1)]
         sorting = np.lexsort(tuple(sorter))
         return cast(np.ndarray, sorting)
 

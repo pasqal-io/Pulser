@@ -37,7 +37,12 @@ class AbstractArray:
         array: The array to store.
     """
 
-    def __init__(self, array: AbstractArrayLike, dtype: DTypeLike = None):
+    def __init__(
+        self,
+        array: AbstractArrayLike,
+        dtype: DTypeLike = None,
+        force_array: bool = False,
+    ):
         """Initializes a new AbstractArray."""
         self._array: np.ndarray | torch.Tensor
         if isinstance(array, AbstractArray):
@@ -49,6 +54,9 @@ class AbstractArray:
             )
         else:
             self._array = np.asarray(array, dtype=dtype)
+
+        if force_array:
+            self._array = self._array[None]
 
     @staticmethod
     @functools.lru_cache
