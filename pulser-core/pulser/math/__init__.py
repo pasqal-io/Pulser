@@ -195,6 +195,13 @@ def sum(a: AbstractArrayLike) -> AbstractArray:
     return AbstractArray(np.sum(a.as_array()))
 
 
+def dot(a: AbstractArrayLike, b: AbstractArrayLike) -> AbstractArray:
+    a, b = map(AbstractArray, (a, b))
+    if a.is_tensor or b.is_tensor:
+        return AbstractArray(torch.dot(a.as_tensor(), b.as_tensor()))
+    return AbstractArray(np.dot(a.as_array(), b.as_array()))
+
+
 def pdist(a: AbstractArrayLike) -> AbstractArray:
     a = AbstractArray(a)
     if a.is_tensor:

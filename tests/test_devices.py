@@ -296,7 +296,7 @@ def test_validate_layout():
     valid_layout = RegisterLayout(
         Register.square(
             int(np.sqrt(DigitalAnalogDevice.max_atom_num * 2))
-        )._coords
+        )._coords_arr
     )
     DigitalAnalogDevice.validate_layout(valid_layout)
 

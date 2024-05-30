@@ -46,8 +46,9 @@ class Register(BaseRegister, RegDrawer):
     def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
-        if any(c.shape != (self.dimensionality,) for c in self._coords) or (
-            self.dimensionality != 2
+        if (
+            any(c.shape != (self.dimensionality,) for c in self._coords_arr)
+            or self.dimensionality != 2
         ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 2."
@@ -327,7 +328,7 @@ class Register(BaseRegister, RegDrawer):
             )
 
         return Register(
-            dict(zip(self.qubit_ids, [rot @ v for v in self._coords]))
+            dict(zip(self.qubit_ids, [rot @ v for v in self._coords_arr]))
         )
 
     def draw(
@@ -385,7 +386,7 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
 
-        pos = np.array(self._coords)
+        pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
             _, custom_ax = self._initialize_fig_axes(
                 pos,
@@ -416,7 +417,7 @@ class Register(BaseRegister, RegDrawer):
         names = stringify_qubit_ids(self._ids)
         return [
             {"name": name, "x": x, "y": y}
-            for name, (x, y) in zip(names, self._coords)
+            for name, (x, y) in zip(names, self._coords_arr.tolist())
         ]
 
     @staticmethod

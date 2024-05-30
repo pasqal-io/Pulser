@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_register,
 )
@@ -43,8 +44,9 @@ class Register3D(BaseRegister, RegDrawer):
     def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
-        if any(c.shape != (self.dimensionality,) for c in self._coords) or (
-            self.dimensionality != 3
+        if (
+            any(c.shape != (self.dimensionality,) for c in self._coords_arr)
+            or self.dimensionality != 3
         ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 3."
@@ -155,11 +157,10 @@ class Register3D(BaseRegister, RegDrawer):
         Raises:
             ValueError: If the atoms are not coplanar.
         """
-        coords = np.array(self._coords)
-
+        coords = self._coords_arr.as_array(detach=True)
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
-        u, s, vh = np.linalg.svd(coords - barycenter)
+        _, _, vh = np.linalg.svd(coords - barycenter)
         e_z = vh[2, :]
         perp_extent = [e_z.dot(r) for r in coords]
         width = np.ptp(perp_extent)
@@ -171,8 +172,11 @@ class Register3D(BaseRegister, RegDrawer):
         else:
             e_x = vh[0, :]
             e_y = vh[1, :]
-            coords_2D = np.array(
-                [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
+            coords_2D = pm.AbstractArray(
+                [
+                    pm.AbstractArray([pm.dot(e_x, r), pm.dot(e_y, r)])
+                    for r in self._coords_arr
+                ]
             )
             return Register.from_coordinates(coords_2D, labels=self._ids)
 
@@ -225,7 +229,7 @@ class Register3D(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
 
-        pos = np.array(self._coords)
+        pos = self._coords_arr.as_array(detach=True)
 
         self._draw_3D(
             pos,

@@ -1154,9 +1154,9 @@ class Sequence(Generic[DeviceType]):
                     detuning_off,
                     switching_beams,
                 ) = eom_config.calculate_detuning_off(
-                    amp_on,
-                    detuning_on,
-                    optimal_detuning_off,
+                    float(amp_on),
+                    float(detuning_on),
+                    float(optimal_detuning_off),
                     return_switching_beams=True,
                 )
                 off_pulse = Pulse.ConstantPulse(
@@ -2069,7 +2069,8 @@ class Sequence(Generic[DeviceType]):
         basis = channel_obj.basis
 
         ph_refs = {
-            self._basis_ref[basis][q].phase.last_phase for q in last.targets
+            float(self._basis_ref[basis][q].phase.last_phase)
+            for q in last.targets
         }
         if len(ph_refs) != 1:
             raise ValueError(
@@ -2132,6 +2133,7 @@ class Sequence(Generic[DeviceType]):
     ) -> None:
         self._validate_channel(channel, block_eom_mode=True)
         channel_obj = self._schedule[channel].channel_obj
+        qubits = np.array(qubits).tolist()
         try:
             qubits_set = (
                 set(cast(Collection, qubits))
@@ -2161,7 +2163,7 @@ class Sequence(Generic[DeviceType]):
         if not self.is_parametrized():
             basis = channel_obj.basis
             phase_refs = {
-                self._basis_ref[basis][q].phase.last_phase
+                float(self._basis_ref[basis][q].phase.last_phase)
                 for q in qubit_ids_set
             }
             if len(phase_refs) != 1:
@@ -2189,10 +2191,12 @@ class Sequence(Generic[DeviceType]):
                         )
                 return set()
             else:
-                qubits = cast(Tuple[int, ...], qubits)
                 try:
                     return {
-                        self._register.qubit_ids[index] for index in qubits
+                        self._register.qubit_ids[
+                            int(index)  # type: ignore[arg-type]
+                        ]
+                        for index in qubits
                     }
                 except IndexError:
                     raise IndexError("Indices must exist for the register.")

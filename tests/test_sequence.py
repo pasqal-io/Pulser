@@ -73,7 +73,7 @@ def test_init(reg, device):
         Sequence(reg, Device)
 
     seq = Sequence(reg, device)
-    assert seq.qubit_info == reg.qubits
+    assert Register(seq.qubit_info) == reg
     assert seq.declared_channels == {}
     assert (
         seq.available_channels.keys()

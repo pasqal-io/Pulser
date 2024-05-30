@@ -62,6 +62,7 @@ SUPPORTED_MODULES = {
     "_operator": SUPPORTED_OPERATORS,
     "operator": SUPPORTED_OPERATORS,
     "numpy": SUPPORTED_NUMPY,
+    "pulser.math": SUPPORTED_NUMPY,  # Numpy funcs replicated in pulser.math
     "pulser.math.abstract_array": ("AbstractArray",),
     "pulser.register.register": ("Register",),
     "pulser.register.register3d": ("Register3D",),

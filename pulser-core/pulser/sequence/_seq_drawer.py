@@ -369,7 +369,7 @@ def _draw_register_det_maps(
     )
     # Draw masked register
     if register:
-        pos = np.array(register._coords)
+        pos = register._coords_arr.as_array(detach=True)
         title = (
             "Register"
             if sampled_seq._slm_mask.targets == set()
@@ -429,7 +429,7 @@ def _draw_register_det_maps(
                 else cast(DMMSamples, sampled_seq.channel_samples[ch]).qubits
             )
             reg_det_map = det_map.get_qubit_weight_map(qubits)
-            pos = np.array(list(qubits.values()))
+            pos = np.array([c.as_array(detach=True) for c in qubits.values()])
             if need_init:
                 if det_map.dimensionality == 3:
                     labels = "xyz"

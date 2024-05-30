@@ -157,7 +157,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
             for ch in sampled_seq.channels
         ]
     )
-    assert sim._hamiltonian._qdict == seq.qubit_info
+    assert Register(sim._hamiltonian._qdict) == Register(seq.qubit_info)
     assert sim._hamiltonian._size == len(seq.qubit_info)
     assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
     assert sim._hamiltonian._qid_index == {

@@ -116,8 +116,8 @@ def test_varitem(a, b, d):
     assert d0.build() == 0.5
     with pytest.raises(FrozenInstanceError):
         b1.key = 0
-    np.testing.assert_equal(b01.build(), b01_2.build())
-    np.testing.assert_equal(b01_2.build(), b01_3.build())
+    np.testing.assert_equal(b01.build().as_array(), b01_2.build().as_array())
+    np.testing.assert_equal(b01_2.build().as_array(), b01_3.build().as_array())
     with pytest.raises(
         TypeError, match=re.escape("len() of unsized variable item 'b[1]'")
     ):
@@ -196,12 +196,18 @@ def test_opsupport(a, b):
     y = np.exp(b)
     np.testing.assert_almost_equal(y.build(), [1 / np.e, np.e])
     y = np.log(y)
-    np.testing.assert_almost_equal(y.build(), b.build())
+    np.testing.assert_almost_equal(y.build().as_array(), b.build().as_array())
     y_ = y + 0.4  # y_ = [-0.6, 1.4]
     y = np.round(y_, 1)
-    np.testing.assert_array_equal(y.build(), np.round(y_.build(), 1))
-    np.testing.assert_array_equal(round(y_).build(), np.round(y_).build())
-    np.testing.assert_array_equal(round(y_, 1).build(), y.build())
+    np.testing.assert_array_equal(
+        y.build().as_array(), np.round(y_.build().as_array(), 1)
+    )
+    np.testing.assert_array_equal(
+        round(y_).build().as_array(), np.round(y_).build().as_array()
+    )
+    np.testing.assert_array_equal(
+        round(y_, 1).build().as_array(), y.build().as_array()
+    )
 
     y = round(y)
     np.testing.assert_array_equal(y.build(), [-1.0, 1.0])

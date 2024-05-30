@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import collections.abc as abc  # To use collections.abc.Sequence
 import dataclasses
-from typing import Any, Iterator, Optional, Union, cast
+from typing import Any, Iterator, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -83,9 +83,9 @@ class Variable(Parametrized, OpSupport):
             )
         return val
 
-    def build(self) -> ArrayLike:
+    def build(self) -> pm.AbstractArray:
         """Returns the variable's current value."""
-        self.value: Optional[ArrayLike]
+        self.value: pm.AbstractArray | None
         if self.value is None:
             raise ValueError(f"No value assigned to variable '{self.name}'.")
         return self.value
@@ -149,12 +149,9 @@ class VariableItem(Parametrized, OpSupport):
         """All the variables involved with this object."""
         return self.var.variables
 
-    def build(self) -> Union[ArrayLike, float, int]:
+    def build(self) -> pm.AbstractArray:
         """Return the variable's item(s) values."""
-        built_var = cast(abc.Sequence, self.var.build())
-        if isinstance(self.key, abc.Sequence):
-            return [built_var[k] for k in self.key]
-        return built_var[self.key]
+        return self.var.build()[self.key]
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(

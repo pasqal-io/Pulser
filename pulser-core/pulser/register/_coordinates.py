@@ -36,15 +36,18 @@ class CoordsCollection:
         return self._sorted_coords.shape[1]
 
     @property
-    def sorted_coords(self) -> pm.AbstractArray:
+    def sorted_coords(self) -> np.ndarray:
         """The sorted coordinates."""
         # Copies to prevent direct access to self._sorted_coords
-        return self._sorted_coords.copy()
+        return self._sorted_coords.as_array(detach=True).copy()
+
+    @cached_property
+    def _coords_arr(self) -> pm.AbstractArray:
+        return pm.vstack(cast(Sequence[AbstractArrayLike], self._coords))
 
     @cached_property
     def _rounded_coords(self) -> pm.AbstractArray:
-        coords = pm.vstack(cast(Sequence[AbstractArrayLike], self._coords))
-        return pm.round(coords, decimals=COORD_PRECISION)
+        return pm.round(self._coords_arr, decimals=COORD_PRECISION)
 
     @cached_property  # Acts as an attribute in a frozen dataclass
     def _sorted_coords(self) -> pm.AbstractArray:
@@ -64,7 +67,7 @@ class CoordsCollection:
     def _hash_object(self) -> hashlib._Hash:
         # Include dimensionality because the array is flattened with tobytes()
         hash_ = hashlib.sha256(bytes(self.dimensionality))
-        hash_.update(self.sorted_coords.as_array(detach=True).tobytes())
+        hash_.update(self.sorted_coords.tobytes())
         return hash_
 
     def _safe_hash(self) -> bytes:

@@ -1114,11 +1114,12 @@ class TestSerialization:
 
             assert abstract["operations"][1]["op"] == "config_detuning_map"
             assert abstract["operations"][1]["dmm_id"] == "dmm_0"
+            reg_coords = reg._coords_arr.as_array()
             assert abstract["operations"][1]["detuning_map"]["traps"] == [
                 {
                     "weight": weight,
-                    "x": reg._coords[i][0],
-                    "y": reg._coords[i][1],
+                    "x": reg_coords[i][0],
+                    "y": reg_coords[i][1],
                 }
                 for i, weight in enumerate(list(det_map.values()))
             ]
@@ -1832,7 +1833,7 @@ class TestDeserialization:
             operations=[op],
             variables={
                 "var1": {"type": "int", "value": [0]},
-                "var2": {"type": "int", "value": [42]},
+                "var2": {"type": "int", "value": [44]},
             },
         )
         _check_roundtrip(s)

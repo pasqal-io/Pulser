@@ -466,8 +466,8 @@ def test_coords_hash():
     reg1 = Register.square(2, prefix="foo")
     reg2 = Register.rectangle(2, 2, prefix="bar")
     assert reg1 != reg2  # Ids are different
-    coords1 = list(reg1.qubits.values())
-    coords2 = list(reg2.qubits.values())
+    coords1 = list(c.as_array() for c in reg1.qubits.values())
+    coords2 = list(c.as_array() for c in reg2.qubits.values())
     np.testing.assert_equal(coords1, coords2)  # But coords are the same
     assert reg1.coords_hex_hash() == reg2.coords_hex_hash()
 

@@ -68,7 +68,7 @@ class Traps(ABC, CoordsCollection):
         object.__setattr__(self, "slug", slug)
 
     @property
-    def traps_dict(self) -> dict:
+    def traps_dict(self) -> dict[int, np.ndarray]:
         """Mapping between trap IDs and coordinates."""
         return dict(enumerate(self.sorted_coords))
 

@@ -54,7 +54,7 @@ class RegisterLayout(Traps, RegDrawer):
     @property
     def coords(self) -> np.ndarray:
         """A shorthand for 'sorted_coords'."""
-        return self.sorted_coords.as_array(detach=True)
+        return self.sorted_coords
 
     def define_register(
         self, *trap_ids: int, qubit_ids: Optional[abcSequence[QubitId]] = None
@@ -247,7 +247,7 @@ class RegisterLayout(Traps, RegDrawer):
         # Allows for serialization of subclasses without a special _to_dict()
         return obj_to_dict(
             self,
-            self._coords,
+            self._coords_arr.tolist(),
             slug=self.slug,
             _module=__name__,
             _name="RegisterLayout",

@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, cast, get_args
 
@@ -450,10 +451,14 @@ class BaseDevice(ABC):
         }
 
     def _validate_coords(
-        self, coords_dict: dict[QubitId, pm.AbstractArray], kind: str = "atoms"
+        self,
+        coords_dict: (
+            Mapping[QubitId, pm.AbstractArray] | Mapping[int, np.ndarray]
+        ),
+        kind: Literal["atoms", "traps"] = "atoms",
     ) -> None:
         ids = list(coords_dict.keys())
-        coords = list(coords_dict.values())
+        coords = list(map(pm.AbstractArray, coords_dict.values()))
         if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
             and self.max_atom_num is None

@@ -211,8 +211,10 @@ class ParamObj(Parametrized, OpSupport):
                 "Serialization of calls to parametrized objects is not "
                 "supported."
             )
-        elif hasattr(args[0], self.cls.__name__) and inspect.isfunction(
-            self.cls
+        elif (
+            hasattr(args[0], self.cls.__name__)
+            and inspect.isfunction(self.cls)
+            and self.cls.__module__ != "pulser.math"
         ):
             # Check for parametrized methods
             if inspect.isclass(self.args[0]):
@@ -246,6 +248,7 @@ class ParamObj(Parametrized, OpSupport):
             self.args  # If it is a classmethod the first arg will be the class
             and hasattr(self.args[0], op_name)
             and inspect.isfunction(self.cls)
+            and not self.cls.__module__ == "pulser.math"
         ):
             # Check for parametrized methods
             if inspect.isclass(self.args[0]):
@@ -280,7 +283,6 @@ class ParamObj(Parametrized, OpSupport):
                     return abstract_repr("Pulse", **all_args)
                 else:
                     return abstract_repr(name, **all_args)
-
             raise NotImplementedError(
                 "Instance or static method serialization is not supported."
             )

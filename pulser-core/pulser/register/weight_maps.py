@@ -65,7 +65,7 @@ class WeightMap(Traps, RegDrawer):
     @property
     def trap_coordinates(self) -> np.ndarray:
         """The array of trap coordinates, in the order they were given."""
-        return np.array(self._coords)
+        return self._coords_arr.as_array(detach=True)
 
     @property
     def sorted_weights(self) -> np.ndarray:
