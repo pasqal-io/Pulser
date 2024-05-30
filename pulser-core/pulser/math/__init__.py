@@ -23,7 +23,7 @@ import scipy.fft
 
 from pulser.math.abstract_array import (
     AbstractArray as AbstractArray,
-    AbstractArrayLike as AbstractArrayLike,
+    AbstractArrayLike,
 )
 
 try:

@@ -21,6 +21,7 @@ from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Literal, Optional, Type, TypeVar, cast
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM
@@ -399,7 +400,7 @@ class Channel(ABC):
 
     def modulate(
         self,
-        input_samples: pm.AbstractArrayLike,
+        input_samples: ArrayLike,
         keep_ends: bool = False,
         eom: bool = False,
     ) -> pm.AbstractArray:
@@ -447,7 +448,7 @@ class Channel(ABC):
 
     @staticmethod
     def apply_modulation(
-        input_samples: pm.AbstractArrayLike, mod_bandwidth: float
+        input_samples: ArrayLike, mod_bandwidth: float
     ) -> pm.AbstractArray:
         """Applies the modulation transfer fuction to the input samples.
 
@@ -470,8 +471,8 @@ class Channel(ABC):
 
     def calc_modulation_buffer(
         self,
-        input_samples: pm.AbstractArrayLike,
-        mod_samples: pm.AbstractArrayLike,
+        input_samples: ArrayLike,
+        mod_samples: ArrayLike,
         max_allowed_diff: float = 1e-2,
         eom: bool = False,
     ) -> tuple[int, int]:

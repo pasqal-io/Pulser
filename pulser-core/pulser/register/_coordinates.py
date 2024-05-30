@@ -9,9 +9,9 @@ from functools import cached_property
 from typing import cast
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 import pulser.math as pm
-from pulser.math.abstract_array import AbstractArrayLike
 
 COORD_PRECISION = 6
 
@@ -43,7 +43,7 @@ class CoordsCollection:
 
     @cached_property
     def _coords_arr(self) -> pm.AbstractArray:
-        return pm.vstack(cast(Sequence[AbstractArrayLike], self._coords))
+        return pm.vstack(cast(Sequence[ArrayLike], self._coords))
 
     @cached_property
     def _rounded_coords(self) -> pm.AbstractArray:
