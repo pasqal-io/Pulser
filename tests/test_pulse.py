@@ -26,6 +26,7 @@ from pulser.waveforms import (
     InterpolatedWaveform,
     RampWaveform,
 )
+from pulser.parametrized import ParamObj, Variable
 
 cwf = ConstantWaveform(100, -10)
 bwf = BlackmanWaveform(200, 3)
@@ -171,4 +172,41 @@ def test_arbitrary_phase(phase_wf, det_wf, phase_0):
         (np.cumsum(pls_.detuning.samples[1:] * 1e-3) + phase_wf[0]),
         phase_wf.samples[1:],
         atol=1e-17,
+    )
+
+
+def test_parametrized_pulses():
+    vars = Variable("vars", float, size=2)
+    vars._assign([1000, 1.0])
+    param_bwf = BlackmanWaveform(vars[0], vars[1])
+    const_pulse = Pulse.ConstantPulse(vars[0], vars[1], vars[1], vars[1])
+    assert isinstance(const_pulse, ParamObj)
+    assert const_pulse.cls is Pulse
+    param_const = ConstantWaveform(vars[0], vars[1])
+    assert (
+        const_pulse.build() == Pulse(param_const, param_const, vars[1]).build()
+    )
+    const_amp = Pulse.ConstantAmplitude(vars[1], param_bwf, vars[1])
+    assert const_amp.cls.__name__ == "ConstantAmplitude"
+    const_det = Pulse.ConstantDetuning(param_bwf, vars[1], vars[1])
+    assert const_det.cls.__name__ == "ConstantDetuning"
+    arb_phase = Pulse.ArbitraryPhase(
+        param_bwf, RampWaveform(vars[0], 0, vars[1])
+    )
+    assert arb_phase.cls.__name__ == "ArbitraryPhase"
+    special_pulses = [const_amp, const_det, arb_phase]
+    for p in special_pulses:
+        assert isinstance(p, ParamObj)
+        assert p.cls is not Pulse
+        assert p.args[0] is Pulse
+
+    assert const_amp.build() == Pulse(param_const, param_bwf, vars[1]).build()
+    assert const_det.build() == Pulse(param_bwf, param_const, vars[1]).build()
+    assert (
+        arb_phase.build()
+        == Pulse(
+            param_bwf,
+            ConstantWaveform(vars[0], vars[1] * 1e3 / (vars[0] - 1)),
+            0,
+        ).build()
     )
