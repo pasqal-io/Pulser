@@ -142,7 +142,7 @@ class PasqalCloud(RemoteConnection):
                     sequence = sequence.switch_device(new_device, strict=True)
                 except Exception as e:
                     raise ValueError(
-                        "The sequence cannot be recreated with the latest "
+                        "The sequence is not compatible with the latest "
                         "device specs." + err_suffix
                     ) from e
                 # Validate the sequence with the new device

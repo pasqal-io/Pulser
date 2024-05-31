@@ -167,8 +167,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
         )
         with pytest.raises(
             ValueError,
-            match="sequence cannot be recreated with the latest "
-            "device specs",
+            match="sequence is not compatible with the latest device specs",
         ):
             fixt.pasqal_cloud.submit(
                 seq3, job_params=[dict(runs=10)], mimic_qpu=mimic_qpu
