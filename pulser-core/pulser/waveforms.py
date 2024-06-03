@@ -303,17 +303,18 @@ class Waveform(ABC):
         return slice(start, stop)
 
     @abstractmethod
-    def __mul__(self, other: float) -> Waveform:
+    def __mul__(self, other: float | ArrayLike) -> Waveform:
         pass
 
     def __neg__(self) -> Waveform:
         return self.__mul__(-1.0)
 
-    def __truediv__(self, other: float) -> Waveform:
-        if other == 0:
+    def __truediv__(self, other: float | ArrayLike) -> Waveform:
+        other_ = pm.AbstractArray(other)
+        if other_ == 0:
             raise ZeroDivisionError("Can't divide a waveform by zero.")
         else:
-            return self.__mul__(1 / other)
+            return self.__mul__(1 / other_)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Waveform):
@@ -435,8 +436,9 @@ class CompositeWaveform(Waveform):
     def __repr__(self) -> str:
         return f"CompositeWaveform({self.duration} ns, {self._waveforms!r})"
 
-    def __mul__(self, other: float) -> CompositeWaveform:
-        return CompositeWaveform(*(wf * other for wf in self._waveforms))
+    def __mul__(self, other: float | ArrayLike) -> CompositeWaveform:
+        other_ = pm.AbstractArray(other, dtype=float)
+        return CompositeWaveform(*(wf * other_ for wf in self._waveforms))
 
 
 class CustomWaveform(Waveform):
@@ -479,8 +481,10 @@ class CustomWaveform(Waveform):
     def __repr__(self) -> str:
         return f"CustomWaveform({self.duration} ns, {self.samples!r})"
 
-    def __mul__(self, other: float) -> CustomWaveform:
-        return CustomWaveform(self._samples * float(other))
+    def __mul__(self, other: float | ArrayLike) -> CustomWaveform:
+        return CustomWaveform(
+            self._samples * pm.AbstractArray(other, dtype=float)
+        )
 
 
 class ConstantWaveform(Waveform):
@@ -541,8 +545,10 @@ class ConstantWaveform(Waveform):
             f"ConstantWaveform({self._duration} ns, {float(self._value):.3g})"
         )
 
-    def __mul__(self, other: float) -> ConstantWaveform:
-        return ConstantWaveform(self._duration, self._value * float(other))
+    def __mul__(self, other: float | ArrayLike) -> ConstantWaveform:
+        return ConstantWaveform(
+            self._duration, self._value * pm.AbstractArray(other, dtype=float)
+        )
 
 
 class RampWaveform(Waveform):
@@ -622,8 +628,8 @@ class RampWaveform(Waveform):
             f"{float(self._start):.3g}->{float(self._stop):.3g})"
         )
 
-    def __mul__(self, other: float) -> RampWaveform:
-        k = float(other)
+    def __mul__(self, other: float | ArrayLike) -> RampWaveform:
+        k = pm.AbstractArray(other, dtype=float)
         return RampWaveform(self._duration, self._start * k, self._stop * k)
 
 
@@ -759,8 +765,10 @@ class BlackmanWaveform(Waveform):
             f"Area: {float(self._area):.3g})"
         )
 
-    def __mul__(self, other: float) -> BlackmanWaveform:
-        return BlackmanWaveform(self._duration, self._area * float(other))
+    def __mul__(self, other: float | ArrayLike) -> BlackmanWaveform:
+        return BlackmanWaveform(
+            self._duration, self._area * pm.AbstractArray(other, dtype=float)
+        )
 
 
 class InterpolatedWaveform(Waveform):
@@ -927,9 +935,11 @@ class InterpolatedWaveform(Waveform):
         interp_str = f", Interpolator={self._kwargs['interpolator']})"
         return self.__str__()[:-1] + interp_str
 
-    def __mul__(self, other: float) -> InterpolatedWaveform:
+    def __mul__(self, other: float | ArrayLike) -> InterpolatedWaveform:
         return InterpolatedWaveform(
-            self._duration, self._values * other, **self._kwargs
+            self._duration,
+            self._values * np.array(other, dtype=float),
+            **self._kwargs,
         )
 
 
@@ -1120,9 +1130,11 @@ class KaiserWaveform(Waveform):
             f"area: {float(self._area):.3g}, beta: {self._beta:.3g})"
         )
 
-    def __mul__(self, other: float) -> KaiserWaveform:
+    def __mul__(self, other: float | ArrayLike) -> KaiserWaveform:
         return KaiserWaveform(
-            self._duration, self._area * float(other), self._beta
+            self._duration,
+            self._area * pm.AbstractArray(other, dtype=float),
+            self._beta,
         )
 
 
