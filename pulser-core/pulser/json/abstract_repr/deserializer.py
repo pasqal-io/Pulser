@@ -268,6 +268,19 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             channel=op["channel"],
             protocol=op["protocol"],
         )
+    elif op["op"] == "pulse_arbitrary_phase":
+        pulse = Pulse.ArbitraryPhase(
+            amplitude=_deserialize_waveform(op["amplitude"], vars),
+            phase=_deserialize_waveform(op["phase"], vars),
+            post_phase_shift=_deserialize_parameter(
+                op["post_phase_shift"], vars
+            ),
+        )
+        seq.add(
+            pulse=pulse,
+            channel=op["channel"],
+            protocol=op["protocol"],
+        )
     elif op["op"] == "enable_eom_mode":
         seq.enable_eom_mode(
             channel=op["channel"],
