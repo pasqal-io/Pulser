@@ -3,7 +3,7 @@ dev-install: dev-install-core dev-install-simulation dev-install-pasqal
 
 .PHONY: dev-install-core
 dev-install-core:
-	pip install -e ./pulser-core
+	pip install -e ./pulser-core[torch]
 
 .PHONY: dev-install-simulation
 dev-install-simulation:
