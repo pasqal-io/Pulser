@@ -17,6 +17,9 @@ from __future__ import annotations
 from typing import Generator, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
+
+import pulser.math as pm
 
 
 class _QubitRef:
@@ -24,7 +27,7 @@ class _QubitRef:
         self.phase = _PhaseTracker(0)
         self.last_used = 0
 
-    def increment_phase(self, phi: float) -> None:
+    def increment_phase(self, phi: pm.AbstractArray) -> None:
         self.phase[self.last_used] = self.phase.last_phase + phi
 
     def update_last_used(self, new_t: int) -> None:
@@ -36,14 +39,14 @@ class _PhaseTracker:
 
     def __init__(self, initial_phase: float):
         self._times: list[int] = [0]
-        self._phases: list[float] = [self._format(initial_phase)]
+        self._phases: list[pm.AbstractArray] = [self._format(initial_phase)]
 
     @property
     def last_time(self) -> int:
         return self._times[-1]
 
     @property
-    def last_phase(self) -> float:
+    def last_phase(self) -> pm.AbstractArray:
         return self._phases[-1]
 
     def changes(
@@ -51,7 +54,7 @@ class _PhaseTracker:
         ti: Union[float, int],
         tf: Union[float, int],
         time_scale: float = 1.0,
-    ) -> Generator[tuple[float, float], None, None]:
+    ) -> Generator[tuple[float, pm.AbstractArray], None, None]:
         """Changes in phases within ]ti, tf]."""
         start, end = np.searchsorted(
             self._times, (ti * time_scale, tf * time_scale), side="right"
@@ -60,10 +63,10 @@ class _PhaseTracker:
             change = self._phases[i] - self._phases[i - 1]
             yield (self._times[i] / time_scale, change)
 
-    def _format(self, phi: float) -> float:
-        return phi % (2 * np.pi)
+    def _format(self, phi: ArrayLike) -> pm.AbstractArray:
+        return pm.AbstractArray(phi) % (2 * np.pi)
 
-    def __setitem__(self, t: int, phi: float) -> None:
+    def __setitem__(self, t: int, phi: ArrayLike) -> None:
         phase = self._format(phi)
         if t in self._times:
             ind = self._times.index(t)
@@ -73,6 +76,6 @@ class _PhaseTracker:
             self._times.insert(ind, t)
             self._phases.insert(ind, phase)
 
-    def __getitem__(self, t: int) -> float:
+    def __getitem__(self, t: int) -> pm.AbstractArray:
         ind = int(np.searchsorted(self._times, t, side="right")) - 1
         return self._phases[ind]

@@ -78,7 +78,7 @@ def seq_to_str(sequence: Sequence) -> str:
                 else:
                     full += pulse_line.format(ts.ti, ts.tf, ts.type, tgt_txt)
             elif ts.type == "target":
-                phase = sequence._basis_ref[basis][tgts[0]].phase[ts.tf]
+                phase = float(sequence._basis_ref[basis][tgts[0]].phase[ts.tf])
                 if first_slot:
                     full += (
                         f"t: 0 | Initial targets: {tgt_txt} | "

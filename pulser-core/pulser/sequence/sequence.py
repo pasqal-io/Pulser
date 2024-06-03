@@ -487,7 +487,7 @@ class Sequence(Generic[DeviceType]):
                 f"No declared channel targets the given 'basis' ('{basis}')."
             )
 
-        return self._basis_ref[basis][qubit].phase.last_phase
+        return float(self._basis_ref[basis][qubit].phase.last_phase)
 
     def set_magnetic_field(
         self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0
@@ -1146,18 +1146,17 @@ class Sequence(Generic[DeviceType]):
         stored_opt_detuning_off = optimal_detuning_off
         if not isinstance(on_pulse, Parametrized):
             channel_obj.validate_pulse(on_pulse)
-            amp_on = cast(float, amp_on)
-            detuning_on = cast(float, detuning_on)
+            amp_on_ = pm.AbstractArray(cast(float, amp_on))
+            detuning_on_ = pm.AbstractArray(cast(float, detuning_on))
             eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                (
-                    detuning_off,
-                    switching_beams,
-                ) = eom_config.calculate_detuning_off(
-                    float(amp_on),
-                    float(detuning_on),
-                    float(optimal_detuning_off),
-                    return_switching_beams=True,
+                detuning_off, switching_beams = (
+                    eom_config.calculate_detuning_off(
+                        amp_on_,
+                        detuning_on_,
+                        float(optimal_detuning_off),
+                        return_switching_beams=True,
+                    )
                 )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
@@ -1166,7 +1165,7 @@ class Sequence(Generic[DeviceType]):
                 # Update optimal_detuning_off to match the chosen detuning_off
                 # This minimizes the changes to the sequence when the device
                 # is switched
-                stored_opt_detuning_off = detuning_off
+                stored_opt_detuning_off = float(detuning_off)
 
             if not self.is_parametrized():
                 phase_drift_params = _PhaseDriftParams(
@@ -1176,7 +1175,11 @@ class Sequence(Generic[DeviceType]):
                     ti=self.get_duration(channel, include_fall_time=True),
                 )
                 self._schedule.enable_eom(
-                    channel, amp_on, detuning_on, detuning_off, switching_beams
+                    channel,
+                    amp_on_,
+                    detuning_on_,
+                    detuning_off,
+                    switching_beams,
                 )
                 if correct_phase_drift:
                     buffer_slot = self._last(channel)
@@ -1307,7 +1310,13 @@ class Sequence(Generic[DeviceType]):
                 channel_obj = self.declared_channels[channel]
                 channel_obj.validate_duration(duration)
             for arg in (phase, post_phase_shift):
-                if not isinstance(arg, (Parametrized, float, int)):
+                if isinstance(arg, Parametrized):
+                    continue
+                try:
+                    if isinstance(arg, str):
+                        raise TypeError
+                    float(arg)
+                except TypeError:
                     raise TypeError("Phase values must be a numeric value.")
             return
 
@@ -2226,7 +2235,7 @@ class Sequence(Generic[DeviceType]):
 
     def _phase_shift(
         self,
-        phi: Union[float, Parametrized],
+        phi: Union[ArrayLike, Parametrized],
         *targets: Union[QubitId, Parametrized],
         basis: str,
         _index: bool = False,
@@ -2238,10 +2247,7 @@ class Sequence(Generic[DeviceType]):
         target_ids = self._check_qubits_give_ids(*targets, _index=_index)
 
         if not self.is_parametrized():
-            phi = cast(float, phi)
-            if phi % (2 * np.pi) == 0:
-                return
-
+            phi = pm.AbstractArray(cast(ArrayLike, phi))
             for qubit in target_ids:
                 self._basis_ref[basis][qubit].increment_phase(phi)
 

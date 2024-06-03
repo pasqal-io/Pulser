@@ -28,7 +28,7 @@ from pulser.math.abstract_array import (
 
 try:
     import torch
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 # Custom function definitions
@@ -81,13 +81,6 @@ def tan(a: AbstractArrayLike, /) -> AbstractArray:
     if a.is_tensor:
         return AbstractArray(torch.tan(a.as_tensor()))
     return AbstractArray(np.tan(a.as_array()))
-
-
-def count_nonzero(a: AbstractArrayLike, /) -> AbstractArray:
-    a = AbstractArray(a)
-    if a.is_tensor:
-        return AbstractArray(torch.count_nonzero(a.as_tensor()))
-    return AbstractArray(np.count_nonzero(a.as_array()))
 
 
 def pad(
@@ -232,3 +225,10 @@ def clip(
             torch.clip(a.as_tensor(), min.as_tensor(), max.as_tensor())
         )
     return AbstractArray(np.clip(a.as_array(), min.as_array(), max.as_array()))
+
+
+def flatten(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.flatten(a.as_tensor()))
+    return AbstractArray(a.as_array().flatten())

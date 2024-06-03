@@ -20,7 +20,9 @@ from itertools import chain
 from typing import Any, Literal, cast, overload
 
 import numpy as np
+from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
 
 # Conversion factor from modulation bandwith to rise time
@@ -210,30 +212,30 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     @overload
     def calculate_detuning_off(
         self,
-        amp_on: float,
-        detuning_on: float,
+        amp_on: float | ArrayLike,
+        detuning_on: float | ArrayLike,
         optimal_detuning_off: float,
         return_switching_beams: Literal[False],
-    ) -> float:
+    ) -> pm.AbstractArray:
         pass
 
     @overload
     def calculate_detuning_off(
         self,
-        amp_on: float,
-        detuning_on: float,
+        amp_on: float | ArrayLike,
+        detuning_on: float | ArrayLike,
         optimal_detuning_off: float,
         return_switching_beams: Literal[True],
-    ) -> tuple[float, tuple[RydbergBeam, ...]]:
+    ) -> tuple[pm.AbstractArray, tuple[RydbergBeam, ...]]:
         pass
 
     def calculate_detuning_off(
         self,
-        amp_on: float,
-        detuning_on: float,
+        amp_on: float | ArrayLike,
+        detuning_on: float | ArrayLike,
         optimal_detuning_off: float,
         return_switching_beams: bool = False,
-    ) -> float | tuple[float, tuple[RydbergBeam, ...]]:
+    ) -> pm.AbstractArray | tuple[pm.AbstractArray, tuple[RydbergBeam, ...]]:
         """Calculates the detuning when the amplitude is off in EOM mode.
 
         Args:
@@ -246,17 +248,17 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
                 on and off.
         """
         off_options = self.detuning_off_options(amp_on, detuning_on)
-        closest_option = np.abs(off_options - optimal_detuning_off).argmin()
-        best_det_off = cast(float, off_options[closest_option])
+        closest_option = np.abs(
+            off_options.as_array(detach=True) - optimal_detuning_off
+        ).argmin()
+        best_det_off = off_options[closest_option]
         if not return_switching_beams:
             return best_det_off
         return best_det_off, self._switching_beams_combos[closest_option]
 
     def detuning_off_options(
-        self,
-        rabi_frequency: float,
-        detuning_on: float,
-    ) -> np.ndarray:
+        self, rabi_frequency: float | ArrayLike, detuning_on: float | ArrayLike
+    ) -> pm.AbstractArray:
         """Calculates the possible detuning values when the amplitude is off.
 
         Args:
@@ -267,11 +269,14 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         Returns:
             The possible detuning values when in between pulses.
         """
+        rabi_frequency = pm.AbstractArray(rabi_frequency)
         # detuning = offset + lightshift
 
         # offset takes into account the lightshift when both beams are on
         # which is not zero when the Rabi freq of both beams is not equal
-        offset = detuning_on - self._lightshift(rabi_frequency, *RydbergBeam)
+        offset = pm.AbstractArray(detuning_on) - self._lightshift(
+            rabi_frequency, *RydbergBeam
+        )
         all_beams: set[RydbergBeam] = set(RydbergBeam)
         lightshifts = []
         for beams_off in self._switching_beams_combos:
@@ -280,11 +285,11 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             lightshifts.append(self._lightshift(rabi_frequency, *beams_on))
 
         # We sum the offset to all lightshifts to get the effective detuning
-        return np.array(lightshifts) + offset
+        return pm.flatten(pm.vstack(lightshifts)) + offset
 
     def _lightshift(
-        self, rabi_frequency: float, *beams_on: RydbergBeam
-    ) -> float:
+        self, rabi_frequency: pm.AbstractArray, *beams_on: RydbergBeam
+    ) -> pm.AbstractArray:
         # lightshift = (rabi_blue**2 - rabi_red**2) / 4 * int_detuning
         rabi_freqs = self._rabi_freq_per_beam(rabi_frequency)
         bias = {
@@ -292,13 +297,14 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             RydbergBeam.BLUE: self.blue_shift_coeff,
         }
         # beam off -> beam_rabi_freq = 0
-        return sum(bias[beam] * rabi_freqs[beam] ** 2 for beam in beams_on) / (
-            4 * self.intermediate_detuning
+        return pm.AbstractArray(
+            sum(bias[beam] * rabi_freqs[beam] ** 2 for beam in beams_on)
+            / (4 * self.intermediate_detuning)
         )
 
     def _rabi_freq_per_beam(
-        self, rabi_frequency: float
-    ) -> dict[RydbergBeam, float]:
+        self, rabi_frequency: pm.AbstractArray
+    ) -> dict[RydbergBeam, pm.AbstractArray]:
         shift_factor = np.sqrt(
             self.red_shift_coeff / self.blue_shift_coeff
             if self.limiting_beam == RydbergBeam.RED
@@ -315,14 +321,14 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         if rabi_frequency <= limit_rabi_freq:
             base_amp_squared = 2 * rabi_frequency * self.intermediate_detuning
             return {
-                self.limiting_beam: np.sqrt(base_amp_squared / shift_factor),
-                ~self.limiting_beam: np.sqrt(base_amp_squared * shift_factor),
+                self.limiting_beam: pm.sqrt(base_amp_squared / shift_factor),
+                ~self.limiting_beam: pm.sqrt(base_amp_squared * shift_factor),
             }
 
         # The limiting beam is at its maximum amplitude while the other
         # has the necessary amplitude to reach the desired effective rabi freq
         return {
-            self.limiting_beam: self.max_limiting_amp,
+            self.limiting_beam: pm.AbstractArray(self.max_limiting_amp),
             ~self.limiting_beam: 2
             * self.intermediate_detuning
             * rabi_frequency

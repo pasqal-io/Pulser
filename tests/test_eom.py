@@ -155,6 +155,7 @@ def test_detuning_off(
     switching_beams_opts = eom._switching_beams_combos
     assert len(det_off_options) == len(switching_beams_opts)
     assert len(det_off_options) == 2 + multiple_beam_control
+    det_off_options = det_off_options.as_array()
     order = np.argsort(det_off_options)
     det_off_options = det_off_options[order]
     switching_beams_opts = [switching_beams_opts[ind] for ind in order]

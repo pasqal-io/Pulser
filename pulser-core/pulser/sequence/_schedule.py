@@ -43,9 +43,9 @@ class _TimeSlot(NamedTuple):
 
 @dataclass
 class _EOMSettings:
-    rabi_freq: float
-    detuning_on: float
-    detuning_off: float
+    rabi_freq: pm.AbstractArray
+    detuning_on: pm.AbstractArray
+    detuning_off: pm.AbstractArray
     ti: int
     tf: int | None = None
     switching_beams: tuple[RydbergBeam, ...] = ()
@@ -53,10 +53,10 @@ class _EOMSettings:
 
 @dataclass
 class _PhaseDriftParams:
-    drift_rate: float  # rad/µs
+    drift_rate: pm.AbstractArray  # rad/µs
     ti: int  # ns
 
-    def calc_phase_drift(self, tf: int) -> float:
+    def calc_phase_drift(self, tf: int) -> pm.AbstractArray:
         """Calculate the phase drift during the elapsed time."""
         return self.drift_rate * (tf - self.ti) * 1e-3
 
@@ -341,9 +341,9 @@ class _Schedule(Dict[str, _ChannelSchedule]):
     def enable_eom(
         self,
         channel_id: str,
-        amp_on: float,
-        detuning_on: float,
-        detuning_off: float,
+        amp_on: pm.AbstractArray,
+        detuning_on: pm.AbstractArray,
+        detuning_off: pm.AbstractArray,
         switching_beams: tuple[RydbergBeam, ...] = (),
         _skip_buffer: bool = False,
     ) -> None:
@@ -403,7 +403,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
         def corrected_phase(tf: int) -> pm.AbstractArray:
-            phase_drift = (
+            phase_drift = pm.AbstractArray(
                 phase_drift_params.calc_phase_drift(tf)
                 if phase_drift_params
                 else 0

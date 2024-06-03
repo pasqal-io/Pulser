@@ -2091,8 +2091,8 @@ class TestDeserialization:
         else:
             enable_eom_call = seq._calls[-1]
             eom_conf = seq.declared_channels["global"].eom_config
-            optimal_det_off = eom_conf.calculate_detuning_off(
-                3.0, detuning_on, -1.0
+            optimal_det_off = float(
+                eom_conf.calculate_detuning_off(3.0, detuning_on, -1.0)
             )
 
         # Roundtrip will only match if the optimal detuning off matches

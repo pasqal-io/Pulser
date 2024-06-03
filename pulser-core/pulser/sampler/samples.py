@@ -166,7 +166,7 @@ class ChannelSamples:
         new_amp = pm.pad(self.amp, (0, extension))
         # When in EOM mode, we need to keep the detuning at detuning_off
         if self.eom_blocks and self.eom_blocks[-1].tf is None:
-            final_detuning = self.eom_blocks[-1].detuning_off
+            final_detuning = float(self.eom_blocks[-1].detuning_off)
         else:
             final_detuning = 0.0
         new_detuning = pm.pad(
@@ -390,7 +390,9 @@ class ChannelSamples:
                             samples_,
                             (1, 0),
                             "constant",
-                            constant_values=self.eom_blocks[0].detuning_off,
+                            constant_values=float(
+                                self.eom_blocks[0].detuning_off
+                            ),
                         )
                     # Finally, the modified EOM samples are modulated
                     modulated_eom = channel_obj.modulate(

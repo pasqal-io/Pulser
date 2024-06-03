@@ -119,6 +119,20 @@ class ChannelDrawContent:
     phase_modulated: bool = False
 
     def __post_init__(self) -> None:
+        # Make sure there are no tensors in the channel samples
+        self.samples.amp = pm.AbstractArray(
+            self.samples.amp.as_array(detach=True)
+        )
+        self.samples.det = pm.AbstractArray(
+            self.samples.det.as_array(detach=True)
+        )
+        self.samples.phase = pm.AbstractArray(
+            self.samples.phase.as_array(detach=True)
+        )
+        if self.samples._centered_phase is not None:
+            self.samples._centered_phase = pm.AbstractArray(
+                self.samples._centered_phase.as_array(detach=True)
+            )
         self.curves_on = {"amplitude": True, "detuning": False, "phase": False}
 
     @property
@@ -521,9 +535,9 @@ def _draw_channel_content(
         shown_duration: Total duration to be shown in the X axis.
     """
 
-    def phase_str(phi: float) -> str:
+    def phase_str(phi: Any) -> str:
         """Formats a phase value for printing."""
-        value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
+        value = (((float(phi) + np.pi) % (2 * np.pi)) - np.pi) / np.pi
         if value == -1:
             return r"$\pi$"
         elif value == 0:
