@@ -71,10 +71,7 @@ def test_change_duration():
     assert new_cte.duration == 103
 
     new_blackman = blackman.change_duration(30)
-    with pytest.warns(
-        UserWarning, match="assumes the waveform values are in rad/µs"
-    ):
-        assert np.isclose(new_blackman.integral, blackman.integral)
+    assert np.isclose(new_blackman.integral, blackman.integral)
     assert new_blackman != blackman
 
     new_ramp = ramp.change_duration(100)
@@ -95,12 +92,9 @@ def test_samples():
 
 
 def test_integral():
-    with pytest.warns(
-        UserWarning, match="assumes the waveform values are in rad/µs"
-    ):
-        assert np.isclose(blackman.integral, np.pi)
-        assert constant.integral == -0.3
-        assert ramp.integral == 24
+    assert np.isclose(blackman.integral, np.pi)
+    assert constant.integral == -0.3
+    assert ramp.integral == 24
 
 
 def test_draw(patch_plt_show):
@@ -175,10 +169,7 @@ def test_blackman():
     with pytest.raises(TypeError):
         BlackmanWaveform(100, np.array([1, 2]))
     wf = BlackmanWaveform(100, -2)
-    with pytest.warns(
-        UserWarning, match="assumes the waveform values are in rad/µs"
-    ):
-        assert np.isclose(wf.integral, -2)
+    assert np.isclose(wf.integral, -2)
     assert np.all(wf.samples <= 0)
     assert wf == BlackmanWaveform(100, np.array(-2))
 
@@ -186,17 +177,11 @@ def test_blackman():
         BlackmanWaveform.from_max_val(-10, np.pi)
 
     wf = BlackmanWaveform.from_max_val(10, 2 * np.pi)
-    with pytest.warns(
-        UserWarning, match="assumes the waveform values are in rad/µs"
-    ):
-        assert np.isclose(wf.integral, 2 * np.pi)
+    assert np.isclose(wf.integral, 2 * np.pi)
     assert np.max(wf.samples) < 10
 
     wf = BlackmanWaveform.from_max_val(-10, -np.pi)
-    with pytest.warns(
-        UserWarning, match="assumes the waveform values are in rad/µs"
-    ):
-        assert np.isclose(wf.integral, -np.pi)
+    assert np.isclose(wf.integral, -np.pi)
     assert np.min(wf.samples) > -10
 
     var = Variable("var", float)
@@ -445,8 +430,5 @@ def test_modulation():
         rydberg_global.rise_time,
     )
     assert len(mod_samples) == constant.duration + 2 * rydberg_global.rise_time
-    with pytest.warns(
-        UserWarning, match="assumes the waveform values are in rad/µs"
-    ):
-        assert np.isclose(np.sum(mod_samples) * 1e-3, constant.integral)
+    assert np.isclose(np.sum(mod_samples) * 1e-3, constant.integral)
     assert max(np.abs(mod_samples)) < np.abs(constant[0])

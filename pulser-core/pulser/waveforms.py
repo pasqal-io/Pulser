@@ -124,26 +124,28 @@ class Waveform(ABC):
 
     @property
     def integral(self) -> float:
-        """Integral of the waveform (time in ns, value in rad/µs)."""
-        warnings.warn(
-            "'Waveform.integral' assumes the waveform values are in rad/µs.",
-            stacklevel=2,
-        )
+        """Integral of the waveform (in [waveform units].µs)."""
         return float(np.sum(self.samples)) * 1e-3  # ns * rad/µs = 1e-3
 
-    def draw(self, output_channel: Optional[Channel] = None) -> None:
+    def draw(
+        self,
+        output_channel: Optional[Channel] = None,
+        ylabel: str | None = None,
+    ) -> None:
         """Draws the waveform.
 
         Args:
             output_channel: The output channel. If given, will draw the
                 modulated waveform on top of the input one.
+            ylabel: An optional label for the y-axis of the plot.
         """
         fig, ax = plt.subplots()
         if not output_channel:
-            self._plot(ax)
+            self._plot(ax, ylabel=ylabel)
         else:
             self._plot(
                 ax,
+                ylabel=ylabel,
                 label="Input",
                 start_t=self.modulation_buffers(output_channel)[0],
             )
@@ -565,7 +567,7 @@ class RampWaveform(Waveform):
 
     @property
     def slope(self) -> float:
-        r"""Slope of the ramp, in :math:`s^{-9}`."""
+        r"""Slope of the ramp, in [waveform units] / ns."""
         return (self._stop - self._start) / (self._duration - 1)
 
     def change_duration(self, new_duration: int) -> RampWaveform:
