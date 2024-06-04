@@ -137,9 +137,6 @@ class AbstractArray:
     def __array__(self, dtype: Any = None) -> np.ndarray:
         return self._array.__array__(dtype)
 
-    def __array_wrap__(self, array: np.ndarray) -> AbstractArray:
-        return AbstractArray(self._array.__array_wrap__(array))
-
     def __repr__(self) -> str:
         return str(self._array.__repr__())
 
