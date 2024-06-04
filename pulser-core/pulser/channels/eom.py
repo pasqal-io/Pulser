@@ -311,11 +311,10 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         # limit_rabi_freq is the maximum effective rabi frequency value
         # below which the lightshift can be zero
         if rabi_frequency <= limit_rabi_freq:
-            base_amp = np.sqrt(2 * rabi_frequency * self.intermediate_detuning)
-            sqrt_shift_factor = np.sqrt(shift_factor)
+            base_amp_squared = 2 * rabi_frequency * self.intermediate_detuning
             return {
-                self.limiting_beam: base_amp / sqrt_shift_factor,
-                ~self.limiting_beam: base_amp * sqrt_shift_factor,
+                self.limiting_beam: np.sqrt(base_amp_squared / shift_factor),
+                ~self.limiting_beam: np.sqrt(base_amp_squared * shift_factor),
             }
 
         # The limiting beam is at its maximum amplitude while the other
