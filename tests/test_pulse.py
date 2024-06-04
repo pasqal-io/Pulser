@@ -19,6 +19,7 @@ import pytest
 from pulser import Pulse
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
+from pulser.parametrized import ParamObj, Variable
 from pulser.waveforms import (
     BlackmanWaveform,
     ConstantWaveform,
@@ -26,7 +27,6 @@ from pulser.waveforms import (
     InterpolatedWaveform,
     RampWaveform,
 )
-from pulser.parametrized import ParamObj, Variable
 
 cwf = ConstantWaveform(100, -10)
 bwf = BlackmanWaveform(200, 3)

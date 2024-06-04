@@ -66,7 +66,7 @@ class Pulse:
         detuning: The pulse detuning waveform (in rad/µs).
         phase: The pulse phase (in radians).
         post_phase_shift: Optionally lets you add a phase
-            shift(in rads) immediately after the end of the pulse. This allows
+            shift(in rad) immediately after the end of the pulse. This allows
             for enconding of arbitrary single-qubit gates into a single pulse
             (see ``Sequence.phase_shift()`` for more information).
     """
@@ -136,7 +136,7 @@ class Pulse:
             detuning: The detuning value (in rad/µs).
             phase: The pulse phase (in radians).
             post_phase_shift: Optionally lets you add a
-                phase shift (in rads) immediately after the end of the pulse.
+                phase shift (in rad) immediately after the end of the pulse.
         """
         detuning_wf = ConstantWaveform(
             cast(Waveform, amplitude).duration, detuning
@@ -159,7 +159,7 @@ class Pulse:
             detuning: The pulse detuning waveform (in rad/µs).
             phase: The pulse phase (in radians).
             post_phase_shift: Optionally lets you add a
-                phase shift (in rads) immediately after the end of the pulse.
+                phase shift (in rad) immediately after the end of the pulse.
         """
         amplitude_wf = ConstantWaveform(
             cast(Waveform, detuning).duration, amplitude
@@ -183,7 +183,7 @@ class Pulse:
             detuning: The detuning value (in rad/µs).
             phase: The pulse phase (in radians).
             post_phase_shift: Optionally lets you add a
-                phase shift (in rads) immediately after the end of the pulse.
+                phase shift (in rad) immediately after the end of the pulse.
         """
         amplitude_wf = ConstantWaveform(duration, amplitude)
         detuning_wf = ConstantWaveform(duration, detuning)
@@ -206,9 +206,9 @@ class Pulse:
 
         Args:
             amplitude: The amplitude waveform (in rad/µs).
-            phase: The phase waveform (in rads).
+            phase: The phase waveform (in rad).
             post_phase_shift: Optionally lets you add a
-                phase shift (in rads) immediately after the end of the pulse.
+                phase shift (in rad) immediately after the end of the pulse.
         """
         if not isinstance(phase, Waveform):
             raise TypeError(

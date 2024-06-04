@@ -1277,7 +1277,7 @@ class Sequence(Generic[DeviceType]):
             channel: The name of the channel to add the pulse to.
             duration: The duration of the pulse (in ns).
             phase: The pulse phase (in radians).
-            post_phase_shift: Optionally lets you add a phase shift (in rads)
+            post_phase_shift: Optionally lets you add a phase shift (in rad)
                 immediately after the end of the pulse.
             protocol: Stipulates how to deal with eventual conflicts with
                 other channels (see `Sequence.add()` for more details).
@@ -1518,7 +1518,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The ids of the qubits to apply the phase shift to.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
@@ -1540,7 +1540,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The indices of the qubits to apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
