@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import cast
+from typing import cast, Protocol
 
 import numpy as np
 import scipy.fft
@@ -30,6 +30,13 @@ try:
     import torch
 except ImportError:  # pragma: no cover
     pass
+
+
+class Differentiable(Protocol):
+    """A type hint to signal that a parameter may be differentiable."""
+
+    def __array__(self) -> np.ndarray: ...
+
 
 # Custom function definitions
 

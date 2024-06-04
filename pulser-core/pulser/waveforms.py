@@ -449,7 +449,7 @@ class CustomWaveform(Waveform):
             The number of samples dictates the duration, in ns.
     """
 
-    def __init__(self, samples: ArrayLike):
+    def __init__(self, samples: ArrayLike | pm.Differentiable):
         """Initializes a custom waveform."""
         samples_arr = pm.AbstractArray(samples, dtype=float)
         self._samples_arr: pm.AbstractArray = samples_arr
@@ -498,7 +498,7 @@ class ConstantWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        value: Union[float, ArrayLike, Parametrized],
+        value: Union[float, pm.Differentiable, Parametrized],
     ):
         """Initializes a constant waveform."""
         super().__init__(duration)
@@ -563,8 +563,8 @@ class RampWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        start: Union[float, ArrayLike, Parametrized],
-        stop: Union[float, ArrayLike, Parametrized],
+        start: Union[float, pm.Differentiable, Parametrized],
+        stop: Union[float, pm.Differentiable, Parametrized],
     ):
         """Initializes a ramp waveform."""
         super().__init__(duration)
@@ -651,7 +651,7 @@ class BlackmanWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        area: Union[float, ArrayLike, Parametrized],
+        area: Union[float, pm.Differentiable, Parametrized],
     ):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
@@ -667,7 +667,7 @@ class BlackmanWaveform(Waveform):
     def from_max_val(
         cls,
         max_val: Union[float, Parametrized],
-        area: Union[float, ArrayLike, Parametrized],
+        area: Union[float, pm.Differentiable, Parametrized],
     ) -> BlackmanWaveform:
         """Creates a Blackman waveform with a threshold on the maximum value.
 
@@ -968,7 +968,7 @@ class KaiserWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        area: Union[float, ArrayLike, Parametrized],
+        area: Union[float, pm.Differentiable, Parametrized],
         beta: Optional[Union[float, Parametrized]] = 14.0,
     ):
         """Initializes a Kaiser waveform."""
@@ -1000,7 +1000,7 @@ class KaiserWaveform(Waveform):
     def from_max_val(
         cls,
         max_val: Union[float, Parametrized],
-        area: Union[float, ArrayLike, Parametrized],
+        area: Union[float, pm.Differentiable, Parametrized],
         beta: Optional[Union[float, Parametrized]] = 14.0,
     ) -> KaiserWaveform:
         """Creates a Kaiser waveform with a threshold on the maximum value.

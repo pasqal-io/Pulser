@@ -41,7 +41,11 @@ class Register3D(BaseRegister, RegDrawer):
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
+    def __init__(
+        self,
+        qubits: Mapping[Any, ArrayLike | pm.Differentiable],
+        **kwargs: Any,
+    ):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
         if (
@@ -54,7 +58,10 @@ class Register3D(BaseRegister, RegDrawer):
 
     @classmethod
     def cubic(
-        cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
+        cls,
+        side: int,
+        spacing: float | pm.Differentiable = 4.0,
+        prefix: Optional[str] = None,
     ) -> Register3D:
         """Initializes the register with the qubits in a cubic array.
 
@@ -83,7 +90,7 @@ class Register3D(BaseRegister, RegDrawer):
         rows: int,
         columns: int,
         layers: int,
-        spacing: float = 4.0,
+        spacing: float | pm.Differentiable = 4.0,
         prefix: Optional[str] = None,
     ) -> Register3D:
         """Initializes the register with the qubits in a cuboid array.
@@ -122,14 +129,15 @@ class Register3D(BaseRegister, RegDrawer):
             )
 
         # Check spacing
-        if spacing <= 0.0:
+        spacing_ = pm.AbstractArray(spacing)
+        if spacing_ <= 0.0:
             raise ValueError(
                 f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than 0."
             )
 
         coords = (
-            np.array(
+            pm.AbstractArray(
                 [
                     (x, y, z)
                     for z in range(layers)
@@ -138,7 +146,7 @@ class Register3D(BaseRegister, RegDrawer):
                 ],
                 dtype=float,
             )
-            * spacing
+            * spacing_
         )
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)

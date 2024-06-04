@@ -25,6 +25,7 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 import pulser
+import pulser.math as pm
 import pulser.register._patterns as patterns
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_register,
@@ -43,7 +44,11 @@ class Register(BaseRegister, RegDrawer):
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
+    def __init__(
+        self,
+        qubits: Mapping[Any, ArrayLike | pm.Differentiable],
+        **kwargs: Any,
+    ):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
         if (
@@ -56,7 +61,10 @@ class Register(BaseRegister, RegDrawer):
 
     @classmethod
     def square(
-        cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
+        cls,
+        side: int,
+        spacing: float | pm.Differentiable = 4.0,
+        prefix: Optional[str] = None,
     ) -> Register:
         """Initializes the register with the qubits in a square array.
 
@@ -84,7 +92,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         columns: int,
-        spacing: float = 4.0,
+        spacing: float | pm.Differentiable = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Creates a rectangular array of qubits on a square lattice.
@@ -107,8 +115,8 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         columns: int,
-        row_spacing: float = 4.0,
-        col_spacing: float = 2.0,
+        row_spacing: float | pm.Differentiable = 4.0,
+        col_spacing: float | pm.Differentiable = 2.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Creates a rectangular array of qubits on a rectangular lattice.
@@ -140,13 +148,16 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than or equal to 1."
             )
 
+        row_spacing_ = pm.AbstractArray(row_spacing)
+        col_spacing_ = pm.AbstractArray(col_spacing)
+
         # Check spacing
-        if row_spacing <= 0.0 or col_spacing <= 0.0:
+        if row_spacing_ <= 0.0 or col_spacing_ <= 0.0:
             raise ValueError("Spacing between atoms must be greater than 0.")
 
-        coords = patterns.square_rect(rows, columns)
-        coords[:, 0] = coords[:, 0] * col_spacing
-        coords[:, 1] = coords[:, 1] * row_spacing
+        coords = pm.AbstractArray(patterns.square_rect(rows, columns))
+        coords[:, 0] = coords[:, 0] * col_spacing_
+        coords[:, 1] = coords[:, 1] * row_spacing_
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
@@ -155,7 +166,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         atoms_per_row: int,
-        spacing: float = 4.0,
+        spacing: float | pm.Differentiable = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Initializes the register with the qubits in a triangular lattice.
@@ -190,20 +201,26 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than or equal to 1."
             )
 
+        spacing_ = pm.AbstractArray(spacing)
         # Check spacing
-        if spacing <= 0.0:
+        if spacing_ <= 0.0:
             raise ValueError(
                 f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than 0."
             )
 
-        coords = patterns.triangular_rect(rows, atoms_per_row) * spacing
-
+        coords = (
+            pm.AbstractArray(patterns.triangular_rect(rows, atoms_per_row))
+            * spacing_
+        )
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     @classmethod
     def hexagon(
-        cls, layers: int, spacing: float = 4.0, prefix: Optional[str] = None
+        cls,
+        layers: int,
+        spacing: float | pm.Differentiable = 4.0,
+        prefix: Optional[str] = None,
     ) -> Register:
         """Initializes the register with the qubits in a hexagonal layout.
 
@@ -224,15 +241,16 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than or equal to 1."
             )
 
+        spacing_ = pm.AbstractArray(spacing)
         # Check spacing
-        if spacing <= 0.0:
+        if spacing_ <= 0.0:
             raise ValueError(
                 f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than 0."
             )
 
         n_atoms = 1 + 3 * (layers**2 + layers)
-        coords = patterns.triangular_hex(n_atoms) * spacing
+        coords = pm.AbstractArray(patterns.triangular_hex(n_atoms)) * spacing_
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
@@ -241,7 +259,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         n_qubits: int,
         device: pulser.devices._device_datacls.BaseDevice,
-        spacing: float | None = None,
+        spacing: float | pm.Differentiable | None = None,
         prefix: str | None = None,
     ) -> Register:
         """Initializes the register with maximum connectivity for a device.
@@ -285,22 +303,24 @@ class Register(BaseRegister, RegDrawer):
 
         # Default spacing or check minimal distance
         if spacing is None:
-            spacing = device.min_atom_distance
-        elif spacing < device.min_atom_distance:
+            spacing_ = pm.AbstractArray(device.min_atom_distance)
+        elif (
+            spacing_ := pm.AbstractArray(spacing)
+        ) < device.min_atom_distance:
             raise ValueError(
                 f"Spacing between atoms (`spacing = `{spacing})"
                 " must be greater than or equal to the minimal"
                 " distance supported by this device"
                 f" ({device.min_atom_distance})."
             )
-        if spacing <= 0.0:
+        if spacing_ <= 0.0:
             # spacing is None or 0.0, device.min_atom_distance is 0.0
             raise NotImplementedError(
                 "Maximum connectivity layouts are not well defined for a "
                 "device with 'min_atom_distance=0.0'."
             )
 
-        coords = patterns.triangular_hex(n_qubits) * spacing
+        coords = pm.AbstractArray(patterns.triangular_hex(n_qubits)) * spacing_
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
@@ -317,7 +337,7 @@ class Register(BaseRegister, RegDrawer):
             angle.
         """
         theta = np.deg2rad(degrees)
-        rot = np.array(
+        rot = pm.vstack(
             [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
         )
         if self.layout is not None:

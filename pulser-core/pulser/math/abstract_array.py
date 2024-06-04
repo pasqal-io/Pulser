@@ -129,6 +129,11 @@ class AbstractArray:
         """The real part of each element in the array."""
         return AbstractArray(self._array.real)
 
+    @property
+    def dtype(self) -> Any:
+        """The data type of the array elements."""
+        return self._array.dtype
+
     def __array__(self, dtype: Any = None) -> np.ndarray:
         return self._array.__array__(dtype)
 
@@ -244,12 +249,19 @@ class AbstractArray:
             operator.matmul(*self._binary_operands(other)[::-1])
         )
 
+    def _process_indices(self, indices: Any) -> Any:
+        return (
+            indices.tolist() if isinstance(indices, AbstractArray) else indices
+        )
+
     def __getitem__(self, indices: Any) -> AbstractArray:
-        return AbstractArray(self._array[indices])
+        return AbstractArray(self._array[self._process_indices(indices)])
 
     def __setitem__(self, indices: Any, values: AbstractArrayLike) -> None:
         array, values = self._binary_operands(values)
-        array[indices] = values  # type: ignore[assignment]
+        array[
+            self._process_indices(indices)
+        ] = values  # type: ignore[assignment]
         self._array = array
         del self.is_tensor  # Clears cache
 

@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.typing import ArrayLike
 
 import pulser
 import pulser.math as pm
@@ -92,7 +91,7 @@ class Pulse:
         self,
         amplitude: Waveform | Parametrized,
         detuning: Waveform | Parametrized,
-        phase: float | ArrayLike | Parametrized,
+        phase: float | pm.Differentiable | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ):
         """Initializes a new Pulse."""
@@ -131,8 +130,8 @@ class Pulse:
     def ConstantDetuning(
         cls,
         amplitude: Waveform | Parametrized,
-        detuning: float | ArrayLike | Parametrized,
-        phase: float | ArrayLike | Parametrized,
+        detuning: float | pm.Differentiable | Parametrized,
+        phase: float | pm.Differentiable | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Creates a Pulse with an amplitude waveform and a constant detuning.
@@ -153,9 +152,9 @@ class Pulse:
     @parametrize
     def ConstantAmplitude(
         cls,
-        amplitude: float | ArrayLike | Parametrized,
+        amplitude: float | pm.Differentiable | Parametrized,
         detuning: Waveform | Parametrized,
-        phase: float | ArrayLike | Parametrized,
+        phase: float | pm.Differentiable | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
@@ -176,9 +175,9 @@ class Pulse:
     def ConstantPulse(
         cls,
         duration: int | Parametrized,
-        amplitude: float | ArrayLike | Parametrized,
-        detuning: float | ArrayLike | Parametrized,
-        phase: float | ArrayLike | Parametrized,
+        amplitude: float | pm.Differentiable | Parametrized,
+        detuning: float | pm.Differentiable | Parametrized,
+        phase: float | pm.Differentiable | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a constant detuning.

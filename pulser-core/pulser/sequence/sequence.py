@@ -1093,8 +1093,8 @@ class Sequence(Generic[DeviceType]):
     def enable_eom_mode(
         self,
         channel: str,
-        amp_on: Union[float, Parametrized],
-        detuning_on: Union[float, Parametrized],
+        amp_on: Union[float, pm.Differentiable, Parametrized],
+        detuning_on: Union[float, pm.Differentiable, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
         correct_phase_drift: bool = False,
     ) -> None:
@@ -1146,8 +1146,10 @@ class Sequence(Generic[DeviceType]):
         stored_opt_detuning_off = optimal_detuning_off
         if not isinstance(on_pulse, Parametrized):
             channel_obj.validate_pulse(on_pulse)
-            amp_on_ = pm.AbstractArray(cast(float, amp_on))
-            detuning_on_ = pm.AbstractArray(cast(float, detuning_on))
+            assert not isinstance(amp_on, Parametrized)
+            amp_on_ = pm.AbstractArray(amp_on)
+            assert not isinstance(detuning_on, Parametrized)
+            detuning_on_ = pm.AbstractArray(detuning_on)
             eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
                 detuning_off, switching_beams = (
@@ -1260,7 +1262,7 @@ class Sequence(Generic[DeviceType]):
         self,
         channel: str,
         duration: Union[int, Parametrized],
-        phase: Union[float, Parametrized],
+        phase: Union[float, pm.Differentiable, Parametrized],
         post_phase_shift: Union[float, Parametrized] = 0.0,
         protocol: PROTOCOLS = "min-delay",
         correct_phase_drift: bool = False,
@@ -1315,7 +1317,7 @@ class Sequence(Generic[DeviceType]):
                 try:
                     if isinstance(arg, str):
                         raise TypeError
-                    float(arg)
+                    float(pm.AbstractArray(arg, dtype=float))
                 except TypeError:
                     raise TypeError("Phase values must be a numeric value.")
             return
@@ -1526,7 +1528,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def phase_shift(
         self,
-        phi: Union[float, Parametrized],
+        phi: Union[float, pm.Differentiable, Parametrized],
         *targets: QubitId,
         basis: str = "digital",
     ) -> None:
@@ -1548,7 +1550,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def phase_shift_index(
         self,
-        phi: Union[float, Parametrized],
+        phi: Union[float, pm.Differentiable, Parametrized],
         *targets: Union[int, Parametrized],
         basis: str = "digital",
     ) -> None:
@@ -1623,7 +1625,7 @@ class Sequence(Generic[DeviceType]):
         self,
         *,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, float, int],
+        **vars: Union[ArrayLike, pm.Differentiable, float, int],
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
