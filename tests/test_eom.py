@@ -151,9 +151,8 @@ def test_detuning_off(
     zero_det = calc_offset(amp)  # detuning when both beams are off = offset
     assert np.isclose(eom._lightshift(amp, *RydbergBeam), -zero_det)
     assert eom._lightshift(amp) == 0.0
-    det_off_options, switching_beams_opts = eom.detuning_off_options(
-        amp, detuning_on, return_switching_beams=True
-    )
+    det_off_options = eom.detuning_off_options(amp, detuning_on)
+    switching_beams_opts = eom._switching_beams_combos
     assert len(det_off_options) == len(switching_beams_opts)
     assert len(det_off_options) == 2 + multiple_beam_control
     order = np.argsort(det_off_options)

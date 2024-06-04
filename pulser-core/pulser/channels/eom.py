@@ -196,6 +196,15 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
                     f" enumeration, not {self.limiting_beam}."
                 )
 
+    @property
+    def _switching_beams_combos(self) -> list[tuple[RydbergBeam, ...]]:
+        switching_beams: list[tuple[RydbergBeam, ...]] = [
+            (beam,) for beam in self.controlled_beams
+        ]
+        if len(self.controlled_beams) > 1 and self.multiple_beam_control:
+            switching_beams.append(tuple(RydbergBeam))
+        return switching_beams
+
     @overload
     def calculate_detuning_off(
         self,
@@ -234,47 +243,24 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
             return_switching_beams: Whether to return the beams that switch on
                 on and off.
         """
-        off_options, switching_options = self.detuning_off_options(
-            amp_on, detuning_on, return_switching_beams=True
-        )
+        off_options = self.detuning_off_options(amp_on, detuning_on)
         closest_option = np.abs(off_options - optimal_detuning_off).argmin()
         best_det_off = cast(float, off_options[closest_option])
         if not return_switching_beams:
             return best_det_off
-        return best_det_off, switching_options[closest_option]
+        return best_det_off, self._switching_beams_combos[closest_option]
 
-    @overload
     def detuning_off_options(
         self,
         rabi_frequency: float,
         detuning_on: float,
-        return_switching_beams: Literal[False],
     ) -> np.ndarray:
-        pass
-
-    @overload
-    def detuning_off_options(
-        self,
-        rabi_frequency: float,
-        detuning_on: float,
-        return_switching_beams: Literal[True],
-    ) -> tuple[np.ndarray, list[tuple[RydbergBeam, ...]]]:
-        pass
-
-    def detuning_off_options(
-        self,
-        rabi_frequency: float,
-        detuning_on: float,
-        return_switching_beams: bool = False,
-    ) -> np.ndarray | tuple[np.ndarray, list[tuple[RydbergBeam, ...]]]:
         """Calculates the possible detuning values when the amplitude is off.
 
         Args:
             rabi_frequency: The Rabi frequency when executing a pulse,
                 in rad/µs.
             detuning_on: The detuning when executing a pulse, in rad/µs.
-            return_switching_beams: Whether to return the beams that switch for
-                each option.
 
         Returns:
             The possible detuning values when in between pulses.
@@ -284,34 +270,15 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         # offset takes into account the lightshift when both beams are on
         # which is not zero when the Rabi freq of both beams is not equal
         offset = detuning_on - self._lightshift(rabi_frequency, *RydbergBeam)
-        switching_beams: list[tuple[RydbergBeam, ...]] = [
-            (beam,) for beam in self.controlled_beams
-        ]
-        if len(self.controlled_beams) == 1:
-            # When only one beam is controlled, the lighshift during delays
-            # corresponds to having only the other beam (which can't be
-            # switched off) on.
-            lightshifts = [
-                self._lightshift(rabi_frequency, ~self.controlled_beams[0])
-            ]
-
-        else:
-            # When both beams are controlled, we have three options for the
-            # lightshift: (ON, OFF), (OFF, ON) and (OFF, OFF)
-            lightshifts = [
-                self._lightshift(rabi_frequency, ~beam)
-                for beam in self.controlled_beams
-            ]
-            if self.multiple_beam_control:
-                # Case where both beams are off ie (OFF, OFF) -> no lightshift
-                lightshifts.append(0.0)
-                switching_beams.append(tuple(RydbergBeam))
+        all_beams: set[RydbergBeam] = set(RydbergBeam)
+        lightshifts = []
+        for beams_off in self._switching_beams_combos:
+            # The beams that don't switch off contribute to the lightshift
+            beams_on: set[RydbergBeam] = all_beams - set(beams_off)
+            lightshifts.append(self._lightshift(rabi_frequency, *beams_on))
 
         # We sum the offset to all lightshifts to get the effective detuning
-        det_offs = np.array(lightshifts) + offset
-        if not return_switching_beams:
-            return det_offs
-        return det_offs, switching_beams
+        return np.array(lightshifts) + offset
 
     def _lightshift(
         self, rabi_frequency: float, *beams_on: RydbergBeam
