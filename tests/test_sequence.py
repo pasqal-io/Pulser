@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import itertools
 import json
@@ -488,6 +489,7 @@ def init_seq(
     parametrized=False,
     mappable_reg=False,
     config_det_map=False,
+    prefer_slm_mask=True,
 ) -> Sequence:
     register = (
         reg.layout.make_mappable_register(len(reg.qubits))
@@ -511,7 +513,7 @@ def init_seq(
                 for i in range(10)
             }
         )
-        if mappable_reg:
+        if mappable_reg or not prefer_slm_mask:
             seq.config_detuning_map(detuning_map=det_map, dmm_id="dmm_0")
         else:
             seq.config_slm_mask(["q0"], "dmm_0")
@@ -536,6 +538,100 @@ def test_ising_mode(
     assert seq2._in_xy and not seq2._in_ising
     with pytest.raises(ValueError, match="Cannot be in ising if in xy."):
         seq2._in_ising = True
+
+
+@pytest.mark.parametrize("config_det_map", [False, True])
+@pytest.mark.parametrize("starts_mappable", [False, True])
+@pytest.mark.parametrize("mappable_reg", [False, True])
+@pytest.mark.parametrize("parametrized", [False, True])
+def test_switch_register(
+    reg, mappable_reg, parametrized, starts_mappable, config_det_map
+):
+    pulse = Pulse.ConstantPulse(1000, 1, -1, 2)
+    with_slm_mask = not starts_mappable and not mappable_reg
+    seq = init_seq(
+        reg,
+        DigitalAnalogDevice,
+        "raman",
+        "raman_local",
+        [pulse],
+        initial_target="q0",
+        parametrized=parametrized,
+        mappable_reg=starts_mappable,
+        config_det_map=config_det_map,
+        prefer_slm_mask=with_slm_mask,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="given ids have to be qubit ids declared in this sequence's"
+        " register",
+    ):
+        seq.switch_register(Register(dict(q1=(0, 0), qN=(10, 10))))
+
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(pulse, "ryd", protocol="no-delay")
+
+    if mappable_reg:
+        new_reg = TriangularLatticeLayout(10, 5).make_mappable_register(2)
+    else:
+        new_reg = Register(dict(q0=(0, 0), foo=(10, 10)))
+
+    if config_det_map and not with_slm_mask:
+        context_manager = pytest.warns(
+            UserWarning, match="configures a detuning map"
+        )
+    else:
+        context_manager = contextlib.nullcontext()
+
+    with context_manager:
+        new_seq = seq.switch_register(new_reg)
+    assert seq.declared_variables or not parametrized
+    assert seq.declared_variables == new_seq.declared_variables
+    assert new_seq.is_parametrized() == parametrized
+    assert new_seq.is_register_mappable() == mappable_reg
+    assert new_seq._calls[1:] == seq._calls[1:]  # Excludes __init__
+    assert new_seq._to_build_calls == seq._to_build_calls
+
+    build_kwargs = {}
+    if parametrized:
+        build_kwargs["delay"] = 120
+    if mappable_reg:
+        build_kwargs["qubits"] = {"q0": 1, "q1": 4}
+    if build_kwargs:
+        new_seq = new_seq.build(**build_kwargs)
+
+    assert isinstance(
+        (raman_pulse_slot := new_seq._schedule["raman"][1]).type, Pulse
+    )
+    assert raman_pulse_slot.type == pulse
+    assert raman_pulse_slot.targets == {"q0"}
+
+    assert isinstance(
+        (rydberg_pulse_slot := new_seq._schedule["ryd"][1]).type, Pulse
+    )
+    assert rydberg_pulse_slot.type == pulse
+    assert rydberg_pulse_slot.targets == set(new_reg.qubit_ids)
+
+    if config_det_map:
+        if with_slm_mask:
+            if parametrized:
+                seq = seq.build(**build_kwargs)
+            assert np.any(reg.qubits["q0"] != new_reg.qubits["q0"])
+            assert "dmm_0" in seq.declared_channels
+            prev_qubit_wmap = seq._schedule[
+                "dmm_0"
+            ].detuning_map.get_qubit_weight_map(reg.qubits)
+            new_qubit_wmap = new_seq._schedule[
+                "dmm_0"
+            ].detuning_map.get_qubit_weight_map(new_reg.qubits)
+            assert prev_qubit_wmap["q0"] == 1.0
+            assert new_qubit_wmap == dict(q0=1.0, foo=0.0)
+        elif not parametrized:
+            assert (
+                seq._schedule["dmm_0"].detuning_map
+                == new_seq._schedule["dmm_0"].detuning_map
+            )
 
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
