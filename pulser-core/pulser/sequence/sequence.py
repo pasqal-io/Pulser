@@ -1149,8 +1149,14 @@ class Sequence(Generic[DeviceType]):
             detuning_on = cast(float, detuning_on)
             eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                detuning_off = eom_config.calculate_detuning_off(
-                    amp_on, detuning_on, optimal_detuning_off
+                (
+                    detuning_off,
+                    switching_beams,
+                ) = eom_config.calculate_detuning_off(
+                    amp_on,
+                    detuning_on,
+                    optimal_detuning_off,
+                    return_switching_beams=True,
                 )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
@@ -1166,7 +1172,7 @@ class Sequence(Generic[DeviceType]):
                     drift_rate=-detuning_off, ti=self.get_duration(channel)
                 )
                 self._schedule.enable_eom(
-                    channel, amp_on, detuning_on, detuning_off
+                    channel, amp_on, detuning_on, detuning_off, switching_beams
                 )
                 if correct_phase_drift:
                     buffer_slot = self._last(channel)
