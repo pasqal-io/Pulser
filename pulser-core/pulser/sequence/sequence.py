@@ -1124,7 +1124,10 @@ class Sequence(Generic[DeviceType]):
 
             if not self.is_parametrized():
                 phase_drift_params = _PhaseDriftParams(
-                    drift_rate=-detuning_off, ti=self.get_duration(channel)
+                    drift_rate=-detuning_off,
+                    # enable_eom() calls wait for fall, so the block only
+                    # starts after fall time
+                    ti=self.get_duration(channel, include_fall_time=True),
                 )
                 self._schedule.enable_eom(
                     channel, amp_on, detuning_on, detuning_off
@@ -2034,10 +2037,17 @@ class Sequence(Generic[DeviceType]):
         for qubit in last.targets:
             self._basis_ref[basis][qubit].update_last_used(true_finish)
 
-        if pulse.post_phase_shift:
-            self._phase_shift(
-                pulse.post_phase_shift, *last.targets, basis=basis
+        total_phase_shift = pulse.post_phase_shift
+        if phase_drift_params:
+            # The phase correction done to the EOM pulse's phase must
+            # also be done to the phase shift, as the phase reference is
+            # effectively changed by -drift
+            total_phase_shift = (
+                total_phase_shift
+                - phase_drift_params.calc_phase_drift(new_pulse_slot.ti)
             )
+        if total_phase_shift:
+            self._phase_shift(total_phase_shift, *last.targets, basis=basis)
         if (
             self._in_ising
             and self._slm_mask_dmm
