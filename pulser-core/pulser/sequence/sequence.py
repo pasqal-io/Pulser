@@ -2031,11 +2031,9 @@ class Sequence(Generic[DeviceType]):
             phase_drift_params=phase_drift_params,
         )
 
-        true_finish = self._last(channel).tf + pulse.fall_time(
-            channel_obj, in_eom_mode=self.is_in_eom_mode(channel)
-        )
+        new_pulse_slot = self._last(channel)
         for qubit in last.targets:
-            self._basis_ref[basis][qubit].update_last_used(true_finish)
+            self._basis_ref[basis][qubit].update_last_used(new_pulse_slot.tf)
 
         total_phase_shift = pulse.post_phase_shift
         if phase_drift_params:
