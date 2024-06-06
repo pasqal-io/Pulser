@@ -242,6 +242,12 @@ class NoiseModel:
         if np.any(np.array(self.eff_noise_rates) < 0):
             raise ValueError("The provided rates must be greater than 0.")
 
+        with_leakage = "leakage" in self.noise_types
+        min_shape = 2 if not with_leakage else 3
+        possible_shapes = [
+            (min_shape, min_shape),
+            (min_shape + 1, min_shape + 1),
+        ]
         # Check the validity of operators
         for op in self.eff_noise_opers:
             # type checking
@@ -253,6 +259,12 @@ class NoiseModel:
                 )
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
+            if operator.shape not in possible_shapes:
+                raise ValueError(
+                    f"With{'' if with_leakage else 'out'} leakage, operator's "
+                    f"shape must be {possible_shapes[0]} or "
+                    f"{possible_shapes[1]}, not {operator.shape}."
+                )
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = asdict(self)

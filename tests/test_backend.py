@@ -215,6 +215,26 @@ class TestNoiseModel:
             ValueError, match="Effective noise must be included in noise types"
         ):
             NoiseModel(noise_types=("leakage",))
+        err_message = (
+            r"Without leakage, operator's shape must be \(2, 2\) or "
+            + r"\(3, 3\), not \(1, 1\)."
+        )
+        with pytest.raises(ValueError, match=err_message):
+            NoiseModel(
+                noise_types=("eff_noise",),
+                eff_noise_opers=[[[1.0]]],
+                eff_noise_rates=[1.0],
+            )
+        err_message = (
+            r"With leakage, operator's shape must be \(3, 3\) or "
+            + r"\(4, 4\), not \(5, 5\)."
+        )
+        with pytest.raises(ValueError, match=err_message):
+            NoiseModel(
+                noise_types=("eff_noise", "leakage"),
+                eff_noise_opers=[np.ones((5, 5))],
+                eff_noise_rates=[1.0],
+            )
 
     def test_eq(self, matrices):
         final_fields = dict(
