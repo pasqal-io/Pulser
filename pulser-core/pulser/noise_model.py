@@ -202,6 +202,8 @@ class NoiseModel:
         # Can't define "dephasing", "depolarizing" with "leakage"
         if "leakage" not in self.noise_types:
             return
+        # TODO: Implement the depolarizing and dephasing operations with
+        # projectors will stop raising an error.
         if (
             "dephasing" in self.noise_types
             or "depolarizing" in self.noise_types
