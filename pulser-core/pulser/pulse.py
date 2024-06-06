@@ -269,7 +269,7 @@ class Pulse:
         if type(other) is not type(self):
             return False
 
-        def check_phase_eq(phase1: float, phase2: float) -> bool:
+        def check_phase_eq(phase1: float, phase2: float) -> np.bool_:
             # Comparing with an offset ensures we don't fail just because
             # we are very close to the wraping point
             return np.isclose(phase1, phase2, atol=1e-6) or np.isclose(
