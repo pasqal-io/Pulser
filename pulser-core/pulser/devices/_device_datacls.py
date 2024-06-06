@@ -272,7 +272,7 @@ class BaseDevice(ABC):
 
     @property
     def supported_states(self) -> list[States]:
-        """Available states in their order of appearances."""
+        """Available states ranked by their energy levels (highest first)."""
         all_states = set().union(
             *(set(ch.eigenstates) for ch in self.channel_objects)
         )
