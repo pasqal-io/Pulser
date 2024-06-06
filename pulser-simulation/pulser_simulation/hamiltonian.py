@@ -34,7 +34,7 @@ from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
 def build_operator(
     sampled_seq: SequenceSamples,
     qubits: dict[QubitId, np.ndarray],
-    operations: Union[list, tuple],
+    operations: list[tuple],
     op_matrix: dict[str, qutip.Qobj] | None = None,
     with_leakage: bool = False,
 ) -> qutip.Qobj:
@@ -46,18 +46,33 @@ def build_operator(
     ``(operator, 'global')`` returns the sum for all ``j`` of operator
     applied at ``qubit_j`` and identity elsewhere.
 
-    `operator` can be a ``qutip.Quobj`` or a string key for ``op_matrix``. If
+    `operator` can be a ``qutip.Qobj`` or a string key for ``op_matrix``. If
     ``op_matrix`` is undefined, this string can be "I" or "sigma_{a}{b}" with
     a, b elements of the computational basis (sampled_seq.eigenbasis with "x"
     if with_leakage is True) and ``sigma_{ab} = a * b^\dagger``.
-    `qubits` is the list on which operator will be applied. The qubits can be
-    passed as their index or their label in the register.
+    `qubits` is the list on which operator will be applied. The qubits are
+    passed as their label in the register.
 
-    Example for 4 qubits labelled ["q0", "q1", "q2", "q3"]:
-        - ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`.
-        - ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`.
-        - ``[(X, ["q0"])]`` returns ``XIII`` on ["q0", "q1", "q2", "q3"].
-        - ``[(sigma_gg, ["q0"])]`` applies ``sigma_ggIII``.
+    Examples:
+        If you want to generate an effective noise operator for your sampled
+        Sequence, provide a dummy register::
+
+            ```python
+                build_operator(sampled_seq, {0:[0., 0.]}, [("sigma_gg", [0])])
+                build_operator(
+                    sampled_seq, {0:[0., 0.]}, [(qutip.sigmax(), [0])]
+                )
+            ```
+
+        Here are some operations on 4 qubits labelled ["q0", "q1", "q2", "q3"]:
+            - ``[(qutip.sigmax(), 'global')]`` returns `XIII + IXII + IIXI +
+                IIIX`.
+            - ``[(qutip.sigmax(), ["q1"])]`` returns ``IXII``.
+            - ``[(sigma_gg, ["q0"])]`` applies ``sigma_ggIII``.
+
+        If you define in `op_matrix` a dictionnary containing
+        {"X": qutip.sigmax()}, then the first two operations can also be
+        written ``[("X", 'global')]`` and ``[("X", ["q1"])]``.
 
     Args:
         sampled_seq: The SequenceSamples to consider. Provides the
@@ -76,6 +91,37 @@ def build_operator(
     Returns:
         The final operator.
     """
+    # Check operations list
+    if not isinstance(operations, list):
+        raise ValueError(
+            "The operations should be a list of tuples of shape "
+            "(operator as a qutip.Qobj or str, qubit id as an int or str)."
+        )
+    # Check the qubit ids targeted in operations
+    target_qids = [operation[1] for operation in operations]
+    if "global" in target_qids:
+        if len(operations) > 1:
+            raise ValueError(
+                "If a 'global' operation is defined, no other operations "
+                "can be defined."
+            )
+    else:
+        target_qids_list = list(itertools.chain(*target_qids))
+        target_qids_set = set(target_qids_list)
+        if len(target_qids_set) < len(target_qids_list):
+            # Either the qubit id has been defined twice in an operation:
+            for qids in target_qids:
+                if len(set(qids)) < len(qids):
+                    raise ValueError("Duplicate atom ids in argument list.")
+            # Or it was defined in two different operations
+            raise ValueError(
+                "Each qubit can be targeted by only one operation."
+            )
+        if not target_qids_set.issubset(qubits.keys()):
+            raise ValueError(
+                "Invalid qubit names: " f"{target_qids_set - qubits.keys()}"
+            )
+    # Generate op matrix
     if op_matrix is None:
         eigenstates = sampled_seq.eigenbasis
         if with_leakage:
@@ -90,10 +136,9 @@ def build_operator(
                 proj_name = "sigma_" + proj0 + proj1
                 op_matrix[proj_name] = basis[proj0] * basis[proj1].dag()
 
+    # Build operator
     op_list = [op_matrix["I"] for j in range(len(qubits))]
     _qid_index = {qid: i for i, qid in enumerate(qubits)}
-    if not isinstance(operations, list):
-        operations = [operations]
 
     for operator, qids in operations:
         if qids == "global":
@@ -107,22 +152,14 @@ def build_operator(
                 )
                 for q_id in qubits
             )
-        else:
-            qids_set = set(qids)
-            if len(qids_set) < len(qids):
-                raise ValueError("Duplicate atom ids in argument list.")
-            if not qids_set.issubset(qubits.keys()):
-                raise ValueError(
-                    "Invalid qubit names: " f"{qids_set - qubits.keys()}"
-                )
-            if isinstance(operator, str):
-                try:
-                    operator = op_matrix[operator]
-                except KeyError:
-                    raise ValueError(f"{operator} is not a valid operator")
-            for qubit in qids:
-                k = _qid_index[qubit]
-                op_list[k] = operator
+        if isinstance(operator, str):
+            try:
+                operator = op_matrix[operator]
+            except KeyError:
+                raise ValueError(f"{operator} is not a valid operator")
+        for qubit in qids:
+            k = _qid_index[qubit]
+            op_list[k] = operator
     return qutip.tensor(list(map(qutip.Qobj, op_list)))
 
 
@@ -239,7 +276,9 @@ class Hamiltonian:
 
         if "eff_noise" in config.noise_types:
             for id, rate in enumerate(config.eff_noise_rates):
-                if config.eff_noise_opers[id].shape != (self.dim, self.dim):
+                if np.array(
+                    config.eff_noise_opers[id], dtype=complex
+                ).shape != (self.dim, self.dim):
                     raise ValueError(
                         "Effective noise operator should be of shape "
                         f"{(self.dim, self.dim)}, see basis :{self.basis}."
@@ -350,7 +389,7 @@ class Hamiltonian:
                             samples["Local"][basis][qid][qty] = 0.0
         self.samples = samples
 
-    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+    def build_operator(self, operations: list) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
 
         Takes as argument a list of tuples ``[(operator_1, qubits_1),

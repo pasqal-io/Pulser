@@ -1498,7 +1498,7 @@ class Sequence(Generic[DeviceType]):
         Args:
             basis: Valid basis for measurement (consult the
                 ``supported_bases`` attribute of the selected device for
-                the available options, "error" basis not being valid).
+                the available options).
         """
         available = (
             self._device.supported_bases - {"XY"}

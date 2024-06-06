@@ -311,31 +311,25 @@ def test_building_basis_and_projection_operators(
         assert "sigma_xg" not in sim.op_matrix
 
     # Check local operator building method:
+    with pytest.raises(
+        ValueError, match="The operations should be a list of tuples"
+    ):
+        sim.build_operator(("sigma_gg", ["target"]))
+    with pytest.raises(ValueError, match="If a 'global' operation is defined"):
+        sim.build_operator([("sigma_gg", ["target"]), ("sigma_gg", "global")])
     with pytest.raises(ValueError, match="Duplicate atom"):
         sim.build_operator([("sigma_gg", ["target", "target"])])
+    with pytest.raises(
+        ValueError, match="Each qubit can be targeted by only one operation."
+    ):
+        sim.build_operator(
+            [("sigma_gg", ["target"]), ("sigma_rr", ["target", "control1"])]
+        )
     with pytest.raises(ValueError, match="not a valid operator"):
         sim.build_operator([("wrong", ["target"])])
     with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
         sim.build_operator([("sigma_gg", ["wrong"])])
 
-    # Check building operator with one operator
-    op_standard = sim.build_operator([("sigma_gg", ["target"])])
-    op_one = sim.build_operator(("sigma_gg", ["target"]))
-    assert np.linalg.norm(op_standard - op_one) < 1e-10
-
-    op_standard = build_operator(
-        sim.samples_obj,
-        reg.qubits,
-        [("sigma_gg", ["target"])],
-        with_leakage=with_leakage,
-    )
-    op_one = build_operator(
-        sim.samples_obj,
-        reg.qubits,
-        ("sigma_gg", ["target"]),
-        with_leakage=with_leakage,
-    )
-    assert np.linalg.norm(op_standard - op_one) < 1e-10
     # Global ground-rydberg
     seq2 = Sequence(reg, DigitalAnalogDevice)
     seq2.declare_channel("global", "rydberg_global")
