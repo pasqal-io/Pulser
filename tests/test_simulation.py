@@ -28,6 +28,9 @@ from pulser_simulation import (
     QutipEmulator,
     SimConfig,
     Simulation,
+    default_operators,
+    build_1qubit_operator,
+    build_projector,
     build_operator,
 )
 from pulser_simulation.simresults import CoherentResults
@@ -274,6 +277,7 @@ def test_building_basis_and_projection_operators(
         return qutip.basis(dim, idx1) * qutip.basis(dim, idx2).dag()
 
     # All three levels:
+
     config_4lvls = SimConfig(
         noise=("leakage", "eff_noise"),
         eff_noise_rates=[0.0],
@@ -302,13 +306,39 @@ def test_building_basis_and_projection_operators(
         basis["x"] = qutip.basis(dim, 3)
     assert sim.basis == basis
     assert sim.eigenbasis == list(basis.keys())
-    assert sim.op_matrix["sigma_rr"] == proj(dim, 0, 0)
-    assert sim.op_matrix["sigma_gr"] == proj(dim, 1, 0)
-    assert sim.op_matrix["sigma_hg"] == proj(dim, 2, 1)
-    if with_leakage:
-        assert sim.op_matrix["sigma_xg"] == proj(dim, 3, 1)
-    else:
-        assert "sigma_xg" not in sim.op_matrix
+    for op_matrix in (
+        sim.op_matrix,
+        operators := default_operators(sim.samples_obj, with_leakage),
+    ):
+        assert op_matrix["sigma_rr"] == proj(dim, 0, 0)
+        assert op_matrix["sigma_gr"] == proj(dim, 1, 0)
+        assert op_matrix["sigma_hg"] == proj(dim, 2, 1)
+        if with_leakage:
+            assert op_matrix["sigma_xg"] == proj(dim, 3, 1)
+        else:
+            assert "sigma_xg" not in op_matrix
+
+    assert build_projector(sim.samples_obj, "sigma_rr", with_leakage) == proj(
+        dim, 0, 0
+    )
+    assert build_projector(sim.samples_obj, "sigma_gr", with_leakage) == proj(
+        dim, 1, 0
+    )
+    assert build_projector(sim.samples_obj, "sigma_hg", with_leakage) == proj(
+        dim, 2, 1
+    )
+    assert build_projector(sim.samples_obj, "sigma_xg", True) == proj(4, 3, 1)
+    assert (
+        op_Z := build_1qubit_operator(
+            sim.samples_obj,
+            [(1.0, "sigma_hh"), (-1.0, "sigma_gg")],
+            with_leakage=with_leakage,
+        )
+    ) == proj(dim, 2, 2) - proj(dim, 1, 1)
+    operators["Z"] = op_Z
+    assert build_1qubit_operator(
+        sim.samples_obj, [(2.0, "Z")], operators, with_leakage
+    ) == 2 * proj(dim, 2, 2) - 2 * proj(dim, 1, 1)
 
     # Check local operator building method:
     with pytest.raises(

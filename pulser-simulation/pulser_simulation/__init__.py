@@ -19,7 +19,12 @@ from pulser_simulation._version import __version__ as __version__
 from pulser_simulation.qutip_backend import QutipBackend
 from pulser_simulation.simconfig import SimConfig
 from pulser_simulation.simulation import QutipEmulator, Simulation
-from pulser_simulation.hamiltonian import build_operator
+from pulser_simulation.operators import (
+    default_operators,
+    build_projector,
+    build_1qubit_operator,
+    build_operator,
+)
 
 __all__ = [
     "EmulatorConfig",
@@ -27,5 +32,8 @@ __all__ = [
     "QutipBackend",
     "QutipEmulator",
     "SimConfig",
+    "default_operators",
+    "build_projector",
+    "build_1qubit_operator",
     "build_operator",
 ]
