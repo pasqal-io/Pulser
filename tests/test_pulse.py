@@ -119,3 +119,13 @@ def test_full_duration(eom_channel):
     assert pls.get_full_duration(
         eom_channel, in_eom_mode=True
     ) == pls.duration + pls.fall_time(eom_channel, in_eom_mode=True)
+
+
+def test_eq():
+    assert (pls_ := Pulse.ConstantPulse(100, 1, -1, 0)) == Pulse(
+        ConstantWaveform(100, 1),
+        ConstantWaveform(100, -1),
+        1e-6,
+        post_phase_shift=-1e-6,
+    )
+    assert pls_ != repr(pls_)

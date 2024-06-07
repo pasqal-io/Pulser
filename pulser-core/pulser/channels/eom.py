@@ -190,7 +190,9 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
                 "There must be at least one beam in 'controlled_beams'."
             )
         for beam in chain((self.limiting_beam,), self.controlled_beams):
-            if not (isinstance(beam, RydbergBeam) and beam in RydbergBeam):
+            if not (
+                isinstance(beam, RydbergBeam) and beam in tuple(RydbergBeam)
+            ):
                 raise TypeError(
                     "Every beam must be one of options of the `RydbergBeam`"
                     f" enumeration, not {self.limiting_beam}."

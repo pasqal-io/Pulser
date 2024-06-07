@@ -35,6 +35,8 @@ if TYPE_CHECKING:
 
 __all__ = ["Pulse"]
 
+PHASE_PRECISION = 1e-6
+
 
 @dataclass(init=False, repr=False, frozen=True)
 class Pulse:
@@ -261,6 +263,26 @@ class Pulse:
             f"Pulse(amp={self.amplitude!r}, detuning={self.detuning!r}, "
             + f"phase={self.phase:.3g}, "
             + f"post_phase_shift={self.post_phase_shift:.3g})"
+        )
+
+    def __eq__(self, other: Any) -> bool:
+        if type(other) is not type(self):
+            return False
+
+        def check_phase_eq(phase1: float, phase2: float) -> np.bool_:
+            # Comparing with an offset ensures we don't fail just because
+            # we are very close to the wraping point
+            return np.isclose(phase1, phase2, atol=1e-6) or np.isclose(
+                (phase1 + 1) % (2 * np.pi),
+                (phase2 + 1) % (2 * np.pi),
+                atol=PHASE_PRECISION,
+            )
+
+        return bool(
+            self.amplitude == other.amplitude
+            and self.detuning == other.detuning
+            and check_phase_eq(self.phase, other.phase)
+            and check_phase_eq(self.post_phase_shift, other.post_phase_shift)
         )
 
 
