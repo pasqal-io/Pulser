@@ -40,12 +40,7 @@ SUPPORTED_NOISES: dict = {
         "SPAM",
         "leakage",
     },
-    "XY": {
-        "dephasing",
-        "depolarizing",
-        "eff_noise",
-        "SPAM",
-    },
+    "XY": {"dephasing", "depolarizing", "eff_noise", "SPAM", "leakage"},
 }
 
 
@@ -87,7 +82,9 @@ class SimConfig:
             - "amplitude": Gaussian damping due to finite laser waist
             - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
               **epsilon_prime**.
-
+        eta: Probability of each atom to be badly prepared.
+        epsilon: Probability of false positives.
+        epsilon_prime: Probability of false negatives.
         runs: Number of runs needed : each run draws a new random
             noise.
         samples_per_run: Number of samples per noisy run.
@@ -98,22 +95,7 @@ class SimConfig:
             pulses.
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
-        eta: Probability of each atom to be badly prepared.
-        epsilon: Probability of false positives.
-        epsilon_prime: Probability of false negatives.
-        dephasing_rate: The rate of a dephasing error occuring (in rad/µs).
-        depolarizing_rate: The rate (in rad/µs) at which a depolarizing
-            error occurs.
-        eff_noise_rates: The rate associated to each effective noise operator
-            (in rad/µs).
-        eff_noise_opers: The operators for the effective noise model.
         solver_options: Options for the qutip solver.
-        dephasing_prob: (Deprecated) The rate of a dephasing error occuring
-            (in rad/µs). Use `dephasing_rate` instead.
-        depolarizing_prob: (Deprecated) The rate (in rad/µs) at which a
-            depolarizing error occurs. Use `depolarizing_rate` instead.
-        eff_noise_probs: (Deprecated) The rate associated to each effective
-            noise operator (in rad/µs). Use `eff_noise_rate` instead.
     """
 
     noise: Union[NOISE_TYPES, tuple[NOISE_TYPES, ...]] = ()

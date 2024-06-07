@@ -118,6 +118,7 @@ class Hamiltonian:
 
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
+            # TODO: Define collapse ops with projectors to delete this check
             basis_check("dephasing")
             rate = (
                 config.hyperfine_dephasing_rate
@@ -137,6 +138,7 @@ class Hamiltonian:
                 )
 
         if "depolarizing" in config.noise_types:
+            # TODO: Define collapse ops with projectors to delete this check
             basis_check("depolarizing")
             coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * qutip.sigmax())

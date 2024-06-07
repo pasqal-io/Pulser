@@ -173,6 +173,8 @@ class QutipEmulator:
                 self._meas_basis = "digital"
             elif self.basis_name == "ground-rydberg_with_error":
                 self._meas_basis = "ground-rydberg"
+            elif self.basis_name == "XY_with_error":
+                self._meas_basis = "XY"
             else:
                 self._meas_basis = self.basis_name
         self.set_initial_state("all-ground")
