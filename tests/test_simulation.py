@@ -28,10 +28,10 @@ from pulser_simulation import (
     QutipEmulator,
     SimConfig,
     Simulation,
-    default_operators,
     build_1qubit_operator,
-    build_projector,
     build_operator,
+    build_projector,
+    default_operators,
 )
 from pulser_simulation.simresults import CoherentResults
 
