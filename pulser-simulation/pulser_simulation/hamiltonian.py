@@ -48,7 +48,7 @@ class Hamiltonian:
     def __init__(
         self,
         samples_obj: SequenceSamples,
-        qdict: dict[QubitId, np.ndarray],
+        qdict: Mapping[QubitId, np.ndarray],
         device: BaseDevice,
         sampling_rate: float,
         config: NoiseModel,

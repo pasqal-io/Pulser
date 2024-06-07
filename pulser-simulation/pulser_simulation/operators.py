@@ -16,9 +16,10 @@
 from __future__ import annotations
 
 import itertools
+from collections.abc import Mapping
 
-import numpy as np
 import qutip
+from numpy.typing import ArrayLike
 
 from pulser.channels.base_channel import STATES_RANK
 from pulser.register.base_register import QubitId
@@ -27,7 +28,7 @@ from pulser.sampler.samples import SequenceSamples
 
 def default_operators(
     sampled_seq: SequenceSamples, with_leakage: bool
-) -> dict[str, qutip.Qobj]:
+) -> Mapping[str, qutip.Qobj]:
     r"""Default operators associated to a SequenceSamples with/without leakage.
 
     The default operators are the projectors on states of the computational
@@ -116,7 +117,7 @@ def build_projector(
 def build_1qubit_operator(
     sampled_seq: SequenceSamples,
     operations: list[tuple[float, list[str | qutip.Qobj]]],
-    operators: dict[str, qutip.Qobj] | None = None,
+    operators: Mapping[str, qutip.Qobj] | None = None,
     with_leakage: bool = False,
 ) -> qutip.Qobj:
     r"""Creates a 1 qubit operator summing projectors and qutip objects.
@@ -189,9 +190,9 @@ def build_1qubit_operator(
 
 def build_operator(
     sampled_seq: SequenceSamples,
-    qubits: dict[QubitId, np.ndarray],
+    qubits: Mapping[QubitId, ArrayLike],
     operations: list[tuple],
-    operators: dict[str, qutip.Qobj] | None = None,
+    operators: Mapping[str, qutip.Qobj] | None = None,
     with_leakage: bool = False,
 ) -> qutip.Qobj:
     r"""Creates an operator with non-trivial actions on some qubits.
