@@ -30,12 +30,152 @@ from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
 
+def default_operators(sampled_seq:SequenceSamples, with_leakage:bool) -> dict[str, qutip.Qobj]:
+    """Default operators associated to a SequenceSamples with optional leakage.
+
+    The default operators are the projectors on states of the computational
+    basis and the identity "I". The computational basis is composed of 
+    elements in sampled_seq.eigenbasis, with "x" if with_leakage is True.
+    The projectors are named "sigma_{a}{b}" with a, b elements of the 
+    computational basis such that ``sigma_{ab} = a * b^\dagger``.
+
+    Args:
+        sampled_seq: The SequenceSamples to consider. Provides the
+            computational basis in which the operators are defined.
+        with_leakage: Whether or not to include an error state (adds a "x"
+            state to the computational basis of sampled_seq).
+    
+    Returns:
+        A dictionary composed of default operators as qutip.Qobj objects 
+        and their associated key.
+    """
+    eigenstates = sampled_seq.eigenbasis
+    if with_leakage:
+        eigenstates.append("x")
+    eigenbasis = [state for state in STATES_RANK if state in eigenstates]
+
+    dim = len(eigenbasis)
+    basis = {b: qutip.basis(dim, i) for i, b in enumerate(eigenbasis)}
+    operators = {"I": qutip.qeye(dim)}
+    for proj0 in eigenbasis:
+        for proj1 in eigenbasis:
+            proj_name = "sigma_" + proj0 + proj1
+            operators[proj_name] = basis[proj0] * basis[proj1].dag()
+    return operators
+
+def build_projector(
+    sampled_seq: SequenceSamples,
+    operation: str,
+    with_leakage: bool = False,
+) -> qutip.Qobj:
+    r"""Creates a projector on a state. 
+
+    Returns the projector on a state of the computational basis, that are
+    the elements of sampled_seq.eigenbasis, with "x" if with_leakage is True.
+    The string that can be provided are either "I" (the identity) or 
+    "sigma_{a}{b}" with a, b elements of the computational basis such that
+    ``sigma_{ab} = a * b^\dagger``.
+
+    Examples:
+        If we have a sampled sequence with only a Rydberg Channel, by default
+        the available operators are "I" and "sigma_ab" with a, b in ["r", "g"].
+        The projector on the Rydberg ground state `sigma_gg` can be generated
+        with::
+
+            $ python build_1qubit_operator(sampled_seq, "sigma_gg")
+
+        Then, if we add `with_leakage=True`, the system is now described by a
+        qutrit state ["r", "g", "x"] and "sigma_gx", "sigma_rx", "sigma_xx" are
+        some of the new operators that can be defined. For instance to define
+        the projector on the leakage state "x", `sigma_xx`, do::
+
+            ```python
+                build_1qubit_operator(
+                    sampled_seq, "sigma_xx", with_leakage=True
+                )
+            ```
+
+    Args:
+        sampled_seq: The SequenceSamples to consider. Provides the
+            computational basis in which the operators are defined.
+        operation: A string: either "I" or "sigma_{a}{b}" with a, b in the 
+            computational basis.
+        with_leakage: Whether or not to include an error state (adds a "x"
+            state to the computational basis of sampled_seq).
+
+    Returns:
+        The desired operator as a qutip.Qobj object, identity if "I",
+        ``sigma_{ab} = a * b^\dagger`` if "sigma_ab". 
+    """
+    return build_operator(sampled_seq, {0:[0.0, 0.0]}, [(0, operation)], with_leakage=with_leakage) 
+
+
+def build_1qubit_operator(
+    sampled_seq: SequenceSamples,
+    operations: list[tuple[float, list[str | qutip.Qobj]]],
+    operators: dict[str, qutip.Qobj] | None = None,
+    with_leakage: bool = False,
+) -> qutip.Qobj:
+    r"""Creates a 1 qubit operator summing projectors and qutip objects. 
+
+    Takes as argument a list of operations to apply on one qubit. Returns 
+    the sum of these operations. The elements in operations can be a 
+    ``qutip.Qobj`` or a string key. If ``operators`` is undefined, this string
+    can be "I" or "sigma_{a}{b}" with a, b elements of the computational basis
+    (sampled_seq.eigenbasis with "x" if with_leakage is True) and 
+    ``sigma_{ab} = a * b^\dagger``.
+
+    Examples:
+        If we have a sampled sequence with only a Rydberg Channel, by default
+        the available operators are "I" and "sigma_ab" with a, b in ["r", "g"].
+        If we add `with_leakage=True`, the system is now described by a qutrit
+        state ["r", "g", "x"], and another default projector `sigma_xx` is defined.
+        The operator ``sigma_gg - sigma_xx`` can be written as::
+            
+            ```python
+                build_1qubit_operator(
+                    sampled_seq,
+                    [(1.0, "sigma_gg"), (-1.0, "sigma_xx")],
+                    with_leakage=True,
+                )
+            ```
+        
+        We can also define our custom set of operators. For instance, by defining 
+        `operators = {"X":qutip.sigmax(), "Z":qutip.sigmaz()}` you can make 
+        combinations of these operators such as X-Z::
+
+        ```python
+            build_1qubit_operator(
+                sampled_seq,
+                [(1.0, "X"), (-1.0, "Z")],
+                operators=operators,
+            )
+        ```
+
+    Args:
+        sampled_seq: The SequenceSamples to consider. Provides the
+            computational basis in which the operators are defined.
+        operations: List of tuples `(operator, qubits)`.
+        operators: A dict of operators and their labels. If None, it is
+            composed of all the projectors on the computational basis
+            (with error state if with_leakage is True) and "I".
+        with_leakage: Whether or not to include an error state (adds a "x"
+            state to the computational basis of sampled_seq). Only used if
+            operators is None.
+
+
+    Returns:
+        The final operator as a qutip.Qobj object.
+    """
+    if operators is None:
+        operators = default_operators(sampled_seq, with_leakage)
+    return sum([operation[0] * build_operator(sampled_seq, {0:[0.0, 0.0]}, [(0, operation[1])], operators, with_leakage) for operation in operations])
 
 def build_operator(
     sampled_seq: SequenceSamples,
     qubits: dict[QubitId, np.ndarray],
     operations: list[tuple],
-    op_matrix: dict[str, qutip.Qobj] | None = None,
+    operators: dict[str, qutip.Qobj] | None = None,
     with_leakage: bool = False,
 ) -> qutip.Qobj:
     r"""Creates an operator with non-trivial actions on some qubits.
@@ -46,8 +186,8 @@ def build_operator(
     ``(operator, 'global')`` returns the sum for all ``j`` of operator
     applied at ``qubit_j`` and identity elsewhere.
 
-    `operator` can be a ``qutip.Qobj`` or a string key for ``op_matrix``. If
-    ``op_matrix`` is undefined, this string can be "I" or "sigma_{a}{b}" with
+    `operator` can be a ``qutip.Qobj`` or a string key of ``operators``. If
+    ``operators`` is undefined, this string can be "I" or "sigma_{a}{b}" with
     a, b elements of the computational basis (sampled_seq.eigenbasis with "x"
     if with_leakage is True) and ``sigma_{ab} = a * b^\dagger``.
     `qubits` is the list on which operator will be applied. The qubits are
@@ -70,7 +210,7 @@ def build_operator(
             - ``[(qutip.sigmax(), ["q1"])]`` returns ``IXII``.
             - ``[(sigma_gg, ["q0"])]`` applies ``sigma_ggIII``.
 
-        If you define in `op_matrix` a dictionnary containing
+        If you define in `operators` a dictionnary containing
         {"X": qutip.sigmax()}, then the first two operations can also be
         written ``[("X", 'global')]`` and ``[("X", ["q1"])]``.
 
@@ -80,16 +220,16 @@ def build_operator(
         qubits: A dict of {label: position} whose labels can be used in
             operations.
         operations: List of tuples `(operator, qubits)`.
-        op_matrix: A dict of operators and their labels. If None, it is
+        operators: A dict of operators and their labels. If None, it is
             composed of all the projectors on the computational basis
             (with error state if with_leakage is True) and "I".
         with_leakage: Whether or not to include an error state (adds a "x"
             state to the computational basis of sampled_seq). Only used if
-            op_matrix is None.
+            operators is None.
 
 
     Returns:
-        The final operator.
+        The final operator as qutip.Qobj object.
     """
     # Check operations list
     if not isinstance(operations, list):
@@ -121,23 +261,12 @@ def build_operator(
             raise ValueError(
                 "Invalid qubit names: " f"{target_qids_set - qubits.keys()}"
             )
-    # Generate op matrix
-    if op_matrix is None:
-        eigenstates = sampled_seq.eigenbasis
-        if with_leakage:
-            eigenstates.append("x")
-        eigenbasis = [state for state in STATES_RANK if state in eigenstates]
-
-        dim = len(eigenbasis)
-        basis = {b: qutip.basis(dim, i) for i, b in enumerate(eigenbasis)}
-        op_matrix = {"I": qutip.qeye(dim)}
-        for proj0 in eigenbasis:
-            for proj1 in eigenbasis:
-                proj_name = "sigma_" + proj0 + proj1
-                op_matrix[proj_name] = basis[proj0] * basis[proj1].dag()
+    # Generate default operators if no operators were given
+    if operators is None:
+        operators = default_operators(sampled_seq, with_leakage)
 
     # Build operator
-    op_list = [op_matrix["I"] for j in range(len(qubits))]
+    op_list = [operators["I"] for j in range(len(qubits))]
     _qid_index = {qid: i for i, qid in enumerate(qubits)}
 
     for operator, qids in operations:
@@ -147,14 +276,14 @@ def build_operator(
                     sampled_seq,
                     qubits,
                     [(operator, [q_id])],
-                    op_matrix,
+                    operators,
                     with_leakage,
                 )
                 for q_id in qubits
             )
         if isinstance(operator, str):
             try:
-                operator = op_matrix[operator]
+                operator = operators[operator]
             except KeyError:
                 raise ValueError(f"{operator} is not a valid operator")
         for qubit in qids:
