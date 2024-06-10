@@ -208,3 +208,13 @@ def test_parametrized_pulses():
             0,
         ).build()
     )
+
+
+def test_eq():
+    assert (pls_ := Pulse.ConstantPulse(100, 1, -1, 0)) == Pulse(
+        ConstantWaveform(100, 1),
+        ConstantWaveform(100, -1),
+        1e-6,
+        post_phase_shift=-1e-6,
+    )
+    assert pls_ != repr(pls_)
