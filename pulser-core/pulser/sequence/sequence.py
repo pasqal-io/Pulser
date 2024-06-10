@@ -1877,6 +1877,7 @@ class Sequence(Generic[DeviceType]):
     def draw(
         self,
         mode: str = "input+output",
+        as_phase_modulated: bool = False,
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
@@ -1897,6 +1898,8 @@ class Sequence(Generic[DeviceType]):
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
+            as_phase_modulated: Instead of displaying the detuning and phase
+                offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
                 'output' mode. If `draw_phase_curve=True`, phase values are
@@ -1979,6 +1982,7 @@ class Sequence(Generic[DeviceType]):
             draw_detuning_maps=draw_detuning_maps,
             draw_qubit_amp=draw_qubit_amp,
             draw_qubit_det=draw_qubit_det,
+            phase_modulated=as_phase_modulated,
         )
         if fig_name is not None:
             name, ext = os.path.splitext(fig_name)

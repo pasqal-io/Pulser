@@ -141,7 +141,9 @@ class ChannelSamples:
 
         .. math:: \phi(t) = \phi_c(t) - \sum_{k=0}^{t} \delta(k)
         """
-        return self.centered_phase - np.cumsum(self.det * 1e-3)
+        return cast(
+            np.ndarray, self.centered_phase - np.cumsum(self.det * 1e-3)
+        )
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.

@@ -1456,6 +1456,7 @@ def test_sequence(reg, device, patch_plt_show):
 
     seq.draw(draw_phase_area=True)
     seq.draw(draw_phase_curve=True)
+    seq.draw(as_phase_modulated=True)
 
     s = seq._serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
@@ -1644,14 +1645,14 @@ def test_draw_slm_mask_in_ising(
             seq1.draw(
                 draw_qubit_det=True, draw_interp_pts=False, mode="output"
             )  # Drawing Sequence with only a DMM
-        assert len(record) == 7
+        assert len(record) == 9
         assert np.all(
             str(record[i].message).startswith(
                 "No modulation bandwidth defined"
             )
-            for i in range(6)
+            for i in range(len(record) - 1)
         )
-        assert str(record[6].message).startswith(
+        assert str(record[-1].message).startswith(
             "Can't display modulated quantities per qubit"
         )
     seq1.draw(mode, draw_qubit_det=draw_qubit_det, draw_interp_pts=False)
