@@ -141,22 +141,22 @@ def test_full_duration(eom_channel):
         ),
         (
             RampWaveform(200, -5, 5),
-            ConstantWaveform(200, 10 / 199e-3),
-            -5 % (2 * np.pi),
+            ConstantWaveform(200, (_slope := -10 / 199) * 1e3),
+            (-5 + _slope) % (2 * np.pi),
         ),
         (
-            bwf,
+            -bwf,
             CustomWaveform(
                 np.pad(np.diff(bwf.samples), (1, 0), mode="edge") * 1e3
             ),
-            bwf[0],
+            -bwf[0] + (-bwf[0] + bwf[1]),
         ),
         (
             interp_wf := InterpolatedWaveform(200, values=[1, 3, -2, 4]),
             CustomWaveform(
-                np.pad(np.diff(interp_wf.samples), (1, 0), mode="edge") * 1e3
+                np.pad(-np.diff(interp_wf.samples), (1, 0), mode="edge") * 1e3
             ),
-            1,
+            interp_wf[0] + (interp_wf[0] - interp_wf[1]),
         ),
     ],
 )
@@ -165,13 +165,11 @@ def test_arbitrary_phase(phase_wf, det_wf, phase_0):
         Pulse.ArbitraryPhase(bwf, -3)
 
     pls_ = Pulse.ArbitraryPhase(bwf, phase_wf)
-    assert pls_.amplitude == bwf
-    assert pls_.detuning == det_wf
-    assert pls_.phase == phase_0
+    assert pls_ == Pulse(bwf, det_wf, phase_0)
     np.testing.assert_allclose(
-        (np.cumsum(pls_.detuning.samples[1:] * 1e-3) + phase_wf[0]),
-        phase_wf.samples[1:],
-        atol=1e-17,
+        (-np.cumsum(pls_.detuning.samples * 1e-3) + phase_0) % (2 * np.pi),
+        phase_wf.samples % (2 * np.pi),
+        atol=1e-14,
     )
 
 

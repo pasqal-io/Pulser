@@ -197,12 +197,24 @@ class Pulse:
         phase: Waveform | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
-        """Pulse with an arbitrary phase waveform.
+        r"""Pulse with an arbitrary phase waveform.
 
-        The detuning waveform is the derivative of the phase waveform while the
-        phase offset is simply the phase at the beginning of the waveform. In
-        the detuning waveform calculation, it is always assumed that the
-        detuning is the same in the first two samples.
+        Due to how the Hamiltonian is defined in Pulser, the phase and
+        detuning are related by
+
+        .. math:: \phi(t) = \phi_c - \sum_{k=0}^{t} \delta(k)
+
+        where :math:`\phi_c` is the pulse's constant phase offset.
+        From a given phase waveform, we extract the phase offset and detuning
+        waveform that respect this formula for every sample of :math:`\phi(t)`
+        and use these quantities to define the Pulse.
+
+        Warning:
+            Expect when the phase waveform is a ``ConstantWaveform`` or a
+            ``RampWaveform``, the extracted detuning waveform will be a
+            ``CustomWaveform``. This makes the Pulse uncapable of automatically
+            extending its duration to fit a channel's clock period.
+
 
         Args:
             amplitude: The amplitude waveform (in rad/µs).
@@ -214,19 +226,20 @@ class Pulse:
             raise TypeError(
                 f"'phase' must be a waveform, not of type {type(phase)}."
             )
-        phase_0 = phase.first_value
         detuning: Waveform
         if isinstance(phase, ConstantWaveform):
             detuning = ConstantWaveform(phase.duration, 0.0)
         elif isinstance(phase, RampWaveform):
-            detuning = ConstantWaveform(phase.duration, phase.slope * 1e3)
+            detuning = ConstantWaveform(phase.duration, -phase.slope * 1e3)
         else:
-            detuning_samples = np.diff(phase.samples) * 1e3  # rad/ns -> rad/µs
+            detuning_samples = -np.diff(phase.samples) * 1e3  # rad/ns->rad/µs
             # Use the same value in the first two detuning samples
             detuning = CustomWaveform(
                 np.pad(detuning_samples, (1, 0), mode="edge")
             )
-        return cls(amplitude, detuning, phase_0, post_phase_shift)
+        # Adjust phase_c to incorporate the first detuning sample
+        phase_c = phase.first_value + detuning.first_value * 1e-3
+        return cls(amplitude, detuning, phase_c, post_phase_shift)
 
     def draw(self) -> None:
         """Draws the pulse's amplitude and frequency waveforms."""
