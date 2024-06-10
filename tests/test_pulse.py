@@ -204,8 +204,8 @@ def test_parametrized_pulses():
         arb_phase.build()
         == Pulse(
             param_bwf,
-            ConstantWaveform(vars[0], vars[1] * 1e3 / (vars[0] - 1)),
-            0,
+            ConstantWaveform(vars[0], -vars[1] * 1e3 / (vars[0] - 1)),
+            -vars[1] / (vars[0] - 1),
         ).build()
     )
 

@@ -174,11 +174,15 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     input_ch_samples = input_samples.channel_samples["ch0"]
     output_ch_samples = mod_samples.channel_samples["ch0"]
 
-    for qty in ("amp", "det", "phase"):
+    for qty in ("amp", "det", "phase", "centered_phase"):
         np.testing.assert_array_equal(
             getattr(input_ch_samples.modulate(chan), qty),
             getattr(output_ch_samples, qty),
         )
+
+    # input samples don't have a custom centered phase, output samples do
+    assert input_ch_samples._centered_phase is None
+    assert output_ch_samples._centered_phase is not None
 
 
 def test_modulation_local(mod_device):
@@ -384,9 +388,13 @@ def test_samples_repr(seq_rydberg):
     )
 
 
-def test_extend_duration(seq_rydberg):
+@pytest.mark.parametrize("with_custom_centered_phase", [False, True])
+def test_extend_duration(seq_rydberg, with_custom_centered_phase):
     samples = sample(seq_rydberg)
     short, long = samples.samples_list
+    if with_custom_centered_phase:
+        short = replace(short, _centered_phase=short.centered_phase)
+        long = replace(long, _centered_phase=long.centered_phase)
     assert short.duration < long.duration
     assert short.extend_duration(short.duration).duration == short.duration
     with pytest.raises(
@@ -396,7 +404,7 @@ def test_extend_duration(seq_rydberg):
 
     extended_short = short.extend_duration(long.duration)
     assert extended_short.duration == long.duration
-    for qty in ("amp", "det", "phase"):
+    for qty in ("amp", "det", "phase", "centered_phase"):
         new_qty_samples = getattr(extended_short, qty)
         old_qty_samples = getattr(short, qty)
         np.testing.assert_array_equal(
@@ -404,7 +412,7 @@ def test_extend_duration(seq_rydberg):
         )
         np.testing.assert_equal(
             new_qty_samples[short.duration :],
-            old_qty_samples[-1] if qty == "phase" else 0.0,
+            old_qty_samples[-1] if "phase" in qty else 0.0,
         )
     assert extended_short.slots == short.slots
 
@@ -445,8 +453,35 @@ def test_phase_sampling(mod_device):
     expected_phase[transition2_3:transition3_4] = 3.0
     expected_phase[transition3_4:] = 4.0
 
-    got_phase = sample(seq).channel_samples["ch0"].phase
+    got_phase = (ch_samples_ := sample(seq).channel_samples["ch0"]).phase
     np.testing.assert_array_equal(expected_phase, got_phase)
+
+    # Test centered phase
+    expected_phase[expected_phase > np.pi] -= 2 * np.pi
+    np.testing.assert_array_equal(expected_phase, ch_samples_.centered_phase)
+
+
+@pytest.mark.parametrize("off_center", [False, True])
+def test_phase_modulation(off_center):
+    start_phase = np.pi / 2 + np.pi * off_center
+    phase1 = pulser.RampWaveform(400, start_phase, 0)
+    phase2 = pulser.BlackmanWaveform(500, np.pi)
+    phase3 = pulser.InterpolatedWaveform(500, [0, 11, 1, 5])
+    full_phase = pulser.CompositeWaveform(phase1, phase2, phase3)
+    pulse = Pulse.ArbitraryPhase(
+        pulser.ConstantWaveform(full_phase.duration, 1), full_phase
+    )
+
+    seq = pulser.Sequence(pulser.Register.square(1), pulser.MockDevice)
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    seq.add(pulse, "rydberg_global")
+    seq_samples = sample(seq).channel_samples["rydberg_global"]
+
+    np.testing.assert_allclose(
+        seq_samples.phase_modulation + 2 * np.pi * off_center,
+        full_phase.samples,
+        atol=1e-15,
+    )
 
 
 @pytest.mark.parametrize("modulation", [True, False])

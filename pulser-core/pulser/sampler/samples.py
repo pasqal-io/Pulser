@@ -98,9 +98,15 @@ class ChannelSamples:
     eom_start_buffers: list[tuple[int, int]] = field(default_factory=list)
     eom_end_buffers: list[tuple[int, int]] = field(default_factory=list)
     target_time_slots: list[_TimeSlot] = field(default_factory=list)
+    _centered_phase: np.ndarray | None = None
 
     def __post_init__(self) -> None:
-        assert len(self.amp) == len(self.det) == len(self.phase)
+        assert (
+            len(self.amp)
+            == len(self.det)
+            == len(self.phase)
+            == len(self.centered_phase)
+        )
         self.duration = len(self.amp)
 
         for t in self.slots:
@@ -116,6 +122,26 @@ class ChannelSamples:
             if self.target_time_slots
             else set()
         )
+
+    @property
+    def centered_phase(self) -> np.ndarray:
+        """The phase samples centered in ]-π, π]."""
+        if self._centered_phase is not None:
+            return self._centered_phase
+        phase_ = self.phase.copy() % (2 * np.pi)
+        phase_[phase_ > np.pi] -= 2 * np.pi
+        return phase_
+
+    @property
+    def phase_modulation(self) -> np.ndarray:
+        r"""The phase modulation samples (in rad).
+
+        Constructed by combining the integral of the detuning samples with the
+        phase offset samples according to
+
+        .. math:: \phi(t) = \phi_c(t) - \sum_{k=0}^{t} \delta(k)
+        """
+        return self.centered_phase - np.cumsum(self.det * 1e-3)
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
@@ -151,7 +177,21 @@ class ChannelSamples:
             (0, extension),
             mode="edge" if self.phase.size > 0 else "constant",
         )
-        return replace(self, amp=new_amp, det=new_detuning, phase=new_phase)
+        _new_centered_phase = None
+        if self._centered_phase is not None:
+            _new_centered_phase = np.pad(
+                self._centered_phase,
+                (0, extension),
+                mode="edge" if self._centered_phase.size > 0 else "constant",
+            )
+
+        return replace(
+            self,
+            amp=new_amp,
+            det=new_detuning,
+            phase=new_phase,
+            _centered_phase=_new_centered_phase,
+        )
 
     def is_empty(self) -> bool:
         """Whether the channel is effectively empty.
@@ -372,6 +412,9 @@ class ChannelSamples:
             new_samples["det"] = channel_obj.modulate(self.det, keep_ends=True)
 
         new_samples["phase"] = channel_obj.modulate(self.phase, keep_ends=True)
+        new_samples["_centered_phase"] = channel_obj.modulate(
+            self.centered_phase, keep_ends=True
+        )
         for key in new_samples:
             new_samples[key] = new_samples[key][slice(0, max_duration)]
         return replace(self, **new_samples)
