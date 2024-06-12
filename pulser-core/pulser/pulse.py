@@ -212,7 +212,7 @@ class Pulse:
         and use these quantities to define the Pulse.
 
         Warning:
-            Expect when the phase waveform is a ``ConstantWaveform`` or a
+            Except when the phase waveform is a ``ConstantWaveform`` or a
             ``RampWaveform``, the extracted detuning waveform will be a
             ``CustomWaveform``. This makes the Pulse uncapable of automatically
             extending its duration to fit a channel's clock period.
