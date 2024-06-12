@@ -82,6 +82,7 @@ class PasqalEmulator(RemoteBackend):
         suffix = f" when executing a sequence on {self.__class__.__name__}."
         if not job_params:
             raise ValueError("'job_params' must be specified" + suffix)
+        self._type_check_job_params(job_params)
         if any("runs" not in j for j in job_params):
             raise ValueError(
                 "All elements of 'job_params' must specify 'runs'" + suffix

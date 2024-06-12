@@ -148,3 +148,16 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
+
+    @staticmethod
+    def _type_check_job_params(job_params: list[JobParams] | None) -> None:
+        if not isinstance(job_params, list):
+            raise TypeError(
+                f"'job_params' must be a list; got {type(job_params)} instead."
+            )
+        for d in job_params:
+            if not isinstance(d, dict):
+                raise TypeError(
+                    "All elements of 'job_params' must be dictionaries; "
+                    f"got {type(d)} instead."
+                )

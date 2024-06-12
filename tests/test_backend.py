@@ -134,6 +134,12 @@ def test_qpu_backend(sequence):
     qpu_backend = QPUBackend(seq, connection)
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         qpu_backend.run()
+    with pytest.raises(TypeError, match="'job_params' must be a list"):
+        qpu_backend.run(job_params={"runs": 100})
+    with pytest.raises(
+        TypeError, match="All elements of 'job_params' must be dictionaries"
+    ):
+        qpu_backend.run(job_params=[{"runs": 100}, "foo"])
     with pytest.raises(
         ValueError,
         match="All elements of 'job_params' must specify 'runs'",

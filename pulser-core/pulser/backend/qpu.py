@@ -78,6 +78,7 @@ class QPUBackend(RemoteBackend):
         suffix = " when executing a sequence on a real QPU."
         if not job_params:
             raise ValueError("'job_params' must be specified" + suffix)
+        RemoteBackend._type_check_job_params(job_params)
         for j in job_params:
             if "runs" not in j:
                 raise ValueError(

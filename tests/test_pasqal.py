@@ -345,6 +345,13 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool, mimic_qpu):
     with pytest.raises(ValueError, match="'job_params' must be specified"):
         emu.run()
 
+    with pytest.raises(TypeError, match="'job_params' must be a list"):
+        emu.run(job_params={"runs": 100})
+    with pytest.raises(
+        TypeError, match="All elements of 'job_params' must be dictionaries"
+    ):
+        emu.run(job_params=[{"runs": 100}, "foo"])
+
     with pytest.raises(ValueError, match="must specify 'runs'"):
         emu.run(job_params=[{}])
 
