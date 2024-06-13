@@ -1155,6 +1155,17 @@ class TestSerialization:
             == "abc"
         )
 
+    @pytest.mark.parametrize("skip_validation", [False, True])
+    def test_skip_validation(self, sequence, skip_validation):
+        with patch(
+            "pulser.json.abstract_repr.serializer.validate_abstract_repr"
+        ) as mock:
+            sequence.to_abstract_repr(skip_validation=skip_validation)
+            if skip_validation:
+                mock.assert_not_called()
+            else:
+                mock.assert_called_once()
+
 
 def _get_serialized_seq(
     operations: list[dict] = [],

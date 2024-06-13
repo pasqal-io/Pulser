@@ -24,7 +24,7 @@ import pulser
 import pulser_simulation
 from pulser.channels.dmm import DMM
 from pulser.devices import Device, MockDevice
-from pulser.pulse import Pulse
+from pulser.pulse import PHASE_PRECISION, Pulse
 from pulser.register.mappable_reg import MappableRegister
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sample
@@ -480,7 +480,7 @@ def test_phase_modulation(off_center):
     np.testing.assert_allclose(
         seq_samples.phase_modulation + 2 * np.pi * off_center,
         full_phase.samples,
-        atol=1e-15,
+        atol=PHASE_PRECISION,
     )
 
 

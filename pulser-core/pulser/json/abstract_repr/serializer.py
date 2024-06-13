@@ -104,6 +104,7 @@ def serialize_abstract_sequence(
     seq: Sequence,
     seq_name: str = "pulser-exported",
     json_dumps_options: dict[str, Any] = {},
+    skip_validation: bool = False,
     **defaults: Any,
 ) -> str:
     """Serializes the Sequence into an abstract JSON object.
@@ -114,6 +115,13 @@ def serialize_abstract_sequence(
         json_dumps_options: A mapping between optional parameters of
             ``json.dumps()`` (as string) and their value (parameter cannot
             be "cls").
+        skip_validation: Whether to skip the validation of the serialized
+            sequence against the abstract representation's JSON schema.
+            Skipping the validation is useful to cut down on execution
+            time, as this step takes significantly longer than the
+            serialization itself; it is also low risk, as the validation
+            is only defensively checking that there are no bugs in the
+            serialized sequence.
         defaults: The default values for all the variables declared in this
             Sequence instance, indexed by the name given upon declaration.
             Check ``Sequence.declared_variables`` to see all the variables.
@@ -381,5 +389,6 @@ def serialize_abstract_sequence(
     abstr_seq_str = json.dumps(
         res, cls=AbstractReprEncoder, **json_dumps_options
     )
-    validate_abstract_repr(abstr_seq_str, "sequence")
+    if not skip_validation:
+        validate_abstract_repr(abstr_seq_str, "sequence")
     return abstr_seq_str
