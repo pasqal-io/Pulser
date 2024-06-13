@@ -115,15 +115,18 @@ class ChannelDrawContent:
     eom_start_buffers: list[EOMSegment]
     eom_end_buffers: list[EOMSegment]
     interp_pts: dict[str, list[list[float]]] = field(default_factory=dict)
+    phase_modulated: bool = False
 
     def __post_init__(self) -> None:
-        self.samples.phase = self.samples.phase / (2 * np.pi)
-        self._samples_from_curves = {
+        self.curves_on = {"amplitude": True, "detuning": False, "phase": False}
+
+    @property
+    def _samples_from_curves(self) -> dict[str, str]:
+        return {
             "amplitude": "amp",
             "detuning": "det",
-            "phase": "phase",
+            "phase": ("phase_modulation" if self.phase_modulated else "phase"),
         }
-        self.curves_on = {"amplitude": True, "detuning": False, "phase": False}
 
     @property
     def n_axes_on(self) -> int:
@@ -161,14 +164,18 @@ class ChannelDrawContent:
     def _give_curves_from_samples(
         self, samples: ChannelSamples
     ) -> list[np.ndarray]:
-        return [
-            getattr(samples, self._samples_from_curves[qty])
-            for qty in CURVES_ORDER
-        ]
+        curves = []
+        for qty in CURVES_ORDER:
+            qty_arr = getattr(samples, self._samples_from_curves[qty])
+            if "phase" in qty:
+                qty_arr = qty_arr / (2 * np.pi)
+            curves.append(qty_arr)
+        return curves
 
 
 def gather_data(
-    sampled_seq: SequenceSamples, shown_duration: Optional[int] = None
+    sampled_seq: SequenceSamples,
+    shown_duration: Optional[int] = None,
 ) -> dict:
     """Collects the whole sequence data for plotting.
 
@@ -477,6 +484,7 @@ def _draw_channel_content(
     draw_modulation: bool = False,
     draw_phase_curve: bool = False,
     draw_detuning_maps: bool = False,
+    phase_modulated: bool = False,
     shown_duration: Optional[int] = None,
 ) -> tuple[Figure, Any, dict]:
     """Draws samples of a sequence.
@@ -504,6 +512,8 @@ def _draw_channel_content(
         draw_detuning_maps: Draws the detuning maps applied on the qubits of
             the register of the sequence. Shown before the pulse sequence,
             defaults to False.
+        phase_modulated: Show the phase modulation samples instead of the
+            detuning and phase offset combination.
         shown_duration: Total duration to be shown in the X axis.
     """
 
@@ -522,9 +532,13 @@ def _draw_channel_content(
     total_duration = data["total_duration"]
     time_scale = 1e3 if total_duration > 1e4 else 1
     for ch in sampled_seq.channels:
+        data[ch].phase_modulated = phase_modulated
         if np.count_nonzero(data[ch].samples.det) > 0:
-            data[ch].curves_on["detuning"] = True
-        if draw_phase_curve and np.count_nonzero(data[ch].samples.phase) > 0:
+            data[ch].curves_on["detuning"] = not phase_modulated
+            data[ch].curves_on["phase"] = phase_modulated
+        if (phase_modulated or draw_phase_curve) and np.count_nonzero(
+            data[ch].samples.phase
+        ) > 0:
             data[ch].curves_on["phase"] = True
 
     # Boxes for qubit and phase text
@@ -614,10 +628,16 @@ def _draw_channel_content(
         det_range = det_max - det_min
         det_top = det_max + det_range * 0.15
         det_bottom = det_min - det_range * 0.05
+        # Phase limits
+        phase_min = min(*ref_ys[2], 0.0)
+        phase_max = max(*ref_ys[2], 1.0 if not phase_modulated else 0.1)
+        phase_range = phase_max - phase_min
+        phase_top = phase_max + phase_range * 0.15
+        phase_bottom = phase_min - phase_range * 0.05
         ax_lims = [
             (amp_bottom, amp_top),
             (det_bottom, det_top),
-            (min(0.0, *ref_ys[2]), max(1.1, *ref_ys[2])),
+            (phase_bottom, phase_top),
         ]
         ax_lims = [ax_lims[i] for i in ch_data.curves_on_indices()]
         for ax, ylim in zip(axes, ax_lims):
@@ -1170,6 +1190,7 @@ def draw_samples(
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
+    phase_modulated: bool = False,
 ) -> tuple[Figure | None, Figure, Figure | None, Figure | None]:
     """Draws a SequenceSamples.
 
@@ -1195,6 +1216,8 @@ def draw_samples(
             the drawing of the sequence.
         draw_qubit_det: Draws the detuning seen by the qubits locally after
             the drawing of the sequence.
+        phase_modulated: Show the phase modulation samples instead of the
+            detuning and phase offset combination.
     """
     if not len(sampled_seq.channels):
         raise RuntimeError("Can't draw an empty sequence.")
@@ -1215,6 +1238,7 @@ def draw_samples(
         draw_input=True,
         draw_modulation=False,
         draw_phase_curve=draw_phase_curve,
+        phase_modulated=phase_modulated,
         shown_duration=max_slot_tf,
     )
     (fig_qubit, fig_legend) = _draw_qubit_content(
@@ -1242,6 +1266,7 @@ def draw_sequence(
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
+    phase_modulated: bool = False,
 ) -> tuple[Figure | None, Figure, Figure | None, Figure | None]:
     """Draws the entire sequence.
 
@@ -1275,6 +1300,8 @@ def draw_sequence(
             the drawing of the sequence.
         draw_qubit_det: Draws the detuning seen by the qubits locally after
             the drawing of the sequence.
+        phase_modulated: Show the phase modulation samples instead of the
+            detuning and phase offset combination.
     """
     # Sample the sequence and get the data to plot
     shown_duration = seq.get_duration(include_fall_time=draw_modulation)
@@ -1296,6 +1323,7 @@ def draw_sequence(
         draw_modulation,
         draw_phase_curve,
         draw_detuning_maps,
+        phase_modulated,
         shown_duration,
     )
     draw_output = draw_modulation

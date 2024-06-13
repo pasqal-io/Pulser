@@ -304,7 +304,10 @@ def serialize_abstract_sequence(
                 "channel": data["channel"],
                 "protocol": data["protocol"],
             }
-            op_dict.update(data["pulse"]._to_abstract_repr())
+            pulse_abstract_repr = data["pulse"]._to_abstract_repr()
+            if "detuning" not in pulse_abstract_repr:
+                op_dict["op"] = "pulse_arbitrary_phase"
+            op_dict.update(pulse_abstract_repr)
             operations.append(op_dict)
         elif "phase_shift" in call.name:
             targets = call.args[1:]
