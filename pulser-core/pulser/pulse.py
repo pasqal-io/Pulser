@@ -201,15 +201,22 @@ class Pulse:
     ) -> Pulse:
         r"""Pulse with an arbitrary phase waveform.
 
-        Due to how the Hamiltonian is defined in Pulser, the phase and
-        detuning are related by
+        Args:
+            amplitude: The amplitude waveform (in rad/µs).
+            phase: The phase waveform (in rad).
+            post_phase_shift: Optionally lets you add a
+                phase shift (in rad) immediately after the end of the pulse.
 
-        .. math:: \phi(t) = \phi_c - \sum_{k=0}^{t} \delta(k)
+        Note:
+            Due to how the Hamiltonian is defined in Pulser, the phase and
+            detuning are related by
 
-        where :math:`\phi_c` is the pulse's constant phase offset.
-        From a given phase waveform, we extract the phase offset and detuning
-        waveform that respect this formula for every sample of :math:`\phi(t)`
-        and use these quantities to define the Pulse.
+            .. math:: \phi(t) = \phi_c - \sum_{k=0}^{t} \delta(k)
+
+            where :math:`\phi_c` is the pulse's constant phase offset.
+            From a given phase waveform, we extract the phase offset and
+            detuning waveform that respect this formula for every sample of
+            :math:`\phi(t)` and use these quantities to define the Pulse.
 
         Warning:
             Except when the phase waveform is a ``ConstantWaveform`` or a
@@ -217,12 +224,9 @@ class Pulse:
             ``CustomWaveform``. This makes the Pulse uncapable of automatically
             extending its duration to fit a channel's clock period.
 
-
-        Args:
-            amplitude: The amplitude waveform (in rad/µs).
-            phase: The phase waveform (in rad).
-            post_phase_shift: Optionally lets you add a
-                phase shift (in rad) immediately after the end of the pulse.
+        Returns:
+            A regular Pulse, with the phase waveform translated into a
+            detuning waveform and a constant phase offset.
         """
         if not isinstance(phase, Waveform):
             raise TypeError(
