@@ -286,7 +286,6 @@ def test_eom_modulation(mod_device, disable_eom):
             input_samples.modulate(chan, full_duration), qty
         ).as_array()
         np.testing.assert_array_equal(got, alt_got)
-        print(qty)
         np.testing.assert_allclose(want.as_array(), got, atol=1e-10)
 
 

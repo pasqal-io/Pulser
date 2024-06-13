@@ -1347,7 +1347,6 @@ def test_str(reg, device, mod_device, det_map):
     )
 
     measure_msg = "\n\nMeasured in basis: digital"
-    print(seq)
     assert seq.__str__() == msg_ch0 + msg_ch1 + msg_det_map + measure_msg
 
     seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)

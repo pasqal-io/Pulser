@@ -20,7 +20,6 @@ from itertools import chain
 from typing import Any, Literal, cast, overload
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 import pulser.math as pm
 from pulser.json.utils import get_dataclass_defaults, obj_to_dict
@@ -212,8 +211,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     @overload
     def calculate_detuning_off(
         self,
-        amp_on: float | ArrayLike,
-        detuning_on: float | ArrayLike,
+        amp_on: float | pm.Differentiable,
+        detuning_on: float | pm.Differentiable,
         optimal_detuning_off: float,
         return_switching_beams: Literal[False],
     ) -> pm.AbstractArray:
@@ -222,8 +221,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     @overload
     def calculate_detuning_off(
         self,
-        amp_on: float | ArrayLike,
-        detuning_on: float | ArrayLike,
+        amp_on: float | pm.Differentiable,
+        detuning_on: float | pm.Differentiable,
         optimal_detuning_off: float,
         return_switching_beams: Literal[True],
     ) -> tuple[pm.AbstractArray, tuple[RydbergBeam, ...]]:
@@ -231,8 +230,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
 
     def calculate_detuning_off(
         self,
-        amp_on: float | ArrayLike,
-        detuning_on: float | ArrayLike,
+        amp_on: float | pm.Differentiable,
+        detuning_on: float | pm.Differentiable,
         optimal_detuning_off: float,
         return_switching_beams: bool = False,
     ) -> pm.AbstractArray | tuple[pm.AbstractArray, tuple[RydbergBeam, ...]]:
@@ -257,7 +256,9 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
         return best_det_off, self._switching_beams_combos[closest_option]
 
     def detuning_off_options(
-        self, rabi_frequency: float | ArrayLike, detuning_on: float | ArrayLike
+        self,
+        rabi_frequency: float | pm.Differentiable,
+        detuning_on: float | pm.Differentiable,
     ) -> pm.AbstractArray:
         """Calculates the possible detuning values when the amplitude is off.
 
