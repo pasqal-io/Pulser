@@ -16,10 +16,10 @@ import dataclasses
 import numpy as np
 import pytest
 
-from pulser import Pulse
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.parametrized import ParamObj, Variable
+from pulser.pulse import PHASE_PRECISION, Pulse
 from pulser.waveforms import (
     BlackmanWaveform,
     ConstantWaveform,
@@ -166,10 +166,17 @@ def test_arbitrary_phase(phase_wf, det_wf, phase_0):
 
     pls_ = Pulse.ArbitraryPhase(bwf, phase_wf)
     assert pls_ == Pulse(bwf, det_wf, phase_0)
-    np.testing.assert_allclose(
-        (-np.cumsum(pls_.detuning.samples * 1e-3) + phase_0) % (2 * np.pi),
+
+    calculated_phase = -np.cumsum(pls_.detuning.samples * 1e-3) + phase_0
+    assert np.allclose(
+        calculated_phase % (2 * np.pi),
         phase_wf.samples % (2 * np.pi),
-        atol=1e-14,
+        atol=PHASE_PRECISION,
+        # The shift makes sure we don't fail around the wrapping point
+    ) or np.allclose(
+        (calculated_phase + 1) % (2 * np.pi),
+        (phase_wf.samples + 1) % (2 * np.pi),
+        atol=PHASE_PRECISION,
     )
 
 
