@@ -377,6 +377,10 @@
                 {
                   "additionalProperties": false,
                   "properties": {
+                    "blue_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
+                    },
                     "controlled_beams": {
                       "description": "The beams that can be switched on/off with an EOM.",
                       "items": {
@@ -415,6 +419,10 @@
                     "multiple_beam_control": {
                       "description": "Whether both EOMs can be used simultaneously or not.",
                       "type": "boolean"
+                    },
+                    "red_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -703,6 +711,10 @@
                 {
                   "additionalProperties": false,
                   "properties": {
+                    "blue_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
+                    },
                     "controlled_beams": {
                       "description": "The beams that can be switched on/off with an EOM.",
                       "items": {
@@ -741,6 +753,10 @@
                     "multiple_beam_control": {
                       "description": "Whether both EOMs can be used simultaneously or not.",
                       "type": "boolean"
+                    },
+                    "red_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -1043,6 +1059,10 @@
                 {
                   "additionalProperties": false,
                   "properties": {
+                    "blue_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
+                    },
                     "controlled_beams": {
                       "description": "The beams that can be switched on/off with an EOM.",
                       "items": {
@@ -1081,6 +1101,10 @@
                     "multiple_beam_control": {
                       "description": "Whether both EOMs can be used simultaneously or not.",
                       "type": "boolean"
+                    },
+                    "red_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -1342,6 +1366,10 @@
                 {
                   "additionalProperties": false,
                   "properties": {
+                    "blue_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
+                    },
                     "controlled_beams": {
                       "description": "The beams that can be switched on/off with an EOM.",
                       "items": {
@@ -1380,6 +1408,10 @@
                     "multiple_beam_control": {
                       "description": "Whether both EOMs can be used simultaneously or not.",
                       "type": "boolean"
+                    },
+                    "red_shift_coeff": {
+                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "type": "number"
                     }
                   },
                   "required": [

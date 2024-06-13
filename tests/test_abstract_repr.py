@@ -352,6 +352,32 @@ class TestDevice:
                     custom_buffer_time=500,
                 ),
             ),
+            Rydberg.Global(
+                None,
+                None,
+                mod_bandwidth=5,
+                eom_config=RydbergEOM(
+                    max_limiting_amp=10,
+                    mod_bandwidth=20,
+                    limiting_beam=RydbergBeam.RED,
+                    intermediate_detuning=1000,
+                    controlled_beams=tuple(RydbergBeam),
+                    red_shift_coeff=1.4,
+                ),
+            ),
+            Rydberg.Global(
+                None,
+                None,
+                mod_bandwidth=5,
+                eom_config=RydbergEOM(
+                    max_limiting_amp=10,
+                    mod_bandwidth=20,
+                    limiting_beam=RydbergBeam.RED,
+                    intermediate_detuning=1000,
+                    controlled_beams=tuple(RydbergBeam),
+                    blue_shift_coeff=1.4,
+                ),
+            ),
         ],
     )
     def test_optional_channel_fields(self, ch_obj):
@@ -407,6 +433,7 @@ class TestSerialization:
         max_val = DigitalAnalogDevice.rabi_from_blockade(8)
         two_pi_wf = BlackmanWaveform.from_max_val(max_val, amps[1])
         two_pi_pulse = Pulse.ConstantDetuning(two_pi_wf, 0, 0)
+        pm_pulse = Pulse.ArbitraryPhase(pi_2_wf, RampWaveform(duration, -1, 1))
 
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
@@ -415,6 +442,7 @@ class TestSerialization:
         seq.add(two_pi_pulse, "rydberg")
 
         seq.delay(100, "digital")
+        seq.add(pm_pulse, "digital")
         seq.measure("digital")
         return seq
 
@@ -464,7 +492,7 @@ class TestSerialization:
             "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
             "duration": {"type": "int", "value": [200]},
         }
-        assert len(abstract["operations"]) == 11
+        assert len(abstract["operations"]) == 12
         assert abstract["operations"][0] == {
             "op": "target",
             "channel": "digital",
@@ -550,6 +578,20 @@ class TestSerialization:
             "op": "delay",
             "channel": "digital",
             "time": 100,
+        }
+
+        assert abstract["operations"][11] == {
+            "op": "pulse_arbitrary_phase",
+            "channel": "digital",
+            "amplitude": blackman_wf_dict,
+            "phase": {
+                "kind": "ramp",
+                "duration": duration_ref,
+                "start": -1,
+                "stop": 1,
+            },
+            "post_phase_shift": 0.0,
+            "protocol": "min-delay",
         }
 
         assert abstract["measurement"] == "digital"
@@ -1112,6 +1154,17 @@ class TestSerialization:
             )
             == "abc"
         )
+
+    @pytest.mark.parametrize("skip_validation", [False, True])
+    def test_skip_validation(self, sequence, skip_validation):
+        with patch(
+            "pulser.json.abstract_repr.serializer.validate_abstract_repr"
+        ) as mock:
+            sequence.to_abstract_repr(skip_validation=skip_validation)
+            if skip_validation:
+                mock.assert_not_called()
+            else:
+                mock.assert_called_once()
 
 
 def _get_serialized_seq(
@@ -1677,6 +1730,23 @@ class TestDeserialization:
                     "stop": 5,
                 },
             },
+            {
+                "op": "pulse_arbitrary_phase",
+                "channel": "global",
+                "post_phase_shift": var2,
+                "protocol": "min-delay",
+                "amplitude": {
+                    "kind": "constant",
+                    "duration": var2,
+                    "value": 3.14,
+                },
+                "phase": {
+                    "kind": "ramp",
+                    "duration": var2,
+                    "start": 1,
+                    "stop": 0,
+                },
+            },
         ],
         ids=_get_op,
     )
@@ -1723,20 +1793,26 @@ class TestDeserialization:
             assert isinstance(c.args[2], VariableItem)
             # basis is fixed
             assert c.kwargs["basis"] == "ground-rydberg"
-        elif op["op"] == "pulse":
+        elif "pulse" in op["op"]:
             assert c.name == "add"
             assert c.kwargs["channel"] == op["channel"]
             assert c.kwargs["protocol"] == op["protocol"]
             pulse = c.kwargs["pulse"]
             assert isinstance(pulse, ParamObj)
-            assert pulse.cls == Pulse
-            assert isinstance(pulse.kwargs["phase"], VariableItem)
+            if op["op"] == "pulse":
+                assert pulse.cls is Pulse
+                assert isinstance(pulse.kwargs["phase"], VariableItem)
+                time_domain_mod = "detuning"
+            else:
+                assert pulse.args[0] is Pulse
+                assert op["op"] == "pulse_arbitrary_phase"
+                time_domain_mod = "phase"
             assert isinstance(pulse.kwargs["post_phase_shift"], VariableItem)
 
             assert isinstance(pulse.kwargs["amplitude"], ParamObj)
             assert issubclass(pulse.kwargs["amplitude"].cls, Waveform)
-            assert isinstance(pulse.kwargs["detuning"], ParamObj)
-            assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
+            assert isinstance(pulse.kwargs[time_domain_mod], ParamObj)
+            assert issubclass(pulse.kwargs[time_domain_mod].cls, Waveform)
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
 
@@ -1805,6 +1881,25 @@ class TestDeserialization:
                 },
                 "ConstantDetuning",
             ),
+            (
+                {
+                    "op": "pulse_arbitrary_phase",
+                    "channel": "global",
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 3.14,
+                    },
+                    "phase": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 1,
+                    },
+                },
+                "ArbitraryPhase",
+            ),
         ],
     )
     @pytest.mark.filterwarnings(
@@ -1835,7 +1930,6 @@ class TestDeserialization:
         pulse = c.kwargs["pulse"]
         assert isinstance(pulse, ParamObj)
         assert pulse.cls.__name__ == pulse_cls
-        assert isinstance(pulse.kwargs["phase"], VariableItem)
         assert isinstance(pulse.kwargs["post_phase_shift"], VariableItem)
 
         if pulse_cls != "ConstantAmplitude":
@@ -1844,11 +1938,19 @@ class TestDeserialization:
         else:
             assert pulse.kwargs["amplitude"] == 3.14
 
-        if pulse_cls != "ConstantDetuning":
+        if pulse_cls == "ConstantAmplitude":
             assert isinstance(pulse.kwargs["detuning"], ParamObj)
             assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
-        else:
+        elif pulse_cls == "ConstantDetuning":
             assert pulse.kwargs["detuning"] == 1
+        elif pulse_cls == "ArbitraryPhase":
+            assert "detuning" not in pulse.kwargs
+
+        if pulse_cls != "ArbitraryPhase":
+            assert isinstance(pulse.kwargs["phase"], VariableItem)
+        else:
+            assert isinstance(pulse.kwargs["phase"], ParamObj)
+            assert issubclass(pulse.kwargs["phase"].cls, Waveform)
 
     @pytest.mark.parametrize("correct_phase_drift", (False, True, None))
     @pytest.mark.parametrize("var_detuning_on", [False, True])

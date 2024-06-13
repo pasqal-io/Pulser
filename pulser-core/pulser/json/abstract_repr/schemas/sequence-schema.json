@@ -690,6 +690,49 @@
       ],
       "type": "object"
     },
+    "OpPulseArbitraryPhase": {
+      "additionalProperties": false,
+      "properties": {
+        "amplitude": {
+          "$ref": "#/definitions/Waveform",
+          "description": "Pulse amplitude waveform (in rad/µs)"
+        },
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "Device channel to use for this pulse."
+        },
+        "op": {
+          "const": "pulse_arbitrary_phase",
+          "type": "string"
+        },
+        "phase": {
+          "$ref": "#/definitions/Waveform",
+          "description": "The pulse phase waveform (in radians)"
+        },
+        "post_phase_shift": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "A phase shift (in radians) immediately after the end of the pulse"
+        },
+        "protocol": {
+          "description": "A parametrized pulse constructed with an arbitrary phase waveform.",
+          "enum": [
+            "min-delay",
+            "no-delay",
+            "wait-for-all"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "protocol",
+        "channel",
+        "amplitude",
+        "phase",
+        "post_phase_shift"
+      ],
+      "type": "object"
+    },
     "OpTarget": {
       "additionalProperties": false,
       "description": "Adds a waveform to the pulse.",
@@ -734,6 +777,9 @@
         },
         {
           "$ref": "#/definitions/OpPulse"
+        },
+        {
+          "$ref": "#/definitions/OpPulseArbitraryPhase"
         },
         {
           "$ref": "#/definitions/OpPhaseShift"

@@ -1149,8 +1149,14 @@ class Sequence(Generic[DeviceType]):
             detuning_on = cast(float, detuning_on)
             eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                detuning_off = eom_config.calculate_detuning_off(
-                    amp_on, detuning_on, optimal_detuning_off
+                (
+                    detuning_off,
+                    switching_beams,
+                ) = eom_config.calculate_detuning_off(
+                    amp_on,
+                    detuning_on,
+                    optimal_detuning_off,
+                    return_switching_beams=True,
                 )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
@@ -1163,10 +1169,13 @@ class Sequence(Generic[DeviceType]):
 
             if not self.is_parametrized():
                 phase_drift_params = _PhaseDriftParams(
-                    drift_rate=-detuning_off, ti=self.get_duration(channel)
+                    drift_rate=-detuning_off,
+                    # enable_eom() calls wait for fall, so the block only
+                    # starts after fall time
+                    ti=self.get_duration(channel, include_fall_time=True),
                 )
                 self._schedule.enable_eom(
-                    channel, amp_on, detuning_on, detuning_off
+                    channel, amp_on, detuning_on, detuning_off, switching_beams
                 )
                 if correct_phase_drift:
                     buffer_slot = self._last(channel)
@@ -1277,7 +1286,7 @@ class Sequence(Generic[DeviceType]):
             channel: The name of the channel to add the pulse to.
             duration: The duration of the pulse (in ns).
             phase: The pulse phase (in radians).
-            post_phase_shift: Optionally lets you add a phase shift (in rads)
+            post_phase_shift: Optionally lets you add a phase shift (in rad)
                 immediately after the end of the pulse.
             protocol: Stipulates how to deal with eventual conflicts with
                 other channels (see `Sequence.add()` for more details).
@@ -1518,7 +1527,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The ids of the qubits to apply the phase shift to.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
@@ -1540,7 +1549,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The indices of the qubits to apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -1738,6 +1747,7 @@ class Sequence(Generic[DeviceType]):
         self,
         seq_name: str = "pulser-exported",
         json_dumps_options: dict[str, Any] = {},
+        skip_validation: bool = False,
         **defaults: Any,
     ) -> str:
         """Serializes the Sequence into an abstract JSON object.
@@ -1748,6 +1758,13 @@ class Sequence(Generic[DeviceType]):
             json_dumps_options: A mapping between optional parameters of
                 ``json.dumps()`` (as string) and their value (parameter cannot
                 be "cls").
+            skip_validation: Whether to skip the validation of the serialized
+                sequence against the abstract representation's JSON schema.
+                Skipping the validation is useful to cut down on execution
+                time, as this step takes significantly longer than the
+                serialization itself; it is also low risk, as the validation
+                is only defensively checking that there are no bugs in the
+                serialized sequence.
             defaults: The default values for all the variables declared in this
                 Sequence instance, indexed by the name given upon declaration.
                 Check ``Sequence.declared_variables`` to see all the variables.
@@ -1763,7 +1780,11 @@ class Sequence(Generic[DeviceType]):
         """
         try:
             return serialize_abstract_sequence(
-                self, seq_name, json_dumps_options, **defaults
+                self,
+                seq_name=seq_name,
+                json_dumps_options=json_dumps_options,
+                skip_validation=skip_validation,
+                **defaults,
             )
         except jsonschema.exceptions.ValidationError as e:
             if self.is_parametrized():
@@ -1868,6 +1889,7 @@ class Sequence(Generic[DeviceType]):
     def draw(
         self,
         mode: str = "input+output",
+        as_phase_modulated: bool = False,
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
@@ -1888,6 +1910,8 @@ class Sequence(Generic[DeviceType]):
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
+            as_phase_modulated: Instead of displaying the detuning and phase
+                offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
                 'output' mode. If `draw_phase_curve=True`, phase values are
@@ -1970,6 +1994,7 @@ class Sequence(Generic[DeviceType]):
             draw_detuning_maps=draw_detuning_maps,
             draw_qubit_amp=draw_qubit_amp,
             draw_qubit_det=draw_qubit_det,
+            phase_modulated=as_phase_modulated,
         )
         if fig_name is not None:
             name, ext = os.path.splitext(fig_name)
@@ -2067,16 +2092,21 @@ class Sequence(Generic[DeviceType]):
             phase_drift_params=phase_drift_params,
         )
 
-        true_finish = self._last(channel).tf + pulse.fall_time(
-            channel_obj, in_eom_mode=self.is_in_eom_mode(channel)
-        )
+        new_pulse_slot = self._last(channel)
         for qubit in last.targets:
-            self._basis_ref[basis][qubit].update_last_used(true_finish)
+            self._basis_ref[basis][qubit].update_last_used(new_pulse_slot.tf)
 
-        if pulse.post_phase_shift:
-            self._phase_shift(
-                pulse.post_phase_shift, *last.targets, basis=basis
+        total_phase_shift = pulse.post_phase_shift
+        if phase_drift_params:
+            # The phase correction done to the EOM pulse's phase must
+            # also be done to the phase shift, as the phase reference is
+            # effectively changed by -drift
+            total_phase_shift = (
+                total_phase_shift
+                - phase_drift_params.calc_phase_drift(new_pulse_slot.ti)
             )
+        if total_phase_shift:
+            self._phase_shift(total_phase_shift, *last.targets, basis=basis)
         if (
             self._in_ising
             and self._slm_mask_dmm

@@ -16,10 +16,17 @@ import dataclasses
 import numpy as np
 import pytest
 
-from pulser import Pulse
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
-from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
+from pulser.parametrized import ParamObj, Variable
+from pulser.pulse import PHASE_PRECISION, Pulse
+from pulser.waveforms import (
+    BlackmanWaveform,
+    ConstantWaveform,
+    CustomWaveform,
+    InterpolatedWaveform,
+    RampWaveform,
+)
 
 cwf = ConstantWaveform(100, -10)
 bwf = BlackmanWaveform(200, 3)
@@ -59,15 +66,18 @@ def test_str():
         "Pulse(Amp=1 rad/µs, Detuning=-10 rad/µs, " + "Phase=3.14)"
     )
     pls_ = Pulse(bwf, rwf, 1)
-    msg = "Pulse(Amp=Blackman(Area: 3), Detuning=Ramp(0->1 rad/µs), Phase=1)"
+    msg = (
+        "Pulse(Amp=Blackman(Area: 3) rad/µs, Detuning=Ramp(0->1) rad/µs, "
+        "Phase=1)"
+    )
     assert pls_.__str__() == msg
 
 
 def test_repr():
     pls_ = Pulse(bwf, rwf, 1, post_phase_shift=-np.pi)
     msg = (
-        "Pulse(amp=BlackmanWaveform(200 ns, Area: 3), "
-        + "detuning=RampWaveform(200 ns, 0->1 rad/µs), "
+        "Pulse(amp=BlackmanWaveform(200 ns, Area: 3) rad/µs, "
+        + "detuning=RampWaveform(200 ns, 0->1) rad/µs, "
         + "phase=1, post_phase_shift=3.14)"
     )
     assert pls_.__repr__() == msg
@@ -119,3 +129,99 @@ def test_full_duration(eom_channel):
     assert pls.get_full_duration(
         eom_channel, in_eom_mode=True
     ) == pls.duration + pls.fall_time(eom_channel, in_eom_mode=True)
+
+
+@pytest.mark.parametrize(
+    "phase_wf, det_wf, phase_0",
+    [
+        (
+            ConstantWaveform(200, -123),
+            ConstantWaveform(200, 0),
+            -123 % (2 * np.pi),
+        ),
+        (
+            RampWaveform(200, -5, 5),
+            ConstantWaveform(200, (_slope := -10 / 199) * 1e3),
+            (-5 + _slope) % (2 * np.pi),
+        ),
+        (
+            -bwf,
+            CustomWaveform(
+                np.pad(np.diff(bwf.samples), (1, 0), mode="edge") * 1e3
+            ),
+            -bwf[0] + (-bwf[0] + bwf[1]),
+        ),
+        (
+            interp_wf := InterpolatedWaveform(200, values=[1, 3, -2, 4]),
+            CustomWaveform(
+                np.pad(-np.diff(interp_wf.samples), (1, 0), mode="edge") * 1e3
+            ),
+            interp_wf[0] + (interp_wf[0] - interp_wf[1]),
+        ),
+    ],
+)
+def test_arbitrary_phase(phase_wf, det_wf, phase_0):
+    with pytest.raises(TypeError, match="must be a waveform"):
+        Pulse.ArbitraryPhase(bwf, -3)
+
+    pls_ = Pulse.ArbitraryPhase(bwf, phase_wf)
+    assert pls_ == Pulse(bwf, det_wf, phase_0)
+
+    calculated_phase = -np.cumsum(pls_.detuning.samples * 1e-3) + phase_0
+    assert np.allclose(
+        calculated_phase % (2 * np.pi),
+        phase_wf.samples % (2 * np.pi),
+        atol=PHASE_PRECISION,
+        # The shift makes sure we don't fail around the wrapping point
+    ) or np.allclose(
+        (calculated_phase + 1) % (2 * np.pi),
+        (phase_wf.samples + 1) % (2 * np.pi),
+        atol=PHASE_PRECISION,
+    )
+
+
+def test_parametrized_pulses():
+    vars = Variable("vars", float, size=2)
+    vars._assign([1000, 1.0])
+    param_bwf = BlackmanWaveform(vars[0], vars[1])
+    const_pulse = Pulse.ConstantPulse(vars[0], vars[1], vars[1], vars[1])
+    assert isinstance(const_pulse, ParamObj)
+    assert const_pulse.cls is Pulse
+    param_const = ConstantWaveform(vars[0], vars[1])
+    assert (
+        const_pulse.build() == Pulse(param_const, param_const, vars[1]).build()
+    )
+    const_amp = Pulse.ConstantAmplitude(vars[1], param_bwf, vars[1])
+    assert const_amp.cls.__name__ == "ConstantAmplitude"
+    const_det = Pulse.ConstantDetuning(param_bwf, vars[1], vars[1])
+    assert const_det.cls.__name__ == "ConstantDetuning"
+    arb_phase = Pulse.ArbitraryPhase(
+        param_bwf, RampWaveform(vars[0], 0, vars[1])
+    )
+    assert arb_phase.cls.__name__ == "ArbitraryPhase"
+    special_pulses = [const_amp, const_det, arb_phase]
+    for p in special_pulses:
+        assert isinstance(p, ParamObj)
+        assert p.cls is not Pulse
+        assert p.args[0] is Pulse
+
+    assert const_amp.build() == Pulse(param_const, param_bwf, vars[1]).build()
+    assert const_det.build() == Pulse(param_bwf, param_const, vars[1]).build()
+    assert (
+        arb_phase.build()
+        == Pulse(
+            param_bwf,
+            ConstantWaveform(vars[0], -vars[1] * 1e3 / (vars[0] - 1)),
+            -vars[1] / (vars[0] - 1),
+        ).build()
+    )
+
+
+def test_eq():
+    assert (pls_ := Pulse.ConstantPulse(100, 1, -1, 0)) == Pulse(
+        ConstantWaveform(100, 1),
+        ConstantWaveform(100, -1),
+        1e-6,
+        post_phase_shift=-1e-6,
+    )
+    assert pls_ != repr(pls_)
