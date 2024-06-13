@@ -1338,7 +1338,9 @@ class TestDeserialization:
         # Check layout
         if layout_coords is not None:
             assert seq.register.layout == reg_layout
-            q_coords = list(seq.qubit_info.values())
+            q_coords = [
+                q_coords.tolist() for q_coords in seq.qubit_info.values()
+            ]
             assert seq.register._layout_info.trap_ids == tuple(
                 reg_layout.get_traps_from_coordinates(*q_coords)
             )

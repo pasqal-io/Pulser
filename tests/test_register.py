@@ -292,7 +292,9 @@ def test_rotation():
     reg = Register.square(2, spacing=np.sqrt(2))
     rot_reg = reg.rotated(45)
     new_coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
-    np.testing.assert_allclose(rot_reg._coords, new_coords_, atol=1e-15)
+    np.testing.assert_allclose(
+        rot_reg._coords_arr.as_array(), new_coords_, atol=1e-15
+    )
     assert rot_reg != reg
 
 

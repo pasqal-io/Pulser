@@ -60,7 +60,7 @@ class Traps(ABC, CoordsCollection):
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
             )
 
-        if len(np.unique(trap_coordinates, axis=0)) != shape[0]:
+        if len(np.unique(coords_arr, axis=0)) != shape[0]:
             raise ValueError(
                 "All trap coordinates of a register layout must be unique."
             )

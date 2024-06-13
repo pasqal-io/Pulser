@@ -83,7 +83,11 @@ class WeightMap(Traps, RegDrawer):
         for qid, pos in qubits.items():
             matches = np.argwhere(
                 np.all(
-                    np.isclose(coords_arr, pos, atol=10 ** (-COORD_PRECISION)),
+                    np.isclose(
+                        coords_arr,
+                        pos.as_array(detach=True),
+                        atol=10 ** (-COORD_PRECISION),
+                    ),
                     axis=1,
                 )
             )

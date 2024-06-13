@@ -85,7 +85,7 @@ class AbstractArray:
             raise RuntimeError("`torch` is not installed.")
         return torch.as_tensor(self._array)
 
-    def as_array(self, detach: bool = False) -> np.ndarray:
+    def as_array(self, *, detach: bool = False) -> np.ndarray:
         """Converts the stored array to a Numpy array.
 
         Args:

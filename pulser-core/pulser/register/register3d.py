@@ -180,9 +180,9 @@ class Register3D(BaseRegister, RegDrawer):
         else:
             e_x = vh[0, :]
             e_y = vh[1, :]
-            coords_2D = pm.AbstractArray(
+            coords_2D = pm.vstack(
                 [
-                    pm.AbstractArray([pm.dot(e_x, r), pm.dot(e_y, r)])
+                    pm.hstack([pm.dot(e_x, r), pm.dot(e_y, r)])
                     for r in self._coords_arr
                 ]
             )

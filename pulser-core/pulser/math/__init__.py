@@ -223,6 +223,13 @@ def vstack(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
     return AbstractArray(np.vstack([a.as_array() for a in abst_arrs]))
 
 
+def hstack(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
+    abst_arrs = tuple(map(AbstractArray, arrs))
+    if any(a.is_tensor for a in abst_arrs):
+        return AbstractArray(torch.hstack([a.as_tensor() for a in abst_arrs]))
+    return AbstractArray(np.hstack([a.as_array() for a in abst_arrs]))
+
+
 def clip(
     a: AbstractArrayLike, min: AbstractArrayLike, max: AbstractArrayLike
 ) -> AbstractArray:

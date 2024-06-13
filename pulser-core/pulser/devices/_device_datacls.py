@@ -426,7 +426,10 @@ class BaseDevice(ABC):
     def _validate_radial_distance(
         self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
     ) -> None:
-        too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
+        too_far = (
+            np.linalg.norm(pm.vstack(coords).as_array(detach=True), axis=1)
+            > self.max_radial_distance
+        )
         if np.any(too_far):
             raise ValueError(
                 f"All {kind} must be at most {self.max_radial_distance} μm "

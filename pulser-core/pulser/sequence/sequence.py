@@ -2144,7 +2144,8 @@ class Sequence(Generic[DeviceType]):
     ) -> None:
         self._validate_channel(channel, block_eom_mode=True)
         channel_obj = self._schedule[channel].channel_obj
-        qubits = np.array(qubits).tolist()
+        if isinstance(qubits, pm.AbstractArray):
+            qubits = qubits.tolist()
         try:
             qubits_set = (
                 set(cast(Collection, qubits))

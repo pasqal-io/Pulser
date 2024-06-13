@@ -149,7 +149,7 @@ def test_detuning_off(
     # Case where the EOM pulses are resonant
     detuning_on = 0.0
     zero_det = calc_offset(amp)  # detuning when both beams are off = offset
-    assert np.isclose(eom._lightshift(amp, *RydbergBeam), -zero_det)
+    assert np.isclose(float(eom._lightshift(amp, *RydbergBeam)), -zero_det)
     assert eom._lightshift(amp) == 0.0
     det_off_options = eom.detuning_off_options(amp, detuning_on)
     switching_beams_opts = eom._switching_beams_combos
@@ -193,7 +193,9 @@ def test_detuning_off(
         assert len(off_options) == 1
         # The new detuning_off is shifted by the new detuning_on,
         # since that changes the offset compared the resonant case
-        assert np.isclose(off_options[0], det_off_options[ind] + detuning_on)
+        assert np.isclose(
+            float(off_options[0]), det_off_options[ind] + detuning_on
+        )
         assert off_options[0] == eom_.calculate_detuning_off(
             amp, detuning_on, optimal_detuning_off=0.0
         )

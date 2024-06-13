@@ -1388,7 +1388,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
         )
 
     def pos_factor(qid):
-        r = np.linalg.norm(reg.qubits[qid])
+        r = np.linalg.norm(reg.qubits[qid].as_array())
         w0 = sim_config.laser_waist
         return np.exp(-((r / w0) ** 2))
 
