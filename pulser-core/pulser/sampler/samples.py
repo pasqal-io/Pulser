@@ -99,7 +99,7 @@ class ChannelSamples:
     eom_start_buffers: list[tuple[int, int]] = field(default_factory=list)
     eom_end_buffers: list[tuple[int, int]] = field(default_factory=list)
     target_time_slots: list[_TimeSlot] = field(default_factory=list)
-    _centered_phase: np.ndarray | None = None
+    _centered_phase: pm.AbstractArray | None = None
 
     def __post_init__(self) -> None:
         assert (
@@ -125,7 +125,7 @@ class ChannelSamples:
         )
 
     @property
-    def centered_phase(self) -> np.ndarray:
+    def centered_phase(self) -> pm.AbstractArray:
         """The phase samples centered in ]-π, π]."""
         if self._centered_phase is not None:
             return self._centered_phase
@@ -134,7 +134,7 @@ class ChannelSamples:
         return phase_
 
     @property
-    def phase_modulation(self) -> np.ndarray:
+    def phase_modulation(self) -> pm.AbstractArray:
         r"""The phase modulation samples (in rad).
 
         Constructed by combining the integral of the detuning samples with the
@@ -142,9 +142,7 @@ class ChannelSamples:
 
         .. math:: \phi(t) = \phi_c(t) - \sum_{k=0}^{t} \delta(k)
         """
-        return cast(
-            np.ndarray, self.centered_phase - np.cumsum(self.det * 1e-3)
-        )
+        return self.centered_phase - pm.cumsum(self.det * 1e-3)
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
@@ -182,7 +180,7 @@ class ChannelSamples:
         )
         _new_centered_phase = None
         if self._centered_phase is not None:
-            _new_centered_phase = np.pad(
+            _new_centered_phase = pm.pad(
                 self._centered_phase,
                 (0, extension),
                 mode="edge" if self._centered_phase.size > 0 else "constant",

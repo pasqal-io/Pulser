@@ -2109,7 +2109,7 @@ class Sequence(Generic[DeviceType]):
         for qubit in last.targets:
             self._basis_ref[basis][qubit].update_last_used(new_pulse_slot.tf)
 
-        total_phase_shift = pulse.post_phase_shift
+        total_phase_shift = pm.AbstractArray(pulse.post_phase_shift)
         if phase_drift_params:
             # The phase correction done to the EOM pulse's phase must
             # also be done to the phase shift, as the phase reference is
@@ -2118,7 +2118,7 @@ class Sequence(Generic[DeviceType]):
                 total_phase_shift
                 - phase_drift_params.calc_phase_drift(new_pulse_slot.ti)
             )
-        if total_phase_shift:
+        if total_phase_shift != 0.0:
             self._phase_shift(total_phase_shift, *last.targets, basis=basis)
         if (
             self._in_ising

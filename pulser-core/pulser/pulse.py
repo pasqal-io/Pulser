@@ -239,15 +239,15 @@ class Pulse:
         if isinstance(phase, ConstantWaveform):
             detuning = ConstantWaveform(phase.duration, 0.0)
         elif isinstance(phase, RampWaveform):
-            detuning = ConstantWaveform(phase.duration, -phase.slope * 1e3)
+            detuning = ConstantWaveform(phase.duration, -phase._slope * 1e3)
         else:
-            detuning_samples = -np.diff(phase.samples) * 1e3  # rad/ns->rad/µs
+            detuning_samples = -pm.diff(phase.samples) * 1e3  # rad/ns->rad/µs
             # Use the same value in the first two detuning samples
             detuning = CustomWaveform(
-                np.pad(detuning_samples, (1, 0), mode="edge")
+                pm.pad(detuning_samples, (1, 0), mode="edge")
             )
         # Adjust phase_c to incorporate the first detuning sample
-        phase_c = phase.first_value + detuning.first_value * 1e-3
+        phase_c = phase[0] + detuning[0] * 1e-3
         return cls(amplitude, detuning, phase_c, post_phase_shift)
 
     def draw(self) -> None:

@@ -167,15 +167,18 @@ def test_arbitrary_phase(phase_wf, det_wf, phase_0):
     pls_ = Pulse.ArbitraryPhase(bwf, phase_wf)
     assert pls_ == Pulse(bwf, det_wf, phase_0)
 
-    calculated_phase = -np.cumsum(pls_.detuning.samples * 1e-3) + phase_0
+    calculated_phase = -np.cumsum(
+        pls_.detuning.samples.as_array() * 1e-3
+    ) + float(phase_0)
+    phase_samples = phase_wf.samples.as_array()
     assert np.allclose(
         calculated_phase % (2 * np.pi),
-        phase_wf.samples % (2 * np.pi),
+        phase_samples % (2 * np.pi),
         atol=PHASE_PRECISION,
         # The shift makes sure we don't fail around the wrapping point
     ) or np.allclose(
         (calculated_phase + 1) % (2 * np.pi),
-        (phase_wf.samples + 1) % (2 * np.pi),
+        (phase_samples + 1) % (2 * np.pi),
         atol=PHASE_PRECISION,
     )
 

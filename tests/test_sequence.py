@@ -2304,7 +2304,7 @@ def test_eom_mode(
     )
     assert np.isclose(
         seq.current_phase_ref("q0", basis="ground-rydberg"),
-        phase_ref % (2 * np.pi),
+        float(phase_ref) % (2 * np.pi),
     )
 
     # Add delay to test the phase drift correction in disable_eom_mode
@@ -2315,7 +2315,7 @@ def test_eom_mode(
     phase_ref += new_eom_block.detuning_off * last_delay_time * 1e-3
     assert np.isclose(
         seq.current_phase_ref("q0", basis="ground-rydberg"),
-        phase_ref % (2 * np.pi),
+        float(phase_ref) % (2 * np.pi),
     )
 
     # Test drawing in eom mode

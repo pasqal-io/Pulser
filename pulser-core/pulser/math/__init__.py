@@ -195,6 +195,20 @@ def sum(a: AbstractArrayLike) -> AbstractArray:
     return AbstractArray(np.sum(a.as_array()))
 
 
+def cumsum(a: AbstractArrayLike, axis: int = 0) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.cumsum(a.as_tensor(), dim=axis))
+    return AbstractArray(np.cumsum(a.as_array(), axis=axis))
+
+
+def diff(a: AbstractArrayLike) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.diff(a.as_tensor()))
+    return AbstractArray(np.diff(a.as_array()))
+
+
 def dot(a: AbstractArrayLike, b: AbstractArrayLike) -> AbstractArray:
     a, b = map(AbstractArray, (a, b))
     if a.is_tensor or b.is_tensor:

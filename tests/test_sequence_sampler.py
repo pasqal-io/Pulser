@@ -480,8 +480,8 @@ def test_phase_modulation(off_center):
     seq_samples = sample(seq).channel_samples["rydberg_global"]
 
     np.testing.assert_allclose(
-        seq_samples.phase_modulation + 2 * np.pi * off_center,
-        full_phase.samples,
+        seq_samples.phase_modulation.as_array() + 2 * np.pi * off_center,
+        full_phase.samples.as_array(),
         atol=PHASE_PRECISION,
     )
 
