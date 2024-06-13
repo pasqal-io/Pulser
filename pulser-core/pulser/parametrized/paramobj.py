@@ -252,7 +252,11 @@ class ParamObj(Parametrized, OpSupport):
                 cls_name = self.args[0].__name__
                 name = f"{cls_name}.{op_name}"
                 signature = SIGNATURES[
-                    "Pulse" if cls_name == "Pulse" else name
+                    (
+                        "Pulse"
+                        if cls_name == "Pulse" and op_name != "ArbitraryPhase"
+                        else name
+                    )
                 ]
                 # No existing classmethod has *args in its signature
                 assert (

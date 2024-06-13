@@ -1286,7 +1286,7 @@ class Sequence(Generic[DeviceType]):
             channel: The name of the channel to add the pulse to.
             duration: The duration of the pulse (in ns).
             phase: The pulse phase (in radians).
-            post_phase_shift: Optionally lets you add a phase shift (in rads)
+            post_phase_shift: Optionally lets you add a phase shift (in rad)
                 immediately after the end of the pulse.
             protocol: Stipulates how to deal with eventual conflicts with
                 other channels (see `Sequence.add()` for more details).
@@ -1527,7 +1527,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The ids of the qubits to apply the phase shift to.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
@@ -1549,7 +1549,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The indices of the qubits to apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -1877,6 +1877,7 @@ class Sequence(Generic[DeviceType]):
     def draw(
         self,
         mode: str = "input+output",
+        as_phase_modulated: bool = False,
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
@@ -1897,6 +1898,8 @@ class Sequence(Generic[DeviceType]):
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
+            as_phase_modulated: Instead of displaying the detuning and phase
+                offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
                 'output' mode. If `draw_phase_curve=True`, phase values are
@@ -1979,6 +1982,7 @@ class Sequence(Generic[DeviceType]):
             draw_detuning_maps=draw_detuning_maps,
             draw_qubit_amp=draw_qubit_amp,
             draw_qubit_det=draw_qubit_det,
+            phase_modulated=as_phase_modulated,
         )
         if fig_name is not None:
             name, ext = os.path.splitext(fig_name)

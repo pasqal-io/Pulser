@@ -64,7 +64,7 @@ def seq_to_str(sequence: Sequence) -> str:
                         ts.ti,
                         ts.tf,
                         (
-                            ts.type.detuning
+                            f"{ts.type.detuning!s} rad/µs"
                             if not seq.is_detuned_delay(ts.type)
                             else "{:.3g} rad/µs".format(
                                 cast(float, ts.type.detuning[0])
