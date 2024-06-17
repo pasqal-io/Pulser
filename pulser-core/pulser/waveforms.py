@@ -253,13 +253,13 @@ class Waveform(ABC):
 
     def __getitem__(
         self, index_or_slice: Union[int, slice]
-    ) -> Union[float, pm.AbstractArray]:
+    ) -> pm.AbstractArray:
         if isinstance(index_or_slice, slice):
             s: slice = self._check_slice(index_or_slice)
             return self._samples[s]
         else:
             index: int = self._check_index(index_or_slice)
-            return cast(float, self._samples[index])
+            return self._samples[index]
 
     def _check_index(self, i: int) -> int:
         if i < -self.duration or i >= self.duration:
