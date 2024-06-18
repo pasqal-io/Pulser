@@ -54,6 +54,9 @@ def test_creation():
         Pulse.ConstantAmplitude(-1, cwf, 0)
         Pulse.ConstantPulse(100, -1, 0, 0)
 
+    with pytest.raises(TypeError, match="'phase' must be a single float"):
+        Pulse(bwf, rwf, [0.0, 1.0, 2.0])
+
     assert pls.phase == 0
     assert pls2 == pls3
     assert pls != pls4

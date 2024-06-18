@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from dataclasses import replace
 from typing import Literal
@@ -21,6 +22,7 @@ import numpy as np
 import pytest
 
 import pulser
+import pulser.math as pm
 import pulser_simulation
 from pulser.channels.dmm import DMM
 from pulser.devices import Device, MockDevice
@@ -30,6 +32,13 @@ from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sample
 from pulser.sequence._seq_drawer import draw_samples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
+
+try:
+    import torch
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 # Helpers
 
@@ -508,6 +517,54 @@ def test_draw_samples(
         draw_phase_shifts=draw_phase_shifts,
         draw_phase_curve=draw_phase_curve,
     )
+
+
+@pytest.mark.parametrize("all_local", [False, True])
+@pytest.mark.parametrize(
+    "samples_type",
+    [
+        "array",
+        "abstract",
+        pytest.param(
+            "tensor",
+            marks=pytest.mark.skipif(
+                not HAS_TORCH, reason="torch is not installed"
+            ),
+        ),
+    ],
+)
+def test_to_nested_dict_samples_type(mod_seq, samples_type, all_local):
+    samples = sample(mod_seq)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'samples_type' must be one of ('abstract', 'array', 'tensor'),"
+            " not 'jax'."
+        ),
+    ):
+        samples.to_nested_dict(samples_type="jax")
+
+    nested_dict = samples.to_nested_dict(
+        samples_type=samples_type, all_local=all_local
+    )
+    if samples_type == "tensor":
+        expected_type = torch.Tensor
+    elif samples_type == "array":
+        expected_type = np.ndarray
+    else:
+        assert samples_type == "abstract"
+        expected_type = pm.AbstractArray
+    if all_local:
+        assert not nested_dict["Global"]
+        samples_per_qubit = nested_dict["Local"]["ground-rydberg"]
+        for qsamples in samples_per_qubit.values():
+            for arr_ in qsamples.values():
+                assert isinstance(arr_, expected_type)
+    else:
+        assert not nested_dict["Local"]
+        samples_arrs = nested_dict["Global"]["ground-rydberg"]
+        for arr_ in samples_arrs.values():
+            assert isinstance(arr_, expected_type)
 
 
 # Fixtures

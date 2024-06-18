@@ -84,6 +84,17 @@ def test_creation():
         Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
 
 
+def test_repr():
+    assert (
+        repr(Register(dict(q0=(1.0, 0.0), q1=(-1, 5))))
+        == "Register({'q0': array([1., 0.]), 'q1': array([-1.,  5.])})"
+    )
+    assert (
+        repr(Register3D(dict(q0=(1, 2, 3))))
+        == "Register3D({'q0': array([1., 2., 3.])})"
+    )
+
+
 def test_rectangular_lattice():
     # Check rows
     with pytest.raises(ValueError, match="The number of rows"):
