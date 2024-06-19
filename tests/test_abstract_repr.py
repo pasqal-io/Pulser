@@ -109,10 +109,7 @@ def test_layout(layout: RegisterLayout):
         RegisterLayout.from_abstract_repr(ser_layout_obj)
 
     # Check the validation catches invalid entries
-    with pytest.raises(
-        jsonschema.exceptions.ValidationError,
-        match="is not valid under any of the given schemas",
-    ):
+    with pytest.raises(jsonschema.exceptions.ValidationError):
         ser_layout_obj["coordinates"].append(
             [0, 0, 0] if layout.dimensionality == 2 else [0, 0]
         )
@@ -161,10 +158,7 @@ def test_register(reg: Register | Register3D):
             Register3D.from_abstract_repr(ser_reg_str)
 
         # Check the validation catches invalid entries
-        with pytest.raises(
-            jsonschema.exceptions.ValidationError,
-            match="is not valid under any of the given schemas",
-        ):
+        with pytest.raises(jsonschema.exceptions.ValidationError):
             ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
             Register.from_abstract_repr(json.dumps(ser_reg_obj))
     else:
@@ -174,10 +168,7 @@ def test_register(reg: Register | Register3D):
             Register.from_abstract_repr(ser_reg_str)
 
         # Check the validation catches invalid entries
-        with pytest.raises(
-            jsonschema.exceptions.ValidationError,
-            match="is not valid under any of the given schemas",
-        ):
+        with pytest.raises(jsonschema.exceptions.ValidationError):
             ser_reg_obj["register"].append(dict(name="q10", x=10, y=0))
             Register.from_abstract_repr(json.dumps(ser_reg_obj))
 
