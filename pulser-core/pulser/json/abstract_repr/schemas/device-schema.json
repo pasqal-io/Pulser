@@ -421,7 +421,7 @@
                       "type": "boolean"
                     },
                     "red_shift_coeff": {
-                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "description": "The weight coefficient of the red beam's contribution to the lightshift.",
                       "type": "number"
                     }
                   },
@@ -755,7 +755,7 @@
                       "type": "boolean"
                     },
                     "red_shift_coeff": {
-                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "description": "The weight coefficient of the red beam's contribution to the lightshift.",
                       "type": "number"
                     }
                   },
@@ -1103,7 +1103,7 @@
                       "type": "boolean"
                     },
                     "red_shift_coeff": {
-                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "description": "The weight coefficient of the red beam's contribution to the lightshift.",
                       "type": "number"
                     }
                   },
@@ -1410,7 +1410,7 @@
                       "type": "boolean"
                     },
                     "red_shift_coeff": {
-                      "description": "The weight coefficient of the blue beam's contribution to the lightshift.",
+                      "description": "The weight coefficient of the red beam's contribution to the lightshift.",
                       "type": "number"
                     }
                   },
