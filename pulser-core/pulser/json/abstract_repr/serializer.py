@@ -50,7 +50,7 @@ class AbstractReprEncoder(json.JSONEncoder):
             return list(o)
         elif isinstance(o, complex):
             return dict(real=o.real, imag=o.imag)
-        else:
+        else:  # pragma: no cover
             return cast(dict, json.JSONEncoder.default(self, o))
 
 

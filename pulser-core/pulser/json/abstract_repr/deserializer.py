@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, Type, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Type, Union, cast, overload
 
 import jsonschema
 import jsonschema.exceptions
@@ -57,7 +57,7 @@ from pulser.waveforms import (
 
 if TYPE_CHECKING:
     from pulser.noise_model import NoiseModel
-    from pulser.register.base_register import BaseRegister
+    from pulser.register import Register, Register3D
     from pulser.sequence import Sequence
 
 
@@ -384,7 +384,7 @@ def _deserialize_layout(layout_obj: dict[str, Any]) -> RegisterLayout:
 
 def _deserialize_register(
     qubits: list[dict[str, Any]], layout: RegisterLayout | None
-) -> BaseRegister:
+) -> Register:
     coords = [(q["x"], q["y"]) for q in qubits]
     qubit_ids = [q["name"] for q in qubits]
     if layout:
@@ -392,7 +392,20 @@ def _deserialize_register(
         reg = layout.define_register(*trap_ids, qubit_ids=qubit_ids)
     else:
         reg = pulser.Register(dict(zip(qubit_ids, coords)))
-    return reg
+    return cast(pulser.Register, reg)
+
+
+def _deserialize_register3d(
+    qubits: list[dict[str, Any]], layout: RegisterLayout | None
+) -> Register3D:
+    coords = [(q["x"], q["y"], q["z"]) for q in qubits]
+    qubit_ids = [q["name"] for q in qubits]
+    if layout:
+        trap_ids = layout.get_traps_from_coordinates(*coords)
+        reg = layout.define_register(*trap_ids, qubit_ids=qubit_ids)
+    else:
+        reg = pulser.Register3D(dict(zip(qubit_ids, coords)))
+    return cast(pulser.Register3D, reg)
 
 
 def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
@@ -495,11 +508,14 @@ def deserialize_abstract_sequence(obj_str: str) -> Sequence:
     layout = _deserialize_layout(obj["layout"]) if "layout" in obj else None
 
     # Register
-    reg: Union[BaseRegister, MappableRegister]
+    reg: Register | Register3D | MappableRegister
     qubits = obj["register"]
     if {"name", "x", "y"} == qubits[0].keys():
-        # Regular register
+        # Regular 2D register
         reg = _deserialize_register(qubits, layout)
+    elif {"name", "x", "y", "z"} == qubits[0].keys():
+        # Regular 3D register
+        reg = _deserialize_register3d(qubits, layout)
     else:
         # Mappable register
         assert (
@@ -589,20 +605,59 @@ def deserialize_abstract_layout(obj_str: str) -> RegisterLayout:
     return _deserialize_layout(json.loads(obj_str))
 
 
-def deserialize_abstract_register(obj_str: str) -> BaseRegister:
+@overload
+def deserialize_abstract_register(
+    obj_str: str, required_dim: Literal[2]
+) -> Register:
+    pass
+
+
+@overload
+def deserialize_abstract_register(
+    obj_str: str, required_dim: Literal[3]
+) -> Register3D:
+    pass
+
+
+@overload
+def deserialize_abstract_register(obj_str: str) -> Register | Register3D:
+    pass
+
+
+def deserialize_abstract_register(
+    obj_str: str, required_dim: Literal[None, 2, 3] = None
+) -> Register | Register3D:
     """Deserialize a register from an abstract JSON object.
 
     Args:
-        obj_str: the JSON string representing the register encoded
+        obj_str: The JSON string representing the register encoded
             in the abstract JSON format.
+        required_dim: If defined, ensures the register is of the
+            specified dimensionality.
 
     Returns:
         The Register instance.
     """
+    if required_dim not in (None, 2, 3):
+        raise ValueError(
+            "When specified, 'required_dim' must be 2 or 3, "
+            f"not {required_dim!s}."
+        )
     validate_abstract_repr(obj_str, "register")
     obj = json.loads(obj_str)
     layout = _deserialize_layout(obj["layout"]) if "layout" in obj else None
-    return _deserialize_register(qubits=obj["register"], layout=layout)
+    qubits = obj["register"]
+    dim_ = len(set(qubits[0]) - {"name"})
+    # These conditions should be enforced by the schema
+    assert dim_ == 2 or dim_ == 3
+    assert layout is None or layout.dimensionality == dim_
+    if required_dim is not None and required_dim != dim_:
+        raise ValueError(
+            f"The provided register must be in {required_dim}D, not {dim_}D."
+        )
+    if dim_ == 3:
+        return _deserialize_register3d(qubits=qubits, layout=layout)
+    return _deserialize_register(qubits=qubits, layout=layout)
 
 
 def deserialize_abstract_noise_model(obj_str: str) -> NoiseModel:
