@@ -607,14 +607,14 @@ def deserialize_abstract_layout(obj_str: str) -> RegisterLayout:
 
 @overload
 def deserialize_abstract_register(
-    obj_str: str, required_dim: Literal[2]
+    obj_str: str, expected_dim: Literal[2]
 ) -> Register:
     pass
 
 
 @overload
 def deserialize_abstract_register(
-    obj_str: str, required_dim: Literal[3]
+    obj_str: str, expected_dim: Literal[3]
 ) -> Register3D:
     pass
 
@@ -625,23 +625,23 @@ def deserialize_abstract_register(obj_str: str) -> Register | Register3D:
 
 
 def deserialize_abstract_register(
-    obj_str: str, required_dim: Literal[None, 2, 3] = None
+    obj_str: str, expected_dim: Literal[None, 2, 3] = None
 ) -> Register | Register3D:
     """Deserialize a register from an abstract JSON object.
 
     Args:
         obj_str: The JSON string representing the register encoded
             in the abstract JSON format.
-        required_dim: If defined, ensures the register is of the
+        expected_dim: If defined, ensures the register is of the
             specified dimensionality.
 
     Returns:
         The Register instance.
     """
-    if required_dim not in (None, 2, 3):
+    if expected_dim not in (None, 2, 3):
         raise ValueError(
-            "When specified, 'required_dim' must be 2 or 3, "
-            f"not {required_dim!s}."
+            "When specified, 'expected_dim' must be 2 or 3, "
+            f"not {expected_dim!s}."
         )
     validate_abstract_repr(obj_str, "register")
     obj = json.loads(obj_str)
@@ -651,9 +651,9 @@ def deserialize_abstract_register(
     # These conditions should be enforced by the schema
     assert dim_ == 2 or dim_ == 3
     assert layout is None or layout.dimensionality == dim_
-    if required_dim is not None and required_dim != dim_:
+    if expected_dim is not None and expected_dim != dim_:
         raise ValueError(
-            f"The provided register must be in {required_dim}D, not {dim_}D."
+            f"The provided register must be in {expected_dim}D, not {dim_}D."
         )
     if dim_ == 3:
         return _deserialize_register3d(qubits=qubits, layout=layout)

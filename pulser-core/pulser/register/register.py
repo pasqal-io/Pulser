@@ -432,4 +432,4 @@ class Register(BaseRegister, RegDrawer):
                 "The serialized register must be given as a string. "
                 f"Instead, got object of type {type(obj_str)}."
             )
-        return deserialize_abstract_register(obj_str, required_dim=2)
+        return deserialize_abstract_register(obj_str, expected_dim=2)

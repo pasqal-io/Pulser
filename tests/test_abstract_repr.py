@@ -144,10 +144,10 @@ def test_register(reg: Register | Register3D):
     with pytest.raises(ValueError, match="must be 2 or 3, not 1"):
         deserialize_abstract_register(  # type: ignore
             ser_reg_str,
-            required_dim=1,
+            expected_dim=1,
         )
 
-    # Without required_dim, the deserializer returns the right type
+    # Without expected_dim, the deserializer returns the right type
     re_reg2 = deserialize_abstract_register(ser_reg_str)
     assert type(reg) is type(re_reg2)
     assert re_reg == re_reg2
