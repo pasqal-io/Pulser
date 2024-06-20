@@ -26,6 +26,34 @@
       ],
       "type": "object"
     },
+    "Atom3D": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/QubitId",
+          "description": "Name of the atom."
+        },
+        "x": {
+          "description": "x-position in µm",
+          "type": "number"
+        },
+        "y": {
+          "description": "y-position in µm",
+          "type": "number"
+        },
+        "z": {
+          "description": "z-position in µm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "x",
+        "y",
+        "z"
+      ],
+      "type": "object"
+    },
     "Basis": {
       "description": "The two-level-system basis addressable by a given channel.",
       "enum": [
@@ -349,6 +377,56 @@
         "duration",
         "area",
         "beta"
+      ],
+      "type": "object"
+    },
+    "Layout2D": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "description": "The trap coordinates in µm.",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "slug": {
+          "description": "An optional name for the layout.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "type": "object"
+    },
+    "Layout3D": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "description": "The trap coordinates in µm.",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "slug": {
+          "description": "An optional name for the layout.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
       ],
       "type": "object"
     },
@@ -860,7 +938,7 @@
               "description": "A valid device in which to execute the Sequence"
             },
             "layout": {
-              "$ref": "layout-schema.json",
+              "$ref": "#/definitions/Layout2D",
               "description": "The trap layout underlying the register."
             },
             "magnetic_field": {
@@ -898,6 +976,103 @@
               "description": "A 2D register containing a set of atoms.",
               "items": {
                 "$ref": "#/definitions/Atom"
+              },
+              "type": "array"
+            },
+            "slm_mask_targets": {
+              "description": "The qubits to mask during the first global pulse of the sequence.",
+              "items": {
+                "$ref": "#/definitions/QubitId"
+              },
+              "type": "array"
+            },
+            "variables": {
+              "additionalProperties": {
+                "$ref": "#/definitions/Variable"
+              },
+              "description": "Variables and expressions that can be used in expressions or parametrized values.",
+              "type": "object"
+            },
+            "version": {
+              "const": "1",
+              "type": "string"
+            }
+          },
+          "required": [
+            "channels",
+            "device",
+            "measurement",
+            "name",
+            "operations",
+            "register",
+            "variables",
+            "version"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "$schema": {
+              "type": "string"
+            },
+            "channels": {
+              "additionalProperties": {
+                "$ref": "#/definitions/ChannelId"
+              },
+              "description": "Channels declared in this Sequence.",
+              "type": "object"
+            },
+            "device": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/HardcodedDevice"
+                },
+                {
+                  "$ref": "device-schema.json"
+                }
+              ],
+              "description": "A valid device in which to execute the Sequence"
+            },
+            "layout": {
+              "$ref": "#/definitions/Layout3D",
+              "description": "The trap layout underlying the register."
+            },
+            "magnetic_field": {
+              "description": "The magnetic field components in x, y and z (in Gauss)",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            "measurement": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Basis"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Type of measurement to perform after all pulses are executed"
+            },
+            "name": {
+              "description": "User-assigned sequence name. Can be autogenerated on export if not provided.",
+              "type": "string"
+            },
+            "operations": {
+              "description": "Sequence of pulses, delays and target changes, performed in specified order.",
+              "items": {
+                "$ref": "#/definitions/Operation"
+              },
+              "type": "array"
+            },
+            "register": {
+              "description": "A 3D register containing a set of atoms.",
+              "items": {
+                "$ref": "#/definitions/Atom3D"
               },
               "type": "array"
             },

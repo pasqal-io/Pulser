@@ -26,21 +26,129 @@
       ],
       "type": "object"
     },
+    "Atom3D": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/QubitId",
+          "description": "Name of the atom."
+        },
+        "x": {
+          "description": "x-position in µm",
+          "type": "number"
+        },
+        "y": {
+          "description": "y-position in µm",
+          "type": "number"
+        },
+        "z": {
+          "description": "z-position in µm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "x",
+        "y",
+        "z"
+      ],
+      "type": "object"
+    },
+    "Layout2D": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "description": "The trap coordinates in µm.",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "slug": {
+          "description": "An optional name for the layout.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "type": "object"
+    },
+    "Layout3D": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "description": "The trap coordinates in µm.",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "slug": {
+          "description": "An optional name for the layout.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "type": "object"
+    },
     "QubitId": {
       "description": "Name for a qubit.",
       "type": "string"
     },
     "Register": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Register2D"
+        },
+        {
+          "$ref": "#/definitions/Register3D"
+        }
+      ]
+    },
+    "Register2D": {
       "additionalProperties": false,
       "properties": {
         "layout": {
-          "$ref": "layout-schema.json",
+          "$ref": "#/definitions/Layout2D",
           "description": "The trap layout underlying the register."
         },
         "register": {
           "description": "A 2D register containing a set of atoms.",
           "items": {
             "$ref": "#/definitions/Atom"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "register"
+      ],
+      "type": "object"
+    },
+    "Register3D": {
+      "additionalProperties": false,
+      "properties": {
+        "layout": {
+          "$ref": "#/definitions/Layout3D",
+          "description": "The trap layout underlying the register."
+        },
+        "register": {
+          "description": "A 3D register containing a set of atoms.",
+          "items": {
+            "$ref": "#/definitions/Atom3D"
           },
           "type": "array"
         }

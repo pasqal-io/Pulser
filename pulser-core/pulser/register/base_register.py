@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
@@ -32,6 +33,8 @@ from typing import (
 import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.json.abstract_repr.serializer import AbstractReprEncoder
+from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.register._coordinates import CoordsCollection
 from pulser.register.weight_maps import DetuningMap
@@ -289,3 +292,16 @@ class BaseRegister(ABC, CoordsCollection):
             the '0x' prefix (unlike what is returned by 'hex()').
         """
         return self._safe_hash().hex()
+
+    @abstractmethod
+    def _to_abstract_repr(self) -> list[dict[str, Union[QubitId, float]]]:
+        pass
+
+    def to_abstract_repr(self) -> str:
+        """Serializes the register into an abstract JSON object."""
+        abstr_reg: dict[str, Any] = dict(register=self._to_abstract_repr())
+        if self.layout is not None:
+            abstr_reg["layout"] = self.layout
+        abstr_reg_str = json.dumps(abstr_reg, cls=AbstractReprEncoder)
+        validate_abstract_repr(abstr_reg_str, "register")
+        return abstr_reg_str

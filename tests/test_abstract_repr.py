@@ -39,6 +39,7 @@ from pulser.devices import (
 )
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
+    deserialize_abstract_register,
     deserialize_device,
 )
 from pulser.json.abstract_repr.serializer import (
@@ -93,6 +94,7 @@ phys_Chadoq2 = replace(
         RegisterLayout([[0, 0], [1, 1]]),
         TriangularLatticeLayout(10, 10),
         RegisterLayout([[10, 0], [1, 10]], slug="foo"),
+        RegisterLayout([[0.0, 1.0, 2.0], [-0.4, 1.6, 35.0]]),
     ],
 )
 def test_layout(layout: RegisterLayout):
@@ -107,10 +109,10 @@ def test_layout(layout: RegisterLayout):
         RegisterLayout.from_abstract_repr(ser_layout_obj)
 
     # Check the validation catches invalid entries
-    with pytest.raises(
-        jsonschema.exceptions.ValidationError, match="is too long"
-    ):
-        ser_layout_obj["coordinates"].append([0, 0, 0])
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        ser_layout_obj["coordinates"].append(
+            [0, 0, 0] if layout.dimensionality == 2 else [0, 0]
+        )
         RegisterLayout.from_abstract_repr(json.dumps(ser_layout_obj))
 
 
@@ -119,9 +121,11 @@ def test_layout(layout: RegisterLayout):
     [
         Register.from_coordinates(np.array([[0, 0], [1, 1]]), prefix="q"),
         TriangularLatticeLayout(10, 10).define_register(*[1, 2, 3]),
+        Register3D(dict(q0=(0, 0, 0), q1=(1, 2, 3))),
+        RegisterLayout([[0, 0, 0], [1, 1, 1]]).define_register(1),
     ],
 )
-def test_register(reg: Register):
+def test_register(reg: Register | Register3D):
     ser_reg_str = reg.to_abstract_repr()
     ser_reg_obj = json.loads(ser_reg_str)
     if reg.layout:
@@ -131,18 +135,42 @@ def test_register(reg: Register):
     else:
         assert "layout" not in ser_reg_obj
 
-    re_reg = Register.from_abstract_repr(ser_reg_str)
+    re_reg = type(reg).from_abstract_repr(ser_reg_str)
     assert reg == re_reg
 
     with pytest.raises(TypeError, match="must be given as a string"):
-        Register.from_abstract_repr(ser_reg_obj)
+        type(reg).from_abstract_repr(ser_reg_obj)
 
-    # Check the validation catches invalid entries
-    with pytest.raises(
-        jsonschema.exceptions.ValidationError, match="'z' was unexpected"
-    ):
-        ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
-        Register.from_abstract_repr(json.dumps(ser_reg_obj))
+    with pytest.raises(ValueError, match="must be 2 or 3, not 1"):
+        deserialize_abstract_register(  # type: ignore
+            ser_reg_str,
+            expected_dim=1,
+        )
+
+    # Without expected_dim, the deserializer returns the right type
+    re_reg2 = deserialize_abstract_register(ser_reg_str)
+    assert type(reg) is type(re_reg2)
+    assert re_reg == re_reg2
+
+    if reg.dimensionality == 2:
+        # A 2D register can't be deserialized as a 3D register
+        with pytest.raises(ValueError, match="must be in 3D, not 2D"):
+            Register3D.from_abstract_repr(ser_reg_str)
+
+        # Check the validation catches invalid entries
+        with pytest.raises(jsonschema.exceptions.ValidationError):
+            ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
+            Register.from_abstract_repr(json.dumps(ser_reg_obj))
+    else:
+        assert reg.dimensionality == 3
+        # A 3D register can't be deserialized as a 2D register
+        with pytest.raises(ValueError, match="must be in 2D, not 3D"):
+            Register.from_abstract_repr(ser_reg_str)
+
+        # Check the validation catches invalid entries
+        with pytest.raises(jsonschema.exceptions.ValidationError):
+            ser_reg_obj["register"].append(dict(name="q10", x=10, y=0))
+            Register.from_abstract_repr(json.dumps(ser_reg_obj))
 
 
 @pytest.mark.parametrize(
@@ -597,10 +625,6 @@ class TestSerialization:
         assert abstract["measurement"] == "digital"
 
     def test_exceptions(self, sequence):
-        with pytest.raises(TypeError, match="not JSON serializable"):
-            Sequence(
-                Register3D.cubic(2, prefix="q"), MockDevice
-            ).to_abstract_repr()
 
         with pytest.raises(
             ValueError, match="No signature found for 'FakeWaveform'"
@@ -1298,6 +1322,8 @@ class TestDeserialization:
 
         # Check register
         assert len(seq.register.qubits) == len(s["register"])
+        assert seq.register.dimensionality == 2
+        assert isinstance(seq.register, Register)
         for q in s["register"]:
             assert q["name"] in seq.qubit_info
             assert seq.qubit_info[q["name"]][0] == q["x"]
@@ -1310,6 +1336,49 @@ class TestDeserialization:
             assert seq.register._layout_info.trap_ids == tuple(
                 reg_layout.get_traps_from_coordinates(*q_coords)
             )
+            assert reg_layout.dimensionality == 2
+        else:
+            assert "layout" not in s
+            assert seq.register.layout is None
+
+    @pytest.mark.parametrize(
+        "layout_coords", [None, np.array([(0, 0, 0), (1, 2, 3)])]
+    )
+    def test_deserialize_register3D(self, layout_coords):
+        custom_fields = {
+            "device": json.loads(MockDevice.to_abstract_repr()),
+            "register": [
+                {"name": "q0", "x": 1.0, "y": 2.0, "z": 3.0},
+            ],
+        }
+        if layout_coords is not None:
+            reg_layout = RegisterLayout(layout_coords)
+            custom_fields["layout"] = {
+                "coordinates": reg_layout.coords.tolist()
+            }
+
+        s = _get_serialized_seq(**custom_fields)
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # Check register
+        assert len(seq.register.qubits) == len(s["register"])
+        assert seq.register.dimensionality == 3
+        assert isinstance(seq.register, Register3D)
+        for q in s["register"]:
+            assert q["name"] in seq.qubit_info
+            assert seq.qubit_info[q["name"]][0] == q["x"]
+            assert seq.qubit_info[q["name"]][1] == q["y"]
+            assert seq.qubit_info[q["name"]][2] == q["z"]
+
+        # Check layout
+        if layout_coords is not None:
+            assert seq.register.layout == reg_layout
+            q_coords = list(seq.qubit_info.values())
+            assert seq.register._layout_info.trap_ids == tuple(
+                reg_layout.get_traps_from_coordinates(*q_coords)
+            )
+            assert reg_layout.dimensionality == 3
         else:
             assert "layout" not in s
             assert seq.register.layout is None
