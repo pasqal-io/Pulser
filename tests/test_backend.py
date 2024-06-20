@@ -152,7 +152,7 @@ def test_qpu_backend(sequence):
             "All 'runs' must be below the maximum allowed by the device"
         ),
     ):
-        qpu_backend.run(job_params=[{"runs": 1000}])
+        qpu_backend.run(job_params=[{"runs": 100000}])
 
     remote_results = qpu_backend.run(job_params=[{"runs": 10}])
 
