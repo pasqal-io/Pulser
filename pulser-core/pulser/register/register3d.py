@@ -22,6 +22,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_abstract_register,
+)
+from pulser.json.utils import stringify_qubit_ids
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 from pulser.register.register import Register
@@ -240,3 +244,25 @@ class Register3D(BaseRegister, RegDrawer):
 
     def _to_dict(self) -> dict[str, Any]:
         return super()._to_dict()
+
+    def _to_abstract_repr(self) -> list[dict[str, QubitId | float]]:
+        names = stringify_qubit_ids(self._ids)
+        return [
+            {"name": name, "x": x, "y": y, "z": z}
+            for name, (x, y, z) in zip(names, self._coords)
+        ]
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> Register3D:
+        """Deserialize a 3D register from an abstract JSON object.
+
+        Args:
+            obj_str (str): the JSON string representing the register encoded
+                in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized register must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+        return deserialize_abstract_register(obj_str, expected_dim=3)
