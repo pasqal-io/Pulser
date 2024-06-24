@@ -332,7 +332,7 @@ class Waveform(ABC):
             )
 
     def __hash__(self) -> int:
-        return hash(tuple(self.samples.as_array(detach=True)))
+        return hash(self.samples)
 
     def _plot(
         self,
@@ -717,7 +717,9 @@ class BlackmanWaveform(Waveform):
         if (
             previous_wf is not None
             and duration % 2 == 1
-            and np.max(wf.samples) < np.max(previous_wf.samples) <= max_val
+            and np.max(wf.samples.as_array(detach=True))
+            < np.max(previous_wf.samples.as_array(detach=True))
+            <= max_val
         ):
             wf = previous_wf
 

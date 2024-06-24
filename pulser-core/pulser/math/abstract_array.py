@@ -140,6 +140,12 @@ class AbstractArray:
     def __repr__(self) -> str:
         return str(self._array.__repr__())
 
+    def __hash__(self) -> int:
+        if self.is_tensor:
+            # Torch tensors are hashable
+            return hash(self._array)
+        return hash(tuple(self.tolist()))
+
     # Unary operators
     def __neg__(self) -> AbstractArray:
         return AbstractArray(-self._array)

@@ -426,12 +426,16 @@ def test_get_item():
         assert wf[-duration * 3 : -duration * 2].size == 0
 
 
-def test_modulation():
-    rydberg_global = Rydberg.Global(
+@pytest.fixture
+def rydberg_global():
+    return Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         mod_bandwidth=4,  # MHz
     )
+
+
+def test_modulation(rydberg_global):
     mod_samples = constant.modulated_samples(rydberg_global).as_array()
     assert np.all(mod_samples == rydberg_global.modulate(constant.samples))
     assert constant.modulation_buffers(rydberg_global) == (
@@ -441,3 +445,73 @@ def test_modulation():
     assert len(mod_samples) == constant.duration + 2 * rydberg_global.rise_time
     assert np.isclose(np.sum(mod_samples) * 1e-3, constant.integral)
     assert max(np.abs(mod_samples)) < np.abs(constant[0])
+
+
+@pytest.mark.parametrize(
+    "wf_type, diff_param_name, diff_param_value, extra_params",
+    [
+        (CustomWaveform, "samples", np.arange(-10.0, 10.0), {}),
+        (ConstantWaveform, "value", -3.14, {"duration": 20}),
+        (RampWaveform, "start", -10.0, {"duration": 10, "stop": 10}),
+        (RampWaveform, "stop", -10.0, {"duration": 10, "start": 10}),
+        (BlackmanWaveform, "area", 2.0, {"duration": 200}),
+        (BlackmanWaveform.from_max_val, "area", -2.0, {"max_val": -1}),
+        (KaiserWaveform, "area", -2.0, {"duration": 200}),
+        (KaiserWaveform.from_max_val, "area", 2.0, {"max_val": 1}),
+    ],
+)
+@pytest.mark.parametrize("requires_grad", [True, False])
+@pytest.mark.parametrize("composite", [True, False])
+def test_waveform_diff(
+    wf_type,
+    diff_param_name,
+    diff_param_value,
+    extra_params,
+    requires_grad,
+    composite,
+    rydberg_global,
+    patch_plt_show,
+):
+    torch = pytest.importorskip("torch")
+    kwargs = {
+        diff_param_name: torch.tensor(
+            diff_param_value, requires_grad=requires_grad
+        ),
+        **extra_params,
+    }
+    wf = wf_type(**kwargs)
+    if composite:
+        wf = CompositeWaveform(wf, ConstantWaveform(100, 1.0))
+
+    samples_tensor = wf.samples.as_tensor()
+    assert samples_tensor.requires_grad == requires_grad
+    assert (
+        wf.modulated_samples(rydberg_global).as_tensor().requires_grad
+        == requires_grad
+    )
+    wfx2_tensor = (-wf * 2).samples.as_tensor()
+    assert torch.equal(wfx2_tensor, samples_tensor * -2.0)
+    assert wfx2_tensor.requires_grad == requires_grad
+
+    wfdiv2 = wf / torch.tensor(2.0, requires_grad=True)
+    assert torch.equal(wfdiv2.samples.as_tensor(), samples_tensor / 2.0)
+    # Should always be true because it was divided by diff tensor
+    assert wfdiv2.samples.as_tensor().requires_grad
+
+    assert wf[-1].as_tensor().requires_grad == requires_grad
+
+    try:
+        assert (
+            wf.change_duration(1000).samples.as_tensor().requires_grad
+            == requires_grad
+        )
+    except NotImplementedError:
+        pass
+
+    # Check that all non-related methods still work
+    wf.draw(output_channel=rydberg_global)
+    repr(wf)
+    str(wf)
+    hash(wf)
+    wf._to_dict()
+    wf._to_abstract_repr()
