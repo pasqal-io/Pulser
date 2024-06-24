@@ -497,3 +497,91 @@ def test_coords_hash():
     coords1[0][1] += 1e-6
     reg5 = Register.from_coordinates(coords1)
     assert reg1.coords_hex_hash() != reg5.coords_hex_hash()
+
+
+def _assert_reg_requires_grad(
+    reg: Register | Register3D, invert: bool = False
+) -> None:
+    for coords in reg.qubits.values():
+        if invert:
+            assert not coords.as_tensor().requires_grad
+        else:
+            assert coords.is_tensor and coords.as_tensor().requires_grad
+
+
+@pytest.mark.parametrize(
+    "register_type, coords",
+    [
+        (Register, [[1.0, -4.0], [0.0, 0.0]]),
+        (Register3D, [[1.0, -4.0, 5.0], [0.0, 0.0, 0.0]]),
+    ],
+)
+def test_custom_register_torch(register_type, coords, patch_plt_show):
+    torch = pytest.importorskip("torch")
+
+    diff_qubit = torch.tensor(coords[0], requires_grad=True)
+
+    reg1 = register_type({"q0": diff_qubit, "q1": coords[1]})
+    reg2 = register_type.from_coordinates(
+        [diff_qubit, coords[1]], center=False, prefix="q"
+    )
+    assert reg1 == reg2
+
+    # Also check that centering keeps the grad
+    reg3 = register_type.from_coordinates([diff_qubit, coords[1]], center=True)
+    assert torch.all(reg3.qubits[0].as_tensor() == diff_qubit / 2)
+
+    for r in [reg1, reg2, reg3]:
+        _assert_reg_requires_grad(r)
+        if r.dimensionality == 2:
+            # Check after rotation
+            _assert_reg_requires_grad(r.rotated(30))
+        else:
+            # Check after conversion to 2D
+            _assert_reg_requires_grad(r.to_2D(0.1))
+
+        # Check that drawing still works too
+        r.draw()
+
+
+@pytest.mark.parametrize(
+    "reg_classmethod, param_name, extra_params",
+    [
+        (Register.square, "spacing", {"side": 2}),
+        (Register.rectangle, "spacing", {"rows": 1, "columns": 3}),
+        (
+            Register.rectangular_lattice,
+            "row_spacing",
+            {"rows": 1, "columns": 3},
+        ),
+        (
+            Register.rectangular_lattice,
+            "col_spacing",
+            {"rows": 1, "columns": 3},
+        ),
+        (
+            Register.triangular_lattice,
+            "spacing",
+            {"rows": 3, "atoms_per_row": 5},
+        ),
+        (Register.hexagon, "spacing", {"layers": 5}),
+        (
+            Register.max_connectivity,
+            "spacing",
+            {"n_qubits": 20, "device": DigitalAnalogDevice},
+        ),
+        (Register3D.cubic, "spacing", {"side": 3}),
+        (Register3D.cuboid, "spacing", {"rows": 4, "columns": 2, "layers": 5}),
+    ],
+)
+@pytest.mark.parametrize("requires_grad", [True, False])
+def test_register_recipes_torch(
+    reg_classmethod, param_name, extra_params, requires_grad
+):
+    torch = pytest.importorskip("torch")
+    kwargs = {
+        param_name: torch.tensor(6.0, requires_grad=requires_grad),
+        **extra_params,
+    }
+    reg = reg_classmethod(**kwargs)
+    _assert_reg_requires_grad(reg, invert=not requires_grad)

@@ -167,11 +167,9 @@ class BaseRegister(ABC, CoordsCollection):
         Returns:
             A register with qubits placed on the given coordinates.
         """
-        coords_ = pm.AbstractArray(coords)
+        coords_ = pm.vstack(cast(abcSequence[ArrayLike], coords))
         if center:
-            coords_ = coords_ - np.mean(
-                coords_.as_array(detach=True), axis=0
-            )  # Centers the array
+            coords_ = coords_ - pm.mean(coords_, axis=0)  # Centers the array
         qubits: dict[str, pm.AbstractArray]
         if prefix is not None:
             pre = str(prefix)

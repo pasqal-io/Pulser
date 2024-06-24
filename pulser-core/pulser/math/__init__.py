@@ -188,6 +188,13 @@ def floor(a: AbstractArrayLike) -> AbstractArray:
     return AbstractArray(np.floor(a.as_array()))
 
 
+def mean(a: AbstractArrayLike, axis: int | None = None) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.mean(a.as_tensor(), dim=axis))
+    return AbstractArray(np.mean(a.as_array(), axis=axis))
+
+
 def sum(a: AbstractArrayLike) -> AbstractArray:
     a = AbstractArray(a)
     if a.is_tensor:
