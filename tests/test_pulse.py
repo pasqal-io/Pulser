@@ -231,3 +231,47 @@ def test_eq():
         post_phase_shift=-1e-6,
     )
     assert pls_ != repr(pls_)
+
+
+def _assert_pulse_requires_grad(pulse: Pulse, invert: bool = False) -> None:
+    assert pulse.amplitude.samples.as_tensor().requires_grad == (not invert)
+    assert pulse.detuning.samples.as_tensor().requires_grad == (not invert)
+    assert pulse.phase.as_tensor().requires_grad == (not invert)
+
+
+@pytest.mark.parametrize("requires_grad", [True, False])
+def test_pulse_diff(requires_grad, eom_channel, patch_plt_show):
+    torch = pytest.importorskip("torch")
+
+    duration = 1000
+    diff_val = torch.tensor(1.0, requires_grad=requires_grad)
+    constant_wf = ConstantWaveform(duration, diff_val)
+    phase = torch.tensor(3.14, requires_grad=requires_grad)
+    phase_wf = RampWaveform(
+        duration,
+        phase - diff_val * 1e-3,
+        phase - diff_val * duration * 1e-3,
+    )
+    assert torch.isclose(torch.tensor(phase_wf.slope), -diff_val * 1e-3)
+
+    pulses: list[Pulse] = [
+        Pulse(constant_wf, constant_wf, phase),
+        Pulse.ConstantDetuning(constant_wf, diff_val, phase),
+        Pulse.ConstantAmplitude(diff_val, constant_wf, phase),
+        Pulse.ConstantPulse(constant_wf.duration, diff_val, diff_val, phase),
+        Pulse.ArbitraryPhase(constant_wf, phase_wf),
+    ]
+    for i, pulse in enumerate(pulses):
+        _assert_pulse_requires_grad(pulse, invert=not requires_grad)
+        # Check other methods still work
+        assert pulse.duration == duration
+        assert pulse.get_full_duration(
+            eom_channel
+        ) == duration + pulse.fall_time(eom_channel)
+
+    # Check all pulses are equal (by design)
+    for pulse2 in pulses[1:]:
+        assert str(pulses[0]) == str(pulse2)
+        assert repr(pulses[0]) == repr(pulse2)
+
+        assert pulses[0] == pulse2

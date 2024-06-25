@@ -33,13 +33,6 @@ from pulser.sampler import sample
 from pulser.sequence._seq_drawer import draw_samples
 from pulser.waveforms import BlackmanWaveform, RampWaveform
 
-try:
-    import torch
-
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
-
 # Helpers
 
 
@@ -520,19 +513,7 @@ def test_draw_samples(
 
 
 @pytest.mark.parametrize("all_local", [False, True])
-@pytest.mark.parametrize(
-    "samples_type",
-    [
-        "array",
-        "abstract",
-        pytest.param(
-            "tensor",
-            marks=pytest.mark.skipif(
-                not HAS_TORCH, reason="torch is not installed"
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("samples_type", ["array", "abstract", "tensor"])
 def test_to_nested_dict_samples_type(mod_seq, samples_type, all_local):
     samples = sample(mod_seq)
     with pytest.raises(
@@ -544,16 +525,18 @@ def test_to_nested_dict_samples_type(mod_seq, samples_type, all_local):
     ):
         samples.to_nested_dict(samples_type="jax")
 
-    nested_dict = samples.to_nested_dict(
-        samples_type=samples_type, all_local=all_local
-    )
     if samples_type == "tensor":
-        expected_type = torch.Tensor
+        expected_type = pytest.importorskip("torch").Tensor
     elif samples_type == "array":
         expected_type = np.ndarray
     else:
         assert samples_type == "abstract"
         expected_type = pm.AbstractArray
+
+    nested_dict = samples.to_nested_dict(
+        samples_type=samples_type, all_local=all_local
+    )
+
     if all_local:
         assert not nested_dict["Global"]
         samples_per_qubit = nested_dict["Local"]["ground-rydberg"]
