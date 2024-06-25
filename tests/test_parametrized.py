@@ -97,6 +97,19 @@ def test_var(a, b):
         b[[-3, 1]]
 
 
+@pytest.mark.parametrize("requires_grad", [True, False])
+def test_var_diff(a, b, requires_grad):
+    torch = pytest.importorskip("torch")
+    a._assign(torch.tensor(1.23, requires_grad=requires_grad))
+    b._assign(torch.tensor([-1.0, 1.0], requires_grad=requires_grad))
+
+    for var in [a, b]:
+        assert (
+            a.value is not None
+            and a.value.as_tensor().requires_grad == requires_grad
+        )
+
+
 def test_varitem(a, b, d):
     a0 = a[0]
     b1 = b[1]
