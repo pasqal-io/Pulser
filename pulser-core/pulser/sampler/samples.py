@@ -354,9 +354,7 @@ class ChannelSamples:
                     )
                 else:
                     std_mask = ~eom_mask
-                    modulated_buffer = pm.AbstractArray(
-                        np.zeros_like(modulated_std)
-                    )
+                    modulated_buffer = pm.AbstractArray(modulated_std) * 0.0
 
                 std = masked(modulated_std, std_mask)
                 buffers = masked(

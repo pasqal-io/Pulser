@@ -144,7 +144,10 @@ class AbstractArray:
         if self.is_tensor:
             # Torch tensors are hashable
             return hash(self._array)
-        return hash(tuple(self.tolist()))
+        vals = self.tolist()
+        if self.ndim > 0:
+            return hash(tuple(vals))
+        return hash(vals)
 
     # Unary operators
     def __neg__(self) -> AbstractArray:

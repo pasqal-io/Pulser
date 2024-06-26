@@ -241,7 +241,9 @@ class BaseRegister(ABC, CoordsCollection):
                 " in the register."
             )
         return DetuningMap(
-            [self.qubits[qubit_id] for qubit_id in detuning_weights],
+            pm.vstack(
+                [self.qubits[qubit_id] for qubit_id in detuning_weights]
+            ),
             list(detuning_weights.values()),
             slug,
         )

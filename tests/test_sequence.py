@@ -2397,3 +2397,60 @@ def test_add_to_dmm_fails(reg, device, det_map):
     seq.declare_channel("ryd", "rydberg_global")
     with pytest.raises(ValueError, match="not the name of a DMM channel"):
         seq.add_dmm_detuning(pulse.detuning, "ryd")
+
+
+@pytest.mark.parametrize(
+    "with_eom, with_modulation", [(True, True), (True, False), (False, False)]
+)
+@pytest.mark.parametrize("parametrized", [True, False])
+def test_sequence_diff(device, parametrized, with_modulation, with_eom):
+    torch = pytest.importorskip("torch")
+    reg = Register({"q0": torch.tensor([0.0, 0.0], requires_grad=True)})
+    seq = Sequence(reg, AnalogDevice if with_eom else device)
+    seq.declare_channel("ryd_global", "rydberg_global")
+
+    if parametrized:
+        amp = seq.declare_variable("amp", dtype=float)
+        dets = seq.declare_variable("dets", dtype=float, size=2)
+    else:
+        amp = torch.tensor(1.0, requires_grad=True)
+        dets = torch.tensor([-2.0, -1.0], requires_grad=True)
+
+    # The phase is never a variable so we're sure the gradient
+    # is kept after build
+    phase = torch.tensor(2.0, requires_grad=True)
+
+    if with_eom:
+        seq.enable_eom_mode("ryd_global", amp, dets[0], dets[1])
+        seq.delay(100, "ryd_global")
+        seq.add_eom_pulse("ryd_global", 100, -phase, correct_phase_drift=True)
+        seq.disable_eom_mode("ryd_global")
+
+    else:
+        pulse = Pulse.ConstantDetuning(
+            BlackmanWaveform(1000, amp), dets[0], 0.0
+        )
+        seq.add(pulse, "ryd_global")
+        seq.phase_shift(phase, *reg.qubit_ids, basis="ground-rydberg")
+        seq.add(pulse, "ryd_global")
+        det_map = reg.define_detuning_map({"q0": 1.0})
+        seq.config_detuning_map(det_map, "dmm_0")
+        seq.add_dmm_detuning(RampWaveform(2000, *dets), "dmm_0")
+
+    if parametrized:
+        seq = seq.build(
+            amp=torch.tensor(1.0, requires_grad=True),
+            dets=torch.tensor([-2.0, -1.0], requires_grad=True),
+        )
+
+    seq_samples = sample(seq, modulation=with_modulation)
+    ryd_ch_samples = seq_samples.channel_samples["ryd_global"]
+    assert ryd_ch_samples.amp.as_tensor().requires_grad
+    assert ryd_ch_samples.det.as_tensor().requires_grad
+    assert ryd_ch_samples.phase.as_tensor().requires_grad
+    if "dmm_0" in seq_samples.channel_samples:
+        dmm_ch_samples = seq_samples.channel_samples["dmm_0"]
+        # Only detuning is modulated
+        assert not dmm_ch_samples.amp.as_tensor().requires_grad
+        assert dmm_ch_samples.det.as_tensor().requires_grad
+        assert not dmm_ch_samples.phase.as_tensor().requires_grad

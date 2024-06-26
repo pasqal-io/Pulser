@@ -1674,9 +1674,12 @@ class Sequence(Generic[DeviceType]):
         # Eliminates the source of recursiveness errors
         seq._reset_parametrized()
 
-        # Deepcopy the base sequence (what remains)
-        seq = copy.deepcopy(seq)
-        # NOTE: Changes to seq are now safe to do
+        # Recreate the base sequence (what remains)
+        temp_seq = type(seq)(register=seq._register, device=seq._device)
+        assert not seq._to_build_calls
+        for call in seq._calls[1:]:
+            getattr(temp_seq, call.name)(*call.args, **call.kwargs)
+        seq = temp_seq
 
         if not (self.is_parametrized() or self.is_register_mappable()):
             warnings.warn(
@@ -2080,8 +2083,7 @@ class Sequence(Generic[DeviceType]):
         basis = channel_obj.basis
 
         ph_refs = {
-            float(self._basis_ref[basis][q].phase.last_phase)
-            for q in last.targets
+            self._basis_ref[basis][q].phase.last_phase for q in last.targets
         }
         if len(ph_refs) != 1:
             raise ValueError(
@@ -2324,7 +2326,10 @@ class Sequence(Generic[DeviceType]):
             )
 
     def _validate_and_adjust_pulse(
-        self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
+        self,
+        pulse: Pulse,
+        channel: str,
+        phase_ref: pm.AbstractArray | None = None,
     ) -> Pulse:
         # Get the channel object and its detuning map if the channel is a DMM
         channel_obj: Channel
