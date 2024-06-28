@@ -189,11 +189,22 @@ class Waveform(ABC):
         Returns:
             The array of samples after modulation.
         """
+        detach = True  # We detach unless...
+        if self.samples.is_tensor and self.samples.as_tensor().requires_grad:
+            # ... the samples require grad. In this case, we clear the cache
+            # so that the modulation is recalculated with the current samples
+            self._modulated_samples.cache_clear()
+            detach = False
         start, end = self.modulation_buffers(channel)
         mod_samples = self._modulated_samples(channel, eom=eom)
         tr = channel.rise_time
         trim = slice(tr - start, len(mod_samples) - tr + end)
-        return mod_samples[trim]
+        final_samples = mod_samples[trim]
+        if detach:
+            # This ensures that we don't carry the `requires_grad` of a
+            # cached results
+            return pm.AbstractArray(final_samples.as_array(detach=True))
+        return final_samples
 
     @functools.lru_cache()
     def modulation_buffers(
@@ -332,7 +343,7 @@ class Waveform(ABC):
             )
 
     def __hash__(self) -> int:
-        return hash(self.samples)
+        return hash(tuple(self.samples.tolist()))
 
     def _plot(
         self,

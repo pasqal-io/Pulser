@@ -2430,10 +2430,8 @@ def test_sequence_diff(device, parametrized, with_modulation, with_eom):
 
     else:
         pulse = Pulse.ConstantDetuning(
-            BlackmanWaveform(1000, amp), dets[0], 0.0
+            BlackmanWaveform(1000, amp), dets[0], phase
         )
-        seq.add(pulse, "ryd_global")
-        seq.phase_shift(phase, *reg.qubit_ids, basis="ground-rydberg")
         seq.add(pulse, "ryd_global")
         det_map = reg.define_detuning_map({"q0": 1.0})
         seq.config_detuning_map(det_map, "dmm_0")

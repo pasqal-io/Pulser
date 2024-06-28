@@ -1187,7 +1187,9 @@ class Sequence(Generic[DeviceType]):
                     buffer_slot = self._last(channel)
                     drift = phase_drift_params.calc_phase_drift(buffer_slot.tf)
                     self._phase_shift(
-                        -drift, *buffer_slot.targets, basis=channel_obj.basis
+                        -float(drift),
+                        *buffer_slot.targets,
+                        basis=channel_obj.basis,
                     )
 
         # Manually store the call to "enable_eom_mode" so that the updated
@@ -1250,7 +1252,7 @@ class Sequence(Generic[DeviceType]):
                 last_eom_block_tf = cast(int, ch_schedule.eom_blocks[-1].tf)
                 drift_params = self._get_last_eom_pulse_phase_drift(channel)
                 self._phase_shift(
-                    -drift_params.calc_phase_drift(last_eom_block_tf),
+                    -float(drift_params.calc_phase_drift(last_eom_block_tf)),
                     *ch_schedule[-1].targets,
                     basis=ch_schedule.channel_obj.basis,
                 )
@@ -1528,7 +1530,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def phase_shift(
         self,
-        phi: Union[float, pm.Differentiable, Parametrized],
+        phi: float | Parametrized,
         *targets: QubitId,
         basis: str = "digital",
     ) -> None:
@@ -1550,8 +1552,8 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def phase_shift_index(
         self,
-        phi: Union[float, pm.Differentiable, Parametrized],
-        *targets: Union[int, Parametrized],
+        phi: float | Parametrized,
+        *targets: int | Parametrized,
         basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
@@ -2085,7 +2087,9 @@ class Sequence(Generic[DeviceType]):
         ph_refs = {
             self._basis_ref[basis][q].phase.last_phase for q in last.targets
         }
-        if len(ph_refs) != 1:
+        if isinstance(channel_obj, DMM):
+            phase_ref = None
+        elif len(ph_refs) != 1:
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
                 "phase references for the same basis."
@@ -2111,14 +2115,13 @@ class Sequence(Generic[DeviceType]):
         for qubit in last.targets:
             self._basis_ref[basis][qubit].update_last_used(new_pulse_slot.tf)
 
-        total_phase_shift = pm.AbstractArray(pulse.post_phase_shift)
+        total_phase_shift = pulse.post_phase_shift
         if phase_drift_params:
             # The phase correction done to the EOM pulse's phase must
             # also be done to the phase shift, as the phase reference is
             # effectively changed by -drift
-            total_phase_shift = (
-                total_phase_shift
-                - phase_drift_params.calc_phase_drift(new_pulse_slot.ti)
+            total_phase_shift -= float(
+                phase_drift_params.calc_phase_drift(new_pulse_slot.ti)
             )
         if total_phase_shift != 0.0:
             self._phase_shift(total_phase_shift, *last.targets, basis=basis)
@@ -2240,8 +2243,8 @@ class Sequence(Generic[DeviceType]):
 
     def _phase_shift(
         self,
-        phi: Union[ArrayLike, Parametrized],
-        *targets: Union[QubitId, Parametrized],
+        phi: float | Parametrized,
+        *targets: QubitId | Parametrized,
         basis: str,
         _index: bool = False,
     ) -> None:
@@ -2252,7 +2255,7 @@ class Sequence(Generic[DeviceType]):
         target_ids = self._check_qubits_give_ids(*targets, _index=_index)
 
         if not self.is_parametrized():
-            phi = pm.AbstractArray(cast(ArrayLike, phi))
+            phi = float(cast(float, phi))
             for qubit in target_ids:
                 self._basis_ref[basis][qubit].increment_phase(phi)
 
@@ -2329,7 +2332,7 @@ class Sequence(Generic[DeviceType]):
         self,
         pulse: Pulse,
         channel: str,
-        phase_ref: pm.AbstractArray | None = None,
+        phase_ref: float | None = None,
     ) -> Pulse:
         # Get the channel object and its detuning map if the channel is a DMM
         channel_obj: Channel
