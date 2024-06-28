@@ -35,6 +35,7 @@ except ImportError:  # pragma: no cover
 class Differentiable(Protocol):
     """A type hint to signal that a parameter may be differentiable."""
 
+    # AbstractArray and torch.Tensor have this method, so it's a good proxy
     def __array__(self) -> np.ndarray: ...
 
 
@@ -99,42 +100,21 @@ def pad(
     a = AbstractArray(a)
     if a.is_tensor:
         t = cast(torch.Tensor, a._array)
+        if isinstance(pad_width, (int, float)):
+            pad_width = (pad_width, pad_width)
         if mode == "constant":
-            if isinstance(pad_width, int):
-                if isinstance(constant_values, (int, float)):
-                    out = torch.nn.functional.pad(
-                        t,
-                        (pad_width, pad_width),
-                        "constant",
-                        constant_values,
-                    )
-                else:
-                    out = torch.nn.functional.pad(
-                        t, (pad_width, 0), "constant", constant_values[0]
-                    )
-                    out = torch.nn.functional.pad(
-                        out, (0, pad_width), "constant", constant_values[1]
-                    )
-            elif isinstance(constant_values, (int, float)):
+            if isinstance(constant_values, (int, float)):
                 out = torch.nn.functional.pad(
                     t, pad_width, "constant", constant_values
                 )
             else:
                 out = torch.nn.functional.pad(
-                    t,
-                    (pad_width[0], 0),
-                    "constant",
-                    constant_values[0],
+                    t, (pad_width[0], 0), "constant", constant_values[0]
                 )
                 out = torch.nn.functional.pad(
-                    out,
-                    (0, pad_width[1]),
-                    "constant",
-                    constant_values[1],
+                    out, (0, pad_width[1]), "constant", constant_values[1]
                 )
         elif mode == "edge":
-            if isinstance(pad_width, (int, float)):
-                pad_width = (pad_width, pad_width)
             out = torch.nn.functional.pad(
                 t, (pad_width[0], 0), "constant", float(t[0])
             )
@@ -249,17 +229,6 @@ def hstack(arrs: Sequence[AbstractArrayLike]) -> AbstractArray:
     if any(a.is_tensor for a in abst_arrs):
         return AbstractArray(torch.hstack([a.as_tensor() for a in abst_arrs]))
     return AbstractArray(np.hstack([a.as_array() for a in abst_arrs]))
-
-
-def clip(
-    a: AbstractArrayLike, min: AbstractArrayLike, max: AbstractArrayLike
-) -> AbstractArray:
-    a, min, max = map(AbstractArray, (a, min, max))
-    if any(arr.is_tensor for arr in (a, min, max)):
-        return AbstractArray(
-            torch.clip(a.as_tensor(), min.as_tensor(), max.as_tensor())
-        )
-    return AbstractArray(np.clip(a.as_array(), min.as_array(), max.as_array()))
 
 
 def flatten(a: AbstractArrayLike) -> AbstractArray:

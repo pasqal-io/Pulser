@@ -241,27 +241,39 @@ def test_rydberg_blockade():
     )
 
 
-def test_validate_register():
+@pytest.mark.parametrize("with_diff", [False, True])
+def test_validate_register(with_diff):
+    bad_coords1 = [(100.0, 0.0), (-100.0, 0.0)]
+    bad_coords2 = [(-10, 4, 0), (0, 0, 0)]
+    good_spacing = 5.0
+    if with_diff:
+        torch = pytest.importorskip("torch")
+        bad_coords1 = torch.tensor(
+            bad_coords1, dtype=float, requires_grad=True
+        )
+        bad_coords2 = torch.tensor(
+            bad_coords2, dtype=float, requires_grad=True
+        )
+        good_spacing = torch.tensor(good_spacing, requires_grad=True)
+
     with pytest.raises(ValueError, match="The number of atoms"):
         DigitalAnalogDevice.validate_register(Register.square(50))
 
-    coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
-        DigitalAnalogDevice.validate_register(coords)
+        DigitalAnalogDevice.validate_register(bad_coords1)
     with pytest.raises(ValueError, match="at most 50 μm away from the center"):
         DigitalAnalogDevice.validate_register(
-            Register.from_coordinates(coords)
+            Register.from_coordinates(bad_coords1)
         )
 
     with pytest.raises(ValueError, match="at most 2D vectors"):
-        coords = [(-10, 4, 0), (0, 0, 0)]
         DigitalAnalogDevice.validate_register(
-            Register3D(dict(enumerate(coords)))
+            Register3D(dict(enumerate(bad_coords2)))
         )
 
     with pytest.raises(ValueError, match="The minimal distance between atoms"):
         DigitalAnalogDevice.validate_register(
-            Register.triangular_lattice(3, 4, spacing=3.9)
+            Register.triangular_lattice(3, 4, spacing=good_spacing // 2)
         )
 
     with pytest.raises(
@@ -272,7 +284,9 @@ def test_validate_register():
             tri_layout.hexagonal_register(10)
         )
 
-    DigitalAnalogDevice.validate_register(Register.rectangle(5, 10, spacing=5))
+    DigitalAnalogDevice.validate_register(
+        Register.rectangle(5, 10, spacing=good_spacing)
+    )
 
 
 def test_validate_layout():

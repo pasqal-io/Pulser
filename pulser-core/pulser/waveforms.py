@@ -133,7 +133,7 @@ class Waveform(ABC):
     @property
     def integral(self) -> float:
         """Integral of the waveform (in [waveform units].µs)."""
-        return float(pm.sum(self.samples)) * 1e-3  # ns * rad/µs = 1e-3
+        return float(pm.sum(self._samples)) * 1e-3  # ns * rad/µs = 1e-3
 
     def draw(
         self,
@@ -659,7 +659,9 @@ class BlackmanWaveform(Waveform):
         _cast_check(float, area, "area")
         self._area = pm.AbstractArray(area, dtype=float)
 
-        self._norm_samples = pm.clip(np.blackman(self._duration), 0, np.inf)
+        self._norm_samples = pm.AbstractArray(
+            np.clip(np.blackman(self._duration), 0, np.inf)
+        )
         self._scaling = self._area / pm.sum(self._norm_samples) * 1e3
 
     @classmethod
@@ -991,8 +993,8 @@ class KaiserWaveform(Waveform):
                 " must be greater than 0."
             )
 
-        self._norm_samples = pm.clip(
-            np.kaiser(self._duration, self._beta), 0, np.inf
+        self._norm_samples = pm.AbstractArray(
+            np.clip(np.kaiser(self._duration, self._beta), 0, np.inf)
         )
 
         self._scaling = self._area / pm.sum(self._norm_samples) * 1e3

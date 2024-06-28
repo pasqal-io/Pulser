@@ -515,3 +515,4 @@ def test_waveform_diff(
     hash(wf)
     wf._to_dict()
     wf._to_abstract_repr()
+    assert isinstance(wf.integral, float)

@@ -2405,7 +2405,9 @@ def test_add_to_dmm_fails(reg, device, det_map):
 @pytest.mark.parametrize("parametrized", [True, False])
 def test_sequence_diff(device, parametrized, with_modulation, with_eom):
     torch = pytest.importorskip("torch")
-    reg = Register({"q0": torch.tensor([0.0, 0.0], requires_grad=True)})
+    reg = Register(
+        {"q0": torch.tensor([0.0, 0.0], requires_grad=True), "q1": (-5.0, 5.0)}
+    )
     seq = Sequence(reg, AnalogDevice if with_eom else device)
     seq.declare_channel("ryd_global", "rydberg_global")
 

@@ -464,9 +464,13 @@ def test_phase_sampling(mod_device):
     np.testing.assert_array_equal(expected_phase, ch_samples_.centered_phase)
 
 
+@pytest.mark.parametrize("with_diff", [False, True])
 @pytest.mark.parametrize("off_center", [False, True])
-def test_phase_modulation(off_center):
+def test_phase_modulation(off_center, with_diff):
     start_phase = np.pi / 2 + np.pi * off_center
+    if with_diff:
+        torch = pytest.importorskip("torch")
+        start_phase = torch.tensor(start_phase, requires_grad=True)
     phase1 = pulser.RampWaveform(400, start_phase, 0)
     phase2 = pulser.BlackmanWaveform(500, np.pi)
     phase3 = pulser.InterpolatedWaveform(500, [0, 11, 1, 5])
@@ -480,9 +484,17 @@ def test_phase_modulation(off_center):
     seq.add(pulse, "rydberg_global")
     seq_samples = sample(seq).channel_samples["rydberg_global"]
 
+    if with_diff:
+        assert full_phase.samples.as_tensor().requires_grad
+        assert not seq_samples.amp.as_tensor().requires_grad
+        assert seq_samples.det.as_tensor().requires_grad
+        assert seq_samples.phase.as_tensor().requires_grad
+        assert seq_samples.phase_modulation.as_tensor().requires_grad
+
     np.testing.assert_allclose(
-        seq_samples.phase_modulation.as_array() + 2 * np.pi * off_center,
-        full_phase.samples.as_array(),
+        seq_samples.phase_modulation.as_array(detach=with_diff)
+        + 2 * np.pi * off_center,
+        full_phase.samples.as_array(detach=with_diff),
         atol=PHASE_PRECISION,
     )
 

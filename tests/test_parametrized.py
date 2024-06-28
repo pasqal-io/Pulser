@@ -163,13 +163,31 @@ def test_paramobj(bwf, t, a, b):
     assert origin.build() == 0.0
 
 
-def test_opsupport(a, b):
+@pytest.mark.parametrize("with_diff_tensor", [False, True])
+def test_opsupport(a, b, with_diff_tensor):
+    def check_var_grad(var):
+        assert var.build().as_tensor().requires_grad == with_diff_tensor
+
     a._assign(-2.0)
+    if with_diff_tensor:
+        torch = pytest.importorskip("torch")
+        a._assign(
+            torch.tensor(
+                a.build().as_array().astype(float), requires_grad=True
+            )
+        )
+        # We need to make b's dtype=float so that it preserves the grad
+        bval = b.build().as_array().astype(float)
+        b = Variable("b", float, size=2)
+        b._assign(torch.tensor(bval, requires_grad=True))
+    check_var_grad(a)
+    check_var_grad(b)
     u = 5 + a
     u = b - u  # u = [-4, -2]
     u = u / 2
     u = 8 * u  # u = [-16, -8]
     u = -u // 3  # u = [5, 2]
+    check_var_grad(u)
     assert np.all(u.build() == [5.0, 2.0])
 
     v = a**a
@@ -180,6 +198,7 @@ def test_opsupport(a, b):
     assert v.build() == 1.0
     v = -v
     assert v.build() == -1.0
+    check_var_grad(v)
 
     x = a + 11
     assert x.build() == 9
@@ -195,41 +214,70 @@ def test_opsupport(a, b):
     assert x.build() == 0.125
     x = np.log2(x)
     assert x.build() == -3.0
+    check_var_grad(x)
 
     # Trigonometric functions
     pi = -a * np.pi / 2
     x = np.sin(pi)
-    np.testing.assert_almost_equal(x.build(), 0.0)
+    check_var_grad(x)
+    np.testing.assert_almost_equal(
+        x.build().as_array(detach=with_diff_tensor), 0.0
+    )
     x = np.cos(pi)
-    np.testing.assert_almost_equal(x.build(), -1.0)
+    check_var_grad(x)
+    np.testing.assert_almost_equal(
+        x.build().as_array(detach=with_diff_tensor), -1.0
+    )
     x = np.tan(pi / 4)
-    np.testing.assert_almost_equal(x.build(), 1.0)
+    check_var_grad(x)
+    np.testing.assert_almost_equal(
+        x.build().as_array(detach=with_diff_tensor), 1.0
+    )
 
     # Other transcendentals
     y = np.exp(b)
-    np.testing.assert_almost_equal(y.build(), [1 / np.e, np.e])
+    check_var_grad(y)
+    np.testing.assert_almost_equal(
+        y.build().as_array(detach=with_diff_tensor), [1 / np.e, np.e]
+    )
     y = np.log(y)
-    np.testing.assert_almost_equal(y.build().as_array(), b.build().as_array())
+    check_var_grad(y)
+    np.testing.assert_almost_equal(
+        y.build().as_array(detach=with_diff_tensor),
+        b.build().as_array(detach=with_diff_tensor),
+    )
     y_ = y + 0.4  # y_ = [-0.6, 1.4]
     y = np.round(y_, 1)
     np.testing.assert_array_equal(
-        y.build().as_array(), np.round(y_.build().as_array(), 1)
+        y.build().as_array(detach=with_diff_tensor),
+        np.round(y_.build().as_array(detach=with_diff_tensor), 1),
     )
     np.testing.assert_array_equal(
-        round(y_).build().as_array(), np.round(y_).build().as_array()
+        round(y_).build().as_array(detach=with_diff_tensor),
+        np.round(y_).build().as_array(detach=with_diff_tensor),
     )
     np.testing.assert_array_equal(
-        round(y_, 1).build().as_array(), y.build().as_array()
+        round(y_, 1).build().as_array(detach=with_diff_tensor),
+        y.build().as_array(detach=with_diff_tensor),
     )
 
     y = round(y)
-    np.testing.assert_array_equal(y.build(), [-1.0, 1.0])
+    np.testing.assert_array_equal(
+        y.build().as_array(detach=with_diff_tensor), [-1.0, 1.0]
+    )
     y = np.floor(y + 0.1)
-    np.testing.assert_array_equal(y.build(), [-1.0, 1.0])
+    np.testing.assert_array_equal(
+        y.build().as_array(detach=with_diff_tensor), [-1.0, 1.0]
+    )
     y = np.ceil(y + 0.1)
-    np.testing.assert_array_equal(y.build(), [0.0, 2.0])
+    np.testing.assert_array_equal(
+        y.build().as_array(detach=with_diff_tensor), [0.0, 2.0]
+    )
     y = np.sqrt((y - 1) ** 2)
-    np.testing.assert_array_equal(y.build(), [1.0, 1.0])
+    np.testing.assert_array_equal(
+        y.build().as_array(detach=with_diff_tensor), [1.0, 1.0]
+    )
+    check_var_grad(y)
 
     # Test serialization support for operations
     def encode_decode(obj):
@@ -242,19 +290,29 @@ def test_opsupport(a, b):
     assert set(u2.variables) == {"a", "b"}
     u2.variables["a"]._assign(a.value)
     u2.variables["b"]._assign(b.value)
-    np.testing.assert_array_equal(u2.build(), u.build())
+    np.testing.assert_array_equal(
+        u2.build().as_array(detach=with_diff_tensor),
+        u.build().as_array(detach=with_diff_tensor),
+    )
+    check_var_grad(u2)
 
     v2 = encode_decode(v)
     assert list(v2.variables) == ["a"]
     v2.variables["a"]._assign(a.value)
     assert v2.build() == v.build()
+    check_var_grad(v2)
 
     x2 = encode_decode(x)
     assert list(x2.variables) == ["a"]
     x2.variables["a"]._assign(a.value)
     assert x2.build() == x.build()
+    check_var_grad(x2)
 
     y2 = encode_decode(y)
     assert list(y2.variables) == ["b"]
     y2.variables["b"]._assign(b.value)
-    np.testing.assert_array_equal(y2.build(), y.build())
+    np.testing.assert_array_equal(
+        y2.build().as_array(detach=with_diff_tensor),
+        y.build().as_array(detach=with_diff_tensor),
+    )
+    check_var_grad(y2)

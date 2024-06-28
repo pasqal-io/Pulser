@@ -273,5 +273,9 @@ def test_pulse_diff(requires_grad, eom_channel, patch_plt_show):
     for pulse2 in pulses[1:]:
         assert str(pulses[0]) == str(pulse2)
         assert repr(pulses[0]) == repr(pulse2)
-
         assert pulses[0] == pulse2
+
+    # Extra checks for ArbitraryPhase (since it's more complex)
+    bwf = BlackmanWaveform(duration, diff_val)
+    phase_pulse = Pulse.ArbitraryPhase(constant_wf, bwf)
+    _assert_pulse_requires_grad(phase_pulse, invert=not requires_grad)
