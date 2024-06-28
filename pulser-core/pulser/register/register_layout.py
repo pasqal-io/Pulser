@@ -118,7 +118,7 @@ class RegisterLayout(Traps, RegDrawer):
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
-                of the targeted traps.
+            of the targeted traps.
         """
         if not set(detuning_weights.keys()) <= set(self.traps_dict):
             raise ValueError(

@@ -15,16 +15,13 @@ Register classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The register classes allow for the creation of arbitrary registers.
 
-.. autoclass:: pulser.register.base_register.BaseRegister
-  :members:
-
 .. autoclass:: pulser.register.register.Register
   :members:
-  :show-inheritance:
+  :inherited-members:
 
 .. autoclass:: pulser.register.register3d.Register3D
   :members:
-  :show-inheritance:
+  :inherited-members:
 
 
 Register layout
