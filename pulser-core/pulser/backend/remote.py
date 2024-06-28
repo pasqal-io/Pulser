@@ -107,7 +107,12 @@ class RemoteConnection(ABC):
 
     @abstractmethod
     def submit(
-        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+        self,
+        sequence: Sequence,
+        wait: bool = False,
+        open_submission: bool = False,
+        submission_id: str | None = None,
+        **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
         pass
@@ -123,6 +128,14 @@ class RemoteConnection(ABC):
 
         Not all SubmissionStatus values must be covered, but at least
         SubmissionStatus.DONE is expected.
+        """
+        pass
+
+    @abstractmethod
+    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
+        """
+        Close a submission and make it unavailable to submit any further jobs
+        to.
         """
         pass
 
