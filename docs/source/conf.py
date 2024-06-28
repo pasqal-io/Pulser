@@ -58,6 +58,11 @@ autosummary_generate = True
 autodoc_member_order = "bysource"
 autodoc_typehints = "none"
 typehints_defaults = "comma"
+always_use_bars_union = True
+autodoc_type_aliases = {
+    "ArrayLike": "ArrayLike",
+}
+
 
 # -- Options for HTML output -------------------------------------------------
 
