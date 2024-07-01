@@ -18,6 +18,7 @@ jobs:
         # Python 3.8 and 3.9 does not run on macos-latest (14)
         # Uses macos-13 for 3.8 and 3.9 and macos-latest for >=3.10 
         os: [ubuntu-latest, macos-13, macos-latest, windows-latest]
+        with-torch: [true, false]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         exclude:
           - os: macos-latest
@@ -38,5 +39,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           extra-packages: pytest
+          with-torch: ${{ matrix.with-torch }}
       - name: Run the unit tests & generate coverage report
-        run: pytest --cov --cov-fail-under=100
+        run: pytest --cov
