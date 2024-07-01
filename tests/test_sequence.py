@@ -2424,6 +2424,7 @@ def test_sequence_diff(device, parametrized, with_modulation, with_eom):
 
     if with_eom:
         seq.enable_eom_mode("ryd_global", amp, dets[0], dets[1])
+        seq.add_eom_pulse("ryd_global", 100, phase, correct_phase_drift=False)
         seq.delay(100, "ryd_global")
         seq.add_eom_pulse("ryd_global", 100, -phase, correct_phase_drift=True)
         seq.disable_eom_mode("ryd_global")

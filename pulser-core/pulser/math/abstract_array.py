@@ -140,6 +140,15 @@ class AbstractArray:
     def __repr__(self) -> str:
         return str(self._array.__repr__())
 
+    def __int__(self) -> int:
+        return int(self._array)
+
+    def __float__(self) -> float:
+        return float(self._array)
+
+    def __bool__(self) -> bool:
+        return bool(self._array)
+
     # Unary operators
     def __neg__(self) -> AbstractArray:
         return AbstractArray(-self._array)
@@ -153,15 +162,6 @@ class AbstractArray:
             if self.is_tensor
             else np.round(cast(np.ndarray, self._array), decimals=decimals)
         )
-
-    def __int__(self) -> int:
-        return int(self._array)
-
-    def __float__(self) -> float:
-        return float(self._array)
-
-    def __bool__(self) -> bool:
-        return bool(self._array)
 
     def _binary_operands(
         self, other: AbstractArrayLike
@@ -247,18 +247,30 @@ class AbstractArray:
         )
 
     def _process_indices(self, indices: Any) -> Any:
-        return (
-            indices.tolist() if isinstance(indices, AbstractArray) else indices
-        )
+        try:
+            return indices.tolist()
+        except Exception:
+            return indices
 
     def __getitem__(self, indices: Any) -> AbstractArray:
         return AbstractArray(self._array[self._process_indices(indices)])
 
     def __setitem__(self, indices: Any, values: AbstractArrayLike) -> None:
         array, values = self._binary_operands(values)
-        array[
-            self._process_indices(indices)
-        ] = values  # type: ignore[assignment]
+        try:
+            array[
+                self._process_indices(indices)
+            ] = values  # type: ignore[assignment]
+        except RuntimeError as e:
+            if (
+                self.is_tensor
+                and cast(torch.Tensor, self._array).requires_grad
+            ):
+                raise RuntimeError(
+                    "Failed to modify a tensor that requires grad in place."
+                ) from e
+            else:  # pragma: no cover
+                raise e
         self._array = array
         del self.is_tensor  # Clears cache
 
@@ -270,10 +282,22 @@ class AbstractArray:
         return len(self._array)
 
     def _to_dict(self) -> dict[str, Any]:
-        return obj_to_dict(self, self.as_array())
+        try:
+            return obj_to_dict(self, self.as_array())
+        except RuntimeError as e:
+            raise NotImplementedError(
+                "A tensor that requires grad can't be serialized without"
+                " losing the computational graph information."
+            ) from e
 
     def _to_abstract_repr(self) -> Any:
-        return self.as_array().tolist()
+        try:
+            return self.as_array().tolist()
+        except RuntimeError as e:
+            raise NotImplementedError(
+                "A tensor that requires grad can't be serialized without"
+                " losing the computational graph information."
+            ) from e
 
 
 AbstractArrayLike = ArrayLike | AbstractArray
