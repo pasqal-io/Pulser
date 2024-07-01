@@ -17,7 +17,7 @@ from __future__ import annotations
 import functools
 import importlib.util
 import operator
-from typing import Any, Generator, cast
+from typing import Any, Generator, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
@@ -300,4 +300,4 @@ class AbstractArray:
             ) from e
 
 
-AbstractArrayLike = ArrayLike | AbstractArray
+AbstractArrayLike = Union[AbstractArray, ArrayLike]

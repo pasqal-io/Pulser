@@ -12,7 +12,7 @@ inputs:
   with-torch:
     description: Whether to include pytorch
     required: false
-    default: true
+    default: "with-torch"
 runs:
   using: "composite"
   steps:
@@ -22,13 +22,13 @@ runs:
         python-version: ${{ inputs.python-version }}
         cache: "pip"
     - name: Install Pulser (with torch)
-      if: ${{ inputs.with-torch }}
+      if: ${{ inputs.with-torch == 'with-torch' }}
       shell: bash
       run: |
         python -m pip install --upgrade pip
         make dev-install
     - name: Install Pulser (without torch)
-      if: ${{ ! inputs.with-torch }}
+      if: ${{ inputs.with-torch != 'with-torch' }} 
       shell: bash
       run: |
         python -m pip install --upgrade pip

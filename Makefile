@@ -9,7 +9,7 @@ dev-install-core:
 	pip install -e ./pulser-core[torch]
 
 .PHONY: dev-install-core-no-torch
-dev-install-core:
+dev-install-core-no-torch:
 	pip install -e ./pulser-core
 
 .PHONY: dev-install-simulation
