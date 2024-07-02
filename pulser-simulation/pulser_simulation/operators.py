@@ -26,7 +26,9 @@ from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples
 
 
-def default_operators(sampled_seq: SequenceSamples) -> Mapping[str, qutip.Qobj]:
+def default_operators(
+    sampled_seq: SequenceSamples,
+) -> Mapping[str, qutip.Qobj]:
     r"""Default operators associated to a SequenceSamples.
 
     The default operators are the projectors on states of the computational
