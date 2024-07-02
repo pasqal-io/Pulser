@@ -167,7 +167,7 @@ def test_paramobj(bwf, t, a, b):
 def test_opsupport(a, b, with_diff_tensor):
     def check_var_grad(var):
         if with_diff_tensor:
-            assert var.build().as_tensor().requires_grad == with_diff_tensor
+            assert var.build().as_tensor().requires_grad
 
     a._assign(-2.0)
     if with_diff_tensor:
