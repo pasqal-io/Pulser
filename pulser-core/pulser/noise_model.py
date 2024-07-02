@@ -28,6 +28,7 @@ from pulser.json.abstract_repr.validation import validate_abstract_repr
 __all__ = ["NoiseModel"]
 
 NOISE_TYPES = Literal[
+    "leakage",
     "doppler",
     "amplitude",
     "SPAM",
@@ -50,6 +51,12 @@ class NoiseModel:
     Args:
         noise_types: Noise types to include in the emulation.
             Available options:
+
+            - "leakage": Adds an error state 'x' to the computational
+              basis, that can interact with the other states via an
+              effective noise channel. Must be defined with an effective
+              noise channel, but is incompatible with dephasing and
+              depolarizing noise channels.
 
             - "relaxation": Noise due to a decay from the Rydberg to
               the ground state (parametrized by `relaxation_rate`), commonly
@@ -179,6 +186,7 @@ class NoiseModel:
                 )
 
         self._check_noise_types()
+        self._check_leakage_noise()
         self._check_eff_noise()
 
     def _check_noise_types(self) -> None:
@@ -189,6 +197,26 @@ class NoiseModel:
                     + "Valid noise types: "
                     + ", ".join(get_args(NOISE_TYPES))
                 )
+
+    def _check_leakage_noise(self) -> None:
+        # Can't define "dephasing", "depolarizing" with "leakage"
+        if "leakage" not in self.noise_types:
+            return
+        # TODO: Implement the depolarizing and dephasing operations with
+        # projectors will stop raising an error.
+        if (
+            "dephasing" in self.noise_types
+            or "depolarizing" in self.noise_types
+        ):
+            raise ValueError(
+                "Dephasing and depolarizing channels can't be defined "
+                "with a leakage noise."
+            )
+        if "eff_noise" not in self.noise_types:
+            raise ValueError(
+                "Effective noise must be included in noise types to "
+                "simulate leakage."
+            )
 
     def _check_eff_noise(self) -> None:
         if len(self.eff_noise_opers) != len(self.eff_noise_rates):
@@ -216,6 +244,12 @@ class NoiseModel:
         if np.any(np.array(self.eff_noise_rates) < 0):
             raise ValueError("The provided rates must be greater than 0.")
 
+        with_leakage = "leakage" in self.noise_types
+        min_shape = 2 if not with_leakage else 3
+        possible_shapes = [
+            (min_shape, min_shape),
+            (min_shape + 1, min_shape + 1),
+        ]
         # Check the validity of operators
         for op in self.eff_noise_opers:
             # type checking
@@ -227,10 +261,11 @@ class NoiseModel:
                 )
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
-
-            if operator.shape != (2, 2):
-                raise NotImplementedError(
-                    f"Operator's shape must be (2,2) not {operator.shape}."
+            if operator.shape not in possible_shapes:
+                raise ValueError(
+                    f"With{'' if with_leakage else 'out'} leakage, operator's "
+                    f"shape must be {possible_shapes[0]} or "
+                    f"{possible_shapes[1]}, not {operator.shape}."
                 )
 
     def _to_abstract_repr(self) -> dict[str, Any]:

@@ -28,6 +28,7 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
+from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
@@ -163,10 +164,19 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self._hamiltonian.basis_name in {"digital", "all"}:
+            if self.basis_name in {
+                "digital",
+                "digital_with_error",
+                "all",
+                "all_with_error",
+            }:
                 self._meas_basis = "digital"
+            elif self.basis_name == "ground-rydberg_with_error":
+                self._meas_basis = "ground-rydberg"
+            elif self.basis_name == "XY_with_error":
+                self._meas_basis = "XY"
             else:
-                self._meas_basis = self._hamiltonian.basis_name
+                self._meas_basis = self.basis_name
         self.set_initial_state("all-ground")
 
     @property
@@ -193,6 +203,19 @@ class QutipEmulator:
     def basis(self) -> dict[str, Any]:
         """The basis in which result is expressed."""
         return self._hamiltonian.basis
+
+    @property
+    def op_matrix(self) -> dict[str, qutip.Qobj]:
+        r"""Projectors onto basis states.
+
+        `sigma_ab` is :math:`a \odot b.T` with a and b basis states.
+        """
+        return self._hamiltonian.op_matrix
+
+    @property
+    def eigenbasis(self) -> list[States]:
+        """The computational basis used in the simulation."""
+        return self._hamiltonian.eigenbasis
 
     @property
     def config(self) -> SimConfig:
@@ -309,7 +332,7 @@ class QutipEmulator:
         if isinstance(state, str) and state == "all-ground":
             self._initial_state = qutip.tensor(
                 [
-                    self._hamiltonian.basis[
+                    self.basis[
                         "u" if self._hamiltonian._interaction == "XY" else "g"
                     ]
                     for _ in range(self._hamiltonian._size)
@@ -402,7 +425,7 @@ class QutipEmulator:
         )
         self._eval_times_instruction = value
 
-    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+    def build_operator(self, operations: list[tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
 
         Takes as argument a list of tuples ``[(operator_1, qubits_1),
@@ -412,13 +435,13 @@ class QutipEmulator:
         applied at ``qubit_j`` and identity elsewhere.
 
         Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
-        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
+        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`.
 
         Args:
             operations: List of tuples `(operator, qubits)`.
-                `operator` can be a ``qutip.Quobj`` or a string key for
-                ``self.op_matrix``. `qubits` is the list on which operator
-                will be applied. The qubits can be passed as their
+                `operator` can be a ``qutip.Quobj`` or a string contained in
+                the keys of ``self.op_matrix``. `qubits` is the list on which
+                operator will be applied. The qubits can be passed as their
                 index or their label in the register.
 
         Returns:
@@ -523,7 +546,7 @@ class QutipEmulator:
             }
             if self.config.eta > 0 and self.initial_state != qutip.tensor(
                 [
-                    self._hamiltonian.basis[
+                    self.basis[
                         "u" if self._hamiltonian._interaction == "XY" else "g"
                     ]
                     for _ in range(self._hamiltonian._size)
@@ -553,7 +576,21 @@ class QutipEmulator:
             ):
                 result = qutip.mesolve(
                     self._hamiltonian._hamiltonian,
-                    self.initial_state,
+                    (
+                        self.initial_state
+                        if not (
+                            "SPAM" in self.config.noise
+                            and self._hamiltonian.with_leakage
+                        )
+                        else self.config.eta
+                        * qutip.tensor(
+                            [
+                                self.basis["x"]
+                                for _ in range(self._hamiltonian._size)
+                            ]
+                        )
+                        + (1 - self.config.eta) * self.initial_state
+                    ),
                     self._eval_times_array,
                     self._hamiltonian._collapse_ops,
                     progress_bar=p_bar,
@@ -572,14 +609,14 @@ class QutipEmulator:
                     tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self._hamiltonian.basis_name,
+                    self._meas_basis in self.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
                 self._hamiltonian._size,
-                self._hamiltonian.basis_name,
+                self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -587,10 +624,22 @@ class QutipEmulator:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise"}
+            {
+                "dephasing",
+                "relaxation",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+                "leakage",
+            }
         ):
-            # If there is "SPAM", the preparation errors must be zero
-            if "SPAM" not in self.config.noise or self.config.eta == 0:
+            # If there is no "SPAM" or if error state is to be taken into
+            # account, the preparation errors must be zero
+            if (
+                "SPAM" not in self.config.noise
+                or self.config.eta == 0
+                or self._hamiltonian.with_leakage
+            ):
                 return _run_solver()
 
             else:
@@ -655,7 +704,7 @@ class QutipEmulator:
         return NoisyResults(
             results,
             self._hamiltonian._size,
-            self._hamiltonian.basis_name,
+            self.basis_name,
             self._eval_times_array,
             n_measures,
         )

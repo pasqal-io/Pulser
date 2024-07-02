@@ -194,10 +194,45 @@ class TestNoiseModel:
                 eff_noise_opers=[2.0],
                 eff_noise_rates=[1.0],
             )
-        with pytest.raises(NotImplementedError, match="Operator's shape"):
+
+    def test_leakage(self):
+        with pytest.raises(
+            ValueError,
+            match="Dephasing and depolarizing channels can't be defined",
+        ):
+            NoiseModel(noise_types=("leakage", "dephasing"))
+        with pytest.raises(
+            ValueError,
+            match="Dephasing and depolarizing channels can't be defined",
+        ):
+            NoiseModel(noise_types=("leakage", "depolarizing"))
+        with pytest.raises(
+            ValueError,
+            match="Dephasing and depolarizing channels can't be defined",
+        ):
+            NoiseModel(noise_types=("leakage", "depolarizing", "dephasing"))
+        with pytest.raises(
+            ValueError, match="Effective noise must be included in noise types"
+        ):
+            NoiseModel(noise_types=("leakage",))
+        err_message = (
+            r"Without leakage, operator's shape must be \(2, 2\) or "
+            + r"\(3, 3\), not \(1, 1\)."
+        )
+        with pytest.raises(ValueError, match=err_message):
             NoiseModel(
                 noise_types=("eff_noise",),
-                eff_noise_opers=[matrices["I3"]],
+                eff_noise_opers=[[[1.0]]],
+                eff_noise_rates=[1.0],
+            )
+        err_message = (
+            r"With leakage, operator's shape must be \(3, 3\) or "
+            + r"\(4, 4\), not \(5, 5\)."
+        )
+        with pytest.raises(ValueError, match=err_message):
+            NoiseModel(
+                noise_types=("eff_noise", "leakage"),
+                eff_noise_opers=[np.ones((5, 5))],
                 eff_noise_rates=[1.0],
             )
 

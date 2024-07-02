@@ -23,10 +23,12 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
+from pulser.channels.base_channel import STATES_RANK
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
+from pulser_simulation.operators import build_operator
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
 
 
@@ -46,7 +48,7 @@ class Hamiltonian:
     def __init__(
         self,
         samples_obj: SequenceSamples,
-        qdict: dict[QubitId, np.ndarray],
+        qdict: Mapping[QubitId, np.ndarray],
         device: BaseDevice,
         sampling_rate: float,
         config: NoiseModel,
@@ -58,6 +60,7 @@ class Hamiltonian:
         self._sampling_rate = sampling_rate
 
         # Type hints for attributes defined outside of __init__
+        self.with_leakage: bool
         self.basis_name: str
         self._config: NoiseModel
         self.op_matrix: dict[str, qutip.Qobj]
@@ -107,7 +110,7 @@ class Hamiltonian:
     def _build_collapse_operators(self, config: NoiseModel) -> None:
         def basis_check(noise_type: str) -> None:
             """Checks if the basis allows for the use of noise."""
-            if self.basis_name == "all":
+            if self.basis_name == "all" or self.with_leakage:
                 # Go back to previous config
                 raise NotImplementedError(
                     f"Cannot include {noise_type} noise in all-basis."
@@ -115,6 +118,7 @@ class Hamiltonian:
 
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
+            # TODO: Define collapse ops with projectors to delete this check
             basis_check("dephasing")
             rate = (
                 config.hyperfine_dephasing_rate
@@ -134,6 +138,7 @@ class Hamiltonian:
                 )
 
         if "depolarizing" in config.noise_types:
+            # TODO: Define collapse ops with projectors to delete this check
             basis_check("depolarizing")
             coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * qutip.sigmax())
@@ -141,8 +146,14 @@ class Hamiltonian:
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "eff_noise" in config.noise_types:
-            basis_check("effective")
             for id, rate in enumerate(config.eff_noise_rates):
+                if np.array(
+                    config.eff_noise_opers[id], dtype=complex
+                ).shape != (self.dim, self.dim):
+                    raise ValueError(
+                        "Effective noise operator should be of shape "
+                        f"{(self.dim, self.dim)}, see basis :{self.basis}."
+                    )
                 local_collapse_ops.append(
                     np.sqrt(rate) * np.array(config.eff_noise_opers[id])
                 )
@@ -171,13 +182,24 @@ class Hamiltonian:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        if not hasattr(self, "basis_name"):
+        with_leakage = "leakage" in cfg.noise_types
+        if not hasattr(self, "basis_name") and (
+            not hasattr(self, "with_leakage")
+            or (
+                hasattr(self, "with_leakage")
+                and self.with_leakage != with_leakage
+            )
+        ):
+            self.with_leakage = with_leakage
             self._build_basis_and_op_matrices()
         self._build_collapse_operators(cfg)
         self._config = cfg
-        if not (
-            "SPAM" in self.config.noise_types
-            and self.config.state_prep_error > 0
+        if (
+            not (
+                "SPAM" in self.config.noise_types
+                and self.config.state_prep_error > 0
+            )
+            or self.with_leakage
         ):
             self._bad_atoms = {qid: False for qid in self._qid_index}
         if "doppler" not in self.config.noise_types:
@@ -238,7 +260,7 @@ class Hamiltonian:
                             samples["Local"][basis][qid][qty] = 0.0
         self.samples = samples
 
-    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+    def build_operator(self, operations: list) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
 
         Takes as argument a list of tuples ``[(operator_1, qubits_1),
@@ -260,51 +282,33 @@ class Hamiltonian:
         Returns:
             The final operator.
         """
-        op_list = [self.op_matrix["I"] for j in range(self._size)]
-
-        if not isinstance(operations, list):
-            operations = [operations]
-
-        for operator, qubits in operations:
-            if qubits == "global":
-                return sum(
-                    self.build_operator([(operator, [q_id])])
-                    for q_id in self._qdict
-                )
-            else:
-                qubits_set = set(qubits)
-                if len(qubits_set) < len(qubits):
-                    raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(self._qdict.keys()):
-                    raise ValueError(
-                        "Invalid qubit names: "
-                        f"{qubits_set - self._qdict.keys()}"
-                    )
-                if isinstance(operator, str):
-                    try:
-                        operator = self.op_matrix[operator]
-                    except KeyError:
-                        raise ValueError(f"{operator} is not a valid operator")
-                for qubit in qubits:
-                    k = self._qid_index[qubit]
-                    op_list[k] = operator
-        return qutip.tensor(list(map(qutip.Qobj, op_list)))
+        return build_operator(
+            self.samples_obj,
+            self._qdict,
+            operations,
+            self.op_matrix,
+            self.with_leakage,
+        )
 
     def _update_noise(self) -> None:
         """Updates noise random parameters.
 
-        Used at the start of each run. If SPAM isn't in chosen noises, all
-        atoms are set to be correctly prepared.
+        Used at the start of each run. If SPAM isn't in chosen noises or if
+        the error state is asked to be taken into account, all atoms are set
+        to be correctly prepared.
         """
         if (
             "SPAM" in self.config.noise_types
             and self.config.state_prep_error > 0
         ):
-            dist = (
-                np.random.uniform(size=len(self._qid_index))
-                < self.config.state_prep_error
-            )
-            self._bad_atoms = dict(zip(self._qid_index, dist))
+            if self.with_leakage:
+                self._bad_atoms = {qid: False for qid in self._qid_index}
+            else:
+                dist = (
+                    np.random.uniform(size=len(self._qid_index))
+                    < self.config.state_prep_error
+                )
+                self._bad_atoms = dict(zip(self._qid_index, dist))
         if "doppler" in self.config.noise_types:
             detune = np.random.normal(
                 0,
@@ -315,35 +319,35 @@ class Hamiltonian:
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
-        if self._interaction == "XY":
-            self.basis_name = "XY"
-            self.dim = 2
-            basis = ["u", "d"]
-            projectors = ["uu", "du", "ud", "dd"]
-        else:
-            if "digital" not in self.samples_obj.used_bases:
-                self.basis_name = "ground-rydberg"
-                self.dim = 2
-                basis = ["r", "g"]
-                projectors = ["gr", "rr", "gg"]
-            elif "ground-rydberg" not in self.samples_obj.used_bases:
-                self.basis_name = "digital"
-                self.dim = 2
-                basis = ["g", "h"]
-                projectors = ["hg", "hh", "gg"]
+        if len(self.samples_obj.used_bases) == 0:
+            if self.samples_obj._in_xy:
+                self.basis_name = "XY"
             else:
-                self.basis_name = "all"  # All three states
-                self.dim = 3
-                basis = ["r", "g", "h"]
-                projectors = ["gr", "hg", "rr", "gg", "hh"]
+                self.basis_name = "ground-rydberg"
+        elif len(self.samples_obj.used_bases) == 1:
+            self.basis_name = list(self.samples_obj.used_bases)[0]
+        else:
+            self.basis_name = "all"  # All three rydberg states
+        eigenbasis = self.samples_obj.eigenbasis
 
-        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
+        if self.with_leakage:
+            self.basis_name += "_with_error"
+            eigenbasis.append("x")
+        self.eigenbasis = [
+            state for state in STATES_RANK if state in eigenbasis
+        ]
+
+        self.dim = len(self.eigenbasis)
+        self.basis = {
+            b: qutip.basis(self.dim, i) for i, b in enumerate(self.eigenbasis)
+        }
         self.op_matrix = {"I": qutip.qeye(self.dim)}
-
-        for proj in projectors:
-            self.op_matrix["sigma_" + proj] = (
-                self.basis[proj[0]] * self.basis[proj[1]].dag()
-            )
+        for proj0 in self.eigenbasis:
+            for proj1 in self.eigenbasis:
+                proj_name = "sigma_" + proj0 + proj1
+                self.op_matrix[proj_name] = (
+                    self.basis[proj0] * self.basis[proj1].dag()
+                )
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
@@ -493,7 +497,7 @@ class Hamiltonian:
         qobj_list = []
         # Time independent term:
         effective_size = self._size - sum(self._bad_atoms.values())
-        if self.basis_name != "digital" and effective_size > 1:
+        if "digital" not in self.basis_name and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
             if (

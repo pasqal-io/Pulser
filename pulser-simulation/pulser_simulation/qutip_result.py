@@ -15,13 +15,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import cast
 
 import numpy as np
 import qutip
 
 from pulser.register import QubitId
 from pulser.result import Result
+
+SIM_BASIS = {
+    "ground-rydberg": ["r", "g"],
+    "digital": ["g", "h"],
+    "all": ["r", "g", "h"],
+    "XY": ["u", "d"],
+    "ground-rydberg_with_error": ["r", "g", "x"],
+    "digital_with_error": ["g", "h", "x"],
+    "all_with_error": ["r", "g", "h", "x"],
+    "XY_with_error": ["u", "d", "x"],
+}
 
 
 @dataclass
@@ -62,10 +73,18 @@ class QutipResult(Result):
 
     @property
     def _basis_name(self) -> str:
-        if self._dim > 2:
-            return "all"
         if self.meas_basis == "XY":
+            if self._dim == 3:
+                return "XY_with_error"
+            assert self._dim == 2
             return "XY"
+        if self._dim == 4:
+            return "all_with_error"
+        if self._dim == 3:
+            if self.matching_meas_basis:
+                return f"{self.meas_basis}_with_error"
+            return "all"
+
         if not self.matching_meas_basis:
             return (
                 "digital"
@@ -75,7 +94,7 @@ class QutipResult(Result):
         return self.meas_basis
 
     def _weights(self) -> np.ndarray:
-        n = self._size
+        size = self._size
         if not self.state.isket:
             probs = np.abs(self.state.diag())
         else:
@@ -87,49 +106,47 @@ class QutipResult(Result):
                 # e.g. n=2: [rr, rg, gr, gg] -> [11, 10, 01, 00]
                 # Invert the order ->  [00, 01, 10, 11] correspondence
                 # In the XY and digital bases, the order is canonical
-                weights = (
-                    probs[::-1]
-                    if self.meas_basis == "ground-rydberg"
-                    else probs
+                return cast(
+                    np.ndarray,
+                    (
+                        probs[::-1]
+                        if self.meas_basis == "ground-rydberg"
+                        else probs
+                    )
+                    / sum(probs),
                 )
-            else:
-                # Only 000...000 is measured
-                weights = np.zeros(probs.size)
-                weights[0] = 1.0
+            # Only 000...000 is measured
+            weights = np.zeros(probs.size)
+            weights[0] = 1.0
+            return weights
 
-        elif self._dim == 3:
-            if self.meas_basis == "ground-rydberg":
-                one_state = 0  # 1 = |r>
-                ex_one = slice(1, 3)
-            elif self.meas_basis == "digital":
-                one_state = 2  # 1 = |h>
-                ex_one = slice(0, 2)
-            else:
-                raise RuntimeError(
-                    f"Unknown measurement basis '{self.meas_basis}' "
-                    "for a three-level system.'"
-                )
-            probs = probs.reshape([3] * n)
-            weights = np.zeros(2**n)
-            for dec_val in range(2**n):
-                ind: list[Union[int, slice]] = []
-                for v in np.binary_repr(dec_val, width=n):
-                    if v == "0":
-                        ind.append(ex_one)
-                    else:
-                        ind.append(one_state)
-                # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
-                # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
-                # We sum all probabilites that correspond to measuring
-                # 11010, namely hhghg, hhrhg, hhghr, hhrhr
-                weights[dec_val] = np.sum(probs[tuple(ind)])
-        else:
-            raise NotImplementedError(
-                "Cannot sample system with single-atom state vectors of "
-                "dimension > 3."
+        # 1 = |r> if ground-rydberg, |h> if digital, |d> if XY
+        one_state_dict = {"ground-rydberg": "r", "digital": "h", "XY": "d"}
+        if self.meas_basis not in list(one_state_dict.keys()):
+            raise RuntimeError(
+                f"Unknown measurement basis '{self.meas_basis}' "
+                "for a three-level system.'"
             )
+        one_state = one_state_dict[self.meas_basis]
+        one_state_idx = SIM_BASIS[self._basis_name].index(one_state)
+        ex_one = [i for i in range(self._dim) if i != one_state_idx]
+        probs = probs.reshape([self._dim] * size)
+        weights = np.zeros(2**size)
+        for dec_val in range(2**size):
+            ind = []
+            for v in np.binary_repr(dec_val, width=size):
+                if v == "0":
+                    ind.append(ex_one)
+                else:
+                    ind.append([one_state_idx])
+            # Eg: 'digital' basis : |1> = index2, |0> = index0, 1 = 0:2
+            # p_11010 = sum(probs[2, 2, 0:2, 2, 0:2])
+            # We sum all probabilites that correspond to measuring
+            # 11010, namely hhghg, hhrhg, hhghr, hhrhr
+            weights[dec_val] = np.sum(probs[np.ix_(*ind)])
         # Takes care of numerical artefacts in case sum(weights) != 1
-        return cast(np.ndarray, weights / sum(weights))
+        norm_weights = cast(np.ndarray, weights / sum(weights))
+        return norm_weights
 
     def get_state(
         self,
@@ -142,9 +159,8 @@ class QutipResult(Result):
 
         Args:
             reduce_to_basis: Reduces the full state vector
-                to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible. Doesn't
-                apply to XY mode.
+                to the given basis ("ground-rydberg", "digital" or "XY"), if
+                the population of the states to be ignored is negligible.
             ignore_global_phase: If True and if the final state is a vector,
                 changes the final state's global phase such that the largest
                 term (in absolute value) is real.
@@ -164,7 +180,7 @@ class QutipResult(Result):
             full = state.full()
             global_ph = float(np.angle(full[np.argmax(np.abs(full))])[0])
             state *= np.exp(-1j * global_ph)
-        if self._dim != 3:
+        if self._dim == 2:
             if reduce_to_basis not in [None, self._basis_name]:
                 raise TypeError(
                     f"Can't reduce a system in {self._basis_name}"
@@ -172,24 +188,35 @@ class QutipResult(Result):
                 )
         elif reduce_to_basis is not None:
             if is_density_matrix:  # pragma: no cover
-                # Not tested as noise in digital or all basis not implemented
+                # TODO
                 raise NotImplementedError(
                     "Reduce to basis not implemented for density matrix"
                     " states."
                 )
-            if reduce_to_basis == "ground-rydberg":
-                ex_state = "2"
-            elif reduce_to_basis == "digital":
-                ex_state = "0"
-            else:
+            if reduce_to_basis not in ["ground-rydberg", "digital", "XY"]:
                 raise ValueError(
-                    "'reduce_to_basis' must be 'ground-rydberg' "
-                    + f"or 'digital', not '{reduce_to_basis}'."
+                    "'reduce_to_basis' must be 'ground-rydberg', "
+                    + f"'digital' or 'XY', not '{reduce_to_basis}'."
                 )
+            basis_states = set(SIM_BASIS[self._basis_name])
+            target_states = set(SIM_BASIS[reduce_to_basis])
+            if not target_states.issubset(basis_states):
+                raise ValueError(
+                    f"Can't reduce a state expressed in {self._basis_name}"
+                    f" into {reduce_to_basis}"
+                )
+            # Exclude the states that are not in the basis into which to reduce
+            ex_states = basis_states - target_states
             ex_inds = [
                 i
-                for i in range(3**self._size)
-                if ex_state in np.base_repr(i, base=3).zfill(self._size)
+                for i in range(self._dim**self._size)
+                if any(
+                    [
+                        ex_state
+                        in np.base_repr(i, base=self._dim).zfill(self._size)
+                        for ex_state in ex_states
+                    ]
+                )
             ]
             ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
             if not np.all(np.isclose(ex_probs, 0, atol=tol)):

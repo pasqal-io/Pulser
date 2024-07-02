@@ -83,7 +83,7 @@ def test_initialization(results):
         CoherentResults(rr_state, 1, "all", None, "XY")
     with pytest.raises(
         ValueError,
-        match="`meas_basis` and `basis_name` must have the same value.",
+        match="`meas_basis` must be contained in `basis_name`.",
     ):
         CoherentResults(
             rr_state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
@@ -388,6 +388,8 @@ def test_results_xy(reg, pi_pulse):
     )
 
     # Check that measurement projectors are correct
+    with pytest.raises(ValueError, match="state_n must be 0 or 1"):
+        results_._meas_projector(2)
     assert results_._meas_projector(0) == qutip.basis(2, 0).proj()
     assert results_._meas_projector(1) == qutip.basis(2, 1).proj()
 

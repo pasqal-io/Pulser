@@ -38,13 +38,9 @@ SUPPORTED_NOISES: dict = {
         "doppler",
         "eff_noise",
         "SPAM",
+        "leakage",
     },
-    "XY": {
-        "dephasing",
-        "depolarizing",
-        "eff_noise",
-        "SPAM",
-    },
+    "XY": {"dephasing", "depolarizing", "eff_noise", "SPAM", "leakage"},
 }
 
 
@@ -70,6 +66,10 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
+            - "leakage": Adds an error state 'x' to the computational
+              basis, that can interact with the other states via an
+              effective noise channel. Incompatible with dephasing and
+              depolarizing noise channels.
             - "relaxation": Relaxation from the Rydberg to the ground state.
             - "dephasing": Random phase (Z) flip.
             - "depolarizing": Quantum noise where the state (rho) is
@@ -82,7 +82,6 @@ class SimConfig:
             - "amplitude": Gaussian damping due to finite laser waist
             - "SPAM": SPAM errors. Defined by **eta**, **epsilon** and
               **epsilon_prime**.
-
         eta: Probability of each atom to be badly prepared.
         epsilon: Probability of false positives.
         epsilon_prime: Probability of false negatives.
