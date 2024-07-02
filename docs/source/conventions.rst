@@ -38,7 +38,7 @@ ranked decreasingly according to their associated eigenenergy:
 
 .. list-table:: 
    :align: center
-   :widths: 50 35 35 35 35 35
+   :widths: 50 35 35
    :header-rows: 1
 
    * - Name
