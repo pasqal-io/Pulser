@@ -106,7 +106,7 @@ class Channel(ABC):
 
         Returns a tuple of labels, ranked decreasingly according
         to their associated eigenenergy, as such:
-        
+
         .. list-table::
             :align: center
             :widths: 50 35 35
