@@ -99,7 +99,12 @@ class PasqalCloud(RemoteConnection):
         )
 
     def submit(
-        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+        self,
+        sequence: Sequence,
+        wait: bool = False,
+        open_submission: bool = False,
+        submission_id: str | None = None,
+        **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
         if not sequence.is_measured():
@@ -137,14 +142,25 @@ class PasqalCloud(RemoteConnection):
         configuration = self._convert_configuration(
             config=kwargs.get("config", None), emulator=emulator
         )
-        create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
-        batch = create_batch_fn(
-            serialized_sequence=sequence.to_abstract_repr(),
-            jobs=job_params or [],  # type: ignore[arg-type]
-            emulator=emulator,
-            configuration=configuration,
-            wait=wait,
-        )
+        batch = None
+        if submission_id:
+            submit_jobs_fn = backoff_decorator(self._sdk_connection.add_jobs)
+            batch = submit_jobs_fn(
+                batch_id=submission_id,
+                jobs=job_params or [],  # type: ignore[arg-type]
+            )
+        else:
+            create_batch_fn = backoff_decorator(
+                self._sdk_connection.create_batch
+            )
+            batch = create_batch_fn(
+                serialized_sequence=sequence.to_abstract_repr(),
+                jobs=job_params or [],  # type: ignore[arg-type]
+                emulator=emulator,
+                complete=open_submission,
+                configuration=configuration,
+                wait=wait,
+            )
 
         return RemoteResults(batch.id, self)
 
@@ -210,3 +226,14 @@ class PasqalCloud(RemoteConnection):
             pasqal_config_kwargs["dt"] = 1.0 / config.sampling_rate
 
         return emu_cls(**pasqal_config_kwargs)
+
+    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
+        """
+        Mark a submission as closed so that no more jobs can be submitted to
+        run and return the new and current submission status recorded on
+        Pasqal cloud services.
+        """
+        if submission_id is None:
+            return None
+        batch = self._sdk_connection.close_batch(submission_id)
+        return SubmissionStatus(batch.id)

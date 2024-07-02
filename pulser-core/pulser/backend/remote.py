@@ -70,6 +70,17 @@ class RemoteResults(Results):
         """The actual results, obtained after execution is done."""
         return self._results
 
+    @property
+    def submission_id(self) -> str:
+        """
+        Return submission id  which is associated with a associated
+        with the newly submitted payloads on the remote service
+
+        Returns:
+            UUID in string format representing most recent submission
+        """
+        return self._submission_id
+
     def get_status(self) -> SubmissionStatus:
         """Gets the status of the remote submission."""
         return self._connection._get_submission_status(self._submission_id)
@@ -96,7 +107,12 @@ class RemoteConnection(ABC):
 
     @abstractmethod
     def submit(
-        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+        self,
+        sequence: Sequence,
+        wait: bool = False,
+        open_submission: bool = False,
+        submission_id: str | None = None,
+        **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
         pass
@@ -112,6 +128,14 @@ class RemoteConnection(ABC):
 
         Not all SubmissionStatus values must be covered, but at least
         SubmissionStatus.DONE is expected.
+        """
+        pass
+
+    @abstractmethod
+    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
+        """
+        Close a submission and make it unavailable to submit any further jobs
+        to.
         """
         pass
 

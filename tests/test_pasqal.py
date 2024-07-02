@@ -212,6 +212,7 @@ def test_submit(fixt, parametrized, emulator, seq, mock_job):
             emulator=emulator,
             configuration=sdk_config,
             wait=False,
+            complete=False,
         )
     )
 
@@ -329,4 +330,5 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool):
         emulator=emulator_type,
         configuration=sdk_config,
         wait=False,
+        complete=False,
     )
