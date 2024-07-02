@@ -106,29 +106,30 @@ class Channel(ABC):
 
         Returns a tuple of labels, ranked decreasingly according
         to their associated eigenenergy, as such:
+        
         .. list-table::
             :align: center
             :widths: 50 35 35
             :header-rows: 1
 
             * - Name
-            - Eigenstate (see :doc:`/conventions`)
-            - Associated label
+              - Eigenstate (see :doc:`/conventions`)
+              - Associated label
             * - Up state
-            - :math:`|0\rangle`
-            - ``"u"``
+              - :math:`|0\rangle`
+              - ``"u"``
             * - Down state
-            - :math:`|1\rangle`
-            - ``"d"``
+              - :math:`|1\rangle`
+              - ``"d"``
             * - Rydberg state
-            - :math:`|r\rangle`
-            - ``"r"``
+              - :math:`|r\rangle`
+              - ``"r"``
             * - Ground state
-            - :math:`|g\rangle`
-            - ``"g"``
+              - :math:`|g\rangle`
+              - ``"g"``
             * - Hyperfine state
-            - :math:`|h\rangle`
-            - ``"h"``
+              - :math:`|h\rangle`
+              - ``"h"``
         """
         return EIGENSTATES[self.basis]
 
