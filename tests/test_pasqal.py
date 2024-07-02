@@ -163,7 +163,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
             )
         mod_test_device = dataclasses.replace(test_device, max_atom_num=1000)
         seq3 = seq.switch_device(mod_test_device).switch_register(
-            pulser.Register.square(11, spacing=5)
+            pulser.Register.square(11, spacing=5, prefix="q")
         )
         with pytest.raises(
             ValueError,
@@ -172,7 +172,9 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
             fixt.pasqal_cloud.submit(
                 seq3, job_params=[dict(runs=10)], mimic_qpu=mimic_qpu
             )
-        seq4 = seq3.switch_register(pulser.Register.square(4, spacing=5))
+        seq4 = seq3.switch_register(
+            pulser.Register.square(4, spacing=5, prefix="q")
+        )
         # The sequence goes through QPUBackend.validate_sequence()
         with pytest.raises(
             ValueError, match="defined from a `RegisterLayout`"
