@@ -102,7 +102,7 @@ class Channel(ABC):
 
     @property
     def eigenstates(self) -> list[States]:
-        """The eigenstates associated with the basis.
+        r"""The eigenstates associated with the basis.
 
         Returns a tuple of labels, ranked decreasingly according
         to their associated eigenenergy, as such:
