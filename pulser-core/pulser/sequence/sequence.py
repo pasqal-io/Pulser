@@ -2070,7 +2070,9 @@ class Sequence(Generic[DeviceType]):
         ph_refs = {
             self._basis_ref[basis][q].phase.last_phase for q in last.targets
         }
-        if len(ph_refs) != 1:
+        if isinstance(channel_obj, DMM):
+            phase_ref = None
+        elif len(ph_refs) != 1:
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
                 "phase references for the same basis."
@@ -2326,6 +2328,8 @@ class Sequence(Generic[DeviceType]):
                 detuning_map = cast(
                     _DMMSchedule, self._schedule[channel]
                 ).detuning_map
+                # Ignore the phase reference for DMM
+                assert phase_ref is None
         else:
             # If channel name can't be found among _schedule keys, the
             # Sequence is parametrized and channel is a dmm_name
