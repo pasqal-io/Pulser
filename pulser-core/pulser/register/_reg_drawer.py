@@ -353,7 +353,7 @@ class RegDrawer:
         draw_half_radius: bool = False,
     ) -> np.ndarray:
         """Returns the dimensions of the register to be drawn."""
-        diffs = np.ptp(pos, axis=0)
+        diffs = np.ptp(pos, axis=0).astype(float)
         diffs[diffs < 9] *= 1.5
         diffs[diffs < 9] += 2
         if blockade_radius and draw_half_radius:
