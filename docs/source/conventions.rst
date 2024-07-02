@@ -16,19 +16,19 @@ these two states is said to be addressed by a channel that targets that basis. N
    :header-rows: 1
 
    * - Basis
-     - Eigenstates
+     - Eigenstates (associated labels in Pulser)
      - ``Channel`` type
    * - ``ground-rydberg``
-     - :math:`|g\rangle,~|r\rangle`
+     - :math:`|g\rangle,~|r\rangle` ("g", "r")
      - ``Rydberg``
    * - ``digital``
-     - :math:`|g\rangle,~|h\rangle`
+     - :math:`|g\rangle,~|h\rangle` ("g", "h")
      - ``Raman``
    * - ``XY``
-     - :math:`|0\rangle,~|1\rangle`
+     - :math:`|0\rangle,~|1\rangle` ("u", "d")
      - ``Microwave``
 
-
+The eigenstates of a Channel can be accessed via its ``eigenstates`` property, that returns associated the labels in Pulser. 
 
 Qutrit state
 ******************
@@ -59,7 +59,7 @@ the extra basis state, so we obtain
 * ``digital``: :math:`|g\rangle = (1, 0)^T,~~|h\rangle = (0, 1)^T`
 
 On the other hand, the ``XY`` basis uses an independent set of qubit states that are 
-labelled :math:`|0\rangle` and :math:`|1\rangle` and follow the standard convention:
+named :math:`|0\rangle` and :math:`|1\rangle` (but labelled "u" and "d" respectively in Pulser) and follow the standard convention:
 
 * ``XY``: :math:`|0\rangle = (1, 0)^T,~~|1\rangle = (0, 1)^T`
 
