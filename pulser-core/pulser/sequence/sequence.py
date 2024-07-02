@@ -2348,6 +2348,8 @@ class Sequence(Generic[DeviceType]):
                 detuning_map = cast(
                     _DMMSchedule, self._schedule[channel]
                 ).detuning_map
+                # Ignore the phase reference for DMM
+                assert phase_ref is None
         else:
             # If channel name can't be found among _schedule keys, the
             # Sequence is parametrized and channel is a dmm_name

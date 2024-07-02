@@ -1198,7 +1198,7 @@ def test_delay_min_duration(reg, device):
     )
 
 
-def test_phase(reg, device):
+def test_phase(reg, device, det_map):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.phase_shift(-1, "q0", "q1")
@@ -1226,6 +1226,35 @@ def test_phase(reg, device):
     seq.phase_shift(1, *seq._qids)
     assert seq.current_phase_ref("q1", "digital") == 0
     assert seq.current_phase_ref("q10", "digital") == 1
+
+    # Check that the phase of DMM pulses is unaffected
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch1")
+    seq.config_detuning_map(det_map, "dmm_0")
+    det_wf = RampWaveform(100, -10, -1)
+    seq.add_dmm_detuning(det_wf, "dmm_0")
+    # We shift the phase of just one qubit, which blocks addition
+    # of new pulses on this basis
+    seq.phase_shift(1.0, "q0", basis="ground-rydberg")
+    with pytest.raises(
+        ValueError,
+        match="Cannot do a multiple-target pulse on qubits with different "
+        "phase references for the same basis.",
+    ):
+        seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch1")
+    # But it works on the DMM
+    seq.add_dmm_detuning(det_wf, "dmm_0")
+
+    seq_samples = sample(seq)
+    # The phase on the rydberg channel matches the phase ref
+    np.testing.assert_array_equal(
+        seq_samples.channel_samples["ch1"].phase,
+        seq.current_phase_ref("q1", basis="ground-rydberg"),
+    )
+
+    # but the phase in the DMMSamples stays at zero
+    np.testing.assert_array_equal(
+        sample(seq).channel_samples["dmm_0"].phase, 0.0
+    )
 
 
 def test_align(reg, device):

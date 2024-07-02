@@ -17,6 +17,7 @@ from __future__ import annotations
 import typing
 from abc import ABC, abstractmethod
 
+from pulser.devices import Device
 from pulser.result import Result
 from pulser.sequence import Sequence
 
@@ -26,20 +27,46 @@ Results = typing.Sequence[Result]
 class Backend(ABC):
     """The backend abstract base class."""
 
-    def __init__(self, sequence: Sequence) -> None:
+    def __init__(self, sequence: Sequence, mimic_qpu: bool = False) -> None:
         """Starts a new backend instance."""
-        self.validate_sequence(sequence)
+        self.validate_sequence(sequence, mimic_qpu=mimic_qpu)
         self._sequence = sequence
+        self._mimic_qpu = bool(mimic_qpu)
 
     @abstractmethod
     def run(self) -> Results | typing.Sequence[Results]:
         """Executes the sequence on the backend."""
         pass
 
-    def validate_sequence(self, sequence: Sequence) -> None:
+    @staticmethod
+    def validate_sequence(sequence: Sequence, mimic_qpu: bool = False) -> None:
         """Validates a sequence prior to submission."""
         if not isinstance(sequence, Sequence):
             raise TypeError(
                 "'sequence' should be a `Sequence` instance"
                 f", not {type(sequence)}."
+            )
+        if not mimic_qpu:
+            return
+
+        if not isinstance(device := sequence.device, Device):
+            raise TypeError(
+                "To be sent to a QPU, the device of the sequence "
+                "must be a real device, instance of 'Device'."
+            )
+        reg = sequence.get_register(include_mappable=True)
+        if device.requires_layout and (layout := reg.layout) is None:
+            raise ValueError(
+                f"'{device.name}' requires the sequence's register to be"
+                " defined from a `RegisterLayout`."
+            )
+        if (
+            not device.accepts_new_layouts
+            and layout is not None
+            and layout not in device.pre_calibrated_layouts
+        ):
+            raise ValueError(
+                f"'{device.name}' does not accept new register layouts so "
+                "the register's layout must be one of the layouts available "
+                f"in '{device.name}.calibrated_register_layouts'."
             )

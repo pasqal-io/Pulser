@@ -31,13 +31,18 @@ class QutipBackend(Backend):
     Args:
         sequence: The sequence to emulate.
         config: The configuration for the Qutip emulator.
+        mimic_qpu: Whether to mimic the validations necessary for
+            execution on a QPU.
     """
 
     def __init__(
-        self, sequence: Sequence, config: EmulatorConfig = EmulatorConfig()
+        self,
+        sequence: Sequence,
+        config: EmulatorConfig = EmulatorConfig(),
+        mimic_qpu: bool = False,
     ):
         """Initializes a new QutipBackend."""
-        super().__init__(sequence)
+        super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(config, EmulatorConfig):
             raise TypeError(
                 "'config' must be of type 'EmulatorConfig', "
