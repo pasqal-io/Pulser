@@ -18,7 +18,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any, Literal, Optional, Type, TypeVar, cast
+from typing import Any, Literal, Optional, Type, TypeVar, cast, get_args
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -34,6 +34,16 @@ warnings.filterwarnings("once", "A duration of")
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
 OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
+
+States = Literal["u", "d", "r", "g", "h"]  # TODO: add "x" for leakage
+
+STATES_RANK = get_args(States)
+
+EIGENSTATES: dict[str, list[States]] = {
+    "ground-rydberg": ["r", "g"],
+    "digital": ["g", "h"],
+    "XY": ["u", "d"],
+}
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -91,11 +101,16 @@ class Channel(ABC):
         pass
 
     @property
+    def eigenstates(self) -> list[States]:
+        """The eigenstates associated with the basis."""
+        return EIGENSTATES[self.basis]
+
+    @property
     def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
         """Internal parameters and their valid options."""
         return dict(
             name=("Rydberg", "Raman", "Microwave", "DMM"),
-            basis=("ground-rydberg", "digital", "XY"),
+            basis=tuple(EIGENSTATES.keys()),
             addressing=("Local", "Global"),
         )
 
