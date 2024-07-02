@@ -12,53 +12,23 @@ these two states is said to be addressed by a channel that targets that basis. N
 
 .. list-table:: 
    :align: center
-   :widths: 50 35 35 35
+   :widths: 50 35 35
    :header-rows: 1
 
    * - Basis
      - Eigenstates
      - ``Channel`` type
-     - ``Channel.eigenstates``
    * - ``ground-rydberg``
      - :math:`|g\rangle,~|r\rangle`
      - ``Rydberg``
-     - (``"r"``, ``"g"``)
    * - ``digital``
      - :math:`|g\rangle,~|h\rangle`
      - ``Raman``
-     - (``"g"``, ``"h"``)
    * - ``XY``
      - :math:`|0\rangle,~|1\rangle`
      - ``Microwave``
-     - (``"u"``, ``"d"``)
 
-The eigenstates of a ``Channel`` can be accessed via its ``eigenstates`` property. It returns a tuple of labels, 
-ranked decreasingly according to their associated eigenenergy. Here is the correspondance between eigenstates and their labels,
-ranked decreasingly according to their associated eigenenergy:
 
-.. list-table:: 
-   :align: center
-   :widths: 50 35 35
-   :header-rows: 1
-
-   * - Name
-     - Eigenstate
-     - Associated label (as in ``Channel.eigenstates``)
-   * - Up state
-     - :math:`|0\rangle`
-     - ``"u"``
-   * - Down state
-     - :math:`|1\rangle`
-     - ``"d"``
-   * - Rydberg state
-     - :math:`|r\rangle`
-     - ``"r"``
-   * - Ground state
-     - :math:`|g\rangle`
-     - ``"g"``
-   * - Hyperfine state
-     - :math:`|h\rangle`
-     - ``"h"``
 
 Qutrit state
 ******************
@@ -89,7 +59,7 @@ the extra basis state, so we obtain
 * ``digital``: :math:`|g\rangle = (1, 0)^T,~~|h\rangle = (0, 1)^T`
 
 On the other hand, the ``XY`` basis uses an independent set of qubit states that are 
-named :math:`|0\rangle` and :math:`|1\rangle` (but labelled "u" and "d" respectively in Pulser) and follow the standard convention:
+labelled :math:`|0\rangle` and :math:`|1\rangle` and follow the standard convention:
 
 * ``XY``: :math:`|0\rangle = (1, 0)^T,~~|1\rangle = (0, 1)^T`
 
