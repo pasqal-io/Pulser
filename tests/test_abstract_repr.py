@@ -39,6 +39,7 @@ from pulser.devices import (
 )
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
+    deserialize_abstract_register,
     deserialize_device,
 )
 from pulser.json.abstract_repr.serializer import (
@@ -93,6 +94,7 @@ phys_Chadoq2 = replace(
         RegisterLayout([[0, 0], [1, 1]]),
         TriangularLatticeLayout(10, 10),
         RegisterLayout([[10, 0], [1, 10]], slug="foo"),
+        RegisterLayout([[0.0, 1.0, 2.0], [-0.4, 1.6, 35.0]]),
     ],
 )
 def test_layout(layout: RegisterLayout):
@@ -107,10 +109,10 @@ def test_layout(layout: RegisterLayout):
         RegisterLayout.from_abstract_repr(ser_layout_obj)
 
     # Check the validation catches invalid entries
-    with pytest.raises(
-        jsonschema.exceptions.ValidationError, match="is too long"
-    ):
-        ser_layout_obj["coordinates"].append([0, 0, 0])
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        ser_layout_obj["coordinates"].append(
+            [0, 0, 0] if layout.dimensionality == 2 else [0, 0]
+        )
         RegisterLayout.from_abstract_repr(json.dumps(ser_layout_obj))
 
 
@@ -119,9 +121,11 @@ def test_layout(layout: RegisterLayout):
     [
         Register.from_coordinates(np.array([[0, 0], [1, 1]]), prefix="q"),
         TriangularLatticeLayout(10, 10).define_register(*[1, 2, 3]),
+        Register3D(dict(q0=(0, 0, 0), q1=(1, 2, 3))),
+        RegisterLayout([[0, 0, 0], [1, 1, 1]]).define_register(1),
     ],
 )
-def test_register(reg: Register):
+def test_register(reg: Register | Register3D):
     ser_reg_str = reg.to_abstract_repr()
     ser_reg_obj = json.loads(ser_reg_str)
     if reg.layout:
@@ -131,18 +135,42 @@ def test_register(reg: Register):
     else:
         assert "layout" not in ser_reg_obj
 
-    re_reg = Register.from_abstract_repr(ser_reg_str)
+    re_reg = type(reg).from_abstract_repr(ser_reg_str)
     assert reg == re_reg
 
     with pytest.raises(TypeError, match="must be given as a string"):
-        Register.from_abstract_repr(ser_reg_obj)
+        type(reg).from_abstract_repr(ser_reg_obj)
 
-    # Check the validation catches invalid entries
-    with pytest.raises(
-        jsonschema.exceptions.ValidationError, match="'z' was unexpected"
-    ):
-        ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
-        Register.from_abstract_repr(json.dumps(ser_reg_obj))
+    with pytest.raises(ValueError, match="must be 2 or 3, not 1"):
+        deserialize_abstract_register(  # type: ignore
+            ser_reg_str,
+            expected_dim=1,
+        )
+
+    # Without expected_dim, the deserializer returns the right type
+    re_reg2 = deserialize_abstract_register(ser_reg_str)
+    assert type(reg) is type(re_reg2)
+    assert re_reg == re_reg2
+
+    if reg.dimensionality == 2:
+        # A 2D register can't be deserialized as a 3D register
+        with pytest.raises(ValueError, match="must be in 3D, not 2D"):
+            Register3D.from_abstract_repr(ser_reg_str)
+
+        # Check the validation catches invalid entries
+        with pytest.raises(jsonschema.exceptions.ValidationError):
+            ser_reg_obj["register"].append(dict(name="q10", x=10, y=0, z=1))
+            Register.from_abstract_repr(json.dumps(ser_reg_obj))
+    else:
+        assert reg.dimensionality == 3
+        # A 3D register can't be deserialized as a 2D register
+        with pytest.raises(ValueError, match="must be in 2D, not 3D"):
+            Register.from_abstract_repr(ser_reg_str)
+
+        # Check the validation catches invalid entries
+        with pytest.raises(jsonschema.exceptions.ValidationError):
+            ser_reg_obj["register"].append(dict(name="q10", x=10, y=0))
+            Register.from_abstract_repr(json.dumps(ser_reg_obj))
 
 
 @pytest.mark.parametrize(
@@ -352,6 +380,32 @@ class TestDevice:
                     custom_buffer_time=500,
                 ),
             ),
+            Rydberg.Global(
+                None,
+                None,
+                mod_bandwidth=5,
+                eom_config=RydbergEOM(
+                    max_limiting_amp=10,
+                    mod_bandwidth=20,
+                    limiting_beam=RydbergBeam.RED,
+                    intermediate_detuning=1000,
+                    controlled_beams=tuple(RydbergBeam),
+                    red_shift_coeff=1.4,
+                ),
+            ),
+            Rydberg.Global(
+                None,
+                None,
+                mod_bandwidth=5,
+                eom_config=RydbergEOM(
+                    max_limiting_amp=10,
+                    mod_bandwidth=20,
+                    limiting_beam=RydbergBeam.RED,
+                    intermediate_detuning=1000,
+                    controlled_beams=tuple(RydbergBeam),
+                    blue_shift_coeff=1.4,
+                ),
+            ),
         ],
     )
     def test_optional_channel_fields(self, ch_obj):
@@ -407,6 +461,7 @@ class TestSerialization:
         max_val = DigitalAnalogDevice.rabi_from_blockade(8)
         two_pi_wf = BlackmanWaveform.from_max_val(max_val, amps[1])
         two_pi_pulse = Pulse.ConstantDetuning(two_pi_wf, 0, 0)
+        pm_pulse = Pulse.ArbitraryPhase(pi_2_wf, RampWaveform(duration, -1, 1))
 
         seq.align("digital", "rydberg")
         seq.add(pi_pulse, "rydberg")
@@ -415,6 +470,7 @@ class TestSerialization:
         seq.add(two_pi_pulse, "rydberg")
 
         seq.delay(100, "digital")
+        seq.add(pm_pulse, "digital")
         seq.measure("digital")
         return seq
 
@@ -464,7 +520,7 @@ class TestSerialization:
             "amps": {"type": "float", "value": [np.pi, 2 * np.pi]},
             "duration": {"type": "int", "value": [200]},
         }
-        assert len(abstract["operations"]) == 11
+        assert len(abstract["operations"]) == 12
         assert abstract["operations"][0] == {
             "op": "target",
             "channel": "digital",
@@ -552,13 +608,23 @@ class TestSerialization:
             "time": 100,
         }
 
+        assert abstract["operations"][11] == {
+            "op": "pulse_arbitrary_phase",
+            "channel": "digital",
+            "amplitude": blackman_wf_dict,
+            "phase": {
+                "kind": "ramp",
+                "duration": duration_ref,
+                "start": -1,
+                "stop": 1,
+            },
+            "post_phase_shift": 0.0,
+            "protocol": "min-delay",
+        }
+
         assert abstract["measurement"] == "digital"
 
     def test_exceptions(self, sequence):
-        with pytest.raises(TypeError, match="not JSON serializable"):
-            Sequence(
-                Register3D.cubic(2, prefix="q"), MockDevice
-            ).to_abstract_repr()
 
         with pytest.raises(
             ValueError, match="No signature found for 'FakeWaveform'"
@@ -1113,6 +1179,17 @@ class TestSerialization:
             == "abc"
         )
 
+    @pytest.mark.parametrize("skip_validation", [False, True])
+    def test_skip_validation(self, sequence, skip_validation):
+        with patch(
+            "pulser.json.abstract_repr.serializer.validate_abstract_repr"
+        ) as mock:
+            sequence.to_abstract_repr(skip_validation=skip_validation)
+            if skip_validation:
+                mock.assert_not_called()
+            else:
+                mock.assert_called_once()
+
 
 def _get_serialized_seq(
     operations: list[dict] = [],
@@ -1245,6 +1322,8 @@ class TestDeserialization:
 
         # Check register
         assert len(seq.register.qubits) == len(s["register"])
+        assert seq.register.dimensionality == 2
+        assert isinstance(seq.register, Register)
         for q in s["register"]:
             assert q["name"] in seq.qubit_info
             assert seq.qubit_info[q["name"]][0] == q["x"]
@@ -1257,6 +1336,49 @@ class TestDeserialization:
             assert seq.register._layout_info.trap_ids == tuple(
                 reg_layout.get_traps_from_coordinates(*q_coords)
             )
+            assert reg_layout.dimensionality == 2
+        else:
+            assert "layout" not in s
+            assert seq.register.layout is None
+
+    @pytest.mark.parametrize(
+        "layout_coords", [None, np.array([(0, 0, 0), (1, 2, 3)])]
+    )
+    def test_deserialize_register3D(self, layout_coords):
+        custom_fields = {
+            "device": json.loads(MockDevice.to_abstract_repr()),
+            "register": [
+                {"name": "q0", "x": 1.0, "y": 2.0, "z": 3.0},
+            ],
+        }
+        if layout_coords is not None:
+            reg_layout = RegisterLayout(layout_coords)
+            custom_fields["layout"] = {
+                "coordinates": reg_layout.coords.tolist()
+            }
+
+        s = _get_serialized_seq(**custom_fields)
+        _check_roundtrip(s)
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+
+        # Check register
+        assert len(seq.register.qubits) == len(s["register"])
+        assert seq.register.dimensionality == 3
+        assert isinstance(seq.register, Register3D)
+        for q in s["register"]:
+            assert q["name"] in seq.qubit_info
+            assert seq.qubit_info[q["name"]][0] == q["x"]
+            assert seq.qubit_info[q["name"]][1] == q["y"]
+            assert seq.qubit_info[q["name"]][2] == q["z"]
+
+        # Check layout
+        if layout_coords is not None:
+            assert seq.register.layout == reg_layout
+            q_coords = list(seq.qubit_info.values())
+            assert seq.register._layout_info.trap_ids == tuple(
+                reg_layout.get_traps_from_coordinates(*q_coords)
+            )
+            assert reg_layout.dimensionality == 3
         else:
             assert "layout" not in s
             assert seq.register.layout is None
@@ -1677,6 +1799,23 @@ class TestDeserialization:
                     "stop": 5,
                 },
             },
+            {
+                "op": "pulse_arbitrary_phase",
+                "channel": "global",
+                "post_phase_shift": var2,
+                "protocol": "min-delay",
+                "amplitude": {
+                    "kind": "constant",
+                    "duration": var2,
+                    "value": 3.14,
+                },
+                "phase": {
+                    "kind": "ramp",
+                    "duration": var2,
+                    "start": 1,
+                    "stop": 0,
+                },
+            },
         ],
         ids=_get_op,
     )
@@ -1723,20 +1862,26 @@ class TestDeserialization:
             assert isinstance(c.args[2], VariableItem)
             # basis is fixed
             assert c.kwargs["basis"] == "ground-rydberg"
-        elif op["op"] == "pulse":
+        elif "pulse" in op["op"]:
             assert c.name == "add"
             assert c.kwargs["channel"] == op["channel"]
             assert c.kwargs["protocol"] == op["protocol"]
             pulse = c.kwargs["pulse"]
             assert isinstance(pulse, ParamObj)
-            assert pulse.cls == Pulse
-            assert isinstance(pulse.kwargs["phase"], VariableItem)
+            if op["op"] == "pulse":
+                assert pulse.cls is Pulse
+                assert isinstance(pulse.kwargs["phase"], VariableItem)
+                time_domain_mod = "detuning"
+            else:
+                assert pulse.args[0] is Pulse
+                assert op["op"] == "pulse_arbitrary_phase"
+                time_domain_mod = "phase"
             assert isinstance(pulse.kwargs["post_phase_shift"], VariableItem)
 
             assert isinstance(pulse.kwargs["amplitude"], ParamObj)
             assert issubclass(pulse.kwargs["amplitude"].cls, Waveform)
-            assert isinstance(pulse.kwargs["detuning"], ParamObj)
-            assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
+            assert isinstance(pulse.kwargs[time_domain_mod], ParamObj)
+            assert issubclass(pulse.kwargs[time_domain_mod].cls, Waveform)
         else:
             assert False, f"operation type \"{op['op']}\" is not valid"
 
@@ -1805,6 +1950,25 @@ class TestDeserialization:
                 },
                 "ConstantDetuning",
             ),
+            (
+                {
+                    "op": "pulse_arbitrary_phase",
+                    "channel": "global",
+                    "post_phase_shift": var2,
+                    "protocol": "min-delay",
+                    "amplitude": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 3.14,
+                    },
+                    "phase": {
+                        "kind": "constant",
+                        "duration": var2,
+                        "value": 1,
+                    },
+                },
+                "ArbitraryPhase",
+            ),
         ],
     )
     @pytest.mark.filterwarnings(
@@ -1835,7 +1999,6 @@ class TestDeserialization:
         pulse = c.kwargs["pulse"]
         assert isinstance(pulse, ParamObj)
         assert pulse.cls.__name__ == pulse_cls
-        assert isinstance(pulse.kwargs["phase"], VariableItem)
         assert isinstance(pulse.kwargs["post_phase_shift"], VariableItem)
 
         if pulse_cls != "ConstantAmplitude":
@@ -1844,11 +2007,19 @@ class TestDeserialization:
         else:
             assert pulse.kwargs["amplitude"] == 3.14
 
-        if pulse_cls != "ConstantDetuning":
+        if pulse_cls == "ConstantAmplitude":
             assert isinstance(pulse.kwargs["detuning"], ParamObj)
             assert issubclass(pulse.kwargs["detuning"].cls, Waveform)
-        else:
+        elif pulse_cls == "ConstantDetuning":
             assert pulse.kwargs["detuning"] == 1
+        elif pulse_cls == "ArbitraryPhase":
+            assert "detuning" not in pulse.kwargs
+
+        if pulse_cls != "ArbitraryPhase":
+            assert isinstance(pulse.kwargs["phase"], VariableItem)
+        else:
+            assert isinstance(pulse.kwargs["phase"], ParamObj)
+            assert issubclass(pulse.kwargs["phase"].cls, Waveform)
 
     @pytest.mark.parametrize("correct_phase_drift", (False, True, None))
     @pytest.mark.parametrize("var_detuning_on", [False, True])

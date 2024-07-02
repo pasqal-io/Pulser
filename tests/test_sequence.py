@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import itertools
 import json
@@ -483,6 +484,7 @@ def init_seq(
     parametrized=False,
     mappable_reg=False,
     config_det_map=False,
+    prefer_slm_mask=True,
 ) -> Sequence:
     register = (
         reg.layout.make_mappable_register(len(reg.qubits))
@@ -506,7 +508,7 @@ def init_seq(
                 for i in range(10)
             }
         )
-        if mappable_reg:
+        if mappable_reg or not prefer_slm_mask:
             seq.config_detuning_map(detuning_map=det_map, dmm_id="dmm_0")
         else:
             seq.config_slm_mask(["q0"], "dmm_0")
@@ -531,6 +533,100 @@ def test_ising_mode(
     assert seq2._in_xy and not seq2._in_ising
     with pytest.raises(ValueError, match="Cannot be in ising if in xy."):
         seq2._in_ising = True
+
+
+@pytest.mark.parametrize("config_det_map", [False, True])
+@pytest.mark.parametrize("starts_mappable", [False, True])
+@pytest.mark.parametrize("mappable_reg", [False, True])
+@pytest.mark.parametrize("parametrized", [False, True])
+def test_switch_register(
+    reg, mappable_reg, parametrized, starts_mappable, config_det_map
+):
+    pulse = Pulse.ConstantPulse(1000, 1, -1, 2)
+    with_slm_mask = not starts_mappable and not mappable_reg
+    seq = init_seq(
+        reg,
+        DigitalAnalogDevice,
+        "raman",
+        "raman_local",
+        [pulse],
+        initial_target="q0",
+        parametrized=parametrized,
+        mappable_reg=starts_mappable,
+        config_det_map=config_det_map,
+        prefer_slm_mask=with_slm_mask,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="given ids have to be qubit ids declared in this sequence's"
+        " register",
+    ):
+        seq.switch_register(Register(dict(q1=(0, 0), qN=(10, 10))))
+
+    seq.declare_channel("ryd", "rydberg_global")
+    seq.add(pulse, "ryd", protocol="no-delay")
+
+    if mappable_reg:
+        new_reg = TriangularLatticeLayout(10, 5).make_mappable_register(2)
+    else:
+        new_reg = Register(dict(q0=(0, 0), foo=(10, 10)))
+
+    if config_det_map and not with_slm_mask:
+        context_manager = pytest.warns(
+            UserWarning, match="configures a detuning map"
+        )
+    else:
+        context_manager = contextlib.nullcontext()
+
+    with context_manager:
+        new_seq = seq.switch_register(new_reg)
+    assert seq.declared_variables or not parametrized
+    assert seq.declared_variables == new_seq.declared_variables
+    assert new_seq.is_parametrized() == parametrized
+    assert new_seq.is_register_mappable() == mappable_reg
+    assert new_seq._calls[1:] == seq._calls[1:]  # Excludes __init__
+    assert new_seq._to_build_calls == seq._to_build_calls
+
+    build_kwargs = {}
+    if parametrized:
+        build_kwargs["delay"] = 120
+    if mappable_reg:
+        build_kwargs["qubits"] = {"q0": 1, "q1": 4}
+    if build_kwargs:
+        new_seq = new_seq.build(**build_kwargs)
+
+    assert isinstance(
+        (raman_pulse_slot := new_seq._schedule["raman"][1]).type, Pulse
+    )
+    assert raman_pulse_slot.type == pulse
+    assert raman_pulse_slot.targets == {"q0"}
+
+    assert isinstance(
+        (rydberg_pulse_slot := new_seq._schedule["ryd"][1]).type, Pulse
+    )
+    assert rydberg_pulse_slot.type == pulse
+    assert rydberg_pulse_slot.targets == set(new_reg.qubit_ids)
+
+    if config_det_map:
+        if with_slm_mask:
+            if parametrized:
+                seq = seq.build(**build_kwargs)
+            assert np.any(reg.qubits["q0"] != new_reg.qubits["q0"])
+            assert "dmm_0" in seq.declared_channels
+            prev_qubit_wmap = seq._schedule[
+                "dmm_0"
+            ].detuning_map.get_qubit_weight_map(reg.qubits)
+            new_qubit_wmap = new_seq._schedule[
+                "dmm_0"
+            ].detuning_map.get_qubit_weight_map(new_reg.qubits)
+            assert prev_qubit_wmap["q0"] == 1.0
+            assert new_qubit_wmap == dict(q0=1.0, foo=0.0)
+        elif not parametrized:
+            assert (
+                seq._schedule["dmm_0"].detuning_map
+                == new_seq._schedule["dmm_0"].detuning_map
+            )
 
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
@@ -1102,7 +1198,7 @@ def test_delay_min_duration(reg, device):
     )
 
 
-def test_phase(reg, device):
+def test_phase(reg, device, det_map):
     seq = Sequence(reg, device)
     seq.declare_channel("ch0", "raman_local", initial_target="q0")
     seq.phase_shift(-1, "q0", "q1")
@@ -1130,6 +1226,35 @@ def test_phase(reg, device):
     seq.phase_shift(1, *seq._qids)
     assert seq.current_phase_ref("q1", "digital") == 0
     assert seq.current_phase_ref("q10", "digital") == 1
+
+    # Check that the phase of DMM pulses is unaffected
+    seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch1")
+    seq.config_detuning_map(det_map, "dmm_0")
+    det_wf = RampWaveform(100, -10, -1)
+    seq.add_dmm_detuning(det_wf, "dmm_0")
+    # We shift the phase of just one qubit, which blocks addition
+    # of new pulses on this basis
+    seq.phase_shift(1.0, "q0", basis="ground-rydberg")
+    with pytest.raises(
+        ValueError,
+        match="Cannot do a multiple-target pulse on qubits with different "
+        "phase references for the same basis.",
+    ):
+        seq.add(Pulse.ConstantPulse(100, 1, 0, 0), "ch1")
+    # But it works on the DMM
+    seq.add_dmm_detuning(det_wf, "dmm_0")
+
+    seq_samples = sample(seq)
+    # The phase on the rydberg channel matches the phase ref
+    np.testing.assert_array_equal(
+        seq_samples.channel_samples["ch1"].phase,
+        seq.current_phase_ref("q1", basis="ground-rydberg"),
+    )
+
+    # but the phase in the DMMSamples stays at zero
+    np.testing.assert_array_equal(
+        sample(seq).channel_samples["dmm_0"].phase, 0.0
+    )
 
 
 def test_align(reg, device):
@@ -1247,7 +1372,7 @@ def test_str(reg, device, mod_device, det_map):
         f"\n\nChannel: dmm_0\nt: 0 | Initial targets: {targets} "
         "| Phase Reference: 0.0 "
         f"\nt: 0->100 | Detuning: -10 rad/µs | Targets: {targets}"
-        f"\nt: 100->200 | Detuning: Ramp(-10->0 rad/µs) | Targets: {targets}"
+        f"\nt: 100->200 | Detuning: Ramp(-10->0) rad/µs | Targets: {targets}"
     )
 
     measure_msg = "\n\nMeasured in basis: digital"
@@ -1360,6 +1485,7 @@ def test_sequence(reg, device, patch_plt_show):
 
     seq.draw(draw_phase_area=True)
     seq.draw(draw_phase_curve=True)
+    seq.draw(as_phase_modulated=True)
 
     s = seq._serialize()
     assert json.loads(s)["__version__"] == pulser.__version__
@@ -1548,14 +1674,14 @@ def test_draw_slm_mask_in_ising(
             seq1.draw(
                 draw_qubit_det=True, draw_interp_pts=False, mode="output"
             )  # Drawing Sequence with only a DMM
-        assert len(record) == 7
+        assert len(record) == 9
         assert np.all(
             str(record[i].message).startswith(
                 "No modulation bandwidth defined"
             )
-            for i in range(6)
+            for i in range(len(record) - 1)
         )
-        assert str(record[6].message).startswith(
+        assert str(record[-1].message).startswith(
             "Can't display modulated quantities per qubit"
         )
     seq1.draw(mode, draw_qubit_det=draw_qubit_det, draw_interp_pts=False)

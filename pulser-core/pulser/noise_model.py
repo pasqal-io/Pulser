@@ -82,9 +82,13 @@ class NoiseModel:
             - "SPAM": SPAM errors. Parametrized by
               `state_prep_error`, `p_false_pos` and `p_false_neg`.
 
-        runs: Number of runs needed (each run draws a new random noise).
-        samples_per_run: Number of samples per noisy run. Useful for
-            cutting down on computing time, but unrealistic.
+        runs: When reconstructing the Hamiltonian from random noise is
+            necessary, this determines how many times that happens. Not
+            to be confused with the number of times the resulting
+            bitstring distribution is sampled when calculating bitstring
+            counts.
+        samples_per_run: Number of samples per noisy Hamiltonian. Useful
+            for cutting down on computing time, but unrealistic.
         state_prep_error: The state preparation error probability.
         p_false_pos: Probability of measuring a false positive.
         p_false_neg: Probability of measuring a false negative.

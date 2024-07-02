@@ -124,23 +124,28 @@ class Waveform(ABC):
 
     @property
     def integral(self) -> float:
-        """Integral of the waveform (time in ns, value in rad/µs)."""
+        """Integral of the waveform (in [waveform units].µs)."""
         return float(np.sum(self.samples)) * 1e-3  # ns * rad/µs = 1e-3
 
-    def draw(self, output_channel: Optional[Channel] = None) -> None:
+    def draw(
+        self,
+        output_channel: Optional[Channel] = None,
+        ylabel: str | None = None,
+    ) -> None:
         """Draws the waveform.
 
         Args:
             output_channel: The output channel. If given, will draw the
                 modulated waveform on top of the input one.
+            ylabel: An optional label for the y-axis of the plot.
         """
         fig, ax = plt.subplots()
         if not output_channel:
-            self._plot(ax, "rad/µs")
+            self._plot(ax, ylabel=ylabel)
         else:
             self._plot(
                 ax,
-                "rad/µs",
+                ylabel=ylabel,
                 label="Input",
                 start_t=self.modulation_buffers(output_channel)[0],
             )
@@ -425,8 +430,8 @@ class CustomWaveform(Waveform):
     """A custom waveform.
 
     Args:
-        samples: The modulation values at each time step
-            (in rad/µs). The number of samples dictates the duration, in ns.
+        samples: The modulation values at each time step.
+            The number of samples dictates the duration, in ns.
     """
 
     def __init__(self, samples: ArrayLike):
@@ -470,7 +475,7 @@ class ConstantWaveform(Waveform):
 
     Args:
         duration: The waveform duration (in ns).
-        value: The modulation value (in rad/µs).
+        value: The value.
     """
 
     def __init__(
@@ -515,13 +520,10 @@ class ConstantWaveform(Waveform):
         return abstract_repr("ConstantWaveform", self._duration, self._value)
 
     def __str__(self) -> str:
-        return f"{self._value:.3g} rad/µs"
+        return f"{self._value:.3g}"
 
     def __repr__(self) -> str:
-        return (
-            f"ConstantWaveform({self._duration} ns, "
-            + f"{self._value:.3g} rad/µs)"
-        )
+        return f"ConstantWaveform({self._duration} ns, {self._value:.3g})"
 
     def __mul__(self, other: float) -> ConstantWaveform:
         return ConstantWaveform(self._duration, self._value * float(other))
@@ -532,8 +534,8 @@ class RampWaveform(Waveform):
 
     Args:
         duration: The waveform duration (in ns).
-        start: The value (in rad/µs) at the initial sample.
-        stop: The value (in rad/µs) at the final sample.
+        start: The value at the initial sample.
+        stop: The value at the final sample.
     """
 
     def __init__(
@@ -565,7 +567,7 @@ class RampWaveform(Waveform):
 
     @property
     def slope(self) -> float:
-        r"""Slope of the ramp, in :math:`s^{-15}`."""
+        r"""Slope of the ramp, in [waveform units] / ns."""
         return (self._stop - self._start) / (self._duration - 1)
 
     def change_duration(self, new_duration: int) -> RampWaveform:
@@ -588,12 +590,12 @@ class RampWaveform(Waveform):
         )
 
     def __str__(self) -> str:
-        return f"Ramp({self._start:.3g}->{self._stop:.3g} rad/µs)"
+        return f"Ramp({self._start:.3g}->{self._stop:.3g})"
 
     def __repr__(self) -> str:
         return (
             f"RampWaveform({self._duration} ns, "
-            + f"{self._start:.3g}->{self._stop:.3g} rad/µs)"
+            + f"{self._start:.3g}->{self._stop:.3g})"
         )
 
     def __mul__(self, other: float) -> RampWaveform:
@@ -603,6 +605,11 @@ class RampWaveform(Waveform):
 
 class BlackmanWaveform(Waveform):
     """A Blackman window of a specified duration and area.
+
+    Warning:
+        The BlackmanWaveform assumes its values are in rad/µs for the
+        area calculation. If this is not the case, the 'area' value should be
+        scaled accordingly.
 
     Args:
         duration: The waveform duration (in ns).
@@ -645,6 +652,11 @@ class BlackmanWaveform(Waveform):
         Instead of defining a duration, the waveform is defined by its area and
         the maximum value. The duration is chosen so that the maximum value is
         not surpassed, but approached as closely as possible.
+
+        Warning:
+            The BlackmanWaveform assumes its values are in rad/µs for the
+            area calculation. If this is not the case, the 'max_val' and 'area'
+            values should be scaled accordingly.
 
         Args:
             max_val: The maximum value threshold (in rad/µs). If
@@ -736,7 +748,7 @@ class InterpolatedWaveform(Waveform):
 
     Args:
         duration: The waveform duration (in ns).
-        values: Values of the interpolation points (in rad/µs).
+        values: Values of the interpolation points.
         times: Fractions of the total duration (between 0
             and 1), indicating where to place each value on the time axis. If
             not given, the values are spread evenly throughout the full
@@ -832,7 +844,7 @@ class InterpolatedWaveform(Waveform):
 
     @property
     def data_points(self) -> np.ndarray:
-        """Points (t[ns], value[rad/µs]) that define the interpolation."""
+        """Points (t[ns], value[arb. units]) that define the interpolation."""
         return self._data_pts.copy()
 
     def change_duration(self, new_duration: int) -> InterpolatedWaveform:
@@ -908,6 +920,12 @@ class KaiserWaveform(Waveform):
     check the numpy documentation for the kaiser(M, beta) function:
     https://numpy.org/doc/stable/reference/generated/numpy.kaiser.html
 
+    Warning:
+        The KaiserWaveform assumes its values are in rad/µs for the
+        area calculation. If this is not the case, the 'area'
+        value should be scaled accordingly.
+
+
     Args:
         duration: The waveform duration (in ns).
         area: The integral of the waveform. Can be negative,
@@ -969,6 +987,11 @@ class KaiserWaveform(Waveform):
         Instead of defining a duration, the waveform is defined by its area and
         the maximum value. The duration is chosen so that the maximum value is
         not surpassed, but approached as closely as possible.
+
+        Warning:
+            The KaiserWaveform assumes its values are in rad/µs for the
+            area calculation. If this is not the case, the 'max_val' and 'area'
+            values should be scaled accordingly.
 
         Args:
             max_val: The maximum value threshold (in rad/µs). If

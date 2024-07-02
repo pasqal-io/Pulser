@@ -684,6 +684,45 @@ class Sequence(Generic[DeviceType]):
         # DMM has Global addressing
         self._add_to_schedule(dmm_name, _TimeSlot("target", -1, 0, self._qids))
 
+    def switch_register(
+        self, new_register: BaseRegister | MappableRegister
+    ) -> Sequence:
+        """Replicate the sequence with a different register.
+
+        The new sequence is reconstructed with the provided register by
+        replicating all the instructions used to build the original sequence.
+        This means that operations referecing specific qubits IDs
+        (eg. `Sequence.target()`) expect to find the same qubit IDs in the new
+        register. By the same token, switching from a register to a mappable
+        register might fail if one of the instructions does not work with
+        mappable registers (e.g. `Sequence.configure_slm_mask()`).
+
+        Warns:
+            UserWarning: If the sequence is configuring a detuning map, a
+            warning is raised to remind the user that the detuning map is
+            unchanged and might no longer be aligned with the qubits in
+            the new register.
+
+        Args:
+            new_register: The new register to give the sequence.
+
+        Returns:
+            The sequence with the new register.
+        """
+        new_seq = type(self)(register=new_register, device=self._device)
+        # Copy the variables to the new sequence
+        new_seq._variables = self.declared_variables
+        for call in self._calls[1:] + self._to_build_calls:
+            if call.name == "config_detuning_map":
+                warnings.warn(
+                    "Switching the register of a sequence that configures"
+                    " a detuning map. Please ensure that the new qubit"
+                    " positions are still aligned.",
+                    stacklevel=2,
+                )
+            getattr(new_seq, call.name)(*call.args, **call.kwargs)
+        return new_seq
+
     def switch_device(
         self, new_device: DeviceType, strict: bool = False
     ) -> Sequence:
@@ -1110,8 +1149,14 @@ class Sequence(Generic[DeviceType]):
             detuning_on = cast(float, detuning_on)
             eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
-                detuning_off = eom_config.calculate_detuning_off(
-                    amp_on, detuning_on, optimal_detuning_off
+                (
+                    detuning_off,
+                    switching_beams,
+                ) = eom_config.calculate_detuning_off(
+                    amp_on,
+                    detuning_on,
+                    optimal_detuning_off,
+                    return_switching_beams=True,
                 )
                 off_pulse = Pulse.ConstantPulse(
                     channel_obj.min_duration, 0.0, detuning_off, 0.0
@@ -1130,7 +1175,7 @@ class Sequence(Generic[DeviceType]):
                     ti=self.get_duration(channel, include_fall_time=True),
                 )
                 self._schedule.enable_eom(
-                    channel, amp_on, detuning_on, detuning_off
+                    channel, amp_on, detuning_on, detuning_off, switching_beams
                 )
                 if correct_phase_drift:
                     buffer_slot = self._last(channel)
@@ -1241,7 +1286,7 @@ class Sequence(Generic[DeviceType]):
             channel: The name of the channel to add the pulse to.
             duration: The duration of the pulse (in ns).
             phase: The pulse phase (in radians).
-            post_phase_shift: Optionally lets you add a phase shift (in rads)
+            post_phase_shift: Optionally lets you add a phase shift (in rad)
                 immediately after the end of the pulse.
             protocol: Stipulates how to deal with eventual conflicts with
                 other channels (see `Sequence.add()` for more details).
@@ -1482,7 +1527,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The ids of the qubits to apply the phase shift to.
             basis: The basis (i.e. electronic transition) to associate
                 the phase shift to. Must correspond to the basis of a declared
@@ -1504,7 +1549,7 @@ class Sequence(Generic[DeviceType]):
         Bloch sphere).
 
         Args:
-            phi: The intended phase shift (in rads).
+            phi: The intended phase shift (in rad).
             targets: The indices of the qubits to apply the phase shift to.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -1702,6 +1747,7 @@ class Sequence(Generic[DeviceType]):
         self,
         seq_name: str = "pulser-exported",
         json_dumps_options: dict[str, Any] = {},
+        skip_validation: bool = False,
         **defaults: Any,
     ) -> str:
         """Serializes the Sequence into an abstract JSON object.
@@ -1712,6 +1758,13 @@ class Sequence(Generic[DeviceType]):
             json_dumps_options: A mapping between optional parameters of
                 ``json.dumps()`` (as string) and their value (parameter cannot
                 be "cls").
+            skip_validation: Whether to skip the validation of the serialized
+                sequence against the abstract representation's JSON schema.
+                Skipping the validation is useful to cut down on execution
+                time, as this step takes significantly longer than the
+                serialization itself; it is also low risk, as the validation
+                is only defensively checking that there are no bugs in the
+                serialized sequence.
             defaults: The default values for all the variables declared in this
                 Sequence instance, indexed by the name given upon declaration.
                 Check ``Sequence.declared_variables`` to see all the variables.
@@ -1727,7 +1780,11 @@ class Sequence(Generic[DeviceType]):
         """
         try:
             return serialize_abstract_sequence(
-                self, seq_name, json_dumps_options, **defaults
+                self,
+                seq_name=seq_name,
+                json_dumps_options=json_dumps_options,
+                skip_validation=skip_validation,
+                **defaults,
             )
         except jsonschema.exceptions.ValidationError as e:
             if self.is_parametrized():
@@ -1832,6 +1889,7 @@ class Sequence(Generic[DeviceType]):
     def draw(
         self,
         mode: str = "input+output",
+        as_phase_modulated: bool = False,
         draw_phase_area: bool = False,
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
@@ -1852,6 +1910,8 @@ class Sequence(Generic[DeviceType]):
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
+            as_phase_modulated: Instead of displaying the detuning and phase
+                offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
                 'output' mode. If `draw_phase_curve=True`, phase values are
@@ -1934,6 +1994,7 @@ class Sequence(Generic[DeviceType]):
             draw_detuning_maps=draw_detuning_maps,
             draw_qubit_amp=draw_qubit_amp,
             draw_qubit_det=draw_qubit_det,
+            phase_modulated=as_phase_modulated,
         )
         if fig_name is not None:
             name, ext = os.path.splitext(fig_name)
@@ -2009,7 +2070,9 @@ class Sequence(Generic[DeviceType]):
         ph_refs = {
             self._basis_ref[basis][q].phase.last_phase for q in last.targets
         }
-        if len(ph_refs) != 1:
+        if isinstance(channel_obj, DMM):
+            phase_ref = None
+        elif len(ph_refs) != 1:
             raise ValueError(
                 "Cannot do a multiple-target pulse on qubits with different "
                 "phase references for the same basis."
@@ -2265,6 +2328,8 @@ class Sequence(Generic[DeviceType]):
                 detuning_map = cast(
                     _DMMSchedule, self._schedule[channel]
                 ).detuning_map
+                # Ignore the phase reference for DMM
+                assert phase_ref is None
         else:
             # If channel name can't be found among _schedule keys, the
             # Sequence is parametrized and channel is a dmm_name

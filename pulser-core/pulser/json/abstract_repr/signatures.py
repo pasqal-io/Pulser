@@ -81,6 +81,9 @@ SIGNATURES: dict[str, PulserSignature] = {
     "Pulse": PulserSignature(
         pos=("amplitude", "detuning", "phase"), keyword=("post_phase_shift",)
     ),
+    "Pulse.ArbitraryPhase": PulserSignature(
+        pos=("amplitude", "phase"), keyword=("post_phase_shift",)
+    ),
     # Special case operators
     "truediv": PulserSignature(
         pos=("lhs", "rhs"), extra=dict(expression="div")

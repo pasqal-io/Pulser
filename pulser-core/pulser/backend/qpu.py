@@ -17,12 +17,29 @@ from __future__ import annotations
 from typing import cast
 
 from pulser import Sequence
-from pulser.backend.remote import JobParams, RemoteBackend, RemoteResults
-from pulser.devices import Device
+from pulser.backend.remote import (
+    JobParams,
+    RemoteBackend,
+    RemoteConnection,
+    RemoteResults,
+)
 
 
 class QPUBackend(RemoteBackend):
-    """Backend for sequence execution on a QPU."""
+    """Backend for sequence execution on a QPU.
+
+    Args:
+        sequence: A Sequence or a list of Sequences to execute on a
+            backend accessible via a remote connection.
+        connection: The remote connection through which the jobs
+            are executed.
+    """
+
+    def __init__(
+        self, sequence: Sequence, connection: RemoteConnection
+    ) -> None:
+        """Starts a new QPU backend instance."""
+        super().__init__(sequence, connection, mimic_qpu=True)
 
     def run(
         self, job_params: list[JobParams] | None = None, wait: bool = False
@@ -45,11 +62,23 @@ class QPUBackend(RemoteBackend):
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
+        self.validate_job_params(
+            job_params or [], self._sequence.device.max_runs
+        )
+        results = self._connection.submit(
+            self._sequence, job_params=job_params, wait=wait
+        )
+        return cast(RemoteResults, results)
+
+    @staticmethod
+    def validate_job_params(
+        job_params: list[JobParams], max_runs: int | None
+    ) -> None:
+        """Validates a list of job parameters prior to submission."""
         suffix = " when executing a sequence on a real QPU."
         if not job_params:
             raise ValueError("'job_params' must be specified" + suffix)
-
-        max_runs = self._sequence.device.max_runs
+        RemoteBackend._type_check_job_params(job_params)
         for j in job_params:
             if "runs" not in j:
                 raise ValueError(
@@ -60,20 +89,3 @@ class QPUBackend(RemoteBackend):
                     "All 'runs' must be below the maximum allowed by the "
                     f"device ({max_runs})" + suffix
                 )
-        results = self._connection.submit(
-            self._sequence, job_params=job_params, wait=wait
-        )
-        return cast(RemoteResults, results)
-
-    def validate_sequence(self, sequence: Sequence) -> None:
-        """Validates a sequence prior to submission.
-
-        Args:
-            sequence: The sequence to validate.
-        """
-        super().validate_sequence(sequence)
-        if not isinstance(sequence.device, Device):
-            raise TypeError(
-                "To be sent to a QPU, the device of the sequence "
-                "must be a real device, instance of 'Device'."
-            )

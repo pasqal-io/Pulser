@@ -21,6 +21,7 @@ import qutip
 
 import pulser
 from pulser.devices import MockDevice
+from pulser.register import SquareLatticeLayout
 from pulser.waveforms import BlackmanWaveform
 from pulser_simulation import SimConfig
 from pulser_simulation.qutip_backend import QutipBackend
@@ -55,6 +56,17 @@ def test_qutip_backend(sequence):
     final_state = final_result.get_state()
     assert final_state == results.get_final_state()
     np.testing.assert_allclose(final_state.full(), [[0], [1]], atol=1e-5)
+
+    # Test mimic QPU
+    with pytest.raises(TypeError, match="must be a real device"):
+        QutipBackend(sequence, mimic_qpu=True)
+    sequence = sequence.switch_device(pulser.DigitalAnalogDevice)
+    with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
+        QutipBackend(sequence, mimic_qpu=True)
+    sequence = sequence.switch_register(
+        SquareLatticeLayout(5, 5, 5).square_register(2)
+    )
+    QutipBackend(sequence, mimic_qpu=True)
 
 
 def test_with_default_noise(sequence):
