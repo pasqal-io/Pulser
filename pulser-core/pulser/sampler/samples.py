@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING, Optional, cast
 import numpy as np
 
 from pulser.channels.base_channel import (
-    multiple_bases_states,
     EIGENSTATES,
     Channel,
     States,
+    multiple_bases_states,
 )
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId

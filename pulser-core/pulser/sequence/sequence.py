@@ -41,11 +41,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.devices as devices
 import pulser.sequence._decorators as seq_decorators
-from pulser.channels.base_channel import (
-    multiple_bases_states,
-    Channel,
-    States,
-)
+from pulser.channels.base_channel import Channel, States, multiple_bases_states
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
