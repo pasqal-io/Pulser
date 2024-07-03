@@ -402,7 +402,7 @@ class QutipEmulator:
         )
         self._eval_times_instruction = value
 
-    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+    def build_operator(self, operations: list[tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
 
         Takes as argument a list of tuples ``[(operator_1, qubits_1),
@@ -412,13 +412,13 @@ class QutipEmulator:
         applied at ``qubit_j`` and identity elsewhere.
 
         Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
-        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
+        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`.
 
         Args:
             operations: List of tuples `(operator, qubits)`.
-                `operator` can be a ``qutip.Quobj`` or a string key for
-                ``self.op_matrix``. `qubits` is the list on which operator
-                will be applied. The qubits can be passed as their
+                `operator` can be a ``qutip.Quobj`` or a string contained in
+                the keys of ``self.op_matrix``. `qubits` is the list on which
+                operator will be applied. The qubits can be passed as their
                 index or their label in the register.
 
         Returns:

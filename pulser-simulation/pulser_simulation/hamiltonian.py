@@ -28,6 +28,7 @@ from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples, _PulseTargetSlot
+from pulser_simulation.operators import build_operator
 from pulser_simulation.simconfig import SUPPORTED_NOISES, doppler_sigma
 
 
@@ -239,7 +240,7 @@ class Hamiltonian:
                             samples["Local"][basis][qid][qty] = 0.0
         self.samples = samples
 
-    def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
+    def build_operator(self, operations: list) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
 
         Takes as argument a list of tuples ``[(operator_1, qubits_1),
@@ -261,35 +262,12 @@ class Hamiltonian:
         Returns:
             The final operator.
         """
-        op_list = [self.op_matrix["I"] for j in range(self._size)]
-
-        if not isinstance(operations, list):
-            operations = [operations]
-
-        for operator, qubits in operations:
-            if qubits == "global":
-                return sum(
-                    self.build_operator([(operator, [q_id])])
-                    for q_id in self._qdict
-                )
-            else:
-                qubits_set = set(qubits)
-                if len(qubits_set) < len(qubits):
-                    raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(self._qdict.keys()):
-                    raise ValueError(
-                        "Invalid qubit names: "
-                        f"{qubits_set - self._qdict.keys()}"
-                    )
-                if isinstance(operator, str):
-                    try:
-                        operator = self.op_matrix[operator]
-                    except KeyError:
-                        raise ValueError(f"{operator} is not a valid operator")
-                for qubit in qubits:
-                    k = self._qid_index[qubit]
-                    op_list[k] = operator
-        return qutip.tensor(list(map(qutip.Qobj, op_list)))
+        return build_operator(
+            self.samples_obj,
+            self._qdict,
+            operations,
+            self.op_matrix,
+        )
 
     def _update_noise(self) -> None:
         """Updates noise random parameters.

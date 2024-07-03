@@ -24,7 +24,15 @@ from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
-from pulser_simulation import QutipEmulator, SimConfig, Simulation
+from pulser_simulation import (
+    QutipEmulator,
+    SimConfig,
+    Simulation,
+    build_1qubit_operator,
+    build_operator,
+    build_projector,
+    default_operators,
+)
 
 
 @pytest.fixture
@@ -248,41 +256,61 @@ def test_extraction_of_sequences(seq):
 
 
 def test_building_basis_and_projection_operators(seq, reg):
+    def proj(dim, idx1, idx2):
+        return qutip.basis(dim, idx1) * qutip.basis(dim, idx2).dag()
+
     # All three levels:
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
+    dim = 3
     assert sim.basis_name == "all"
-    assert sim.dim == 3
+    assert sim.dim == dim
     assert sim.basis == {
-        "r": qutip.basis(3, 0),
-        "g": qutip.basis(3, 1),
-        "h": qutip.basis(3, 2),
+        "r": qutip.basis(dim, 0),
+        "g": qutip.basis(dim, 1),
+        "h": qutip.basis(dim, 2),
     }
+    assert sim._hamiltonian.op_matrix["sigma_rr"] == proj(dim, 0, 0)
+    assert sim._hamiltonian.op_matrix["sigma_gr"] == proj(dim, 1, 0)
+    assert sim._hamiltonian.op_matrix["sigma_hg"] == proj(dim, 2, 1)
+    assert build_projector(sim.samples_obj, "sigma_rr") == proj(dim, 0, 0)
+    assert build_projector(sim.samples_obj, "sigma_gr") == proj(dim, 1, 0)
+    assert build_projector(sim.samples_obj, "sigma_hg") == proj(dim, 2, 1)
     assert (
-        sim._hamiltonian.op_matrix["sigma_rr"]
-        == qutip.basis(3, 0) * qutip.basis(3, 0).dag()
-    )
-    assert (
-        sim._hamiltonian.op_matrix["sigma_gr"]
-        == qutip.basis(3, 1) * qutip.basis(3, 0).dag()
-    )
-    assert (
-        sim._hamiltonian.op_matrix["sigma_hg"]
-        == qutip.basis(3, 2) * qutip.basis(3, 1).dag()
-    )
-
+        op_Z := build_1qubit_operator(
+            sim.samples_obj,
+            [(1.0, "sigma_hh"), (-1.0, "sigma_gg")],
+        )
+    ) == proj(dim, 2, 2) - proj(dim, 1, 1)
+    operators = default_operators(sim.samples_obj)
+    assert operators == sim._hamiltonian.op_matrix
+    operators["Z"] = op_Z
+    assert build_1qubit_operator(
+        sim.samples_obj, [(2.0, "Z")], operators
+    ) == 2 * proj(dim, 2, 2) - 2 * proj(dim, 1, 1)
     # Check local operator building method:
+    with pytest.raises(
+        ValueError, match="The operations should be a list of tuples"
+    ):
+        sim.build_operator(("sigma_gg", ["target"]))
+    with pytest.raises(ValueError, match="If a 'global' operation is defined"):
+        sim.build_operator([("sigma_gg", ["target"]), ("sigma_gg", "global")])
     with pytest.raises(ValueError, match="Duplicate atom"):
         sim.build_operator([("sigma_gg", ["target", "target"])])
+    with pytest.raises(
+        ValueError, match="Each qubit can be targeted by only one operation."
+    ):
+        sim.build_operator(
+            [("sigma_gg", ["target"]), ("sigma_rr", ["target", "control1"])]
+        )
     with pytest.raises(ValueError, match="not a valid operator"):
         sim.build_operator([("wrong", ["target"])])
     with pytest.raises(ValueError, match="Invalid qubit names: {'wrong'}"):
         sim.build_operator([("sigma_gg", ["wrong"])])
-
-    # Check building operator with one operator
-    op_standard = sim.build_operator([("sigma_gg", ["target"])])
-    op_one = sim.build_operator(("sigma_gg", ["target"]))
-    assert np.linalg.norm(op_standard - op_one) < 1e-10
-
+    assert sim.build_operator([("sigma_gg", "global")]) == build_operator(
+        sim.samples_obj, reg.qubits, [("sigma_gg", "global")]
+    )
+    identity = qutip.tensor([qutip.qeye(dim) for _ in range(len(reg.qubits))])
+    assert sim.build_operator([("I", "global")]) == identity * len(reg.qubits)
     # Global ground-rydberg
     seq2 = Sequence(reg, DigitalAnalogDevice)
     seq2.declare_channel("global", "rydberg_global")
