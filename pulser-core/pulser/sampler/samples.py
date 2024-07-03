@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Optional, cast
 import numpy as np
 
 from pulser.channels.base_channel import (
+    multiple_bases_states,
     EIGENSTATES,
-    STATES_RANK,
     Channel,
     States,
 )
@@ -478,10 +478,7 @@ class SequenceSamples:
         """The basis of eigenstates used for simulation."""
         if len(self.used_bases) == 0:
             return EIGENSTATES["XY" if self._in_xy else "ground-rydberg"]
-        all_states = set().union(
-            *(EIGENSTATES[basis] for basis in self.used_bases)
-        )
-        return [state for state in STATES_RANK if state in all_states]
+        return multiple_bases_states(self.used_bases)
 
     @property
     def _in_xy(self) -> bool:

@@ -42,8 +42,7 @@ import pulser
 import pulser.devices as devices
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import (
-    EIGENSTATES,
-    STATES_RANK,
+    multiple_bases_states,
     Channel,
     States,
 )
@@ -467,10 +466,7 @@ class Sequence(Generic[DeviceType]):
 
     def get_addressed_states(self) -> list[States]:
         """Returns the states addressed by the declared channels."""
-        all_states = set().union(
-            *(set(EIGENSTATES[basis]) for basis in self.get_addressed_bases())
-        )
-        return [state for state in STATES_RANK if state in all_states]
+        return multiple_bases_states(set(self.get_addressed_bases()))
 
     @seq_decorators.screen
     def current_phase_ref(

@@ -35,6 +35,7 @@ ChannelType = TypeVar("ChannelType", bound="Channel")
 
 OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
 
+# States ranked in decreasing order of their associated eigenenergy
 States = Literal["u", "d", "r", "g", "h"]  # TODO: add "x" for leakage
 
 STATES_RANK = get_args(States)
@@ -44,6 +45,17 @@ EIGENSTATES: dict[str, list[States]] = {
     "digital": ["g", "h"],
     "XY": ["u", "d"],
 }
+
+# Check that states in EIGENSTATES are well ranked (highest energy first)
+for _, states in EIGENSTATES.items():
+    idx_0, idx_1 = STATES_RANK.index(states[0]), STATES_RANK.index(states[1])
+    assert idx_0 != -1 and idx_1 != -1 and idx_0 < idx_1
+
+
+def multiple_bases_states(bases: set[str]) -> list[States]:
+    """The states associated to a list of bases, ranked by their energies."""
+    all_states = set().union(*(set(EIGENSTATES[basis]) for basis in bases))
+    return [state for state in STATES_RANK if state in all_states]
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -104,8 +116,8 @@ class Channel(ABC):
     def eigenstates(self) -> list[States]:
         r"""The eigenstates associated with the basis.
 
-        Returns a tuple of labels, ranked decreasingly according
-        to their associated eigenenergy, as such:
+        Returns a tuple of labels, ranked in decreasing order
+        of their associated eigenenergy, as such:
 
         .. list-table::
             :align: center
