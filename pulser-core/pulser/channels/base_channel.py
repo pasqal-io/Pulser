@@ -21,7 +21,7 @@ from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Literal, Optional, Type, TypeVar, cast, get_args
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, Collection
 from scipy.fft import fft, fftfreq, ifft
 
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM
@@ -47,7 +47,7 @@ EIGENSTATES: dict[str, list[States]] = {
 }
 
 
-def multiple_bases_states(bases: set[str]) -> list[States]:
+def get_states_from_bases(bases: Collection[str]) -> list[States]:
     """The states associated to a list of bases, ranked by their energies."""
     all_states = set().union(*(set(EIGENSTATES[basis]) for basis in bases))
     return [state for state in STATES_RANK if state in all_states]

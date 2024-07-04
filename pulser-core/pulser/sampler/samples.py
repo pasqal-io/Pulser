@@ -13,7 +13,7 @@ from pulser.channels.base_channel import (
     EIGENSTATES,
     Channel,
     States,
-    multiple_bases_states,
+    get_states_from_bases,
 )
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
@@ -478,7 +478,7 @@ class SequenceSamples:
         """The basis of eigenstates used for simulation."""
         if len(self.used_bases) == 0:
             return EIGENSTATES["XY" if self._in_xy else "ground-rydberg"]
-        return multiple_bases_states(self.used_bases)
+        return get_states_from_bases(self.used_bases)
 
     @property
     def _in_xy(self) -> bool:

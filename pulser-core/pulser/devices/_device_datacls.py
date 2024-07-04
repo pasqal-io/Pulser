@@ -23,7 +23,7 @@ from typing import Any, Literal, cast, get_args
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
-from pulser.channels.base_channel import Channel, States, multiple_bases_states
+from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -273,7 +273,7 @@ class BaseDevice(ABC):
     @property
     def supported_states(self) -> list[States]:
         """Available states ranked by their energy levels (highest first)."""
-        return multiple_bases_states(self.supported_bases)
+        return get_states_from_bases(self.supported_bases)
 
     @property
     def interaction_coeff(self) -> float:
