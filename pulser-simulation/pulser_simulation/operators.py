@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Mapping
+from numbers import Number
+from typing import Collection, Sequence
 
 import qutip
 from numpy.typing import ArrayLike
 
-from pulser.channels.base_channel import STATES_RANK
+from pulser.channels.base_channel import States, STATES_RANK
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples
 
@@ -45,8 +47,7 @@ def default_operators(
         A dictionary composed of default operators as qutip.Qobj objects
         and their associated key.
     """
-    eigenstates = sampled_seq.eigenbasis
-    eigenbasis = [state for state in STATES_RANK if state in eigenstates]
+    eigenbasis = sampled_seq.eigenbasis
 
     dim = len(eigenbasis)
     basis = {b: qutip.basis(dim, i) for i, b in enumerate(eigenbasis)}
@@ -164,7 +165,7 @@ def build_1qubit_operator(
 
 def build_operator(
     sampled_seq: SequenceSamples,
-    qubits: Mapping[QubitId, ArrayLike],
+    qubit_ids: list[QubitId],
     operations: list[tuple],
     operators: Mapping[str, qutip.Qobj] | None = None,
 ) -> qutip.Qobj:
@@ -198,7 +199,8 @@ def build_operator(
             - ``[(qutip.sigmax(), 'global')]`` returns `XIII + IXII + IIXI +
                 IIIX`.
             - ``[(qutip.sigmax(), ["q1"])]`` returns ``IXII``.
-            - ``[(sigma_gg, ["q0"])]`` applies ``sigma_ggIII``.
+            - ``[(sigma_gg, ["q0"]), (sigma_rr, ["q1"])]`` applies
+                ``sigma_gg sigma_rr II``.
 
         If you define in `operators` a dictionnary containing
         {"X": qutip.sigmax()}, then the first two operations can also be
@@ -244,28 +246,28 @@ def build_operator(
             raise ValueError(
                 "Each qubit can be targeted by only one operation."
             )
-        if not target_qids_set.issubset(qubits.keys()):
+        if not target_qids_set.issubset(qubit_ids):
             raise ValueError(
-                "Invalid qubit names: " f"{target_qids_set - qubits.keys()}"
+                "Invalid qubit names: " f"{target_qids_set - set(qubit_ids)}"
             )
     # Generate default operators if no operators were given
     if operators is None:
         operators = default_operators(sampled_seq)
 
     # Build operator
-    op_list = [operators["I"] for j in range(len(qubits))]
-    _qid_index = {qid: i for i, qid in enumerate(qubits)}
+    op_list = [operators["I"] for j in range(len(qubit_ids))]
+    _qid_index = {qid: i for i, qid in enumerate(qubit_ids)}
 
     for operator, qids in operations:
         if qids == "global":
             return sum(
                 build_operator(
                     sampled_seq,
-                    qubits,
+                    qubit_ids,
                     [(operator, [q_id])],
                     operators,
                 )
-                for q_id in qubits
+                for q_id in qubit_ids
             )
         if isinstance(operator, str):
             try:
@@ -276,3 +278,277 @@ def build_operator(
             k = _qid_index[qubit]
             op_list[k] = operator
     return qutip.tensor(list(map(qutip.Qobj, op_list)))
+
+
+class QuditOperator:
+    r"""Creates a 1 qubit operator summing projectors and qutip objects.
+
+    Takes as argument a list of operations to apply on one qubit. Returns
+    the sum of these operations. The elements in operations can be a
+    ``qutip.Qobj`` or a string key. If ``operators`` is undefined, this string
+    can be "I" or "sigma_{a}{b}" with a, b elements of the computational basis
+    (sampled_seq.eigenbasis with "x" if with_leakage is True) and
+    ``sigma_{ab} = a * b^\dagger``.
+
+    Examples:
+        If we have a sampled sequence with only a Rydberg Channel, by default
+        the available operators are "I" and "sigma_ab" with a, b in ["r", "g"].
+        The operator ``sigma_gg - sigma_rr`` can be written as::
+
+            ```python
+                build_1qubit_operator(
+                    sampled_seq,
+                    [(1.0, "sigma_gg"), (-1.0, "sigma_rr")],
+                    with_leakage=True,
+                )
+            ```
+
+        We can also define our custom set of operators. For instance, by
+        setting `operators = {"X":qutip.sigmax(), "Z":qutip.sigmaz()}` you can
+        make combinations of these operators such as X-Z::
+
+        ```python
+            build_1qubit_operator(
+                sampled_seq,
+                [(1.0, "X"), (-1.0, "Z")],
+                operators=operators,
+            )
+        ```
+
+    Args:
+        sampled_seq: The SequenceSamples to consider. Provides the
+            computational basis in which the operators are defined.
+        operations: List of tuples `(operator, qubits)`.
+        operators: A dict of operators and their labels. If None, it is
+            composed of all the projectors on the computational basis
+            (with error state if with_leakage is True) and "I".
+
+
+    Returns:
+        The final operator as a qutip.Qobj object.
+    """
+
+    sampled_seq: SequenceSamples
+    operations: tuple[tuple[Number, list[str]]]
+    operators: Mapping[str, qutip.Qobj]
+
+    def __init__(
+        self,
+        sampled_seq: SequenceSamples,
+        operations: Sequence[tuple[Number, list[str]]],
+        operators: Mapping[str, qutip.Qobj] | None = None,
+    ) -> None:
+        self.sampled_seq = sampled_seq
+        self.eigenbasis = self.sampled_seq.eigenbasis
+        self.operators = (
+            default_operators(self.sampled_seq)
+            if operators is None
+            else operators
+        )
+        self.operations = tuple(operations)
+        self.operations_operators = [
+            operation[1] for operation in self.operations
+        ]
+        self.operations_coeffs = [
+            operation[0] for operation in self.operations
+        ]
+
+    @classmethod
+    def from_coeffs_operators(
+        cls,
+        sampled_seq: SequenceSamples,
+        operations_coeffs: list[Number],
+        operations_operators: list[str],
+        operators: Mapping[str, qutip.Qobj] | None = None,
+    ) -> QuditOperator:
+        return QuditOperator(
+            sampled_seq,
+            zip(operations_coeffs, operations_operators),
+            operators,
+        )
+
+    def build_operator(self):
+        return sum(
+            [
+                self.operation[0]
+                * build_operator(
+                    self.sampled_seq,
+                    {0: [0.0, 0.0]},
+                    [(operation[1], [0])],
+                    self.operators,
+                )
+                for operation in self.operations
+            ]
+        )
+
+    def __repr__(self):
+        return (
+            f"Operations: {self.operations} \n"
+            f"Eigenbasis: {self.eigenbasis} \n"
+            + f"Operators: {self.operators}"
+        )
+
+    def __str__(self):
+        return str(self.operations)
+
+
+class MultiQuditOperator:
+    r"""Creates a 1 qubit operator summing projectors and qutip objects.
+
+    Takes as argument a list of operations to apply on one qubit. Returns
+    the sum of these operations. The elements in operations can be a
+    ``qutip.Qobj`` or a string key. If ``operators`` is undefined, this string
+    can be "I" or "sigma_{a}{b}" with a, b elements of the computational basis
+    (sampled_seq.eigenbasis with "x" if with_leakage is True) and
+    ``sigma_{ab} = a * b^\dagger``.
+
+    Examples:
+        If we have a sampled sequence with only a Rydberg Channel, by default
+        the available operators are "I" and "sigma_ab" with a, b in ["r", "g"].
+        The operator ``sigma_gg - sigma_rr`` can be written as::
+
+            ```python
+                build_1qubit_operator(
+                    sampled_seq,
+                    [(1.0, "sigma_gg"), (-1.0, "sigma_rr")],
+                    with_leakage=True,
+                )
+            ```
+
+        We can also define our custom set of operators. For instance, by
+        setting `operators = {"X":qutip.sigmax(), "Z":qutip.sigmaz()}` you can
+        make combinations of these operators such as X-Z::
+
+        ```python
+            build_1qubit_operator(
+                sampled_seq,
+                [(1.0, "X"), (-1.0, "Z")],
+                operators=operators,
+            )
+        ```
+
+    Args:
+        sampled_seq: The SequenceSamples to consider. Provides the
+            computational basis in which the operators are defined.
+        operations: List of tuples `(operator, qubits)`.
+        operators: A dict of operators and their labels. If None, it is
+            composed of all the projectors on the computational basis
+            (with error state if with_leakage is True) and "I".
+
+
+    Returns:
+        The final operator as a qutip.Qobj object.
+    """
+
+    qubit_ids: tuple[str]
+    operations: tuple[tuple[Number, tuple[tuple[QuditOperator, str]]]]
+    operators: Mapping[str, qutip.Qobj]
+
+    def __init__(
+        self,
+        qubit_ids: tuple[str],
+        operations: (
+            Sequence[tuple[QuditOperator, str]]
+            | Sequence[tuple[Number, Sequence[tuple[QuditOperator, str]]]]
+        ),
+    ) -> None:
+        self.qubit_ids = qubit_ids
+        self.operations = tuple(operations)
+        if not isinstance(operations[0][0], Number):
+            self.operations = [(1.0, self.operations)]
+        elif not isinstance(self.operations[0][1][0], QuditOperator):
+            raise ValueError(
+                "Operations should be a Sequence of tuple[QuditOperator, str] or a Sequence"
+                " of tuple[Number, Sequence[tuple[QuditOperator, str]]]."
+            )
+        self.operations_operators = [
+            operation[1] for operation in self.operations
+        ]
+        self.operations_coeffs = [
+            operation[0] for operation in self.operations
+        ]
+        self.eigenbasis = []
+        self.operators = dict()
+        for operations_operator in self.operations_operators:
+            qudit_operators = [
+                tensor_operation[0] for tensor_operation in operations_operator
+            ]
+            eigenbases = set(
+                tuple(qudit_operator.eigenbasis)
+                for qudit_operator in qudit_operators
+            )
+            if len(eigenbases) > 1:
+                raise ValueError(
+                    "All the eigenbases defined in QuditOperators should match."
+                )
+            eigenbasis = list(eigenbases)[0]
+            if not self.eigenbasis:
+                self.eigenbasis = eigenbasis
+                self.sampled_seq = qudit_operators[0].sampled_seq
+            elif eigenbasis != self.eigenbasis:
+                raise ValueError(
+                    "All the eigenbases defined in QuditOperators should match."
+                )
+            for qudit_operator in qudit_operators:
+                for (
+                    operator_label,
+                    operator_value,
+                ) in qudit_operator.operators.items():
+                    if operator_label not in self.operators:
+                        self.operators[operator_label] = operator_value
+                    elif self.operators[operator_label] != operator_value:
+                        raise ValueError(
+                            f"Operator {operator_label} is defined differently in two QuditOperators."
+                        )
+
+    @classmethod
+    def from_coeffs_operators(
+        cls,
+        qubit_ids: tuple[str],
+        operations_coeffs: list[float],
+        operations_operators: list[Sequence[tuple[QuditOperator, str]]],
+    ) -> QuditOperator:
+        return QuditOperator(
+            qubit_ids, zip(operations_coeffs, operations_operators)
+        )
+
+    def build_operator(self):
+        return sum(
+            [
+                self.operation[0]
+                * build_operator(
+                    self.sampled_seq,
+                    self.qubit_ids,
+                    [
+                        (
+                            qudit_operation[0].build_operator(),
+                            qudit_operation[1],
+                        )
+                        for qudit_operation in operation[1]
+                    ],
+                    self.operators,
+                )
+                for operation in self.operations
+            ]
+        )
+
+    def __repr__(self):
+        return (
+            f"Operations: {self.__str__()} \n"
+            f"Eigenbasis: {self.eigenbasis} \n"
+            + f"Operators: {self.operators}"
+        )
+
+    def __str__(self):
+        return str(
+            tuple(
+                (
+                    operation[0],
+                    tuple(
+                        (tensor_operation[0].operations, tensor_operation[1])
+                        for tensor_operation in operation[1]
+                    ),
+                )
+                for operation in self.operations
+            )
+        )
