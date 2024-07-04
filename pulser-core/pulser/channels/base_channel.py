@@ -18,10 +18,19 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any, Literal, Optional, Type, TypeVar, cast, get_args
+from typing import (
+    Any,
+    Collection,
+    Literal,
+    Optional,
+    Type,
+    TypeVar,
+    cast,
+    get_args,
+)
 
 import numpy as np
-from numpy.typing import ArrayLike, Collection
+from numpy.typing import ArrayLike
 from scipy.fft import fft, fftfreq, ifft
 
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM

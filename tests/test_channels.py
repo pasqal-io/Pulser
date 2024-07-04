@@ -19,8 +19,8 @@ import pytest
 
 import pulser
 from pulser import Pulse
-from pulser.channels.base_channel import EIGENSTATES, STATES_RANK
 from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.base_channel import EIGENSTATES, STATES_RANK
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
