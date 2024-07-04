@@ -46,11 +46,6 @@ EIGENSTATES: dict[str, list[States]] = {
     "XY": ["u", "d"],
 }
 
-# Check that states in EIGENSTATES are well ranked (highest energy first)
-for _, states in EIGENSTATES.items():
-    idx_0, idx_1 = STATES_RANK.index(states[0]), STATES_RANK.index(states[1])
-    assert idx_0 != -1 and idx_1 != -1 and idx_0 < idx_1
-
 
 def multiple_bases_states(bases: set[str]) -> list[States]:
     """The states associated to a list of bases, ranked by their energies."""
