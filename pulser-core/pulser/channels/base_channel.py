@@ -17,17 +17,9 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 from dataclasses import MISSING, dataclass, field, fields
-from typing import (
-    Any,
-    Collection,
-    Literal,
-    Optional,
-    Type,
-    TypeVar,
-    cast,
-    get_args,
-)
+from typing import Any, Literal, Optional, Type, TypeVar, cast, get_args
 
 import numpy as np
 from numpy.typing import ArrayLike
