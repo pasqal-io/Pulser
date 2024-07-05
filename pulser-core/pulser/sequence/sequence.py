@@ -41,12 +41,7 @@ from numpy.typing import ArrayLike
 import pulser
 import pulser.devices as devices
 import pulser.sequence._decorators as seq_decorators
-from pulser.channels.base_channel import (
-    EIGENSTATES,
-    STATES_RANK,
-    Channel,
-    States,
-)
+from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
@@ -467,10 +462,7 @@ class Sequence(Generic[DeviceType]):
 
     def get_addressed_states(self) -> list[States]:
         """Returns the states addressed by the declared channels."""
-        all_states = set().union(
-            *(set(EIGENSTATES[basis]) for basis in self.get_addressed_bases())
-        )
-        return [state for state in STATES_RANK if state in all_states]
+        return get_states_from_bases(self.get_addressed_bases())
 
     @seq_decorators.screen
     def current_phase_ref(
