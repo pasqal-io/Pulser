@@ -17,8 +17,9 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any, Literal, Optional, Type, TypeVar, cast
+from typing import Any, Literal, Optional, Type, TypeVar, cast, get_args
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -34,6 +35,23 @@ warnings.filterwarnings("once", "A duration of")
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
 OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
+
+# States ranked in decreasing order of their associated eigenenergy
+States = Literal["u", "d", "r", "g", "h"]  # TODO: add "x" for leakage
+
+STATES_RANK = get_args(States)
+
+EIGENSTATES: dict[str, list[States]] = {
+    "ground-rydberg": ["r", "g"],
+    "digital": ["g", "h"],
+    "XY": ["u", "d"],
+}
+
+
+def get_states_from_bases(bases: Collection[str]) -> list[States]:
+    """The states associated to a list of bases, ranked by their energies."""
+    all_states = set().union(*(set(EIGENSTATES[basis]) for basis in bases))
+    return [state for state in STATES_RANK if state in all_states]
 
 
 @dataclass(init=True, repr=False, frozen=True)
@@ -91,11 +109,44 @@ class Channel(ABC):
         pass
 
     @property
+    def eigenstates(self) -> list[States]:
+        r"""The eigenstates associated with the basis.
+
+        Returns a tuple of labels, ranked in decreasing order
+        of their associated eigenenergy, as such:
+
+        .. list-table::
+            :align: center
+            :widths: 50 35 35
+            :header-rows: 1
+
+            * - Name
+              - Eigenstate (see :doc:`/conventions`)
+              - Associated label
+            * - Up state
+              - :math:`|0\rangle`
+              - ``"u"``
+            * - Down state
+              - :math:`|1\rangle`
+              - ``"d"``
+            * - Rydberg state
+              - :math:`|r\rangle`
+              - ``"r"``
+            * - Ground state
+              - :math:`|g\rangle`
+              - ``"g"``
+            * - Hyperfine state
+              - :math:`|h\rangle`
+              - ``"h"``
+        """
+        return EIGENSTATES[self.basis]
+
+    @property
     def _internal_param_valid_options(self) -> dict[str, tuple[str, ...]]:
         """Internal parameters and their valid options."""
         return dict(
             name=("Rydberg", "Raman", "Microwave", "DMM"),
-            basis=("ground-rydberg", "digital", "XY"),
+            basis=tuple(EIGENSTATES.keys()),
             addressing=("Local", "Global"),
         )
 

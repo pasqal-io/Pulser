@@ -9,7 +9,12 @@ from typing import TYPE_CHECKING, Optional, cast
 
 import numpy as np
 
-from pulser.channels.base_channel import Channel
+from pulser.channels.base_channel import (
+    EIGENSTATES,
+    Channel,
+    States,
+    get_states_from_bases,
+)
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
 from pulser.register.weight_maps import DetuningMap
@@ -467,6 +472,13 @@ class SequenceSamples:
             )
             if not ch_samples.is_empty()
         }
+
+    @property
+    def eigenbasis(self) -> list[States]:
+        """The basis of eigenstates used for simulation."""
+        if len(self.used_bases) == 0:
+            return EIGENSTATES["XY" if self._in_xy else "ground-rydberg"]
+        return get_states_from_bases(self.used_bases)
 
     @property
     def _in_xy(self) -> bool:

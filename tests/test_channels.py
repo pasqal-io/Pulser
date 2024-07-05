@@ -20,6 +20,7 @@ import pytest
 import pulser
 from pulser import Pulse
 from pulser.channels import Microwave, Raman, Rydberg
+from pulser.channels.base_channel import EIGENSTATES, STATES_RANK
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
@@ -138,6 +139,21 @@ def test_device_channels():
                 )
                 assert ch.max_targets >= 1
                 assert ch.max_targets == int(ch.max_targets)
+
+
+def test_eigenstates():
+    for _, states in EIGENSTATES.items():
+        idx_0, idx_1 = STATES_RANK.index(states[0]), STATES_RANK.index(
+            states[1]
+        )
+        assert idx_0 != -1 and idx_1 != -1, f"States must be in {STATES_RANK}."
+        assert (
+            idx_0 < idx_1
+        ), "Eigenstates must be ranked with highest energy first."
+
+    assert Raman.Global(None, None).eigenstates == ["g", "h"]
+    assert Rydberg.Global(None, None).eigenstates == ["r", "g"]
+    assert Microwave.Global(None, None).eigenstates == ["u", "d"]
 
 
 def test_validate_duration():
