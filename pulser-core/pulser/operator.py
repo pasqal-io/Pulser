@@ -29,43 +29,53 @@ from pulser.register import QubitId
 @dataclass
 class QuditOperatorString:
     """A linear combination of 1-qudit operators."""
+
     coefficients: list[Number]
     operators: list[str]
 
     @property
-    def operations(self):
+    def operations(self) -> tuple[tuple[Number, str]]:
+        """Returns the operations associated with the operator."""
         return zip(self.coefficients, self.operators)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.operations)
 
 
 @dataclass
 class TargetedOperatorString:
     """A multi-qudit operator defined as a tensor product."""
+
     kron_operations: tuple[QuditOperatorString, set[str]]
 
     @property
-    def operations(self):
+    def operations(self) -> tuple[tuple[tuple[Number, str]], str]:
+        """Returns the operations associated with the operator."""
         return tuple(
-            (kron_op[0].operations, kron_op[1])
+            (kron_op[0].operations, tuple(kron_op[1]))
             for kron_op in self.kron_operations
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.operations)
 
 
 class OperatorString:
     """A linear combination of multi-qudit operators."""
+
     coefficients: list[Number]
     operators: list[TargetedOperatorString]
 
     @property
-    def operations(self):
-        return zip(self.coefficients, (op.operations for op in self.operators))
+    def operations(
+        self,
+    ) -> tuple[Number, tuple[Number, tuple[tuple[tuple[Number, str]], str]]]:
+        """Returns the operations associated with the operator."""
+        return zip(
+            self.coefficients, list(op.operations for op in self.operators)
+        )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.operations)
 
     def __add__(self, operator: OperatorString) -> OperatorString:
@@ -86,8 +96,10 @@ class OperatorString:
         )
 
 
+@dataclass
 class Operator(ABC):
-    """Defines a generic operator class"""
+    """Defines a generic operator class."""
+
     operator_string: OperatorString
     qubit_ids: Collection[QubitId]
     operators_dict: Mapping
@@ -105,21 +117,24 @@ class Operator(ABC):
                 used_qubits.union(set(kron_op[1]))
         if not used_operators.issubset(self.operators_dict.keys()):
             raise ValueError(
-                "All operators defined in operator_string must be mapped to a value in operators_dict."
+                "All operators defined in operator_string must be mapped"
+                " to a value in operators_dict."
             )
         if not used_qubits.issubset(self.qubit_ids):
             raise ValueError(
-                "qubit_ids must contain at least all the qubits defined in operator_string."
+                "qubit_ids must contain at least all the qubits defined"
+                " in operator_string."
             )
 
     def __add__(self, operator: Operator) -> Operator:
-        """Defines the sum of two operators."""
+        """Sum the current operator with a second one."""
         if not isinstance(operator, OperatorString):
             raise TypeError("Right operand for + must be an Operator")
         for op_key, op_value in self.operators_dict.items():
             if op_key in operator and operator[op_key] != op_value:
                 raise ValueError(
-                    f"Operator {op_key} is defined in the two operators with different values."
+                    f"Operator {op_key} is defined in the two operators"
+                    " with different values."
                 )
         return Operator(
             self.operator + operator,
@@ -135,7 +150,7 @@ class Operator(ABC):
 
     @abstractmethod
     def kron(self, operator: Operator):
-        """Makes the Kroneker product of two operators."""
+        """Kroneker product of the current operator by a second one."""
         pass
 
     @abstractmethod
@@ -145,5 +160,5 @@ class Operator(ABC):
 
     @abstractmethod
     def __matmul__(self, operator: Operator) -> Operator:
-        """Multiplies the current Operator by a state."""
+        """Multiplies the current Operator by a second one."""
         pass
