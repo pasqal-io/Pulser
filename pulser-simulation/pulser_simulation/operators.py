@@ -23,7 +23,7 @@ from typing import Collection, Sequence
 import qutip
 from numpy.typing import ArrayLike
 
-from pulser.channels.base_channel import States, STATES_RANK
+from pulser.channels.base_channel import STATES_RANK, States
 from pulser.register.base_register import QubitId
 from pulser.sampler.samples import SequenceSamples
 
