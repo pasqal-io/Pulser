@@ -41,6 +41,20 @@ States = Literal["u", "d", "r", "g", "h"]  # TODO: add "x" for leakage
 
 STATES_RANK = get_args(States)
 
+
+def check_eigenbasis(states: list[States]) -> None:
+    """Checks that a list of states is an eigenbasis."""
+    indices = [STATES_RANK.index(state) for state in states]
+    if np.any(np.array(indices) == -1):
+        raise ValueError(f"States must be in {STATES_RANK}.")
+    if len(set(indices)) != len(indices):
+        raise ValueError("States can only appear once in eigenbasis.")
+    if np.sort(indices) != indices:
+        raise ValueError(
+            "Eigenstates must be ranked with highest energy first."
+        )
+
+
 EIGENSTATES: dict[str, list[States]] = {
     "ground-rydberg": ["r", "g"],
     "digital": ["g", "h"],
