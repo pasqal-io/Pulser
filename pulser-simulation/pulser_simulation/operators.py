@@ -18,20 +18,18 @@ from __future__ import annotations
 import itertools
 from collections.abc import Mapping
 from dataclasses import dataclass
-from numbers import Number
-from typing import Collection, Sequence
+from typing import Collection
 
 import qutip
 
 from pulser.channels.base_channel import States, check_eigenbasis
-from pulser.operator import (
+from pulser.operators.operator import (
     Operator,
     OperatorString,
     QuditOperatorString,
     TargetedOperatorString,
 )
 from pulser.register.base_register import QubitId
-from pulser.sampler.samples import SequenceSamples
 
 
 def default_operators(

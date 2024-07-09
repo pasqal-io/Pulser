@@ -17,14 +17,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import UserList
 from collections.abc import Collection
 import itertools
 from dataclasses import dataclass
 from numbers import Number
 from typing import Mapping
 
-from pulser.channels import State
+from pulser.channels import State, STATES_RANK
 from pulser.register import QubitId
+
+PROJECTORS = {"sigma_" + a + b for a in STATES_RANK for b in STATES_RANK}
 
 
 def _check_kron_object(
@@ -70,6 +73,11 @@ class QuditString:
     coefficients: list[Number]
     states: list[State]
 
+    def __post_init__(self):
+        for state in self.states:
+            if state not in STATES_RANK:
+                raise ValueError(f"State {state} does not exist.")
+
     def as_tuple(self) -> tuple[tuple[Number, State]]:
         """Returns tuple of (coefficient, state label)."""
         return zip(self.coefficients, self.states)
@@ -92,6 +100,15 @@ class QuditOperatorString:
     coefficients: list[Number]
     operators: list[str]
 
+    def __post_init__(self):
+        for operator in self.operators:
+            if operator not in PROJECTORS:
+                raise ValueError(
+                    f"Operators must be among {PROJECTORS}, not {operator}."
+                )
+        if len(set(self.operators)) < len(self.operators):
+            raise ValueError("Operators can only be used once.")
+
     @property
     def operations(self) -> tuple[tuple[Number, str]]:
         """Returns the operations associated with the operator."""
@@ -99,6 +116,67 @@ class QuditOperatorString:
 
     def __str__(self) -> str:
         return str(self.operations)
+
+    def __rmul__(self, scalar: Number) -> QuditOperatorString:
+        return QuditOperatorString(
+            [coeff * scalar for coeff in self.coefficients], self.operators
+        )
+
+    def as_dict(self):
+        return {
+            operator: self.coefficients[i]
+            for (i, operator) in enumerate(self.operators)
+        }
+
+    def __mul__(self, state: QuditString) -> QuditString:
+        left_states = set(
+            [projector.split("_")[0] for projector in self.operators]
+        )
+        dict_op = self.as_dict()
+        coeffs = []
+        states = []
+        for left_basis in left_states:
+            coeff = 0
+            for i, right_basis in enumerate(state.states):
+                try:
+                    coeff += (
+                        dict_op["sigma_" + left_basis + right_basis]
+                        * state.coefficients[i]
+                    )
+                except KeyError:
+                    pass
+            coeffs.append(coeff)
+            states.append(left_basis)
+        return QuditString(coeffs, states)
+
+    def __matmul__(self, operator: QuditOperatorString) -> QuditOperatorString:
+        left_states = set(
+            [projector.split("_")[0] for projector in self.operators]
+        )
+        current_right_states = set(
+            [projector.split("_")[1] for projector in self.operators]
+        )
+        right_states = set([projector.split("_")[1] for projector in operator])
+        current_dict_op = self.as_dict()
+        dict_op = operator.as_dict()
+        coeffs = []
+        ops = []
+        for left_basis in left_states:
+            for right_basis in right_states:
+                coeff = 0
+                for middle_basis in current_right_states:
+                    try:
+                        coeff += (
+                            current_dict_op[
+                                "sigma_" + left_basis + middle_basis
+                            ]
+                            * dict_op["sigma_" + middle_basis + right_basis]
+                        )
+                    except KeyError:
+                        pass
+                coeffs.append(coeff)
+                ops.append("sigma_" + left_basis + right_basis)
+        return QuditOperatorString(coeffs, ops)
 
 
 @dataclass
@@ -236,13 +314,22 @@ class OperatorString:
         return OperatorString(coeffs, ops)
 
 
+class TimeOperatorString(UserList[OperatorString]):
+
+    def __init__(self, operators: list[OperatorString]):
+        super().__init__(operators)
+
+    def operations(self):
+        return tuple(self.data)
+
+
 @dataclass
 class Operator(ABC):
     """Defines a generic operator class."""
 
     operator_string: OperatorString
     qubit_ids: Collection[QubitId]
-    operators_dict: Mapping
+    operators_dict: Mapping[str, QuditOperatorString]
 
     def __post_init__(self):
         if not isinstance(self.operator_string, OperatorString):
@@ -313,3 +400,20 @@ class Operator(ABC):
     def __matmul__(self, operator: Operator) -> Operator:
         """Multiplies the current Operator by a second one."""
         pass
+
+
+class TimeOperator:
+
+    def __init__(self, operators: list[Operator], times: list[float]):
+        if len(set([operator.qubit_ids for operator in operators])) > 1:
+            raise ValueError(
+                "The qubit_ids of all the operators must be the same."
+            )
+        self.operators = {}
+        for operator in operators:
+            if not isinstance(operator, Operator):
+                raise ValueError(
+                    f"Operators should be an Operator instance, not {type(operator)}"
+                )
+        self.operators = operators
+        self.times = times
