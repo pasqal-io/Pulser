@@ -67,9 +67,6 @@ class QPUBackend(RemoteBackend):
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`
                 property.
-            open_submission: A flag indicating whether or not the submission
-                should be for a single job or accept future jobs before
-                closing.
 
         Returns:
             The results, which can be accessed once all sequences have been

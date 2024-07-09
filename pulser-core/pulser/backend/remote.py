@@ -74,11 +74,11 @@ class RemoteResults(Results):
     @property
     def submission_id(self) -> str:
         """
-        Return submission id  which is associated with a associated
-        with the newly submitted payloads on the remote service
+        Submission ID associated with the newly submitted run on
+        the remote backend.
 
         Returns:
-            UUID in string format representing most recent submission
+            UUID in string format representing the most recent submission.
         """
         return self._submission_id
 
@@ -128,9 +128,6 @@ class RemoteConnection(ABC):
         to.
         """
         pass
-        # raise NotImplementedError(
-        #     "Unable to close submission through this remote connection"
-        # )
 
     @abstractmethod
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
