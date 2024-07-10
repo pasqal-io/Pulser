@@ -93,7 +93,9 @@ class _MockConnection(RemoteConnection):
     def submit(self, sequence, wait: bool = False, **kwargs) -> RemoteResults:
         return RemoteResults("abcd", self)
 
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(
+        self, submission_id: str
+    ) -> typing.Sequence[Result | None]:
         # First job has results,
         # Second one has no results (e.g. in case of error)
         return (
