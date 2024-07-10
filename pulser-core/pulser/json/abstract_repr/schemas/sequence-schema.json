@@ -687,6 +687,44 @@
       ],
       "type": "object"
     },
+    "OpModifyEOM": {
+      "additionalProperties": false,
+      "properties": {
+        "amp_on": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The new amplitude of the EOM pulses (in rad/µs)."
+        },
+        "channel": {
+          "$ref": "#/definitions/ChannelName",
+          "description": "The name of the channel currently in EOM mode."
+        },
+        "correct_phase_drift": {
+          "description": "Performs a phase shift to correct for the phase drift incurred while modifying the EOM setpoint.",
+          "type": "boolean"
+        },
+        "detuning_on": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The new detuning of the EOM pulses (in rad/µs)."
+        },
+        "op": {
+          "const": "modify_eom_setpoint",
+          "type": "string"
+        },
+        "optimal_detuning_off": {
+          "$ref": "#/definitions/ParametrizedNum",
+          "description": "The new optimal value of detuning (in rad/µs) when there is no pulse being  played. It will choose the closest value among the existing options."
+        }
+      },
+      "required": [
+        "op",
+        "channel",
+        "amp_on",
+        "detuning_on",
+        "optimal_detuning_off",
+        "correct_phase_drift"
+      ],
+      "type": "object"
+    },
     "OpPhaseShift": {
       "additionalProperties": false,
       "description": "Adds a separate phase shift to atoms. If possible, OpPulse phase and post_phase_shift are preferred.",
@@ -864,6 +902,9 @@
         },
         {
           "$ref": "#/definitions/OpEnableEOM"
+        },
+        {
+          "$ref": "#/definitions/OpModifyEOM"
         },
         {
           "$ref": "#/definitions/OpDisableEOM"
