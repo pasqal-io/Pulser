@@ -43,7 +43,7 @@ import pulser.devices as devices
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
-from pulser.channels.eom import RydbergEOM
+from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence,
@@ -1139,54 +1139,35 @@ class Sequence(Generic[DeviceType]):
             raise RuntimeError(
                 f"The '{channel}' channel is already in EOM mode."
             )
+
         channel_obj = self.declared_channels[channel]
         if not channel_obj.supports_eom():
             raise TypeError(f"Channel '{channel}' does not have an EOM.")
 
-        on_pulse = Pulse.ConstantPulse(
-            channel_obj.min_duration, amp_on, detuning_on, 0.0
+        detuning_off, switching_beams = self._process_eom_parameters(
+            channel_obj, amp_on, detuning_on, optimal_detuning_off
         )
-        stored_opt_detuning_off = optimal_detuning_off
-        if not isinstance(on_pulse, Parametrized):
-            channel_obj.validate_pulse(on_pulse)
-            amp_on = cast(float, amp_on)
-            detuning_on = cast(float, detuning_on)
-            eom_config = cast(RydbergEOM, channel_obj.eom_config)
-            if not isinstance(optimal_detuning_off, Parametrized):
-                (
-                    detuning_off,
-                    switching_beams,
-                ) = eom_config.calculate_detuning_off(
-                    amp_on,
-                    detuning_on,
-                    optimal_detuning_off,
-                    return_switching_beams=True,
+        if not self.is_parametrized():
+            detuning_off = cast(float, detuning_off)
+            phase_drift_params = _PhaseDriftParams(
+                drift_rate=-detuning_off,
+                # enable_eom() calls wait for fall, so the block only
+                # starts after fall time
+                ti=self.get_duration(channel, include_fall_time=True),
+            )
+            self._schedule.enable_eom(
+                channel,
+                cast(float, amp_on),
+                cast(float, detuning_on),
+                detuning_off,
+                switching_beams,
+            )
+            if correct_phase_drift:
+                buffer_slot = self._last(channel)
+                drift = phase_drift_params.calc_phase_drift(buffer_slot.tf)
+                self._phase_shift(
+                    -drift, *buffer_slot.targets, basis=channel_obj.basis
                 )
-                off_pulse = Pulse.ConstantPulse(
-                    channel_obj.min_duration, 0.0, detuning_off, 0.0
-                )
-                channel_obj.validate_pulse(off_pulse)
-                # Update optimal_detuning_off to match the chosen detuning_off
-                # This minimizes the changes to the sequence when the device
-                # is switched
-                stored_opt_detuning_off = detuning_off
-
-            if not self.is_parametrized():
-                phase_drift_params = _PhaseDriftParams(
-                    drift_rate=-detuning_off,
-                    # enable_eom() calls wait for fall, so the block only
-                    # starts after fall time
-                    ti=self.get_duration(channel, include_fall_time=True),
-                )
-                self._schedule.enable_eom(
-                    channel, amp_on, detuning_on, detuning_off, switching_beams
-                )
-                if correct_phase_drift:
-                    buffer_slot = self._last(channel)
-                    drift = phase_drift_params.calc_phase_drift(buffer_slot.tf)
-                    self._phase_shift(
-                        -drift, *buffer_slot.targets, basis=channel_obj.basis
-                    )
 
         # Manually store the call to "enable_eom_mode" so that the updated
         # 'optimal_detuning_off' is stored
@@ -1201,7 +1182,7 @@ class Sequence(Generic[DeviceType]):
                     channel=channel,
                     amp_on=amp_on,
                     detuning_on=detuning_on,
-                    optimal_detuning_off=stored_opt_detuning_off,
+                    optimal_detuning_off=detuning_off,
                     correct_phase_drift=correct_phase_drift,
                 ),
             )
@@ -1252,6 +1233,90 @@ class Sequence(Generic[DeviceType]):
                     *ch_schedule[-1].targets,
                     basis=ch_schedule.channel_obj.basis,
                 )
+
+    @seq_decorators.verify_parametrization
+    @seq_decorators.block_if_measured
+    def modify_eom_setpoint(
+        self,
+        channel: str,
+        amp_on: Union[float, Parametrized],
+        detuning_on: Union[float, Parametrized],
+        optimal_detuning_off: Union[float, Parametrized] = 0.0,
+        correct_phase_drift: bool = False,
+    ) -> None:
+        """Modifies the setpoint of an ongoing EOM mode operation.
+
+        Note:
+            Modifying the EOM setpoint will automatically enforce a buffer.
+            The detuning will go to the `detuning_off` value during
+            this buffer. This buffer will not wait for pulses on other
+            channels to finish, so calling `Sequence.align()` or
+            `Sequence.delay()` beforehand is necessary to avoid eventual
+            conflicts.
+
+        Args:
+            channel: The name of the channel currently in EOM mode.
+            amp_on: The new amplitude of the EOM pulses (in rad/µs).
+            detuning_on: The new detuning of the EOM pulses (in rad/µs).
+            optimal_detuning_off: The new optimal value of detuning (in rad/µs)
+                when there is no pulse being played. It will choose the closest
+                value among the existing options.
+            correct_phase_drift: Performs a phase shift to correct for the
+                phase drift incurred while modifying the EOM setpoint.
+        """
+        if not self.is_in_eom_mode(channel):
+            raise RuntimeError(f"The '{channel}' channel is not in EOM mode.")
+
+        channel_obj = self.declared_channels[channel]
+        detuning_off, switching_beams = self._process_eom_parameters(
+            channel_obj, amp_on, detuning_on, optimal_detuning_off
+        )
+
+        if not self.is_parametrized():
+            detuning_off = cast(float, detuning_off)
+            self._schedule.disable_eom(channel, _skip_buffer=True)
+            old_phase_drift_params = self._get_last_eom_pulse_phase_drift(
+                channel
+            )
+            new_phase_drift_params = _PhaseDriftParams(
+                drift_rate=-detuning_off,
+                ti=self.get_duration(channel, include_fall_time=False),
+            )
+            self._schedule.enable_eom(
+                channel,
+                cast(float, amp_on),
+                cast(float, detuning_on),
+                detuning_off,
+                switching_beams,
+                _skip_wait_for_fall=True,
+            )
+            if correct_phase_drift:
+                buffer_slot = self._last(channel)
+                drift = old_phase_drift_params.calc_phase_drift(
+                    buffer_slot.ti
+                ) + new_phase_drift_params.calc_phase_drift(buffer_slot.tf)
+                self._phase_shift(
+                    -drift, *buffer_slot.targets, basis=channel_obj.basis
+                )
+
+        # Manually store the call to "modify_eom_setpoint" so that the updated
+        # 'optimal_detuning_off' is stored
+        call_container = (
+            self._to_build_calls if self.is_parametrized() else self._calls
+        )
+        call_container.append(
+            _Call(
+                "modify_eom_setpoint",
+                (),
+                dict(
+                    channel=channel,
+                    amp_on=amp_on,
+                    detuning_on=detuning_on,
+                    optimal_detuning_off=detuning_off,
+                    correct_phase_drift=correct_phase_drift,
+                ),
+            )
+        )
 
     @seq_decorators.store
     @seq_decorators.mark_non_empty
@@ -2388,6 +2453,43 @@ class Sequence(Generic[DeviceType]):
                 f"Invalid protocol '{protocol}', only accepts protocols: "
                 + ", ".join(valid_protocols)
             )
+
+    def _process_eom_parameters(
+        self,
+        channel_obj: Channel,
+        amp_on: Union[float, Parametrized],
+        detuning_on: Union[float, Parametrized],
+        optimal_detuning_off: Union[float, Parametrized],
+    ) -> tuple[float | Parametrized, tuple[RydbergBeam, ...]]:
+        on_pulse = Pulse.ConstantPulse(
+            channel_obj.min_duration, amp_on, detuning_on, 0.0
+        )
+        stored_opt_detuning_off = optimal_detuning_off
+        switching_beams: tuple[RydbergBeam, ...] = ()
+        if not isinstance(on_pulse, Parametrized):
+            channel_obj.validate_pulse(on_pulse)
+            amp_on = cast(float, amp_on)
+            detuning_on = cast(float, detuning_on)
+            eom_config = cast(RydbergEOM, channel_obj.eom_config)
+            if not isinstance(optimal_detuning_off, Parametrized):
+                (
+                    detuning_off,
+                    switching_beams,
+                ) = eom_config.calculate_detuning_off(
+                    amp_on,
+                    detuning_on,
+                    optimal_detuning_off,
+                    return_switching_beams=True,
+                )
+                off_pulse = Pulse.ConstantPulse(
+                    channel_obj.min_duration, 0.0, detuning_off, 0.0
+                )
+                channel_obj.validate_pulse(off_pulse)
+                # Update optimal_detuning_off to match the chosen detuning_off
+                # This minimizes the changes to the sequence when the device
+                # is switched
+                stored_opt_detuning_off = detuning_off
+        return stored_opt_detuning_off, switching_beams
 
     def _reset_parametrized(self) -> None:
         """Resets all attributes related to parametrization."""
