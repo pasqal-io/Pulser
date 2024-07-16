@@ -49,7 +49,7 @@ def test_init():
         and "100" in str_config
         and "Solver Options" in str_config
     )
-    config = SimConfig(noise=("depolarizing", "relaxation"))
+    config = SimConfig(noise=("depolarizing", "relaxation", "doppler"))
     assert config.temperature == 5e-5
     assert config.to_noise_model().temperature == 50
     str_config = config.__str__(True)

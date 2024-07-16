@@ -48,8 +48,8 @@ class TestNoiseModel:
         if value < 0:
             with pytest.raises(
                 ValueError,
-                match=f"'{param}' must be None or greater "
-                f"than or equal to zero, not {value}.",
+                match=f"'{param}' must be greater than "
+                f"or equal to zero, not {value}.",
             ):
                 NoiseModel(**{param: value})
         else:
@@ -72,7 +72,14 @@ class TestNoiseModel:
             match=f"'{param}' must be greater than or equal to zero and "
             f"smaller than or equal to one, not {value}",
         ):
-            NoiseModel(**{param: value})
+            NoiseModel(
+                # Define the strict positive quantities first so that their
+                # absence doesn't trigger their own errors
+                runs=1,
+                samples_per_run=1,
+                laser_waist=1.0,
+                **{param: value},
+            )
 
     @pytest.fixture
     def matrices(self):
@@ -132,15 +139,16 @@ class TestNoiseModel:
 
     def test_eq(self, matrices):
         final_fields = dict(
-            noise_types=("SPAM", "eff_noise"),
+            p_false_pos=0.1,
             eff_noise_rates=(0.1, 0.4),
             eff_noise_opers=(((0, 1), (1, 0)), ((0, -1j), (1j, 0))),
         )
         noise_model = NoiseModel(
-            noise_types=["SPAM", "eff_noise"],
+            p_false_pos=0.1,
             eff_noise_rates=[0.1, 0.4],
             eff_noise_opers=[matrices["X"], matrices["Y"]],
         )
         assert noise_model == NoiseModel(**final_fields)
+        assert set(noise_model.noise_types) == {"SPAM", "eff_noise"}
         for param in final_fields:
             assert final_fields[param] == getattr(noise_model, param)
