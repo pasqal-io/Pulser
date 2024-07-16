@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
 from math import sqrt
-from typing import Any, Optional, Type, TypeVar, Union
+from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
@@ -105,8 +105,8 @@ class SimConfig:
     """
 
     noise: Union[NoiseTypes, tuple[NoiseTypes, ...]] = ()
-    runs: int = _LEGACY_DEFAULTS["runs"]
-    samples_per_run: int = _LEGACY_DEFAULTS["samples_per_run"]
+    runs: int = cast(int, _LEGACY_DEFAULTS["runs"])
+    samples_per_run: int = cast(int, _LEGACY_DEFAULTS["samples_per_run"])
     temperature: float = _LEGACY_DEFAULTS["temperature"]
     laser_waist: float = _LEGACY_DEFAULTS["laser_waist"]
     amp_sigma: float = _LEGACY_DEFAULTS["amp_sigma"]
@@ -184,7 +184,7 @@ class SimConfig:
             )
         self._change_attribute("temperature", self.temperature / 1e6)
 
-        NoiseModel._check_noise_types(self.noise)
+        NoiseModel._check_noise_types(cast(Tuple[NoiseTypes], self.noise))
         self._check_spam_dict()
         self._check_eff_noise()
         NoiseModel._validate_parameters(

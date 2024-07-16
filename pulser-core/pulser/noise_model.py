@@ -15,8 +15,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, Literal, get_args
+from typing import Any, Literal, cast, get_args
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -87,8 +88,8 @@ _LEGACY_DEFAULTS = {
     "dephasing_rate": 0.05,
     "hyperfine_dephasing_rate": 1e-3,
     "depolarizing_rate": 0.05,
-    "eff_noise_rates": (),
-    "eff_noise_opers": (),
+    #     "eff_noise_rates": (),
+    #     "eff_noise_opers": (),
 }
 
 
@@ -221,7 +222,7 @@ class NoiseModel:
             eff_noise_rates=to_tuple(eff_noise_rates),
             eff_noise_opers=to_tuple(eff_noise_opers),
         )
-        relevant_params = set()
+        relevant_params: set[str] = set()
         if noise_types is not None:
             # TODO: Deprecate
             self._check_noise_types(noise_types)
@@ -237,7 +238,10 @@ class NoiseModel:
                     "doppler",
                     "amplitude",
                 )  # TODO: Consider case when amp_sigma == 0.
-                or (n_ == "SPAM" and param_vals["state_prep_error"] > 0.0)
+                or (
+                    n_ == "SPAM"
+                    and cast(float, param_vals["state_prep_error"]) > 0.0
+                )
                 for n_ in noise_types
             ):
                 # Define runs and samples per run from the legacy defaults
@@ -259,13 +263,13 @@ class NoiseModel:
                 relevant_params.update(NOISE_TYPE_PARAMS[noise_type_])
                 if noise_type_ in ("doppler", "amplitude") or (
                     noise_type_ == "SPAM"
-                    and param_vals["state_prep_error"] > 0.0
+                    and cast(float, param_vals["state_prep_error"]) > 0.0
                 ):
                     relevant_params.update(("runs", "samples_per_run"))
 
         self._check_eff_noise(
-            param_vals["eff_noise_rates"],
-            param_vals["eff_noise_opers"],
+            cast(tuple, param_vals["eff_noise_rates"]),
+            cast(tuple, param_vals["eff_noise_opers"]),
             "eff_noise" in (noise_types or true_noise_types),
         )
 
@@ -286,7 +290,7 @@ class NoiseModel:
             object.__setattr__(self, param_, param_vals[param_])
 
     @staticmethod
-    def _check_noise_types(noise_types: tuple[NoiseTypes, ...]) -> None:
+    def _check_noise_types(noise_types: Sequence[NoiseTypes]) -> None:
         for noise_type in noise_types:
             if noise_type not in get_args(NoiseTypes):
                 raise ValueError(
@@ -297,8 +301,8 @@ class NoiseModel:
 
     @staticmethod
     def _check_eff_noise(
-        eff_noise_rates: tuple[float, ...],
-        eff_noise_opers: tuple[tuple, ...],
+        eff_noise_rates: Sequence[float],
+        eff_noise_opers: Sequence[ArrayLike],
         check_contents: bool,
     ) -> None:
         if len(eff_noise_opers) != len(eff_noise_rates):
