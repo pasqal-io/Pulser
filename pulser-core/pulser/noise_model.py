@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, Literal, cast, get_args
+from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -38,7 +38,7 @@ NoiseTypes = Literal[
     "eff_noise",
 ]
 
-NOISE_TYPE_PARAMS = {
+_NOISE_TYPE_PARAMS = {
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
@@ -50,7 +50,7 @@ NOISE_TYPE_PARAMS = {
 
 _PARAM_TO_NOISE_TYPE = {
     param: noise_type
-    for noise_type, params in NOISE_TYPE_PARAMS.items()
+    for noise_type, params in _NOISE_TYPE_PARAMS.items()
     for param in params
 }
 
@@ -222,27 +222,21 @@ class NoiseModel:
             eff_noise_rates=to_tuple(eff_noise_rates),
             eff_noise_opers=to_tuple(eff_noise_opers),
         )
-        relevant_params: set[str] = set()
+
         if noise_types is not None:
             # TODO: Deprecate
             self._check_noise_types(noise_types)
-            for nt in noise_types:
-                relevant_params.update(NOISE_TYPE_PARAMS[nt])
-            for p_ in relevant_params:
-                # Replace undefined relevant params by the legacy default
-                if param_vals[p_] is None:
-                    param_vals[p_] = _LEGACY_DEFAULTS[p_]
+            for nt_ in noise_types:
+                for p_ in _NOISE_TYPE_PARAMS[nt_]:
+                    # Replace undefined relevant params by the legacy default
+                    if param_vals[p_] is None:
+                        param_vals[p_] = _LEGACY_DEFAULTS[p_]
 
-        # Get rid of unnecessary None's
-        for p_ in _POSITIVE | _PROBABILITY_LIKE:
-            param_vals[p_] = param_vals[p_] or 0.0
-
-        true_noise_types = set()
-        for param_ in param_vals:
-            if param_vals[param_] and param_ in _PARAM_TO_NOISE_TYPE:
-                noise_type_ = _PARAM_TO_NOISE_TYPE[param_]
-                true_noise_types.add(noise_type_)
-                relevant_params.update(NOISE_TYPE_PARAMS[noise_type_])
+        true_noise_types: set[NoiseTypes] = {
+            cast(NoiseTypes, _PARAM_TO_NOISE_TYPE[p_])
+            for p_ in param_vals
+            if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
+        }
 
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
@@ -250,31 +244,30 @@ class NoiseModel:
             "eff_noise" in (noise_types or true_noise_types),
         )
 
-        if noise_types is not None and true_noise_types != set(noise_types):
-            raise ValueError(  # TODO: Write better
-                "Explicitly defining noise parameters without using the noise"
-            )
+        # Get rid of unnecessary None's
+        for p_ in _POSITIVE | _PROBABILITY_LIKE:
+            param_vals[p_] = param_vals[p_] or 0.0
 
-        if any(
-            n_ == "doppler"
-            or (
-                n_ == "amplitude"
-                and cast(float, param_vals["amp_sigma"]) > 0.0
-            )
-            or (
-                n_ == "SPAM"
-                and cast(float, param_vals["state_prep_error"]) > 0.0
-            )
-            for n_ in true_noise_types
-        ):
-            relevant_params.update(run_params := ("runs", "samples_per_run"))
-            if noise_types is not None:
-                for p_ in run_params:
-                    param_vals[p_] = param_vals[p_] or _LEGACY_DEFAULTS[p_]
+        relevant_params = self._find_relevant_params(
+            true_noise_types,
+            cast(float, param_vals["state_prep_error"]),
+            cast(float, param_vals["amp_sigma"]),
+            cast(Union[float, None], param_vals["laser_waist"]),
+        )
 
-        # Disregard laser_waist when not defined
-        if param_vals["laser_waist"] is None:
-            relevant_params.discard("laser_waist")
+        if noise_types is not None:
+            if true_noise_types != set(noise_types):
+                raise ValueError(
+                    "The explicit definition of noise types (deprecated) is"
+                    " not compatible with the modification of unrelated noise "
+                    "parameters. Defining only the relevant noise parameters "
+                    "(without specifying the noise types) is recommended."
+                )
+            run_params_ = [
+                p for p in relevant_params if p in ("runs", "samples_per_run")
+            ]
+            for p_ in run_params_:
+                param_vals[p_] = param_vals[p_] or _LEGACY_DEFAULTS[p_]
 
         relevant_param_vals = {
             p: param_vals[p]
@@ -286,6 +279,27 @@ class NoiseModel:
         object.__setattr__(self, "noise_types", tuple(true_noise_types))
         for param_ in param_vals:
             object.__setattr__(self, param_, param_vals[param_])
+
+    @staticmethod
+    def _find_relevant_params(
+        noise_types: Collection[NoiseTypes],
+        state_prep_error: float,
+        amp_sigma: float,
+        laser_waist: float | None,
+    ) -> set[str]:
+        relevant_params: set[str] = set()
+        for nt_ in noise_types:
+            relevant_params.update(_NOISE_TYPE_PARAMS[nt_])
+            if (
+                nt_ == "doppler"
+                or (nt_ == "amplitude" and amp_sigma != 0.0)
+                or (nt_ == "SPAM" and state_prep_error != 0.0)
+            ):
+                relevant_params.update(("runs", "samples_per_run"))
+        # Disregard laser_waist when not defined
+        if laser_waist is None:
+            relevant_params.discard("laser_waist")
+        return relevant_params
 
     @staticmethod
     def _check_noise_types(noise_types: Sequence[NoiseTypes]) -> None:

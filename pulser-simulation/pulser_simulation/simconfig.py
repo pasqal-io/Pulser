@@ -23,7 +23,6 @@ import qutip
 
 from pulser.noise_model import (
     _LEGACY_DEFAULTS,
-    NOISE_TYPE_PARAMS,
     NoiseModel,
     NoiseTypes,
 )
@@ -127,21 +126,17 @@ class SimConfig:
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
         """Creates a SimConfig from a NoiseModel."""
         custom_param_map = {
-            "noise_types": "noise",
             "state_prep_error": "eta",
             "p_false_pos": "epsilon",
             "p_false_neg": "epsilon_prime",
         }
-        kwargs = {}
-        relevant_params = {"noise_types"}
-        for nt in noise_model.noise_types:
-            relevant_params.update(NOISE_TYPE_PARAMS[nt])
-            if (
-                nt == "doppler"
-                or (nt == "amplitude" and noise_model.amp_sigma != 0.0)
-                or (nt == "SPAM" and noise_model.state_prep_error != 0.0)
-            ):
-                relevant_params.update(("runs", "samples_per_run"))
+        kwargs = dict(noise=noise_model.noise_types)
+        relevant_params = NoiseModel._find_relevant_params(
+            noise_model.noise_types,
+            noise_model.state_prep_error,
+            noise_model.amp_sigma,
+            noise_model.laser_waist,
+        )
         for param in relevant_params:
             kwargs[custom_param_map.get(param, param)] = getattr(
                 noise_model, param
@@ -156,23 +151,15 @@ class SimConfig:
             "p_false_pos": "epsilon",
             "p_false_neg": "epsilon_prime",
         }
+        relevant_params = NoiseModel._find_relevant_params(
+            cast(Tuple[NoiseTypes, ...], self.noise),
+            self.eta,
+            self.amp_sigma,
+            self.laser_waist,
+        )
         kwargs = {}
-        for noise_type in self.noise:
-            for param in NOISE_TYPE_PARAMS[noise_type]:
-                kwargs[param] = getattr(
-                    self, custom_param_map.get(param, param)
-                )
-        if any(
-            (
-                nt == "doppler"
-                or (nt == "amplitude" and self.amp_sigma != 0.0)
-                or (nt == "SPAM" and self.eta != 0.0)
-            )
-            for nt in self.noise
-        ):
-            kwargs["runs"] = self.runs
-            kwargs["samples_per_run"] = self.samples_per_run
-
+        for param in relevant_params:
+            kwargs[param] = getattr(self, custom_param_map.get(param, param))
         if "temperature" in kwargs:
             kwargs["temperature"] *= 1e6  # Converts back to µK
         return NoiseModel(**kwargs)
