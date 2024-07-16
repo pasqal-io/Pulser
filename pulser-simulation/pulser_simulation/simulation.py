@@ -587,7 +587,18 @@ class QutipEmulator:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise"}
+            {
+                "dephasing",
+                "relaxation",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+                "amplitude",
+            }
+        ) and (
+            # If amplitude is in noise, not resampling needs amp_sigma=0.
+            "amplitude" not in self.config.noise
+            or self.config.amp_sigma == 0.0
         ):
             # If there is "SPAM", the preparation errors must be zero
             if "SPAM" not in self.config.noise or self.config.eta == 0:

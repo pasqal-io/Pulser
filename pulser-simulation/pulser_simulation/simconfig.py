@@ -136,8 +136,10 @@ class SimConfig:
         relevant_params = {"noise_types"}
         for nt in noise_model.noise_types:
             relevant_params.update(NOISE_TYPE_PARAMS[nt])
-            if nt in ("doppler", "amplitude") or (
-                nt == "SPAM" and noise_model.state_prep_error != 0.0
+            if (
+                nt == "doppler"
+                or (nt == "amplitude" and noise_model.amp_sigma != 0.0)
+                or (nt == "SPAM" and noise_model.state_prep_error != 0.0)
             ):
                 relevant_params.update(("runs", "samples_per_run"))
         for param in relevant_params:
@@ -161,9 +163,12 @@ class SimConfig:
                     self, custom_param_map.get(param, param)
                 )
         if any(
-            noise_type in ("doppler", "amplitude")
-            or (noise_type == "SPAM" and self.eta != 0.0)
-            for noise_type in self.noise
+            (
+                nt == "doppler"
+                or (nt == "amplitude" and self.amp_sigma != 0.0)
+                or (nt == "SPAM" and self.eta != 0.0)
+            )
+            for nt in self.noise
         ):
             kwargs["runs"] = self.runs
             kwargs["samples_per_run"] = self.samples_per_run

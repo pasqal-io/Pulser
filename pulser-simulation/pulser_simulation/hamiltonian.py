@@ -353,6 +353,12 @@ class Hamiltonian:
         Also builds qutip.Qobjs related to the Sequence if not built already,
         and refreshes potential noise parameters by drawing new at random.
 
+        Warning:
+            The refreshed noise parameters (when update=True) are only those
+            that change from shot to shot (ie doppler and state preparation).
+            Amplitude fluctuations change from pulse to pulse and are always
+            applied in `_extract_samples()`.
+
         Args:
             update: Whether to update the noise parameters.
         """

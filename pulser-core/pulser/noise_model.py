@@ -232,24 +232,6 @@ class NoiseModel:
                 # Replace undefined relevant params by the legacy default
                 if param_vals[p_] is None:
                     param_vals[p_] = _LEGACY_DEFAULTS[p_]
-            if any(
-                n_
-                in (
-                    "doppler",
-                    "amplitude",
-                )  # TODO: Consider case when amp_sigma == 0.
-                or (
-                    n_ == "SPAM"
-                    and cast(float, param_vals["state_prep_error"]) > 0.0
-                )
-                for n_ in noise_types
-            ):
-                # Define runs and samples per run from the legacy defaults
-                # when randomization is required
-                run_params = ("runs", "samples_per_run")
-                relevant_params.update(run_params)
-                for p_ in run_params:
-                    param_vals[p_] = _LEGACY_DEFAULTS[p_]
 
         # Get rid of unnecessary None's
         for p_ in _POSITIVE | _PROBABILITY_LIKE:
@@ -261,11 +243,6 @@ class NoiseModel:
                 noise_type_ = _PARAM_TO_NOISE_TYPE[param_]
                 true_noise_types.add(noise_type_)
                 relevant_params.update(NOISE_TYPE_PARAMS[noise_type_])
-                if noise_type_ in ("doppler", "amplitude") or (
-                    noise_type_ == "SPAM"
-                    and cast(float, param_vals["state_prep_error"]) > 0.0
-                ):
-                    relevant_params.update(("runs", "samples_per_run"))
 
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
@@ -277,6 +254,27 @@ class NoiseModel:
             raise ValueError(  # TODO: Write better
                 "Explicitly defining noise parameters without using the noise"
             )
+
+        if any(
+            n_ == "doppler"
+            or (
+                n_ == "amplitude"
+                and cast(float, param_vals["amp_sigma"]) > 0.0
+            )
+            or (
+                n_ == "SPAM"
+                and cast(float, param_vals["state_prep_error"]) > 0.0
+            )
+            for n_ in true_noise_types
+        ):
+            relevant_params.update(run_params := ("runs", "samples_per_run"))
+            if noise_types is not None:
+                for p_ in run_params:
+                    param_vals[p_] = param_vals[p_] or _LEGACY_DEFAULTS[p_]
+
+        # Disregard laser_waist when not defined
+        if param_vals["laser_waist"] is None:
+            relevant_params.discard("laser_waist")
 
         relevant_param_vals = {
             p: param_vals[p]
