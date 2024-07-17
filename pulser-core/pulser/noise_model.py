@@ -286,9 +286,17 @@ class NoiseModel:
         }
         self._validate_parameters(relevant_param_vals)
 
-        object.__setattr__(self, "noise_types", tuple(true_noise_types))
-        for param_ in param_vals:
-            object.__setattr__(self, param_, param_vals[param_])
+        object.__setattr__(
+            self, "noise_types", tuple(sorted(true_noise_types))
+        )
+        for param_, val_ in param_vals.items():
+            object.__setattr__(self, param_, val_)
+            if val_ and param_ not in relevant_params:
+                warnings.warn(
+                    f"{param_!r} is not used by any active noise type "
+                    f"{self.noise_types}.",
+                    stacklevel=2,
+                )
 
     @staticmethod
     def _find_relevant_params(

@@ -11,6 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
+import dataclasses
+import re
+
 import numpy as np
 import pytest
 
@@ -18,12 +23,60 @@ from pulser.noise_model import NoiseModel
 
 
 class TestNoiseModel:
-    def test_bad_noise_type(self):
-        with pytest.raises(
-            ValueError, match="'bad_noise' is not a valid noise type."
-        ):
-            with pytest.warns(DeprecationWarning):
-                NoiseModel(noise_types=("bad_noise",))
+
+    @pytest.mark.parametrize(
+        "params, noise_types",
+        [
+            ({"p_false_pos", "dephasing_rate"}, {"SPAM", "dephasing"}),
+            (
+                {
+                    "state_prep_error",
+                    "relaxation_rate",
+                    "runs",
+                    "samples_per_run",
+                },
+                {"SPAM", "relaxation"},
+            ),
+            (
+                {
+                    "temperature",
+                    "depolarizing_rate",
+                    "runs",
+                    "samples_per_run",
+                },
+                {"doppler", "depolarizing"},
+            ),
+            (
+                {"amp_sigma", "runs", "samples_per_run"},
+                {"amplitude"},
+            ),
+            (
+                {"laser_waist", "hyperfine_dephasing_rate"},
+                {"amplitude", "dephasing"},
+            ),
+        ],
+    )
+    def test_init(self, params, noise_types):
+        noise_model = NoiseModel(**{p: 1.0 for p in params})
+        assert set(noise_model.noise_types) == noise_types
+        relevant_params = NoiseModel._find_relevant_params(
+            noise_types,
+            noise_model.state_prep_error,
+            noise_model.amp_sigma,
+            noise_model.laser_waist,
+        )
+        assert all(getattr(noise_model, p) == 1.0 for p in params)
+        assert all(
+            not getattr(noise_model, p) for p in relevant_params - params
+        )
+
+    @pytest.mark.parametrize(
+        "noise_param", ["relaxation_rate", "p_false_neg", "laser_waist"]
+    )
+    @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
+    def test_unused_params(self, unused_param, noise_param):
+        with pytest.warns(UserWarning, match=f"'{unused_param}' is not used"):
+            NoiseModel(**{unused_param: 100, noise_param: 1.0})
 
     @pytest.mark.parametrize(
         "param",
@@ -112,12 +165,6 @@ class TestNoiseModel:
                 eff_noise_rates=["0.1"],
                 eff_noise_opers=[np.eye(2)],
             )
-        with pytest.raises(
-            ValueError,
-            match="The effective noise parameters have not been filled.",
-        ):
-            with pytest.warns(DeprecationWarning):
-                NoiseModel(noise_types=("eff_noise",))
         with pytest.raises(TypeError, match="not castable to a Numpy array"):
             NoiseModel(
                 eff_noise_rates=[2.0],
@@ -149,3 +196,142 @@ class TestNoiseModel:
         assert set(noise_model.noise_types) == {"SPAM", "eff_noise"}
         for param in final_fields:
             assert final_fields[param] == getattr(noise_model, param)
+
+    def test_relevant_params(self):
+        assert NoiseModel._find_relevant_params({"SPAM"}, 0.0, 0.5, 100) == {
+            "state_prep_error",
+            "p_false_pos",
+            "p_false_neg",
+        }
+        assert NoiseModel._find_relevant_params({"SPAM"}, 0.1, 0.5, 100) == {
+            "state_prep_error",
+            "p_false_pos",
+            "p_false_neg",
+            "runs",
+            "samples_per_run",
+        }
+
+        assert NoiseModel._find_relevant_params(
+            {"doppler"}, 0.0, 0.0, None
+        ) == {"temperature", "runs", "samples_per_run"}
+
+        assert NoiseModel._find_relevant_params(
+            {"amplitude"}, 0.0, 1.0, None
+        ) == {"amp_sigma", "runs", "samples_per_run"}
+        assert NoiseModel._find_relevant_params(
+            {"amplitude"}, 0.0, 0.0, 100.0
+        ) == {"amp_sigma", "laser_waist"}
+        assert NoiseModel._find_relevant_params(
+            {"amplitude"}, 0.0, 0.5, 100.0
+        ) == {"amp_sigma", "laser_waist", "runs", "samples_per_run"}
+
+        assert NoiseModel._find_relevant_params(
+            {"dephasing"}, 0.0, 0.0, None
+        ) == {"dephasing_rate", "hyperfine_dephasing_rate"}
+        assert NoiseModel._find_relevant_params(
+            {"relaxation"}, 0.0, 0.0, None
+        ) == {"relaxation_rate"}
+        assert NoiseModel._find_relevant_params(
+            {"depolarizing"}, 0.0, 0.0, None
+        ) == {"depolarizing_rate"}
+        assert NoiseModel._find_relevant_params(
+            {"eff_noise"}, 0.0, 0.0, None
+        ) == {"eff_noise_rates", "eff_noise_opers"}
+
+    def test_repr(self):
+        assert repr(NoiseModel()) == "NoiseModel(noise_types=())"
+        assert (
+            repr(NoiseModel(p_false_pos=0.1, relaxation_rate=0.2))
+            == "NoiseModel(noise_types=('SPAM', 'relaxation'), "
+            "state_prep_error=0.0, p_false_pos=0.1, p_false_neg=0.0, "
+            "relaxation_rate=0.2)"
+        )
+        assert (
+            repr(NoiseModel(hyperfine_dephasing_rate=0.2))
+            == "NoiseModel(noise_types=('dephasing',), "
+            "dephasing_rate=0.0, hyperfine_dephasing_rate=0.2)"
+        )
+        assert (
+            repr(NoiseModel(amp_sigma=0.3, runs=100, samples_per_run=1))
+            == "NoiseModel(noise_types=('amplitude',), "
+            "runs=100, samples_per_run=1, amp_sigma=0.3)"
+        )
+        assert (
+            repr(NoiseModel(laser_waist=100.0))
+            == "NoiseModel(noise_types=('amplitude',), "
+            "laser_waist=100.0, amp_sigma=0.0)"
+        )
+
+
+class TestLegacyNoiseModel:
+    def test_noise_type_errors(self):
+        with pytest.raises(
+            ValueError, match="'bad_noise' is not a valid noise type."
+        ):
+            with pytest.deprecated_call():
+                NoiseModel(noise_types=("bad_noise",))
+
+        with pytest.raises(
+            ValueError,
+            match="The effective noise parameters have not been filled.",
+        ):
+            with pytest.deprecated_call():
+                NoiseModel(noise_types=("eff_noise",))
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "The explicit definition of noise types (deprecated) is"
+                " not compatible with the modification of unrelated noise "
+                "parameters"
+            ),
+        ):
+            with pytest.deprecated_call():
+                NoiseModel(noise_types=("SPAM",), laser_waist=100.0)
+
+    @pytest.mark.parametrize(
+        "noise_type", ["SPAM", "doppler", "amplitude", "dephasing"]
+    )
+    def test_legacy_init(self, noise_type):
+        expected_relevant_params = dict(
+            SPAM={
+                "state_prep_error",
+                "p_false_pos",
+                "p_false_neg",
+                "runs",
+                "samples_per_run",
+            },
+            amplitude={"laser_waist", "amp_sigma", "runs", "samples_per_run"},
+            doppler={"temperature", "runs", "samples_per_run"},
+            dephasing={"dephasing_rate", "hyperfine_dephasing_rate"},
+        )
+        non_zero_param = tuple(expected_relevant_params[noise_type])[0]
+
+        with pytest.warns(
+            DeprecationWarning,
+            match="The explicit definition of noise types is deprecated",
+        ):
+            noise_model = NoiseModel(
+                **{"noise_types": (noise_type,), non_zero_param: 1}
+            )
+
+        # Check that the parameter is not overwritten by the default
+        assert getattr(noise_model, non_zero_param) == 1
+
+        relevant_params = NoiseModel._find_relevant_params(
+            {noise_type},
+            # These values don't matter, they just have to be > 0
+            state_prep_error=0.1,
+            amp_sigma=0.5,
+            laser_waist=100.0,
+        )
+        assert relevant_params == expected_relevant_params[noise_type]
+
+        for f in dataclasses.fields(noise_model):
+            val = getattr(noise_model, f.name)
+            if f.name == "noise_types":
+                assert val == (noise_type,)
+            elif f.name in relevant_params:
+                assert val > 0.0
+            else:
+                assert not val

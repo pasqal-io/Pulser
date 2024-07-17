@@ -529,6 +529,7 @@ class QutipEmulator:
                 raise ValueError("`progress_bar` must be a bool.")
 
             if (
+                # TODO: Check that the relevant dephasing parameter is > 0.
                 "dephasing" in self.config.noise
                 or "relaxation" in self.config.noise
                 or "depolarizing" in self.config.noise
