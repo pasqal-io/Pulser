@@ -21,11 +21,7 @@ from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
-from pulser.noise_model import (
-    _LEGACY_DEFAULTS,
-    NoiseModel,
-    NoiseTypes,
-)
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
@@ -130,7 +126,7 @@ class SimConfig:
             "p_false_pos": "epsilon",
             "p_false_neg": "epsilon_prime",
         }
-        kwargs = dict(noise=noise_model.noise_types)
+        kwargs: dict[str, Any] = dict(noise=noise_model.noise_types)
         relevant_params = NoiseModel._find_relevant_params(
             noise_model.noise_types,
             noise_model.state_prep_error,

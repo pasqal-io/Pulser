@@ -22,7 +22,8 @@ class TestNoiseModel:
         with pytest.raises(
             ValueError, match="'bad_noise' is not a valid noise type."
         ):
-            NoiseModel(noise_types=("bad_noise",))
+            with pytest.warns(DeprecationWarning):
+                NoiseModel(noise_types=("bad_noise",))
 
     @pytest.mark.parametrize(
         "param",
@@ -97,19 +98,17 @@ class TestNoiseModel:
             ValueError, match="The provided rates must be greater than 0."
         ):
             NoiseModel(
-                noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I"], matrices["X"]],
                 eff_noise_rates=[-1.0, 0.5],
             )
 
     def test_eff_noise_opers(self, matrices):
         with pytest.raises(ValueError, match="The operators list length"):
-            NoiseModel(noise_types=("eff_noise",), eff_noise_rates=[1.0])
+            NoiseModel(eff_noise_rates=[1.0])
         with pytest.raises(
             TypeError, match="eff_noise_rates is a list of floats"
         ):
             NoiseModel(
-                noise_types=("eff_noise",),
                 eff_noise_rates=["0.1"],
                 eff_noise_opers=[np.eye(2)],
             )
@@ -117,22 +116,20 @@ class TestNoiseModel:
             ValueError,
             match="The effective noise parameters have not been filled.",
         ):
-            NoiseModel(noise_types=("eff_noise",))
+            with pytest.warns(DeprecationWarning):
+                NoiseModel(noise_types=("eff_noise",))
         with pytest.raises(TypeError, match="not castable to a Numpy array"):
             NoiseModel(
-                noise_types=("eff_noise",),
                 eff_noise_rates=[2.0],
                 eff_noise_opers=[{(1.0, 0), (0.0, -1)}],
             )
         with pytest.raises(ValueError, match="is not a 2D array."):
             NoiseModel(
-                noise_types=("eff_noise",),
                 eff_noise_opers=[2.0],
                 eff_noise_rates=[1.0],
             )
         with pytest.raises(NotImplementedError, match="Operator's shape"):
             NoiseModel(
-                noise_types=("eff_noise",),
                 eff_noise_opers=[matrices["I3"]],
                 eff_noise_rates=[1.0],
             )

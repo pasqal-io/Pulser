@@ -118,11 +118,9 @@ def test_eff_noise_opers(matrices):
 
 def test_from_noise_model():
     noise_model = NoiseModel(
-        noise_types=("SPAM",),
         p_false_neg=0.4,
         p_false_pos=0.1,
-        state_prep_error=0.05,
     )
     assert SimConfig.from_noise_model(noise_model) == SimConfig(
-        noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.05
+        noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.0
     )

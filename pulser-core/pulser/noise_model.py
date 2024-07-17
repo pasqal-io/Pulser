@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from collections.abc import Collection, Sequence
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Literal, Union, cast, get_args
@@ -222,7 +223,18 @@ class NoiseModel:
         )
 
         if noise_types is not None:
-            # TODO: Deprecate
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                warnings.warn(
+                    "The explicit definition of noise types is deprecated; "
+                    "doing so will use legacy default values for all relevant "
+                    "parameters that are not given a custom value. Instead, "
+                    "defining only the necessary parameters is reccomended; "
+                    "doing so (when the noise types are not explicitly given) "
+                    "will disregard all undefined parameters.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             self._check_noise_types(noise_types)
             for nt_ in noise_types:
                 for p_ in _NOISE_TYPE_PARAMS[nt_]:

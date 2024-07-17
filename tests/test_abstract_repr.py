@@ -78,10 +78,8 @@ phys_Chadoq2 = replace(
         replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
     ),
     default_noise_model=NoiseModel(
-        noise_types=("SPAM", "relaxation", "dephasing"),
         p_false_pos=0.02,
         p_false_neg=0.01,
-        state_prep_error=0.0,  # To avoid Hamiltonian resampling
         relaxation_rate=0.01,
         dephasing_rate=0.2,
     ),
@@ -178,7 +176,6 @@ def test_register(reg: Register | Register3D):
     [
         NoiseModel(),
         NoiseModel(
-            noise_types=("eff_noise",),
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),
         ),

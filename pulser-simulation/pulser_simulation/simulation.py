@@ -250,33 +250,16 @@ class QutipEmulator:
         diff_noise_set = new_noise_set - old_noise_set
         # Create temporary param_dict to add noise parameters:
         param_dict: dict[str, Any] = asdict(self._hamiltonian.config)
-        # Begin populating with added noise parameters:
-        param_dict["noise_types"] = tuple(new_noise_set)
-        if "SPAM" in diff_noise_set:
-            param_dict["state_prep_error"] = noise_model.state_prep_error
-            param_dict["p_false_pos"] = noise_model.p_false_pos
-            param_dict["p_false_neg"] = noise_model.p_false_neg
-        if "doppler" in diff_noise_set:
-            param_dict["temperature"] = noise_model.temperature
-        if "amplitude" in diff_noise_set:
-            param_dict["laser_waist"] = noise_model.laser_waist
-            param_dict["amp_sigma"] = noise_model.amp_sigma
-        if "dephasing" in diff_noise_set:
-            param_dict["dephasing_rate"] = noise_model.dephasing_rate
-            param_dict["hyperfine_dephasing_rate"] = (
-                noise_model.hyperfine_dephasing_rate
-            )
-        if "relaxation" in diff_noise_set:
-            param_dict["relaxation_rate"] = noise_model.relaxation_rate
-        if "depolarizing" in diff_noise_set:
-            param_dict["depolarizing_rate"] = noise_model.depolarizing_rate
-        if "eff_noise" in diff_noise_set:
-            param_dict["eff_noise_opers"] = noise_model.eff_noise_opers
-            param_dict["eff_noise_rates"] = noise_model.eff_noise_rates
-        # update runs:
-        param_dict["runs"] = noise_model.runs
-        param_dict["samples_per_run"] = noise_model.samples_per_run
+        relevant_params = NoiseModel._find_relevant_params(
+            diff_noise_set,
+            noise_model.state_prep_error,
+            noise_model.amp_sigma,
+            noise_model.laser_waist,
+        )
+        for param in relevant_params:
+            param_dict[param] = getattr(noise_model, param)
         # set config with the new parameters:
+        param_dict.pop("noise_types")
         self._hamiltonian.set_config(NoiseModel(**param_dict))
 
     def show_config(self, solver_options: bool = False) -> None:
