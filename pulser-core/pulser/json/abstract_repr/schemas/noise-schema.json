@@ -66,7 +66,10 @@
           "type": "number"
         },
         "laser_waist": {
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "noise_types": {
           "items": {
@@ -84,16 +87,25 @@
           "type": "number"
         },
         "runs": {
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "samples_per_run": {
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "state_prep_error": {
           "type": "number"
         },
         "temperature": {
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "required": [
