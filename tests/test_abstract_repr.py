@@ -175,6 +175,8 @@ def test_register(reg: Register | Register3D):
     "noise_model",
     [
         NoiseModel(),
+        NoiseModel(laser_waist=100),
+        NoiseModel(temperature=100, runs=10, samples_per_run=1),
         NoiseModel(
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),

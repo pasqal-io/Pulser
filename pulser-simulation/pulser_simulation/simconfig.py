@@ -47,6 +47,14 @@ SUPPORTED_NOISES: dict = {
     },
 }
 
+# Maps the noise model parameters with a different name in SimConfig
+_DIFF_NOISE_PARAMS = {
+    "noise_types": "noise",
+    "state_prep_error": "eta",
+    "p_false_pos": "epsilon",
+    "p_false_neg": "epsilon_prime",
+}
+
 
 def doppler_sigma(temperature: float) -> float:
     """Standard deviation for Doppler shifting due to thermal motion.
@@ -121,11 +129,6 @@ class SimConfig:
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
         """Creates a SimConfig from a NoiseModel."""
-        custom_param_map = {
-            "state_prep_error": "eta",
-            "p_false_pos": "epsilon",
-            "p_false_neg": "epsilon_prime",
-        }
         kwargs: dict[str, Any] = dict(noise=noise_model.noise_types)
         relevant_params = NoiseModel._find_relevant_params(
             noise_model.noise_types,
@@ -134,19 +137,13 @@ class SimConfig:
             noise_model.laser_waist,
         )
         for param in relevant_params:
-            kwargs[custom_param_map.get(param, param)] = getattr(
+            kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
                 noise_model, param
             )
         return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
         """Creates a NoiseModel from the SimConfig."""
-        custom_param_map = {
-            "noise_types": "noise",
-            "state_prep_error": "eta",
-            "p_false_pos": "epsilon",
-            "p_false_neg": "epsilon_prime",
-        }
         relevant_params = NoiseModel._find_relevant_params(
             cast(Tuple[NoiseTypes, ...], self.noise),
             self.eta,
@@ -155,7 +152,7 @@ class SimConfig:
         )
         kwargs = {}
         for param in relevant_params:
-            kwargs[param] = getattr(self, custom_param_map.get(param, param))
+            kwargs[param] = getattr(self, _DIFF_NOISE_PARAMS.get(param, param))
         if "temperature" in kwargs:
             kwargs["temperature"] *= 1e6  # Converts back to µK
         return NoiseModel(**kwargs)
