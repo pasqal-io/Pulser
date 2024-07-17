@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Collection, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy as np
@@ -88,12 +88,10 @@ _LEGACY_DEFAULTS = {
     "dephasing_rate": 0.05,
     "hyperfine_dephasing_rate": 1e-3,
     "depolarizing_rate": 0.05,
-    #     "eff_noise_rates": (),
-    #     "eff_noise_opers": (),
 }
 
 
-@dataclass(init=False, frozen=True)
+@dataclass(init=False, repr=False, frozen=True)
 class NoiseModel:
     """Specifies the noise model parameters for emulation.
 
@@ -384,6 +382,20 @@ class NoiseModel:
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
         return all_fields
+
+    def __repr__(self) -> str:
+        relevant_params = self._find_relevant_params(
+            self.noise_types,
+            self.state_prep_error,
+            self.amp_sigma,
+            self.laser_waist,
+        )
+        relevant_params.add("noise_types")
+        params_list = []
+        for f in fields(self):
+            if f.name in relevant_params:
+                params_list.append(f"{f.name}={getattr(self, f.name)!r}")
+        return f"{self.__class__.__name__}({', '.join(params_list)})"
 
     def to_abstract_repr(self) -> str:
         """Serializes the noise model into an abstract JSON object."""
