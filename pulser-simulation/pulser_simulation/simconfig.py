@@ -20,7 +20,7 @@ from math import sqrt
 from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
-
+import pulser.math as pm
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 
 MASS = 1.45e-25  # kg
@@ -158,6 +158,15 @@ class SimConfig:
         return NoiseModel(**kwargs)
 
     def __post_init__(self) -> None:
+        # change effective noise operator type
+        self._change_attribute(
+            "eff_noise_opers",
+            SimConfig._change_eff_noise_oper_type(self.eff_noise_opers),
+        )
+
+        # change rates to AbstractArray type
+        self._change_rate_type()
+
         # only one noise was given as argument : convert it to a tuple
         if isinstance(self.noise, str):
             self._change_attribute("noise", (self.noise,))
