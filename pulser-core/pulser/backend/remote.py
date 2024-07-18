@@ -13,11 +13,12 @@
 # limitations under the License.
 """Base classes for remote backend execution."""
 from __future__ import annotations
-
+from typing import Type
+from types import TracebackType
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast, Self
 
 from pulser.backend.abc import Backend
 from pulser.devices import Device
@@ -96,7 +97,12 @@ class RemoteConnection(ABC):
 
     @abstractmethod
     def submit(
-        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+        self,
+        sequence: Sequence,
+        wait: bool = False,
+        open: bool = False,
+        batch_id: str | None = None,
+        **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
         pass
@@ -142,12 +148,14 @@ class RemoteBackend(Backend):
         mimic_qpu: bool = False,
     ) -> None:
         """Starts a new remote backend instance."""
+
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(connection, RemoteConnection):
             raise TypeError(
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
+        self.batch_id = ""
 
     @staticmethod
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
@@ -161,3 +169,35 @@ class RemoteBackend(Backend):
                     "All elements of 'job_params' must be dictionaries; "
                     f"got {type(d)} instead."
                 )
+
+    def open_batch(self) -> Self:
+        """
+        Create an open batch that can continue to recieve new job submissions
+        as long as the submissions are submitted within an open
+        context manager. The batch will be closed when the scope of
+        the context manager ends.
+
+        Returns:
+            A class instance with an associated batch_id property
+        """
+        # Create batch and receive submission id
+        submission = cast(
+            RemoteResults, self._connection.submit(self._sequence, open=True)
+        )
+        self.batch_id = submission._submission_id
+        return self
+
+    def __enter__(self):
+        # enter returns an instance of self to use open_batch
+        # as a context manager
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        # On context exit, we make a remote call to close the open batch
+        self._connection._close_batch(self.batch_id)
+        self.batch_id = ""

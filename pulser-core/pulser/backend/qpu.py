@@ -66,7 +66,10 @@ class QPUBackend(RemoteBackend):
             job_params or [], self._sequence.device.max_runs
         )
         results = self._connection.submit(
-            self._sequence, job_params=job_params, wait=wait
+            self._sequence,
+            job_params=job_params,
+            wait=wait,
+            batch_id=self.batch_id,
         )
         return cast(RemoteResults, results)
 

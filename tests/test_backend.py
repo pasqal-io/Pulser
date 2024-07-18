@@ -17,7 +17,7 @@ import re
 import typing
 
 import pytest
-
+from dataclasses import replace
 import pulser
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
@@ -28,7 +28,7 @@ from pulser.backend.remote import (
     RemoteResultsError,
     SubmissionStatus,
 )
-from pulser.devices import AnalogDevice, MockDevice
+from pulser.devices import DigitalAnalogDevice, AnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
 
@@ -90,7 +90,15 @@ class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
 
-    def submit(self, sequence, wait: bool = False, **kwargs) -> RemoteResults:
+    def submit(
+        self,
+        sequence,
+        wait: bool = False,
+        batch_id: str | None = None,
+        **kwargs,
+    ) -> RemoteResults:
+        if batch_id:
+            return RemoteResults("dcba", self)
         return RemoteResults("abcd", self)
 
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
@@ -108,6 +116,9 @@ class _MockConnection(RemoteConnection):
             return SubmissionStatus.RUNNING
         return SubmissionStatus.DONE
 
+    def _close_batch(self, batch_id: str) -> None:
+        return None
+
 
 def test_qpu_backend(sequence):
     connection = _MockConnection()
@@ -124,6 +135,7 @@ def test_qpu_backend(sequence):
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
     seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
+
     with pytest.raises(
         ValueError, match="does not accept new register layouts"
     ):
@@ -169,3 +181,12 @@ def test_qpu_backend(sequence):
 
     results = remote_results.results
     assert results[0].sampling_dist == {"00": 1.0}
+
+    # Test create a batch and submitting jobs via a context manager behaves as expected.
+    with qpu_backend.open_batch() as ob:
+        assert ob.batch_id == "abcd"
+        results = ob.run(job_params=[{"runs": 200}])
+        # results submission should differ, confirm the batch_id arg was provided inside submit()
+        assert results._submission_id == "dcba"
+        assert isinstance(results, RemoteResults)
+    assert ob.batch_id == ""
