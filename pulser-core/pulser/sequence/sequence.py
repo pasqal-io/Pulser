@@ -42,7 +42,7 @@ import pulser
 import pulser.devices as devices
 import pulser.math as pm
 import pulser.sequence._decorators as seq_decorators
-from pulser.channels.base_channel import Channel
+from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
 from pulser.channels.eom import RydbergEOM
 from pulser.devices._device_datacls import BaseDevice
@@ -460,6 +460,10 @@ class Sequence(Generic[DeviceType]):
     def get_addressed_bases(self) -> tuple[str, ...]:
         """Returns the bases addressed by the declared channels."""
         return tuple(self._basis_ref)
+
+    def get_addressed_states(self) -> list[States]:
+        """Returns the states addressed by the declared channels."""
+        return get_states_from_bases(self.get_addressed_bases())
 
     @seq_decorators.screen
     def current_phase_ref(

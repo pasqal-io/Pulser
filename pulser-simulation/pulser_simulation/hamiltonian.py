@@ -24,6 +24,7 @@ import numpy as np
 import qutip
 
 import pulser.math as pm
+from pulser.channels.base_channel import STATES_RANK
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
@@ -316,35 +317,34 @@ class Hamiltonian:
 
     def _build_basis_and_op_matrices(self) -> None:
         """Determine dimension, basis and projector operators."""
-        if self._interaction == "XY":
-            self.basis_name = "XY"
-            self.dim = 2
-            basis = ["u", "d"]
-            projectors = ["uu", "du", "ud", "dd"]
-        else:
-            if "digital" not in self.samples_obj.used_bases:
-                self.basis_name = "ground-rydberg"
-                self.dim = 2
-                basis = ["r", "g"]
-                projectors = ["gr", "rr", "gg"]
-            elif "ground-rydberg" not in self.samples_obj.used_bases:
-                self.basis_name = "digital"
-                self.dim = 2
-                basis = ["g", "h"]
-                projectors = ["hg", "hh", "gg"]
+        if len(self.samples_obj.used_bases) == 0:
+            if self.samples_obj._in_xy:
+                self.basis_name = "XY"
             else:
-                self.basis_name = "all"  # All three states
-                self.dim = 3
-                basis = ["r", "g", "h"]
-                projectors = ["gr", "hg", "rr", "gg", "hh"]
+                self.basis_name = "ground-rydberg"
+        elif len(self.samples_obj.used_bases) == 1:
+            self.basis_name = list(self.samples_obj.used_bases)[0]
+        else:
+            self.basis_name = "all"  # All three rydberg states
+        eigenbasis = self.samples_obj.eigenbasis
 
-        self.basis = {b: qutip.basis(self.dim, i) for i, b in enumerate(basis)}
+        # TODO: Add leakage
+
+        self.eigenbasis = [
+            state for state in STATES_RANK if state in eigenbasis
+        ]
+
+        self.dim = len(self.eigenbasis)
+        self.basis = {
+            b: qutip.basis(self.dim, i) for i, b in enumerate(self.eigenbasis)
+        }
         self.op_matrix = {"I": qutip.qeye(self.dim)}
-
-        for proj in projectors:
-            self.op_matrix["sigma_" + proj] = (
-                self.basis[proj[0]] * self.basis[proj[1]].dag()
-            )
+        for proj0 in self.eigenbasis:
+            for proj1 in self.eigenbasis:
+                proj_name = "sigma_" + proj0 + proj1
+                self.op_matrix[proj_name] = (
+                    self.basis[proj0] * self.basis[proj1].dag()
+                )
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.
