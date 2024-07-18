@@ -159,13 +159,11 @@ class SimConfig:
 
     def __post_init__(self) -> None:
         # change effective noise operator type
-        self._change_attribute(
-            "eff_noise_opers",
-            SimConfig._change_eff_noise_oper_type(self.eff_noise_opers),
-        )
-
-        # change rates to AbstractArray type
-        self._change_rate_type()
+        eff_noise_opers = [
+            (pm.AbstractArray(op) if pm.AbstractArray(op).is_tensor else op)
+            for op in self.eff_noise_opers
+        ]
+        self._change_attribute("eff_noise_opers", eff_noise_opers)
 
         # only one noise was given as argument : convert it to a tuple
         if isinstance(self.noise, str):

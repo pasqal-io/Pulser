@@ -119,14 +119,14 @@ class Hamiltonian:
         if "dephasing" in config.noise_types:
             basis_check("dephasing")
             rate = (
-                float(config.hyperfine_dephasing_rate)
+                config.hyperfine_dephasing_rate
                 if self.basis_name == "digital"
-                else float(config.dephasing_rate)
+                else config.dephasing_rate
             )
             local_collapse_ops.append(np.sqrt(rate / 2) * qutip.sigmaz())
 
         if "relaxation" in config.noise_types:
-            coeff = np.sqrt(float(config.relaxation_rate))
+            coeff = np.sqrt(config.relaxation_rate)
             try:
                 local_collapse_ops.append(coeff * self.op_matrix["sigma_gr"])
             except KeyError:
@@ -137,16 +137,16 @@ class Hamiltonian:
 
         if "depolarizing" in config.noise_types:
             basis_check("depolarizing")
-            coeff = np.sqrt(float(config.depolarizing_rate) / 4)
+            coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * qutip.sigmax())
             local_collapse_ops.append(coeff * qutip.sigmay())
             local_collapse_ops.append(coeff * qutip.sigmaz())
 
         if "eff_noise" in config.noise_types:
             basis_check("effective")
-            for id, r in enumerate(config.eff_noise_rates):
+            for id, rate in enumerate(config.eff_noise_rates):
                 local_collapse_ops.append(
-                    np.sqrt(float(r)) * np.array(config.eff_noise_opers[id])
+                    np.sqrt(rate) * np.array(config.eff_noise_opers[id])
                 )
 
         # Building collapse operators
@@ -210,7 +210,7 @@ class Hamiltonian:
             and depend on the qubit's id qid.
             """
             noise_amp_base = max(
-                0, np.random.normal(1.0, float(self.config.amp_sigma))
+                0, np.random.normal(1.0, self.config.amp_sigma)
             )
             for qid in slot.targets:
                 if "doppler" in self.config.noise_types:
