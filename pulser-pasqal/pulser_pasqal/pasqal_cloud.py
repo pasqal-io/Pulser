@@ -185,7 +185,6 @@ class PasqalCloud(RemoteConnection):
                 wait=wait,
                 complete=complete,
             )
-
         return RemoteResults(batch.id, self)
 
     @backoff_decorator
