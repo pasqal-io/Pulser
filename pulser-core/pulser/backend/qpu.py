@@ -42,7 +42,11 @@ class QPUBackend(RemoteBackend):
         super().__init__(sequence, connection, mimic_qpu=True)
 
     def run(
-        self, job_params: list[JobParams] | None = None, wait: bool = False
+        self,
+        job_params: list[JobParams] | None = None,
+        wait: bool = False,
+        open_submission: bool = False,
+        submission_id: str | None = None,
     ) -> RemoteResults:
         """Runs the sequence on the remote QPU and returns the result.
 
@@ -57,6 +61,11 @@ class QPUBackend(RemoteBackend):
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`
                 property.
+            open_submission: A flag indicating whether or not the submission should be for
+                a single job or accept future jobs before closing.
+            submission_id: If you have a preexisting submission and wish to add
+                more jobs to it then you can provide the ID here and 'run' will attempt
+                allocate jobs.
 
         Returns:
             The results, which can be accessed once all sequences have been

@@ -17,3 +17,4 @@ dist/
 env*
 *.egg-info/
 __venv__/
+venv

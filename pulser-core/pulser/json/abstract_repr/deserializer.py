@@ -409,7 +409,6 @@ def _deserialize_register3d(
 
 
 def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
-
     def convert_complex(obj: list | tuple) -> list:
         if isinstance(obj, (list, tuple)):
             return [convert_complex(e) for e in obj]

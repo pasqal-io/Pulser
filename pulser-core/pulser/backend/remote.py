@@ -71,6 +71,17 @@ class RemoteResults(Results):
         """The actual results, obtained after execution is done."""
         return self._results
 
+    @property
+    def submission_id(self) -> str:
+        """
+        Return submission id  which is associated with a associated
+        with the newly submitted payloads on the remote service
+
+        Returns:
+            UUID in string format representing most recent submission
+        """
+        return self._submission_id
+
     def get_status(self) -> SubmissionStatus:
         """Gets the status of the remote submission."""
         return self._connection._get_submission_status(self._submission_id)
