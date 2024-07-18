@@ -101,6 +101,9 @@ class _MockConnection(RemoteConnection):
             return RemoteResults("dcba", self)
         return RemoteResults("abcd", self)
 
+    def close_connection(self, submission_id: str) -> SubmissionStatus | None:
+        return None
+
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
         return (
             SampledResult(

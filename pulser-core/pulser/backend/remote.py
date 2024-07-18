@@ -111,12 +111,26 @@ class RemoteConnection(ABC):
         self,
         sequence: Sequence,
         wait: bool = False,
+<<<<<<< HEAD
         open: bool = False,
         batch_id: str | None = None,
+=======
+        submission_id: str | None = None,
+>>>>>>> 3f3a07c (change to context manager interface for open batches)
         **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
         pass
+
+    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
+        """
+        Close a submission and make it unavailable to submit any further jobs
+        to.
+        """
+        pass
+        # raise NotImplementedError(
+        #     "Unable to close submission through this remote connection"
+        # )
 
     @abstractmethod
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
@@ -129,14 +143,6 @@ class RemoteConnection(ABC):
 
         Not all SubmissionStatus values must be covered, but at least
         SubmissionStatus.DONE is expected.
-        """
-        pass
-
-    @abstractmethod
-    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
-        """
-        Close a submission and make it unavailable to submit any further jobs
-        to.
         """
         pass
 
@@ -174,6 +180,7 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
+<<<<<<< HEAD
         self.batch_id = ""
 
     @staticmethod
@@ -220,3 +227,6 @@ class RemoteBackend(Backend):
         # On context exit, we make a remote call to close the open batch
         self._connection._close_batch(self.batch_id)
         self.batch_id = ""
+=======
+        self.submission_id: str = ""
+>>>>>>> 3f3a07c (change to context manager interface for open batches)

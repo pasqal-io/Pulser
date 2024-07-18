@@ -103,8 +103,12 @@ class PasqalCloud(RemoteConnection):
         self,
         sequence: Sequence,
         wait: bool = False,
+<<<<<<< HEAD
         complete: bool = True,
         batch_id: str | None = None,
+=======
+        submission_id: str | None = None,
+>>>>>>> 3f3a07c (change to context manager interface for open batches)
         **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""

@@ -250,7 +250,10 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
             emulator=emulator,
             configuration=sdk_config,
             wait=False,
+<<<<<<< HEAD
             complete=True,
+=======
+>>>>>>> 3f3a07c (change to context manager interface for open batches)
         )
     )
 
@@ -384,5 +387,8 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool, mimic_qpu):
         emulator=emulator_type,
         configuration=sdk_config,
         wait=False,
+<<<<<<< HEAD
         complete=True,
+=======
+>>>>>>> 3f3a07c (change to context manager interface for open batches)
     )

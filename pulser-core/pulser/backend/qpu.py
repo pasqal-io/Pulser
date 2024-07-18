@@ -14,7 +14,8 @@
 """Defines the backend class for QPU execution."""
 from __future__ import annotations
 
-from typing import cast
+from types import TracebackType
+from typing import Self, Type, cast
 
 from pulser import Sequence
 from pulser.backend.remote import (
@@ -52,8 +53,6 @@ class QPUBackend(RemoteBackend):
         self,
         job_params: list[JobParams] | None = None,
         wait: bool = False,
-        open_submission: bool = False,
-        submission_id: str | None = None,
     ) -> RemoteResults:
         """Runs the sequence on the remote QPU and returns the result.
 
@@ -71,14 +70,12 @@ class QPUBackend(RemoteBackend):
             open_submission: A flag indicating whether or not the submission
                 should be for a single job or accept future jobs before
                 closing.
-            submission_id: If you have a preexisting submission and wish to add
-                more jobs to it then you can provide the ID here and 'run'
-                will attempt allocate jobs.
 
         Returns:
             The results, which can be accessed once all sequences have been
             successfully executed.
         """
+<<<<<<< HEAD
         self.validate_job_params(
             job_params or [], self._sequence.device.max_runs
         )
@@ -106,6 +103,8 @@ class QPUBackend(RemoteBackend):
             )
 
 >>>>>>> 2970d3d (add open submission ability for jobs on pulser-pasqal)
+=======
+>>>>>>> 3f3a07c (change to context manager interface for open batches)
         suffix = " when executing a sequence on a real QPU."
         if not job_params:
             raise ValueError("'job_params' must be specified" + suffix)
@@ -126,10 +125,47 @@ class QPUBackend(RemoteBackend):
             self._sequence,
             job_params=job_params,
             wait=wait,
-            open_submission=open_submission,
-            submission_id=submission_id,
+            submission_id=self.submission_id,
         )
         return cast(RemoteResults, results)
+
+    def open_submission(self, submission_id: str | None = None) -> Self:
+        """
+        If provided a submission_id, we can add new jobs to a batch within
+        the scope of the context manager otherwise an new open submission
+        is created that you can continuously add jobs to.
+
+        Args:
+            submission_id: An optional unique identifier for an already
+                 open submission
+
+        Returns:
+            self reference for current object
+        """
+        if submission_id:
+            self.submission_id = submission_id
+        else:
+            submission = cast(
+                RemoteResults, self._connection.submit(self._sequence)
+            )
+            self.submission_id = submission.submission_id
+        return self
+
+    def __enter__(self) -> Self:
+        # open returns an instance of self to use open_submission within a
+        # context manager
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        # exiting the context of an open submission will
+        # make a remote call to close it.
+        if self.submission_id:
+            self.close_submission(self.submission_id)
 
     def validate_sequence(self, sequence: Sequence) -> None:
         """Validates a sequence prior to submission.
@@ -154,7 +190,6 @@ class QPUBackend(RemoteBackend):
 
         Returns:
             SubmissionStatus representing the new stats of the submission.
-
         """
         return self._connection.close_submission(submission_id)
 >>>>>>> 2970d3d (add open submission ability for jobs on pulser-pasqal)
