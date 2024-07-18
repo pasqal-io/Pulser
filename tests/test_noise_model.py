@@ -19,7 +19,21 @@ import re
 import numpy as np
 import pytest
 
-from pulser.noise_model import NoiseModel
+from pulser.noise_model import (
+    NoiseModel,
+    _NOISE_TYPE_PARAMS,
+    _PARAM_TO_NOISE_TYPE,
+)
+
+
+def test_constants():
+    # Recreate _PARAM_TO_NOISE_TYPE and check it matches
+    params_dict = {}
+    for noise_type, params in _NOISE_TYPE_PARAMS.items():
+        for p in params:
+            assert p not in params_dict
+            params_dict[p] = noise_type
+    assert params_dict == _PARAM_TO_NOISE_TYPE
 
 
 class TestNoiseModel:

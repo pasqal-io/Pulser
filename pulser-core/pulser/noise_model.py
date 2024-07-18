@@ -39,7 +39,7 @@ NoiseTypes = Literal[
     "eff_noise",
 ]
 
-_NOISE_TYPE_PARAMS = {
+_NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
@@ -49,7 +49,7 @@ _NOISE_TYPE_PARAMS = {
     "eff_noise": ("eff_noise_rates", "eff_noise_opers"),
 }
 
-_PARAM_TO_NOISE_TYPE = {
+_PARAM_TO_NOISE_TYPE: dict[str, NoiseTypes] = {
     param: noise_type
     for noise_type, params in _NOISE_TYPE_PARAMS.items()
     for param in params
@@ -111,8 +111,8 @@ class NoiseModel:
       the system under a uniform combination of phase flip (Z) and
       bit flip (X) errors.
     - **eff_noise**: General effective noise channel defined by the
-      set of collapse operators ``eff_noise_opers`` and the
-      corresponding rates distribution ``eff_noise_rates``.
+      set of collapse operators ``eff_noise_opers`` and their
+      corresponding rates ``eff_noise_rates``.
     - **doppler**: Local atom detuning due to termal motion of the
       atoms and Doppler effect with respect to laser frequency.
       Parametrized by the ``temperature`` field.
@@ -223,7 +223,7 @@ class NoiseModel:
                     "The explicit definition of noise types is deprecated; "
                     "doing so will use legacy default values for all relevant "
                     "parameters that are not given a custom value. Instead, "
-                    "defining only the necessary parameters is reccomended; "
+                    "defining only the necessary parameters is recommended; "
                     "doing so (when the noise types are not explicitly given) "
                     "will disregard all undefined parameters.",
                     DeprecationWarning,
@@ -237,7 +237,7 @@ class NoiseModel:
                         param_vals[p_] = _LEGACY_DEFAULTS[p_]
 
         true_noise_types: set[NoiseTypes] = {
-            cast(NoiseTypes, _PARAM_TO_NOISE_TYPE[p_])
+            _PARAM_TO_NOISE_TYPE[p_]
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
@@ -267,9 +267,10 @@ class NoiseModel:
                     "parameters. Defining only the relevant noise parameters "
                     "(without specifying the noise types) is recommended."
                 )
-            run_params_ = [
-                p for p in relevant_params if p in ("runs", "samples_per_run")
-            ]
+            # Only now that we know the relevant_params can we determine if
+            # we need to use the legacy defaults for the run parameters (ie in
+            # case they were not provided by the user)
+            run_params_ = relevant_params & {"runs", "samples_per_run"}
             for p_ in run_params_:
                 param_vals[p_] = param_vals[p_] or _LEGACY_DEFAULTS[p_]
 
