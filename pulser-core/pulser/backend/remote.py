@@ -132,6 +132,14 @@ class RemoteConnection(ABC):
         """
         pass
 
+    @abstractmethod
+    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
+        """
+        Close a submission and make it unavailable to submit any further jobs
+        to.
+        """
+        pass
+
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
         raise NotImplementedError(  # pragma: no cover

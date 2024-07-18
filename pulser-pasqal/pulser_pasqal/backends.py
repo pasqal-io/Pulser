@@ -58,7 +58,11 @@ class PasqalEmulator(RemoteBackend):
             )
 
     def run(
-        self, job_params: list[JobParams] | None = None, wait: bool = False
+        self,
+        job_params: list[JobParams] | None = None,
+        wait: bool = False,
+        submission_id: str | None = None,
+        open_submission: bool = False,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Executes on the emulator backend through the Pasqal Cloud.
 
@@ -73,7 +77,7 @@ class PasqalEmulator(RemoteBackend):
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`
                 property.
-
+            open: Flag to determine whether or not
         Returns:
             The results, which can be accessed once all sequences have been
             successfully executed.

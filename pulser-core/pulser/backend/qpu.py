@@ -20,9 +20,16 @@ from pulser import Sequence
 from pulser.backend.remote import (
     JobParams,
     RemoteBackend,
+<<<<<<< HEAD
     RemoteConnection,
     RemoteResults,
 )
+=======
+    RemoteResults,
+    SubmissionStatus,
+)
+from pulser.devices import Device
+>>>>>>> 2970d3d (add open submission ability for jobs on pulser-pasqal)
 
 
 class QPUBackend(RemoteBackend):
@@ -61,11 +68,12 @@ class QPUBackend(RemoteBackend):
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`
                 property.
-            open_submission: A flag indicating whether or not the submission should be for
-                a single job or accept future jobs before closing.
+            open_submission: A flag indicating whether or not the submission
+                should be for a single job or accept future jobs before
+                closing.
             submission_id: If you have a preexisting submission and wish to add
-                more jobs to it then you can provide the ID here and 'run' will attempt
-                allocate jobs.
+                more jobs to it then you can provide the ID here and 'run'
+                will attempt allocate jobs.
 
         Returns:
             The results, which can be accessed once all sequences have been
@@ -82,11 +90,22 @@ class QPUBackend(RemoteBackend):
         )
         return cast(RemoteResults, results)
 
+<<<<<<< HEAD
     @staticmethod
     def validate_job_params(
         job_params: list[JobParams], max_runs: int | None
     ) -> None:
         """Validates a list of job parameters prior to submission."""
+=======
+        # if submission is already open, we don't need an ID for a preexisting
+        # one
+        if open_submission and submission_id:
+            raise ValueError(
+                """Open submission can only be used for a new submission.
+                                Don't provide a preexisting submission_id"""
+            )
+
+>>>>>>> 2970d3d (add open submission ability for jobs on pulser-pasqal)
         suffix = " when executing a sequence on a real QPU."
         if not job_params:
             raise ValueError("'job_params' must be specified" + suffix)
@@ -101,3 +120,41 @@ class QPUBackend(RemoteBackend):
                     "All 'runs' must be below the maximum allowed by the "
                     f"device ({max_runs})" + suffix
                 )
+<<<<<<< HEAD
+=======
+        results = self._connection.submit(
+            self._sequence,
+            job_params=job_params,
+            wait=wait,
+            open_submission=open_submission,
+            submission_id=submission_id,
+        )
+        return cast(RemoteResults, results)
+
+    def validate_sequence(self, sequence: Sequence) -> None:
+        """Validates a sequence prior to submission.
+
+        Args:
+            sequence: The sequence to validate.
+        """
+        super().validate_sequence(sequence)
+        if not isinstance(sequence.device, Device):
+            raise TypeError(
+                "To be sent to a QPU, the device of the sequence "
+                "must be a real device, instance of 'Device'."
+            )
+
+    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
+        """
+        Closes a submission to prevent any further jobs being added.
+
+        Args:
+            submission_id: unique identifier as a string return when
+                creating a submission.
+
+        Returns:
+            SubmissionStatus representing the new stats of the submission.
+
+        """
+        return self._connection.close_submission(submission_id)
+>>>>>>> 2970d3d (add open submission ability for jobs on pulser-pasqal)
