@@ -310,7 +310,7 @@ class Hamiltonian:
             )
             self._bad_atoms = dict(zip(self._qid_index, dist))
         if "doppler" in self.config.noise_types:
-            temp = cast(float, self.config.temperature) * 1e-6
+            temp = self.config.temperature * 1e-6
             detune = np.random.normal(
                 0, doppler_sigma(temp), size=len(self._qid_index)
             )

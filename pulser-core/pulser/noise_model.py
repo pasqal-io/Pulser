@@ -62,11 +62,11 @@ _POSITIVE = {
     "hyperfine_dephasing_rate",
     "relaxation_rate",
     "depolarizing_rate",
+    "temperature",
 }
 _STRICT_POSITIVE = {
     "runs",
     "samples_per_run",
-    "temperature",
     "laser_waist",
 }
 _PROBABILITY_LIKE = {
@@ -164,7 +164,7 @@ class NoiseModel:
     state_prep_error: float
     p_false_pos: float
     p_false_neg: float
-    temperature: float | None
+    temperature: float
     laser_waist: float | None
     amp_sigma: float
     relaxation_rate: float

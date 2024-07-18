@@ -20,9 +20,9 @@ import numpy as np
 import pytest
 
 from pulser.noise_model import (
-    NoiseModel,
     _NOISE_TYPE_PARAMS,
     _PARAM_TO_NOISE_TYPE,
+    NoiseModel,
 )
 
 
@@ -94,7 +94,7 @@ class TestNoiseModel:
 
     @pytest.mark.parametrize(
         "param",
-        ["runs", "samples_per_run", "temperature", "laser_waist"],
+        ["runs", "samples_per_run", "laser_waist"],
     )
     def test_init_strict_pos(self, param):
         with pytest.raises(
@@ -102,39 +102,58 @@ class TestNoiseModel:
         ):
             NoiseModel(**{param: 0})
 
-    @pytest.mark.parametrize("value", [-1e-9, 0.2, 1.0001])
+    @pytest.mark.parametrize("value", [-1e-9, 0.0, 0.2, 1.0001])
     @pytest.mark.parametrize(
-        "param",
+        "param, noise",
         [
-            "dephasing_rate",
-            "hyperfine_dephasing_rate",
-            "relaxation_rate",
-            "depolarizing_rate",
+            ("dephasing_rate", "dephasing"),
+            ("hyperfine_dephasing_rate", "dephasing"),
+            ("relaxation_rate", "relaxation"),
+            ("depolarizing_rate", "depolarizing"),
+            ("temperature", "doppler"),
         ],
     )
-    def test_init_rate_like(self, param, value):
+    def test_init_rate_like(self, param, noise, value):
+        kwargs = {param: value}
+        if param == "temperature" and value != 0:
+            kwargs.update(dict(runs=1, samples_per_run=1))
         if value < 0:
             with pytest.raises(
                 ValueError,
                 match=f"'{param}' must be greater than "
                 f"or equal to zero, not {value}.",
             ):
-                NoiseModel(**{param: value})
+                NoiseModel(**kwargs)
         else:
-            noise_model = NoiseModel(**{param: value})
+            noise_model = NoiseModel(**kwargs)
             assert getattr(noise_model, param) == value
+            if value > 0:
+                assert noise_model.noise_types == (noise,)
+            else:
+                assert noise_model.noise_types == ()
 
-    @pytest.mark.parametrize("value", [-1e-9, 1.0001])
+    @pytest.mark.parametrize("value", [-1e-9, 0.0, 0.5, 1.0, 1.0001])
     @pytest.mark.parametrize(
-        "param",
+        "param, noise",
         [
-            "state_prep_error",
-            "p_false_pos",
-            "p_false_neg",
-            "amp_sigma",
+            ("state_prep_error", "SPAM"),
+            ("p_false_pos", "SPAM"),
+            ("p_false_neg", "SPAM"),
+            ("amp_sigma", "amplitude"),
         ],
     )
-    def test_init_prob_like(self, param, value):
+    def test_init_prob_like(self, param, noise, value):
+        if 0 <= value <= 1:
+            kwargs = {param: value}
+            if value > 0 and param in ("amp_sigma", "state_prep_error"):
+                kwargs.update(dict(runs=1, samples_per_run=1))
+            noise_model = NoiseModel(**kwargs)
+            assert getattr(noise_model, param) == value
+            if value > 0:
+                assert noise_model.noise_types == (noise,)
+            else:
+                assert noise_model.noise_types == ()
+            return
         with pytest.raises(
             ValueError,
             match=f"'{param}' must be greater than or equal to zero and "
@@ -145,7 +164,6 @@ class TestNoiseModel:
                 # absence doesn't trigger their own errors
                 runs=1,
                 samples_per_run=1,
-                laser_waist=1.0,
                 **{param: value},
             )
 
