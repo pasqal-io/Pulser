@@ -252,10 +252,3 @@ class PasqalCloud(RemoteConnection):
 
         pasqal_config_kwargs["strict_validation"] = strict_validation
         return emu_cls(**pasqal_config_kwargs)
-
-    def _close_submission(self, submission_id: str) -> SubmissionStatus | None:
-        """Mark a submission as closed so no more jobs can be submitted."""
-        if not submission_id:
-            return None
-        batch = self._sdk_connection.close_batch(submission_id)
-        return SubmissionStatus(batch.id)

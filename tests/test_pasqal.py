@@ -121,6 +121,7 @@ def fixt(mock_batch):
 
         mock_cloud_sdk.create_batch = MagicMock(return_value=mock_batch)
         mock_cloud_sdk.get_batch = MagicMock(return_value=mock_batch)
+        mock_cloud_sdk.add_jobs = MagicMock(return_value=mock_batch)
         mock_cloud_sdk.get_device_specs_dict = MagicMock(
             return_value={test_device.name: test_device.to_abstract_repr()}
         )
@@ -252,6 +253,14 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
             wait=False,
             complete=True,
         )
+    )
+    remote_results = fixt.pasqal_cloud.submit(
+        seq, job_params=job_params, batch_id="abcd"
+    )
+
+    fixt.mock_cloud_sdk.add_jobs.assert_called_once_with(
+        "abcd",
+        jobs=job_params,
     )
 
     job_params[0]["runs"] = {10}
