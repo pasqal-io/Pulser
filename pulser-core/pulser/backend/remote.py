@@ -100,7 +100,7 @@ class RemoteConnection(ABC):
         self,
         sequence: Sequence,
         wait: bool = False,
-        open: bool = False,
+        complete: bool = False,
         batch_id: str | None = None,
         **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
@@ -127,6 +127,9 @@ class RemoteConnection(ABC):
             "Unable to fetch the available devices through this "
             "remote connection."
         )
+
+    def _close_batch(self, batch_id: str) -> SubmissionStatus | None:
+        pass
 
 
 class RemoteBackend(Backend):
@@ -185,7 +188,7 @@ class RemoteBackend(Backend):
         self.batch_id = submission._submission_id
         return self
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         # enter returns an instance of self to use open_batch
         # as a context manager
         return self

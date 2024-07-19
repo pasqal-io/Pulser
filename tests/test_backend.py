@@ -94,6 +94,7 @@ class _MockConnection(RemoteConnection):
         self,
         sequence,
         wait: bool = False,
+        complete: bool = True,
         batch_id: str | None = None,
         **kwargs,
     ) -> RemoteResults:
@@ -182,11 +183,13 @@ def test_qpu_backend(sequence):
     results = remote_results.results
     assert results[0].sampling_dist == {"00": 1.0}
 
-    # Test create a batch and submitting jobs via a context manager behaves as expected.
+    # Test create a batch and submitting jobs via a context manager
+    # behaves as expected.
     with qpu_backend.open_batch() as ob:
         assert ob.batch_id == "abcd"
         results = ob.run(job_params=[{"runs": 200}])
-        # submission_id should differ, confirm the batch_id was provided to submit()
+        # submission_id should differ, confirm the batch_id was provided
+        # to submit()
         assert results._submission_id == "dcba"
         assert isinstance(results, RemoteResults)
     assert ob.batch_id == ""
