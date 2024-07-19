@@ -18,7 +18,9 @@ import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from types import TracebackType
-from typing import Any, Self, Type, TypedDict, cast
+from typing import Any, Type, TypedDict, cast
+
+from typing_extensions import Self
 
 from pulser.backend.abc import Backend
 from pulser.devices import Device
