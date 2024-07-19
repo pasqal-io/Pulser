@@ -102,10 +102,7 @@
           "type": "number"
         },
         "temperature": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number"
         }
       },
       "required": [
