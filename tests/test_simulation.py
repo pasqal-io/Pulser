@@ -733,11 +733,7 @@ def test_noise_with_zero_epsilons(seq, matrices):
             noise=("SPAM"), eta=0.0, epsilon=0.0, epsilon_prime=0.0
         ),
     )
-    assert sim2.config.spam_dict == {
-        "eta": 0,
-        "epsilon": 0.0,
-        "epsilon_prime": 0.0,
-    }
+    assert sim2.config.noise == ()
 
     assert sim.run().sample_final_state() == sim2.run().sample_final_state()
 
