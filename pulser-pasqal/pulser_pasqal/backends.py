@@ -61,8 +61,6 @@ class PasqalEmulator(RemoteBackend):
         self,
         job_params: list[JobParams] | None = None,
         wait: bool = False,
-        submission_id: str | None = None,
-        open_submission: bool = False,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Executes on the emulator backend through the Pasqal Cloud.
 

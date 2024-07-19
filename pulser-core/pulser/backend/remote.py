@@ -13,12 +13,12 @@
 # limitations under the License.
 """Base classes for remote backend execution."""
 from __future__ import annotations
-from typing import Type
-from types import TracebackType
+
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, TypedDict, cast, Self
+from types import TracebackType
+from typing import Any, Self, Type, TypedDict, cast
 
 from pulser.backend.abc import Backend
 from pulser.devices import Device
@@ -71,17 +71,6 @@ class RemoteResults(Results):
         """The actual results, obtained after execution is done."""
         return self._results
 
-    @property
-    def submission_id(self) -> str:
-        """
-        Submission ID associated with the newly submitted run on
-        the remote backend.
-
-        Returns:
-            UUID in string format representing the most recent submission.
-        """
-        return self._submission_id
-
     def get_status(self) -> SubmissionStatus:
         """Gets the status of the remote submission."""
         return self._connection._get_submission_status(self._submission_id)
@@ -111,22 +100,11 @@ class RemoteConnection(ABC):
         self,
         sequence: Sequence,
         wait: bool = False,
-<<<<<<< HEAD
         open: bool = False,
         batch_id: str | None = None,
-=======
-        submission_id: str | None = None,
->>>>>>> 3f3a07c (change to context manager interface for open batches)
         **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
-        pass
-
-    def close_submission(self, submission_id: str) -> SubmissionStatus | None:
-        """
-        Close a submission and make it unavailable to submit any further jobs
-        to.
-        """
         pass
 
     @abstractmethod
@@ -170,14 +148,12 @@ class RemoteBackend(Backend):
         mimic_qpu: bool = False,
     ) -> None:
         """Starts a new remote backend instance."""
-
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(connection, RemoteConnection):
             raise TypeError(
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
-<<<<<<< HEAD
         self.batch_id = ""
 
     @staticmethod
@@ -194,11 +170,10 @@ class RemoteBackend(Backend):
                 )
 
     def open_batch(self) -> Self:
-        """
-        Create an open batch that can continue to recieve new job submissions
-        as long as the submissions are submitted within an open
-        context manager. The batch will be closed when the scope of
-        the context manager ends.
+        """Create an open batch that can continue recieve new job.
+
+        As long as jobs are submitted within an open context
+        manager.
 
         Returns:
             A class instance with an associated batch_id property
@@ -224,6 +199,3 @@ class RemoteBackend(Backend):
         # On context exit, we make a remote call to close the open batch
         self._connection._close_batch(self.batch_id)
         self.batch_id = ""
-=======
-        self.submission_id: str = ""
->>>>>>> 3f3a07c (change to context manager interface for open batches)

@@ -103,12 +103,8 @@ class PasqalCloud(RemoteConnection):
         self,
         sequence: Sequence,
         wait: bool = False,
-<<<<<<< HEAD
         complete: bool = True,
         batch_id: str | None = None,
-=======
-        submission_id: str | None = None,
->>>>>>> 3f3a07c (change to context manager interface for open batches)
         **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
@@ -169,8 +165,9 @@ class PasqalCloud(RemoteConnection):
             strict_validation=mimic_qpu,
         )
 
-        # If batch_id is not empty, thedn we can submit new jobs to a batch we just created
-        # otherwise, create a new one with _sdk_connection.create_batch()
+        # If batch_id is not empty, thedn we can submit new jobs to a
+        # batch we just created otherwise, create a new one with
+        #  _sdk_connection.create_batch()
         if batch_id:
             submit_jobs_fn = backoff_decorator(self._sdk_connection.add_jobs)
             batch = submit_jobs_fn(
@@ -257,11 +254,7 @@ class PasqalCloud(RemoteConnection):
         return emu_cls(**pasqal_config_kwargs)
 
     def _close_submission(self, submission_id: str) -> SubmissionStatus | None:
-        """
-        Mark a submission as closed so that no more jobs can be submitted to
-        run and return the new and current submission status recorded on
-        Pasqal cloud services
-        """
+        """Mark a submission as closed so no more jobs can be submitted."""
         if not submission_id:
             return None
         batch = self._sdk_connection.close_batch(submission_id)

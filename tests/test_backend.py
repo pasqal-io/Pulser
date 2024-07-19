@@ -17,7 +17,7 @@ import re
 import typing
 
 import pytest
-from dataclasses import replace
+
 import pulser
 from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
@@ -28,7 +28,7 @@ from pulser.backend.remote import (
     RemoteResultsError,
     SubmissionStatus,
 )
-from pulser.devices import DigitalAnalogDevice, AnalogDevice, MockDevice
+from pulser.devices import AnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
 
@@ -100,9 +100,6 @@ class _MockConnection(RemoteConnection):
         if batch_id:
             return RemoteResults("dcba", self)
         return RemoteResults("abcd", self)
-
-    def close_connection(self, submission_id: str) -> SubmissionStatus | None:
-        return None
 
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
         return (
@@ -189,7 +186,7 @@ def test_qpu_backend(sequence):
     with qpu_backend.open_batch() as ob:
         assert ob.batch_id == "abcd"
         results = ob.run(job_params=[{"runs": 200}])
-        # results submission should differ, confirm the batch_id arg was provided inside submit()
+        # submission_id should differ, confirm the batch_id was provided to submit()
         assert results._submission_id == "dcba"
         assert isinstance(results, RemoteResults)
     assert ob.batch_id == ""
