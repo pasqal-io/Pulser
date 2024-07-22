@@ -20,7 +20,7 @@ import pytest
 import pulser
 from pulser import Pulse
 from pulser.channels import Microwave, Raman, Rydberg
-from pulser.channels.base_channel import EIGENSTATES, STATES_RANK
+from pulser.channels.base_channel import check_eigenbasis
 from pulser.channels.eom import MODBW_TO_TR, BaseEOM, RydbergBeam, RydbergEOM
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform
 
@@ -142,15 +142,12 @@ def test_device_channels():
 
 
 def test_eigenstates():
-    for _, states in EIGENSTATES.items():
-        idx_0, idx_1 = STATES_RANK.index(states[0]), STATES_RANK.index(
-            states[1]
-        )
-        assert idx_0 != -1 and idx_1 != -1, f"States must be in {STATES_RANK}."
-        assert (
-            idx_0 < idx_1
-        ), "Eigenstates must be ranked with highest energy first."
-
+    with pytest.raises(ValueError, match="State must be in"):
+        check_eigenbasis(["r", "g", "abc"])
+    with pytest.raises(ValueError, match="States can only appear once"):
+        check_eigenbasis(["r", "r", "g", "h"])
+    with pytest.raises(ValueError, match="Eigenstates must be ranked"):
+        check_eigenbasis(["g", "r", "h"])
     assert Raman.Global(None, None).eigenstates == ["g", "h"]
     assert Rydberg.Global(None, None).eigenstates == ["r", "g"]
     assert Microwave.Global(None, None).eigenstates == ["u", "d"]
