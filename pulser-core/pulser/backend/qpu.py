@@ -42,9 +42,7 @@ class QPUBackend(RemoteBackend):
         super().__init__(sequence, connection, mimic_qpu=True)
 
     def run(
-        self,
-        job_params: list[JobParams] | None = None,
-        wait: bool = False,
+        self, job_params: list[JobParams] | None = None, wait: bool = False
     ) -> RemoteResults:
         """Runs the sequence on the remote QPU and returns the result.
 
@@ -71,7 +69,7 @@ class QPUBackend(RemoteBackend):
             self._sequence,
             job_params=job_params,
             wait=wait,
-            batch_id=self.batch_id,
+            batch_id=self._batch_id,
         )
         return cast(RemoteResults, results)
 

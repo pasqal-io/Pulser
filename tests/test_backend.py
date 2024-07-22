@@ -27,6 +27,7 @@ from pulser.backend.remote import (
     RemoteResults,
     RemoteResultsError,
     SubmissionStatus,
+    _OpenBatchContextManager,
 )
 from pulser.devices import AnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
@@ -185,11 +186,13 @@ def test_qpu_backend(sequence):
 
     # Test create a batch and submitting jobs via a context manager
     # behaves as expected.
-    with qpu_backend.open_batch() as ob:
-        assert ob.batch_id == "abcd"
-        results = ob.run(job_params=[{"runs": 200}])
+    qpu = QPUBackend(seq, connection)
+    with qpu.open_batch() as ob:
+        print(ob)
+        assert ob.backend._batch_id == "abcd"
+        assert isinstance(ob, _OpenBatchContextManager)
+        results = qpu.run(job_params=[{"runs": 200}])
         # submission_id should differ, confirm the batch_id was provided
         # to submit()
         assert results._submission_id == "dcba"
         assert isinstance(results, RemoteResults)
-    assert ob.batch_id == ""

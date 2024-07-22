@@ -20,8 +20,6 @@ from enum import Enum, auto
 from types import TracebackType
 from typing import Any, Type, TypedDict, cast
 
-from typing_extensions import Self
-
 from pulser.backend.abc import Backend
 from pulser.devices import Device
 from pulser.result import Result, Results
@@ -110,12 +108,12 @@ class RemoteConnection(ABC):
         pass
 
     @abstractmethod
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(self, batch_id: str) -> typing.Sequence[Result]:
         """Fetches the results of a completed submission."""
         pass
 
     @abstractmethod
-    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
+    def _get_submission_status(self, batch_id: str) -> SubmissionStatus:
         """Gets the status of a submission from its ID.
 
         Not all SubmissionStatus values must be covered, but at least
@@ -159,7 +157,7 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
-        self.batch_id = ""
+        self._batch_id = ""
 
     @staticmethod
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
@@ -174,25 +172,21 @@ class RemoteBackend(Backend):
                     f"got {type(d)} instead."
                 )
 
-    def open_batch(self) -> Self:
-        """Create an open batch that can continue recieve new job.
+    def open_batch(self) -> _OpenBatchContextManager:
+        """Create an open batch within a context manager object"""
+        return _OpenBatchContextManager(self)
 
-        As long as jobs are submitted within an open context
-        manager.
 
-        Returns:
-            A class instance with an associated batch_id property
-        """
-        # Create batch and receive submission id
-        submission = cast(
-            RemoteResults, self._connection.submit(self._sequence, open=True)
+class _OpenBatchContextManager:
+    def __init__(self, backend: RemoteBackend) -> None:
+        self.backend = backend
+
+    def __enter__(self) -> _OpenBatchContextManager:
+        batch = cast(
+            RemoteResults,
+            self.backend._connection.submit(self.backend._sequence, open=True),
         )
-        self.batch_id = submission._submission_id
-        return self
-
-    def __enter__(self) -> Self:
-        # enter returns an instance of self to use open_batch
-        # as a context manager
+        self.backend._batch_id = batch._submission_id
         return self
 
     def __exit__(
@@ -201,6 +195,5 @@ class RemoteBackend(Backend):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        # On context exit, we make a remote call to close the open batch
-        self._connection._close_batch(self.batch_id)
-        self.batch_id = ""
+        self.backend._connection._close_batch(self.backend._batch_id)
+        self.backend._batch_id = ""
