@@ -132,7 +132,6 @@ class SimConfig:
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
         """Creates a SimConfig from a NoiseModel."""
-
         kwargs: dict[str, Any] = dict(noise=noise_model.noise_types)
         relevant_params = NoiseModel._find_relevant_params(
             noise_model.noise_types,
@@ -157,7 +156,6 @@ class SimConfig:
 
     def to_noise_model(self) -> NoiseModel:
         """Creates a NoiseModel from the SimConfig."""
-
         relevant_params = NoiseModel._find_relevant_params(
             cast(Tuple[NoiseTypes, ...], self.noise),
             self.eta,
