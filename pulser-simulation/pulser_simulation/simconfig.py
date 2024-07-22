@@ -20,6 +20,7 @@ from math import sqrt
 from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
+
 import pulser.math as pm
 from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 
@@ -123,12 +124,15 @@ class SimConfig:
     ]
     depolarizing_rate: float = _LEGACY_DEFAULTS["depolarizing_rate"]
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
-    eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
-    solver_options: Optional[qutip.Options] = None
+    eff_noise_opers: list[qutip.Qobj | pm.AbstractArrayLike] = field(
+        default_factory=list, repr=False
+    )
+    solver_options: Optional[qutip.Options | dict] = None
 
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
         """Creates a SimConfig from a NoiseModel."""
+
         kwargs: dict[str, Any] = dict(noise=noise_model.noise_types)
         relevant_params = NoiseModel._find_relevant_params(
             noise_model.noise_types,
@@ -140,10 +144,20 @@ class SimConfig:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
                 noise_model, param
             )
+        if kwargs.get("eff_noise_opers", None):
+            kwargs["eff_noise_opers"] = [
+                (
+                    pm.AbstractArray(op)
+                    if pm.AbstractArray(op).is_tensor
+                    else qutip.Qobj(op)
+                )
+                for op in kwargs["eff_noise_opers"]
+            ]
         return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
         """Creates a NoiseModel from the SimConfig."""
+
         relevant_params = NoiseModel._find_relevant_params(
             cast(Tuple[NoiseTypes, ...], self.noise),
             self.eta,
@@ -155,6 +169,16 @@ class SimConfig:
             kwargs[param] = getattr(self, _DIFF_NOISE_PARAMS.get(param, param))
         if "temperature" in kwargs:
             kwargs["temperature"] *= 1e6  # Converts back to µK
+
+        if kwargs.get("eff_noise_opers", None):
+            kwargs["eff_noise_opers"] = [
+                (
+                    cast(pm.AbstractArray, op).as_tensor()
+                    if pm.AbstractArray(op).is_tensor
+                    else cast(qutip.Qobj, op).full()
+                )
+                for op in kwargs["eff_noise_opers"]
+            ]
         return NoiseModel(**kwargs)
 
     def __post_init__(self) -> None:
@@ -250,12 +274,15 @@ class SimConfig:
         # Check the validity of operators
         for operator in self.eff_noise_opers:
             # type checking
-            if not isinstance(operator, qutip.Qobj):
-                raise TypeError(f"{operator} is not a Qobj.")
-            if operator.type != "oper":
+            if not isinstance(operator, (qutip.Qobj, pm.AbstractArray)):
                 raise TypeError(
-                    "Operators are supposed to be of Qutip type 'oper'."
+                    f"{str(operator)} is not a Qobj or AbstractArray."
                 )
+            if isinstance(operator, qutip.Qobj):
+                if operator.type != "oper":
+                    raise TypeError(
+                        "Operators are supposed to be of Qutip type 'oper'."
+                    )
         NoiseModel._check_eff_noise(
             self.eff_noise_rates,
             self.eff_noise_opers,
