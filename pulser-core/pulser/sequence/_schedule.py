@@ -346,12 +346,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         detuning_off: pm.AbstractArray,
         switching_beams: tuple[RydbergBeam, ...] = (),
         _skip_buffer: bool = False,
+        _skip_wait_for_fall: bool = False,
     ) -> None:
         channel_obj = self[channel_id].channel_obj
         # Adds a buffer unless the channel is empty or _skip_buffer = True
         if not _skip_buffer and self.get_duration(channel_id):
-            # Wait for the last pulse to ramp down (if needed)
-            self.wait_for_fall(channel_id)
+            if not _skip_wait_for_fall:
+                # Wait for the last pulse to ramp down (if needed)
+                self.wait_for_fall(channel_id)
             eom_buffer_time = self[channel_id].adjust_duration(
                 channel_obj._eom_buffer_time
             )

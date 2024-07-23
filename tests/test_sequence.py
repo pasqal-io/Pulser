@@ -2407,6 +2407,69 @@ def test_eom_buffer(
         )
 
 
+@pytest.mark.parametrize("correct_phase_drift", [True, False])
+@pytest.mark.parametrize("amp_diff", [0, -0.5, 0.5])
+@pytest.mark.parametrize("det_diff", [0, -5, 10])
+def test_modify_eom_setpoint(
+    reg, mod_device, amp_diff, det_diff, correct_phase_drift
+):
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ryd", "rydberg_global")
+    params = seq.declare_variable("params", dtype=float, size=2)
+    dt = 100
+    amp, det_on = params
+    with pytest.raises(
+        RuntimeError, match="The 'ryd' channel is not in EOM mode"
+    ):
+        seq.modify_eom_setpoint("ryd", amp, det_on)
+    seq.enable_eom_mode("ryd", amp, det_on)
+    assert seq.is_in_eom_mode("ryd")
+    seq.add_eom_pulse("ryd", dt, 0.0)
+    seq.delay(dt, "ryd")
+
+    new_amp, new_det_on = amp + amp_diff, det_on + det_diff
+    seq.modify_eom_setpoint(
+        "ryd", new_amp, new_det_on, correct_phase_drift=correct_phase_drift
+    )
+    assert seq.is_in_eom_mode("ryd")
+    seq.add_eom_pulse("ryd", dt, 0.0)
+    seq.delay(dt, "ryd")
+
+    ryd_ch_obj = seq.declared_channels["ryd"]
+    eom_buffer_dt = ryd_ch_obj._eom_buffer_time
+    param_vals = [1.0, 0.0]
+    built_seq = seq.build(params=param_vals)
+    expected_duration = 4 * dt + eom_buffer_dt
+    assert built_seq.get_duration() == expected_duration
+
+    amp, det = param_vals
+    ch_samples = sample(built_seq).channel_samples["ryd"]
+    expected_amp = np.zeros(expected_duration)
+    expected_amp[:dt] = amp
+    expected_amp[-2 * dt : -dt] = amp + amp_diff
+    np.testing.assert_array_equal(expected_amp, ch_samples.amp)
+
+    det_off = ryd_ch_obj.eom_config.calculate_detuning_off(amp, det, 0.0)
+    new_det_off = ryd_ch_obj.eom_config.calculate_detuning_off(
+        amp + amp_diff, det + det_diff, 0.0
+    )
+    expected_det = np.zeros(expected_duration)
+    expected_det[:dt] = det
+    expected_det[dt : 2 * dt] = det_off
+    expected_det[2 * dt : 2 * dt + eom_buffer_dt] = new_det_off
+    expected_det[-2 * dt : -dt] = det + det_diff
+    expected_det[-dt:] = new_det_off
+    np.testing.assert_array_equal(expected_det, ch_samples.det)
+
+    final_phase = built_seq.current_phase_ref("q0", "ground-rydberg")
+    if not correct_phase_drift:
+        assert final_phase == 0.0
+    else:
+        assert final_phase != 0.0
+    np.testing.assert_array_equal(ch_samples.phase[: 2 * dt], 0.0)
+    np.testing.assert_array_equal(ch_samples.phase[-2 * dt :], final_phase)
+
+
 def test_max_duration(reg, mod_device):
     dev_ = dataclasses.replace(mod_device, max_sequence_duration=100)
     seq = Sequence(reg, dev_)

@@ -291,6 +291,16 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             ),
             correct_phase_drift=op.get("correct_phase_drift", False),
         )
+    elif op["op"] == "modify_eom_setpoint":
+        seq.modify_eom_setpoint(
+            channel=op["channel"],
+            amp_on=_deserialize_parameter(op["amp_on"], vars),
+            detuning_on=_deserialize_parameter(op["detuning_on"], vars),
+            optimal_detuning_off=_deserialize_parameter(
+                op["optimal_detuning_off"], vars
+            ),
+            correct_phase_drift=op["correct_phase_drift"],
+        )
     elif op["op"] == "add_eom_pulse":
         seq.add_eom_pulse(
             channel=op["channel"],
