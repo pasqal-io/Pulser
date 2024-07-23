@@ -195,5 +195,5 @@ class _OpenBatchContextManager:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        self.backend._connection._close_batch(self.backend._batch_id)
+        _ = self.backend._connection._close_batch(self.backend._batch_id)
         self.backend._batch_id = ""
