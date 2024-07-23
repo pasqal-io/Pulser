@@ -157,7 +157,7 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
-        self._batch_id = ""
+        self._batch_id = None
 
     @staticmethod
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
@@ -196,4 +196,4 @@ class _OpenBatchContextManager:
         traceback: TracebackType | None,
     ) -> None:
         _ = self.backend._connection._close_batch(self.backend._batch_id)
-        self.backend._batch_id = ""
+        self.backend._batch_id = None

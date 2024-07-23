@@ -188,7 +188,6 @@ def test_qpu_backend(sequence):
     # behaves as expected.
     qpu = QPUBackend(seq, connection)
     with qpu.open_batch() as ob:
-        print(ob)
         assert ob.backend._batch_id == "abcd"
         assert isinstance(ob, _OpenBatchContextManager)
         results = qpu.run(job_params=[{"runs": 200}])
