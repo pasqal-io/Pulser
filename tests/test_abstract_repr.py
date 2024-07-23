@@ -935,6 +935,13 @@ class TestSerialization:
             "ryd", duration, 0.0, correct_phase_drift=correct_phase_drift
         )
         seq.delay(duration, "ryd", at_rest=delay_at_rest)
+        seq.modify_eom_setpoint(
+            "ryd",
+            amp_on=2.0,
+            detuning_on=-1.0,
+            optimal_detuning_off=det_off,
+            correct_phase_drift=correct_phase_drift,
+        )
         seq.disable_eom_mode("ryd", correct_phase_drift)
 
         abstract = json.loads(seq.to_abstract_repr())
@@ -992,6 +999,21 @@ class TestSerialization:
         }
 
         assert abstract["operations"][3] == {
+            **{
+                "op": "modify_eom_setpoint",
+                "channel": "ryd",
+                "amp_on": 2.0,
+                "detuning_on": -1.0,
+                "optimal_detuning_off": {
+                    "expression": "index",
+                    "lhs": {"variable": "det_off"},
+                    "rhs": 0,
+                },
+                "correct_phase_drift": correct_phase_drift,
+            },
+        }
+
+        assert abstract["operations"][4] == {
             **{
                 "op": "disable_eom_mode",
                 "channel": "ryd",
@@ -1230,7 +1252,11 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
                             *(op[wf][qty] for qty in wf_args)
                         )
                         op[wf] = reconstructed_wf._to_abstract_repr()
-        elif "eom" in op["op"] and not op.get("correct_phase_drift"):
+        elif (
+            "eom" in op["op"]
+            and not op.get("correct_phase_drift")
+            and op["op"] != "modify_eom_setpoint"
+        ):
             # Remove correct_phase_drift when at default, since the
             # roundtrip will delete it
             op.pop("correct_phase_drift", None)
@@ -2056,6 +2082,14 @@ class TestDeserialization:
                     "correct_phase_drift": correct_phase_drift,
                 },
                 {
+                    "op": "modify_eom_setpoint",
+                    "channel": "global",
+                    "amp_on": 1.0,
+                    "detuning_on": detuning_on,
+                    "optimal_detuning_off": -0.5,
+                    "correct_phase_drift": correct_phase_drift or False,
+                },
+                {
                     "op": "disable_eom_mode",
                     "channel": "global",
                     "correct_phase_drift": correct_phase_drift,
@@ -2070,13 +2104,14 @@ class TestDeserialization:
         )
         if correct_phase_drift is None:
             for op in s["operations"]:
-                del op["correct_phase_drift"]
+                if "modify" not in op["op"]:
+                    del op["correct_phase_drift"]
 
         seq = Sequence.from_abstract_repr(json.dumps(s))
         # init + declare_channel + enable_eom_mode (if not var_detuning_on)
         assert len(seq._calls) == 3 - var_detuning_on
         # add_eom_pulse + disable_eom + enable_eom_mode (if var_detuning_on)
-        assert len(seq._to_build_calls) == 2 + var_detuning_on
+        assert len(seq._to_build_calls) == 3 + var_detuning_on
 
         if var_detuning_on:
             enable_eom_call = seq._to_build_calls[0]
@@ -2101,6 +2136,21 @@ class TestDeserialization:
             "channel": "global",
             "amp_on": 3.0,
             "optimal_detuning_off": optimal_det_off,
+            "correct_phase_drift": bool(correct_phase_drift),
+        }
+        if var_detuning_on:
+            assert isinstance(detuning_on_kwarg, VariableItem)
+        else:
+            assert detuning_on_kwarg == detuning_on
+
+        modify_eom_call = seq._to_build_calls[-2]
+        assert modify_eom_call.name == "modify_eom_setpoint"
+        modify_eom_kwargs = modify_eom_call.kwargs.copy()
+        detuning_on_kwarg = modify_eom_kwargs.pop("detuning_on")
+        assert modify_eom_kwargs == {
+            "channel": "global",
+            "amp_on": 1.0,
+            "optimal_detuning_off": -0.5,
             "correct_phase_drift": bool(correct_phase_drift),
         }
         if var_detuning_on:
