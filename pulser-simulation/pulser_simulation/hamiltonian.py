@@ -218,10 +218,13 @@ class Hamiltonian:
                 # Gaussian beam loss in amplitude for global pulses only
                 # Noise is drawn at random for each pulse
                 if "amplitude" in self.config.noise_types and is_global_pulse:
-                    position = self._qdict[qid]
-                    r = np.linalg.norm(position)
-                    w0 = self.config.laser_waist
-                    noise_amp = noise_amp_base * np.exp(-((r / w0) ** 2))
+                    amp_fraction = 1.0
+                    if self.config.laser_waist is not None:
+                        position = self._qdict[qid]
+                        r = np.linalg.norm(position)
+                        w0 = self.config.laser_waist
+                        amp_fraction = np.exp(-((r / w0) ** 2))
+                    noise_amp = noise_amp_base * amp_fraction
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= noise_amp
 
         if local_noises:
@@ -307,10 +310,9 @@ class Hamiltonian:
             )
             self._bad_atoms = dict(zip(self._qid_index, dist))
         if "doppler" in self.config.noise_types:
+            temp = self.config.temperature * 1e-6
             detune = np.random.normal(
-                0,
-                doppler_sigma(self.config.temperature / 1e6),
-                size=len(self._qid_index),
+                0, doppler_sigma(temp), size=len(self._qid_index)
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
@@ -350,6 +352,12 @@ class Hamiltonian:
 
         Also builds qutip.Qobjs related to the Sequence if not built already,
         and refreshes potential noise parameters by drawing new at random.
+
+        Warning:
+            The refreshed noise parameters (when update=True) are only those
+            that change from shot to shot (ie doppler and state preparation).
+            Amplitude fluctuations change from pulse to pulse and are always
+            applied in `_extract_samples()`.
 
         Args:
             update: Whether to update the noise parameters.
