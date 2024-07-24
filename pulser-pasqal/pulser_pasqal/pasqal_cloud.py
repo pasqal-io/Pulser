@@ -252,3 +252,11 @@ class PasqalCloud(RemoteConnection):
 
         pasqal_config_kwargs["strict_validation"] = strict_validation
         return emu_cls(**pasqal_config_kwargs)
+
+    def supports_open_batch(self) -> bool:
+        """Flag to confirm this class can support creating an open batch."""
+        return True
+
+    def _close_batch(self, batch_id: str) -> None:
+        """Closes the batch on pasqal cloud associated with the batch ID."""
+        _ = self._sdk_connection.close_batch(batch_id)

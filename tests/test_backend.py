@@ -121,6 +121,9 @@ class _MockConnection(RemoteConnection):
     def _close_batch(self, batch_id: str) -> None:
         return None
 
+    def supports_open_batch(self) -> bool:
+        return True
+
 
 def test_qpu_backend(sequence):
     connection = _MockConnection()

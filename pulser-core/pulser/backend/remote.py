@@ -128,7 +128,15 @@ class RemoteConnection(ABC):
             "remote connection."
         )
 
-    def _close_batch(self, batch_id: str) -> SubmissionStatus | None:
+    def _close_batch(self, batch_id: str) -> None:
+        """Closes a batch using its ID."""
+        raise NotImplementedError(  # pragma: no cover
+            "Unable to close batch through this remote connection"
+        )
+
+    @abstractmethod
+    def supports_open_batch(self) -> bool:
+        """Flag to confirm this class can support creating an open batch."""
         pass
 
 
@@ -157,7 +165,7 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
-        self._batch_id = None
+        self._batch_id: str | None = None
 
     @staticmethod
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
@@ -173,7 +181,11 @@ class RemoteBackend(Backend):
                 )
 
     def open_batch(self) -> _OpenBatchContextManager:
-        """Create an open batch within a context manager object"""
+        """Creates an open batch within a context manager object."""
+        if not self._connection.supports_open_batch():
+            raise NotImplementedError(  # pragma: no cover
+                "Unable to execute open_batch using this remote connection"
+            )
         return _OpenBatchContextManager(self)
 
 
@@ -195,5 +207,6 @@ class _OpenBatchContextManager:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        _ = self.backend._connection._close_batch(self.backend._batch_id)
+        if self.backend._batch_id:
+            self.backend._connection._close_batch(self.backend._batch_id)
         self.backend._batch_id = None
