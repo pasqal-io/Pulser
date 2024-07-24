@@ -73,6 +73,7 @@ class PasqalEmulator(RemoteBackend):
                 available.  If set to False, the call is non-blocking and the
                 obtained results' status can be checked using their `status`
                 property.
+
         Returns:
             The results, which can be accessed once all sequences have been
             successfully executed.
