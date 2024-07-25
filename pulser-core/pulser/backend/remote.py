@@ -66,7 +66,7 @@ class RemoteResults(Results):
         self._connection = connection
 
     @property
-    def results(self) -> tuple[Result, ...]:
+    def results(self) -> tuple[Result | None, ...]:
         """The actual results, obtained after execution is done."""
         return self._results
 
@@ -77,7 +77,11 @@ class RemoteResults(Results):
     def __getattr__(self, name: str) -> Any:
         if name == "_results":
             status = self.get_status()
-            if status == SubmissionStatus.DONE:
+            if status not in {
+                SubmissionStatus.PENDING,
+                SubmissionStatus.RUNNING,
+                SubmissionStatus.PAUSED,
+            }:
                 self._results = tuple(
                     self._connection._fetch_result(self._submission_id)
                 )
@@ -102,7 +106,9 @@ class RemoteConnection(ABC):
         pass
 
     @abstractmethod
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(
+        self, submission_id: str
+    ) -> typing.Sequence[Result | None]:
         """Fetches the results of a completed submission."""
         pass
 

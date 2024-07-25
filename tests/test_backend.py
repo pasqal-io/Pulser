@@ -93,13 +93,18 @@ class _MockConnection(RemoteConnection):
     def submit(self, sequence, wait: bool = False, **kwargs) -> RemoteResults:
         return RemoteResults("abcd", self)
 
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(
+        self, submission_id: str
+    ) -> typing.Sequence[Result | None]:
+        # First job has results,
+        # Second one has no results (e.g. in case of error)
         return (
             SampledResult(
                 ("q0", "q1"),
                 meas_basis="ground-rydberg",
                 bitstring_counts={"00": 100},
             ),
+            None,
         )
 
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
@@ -169,3 +174,4 @@ def test_qpu_backend(sequence):
 
     results = remote_results.results
     assert results[0].sampling_dist == {"00": 1.0}
+    assert results[1] is None

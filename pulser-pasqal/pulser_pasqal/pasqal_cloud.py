@@ -179,7 +179,7 @@ class PasqalCloud(RemoteConnection):
             for name, dev_str in abstract_devices.items()
         }
 
-    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
+    def _fetch_result(self, submission_id: str) -> tuple[Result | None, ...]:
         # For now, the results are always sampled results
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
         batch = get_batch_fn(id=submission_id)
@@ -188,20 +188,22 @@ class PasqalCloud(RemoteConnection):
         all_qubit_ids = reg.qubit_ids
         meas_basis = seq_builder.get_measurement_basis()
 
-        results = []
+        results: list[Result | None] = []
         for job in batch.ordered_jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:
                 size = len(vars["qubits"])
-            assert job.result is not None, "Failed to fetch the results."
-            results.append(
-                SampledResult(
-                    atom_order=all_qubit_ids[slice(size)],
-                    meas_basis=meas_basis,
-                    bitstring_counts=job.result,
+            if job.result is None:
+                results.append(None)
+            else:
+                results.append(
+                    SampledResult(
+                        atom_order=all_qubit_ids[slice(size)],
+                        meas_basis=meas_basis,
+                        bitstring_counts=job.result,
+                    )
                 )
-            )
         return tuple(results)
 
     @backoff_decorator
