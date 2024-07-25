@@ -26,7 +26,7 @@ def matrices():
     pauli["X"] = sigmax()
     pauli["Zh"] = 0.5 * sigmaz()
     pauli["ket"] = Qobj([[1.0], [2.0]])
-    pauli["I3"] = qeye(3)
+    pauli["I4"] = qeye(4)
     return pauli
 
 
@@ -103,10 +103,17 @@ def test_eff_noise_opers(matrices):
             eff_noise_opers=[matrices["ket"]],
             eff_noise_rates=[1.0],
         )
-    with pytest.raises(NotImplementedError, match="Operator's shape"):
+    with pytest.raises(ValueError, match="With leakage, operator's shape"):
         SimConfig(
-            noise=("eff_noise"),
-            eff_noise_opers=[matrices["I3"]],
+            noise=("eff_noise", "leakage"),
+            eff_noise_opers=[matrices["I"]],
+            eff_noise_rates=[1.0],
+            with_leakage=True
+        )
+    with pytest.raises(ValueError, match="Without leakage, operator's shape"):
+        SimConfig(
+            noise=("eff_noise",),
+            eff_noise_opers=[matrices["I4"]],
             eff_noise_rates=[1.0],
         )
     SimConfig(

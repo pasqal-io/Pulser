@@ -78,6 +78,7 @@ class TestNoiseModel:
             noise_model.state_prep_error,
             noise_model.amp_sigma,
             noise_model.laser_waist,
+            noise_model.with_leakage,
         )
         assert all(getattr(noise_model, p) == 1.0 for p in params)
         assert all(
@@ -176,7 +177,27 @@ class TestNoiseModel:
         matrices["Zh"] = 0.5 * np.array([[1, 0], [0, -1]])
         matrices["ket"] = np.array([[1.0], [2.0]])
         matrices["I3"] = np.eye(3)
+        matrices["I4"] = np.eye(4)
         return matrices
+
+    @pytest.mark.parametrize("value", [False, True, 1, 0.1])
+    def test_init_bool_like(self, value, matrices):
+        if isinstance(value, bool):
+            noise_model = NoiseModel(
+                eff_noise_rates=[0.1],
+                eff_noise_opers=[matrices["I3"]],
+                with_leakage=value,
+            )
+            assert noise_model.with_leakage == value
+            return
+        with pytest.raises(
+            ValueError, match=f"'with_leakage' must be a boolean, not {value}"
+        ):
+            noise_model = NoiseModel(
+                eff_noise_rates=[0.1],
+                eff_noise_opers=[matrices["I3"]],
+                with_leakage=value,
+            )
 
     def test_eff_noise_rates(self, matrices):
         with pytest.raises(
@@ -207,11 +228,28 @@ class TestNoiseModel:
                 eff_noise_opers=[2.0],
                 eff_noise_rates=[1.0],
             )
-        with pytest.raises(NotImplementedError, match="Operator's shape"):
+        with pytest.raises(ValueError, match="Without leakage"):
             NoiseModel(
-                eff_noise_opers=[matrices["I3"]],
+                eff_noise_opers=[matrices["I4"]],
                 eff_noise_rates=[1.0],
             )
+        with pytest.raises(ValueError, match="With leakage"):
+            NoiseModel(
+                eff_noise_opers=[matrices["I"]],
+                eff_noise_rates=[1.0],
+                with_leakage=True,
+            )
+
+    def test_leakage(self):
+        for param in ("dephasing_rate", "depolarizing_rate"):
+            with pytest.raises(
+                NotImplementedError, match="Dephasing and depolarizing"
+            ):
+                NoiseModel(**{param: 0.5, "with_leakage": True})
+        with pytest.raises(
+            ValueError, match="At least one effective noise operator"
+        ):
+            NoiseModel(with_leakage=True)
 
     def test_eq(self, matrices):
         final_fields = dict(
@@ -229,13 +267,21 @@ class TestNoiseModel:
         for param in final_fields:
             assert final_fields[param] == getattr(noise_model, param)
 
-    def test_relevant_params(self):
-        assert NoiseModel._find_relevant_params({"SPAM"}, 0.0, 0.5, 100) == {
+    @pytest.mark.parametrize("with_leakage", [True, False])
+    def test_relevant_params(self, with_leakage):
+        def _add_leakage(noise_set: set, with_leakage: bool) -> set:
+            return noise_set.union({"with_leakage"} if with_leakage else {})
+
+        assert NoiseModel._find_relevant_params(
+            {"SPAM"}, 0.0, 0.5, 100, with_leakage
+        ) == {
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
         }
-        assert NoiseModel._find_relevant_params({"SPAM"}, 0.1, 0.5, 100) == {
+        assert NoiseModel._find_relevant_params(
+            {"SPAM"}, 0.1, 0.5, 100, with_leakage
+        ) == {
             "state_prep_error",
             "p_false_pos",
             "p_false_neg",
@@ -244,31 +290,32 @@ class TestNoiseModel:
         }
 
         assert NoiseModel._find_relevant_params(
-            {"doppler"}, 0.0, 0.0, None
+            {"doppler"}, 0.0, 0.0, None, with_leakage
         ) == {"temperature", "runs", "samples_per_run"}
 
         assert NoiseModel._find_relevant_params(
-            {"amplitude"}, 0.0, 1.0, None
+            {"amplitude"}, 0.0, 1.0, None, with_leakage
         ) == {"amp_sigma", "runs", "samples_per_run"}
         assert NoiseModel._find_relevant_params(
-            {"amplitude"}, 0.0, 0.0, 100.0
+            {"amplitude"}, 0.0, 0.0, 100.0, with_leakage
         ) == {"amp_sigma", "laser_waist"}
         assert NoiseModel._find_relevant_params(
-            {"amplitude"}, 0.0, 0.5, 100.0
+            {"amplitude"}, 0.0, 0.5, 100.0, with_leakage
         ) == {"amp_sigma", "laser_waist", "runs", "samples_per_run"}
-
         assert NoiseModel._find_relevant_params(
-            {"dephasing"}, 0.0, 0.0, None
-        ) == {"dephasing_rate", "hyperfine_dephasing_rate"}
+            {"dephasing", "leakage"}, 0.0, 0.0, None, with_leakage
+        ) == _add_leakage(
+            {"dephasing_rate", "hyperfine_dephasing_rate"}, with_leakage
+        )
         assert NoiseModel._find_relevant_params(
-            {"relaxation"}, 0.0, 0.0, None
-        ) == {"relaxation_rate"}
+            {"relaxation", "leakage"}, 0.0, 0.0, None, with_leakage
+        ) == _add_leakage({"relaxation_rate"}, with_leakage)
         assert NoiseModel._find_relevant_params(
-            {"depolarizing"}, 0.0, 0.0, None
-        ) == {"depolarizing_rate"}
+            {"depolarizing", "leakage"}, 0.0, 0.0, None, with_leakage
+        ) == _add_leakage({"depolarizing_rate"}, with_leakage)
         assert NoiseModel._find_relevant_params(
-            {"eff_noise"}, 0.0, 0.0, None
-        ) == {"eff_noise_rates", "eff_noise_opers"}
+            {"eff_noise", "leakage"}, 0.0, 0.0, None, with_leakage
+        ) == _add_leakage({"eff_noise_rates", "eff_noise_opers"}, with_leakage)
 
     def test_repr(self):
         assert repr(NoiseModel()) == "NoiseModel(noise_types=())"
@@ -356,6 +403,7 @@ class TestLegacyNoiseModel:
             state_prep_error=0.1,
             amp_sigma=0.5,
             laser_waist=100.0,
+            with_leakage=False,
         )
         assert relevant_params == expected_relevant_params[noise_type]
 

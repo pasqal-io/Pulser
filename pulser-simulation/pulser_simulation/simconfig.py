@@ -77,7 +77,9 @@ class SimConfig:
         noise: Types of noises to be used in the
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
-
+            - "leakage": Adds an error state 'x' to the computational
+                basis, that can interact with the other states via an
+                effective noise channel.
             - "relaxation": Relaxation from the Rydberg to the ground state.
             - "dephasing": Random phase (Z) flip.
             - "depolarizing": Quantum noise where the state (rho) is
@@ -105,6 +107,8 @@ class SimConfig:
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
         solver_options: Options for the qutip solver.
+        with_leakage: Whether or not to include an error state in the
+            computations (default to False).
     """
 
     noise: Union[NoiseTypes, tuple[NoiseTypes, ...]] = ()
@@ -125,6 +129,7 @@ class SimConfig:
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
+    with_leakage: bool = bool(_LEGACY_DEFAULTS["with_leakage"])
 
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
@@ -135,6 +140,7 @@ class SimConfig:
             noise_model.state_prep_error,
             noise_model.amp_sigma,
             noise_model.laser_waist,
+            noise_model.with_leakage,
         )
         for param in relevant_params:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
@@ -149,6 +155,7 @@ class SimConfig:
             self.eta,
             self.amp_sigma,
             self.laser_waist,
+            self.with_leakage,
         )
         kwargs = {}
         for param in relevant_params:
@@ -253,6 +260,7 @@ class SimConfig:
             self.eff_noise_rates,
             self.eff_noise_opers,
             "eff_noise" in self.noise,
+            self.with_leakage,
         )
 
     @property

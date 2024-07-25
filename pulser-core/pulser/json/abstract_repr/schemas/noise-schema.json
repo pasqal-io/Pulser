@@ -103,6 +103,9 @@
         },
         "temperature": {
           "type": "number"
+        },
+        "with_leakage": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -125,13 +128,13 @@
     },
     "NoiseType": {
       "enum": [
+        "leakage",
         "doppler",
         "amplitude",
         "SPAM",
         "relaxation",
         "dephasing",
         "depolarizing",
-        "leakage",
         "eff_noise"
       ],
       "type": "string"

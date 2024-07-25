@@ -255,6 +255,7 @@ class QutipEmulator:
             noise_model.state_prep_error,
             noise_model.amp_sigma,
             noise_model.laser_waist,
+            noise_model.with_leakage,
         )
         for param in relevant_params:
             param_dict[param] = getattr(noise_model, param)
