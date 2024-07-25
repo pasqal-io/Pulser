@@ -107,8 +107,6 @@ class SimConfig:
         amp_sigma: Dictates the fluctuations in amplitude as a standard
             deviation of a normal distribution centered in 1.
         solver_options: Options for the qutip solver.
-        with_leakage: Whether or not to include an error state in the
-            computations (default to False).
     """
 
     noise: Union[NoiseTypes, tuple[NoiseTypes, ...]] = ()
@@ -129,7 +127,6 @@ class SimConfig:
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
-    with_leakage: bool = bool(_LEGACY_DEFAULTS["with_leakage"])
 
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
@@ -146,6 +143,7 @@ class SimConfig:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
                 noise_model, param
             )
+        kwargs.pop("with_leakage", None)
         return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
@@ -182,6 +180,11 @@ class SimConfig:
         NoiseModel._validate_parameters(
             {f.name: getattr(self, f.name) for f in fields(self)}
         )
+
+    @property
+    def with_leakage(self):
+        """Whether or not 'leakage' is included in the noise types."""
+        return "leakage" in self.noise
 
     @property
     def spam_dict(self) -> dict[str, float]:

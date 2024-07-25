@@ -81,7 +81,7 @@ _PROBABILITY_LIKE = {
 _BOOLEAN = {"with_leakage"}
 
 _LEGACY_DEFAULTS = {
-    "with_leakage": False,
+    "with_leakage": True,
     "runs": 15,
     "samples_per_run": 5,
     "state_prep_error": 0.005,
@@ -230,7 +230,7 @@ class NoiseModel:
             eff_noise_opers=to_tuple(eff_noise_opers),
             with_leakage=with_leakage,
         )
-
+        print("Initial param_vals", param_vals)
         if noise_types is not None:
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
@@ -250,20 +250,22 @@ class NoiseModel:
                     # Replace undefined relevant params by the legacy default
                     if param_vals[p_] is None:
                         param_vals[p_] = _LEGACY_DEFAULTS[p_]
-
+        print("param_vals post noise_types", param_vals)
         true_noise_types: set[NoiseTypes] = {
             _PARAM_TO_NOISE_TYPE[p_]
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
+        print("With leakage", param_vals["with_leakage"])
         self._check_leakage_noise(
             true_noise_types if noise_types is None else noise_types
         )
+        print("With leakage", param_vals["with_leakage"])
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
             cast(tuple, param_vals["eff_noise_opers"]),
             "eff_noise" in (noise_types or true_noise_types),
-            with_leakage=with_leakage,
+            with_leakage=False,
         )
 
         # Get rid of unnecessary None's
@@ -395,7 +397,7 @@ class NoiseModel:
 
         if np.any(np.array(eff_noise_rates) < 0):
             raise ValueError("The provided rates must be greater than 0.")
-
+        print(with_leakage)
         min_shape = 2 if not with_leakage else 3
         possible_shapes = [
             (min_shape, min_shape),
