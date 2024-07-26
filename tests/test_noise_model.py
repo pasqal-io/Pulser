@@ -177,7 +177,6 @@ class TestNoiseModel:
         matrices["Zh"] = 0.5 * np.array([[1, 0], [0, -1]])
         matrices["ket"] = np.array([[1.0], [2.0]])
         matrices["I3"] = np.eye(3)
-        matrices["I4"] = np.eye(4)
         return matrices
 
     @pytest.mark.parametrize("value", [False, True, 0, 1, 0.1])

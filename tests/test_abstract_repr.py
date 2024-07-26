@@ -183,7 +183,7 @@ def test_register(reg: Register | Register3D):
         ),
         NoiseModel(
             eff_noise_rates=(0.1,),
-            eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
+            eff_noise_opers=(((0, -1j), (1j, 0)),),
             with_leakage=True,
         ),
     ],
