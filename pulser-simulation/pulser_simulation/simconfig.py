@@ -79,7 +79,7 @@ class SimConfig:
             noise types:
             - "leakage": Adds an error state 'x' to the computational
                 basis, that can interact with the other states via an
-                effective noise channel.
+                effective noise channel (which must be defined).
             - "relaxation": Relaxation from the Rydberg to the ground state.
             - "dephasing": Random phase (Z) flip.
             - "depolarizing": Quantum noise where the state (rho) is
@@ -182,7 +182,7 @@ class SimConfig:
         )
 
     @property
-    def with_leakage(self):
+    def with_leakage(self) -> bool:
         """Whether or not 'leakage' is included in the noise types."""
         return "leakage" in self.noise
 

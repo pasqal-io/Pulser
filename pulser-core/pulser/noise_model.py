@@ -81,7 +81,6 @@ _PROBABILITY_LIKE = {
 _BOOLEAN = {"with_leakage"}
 
 _LEGACY_DEFAULTS = {
-    "with_leakage": True,
     "runs": 15,
     "samples_per_run": 5,
     "state_prep_error": 0.005,
@@ -230,7 +229,6 @@ class NoiseModel:
             eff_noise_opers=to_tuple(eff_noise_opers),
             with_leakage=with_leakage,
         )
-        print("Initial param_vals", param_vals)
         if noise_types is not None:
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
@@ -246,26 +244,26 @@ class NoiseModel:
                 )
             self._check_noise_types(noise_types)
             for nt_ in noise_types:
+                if nt_ == "leakage":
+                    raise ValueError(
+                        "'Leakage' cannot be explicitely defined in the noise"
+                        "types. Set 'with_leakage' to True instead."
+                    )
                 for p_ in _NOISE_TYPE_PARAMS[nt_]:
                     # Replace undefined relevant params by the legacy default
                     if param_vals[p_] is None:
                         param_vals[p_] = _LEGACY_DEFAULTS[p_]
-        print("param_vals post noise_types", param_vals)
         true_noise_types: set[NoiseTypes] = {
             _PARAM_TO_NOISE_TYPE[p_]
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
-        print("With leakage", param_vals["with_leakage"])
-        self._check_leakage_noise(
-            true_noise_types if noise_types is None else noise_types
-        )
-        print("With leakage", param_vals["with_leakage"])
+        self._check_leakage_noise(true_noise_types)
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
             cast(tuple, param_vals["eff_noise_opers"]),
             "eff_noise" in (noise_types or true_noise_types),
-            with_leakage=False,
+            with_leakage=cast(bool, param_vals["with_leakage"]),
         )
 
         # Get rid of unnecessary None's
@@ -298,7 +296,11 @@ class NoiseModel:
         relevant_param_vals = {
             p: param_vals[p]
             for p in param_vals
-            if param_vals[p] is not None or (p in relevant_params)
+            if not (
+                param_vals[p] is None
+                or (isinstance(param_vals[p], bool) and not param_vals[p])
+            )
+            or p in relevant_params
         }
         self._validate_parameters(relevant_param_vals)
 
@@ -334,9 +336,6 @@ class NoiseModel:
         # Disregard laser_waist when not defined
         if laser_waist is None:
             relevant_params.discard("laser_waist")
-        # Diregard leakage if with_leakage is False
-        if not with_leakage:
-            relevant_params.discard("with_leakage")
         return relevant_params
 
     @staticmethod
@@ -397,12 +396,6 @@ class NoiseModel:
 
         if np.any(np.array(eff_noise_rates) < 0):
             raise ValueError("The provided rates must be greater than 0.")
-        print(with_leakage)
-        min_shape = 2 if not with_leakage else 3
-        possible_shapes = [
-            (min_shape, min_shape),
-            (min_shape + 1, min_shape + 1),
-        ]
 
         # Check the validity of operators
         for op in eff_noise_opers:
@@ -416,11 +409,9 @@ class NoiseModel:
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
 
-            if operator.shape not in possible_shapes:
-                raise ValueError(
-                    f"With{'' if with_leakage else 'out'} leakage, operator's "
-                    f"shape must be {possible_shapes[0]} or "
-                    f"{possible_shapes[1]}, not {operator.shape}."
+            if operator.shape != (2, 2):
+                raise NotImplementedError(
+                    f"Operator's shape must be (2,2) not {operator.shape}."
                 )
 
     @staticmethod
@@ -441,8 +432,8 @@ class NoiseModel:
                     "or equal to one"
                 )
             elif param in _BOOLEAN:
-                is_valid = isinstance(value, bool)
-                comp = "a boolean"
+                is_valid = isinstance(value, bool) and value
+                comp = "True"
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
