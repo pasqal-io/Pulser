@@ -246,8 +246,8 @@ class NoiseModel:
             for nt_ in noise_types:
                 if nt_ == "leakage":
                     raise ValueError(
-                        "'Leakage' cannot be explicitely defined in the noise"
-                        "types. Set 'with_leakage' to True instead."
+                        "'leakage' cannot be explicitely defined in the noise"
+                        " types. Set 'with_leakage' to True instead."
                     )
                 for p_ in _NOISE_TYPE_PARAMS[nt_]:
                     # Replace undefined relevant params by the legacy default
@@ -275,7 +275,6 @@ class NoiseModel:
             cast(float, param_vals["state_prep_error"]),
             cast(float, param_vals["amp_sigma"]),
             cast(Union[float, None], param_vals["laser_waist"]),
-            cast(bool, param_vals["with_leakage"]),
         )
 
         if noise_types is not None:
@@ -296,11 +295,7 @@ class NoiseModel:
         relevant_param_vals = {
             p: param_vals[p]
             for p in param_vals
-            if not (
-                param_vals[p] is None
-                or (isinstance(param_vals[p], bool) and not param_vals[p])
-            )
-            or p in relevant_params
+            if param_vals[p] is not None or p in relevant_params
         }
         self._validate_parameters(relevant_param_vals)
 
@@ -322,7 +317,6 @@ class NoiseModel:
         state_prep_error: float,
         amp_sigma: float,
         laser_waist: float | None,
-        with_leakage: bool,
     ) -> set[str]:
         relevant_params: set[str] = set()
         for nt_ in noise_types:
@@ -398,6 +392,11 @@ class NoiseModel:
             raise ValueError("The provided rates must be greater than 0.")
 
         # Check the validity of operators
+        min_shape = 2 if not with_leakage else 3
+        possible_shapes = [
+            (min_shape, min_shape),
+            (min_shape + 1, min_shape + 1),
+        ]
         for op in eff_noise_opers:
             # type checking
             try:
@@ -409,9 +408,17 @@ class NoiseModel:
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
 
-            if operator.shape != (2, 2):
-                raise NotImplementedError(
-                    f"Operator's shape must be (2,2) not {operator.shape}."
+            # TODO: Modify when effective noise can be provided for qutrit
+            if operator.shape != possible_shapes[0]:
+                err_type = (
+                    NotImplementedError
+                    if operator.shape in possible_shapes
+                    else ValueError
+                )
+                raise err_type(
+                    f"With{'' if with_leakage else 'out'} leakage, operator's "
+                    f"shape must be {possible_shapes[0]}, "
+                    f"not {operator.shape}."
                 )
 
     @staticmethod
@@ -432,8 +439,8 @@ class NoiseModel:
                     "or equal to one"
                 )
             elif param in _BOOLEAN:
-                is_valid = isinstance(value, bool) and value
-                comp = "True"
+                is_valid = isinstance(value, bool)
+                comp = "a boolean"
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
@@ -450,7 +457,6 @@ class NoiseModel:
             self.state_prep_error,
             self.amp_sigma,
             self.laser_waist,
-            self.with_leakage,
         )
         relevant_params.add("noise_types")
         params_list = []

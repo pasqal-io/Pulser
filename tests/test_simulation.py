@@ -92,6 +92,7 @@ def matrices():
     pauli["X"] = qutip.sigmax()
     pauli["Y"] = qutip.sigmay()
     pauli["Z"] = qutip.sigmaz()
+    pauli["I3"] = qutip.qeye(3)
     return pauli
 
 
@@ -712,7 +713,7 @@ def test_noise(seq, matrices):
         sim2.set_config(
             SimConfig(
                 ("leakage", "eff_noise"),
-                eff_noise_opers=[matrices["I"]],
+                eff_noise_opers=[matrices["I3"]],
                 eff_noise_rates=[0.1],
             )
         )
@@ -1048,7 +1049,7 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
         sim.set_config(
             SimConfig(
                 ("leakage", "eff_noise"),
-                eff_noise_opers=[matrices["I"]],
+                eff_noise_opers=[matrices["I3"]],
                 eff_noise_rates=[0.1],
             )
         )

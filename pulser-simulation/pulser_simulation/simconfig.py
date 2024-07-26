@@ -137,7 +137,6 @@ class SimConfig:
             noise_model.state_prep_error,
             noise_model.amp_sigma,
             noise_model.laser_waist,
-            noise_model.with_leakage,
         )
         for param in relevant_params:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
@@ -153,7 +152,6 @@ class SimConfig:
             self.eta,
             self.amp_sigma,
             self.laser_waist,
-            self.with_leakage,
         )
         kwargs = {}
         for param in relevant_params:
