@@ -92,6 +92,7 @@ def matrices():
     pauli["X"] = qutip.sigmax()
     pauli["Y"] = qutip.sigmay()
     pauli["Z"] = qutip.sigmaz()
+    pauli["I3"] = qutip.qeye(3)
     return pauli
 
 
@@ -705,6 +706,17 @@ def test_noise(seq, matrices):
                 eff_noise_rates=[1.0],
             )
         )
+    with pytest.raises(
+        NotImplementedError,
+        match="mode 'ising' does not support simulation of",
+    ):
+        sim2.set_config(
+            SimConfig(
+                ("leakage", "eff_noise"),
+                eff_noise_opers=[matrices["I3"]],
+                eff_noise_rates=[0.1],
+            )
+        )
     assert sim2.config.spam_dict == {
         "eta": 0.9,
         "epsilon": 0.01,
@@ -1031,6 +1043,16 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     seq.add(rise, "ch0")
 
     sim = QutipEmulator.from_sequence(seq, sampling_rate=0.1)
+    with pytest.raises(
+        NotImplementedError, match="mode 'XY' does not support simulation of"
+    ):
+        sim.set_config(
+            SimConfig(
+                ("leakage", "eff_noise"),
+                eff_noise_opers=[matrices["I3"]],
+                eff_noise_rates=[0.1],
+            )
+        )
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):

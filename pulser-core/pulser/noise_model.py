@@ -30,6 +30,7 @@ from pulser.json.abstract_repr.validation import validate_abstract_repr
 __all__ = ["NoiseModel"]
 
 NoiseTypes = Literal[
+    "leakage",
     "doppler",
     "amplitude",
     "SPAM",
@@ -40,6 +41,7 @@ NoiseTypes = Literal[
 ]
 
 _NOISE_TYPE_PARAMS: dict[NoiseTypes, tuple[str, ...]] = {
+    "leakage": ("with_leakage",),
     "doppler": ("temperature",),
     "amplitude": ("laser_waist", "amp_sigma"),
     "SPAM": ("p_false_pos", "p_false_neg", "state_prep_error"),
@@ -76,6 +78,8 @@ _PROBABILITY_LIKE = {
     "amp_sigma",
 }
 
+_BOOLEAN = {"with_leakage"}
+
 _LEGACY_DEFAULTS = {
     "runs": 15,
     "samples_per_run": 5,
@@ -98,6 +102,11 @@ class NoiseModel:
 
     Supported noise types:
 
+    - "leakage": Adds an error state 'x' to the computational
+        basis, that can interact with the other states via an
+        effective noise channel. Must be defined with an effective
+        noise channel, but is incompatible with dephasing and
+        depolarizing noise channels.
     - **relaxation**: Noise due to a decay from the Rydberg to
       the ground state (parametrized by ``relaxation_rate``),
       commonly characterized experimentally by the T1 time.
@@ -156,6 +165,8 @@ class NoiseModel:
         eff_noise_rates: The rate associated to each effective noise operator
             (in 1/µs).
         eff_noise_opers: The operators for the effective noise model.
+        with_leakage: Whether or not to include an error state in the
+            computations (default to False).
     """
 
     noise_types: tuple[NoiseTypes, ...]
@@ -173,6 +184,7 @@ class NoiseModel:
     depolarizing_rate: float
     eff_noise_rates: tuple[float, ...]
     eff_noise_opers: tuple[ArrayLike, ...]
+    with_leakage: bool
 
     def __init__(
         self,
@@ -191,6 +203,7 @@ class NoiseModel:
         depolarizing_rate: float | None = None,
         eff_noise_rates: tuple[float, ...] = (),
         eff_noise_opers: tuple[ArrayLike, ...] = (),
+        with_leakage: bool = False,
     ) -> None:
         """Initializes a noise model."""
 
@@ -214,8 +227,8 @@ class NoiseModel:
             depolarizing_rate=depolarizing_rate,
             eff_noise_rates=to_tuple(eff_noise_rates),
             eff_noise_opers=to_tuple(eff_noise_opers),
+            with_leakage=with_leakage,
         )
-
         if noise_types is not None:
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
@@ -231,21 +244,26 @@ class NoiseModel:
                 )
             self._check_noise_types(noise_types)
             for nt_ in noise_types:
+                if nt_ == "leakage":
+                    raise ValueError(
+                        "'leakage' cannot be explicitely defined in the noise"
+                        " types. Set 'with_leakage' to True instead."
+                    )
                 for p_ in _NOISE_TYPE_PARAMS[nt_]:
                     # Replace undefined relevant params by the legacy default
                     if param_vals[p_] is None:
                         param_vals[p_] = _LEGACY_DEFAULTS[p_]
-
         true_noise_types: set[NoiseTypes] = {
             _PARAM_TO_NOISE_TYPE[p_]
             for p_ in param_vals
             if param_vals[p_] and p_ in _PARAM_TO_NOISE_TYPE
         }
-
+        self._check_leakage_noise(true_noise_types)
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
             cast(tuple, param_vals["eff_noise_opers"]),
             "eff_noise" in (noise_types or true_noise_types),
+            with_leakage=cast(bool, param_vals["with_leakage"]),
         )
 
         # Get rid of unnecessary None's
@@ -277,7 +295,7 @@ class NoiseModel:
         relevant_param_vals = {
             p: param_vals[p]
             for p in param_vals
-            if param_vals[p] is not None or (p in relevant_params)
+            if param_vals[p] is not None or p in relevant_params
         }
         self._validate_parameters(relevant_param_vals)
 
@@ -315,6 +333,17 @@ class NoiseModel:
         return relevant_params
 
     @staticmethod
+    def _check_leakage_noise(noise_types: Collection[NoiseTypes]) -> None:
+        # Can't define "dephasing", "depolarizing" with "leakage"
+        if "leakage" not in noise_types:
+            return
+        if "eff_noise" not in noise_types:
+            raise ValueError(
+                "At least one effective noise operator must be defined to"
+                " simulate leakage."
+            )
+
+    @staticmethod
     def _check_noise_types(noise_types: Sequence[NoiseTypes]) -> None:
         for noise_type in noise_types:
             if noise_type not in get_args(NoiseTypes):
@@ -329,6 +358,7 @@ class NoiseModel:
         eff_noise_rates: Sequence[float],
         eff_noise_opers: Sequence[ArrayLike],
         check_contents: bool,
+        with_leakage: bool,
     ) -> None:
         if len(eff_noise_opers) != len(eff_noise_rates):
             raise ValueError(
@@ -355,6 +385,11 @@ class NoiseModel:
             raise ValueError("The provided rates must be greater than 0.")
 
         # Check the validity of operators
+        min_shape = 2 if not with_leakage else 3
+        possible_shapes = [
+            (min_shape, min_shape),
+            (min_shape + 1, min_shape + 1),
+        ]
         for op in eff_noise_opers:
             # type checking
             try:
@@ -366,9 +401,17 @@ class NoiseModel:
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
 
-            if operator.shape != (2, 2):
-                raise NotImplementedError(
-                    f"Operator's shape must be (2,2) not {operator.shape}."
+            # TODO: Modify when effective noise can be provided for qutrit
+            if operator.shape != possible_shapes[0]:
+                err_type = (
+                    NotImplementedError
+                    if operator.shape in possible_shapes
+                    else ValueError
+                )
+                raise err_type(
+                    f"With{'' if with_leakage else 'out'} leakage, operator's "
+                    f"shape must be {possible_shapes[0]}, "
+                    f"not {operator.shape}."
                 )
 
     @staticmethod
@@ -388,11 +431,15 @@ class NoiseModel:
                     "greater than or equal to zero and smaller than "
                     "or equal to one"
                 )
+            elif param in _BOOLEAN:
+                is_valid = isinstance(value, bool)
+                comp = "a boolean"
             if not is_valid:
                 raise ValueError(f"'{param}' must be {comp}, not {value}.")
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = asdict(self)
+        all_fields.pop("with_leakage")
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
