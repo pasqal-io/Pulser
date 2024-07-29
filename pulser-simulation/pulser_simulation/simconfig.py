@@ -77,6 +77,7 @@ class SimConfig:
         noise: Types of noises to be used in the
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
+
             - "leakage": Adds an error state 'x' to the computational
               basis, that can interact with the other states via an
               effective noise channel (which must be defined).
