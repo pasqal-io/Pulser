@@ -260,10 +260,6 @@ class TestNoiseModel:
     @pytest.mark.parametrize("param", ["dephasing_rate", "depolarizing_rate"])
     def test_leakage(self, param):
         with pytest.raises(
-            NotImplementedError, match="Dephasing and depolarizing"
-        ):
-            NoiseModel(**{param: 0.5, "with_leakage": True})
-        with pytest.raises(
             ValueError, match="At least one effective noise operator"
         ):
             NoiseModel(with_leakage=True)
@@ -347,6 +343,20 @@ class TestNoiseModel:
             repr(NoiseModel(laser_waist=100.0))
             == "NoiseModel(noise_types=('amplitude',), "
             "laser_waist=100.0, amp_sigma=0.0)"
+        )
+        assert (
+            repr(
+                NoiseModel(
+                    hyperfine_dephasing_rate=0.2,
+                    eff_noise_opers=[[[1, 0, 0], [0, 1, 0], [0, 0, 1]]],
+                    eff_noise_rates=[0.1],
+                    with_leakage=True,
+                )
+            )
+            == "NoiseModel(noise_types=('dephasing', 'eff_noise', 'leakage'), "
+            "dephasing_rate=0.0, hyperfine_dephasing_rate=0.2, "
+            "eff_noise_rates=(0.1,), eff_noise_opers=(((1, 0, 0), (0, 1, 0), "
+            "(0, 0, 1)),), with_leakage=True)"
         )
 
 

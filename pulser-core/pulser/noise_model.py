@@ -337,13 +337,6 @@ class NoiseModel:
         # Can't define "dephasing", "depolarizing" with "leakage"
         if "leakage" not in noise_types:
             return
-        # TODO: Implement the depolarizing and dephasing operations with
-        # projectors will stop raising an error.
-        if "dephasing" in noise_types or "depolarizing" in noise_types:
-            raise NotImplementedError(
-                "Dephasing and depolarizing channels can't be defined "
-                "with a leakage noise."
-            )
         if "eff_noise" not in noise_types:
             raise ValueError(
                 "At least one effective noise operator must be defined to"
