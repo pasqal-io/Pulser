@@ -114,6 +114,17 @@ class Hamiltonian:
                     f"Cannot include {noise_type} noise in all-basis."
                 )
 
+        # NOTE: These operators only make sense when basis != "all"
+        b, a = self.eigenbasis[:2]
+        pauli_2d = {
+            "x": self.op_matrix[f"sigma_{a}{b}"]
+            + self.op_matrix[f"sigma_{b}{a}"],
+            "y": 1j * self.op_matrix[f"sigma_{a}{b}"]
+            - 1j * self.op_matrix[f"sigma_{b}{a}"],
+            "z": self.op_matrix[f"sigma_{b}{b}"]
+            - self.op_matrix[f"sigma_{a}{a}"],
+        }
+
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
             basis_check("dephasing")
@@ -122,7 +133,7 @@ class Hamiltonian:
                 if self.basis_name == "digital"
                 else config.dephasing_rate
             )
-            local_collapse_ops.append(np.sqrt(rate / 2) * qutip.sigmaz())
+            local_collapse_ops.append(np.sqrt(rate / 2) * pauli_2d["z"])
 
         if "relaxation" in config.noise_types:
             coeff = np.sqrt(config.relaxation_rate)
@@ -137,9 +148,9 @@ class Hamiltonian:
         if "depolarizing" in config.noise_types:
             basis_check("depolarizing")
             coeff = np.sqrt(config.depolarizing_rate / 4)
-            local_collapse_ops.append(coeff * qutip.sigmax())
-            local_collapse_ops.append(coeff * qutip.sigmay())
-            local_collapse_ops.append(coeff * qutip.sigmaz())
+            local_collapse_ops.append(coeff * pauli_2d["x"])
+            local_collapse_ops.append(coeff * pauli_2d["y"])
+            local_collapse_ops.append(coeff * pauli_2d["z"])
 
         if "eff_noise" in config.noise_types:
             basis_check("effective")
