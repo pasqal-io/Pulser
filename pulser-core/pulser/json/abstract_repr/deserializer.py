@@ -440,7 +440,7 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         **noise_model_obj,
         eff_noise_rates=tuple(eff_noise_rates),
         eff_noise_opers=tuple(eff_noise_opers),
-        with_leakage=with_leakage
+        with_leakage=with_leakage,
     )
     assert set(noise_model.noise_types) == set(noise_types)
     return noise_model
