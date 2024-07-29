@@ -92,9 +92,7 @@ class AbstractArray:
             detach: Whether to detach before converting.
         """
         if detach and self.is_tensor:
-            return cast(
-                np.ndarray, cast(torch.Tensor, self._array).detach().numpy()
-            )
+            return cast(torch.Tensor, self._array).detach().numpy()
         return np.asarray(self._array)
 
     def tolist(self) -> list:
