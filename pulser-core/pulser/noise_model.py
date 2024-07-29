@@ -439,6 +439,7 @@ class NoiseModel:
 
     def _to_abstract_repr(self) -> dict[str, Any]:
         all_fields = asdict(self)
+        all_fields.pop("with_leakage")
         eff_noise_rates = all_fields.pop("eff_noise_rates")
         eff_noise_opers = all_fields.pop("eff_noise_opers")
         all_fields["eff_noise"] = list(zip(eff_noise_rates, eff_noise_opers))
