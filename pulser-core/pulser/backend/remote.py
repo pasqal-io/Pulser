@@ -183,7 +183,7 @@ class RemoteBackend(Backend):
     def open_batch(self) -> _OpenBatchContextManager:
         """Creates an open batch within a context manager object."""
         if not self._connection.supports_open_batch():
-            raise NotImplementedError(  # pragma: no cover
+            raise NotImplementedError(
                 "Unable to execute open_batch using this remote connection"
             )
         return _OpenBatchContextManager(self)
@@ -196,7 +196,9 @@ class _OpenBatchContextManager:
     def __enter__(self) -> _OpenBatchContextManager:
         batch = cast(
             RemoteResults,
-            self.backend._connection.submit(self.backend._sequence, open=True),
+            self.backend._connection.submit(
+                self.backend._sequence, complete=True
+            ),
         )
         self.backend._batch_id = batch._submission_id
         return self

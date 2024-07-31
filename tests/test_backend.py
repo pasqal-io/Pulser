@@ -90,6 +90,7 @@ def test_emulator_config_type_errors(param, msg):
 class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
+        self._support_open_batch = True
 
     def submit(
         self,
@@ -122,7 +123,9 @@ class _MockConnection(RemoteConnection):
         return None
 
     def supports_open_batch(self) -> bool:
-        return True
+        if self._support_open_batch:
+            return True
+        return False
 
 
 def test_qpu_backend(sequence):
@@ -198,3 +201,11 @@ def test_qpu_backend(sequence):
         # to submit()
         assert results._submission_id == "dcba"
         assert isinstance(results, RemoteResults)
+
+    connection._support_open_batch = False
+    qpu = QPUBackend(seq, connection)
+    with pytest.raises(
+        NotImplementedError,
+        match="Unable to execute open_batch using this remote connection",
+    ):
+        qpu.open_batch()

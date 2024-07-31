@@ -259,4 +259,4 @@ class PasqalCloud(RemoteConnection):
 
     def _close_batch(self, batch_id: str) -> None:
         """Closes the batch on pasqal cloud associated with the batch ID."""
-        _ = self._sdk_connection.close_batch(batch_id)
+        self._sdk_connection.close_batch(batch_id)
