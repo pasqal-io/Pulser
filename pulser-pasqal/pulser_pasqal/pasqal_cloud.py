@@ -108,6 +108,10 @@ class PasqalCloud(RemoteConnection):
         **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
+        # The complete indicates whether a batch is to be left `open` or not.
+        # An eventual rename to 'open' will come in the future, but this is
+        # left as `complete` to match the current cloud sdk interface.
+
         if not sequence.is_measured():
             bases = sequence.get_addressed_bases()
             if len(bases) != 1:
