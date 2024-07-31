@@ -100,9 +100,18 @@ class PasqalCloud(RemoteConnection):
         )
 
     def submit(
-        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+        self,
+        sequence: Sequence,
+        wait: bool = False,
+        complete: bool = True,
+        batch_id: str | None = None,
+        **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
+        # The complete indicates whether a batch is to be left `open` or not.
+        # An eventual rename to 'open' will come in the future, but this is
+        # left as `complete` to match the current cloud sdk interface.
+
         if not sequence.is_measured():
             bases = sequence.get_addressed_bases()
             if len(bases) != 1:
@@ -159,15 +168,28 @@ class PasqalCloud(RemoteConnection):
             emulator=emulator,
             strict_validation=mimic_qpu,
         )
-        create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
-        batch = create_batch_fn(
-            serialized_sequence=sequence.to_abstract_repr(),
-            jobs=job_params or [],  # type: ignore[arg-type]
-            emulator=emulator,
-            configuration=configuration,
-            wait=wait,
-        )
 
+        # If batch_id is not empty, thedn we can submit new jobs to a
+        # batch we just created otherwise, create a new one with
+        #  _sdk_connection.create_batch()
+        if batch_id:
+            submit_jobs_fn = backoff_decorator(self._sdk_connection.add_jobs)
+            batch = submit_jobs_fn(
+                batch_id,
+                jobs=job_params or [],  # type: ignore[arg-type]
+            )
+        else:
+            create_batch_fn = backoff_decorator(
+                self._sdk_connection.create_batch
+            )
+            batch = create_batch_fn(
+                serialized_sequence=sequence.to_abstract_repr(),
+                jobs=job_params or [],  # type: ignore[arg-type]
+                emulator=emulator,
+                configuration=configuration,
+                wait=wait,
+                complete=complete,
+            )
         return RemoteResults(batch.id, self)
 
     @backoff_decorator
@@ -234,3 +256,11 @@ class PasqalCloud(RemoteConnection):
 
         pasqal_config_kwargs["strict_validation"] = strict_validation
         return emu_cls(**pasqal_config_kwargs)
+
+    def supports_open_batch(self) -> bool:
+        """Flag to confirm this class can support creating an open batch."""
+        return True
+
+    def _close_batch(self, batch_id: str) -> None:
+        """Closes the batch on pasqal cloud associated with the batch ID."""
+        self._sdk_connection.close_batch(batch_id)

@@ -27,6 +27,7 @@ from pulser.backend.remote import (
     RemoteResults,
     RemoteResultsError,
     SubmissionStatus,
+    _OpenBatchContextManager,
 )
 from pulser.devices import AnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
@@ -89,8 +90,18 @@ def test_emulator_config_type_errors(param, msg):
 class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
+        self._support_open_batch = True
 
-    def submit(self, sequence, wait: bool = False, **kwargs) -> RemoteResults:
+    def submit(
+        self,
+        sequence,
+        wait: bool = False,
+        complete: bool = True,
+        batch_id: str | None = None,
+        **kwargs,
+    ) -> RemoteResults:
+        if batch_id:
+            return RemoteResults("dcba", self)
         return RemoteResults("abcd", self)
 
     def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
@@ -108,6 +119,14 @@ class _MockConnection(RemoteConnection):
             return SubmissionStatus.RUNNING
         return SubmissionStatus.DONE
 
+    def _close_batch(self, batch_id: str) -> None:
+        return None
+
+    def supports_open_batch(self) -> bool:
+        if self._support_open_batch:
+            return True
+        return False
+
 
 def test_qpu_backend(sequence):
     connection = _MockConnection()
@@ -124,6 +143,7 @@ def test_qpu_backend(sequence):
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
     seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
+
     with pytest.raises(
         ValueError, match="does not accept new register layouts"
     ):
@@ -169,3 +189,23 @@ def test_qpu_backend(sequence):
 
     results = remote_results.results
     assert results[0].sampling_dist == {"00": 1.0}
+
+    # Test create a batch and submitting jobs via a context manager
+    # behaves as expected.
+    qpu = QPUBackend(seq, connection)
+    with qpu.open_batch() as ob:
+        assert ob.backend._batch_id == "abcd"
+        assert isinstance(ob, _OpenBatchContextManager)
+        results = qpu.run(job_params=[{"runs": 200}])
+        # submission_id should differ, confirm the batch_id was provided
+        # to submit()
+        assert results._submission_id == "dcba"
+        assert isinstance(results, RemoteResults)
+
+    connection._support_open_batch = False
+    qpu = QPUBackend(seq, connection)
+    with pytest.raises(
+        NotImplementedError,
+        match="Unable to execute open_batch using this remote connection",
+    ):
+        qpu.open_batch()

@@ -17,7 +17,8 @@ from __future__ import annotations
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, TypedDict
+from types import TracebackType
+from typing import Any, Type, TypedDict, cast
 
 from pulser.backend.abc import Backend
 from pulser.devices import Device
@@ -96,18 +97,23 @@ class RemoteConnection(ABC):
 
     @abstractmethod
     def submit(
-        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+        self,
+        sequence: Sequence,
+        wait: bool = False,
+        complete: bool = False,
+        batch_id: str | None = None,
+        **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
         """Submit a job for execution."""
         pass
 
     @abstractmethod
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(self, batch_id: str) -> typing.Sequence[Result]:
         """Fetches the results of a completed submission."""
         pass
 
     @abstractmethod
-    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
+    def _get_submission_status(self, batch_id: str) -> SubmissionStatus:
         """Gets the status of a submission from its ID.
 
         Not all SubmissionStatus values must be covered, but at least
@@ -121,6 +127,17 @@ class RemoteConnection(ABC):
             "Unable to fetch the available devices through this "
             "remote connection."
         )
+
+    def _close_batch(self, batch_id: str) -> None:
+        """Closes a batch using its ID."""
+        raise NotImplementedError(  # pragma: no cover
+            "Unable to close batch through this remote connection"
+        )
+
+    @abstractmethod
+    def supports_open_batch(self) -> bool:
+        """Flag to confirm this class can support creating an open batch."""
+        pass
 
 
 class RemoteBackend(Backend):
@@ -148,6 +165,7 @@ class RemoteBackend(Backend):
                 "'connection' must be a valid RemoteConnection instance."
             )
         self._connection = connection
+        self._batch_id: str | None = None
 
     @staticmethod
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
@@ -161,3 +179,36 @@ class RemoteBackend(Backend):
                     "All elements of 'job_params' must be dictionaries; "
                     f"got {type(d)} instead."
                 )
+
+    def open_batch(self) -> _OpenBatchContextManager:
+        """Creates an open batch within a context manager object."""
+        if not self._connection.supports_open_batch():
+            raise NotImplementedError(
+                "Unable to execute open_batch using this remote connection"
+            )
+        return _OpenBatchContextManager(self)
+
+
+class _OpenBatchContextManager:
+    def __init__(self, backend: RemoteBackend) -> None:
+        self.backend = backend
+
+    def __enter__(self) -> _OpenBatchContextManager:
+        batch = cast(
+            RemoteResults,
+            self.backend._connection.submit(
+                self.backend._sequence, complete=True
+            ),
+        )
+        self.backend._batch_id = batch._submission_id
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self.backend._batch_id:
+            self.backend._connection._close_batch(self.backend._batch_id)
+        self.backend._batch_id = None
