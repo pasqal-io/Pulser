@@ -78,6 +78,9 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
+            - "leakage": Adds an error state 'x' to the computational
+              basis, that can interact with the other states via an
+              effective noise channel (which must be defined).
             - "relaxation": Relaxation from the Rydberg to the ground state.
             - "dephasing": Random phase (Z) flip.
             - "depolarizing": Quantum noise where the state (rho) is
@@ -140,6 +143,7 @@ class SimConfig:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
                 noise_model, param
             )
+        kwargs.pop("with_leakage", None)
         return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
@@ -175,6 +179,11 @@ class SimConfig:
         NoiseModel._validate_parameters(
             {f.name: getattr(self, f.name) for f in fields(self)}
         )
+
+    @property
+    def with_leakage(self) -> bool:
+        """Whether or not 'leakage' is included in the noise types."""
+        return "leakage" in self.noise
 
     @property
     def spam_dict(self) -> dict[str, float]:
@@ -253,6 +262,7 @@ class SimConfig:
             self.eff_noise_rates,
             self.eff_noise_opers,
             "eff_noise" in self.noise,
+            self.with_leakage,
         )
 
     @property
