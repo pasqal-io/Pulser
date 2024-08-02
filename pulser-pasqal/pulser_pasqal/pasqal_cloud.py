@@ -14,7 +14,6 @@
 """Allows to connect to PASQAL's cloud platform to run sequences."""
 from __future__ import annotations
 
-import copy
 import json
 from dataclasses import fields
 from typing import Any, Type, cast
@@ -110,8 +109,12 @@ class PasqalCloud(RemoteConnection):
                     "The measurement basis can't be implicitly determined "
                     "for a sequence not addressing a single basis."
                 )
-            # The copy prevents changing the input sequence
-            sequence = copy.deepcopy(sequence)
+            # This is equivalent to performing a deepcopy
+            # All tensors are converted to arrays but that's ok, it would
+            # have happened anyway later on
+            sequence = Sequence.from_abstract_repr(
+                sequence.to_abstract_repr(skip_validation=True)
+            )
             sequence.measure(bases[0])
 
         emulator = kwargs.get("emulator", None)

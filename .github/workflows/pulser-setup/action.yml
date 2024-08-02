@@ -9,6 +9,10 @@ inputs:
     description: Extra packages to install (give to grep)
     required: false
     default: ""
+  with-torch:
+    description: Whether to include pytorch
+    required: false
+    default: "with-torch"
 runs:
   using: "composite"
   steps:
@@ -17,11 +21,18 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
         cache: "pip"
-    - name: Install Pulser
+    - name: Install Pulser (with torch)
+      if: ${{ inputs.with-torch == 'with-torch' }}
       shell: bash
       run: |
         python -m pip install --upgrade pip
         make dev-install
+    - name: Install Pulser (without torch)
+      if: ${{ inputs.with-torch != 'with-torch' }} 
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        make dev-install-no-torch
     - name: Install extra packages from the dev requirements
       if: "${{ inputs.extra-packages != '' }}"
       shell: bash

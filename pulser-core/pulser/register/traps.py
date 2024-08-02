@@ -23,6 +23,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.register._coordinates import COORD_PRECISION, CoordsCollection
 
 
@@ -41,13 +42,15 @@ class Traps(ABC, CoordsCollection):
     slug: str | None
 
     def __init__(self, trap_coordinates: ArrayLike, slug: str | None = None):
-        """Initializes a RegisterLayout."""
+        """Initializes a set of traps."""
         array_type_error_msg = ValueError(
             "'trap_coordinates' must be an array or list of coordinates."
         )
 
         try:
-            coords_arr = np.array(trap_coordinates, dtype=float)
+            coords_arr = pm.AbstractArray(
+                trap_coordinates, dtype=float
+            ).as_array(detach=True)
         except ValueError as e:
             raise array_type_error_msg from e
 
@@ -60,7 +63,7 @@ class Traps(ABC, CoordsCollection):
                 f"Each coordinate must be of size 2 or 3, not {shape[1]}."
             )
 
-        if len(np.unique(trap_coordinates, axis=0)) != shape[0]:
+        if len(np.unique(coords_arr, axis=0)) != shape[0]:
             raise ValueError(
                 "All trap coordinates of a register layout must be unique."
             )
@@ -68,7 +71,7 @@ class Traps(ABC, CoordsCollection):
         object.__setattr__(self, "slug", slug)
 
     @property
-    def traps_dict(self) -> dict:
+    def traps_dict(self) -> dict[int, np.ndarray]:
         """Mapping between trap IDs and coordinates."""
         return dict(enumerate(self.sorted_coords))
 

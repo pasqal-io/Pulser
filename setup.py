@@ -33,6 +33,7 @@ setup(
     name="pulser",
     version=__version__,
     install_requires=requirements,
+    extras_require={"torch": [f"pulser-core[torch] == {__version__}"]},
     description="A pulse-level composer for neutral-atom quantum devices.",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
