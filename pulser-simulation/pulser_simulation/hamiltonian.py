@@ -123,12 +123,8 @@ class Hamiltonian:
             }
             for state in self.eigenbasis:
                 if state in dephasing_rates:
-                    coeff = np.sqrt(dephasing_rates[state] / 2)
-                    ground = "g" if self._interaction == "ising" else "u"
-                    op = (
-                        self.op_matrix[f"sigma_{state}{state}"]
-                        - self.op_matrix[f"sigma_{ground}{ground}"]
-                    )
+                    coeff = np.sqrt(2 * dephasing_rates[state])
+                    op = self.op_matrix[f"sigma_{state}{state}"]
                     local_collapse_ops.append(coeff * op)
 
         if "relaxation" in config.noise_types:

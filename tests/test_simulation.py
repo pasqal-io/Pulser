@@ -863,25 +863,25 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", {"111": 949, "110": 23, "011": 15, "101": 13}, 2),
-        ("eff_noise", {"111": 949, "110": 23, "011": 15, "101": 13}, 2),
+        ("dephasing", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
+        ("eff_noise", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
         ("relaxation", {"111": 1000}, 1),
         (
             ("dephasing", "relaxation"),
-            {"111": 949, "110": 23, "011": 15, "101": 13},
+            {"111": 958, "110": 19, "011": 12, "101": 11},
             3,
         ),
         (
             ("eff_noise", "dephasing"),
-            {"111": 906, "110": 39, "011": 28, "101": 26, "100": 1},
+            {"111": 922, "110": 33, "011": 23, "101": 21, "100": 1},
             4,
         ),
     ],
 )
 def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
     # Test with Digital Sequence
-    deph_op = qutip.Qobj([[1, 0, 0], [0, -1, 0], [0, 0, 0]])
-    hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, -1, 0], [0, 0, 1]])
+    deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+    hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
     sim = QutipEmulator.from_sequence(
         seq,  # resulting state should be hhh
         sampling_rate=0.01,
@@ -891,7 +891,7 @@ def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
             hyperfine_dephasing_rate=0.1,
             relaxation_rate=1000,
             eff_noise_opers=[deph_op, hyp_deph_op],
-            eff_noise_rates=[0.05, 0.05],
+            eff_noise_rates=[0.2, 0.2],
         ),
     )
 
