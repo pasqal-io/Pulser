@@ -112,6 +112,21 @@ def test_qutip_result():
     ):
         result.sampling_dist
 
+    density_matrix = qutip.Qobj(np.eye(8) / 8)
+    result = QutipResult(
+        atom_order=("a", "b"),
+        meas_basis="ground-rydberg",
+        state=density_matrix,
+        matching_meas_basis=True,
+    )
+    assert result._basis_name == "all"
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Reduce to basis not implemented for density matrix states.",
+    ):
+        result.get_state(reduce_to_basis="ground-rydberg")
+
     density_matrix = qutip.Qobj(np.eye(4) / 4)
     result = QutipResult(
         atom_order=("a", "b"),
