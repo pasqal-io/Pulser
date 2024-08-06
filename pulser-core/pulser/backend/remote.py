@@ -88,8 +88,8 @@ class RemoteResults(Results):
         return self._results
 
     @property
-    def submission_id(self) -> str:
-        """The ID of the submission linked to these results."""
+    def batch_id(self) -> str:
+        """The ID of the batch containing these results."""
         return self._submission_id
 
     @property

@@ -162,22 +162,22 @@ def test_remote_results(fixt, mock_batch, with_job_id):
         job_ids=select_job_ids if with_job_id else None,
     )
 
-    assert remote_results.submission_id == mock_batch.id
+    assert remote_results.batch_id == mock_batch.id
     assert remote_results.job_ids == select_job_ids
     fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
-        id=remote_results.submission_id
+        id=remote_results.batch_id
     )
     fixt.mock_cloud_sdk.get_batch.reset_mock()
 
     assert remote_results.get_status() == SubmissionStatus.DONE
     fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
-        id=remote_results.submission_id
+        id=remote_results.batch_id
     )
 
     fixt.mock_cloud_sdk.get_batch.reset_mock()
     results = remote_results.results
     fixt.mock_cloud_sdk.get_batch.assert_called_with(
-        id=remote_results.submission_id
+        id=remote_results.batch_id
     )
     assert results == tuple(
         SampledResult(
@@ -301,7 +301,7 @@ def test_submit(
         config=config,
         mimic_qpu=mimic_qpu,
     )
-    assert remote_results.submission_id == mock_batch.id
+    assert remote_results.batch_id == mock_batch.id
 
     assert not seq.is_measured()
     seq.measure(basis="ground-rydberg")
