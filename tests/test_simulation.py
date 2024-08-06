@@ -855,9 +855,7 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         seq_digital.register.qubits
     )
     trace_2 = res.states[-1] ** 2
-    assert np.abs(np.trace(trace_2)) < 1 and not np.isclose(
-        np.trace(trace_2), 1
-    )
+    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
 
 
 @pytest.mark.parametrize(
