@@ -72,4 +72,4 @@ jobs:
       - name: Test validation with legacy jsonschema
         run: |
           pip install jsonschema==4.17.3
-          pytest tests/test_abstract_repr.py
+          pytest tests/test_abstract_repr.py -W ignore::DeprecationWarning
