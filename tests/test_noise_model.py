@@ -243,6 +243,13 @@ class TestNoiseModel:
                 with_leakage=True,
             )
         with pytest.raises(
+            NotImplementedError, match="Without leakage, operator's shape"
+        ):
+            NoiseModel(
+                eff_noise_opers=[matrices["I3"]],
+                eff_noise_rates=[1.0],
+            )
+        with pytest.raises(
             ValueError, match="Without leakage, operator's shape"
         ):
             NoiseModel(

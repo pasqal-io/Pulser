@@ -171,8 +171,8 @@ class QutipResult(Result):
                     + f" to the {reduce_to_basis} basis."
                 )
         elif reduce_to_basis is not None:
-            if is_density_matrix:
-                # TODO
+            if is_density_matrix:  # pragma: no cover
+                # Not tested as noise in digital or all basis not implemented
                 raise NotImplementedError(
                     "Reduce to basis not implemented for density matrix"
                     " states."
