@@ -863,10 +863,21 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     [
         ("dephasing", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
         ("eff_noise", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
-        ("relaxation", {"111": 1000}, 1),
+        (
+            "relaxation",
+            {"000": 421, "010": 231, "001": 172, "100": 171, "101": 5},
+            1,
+        ),
         (
             ("dephasing", "relaxation"),
-            {"111": 958, "110": 19, "011": 12, "101": 11},
+            {
+                "000": 412,
+                "010": 230,
+                "001": 176,
+                "100": 174,
+                "101": 7,
+                "011": 1,
+            },
             3,
         ),
         (
@@ -876,8 +887,21 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         ),
     ],
 )
-def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
-    # Test with Digital Sequence
+def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
+    # Test with Digital+Rydberg Sequence
+    if "relaxation" in noise:
+        # Bring the states to ggg
+        seq.target("control1", "raman")
+        seq.add(pi_Y_pulse, "raman")
+        seq.target("target", "raman")
+        seq.add(pi_Y_pulse, "raman")
+        seq.target("control2", "raman")
+        seq.add(pi_Y_pulse, "raman")
+        # Apply a 2pi pulse on ggg
+        seq.declare_channel("ryd_glob", "rydberg_global")
+        seq.add(twopi_pulse, "ryd_glob")
+        # Measure in the rydberg basis
+        seq.measure()
     deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
     hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
     sim = QutipEmulator.from_sequence(
@@ -887,7 +911,7 @@ def test_noises_all(matrices, noise, result, n_collapse_ops, seq):
             noise=noise,
             dephasing_rate=0.1,
             hyperfine_dephasing_rate=0.1,
-            relaxation_rate=1000,
+            relaxation_rate=1.0,
             eff_noise_opers=[deph_op, hyp_deph_op],
             eff_noise_rates=[0.2, 0.2],
         ),
