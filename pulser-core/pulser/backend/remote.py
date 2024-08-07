@@ -58,17 +58,46 @@ class RemoteResults(Results):
             the results.
         connection: The remote connection over which to get the submission's
             status and fetch the results.
+        job_ids: If given, specifies which jobs within the submission should
+            be included in the results and in what order. If left undefined,
+            all jobs are included.
     """
 
-    def __init__(self, submission_id: str, connection: RemoteConnection):
+    def __init__(
+        self,
+        submission_id: str,
+        connection: RemoteConnection,
+        job_ids: list[str] | None = None,
+    ):
         """Instantiates a new collection of remote results."""
         self._submission_id = submission_id
         self._connection = connection
+        if job_ids is not None and not set(job_ids).issubset(
+            all_job_ids := self._connection._get_job_ids(self._submission_id)
+        ):
+            unknown_ids = [id_ for id_ in job_ids if id_ not in all_job_ids]
+            raise RuntimeError(
+                f"Submission {self._submission_id!r} does not contain jobs "
+                f"{unknown_ids}."
+            )
+        self._job_ids = job_ids
 
     @property
     def results(self) -> tuple[Result, ...]:
         """The actual results, obtained after execution is done."""
         return self._results
+
+    @property
+    def batch_id(self) -> str:
+        """The ID of the batch containing these results."""
+        return self._submission_id
+
+    @property
+    def job_ids(self) -> list[str]:
+        """The IDs of the jobs within this results submission."""
+        if self._job_ids is None:
+            return self._connection._get_job_ids(self._submission_id)
+        return self._job_ids
 
     def get_status(self) -> SubmissionStatus:
         """Gets the status of the remote submission."""
@@ -79,7 +108,9 @@ class RemoteResults(Results):
             status = self.get_status()
             if status == SubmissionStatus.DONE:
                 self._results = tuple(
-                    self._connection._fetch_result(self._submission_id)
+                    self._connection._fetch_result(
+                        self._submission_id, self._job_ids
+                    )
                 )
                 return self._results
             raise RemoteResultsError(
@@ -102,7 +133,9 @@ class RemoteConnection(ABC):
         pass
 
     @abstractmethod
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(
+        self, submission_id: str, job_ids: list[str] | None
+    ) -> typing.Sequence[Result]:
         """Fetches the results of a completed submission."""
         pass
 
@@ -115,9 +148,15 @@ class RemoteConnection(ABC):
         """
         pass
 
+    def _get_job_ids(self, submission_id: str) -> list[str]:
+        """Gets all the job IDs within a submission."""
+        raise NotImplementedError(
+            "Unable to find job IDs through this remote connection."
+        )
+
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
-        raise NotImplementedError(  # pragma: no cover
+        raise NotImplementedError(
             "Unable to fetch the available devices through this "
             "remote connection."
         )
