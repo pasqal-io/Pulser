@@ -858,6 +858,16 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
 
 
+res_deph_relax = {
+    "000": 412,
+    "010": 230,
+    "001": 176,
+    "100": 174,
+    "101": 7,
+    "011": 1,
+}
+
+
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
@@ -868,18 +878,7 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
             {"000": 421, "010": 231, "001": 172, "100": 171, "101": 5},
             1,
         ),
-        (
-            ("dephasing", "relaxation"),
-            {
-                "000": 412,
-                "010": 230,
-                "001": 176,
-                "100": 174,
-                "101": 7,
-                "011": 1,
-            },
-            3,
-        ),
+        (("dephasing", "relaxation"), res_deph_relax, 3),
         (
             ("eff_noise", "dephasing"),
             {"111": 922, "110": 33, "011": 23, "101": 21, "100": 1},
