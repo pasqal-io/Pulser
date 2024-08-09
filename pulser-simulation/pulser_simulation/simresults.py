@@ -397,8 +397,9 @@ class CoherentResults(SimulationResults):
         else:
             if meas_basis != self._basis_name.split("_with_error")[0]:
                 raise ValueError(
-                    f"`meas_basis` associated to basis_name '{self._basis_name}'"
-                    f" must be '{self._basis_name.split("_with_error")[0]}'."
+                    f"`meas_basis` associated to basis_name '"
+                    f"{self._basis_name}' must be '"
+                    f"{self._basis_name.split("_with_error")[0]}'."
                 )
         self._meas_basis = meas_basis
         self._results = tuple(run_output)

@@ -136,7 +136,7 @@ class Hamiltonian:
             if "all" in self.basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
-                    "Cannot include eff_noise noise in all-basis."
+                    "Cannot include depolarizing noise in all-basis."
                 )
             # NOTE: These operators only make sense when basis != "all"
             b, a = self.eigenbasis[:2]

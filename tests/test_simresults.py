@@ -83,7 +83,7 @@ def test_initialization(results):
         CoherentResults(rr_state, 1, "all", None, "XY")
     with pytest.raises(
         ValueError,
-        match="`meas_basis` associated to basis_name 'ground-rydberg' must be ",
+        match="`meas_basis` associated to basis_name 'ground-rydberg' must be",
     ):
         CoherentResults(
             rr_state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
