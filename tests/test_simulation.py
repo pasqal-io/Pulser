@@ -93,6 +93,7 @@ def matrices():
     pauli["Y"] = qutip.sigmay()
     pauli["Z"] = qutip.sigmaz()
     pauli["I3"] = qutip.qeye(3)
+    pauli["Z3"] = qutip.Qobj([[1, 0, 0], [0, -1, 0], [0, 0, 0]])
     return pauli
 
 
@@ -248,27 +249,45 @@ def test_extraction_of_sequences(seq):
                         ).all()
 
 
-def test_building_basis_and_projection_operators(seq, reg):
+@pytest.mark.parametrize("leakage", [False, True])
+def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     # All three levels:
-    sim = QutipEmulator.from_sequence(seq, sampling_rate=0.01)
-    assert sim.basis_name == "all"
-    assert sim.dim == 3
-    assert sim.basis == {
-        "r": qutip.basis(3, 0),
-        "g": qutip.basis(3, 1),
-        "h": qutip.basis(3, 2),
+    def _config(dim):
+        return (
+            SimConfig(
+                ("leakage", "eff_noise"),
+                eff_noise_opers=[qutip.qeye(dim)],
+                eff_noise_rates=[0.0],
+            )
+            if leakage
+            else SimConfig()
+        )
+
+    dim = 3 + leakage
+    sim = QutipEmulator.from_sequence(
+        seq, sampling_rate=0.01, config=_config(dim)
+    )
+    assert sim.basis_name == "all" + ("_with_error" if leakage else "")
+    assert sim.dim == dim
+    basis_dict = {
+        "r": qutip.basis(dim, 0),
+        "g": qutip.basis(dim, 1),
+        "h": qutip.basis(dim, 2),
     }
+    if leakage:
+        basis_dict["x"] = qutip.basis(dim, 3)
+    assert sim.basis == basis_dict
     assert (
         sim._hamiltonian.op_matrix["sigma_rr"]
-        == qutip.basis(3, 0) * qutip.basis(3, 0).dag()
+        == qutip.basis(dim, 0) * qutip.basis(dim, 0).dag()
     )
     assert (
         sim._hamiltonian.op_matrix["sigma_gr"]
-        == qutip.basis(3, 1) * qutip.basis(3, 0).dag()
+        == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
     assert (
         sim._hamiltonian.op_matrix["sigma_hg"]
-        == qutip.basis(3, 2) * qutip.basis(3, 1).dag()
+        == qutip.basis(dim, 2) * qutip.basis(dim, 1).dag()
     )
 
     # Check local operator building method:
@@ -289,51 +308,71 @@ def test_building_basis_and_projection_operators(seq, reg):
     seq2.declare_channel("global", "rydberg_global")
     pi_pls = Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi), 0.0, 0)
     seq2.add(pi_pls, "global")
-    sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01)
-    assert sim2.basis_name == "ground-rydberg"
-    assert sim2.dim == 2
-    assert sim2.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
+    dim = 2 + leakage
+    sim2 = QutipEmulator.from_sequence(
+        seq2, sampling_rate=0.01, config=_config(dim)
+    )
+    assert sim2.basis_name == "ground-rydberg" + (
+        "_with_error" if leakage else ""
+    )
+    assert sim2.dim == dim
+    basis_dict = {"r": qutip.basis(dim, 0), "g": qutip.basis(dim, 1)}
+    if leakage:
+        basis_dict["x"] = qutip.basis(dim, 2)
+    assert sim2.basis == basis_dict
     assert (
         sim2._hamiltonian.op_matrix["sigma_rr"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 0) * qutip.basis(dim, 0).dag()
     )
     assert (
         sim2._hamiltonian.op_matrix["sigma_gr"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
 
     # Digital
     seq2b = Sequence(reg, DigitalAnalogDevice)
     seq2b.declare_channel("local", "raman_local", "target")
     seq2b.add(pi_pls, "local")
-    sim2b = QutipEmulator.from_sequence(seq2b, sampling_rate=0.01)
-    assert sim2b.basis_name == "digital"
-    assert sim2b.dim == 2
-    assert sim2b.basis == {"g": qutip.basis(2, 0), "h": qutip.basis(2, 1)}
+    sim2b = QutipEmulator.from_sequence(
+        seq2b, sampling_rate=0.01, config=_config(dim)
+    )
+    assert sim2b.basis_name == "digital" + ("_with_error" if leakage else "")
+    assert sim2b.dim == dim
+    basis_dict = {"g": qutip.basis(dim, 0), "h": qutip.basis(dim, 1)}
+    if leakage:
+        basis_dict["x"] = qutip.basis(dim, 2)
+    assert sim2b.basis == basis_dict
     assert (
         sim2b._hamiltonian.op_matrix["sigma_gg"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 0) * qutip.basis(dim, 0).dag()
     )
     assert (
         sim2b._hamiltonian.op_matrix["sigma_hg"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
 
     # Local ground-rydberg
     seq2c = Sequence(reg, DigitalAnalogDevice)
     seq2c.declare_channel("local_ryd", "rydberg_local", "target")
     seq2c.add(pi_pls, "local_ryd")
-    sim2c = QutipEmulator.from_sequence(seq2c, sampling_rate=0.01)
-    assert sim2c.basis_name == "ground-rydberg"
-    assert sim2c.dim == 2
-    assert sim2c.basis == {"r": qutip.basis(2, 0), "g": qutip.basis(2, 1)}
+    sim2c = QutipEmulator.from_sequence(
+        seq2c, sampling_rate=0.01, config=_config(dim)
+    )
+    assert sim2c.basis_name == "ground-rydberg" + (
+        "_with_error" if leakage else ""
+    )
+    assert sim2c.dim == dim
+    basis_dict = {"r": qutip.basis(dim, 0), "g": qutip.basis(dim, 1)}
+    if leakage:
+        basis_dict["x"] = qutip.basis(dim, 2)
+    assert sim2c.basis == basis_dict
     assert (
         sim2c._hamiltonian.op_matrix["sigma_rr"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 0) * qutip.basis(dim, 0).dag()
     )
     assert (
         sim2c._hamiltonian.op_matrix["sigma_gr"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
 
     # Global XY
@@ -346,21 +385,26 @@ def test_building_basis_and_projection_operators(seq, reg):
         match="Bases used in samples should be supported by device.",
     ):
         QutipEmulator(sampler.sample(seq2), seq2.register, DigitalAnalogDevice)
-    sim2 = QutipEmulator.from_sequence(seq2, sampling_rate=0.01)
-    assert sim2.basis_name == "XY"
-    assert sim2.dim == 2
-    assert sim2.basis == {"u": qutip.basis(2, 0), "d": qutip.basis(2, 1)}
+    sim2 = QutipEmulator.from_sequence(
+        seq2, sampling_rate=0.01, config=_config(dim)
+    )
+    assert sim2.basis_name == "XY" + ("_with_error" if leakage else "")
+    assert sim2.dim == dim
+    basis_dict = {"u": qutip.basis(dim, 0), "d": qutip.basis(dim, 1)}
+    if leakage:
+        basis_dict["x"] = qutip.basis(dim, 2)
+    assert sim2.basis == basis_dict
     assert (
         sim2._hamiltonian.op_matrix["sigma_uu"]
-        == qutip.basis(2, 0) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 0) * qutip.basis(dim, 0).dag()
     )
     assert (
         sim2._hamiltonian.op_matrix["sigma_du"]
-        == qutip.basis(2, 1) * qutip.basis(2, 0).dag()
+        == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
     assert (
         sim2._hamiltonian.op_matrix["sigma_ud"]
-        == qutip.basis(2, 0) * qutip.basis(2, 1).dag()
+        == qutip.basis(dim, 0) * qutip.basis(dim, 1).dag()
     )
 
 
@@ -535,7 +579,7 @@ def test_run(seq, patch_plt_show):
     ):
         sim.run(progress_bar=1)
 
-    sim.set_config(SimConfig("SPAM", eta=0.1))
+    sim.set_config(SimConfig("SPAM", eta=0.1), good_initial_qobj_no_dims)
     with pytest.raises(
         NotImplementedError,
         match="Can't combine state preparation errors with an initial state "
@@ -696,17 +740,6 @@ def test_noise(seq, matrices):
     )
     with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="depolarizing"))
-    with pytest.raises(
-        NotImplementedError,
-        match="mode 'ising' does not support simulation of",
-    ):
-        sim2.set_config(
-            SimConfig(
-                ("leakage", "eff_noise"),
-                eff_noise_opers=[matrices["I3"]],
-                eff_noise_rates=[0.1],
-            )
-        )
     assert sim2.config.spam_dict == {
         "eta": 0.9,
         "epsilon": 0.01,
@@ -749,6 +782,7 @@ def test_noise_with_zero_epsilons(seq, matrices):
         ("depolarizing", {"0": 587, "1": 413}, 3),
         (("dephasing", "depolarizing", "relaxation"), {"0": 587, "1": 413}, 5),
         (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
+        (("eff_noise", "leakage"), {"0": 519, "1": 481}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -765,7 +799,9 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
         sampling_rate=0.01,
         config=SimConfig(
             noise=noise,
-            eff_noise_opers=[matrices["Z"]],
+            eff_noise_opers=[
+                matrices["Z3"] if "leakage" in noise else matrices["Z"]
+            ],
             eff_noise_rates=[0.025],
         ),
     )
@@ -826,6 +862,7 @@ eff_deph_res = {"111": 958, "110": 19, "011": 12, "101": 11}
         ("depolarizing", depo_res, 3),
         (("dephasing", "depolarizing"), deph_depo_res, 4),
         (("eff_noise", "dephasing"), eff_deph_res, 2),
+        (("eff_noise", "leakage"), {"111": 991, "110": 9}, 1),
     ],
 )
 def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
@@ -837,7 +874,9 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
         config=SimConfig(
             noise=noise,
             hyperfine_dephasing_rate=0.05,
-            eff_noise_opers=[matrices["Z"]],
+            eff_noise_opers=[
+                matrices["Z3"] if "leakage" in noise else matrices["Z"]
+            ],
             eff_noise_rates=[0.025],
         ),
     )
@@ -884,6 +923,11 @@ res_deph_relax = {
             {"111": 922, "110": 33, "011": 23, "101": 21, "100": 1},
             4,
         ),
+        (
+            ("eff_noise", "leakage"),
+            {"111": 948, "011": 43, "110": 9},
+            2,
+        ),
     ],
 )
 def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
@@ -901,8 +945,18 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
         seq.add(twopi_pulse, "ryd_glob")
         # Measure in the rydberg basis
         seq.measure()
-    deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
-    hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+    if "leakage" in noise:
+        deph_op = qutip.Qobj(
+            [[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+        )
+        hyp_deph_op = qutip.Qobj(
+            [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
+        )
+        eff_rate = 1.0
+    else:
+        deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+        hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+        eff_rate = 0.2
     sim = QutipEmulator.from_sequence(
         seq,  # resulting state should be hhh
         sampling_rate=0.01,
@@ -912,10 +966,9 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
             hyperfine_dephasing_rate=0.1,
             relaxation_rate=1.0,
             eff_noise_opers=[deph_op, hyp_deph_op],
-            eff_noise_rates=[0.2, 0.2],
+            eff_noise_rates=[eff_rate, eff_rate],
         ),
     )
-
     with pytest.raises(
         ValueError,
         match="Incompatible shape for effective noise operator n°0.",
@@ -1096,6 +1149,7 @@ res1 = {"0000": 892, "1000": 47, "0100": 25, "0001": 19, "0010": 17}
 res2 = {"0000": 962, "0010": 13, "1000": 13, "0100": 12}
 res3 = {"0000": 904, "0100": 43, "0010": 24, "1000": 19, "0001": 10}
 res4 = {"0000": 969, "0001": 18, "1000": 13}
+res5 = {"0000": 909, "0001": 34, "0010": 28, "1000": 17, "0100": 12}
 
 
 @pytest.mark.parametrize(
@@ -1103,6 +1157,7 @@ res4 = {"0000": 969, "0001": 18, "1000": 13}
     [
         (None, "dephasing", res1, 1),
         (None, "eff_noise", res1, 1),
+        (None, "leakage", res5, 1),
         (None, "depolarizing", res2, 3),
         ("atom0", "dephasing", res3, 1),
         ("atom1", "dephasing", res4, 1),
@@ -1124,16 +1179,6 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     with pytest.raises(
         NotImplementedError, match="mode 'XY' does not support simulation of"
     ):
-        sim.set_config(
-            SimConfig(
-                ("leakage", "eff_noise"),
-                eff_noise_opers=[matrices["I3"]],
-                eff_noise_rates=[0.1],
-            )
-        )
-    with pytest.raises(
-        NotImplementedError, match="mode 'XY' does not support simulation of"
-    ):
         sim.set_config(SimConfig(("SPAM", "doppler")))
     with pytest.raises(ValueError, match="is not a valid"):
         sim._hamiltonian.set_config(SimConfig(("SPAM", "doppler")))
@@ -1151,9 +1196,15 @@ def test_noisy_xy(matrices, masked_qubit, noise, result, n_collapse_ops):
     # SPAM simulation is implemented:
     sim.set_config(
         SimConfig(
-            ("SPAM", noise),
+            (
+                ("SPAM", noise)
+                if noise != "leakage"
+                else ("SPAM", "leakage", "eff_noise")
+            ),
             eta=0.4,
-            eff_noise_opers=[matrices["Z"]],
+            eff_noise_opers=[
+                matrices["Z"] if noise != "leakage" else matrices["Z3"]
+            ],
             eff_noise_rates=[0.025],
         )
     )

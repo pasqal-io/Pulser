@@ -38,13 +38,9 @@ SUPPORTED_NOISES: dict = {
         "doppler",
         "eff_noise",
         "SPAM",
+        "leakage",
     },
-    "XY": {
-        "dephasing",
-        "depolarizing",
-        "eff_noise",
-        "SPAM",
-    },
+    "XY": {"dephasing", "depolarizing", "eff_noise", "SPAM", "leakage"},
 }
 
 # Maps the noise model parameters with a different name in SimConfig

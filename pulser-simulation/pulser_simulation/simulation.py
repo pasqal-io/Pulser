@@ -28,6 +28,7 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
+from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
@@ -163,10 +164,10 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self._hamiltonian.basis_name in {"digital", "all"}:
+            if "all" in self.basis_name:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self._hamiltonian.basis_name
+                self._meas_basis = self.basis_name.split("_with_error")[0]
         self.set_initial_state("all-ground")
 
     @property
@@ -190,7 +191,7 @@ class QutipEmulator:
         return self._hamiltonian.basis_name
 
     @property
-    def basis(self) -> dict[str, Any]:
+    def basis(self) -> dict[States, Any]:
         """The basis in which result is expressed."""
         return self._hamiltonian.basis
 
@@ -199,11 +200,21 @@ class QutipEmulator:
         """The current configuration, as a SimConfig instance."""
         return SimConfig.from_noise_model(self._hamiltonian.config)
 
-    def set_config(self, cfg: SimConfig) -> None:
+    def set_config(
+        self,
+        cfg: SimConfig,
+        state: Union[str, np.ndarray, qutip.Qobj] = "all-ground",
+    ) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
+            state: The initial state.
+                Choose between:
+
+                - "all-ground" for all atoms in ground state
+                - An ArrayLike with a shape compatible with the system
+                - A Qobj object
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
@@ -218,8 +229,13 @@ class QutipEmulator:
                 f"{', '.join(not_supported)}."
             )
         self._hamiltonian.set_config(cfg.to_noise_model())
+        self.set_initial_state(state)
 
-    def add_config(self, config: SimConfig) -> None:
+    def add_config(
+        self,
+        config: SimConfig,
+        state: Union[str, np.ndarray, qutip.Qobj] = "all-ground",
+    ) -> None:
         """Updates the current configuration with parameters of another one.
 
         Mostly useful when dealing with multiple noise types in different
@@ -230,6 +246,12 @@ class QutipEmulator:
 
         Args:
             config: SimConfig to retrieve parameters from.
+            state: The initial state.
+                Choose between:
+
+                - "all-ground" for all atoms in ground state
+                - An ArrayLike with a shape compatible with the system
+                - A Qobj object
         """
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
@@ -261,6 +283,7 @@ class QutipEmulator:
         # set config with the new parameters:
         param_dict.pop("noise_types")
         self._hamiltonian.set_config(NoiseModel(**param_dict))
+        self.set_initial_state(state)
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -556,14 +579,14 @@ class QutipEmulator:
                     tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self._hamiltonian.basis_name,
+                    self._meas_basis in self.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
                 self._hamiltonian._size,
-                self._hamiltonian.basis_name,
+                self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -650,7 +673,7 @@ class QutipEmulator:
         return NoisyResults(
             results,
             self._hamiltonian._size,
-            self._hamiltonian.basis_name,
+            self.basis_name,
             self._eval_times_array,
             n_measures,
         )
