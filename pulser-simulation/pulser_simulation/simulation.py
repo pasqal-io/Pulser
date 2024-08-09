@@ -163,10 +163,10 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self._hamiltonian.basis_name in {"digital", "all"}:
+            if "all" in self.basis_name:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self._hamiltonian.basis_name
+                self._meas_basis = self.basis_name.split("_with_error")[0]
         self.set_initial_state("all-ground")
 
     @property
@@ -556,14 +556,14 @@ class QutipEmulator:
                     tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self._hamiltonian.basis_name,
+                    self._meas_basis in self.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
                 self._hamiltonian._size,
-                self._hamiltonian.basis_name,
+                self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -650,7 +650,7 @@ class QutipEmulator:
         return NoisyResults(
             results,
             self._hamiltonian._size,
-            self._hamiltonian.basis_name,
+            self.basis_name,
             self._eval_times_array,
             n_measures,
         )

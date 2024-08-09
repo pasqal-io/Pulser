@@ -64,6 +64,7 @@ class Hamiltonian:
         self.op_matrix: dict[str, qutip.Qobj]
         self.basis: dict[str, qutip.Qobj]
         self.dim: int
+        self.with_leakage: bool
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
 
@@ -106,13 +107,6 @@ class Hamiltonian:
         return self._config
 
     def _build_collapse_operators(self, config: NoiseModel) -> None:
-        def basis_check(noise_type: str) -> None:
-            """Checks if the basis allows for the use of noise."""
-            if self.basis_name == "all":
-                # Go back to previous config
-                raise NotImplementedError(
-                    f"Cannot include {noise_type} noise in all-basis."
-                )
 
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
@@ -120,6 +114,7 @@ class Hamiltonian:
                 "d": config.dephasing_rate,
                 "r": config.dephasing_rate,
                 "h": config.hyperfine_dephasing_rate,
+                # TODO: Add dephasing rate for leakage
             }
             for state in self.eigenbasis:
                 if state in dephasing_rates:
@@ -138,7 +133,11 @@ class Hamiltonian:
                 )
 
         if "depolarizing" in config.noise_types:
-            basis_check("depolarizing")
+            if "all" in self.basis_name == "all":
+                # Go back to previous config
+                raise NotImplementedError(
+                    "Cannot include eff_noise noise in all-basis."
+                )
             # NOTE: These operators only make sense when basis != "all"
             b, a = self.eigenbasis[:2]
             pauli_2d = {
@@ -189,7 +188,14 @@ class Hamiltonian:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        if not hasattr(self, "basis_name"):
+        if not hasattr(self, "basis_name") and (
+            not hasattr(self, "with_leakage")
+            or (
+                hasattr(self, "with_leakage")
+                and self.with_leakage != cfg.with_leakage
+            )
+        ):
+            self.with_leakage = cfg.with_leakage
             self._build_basis_and_op_matrices()
         self._build_collapse_operators(cfg)
         self._config = cfg
@@ -346,7 +352,9 @@ class Hamiltonian:
             self.basis_name = "all"  # All three rydberg states
         eigenbasis = self.samples_obj.eigenbasis
 
-        # TODO: Add leakage
+        if self.with_leakage:
+            self.basis_name += "_with_error"
+            eigenbasis.append("x")
 
         self.eigenbasis = [
             state for state in STATES_RANK if state in eigenbasis
@@ -518,7 +526,7 @@ class Hamiltonian:
         qobj_list = []
         # Time independent term:
         effective_size = self._size - sum(self._bad_atoms.values())
-        if self.basis_name != "digital" and effective_size > 1:
+        if "digital" not in self.basis_name and effective_size > 1:
             # Build time-dependent or time-independent interaction term based
             # on whether an SLM mask was defined or not
             if (

@@ -37,7 +37,7 @@ ChannelType = TypeVar("ChannelType", bound="Channel")
 OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
 
 # States ranked in decreasing order of their associated eigenenergy
-States = Literal["u", "d", "r", "g", "h"]  # TODO: add "x" for leakage
+States = Literal["u", "d", "r", "g", "h", "x"]
 
 STATES_RANK = get_args(States)
 
@@ -138,6 +138,9 @@ class Channel(ABC):
             * - Hyperfine state
               - :math:`|h\rangle`
               - ``"h"``
+            * - Error state
+              - :math:`|h\rangle`
+              - ``"x"``
         """
         return EIGENSTATES[self.basis]
 
