@@ -579,7 +579,7 @@ def test_run(seq, patch_plt_show):
     ):
         sim.run(progress_bar=1)
 
-    sim.set_config(SimConfig("SPAM", eta=0.1))
+    sim.set_config(SimConfig("SPAM", eta=0.1), good_initial_qobj_no_dims)
     with pytest.raises(
         NotImplementedError,
         match="Can't combine state preparation errors with an initial state "
@@ -925,7 +925,7 @@ res_deph_relax = {
         ),
         (
             ("eff_noise", "leakage"),
-            {"111": 1000},
+            {"111": 948, "011": 43, "110": 9},
             2,
         ),
     ],
@@ -952,9 +952,11 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
         hyp_deph_op = qutip.Qobj(
             [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
         )
+        eff_rate = 1.0
     else:
         deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
         hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+        eff_rate = 0.2
     sim = QutipEmulator.from_sequence(
         seq,  # resulting state should be hhh
         sampling_rate=0.01,
@@ -964,7 +966,7 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
             hyperfine_dephasing_rate=0.1,
             relaxation_rate=1.0,
             eff_noise_opers=[deph_op, hyp_deph_op],
-            eff_noise_rates=[0.2, 0.2],
+            eff_noise_rates=[eff_rate, eff_rate],
         ),
     )
     with pytest.raises(
@@ -1147,6 +1149,7 @@ res1 = {"0000": 892, "1000": 47, "0100": 25, "0001": 19, "0010": 17}
 res2 = {"0000": 962, "0010": 13, "1000": 13, "0100": 12}
 res3 = {"0000": 904, "0100": 43, "0010": 24, "1000": 19, "0001": 10}
 res4 = {"0000": 969, "0001": 18, "1000": 13}
+res5 = {"0000": 909, "0001": 34, "0010": 28, "1000": 17, "0100": 12}
 
 
 @pytest.mark.parametrize(
@@ -1154,7 +1157,7 @@ res4 = {"0000": 969, "0001": 18, "1000": 13}
     [
         (None, "dephasing", res1, 1),
         (None, "eff_noise", res1, 1),
-        (None, "leakage", res1, 1),
+        (None, "leakage", res5, 1),
         (None, "depolarizing", res2, 3),
         ("atom0", "dephasing", res3, 1),
         ("atom1", "dephasing", res4, 1),

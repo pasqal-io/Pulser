@@ -200,11 +200,21 @@ class QutipEmulator:
         """The current configuration, as a SimConfig instance."""
         return SimConfig.from_noise_model(self._hamiltonian.config)
 
-    def set_config(self, cfg: SimConfig) -> None:
+    def set_config(
+        self,
+        cfg: SimConfig,
+        state: Union[str, np.ndarray, qutip.Qobj] = "all-ground",
+    ) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
             cfg: New configuration.
+            state: The initial state.
+                Choose between:
+
+                - "all-ground" for all atoms in ground state
+                - An ArrayLike with a shape compatible with the system
+                - A Qobj object
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
@@ -219,8 +229,13 @@ class QutipEmulator:
                 f"{', '.join(not_supported)}."
             )
         self._hamiltonian.set_config(cfg.to_noise_model())
+        self.set_initial_state(state)
 
-    def add_config(self, config: SimConfig) -> None:
+    def add_config(
+        self,
+        config: SimConfig,
+        state: Union[str, np.ndarray, qutip.Qobj] = "all-ground",
+    ) -> None:
         """Updates the current configuration with parameters of another one.
 
         Mostly useful when dealing with multiple noise types in different
@@ -231,6 +246,12 @@ class QutipEmulator:
 
         Args:
             config: SimConfig to retrieve parameters from.
+            state: The initial state.
+                Choose between:
+
+                - "all-ground" for all atoms in ground state
+                - An ArrayLike with a shape compatible with the system
+                - A Qobj object
         """
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
@@ -262,6 +283,7 @@ class QutipEmulator:
         # set config with the new parameters:
         param_dict.pop("noise_types")
         self._hamiltonian.set_config(NoiseModel(**param_dict))
+        self.set_initial_state(state)
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
