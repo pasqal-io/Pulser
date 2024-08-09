@@ -23,7 +23,7 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
-from pulser.channels.base_channel import STATES_RANK
+from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import QubitId
@@ -62,9 +62,8 @@ class Hamiltonian:
         self.basis_name: str
         self._config: NoiseModel
         self.op_matrix: dict[str, qutip.Qobj]
-        self.basis: dict[str, qutip.Qobj]
+        self.basis: dict[States, qutip.Qobj]
         self.dim: int
-        self.with_leakage: bool
         self._bad_atoms: dict[Union[str, int], bool] = {}
         self._doppler_detune: dict[Union[str, int], float] = {}
 
@@ -106,7 +105,13 @@ class Hamiltonian:
         """The current configuration, as a NoiseModel instance."""
         return self._config
 
-    def _build_collapse_operators(self, config: NoiseModel) -> None:
+    def _build_collapse_operators(
+        self,
+        config: NoiseModel,
+        basis_name: str,
+        eigenbasis: list[States],
+        op_matrix: dict[str, qutip.Qobj],
+    ) -> None:
 
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
@@ -114,18 +119,17 @@ class Hamiltonian:
                 "d": config.dephasing_rate,
                 "r": config.dephasing_rate,
                 "h": config.hyperfine_dephasing_rate,
-                # TODO: Add dephasing rate for leakage
             }
-            for state in self.eigenbasis:
+            for state in eigenbasis:
                 if state in dephasing_rates:
                     coeff = np.sqrt(2 * dephasing_rates[state])
-                    op = self.op_matrix[f"sigma_{state}{state}"]
+                    op = op_matrix[f"sigma_{state}{state}"]
                     local_collapse_ops.append(coeff * op)
 
         if "relaxation" in config.noise_types:
             coeff = np.sqrt(config.relaxation_rate)
             try:
-                local_collapse_ops.append(coeff * self.op_matrix["sigma_gr"])
+                local_collapse_ops.append(coeff * op_matrix["sigma_gr"])
             except KeyError:
                 raise ValueError(
                     "'relaxation' noise requires addressing of the"
@@ -133,20 +137,18 @@ class Hamiltonian:
                 )
 
         if "depolarizing" in config.noise_types:
-            if "all" in self.basis_name == "all":
+            if "all" in basis_name == "all":
                 # Go back to previous config
                 raise NotImplementedError(
                     "Cannot include depolarizing noise in all-basis."
                 )
             # NOTE: These operators only make sense when basis != "all"
-            b, a = self.eigenbasis[:2]
+            b, a = eigenbasis[:2]
             pauli_2d = {
-                "x": self.op_matrix[f"sigma_{a}{b}"]
-                + self.op_matrix[f"sigma_{b}{a}"],
-                "y": 1j * self.op_matrix[f"sigma_{a}{b}"]
-                - 1j * self.op_matrix[f"sigma_{b}{a}"],
-                "z": self.op_matrix[f"sigma_{b}{b}"]
-                - self.op_matrix[f"sigma_{a}{a}"],
+                "x": op_matrix[f"sigma_{a}{b}"] + op_matrix[f"sigma_{b}{a}"],
+                "y": 1j * op_matrix[f"sigma_{a}{b}"]
+                - 1j * op_matrix[f"sigma_{b}{a}"],
+                "z": op_matrix[f"sigma_{b}{b}"] - op_matrix[f"sigma_{a}{a}"],
             }
             coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * pauli_2d["x"])
@@ -156,7 +158,7 @@ class Hamiltonian:
         if "eff_noise" in config.noise_types:
             for id, rate in enumerate(config.eff_noise_rates):
                 op = np.array(config.eff_noise_opers[id])
-                basis_dim = len(self.eigenbasis)
+                basis_dim = len(eigenbasis)
                 op_shape = (basis_dim, basis_dim)
                 if op.shape != op_shape:
                     raise ValueError(
@@ -168,7 +170,7 @@ class Hamiltonian:
         self._collapse_ops = []
         for operator in local_collapse_ops:
             self._collapse_ops += [
-                self.build_operator([(operator, [qid])])
+                self._build_operator([(operator, [qid])], op_matrix)
                 for qid in self._qid_index
             ]
 
@@ -188,16 +190,25 @@ class Hamiltonian:
                 f"Interaction mode '{self._interaction}' does not support "
                 f"simulation of noise types: {', '.join(not_supported)}."
             )
-        if not hasattr(self, "basis_name") and (
-            not hasattr(self, "with_leakage")
-            or (
-                hasattr(self, "with_leakage")
-                and self.with_leakage != cfg.with_leakage
-            )
+        if not hasattr(self, "_config") or (
+            hasattr(self, "_config")
+            and self.config.with_leakage != cfg.with_leakage
         ):
-            self.with_leakage = cfg.with_leakage
-            self._build_basis_and_op_matrices()
-        self._build_collapse_operators(cfg)
+            basis_name = self._get_basis_name(cfg.with_leakage)
+            eigenbasis = self._get_eigenbasis(cfg.with_leakage)
+            basis, op_matrix = self._get_basis_op_matrices(eigenbasis)
+            self._build_collapse_operators(
+                cfg, basis_name, eigenbasis, op_matrix
+            )
+            self.basis_name = basis_name
+            self.eigenbasis = eigenbasis
+            self.basis = basis
+            self.op_matrix = op_matrix
+            self.dim = len(eigenbasis)
+        else:
+            self._build_collapse_operators(
+                cfg, self.basis_name, self.eigenbasis, self.op_matrix
+            )
         self._config = cfg
         if not (
             "SPAM" in self.config.noise_types
@@ -265,6 +276,60 @@ class Hamiltonian:
                             samples["Local"][basis][qid][qty] = 0.0
         self.samples = samples
 
+    def _build_operator(
+        self, operations: Union[list, tuple], op_matrix: dict[str, qutip.Qobj]
+    ) -> qutip.Qobj:
+        """Creates an operator with non-trivial actions on some qubits.
+
+        Takes as argument a list of tuples ``[(operator_1, qubits_1),
+        (operator_2, qubits_2)...]``. Returns the operator given by the tensor
+        product of {``operator_i`` applied on ``qubits_i``} and Id on the rest.
+        ``(operator, 'global')`` returns the sum for all ``j`` of operator
+        applied at ``qubit_j`` and identity elsewhere.
+
+        Example for 4 qubits: ``[(Z, [1, 2]), (Y, [3])]`` returns `ZZYI`
+        and ``[(X, 'global')]`` returns `XIII + IXII + IIXI + IIIX`
+
+        Args:
+            operations: List of tuples `(operator, qubits)`.
+                `operator` can be a ``qutip.Quobj`` or a string key for
+                ``self.op_matrix``. `qubits` is the list on which operator
+                will be applied. The qubits can be passed as their
+                index or their label in the register.
+
+        Returns:
+            The final operator.
+        """
+        op_list = [op_matrix["I"] for j in range(self._size)]
+
+        if not isinstance(operations, list):
+            operations = [operations]
+
+        for operator, qubits in operations:
+            if qubits == "global":
+                return sum(
+                    self._build_operator([(operator, [q_id])], op_matrix)
+                    for q_id in self._qdict
+                )
+            else:
+                qubits_set = set(qubits)
+                if len(qubits_set) < len(qubits):
+                    raise ValueError("Duplicate atom ids in argument list.")
+                if not qubits_set.issubset(self._qdict.keys()):
+                    raise ValueError(
+                        "Invalid qubit names: "
+                        f"{qubits_set - self._qdict.keys()}"
+                    )
+                if isinstance(operator, str):
+                    try:
+                        operator = self.op_matrix[operator]
+                    except KeyError:
+                        raise ValueError(f"{operator} is not a valid operator")
+                for qubit in qubits:
+                    k = self._qid_index[qubit]
+                    op_list[k] = operator
+        return qutip.tensor(list(map(qutip.Qobj, op_list)))
+
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
 
@@ -287,35 +352,7 @@ class Hamiltonian:
         Returns:
             The final operator.
         """
-        op_list = [self.op_matrix["I"] for j in range(self._size)]
-
-        if not isinstance(operations, list):
-            operations = [operations]
-
-        for operator, qubits in operations:
-            if qubits == "global":
-                return sum(
-                    self.build_operator([(operator, [q_id])])
-                    for q_id in self._qdict
-                )
-            else:
-                qubits_set = set(qubits)
-                if len(qubits_set) < len(qubits):
-                    raise ValueError("Duplicate atom ids in argument list.")
-                if not qubits_set.issubset(self._qdict.keys()):
-                    raise ValueError(
-                        "Invalid qubit names: "
-                        f"{qubits_set - self._qdict.keys()}"
-                    )
-                if isinstance(operator, str):
-                    try:
-                        operator = self.op_matrix[operator]
-                    except KeyError:
-                        raise ValueError(f"{operator} is not a valid operator")
-                for qubit in qubits:
-                    k = self._qid_index[qubit]
-                    op_list[k] = operator
-        return qutip.tensor(list(map(qutip.Qobj, op_list)))
+        return self._build_operator(operations, self.op_matrix)
 
     def _update_noise(self) -> None:
         """Updates noise random parameters.
@@ -339,38 +376,39 @@ class Hamiltonian:
             )
             self._doppler_detune = dict(zip(self._qid_index, detune))
 
-    def _build_basis_and_op_matrices(self) -> None:
-        """Determine dimension, basis and projector operators."""
+    def _get_basis_name(self, with_leakage: bool) -> str:
         if len(self.samples_obj.used_bases) == 0:
             if self.samples_obj._in_xy:
-                self.basis_name = "XY"
+                basis_name = "XY"
             else:
-                self.basis_name = "ground-rydberg"
+                basis_name = "ground-rydberg"
         elif len(self.samples_obj.used_bases) == 1:
-            self.basis_name = list(self.samples_obj.used_bases)[0]
+            basis_name = list(self.samples_obj.used_bases)[0]
         else:
-            self.basis_name = "all"  # All three rydberg states
+            basis_name = "all"  # All three rydberg states
+        if with_leakage:
+            basis_name += "_with_error"
+        return basis_name
+
+    def _get_eigenbasis(self, with_leakage: bool) -> list[States]:
         eigenbasis = self.samples_obj.eigenbasis
-
-        if self.with_leakage:
-            self.basis_name += "_with_error"
+        if with_leakage:
             eigenbasis.append("x")
+        return [state for state in STATES_RANK if state in eigenbasis]
 
-        self.eigenbasis = [
-            state for state in STATES_RANK if state in eigenbasis
-        ]
-
-        self.dim = len(self.eigenbasis)
-        self.basis = {
-            b: qutip.basis(self.dim, i) for i, b in enumerate(self.eigenbasis)
-        }
-        self.op_matrix = {"I": qutip.qeye(self.dim)}
-        for proj0 in self.eigenbasis:
-            for proj1 in self.eigenbasis:
+    @staticmethod
+    def _get_basis_op_matrices(
+        eigenbasis: list[States],
+    ) -> tuple[dict[States, qutip.Qobj], dict[str, qutip.Qobj]]:
+        """Determine basis and projector operators."""
+        dim = len(eigenbasis)
+        basis = {b: qutip.basis(dim, i) for i, b in enumerate(eigenbasis)}
+        op_matrix = {"I": qutip.qeye(dim)}
+        for proj0 in eigenbasis:
+            for proj1 in eigenbasis:
                 proj_name = "sigma_" + proj0 + proj1
-                self.op_matrix[proj_name] = (
-                    self.basis[proj0] * self.basis[proj1].dag()
-                )
+                op_matrix[proj_name] = basis[proj0] * basis[proj1].dag()
+        return basis, op_matrix
 
     def _construct_hamiltonian(self, update: bool = True) -> None:
         """Constructs the hamiltonian from the sampled Sequence and noise.

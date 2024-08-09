@@ -925,7 +925,7 @@ res_deph_relax = {
         ),
         (
             ("eff_noise", "leakage"),
-            {"111": 958, "110": 19, "011": 12, "101": 11},
+            {"111": 1000},
             2,
         ),
     ],
@@ -967,7 +967,6 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
             eff_noise_rates=[0.2, 0.2],
         ),
     )
-
     with pytest.raises(
         ValueError,
         match="Incompatible shape for effective noise operator n°0.",

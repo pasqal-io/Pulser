@@ -139,7 +139,7 @@ class Channel(ABC):
               - :math:`|h\rangle`
               - ``"h"``
             * - Error state
-              - :math:`|h\rangle`
+              - :math:`|x\rangle`
               - ``"x"``
         """
         return EIGENSTATES[self.basis]
