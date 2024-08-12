@@ -205,12 +205,6 @@ class QutipEmulator:
 
         Args:
             cfg: New configuration.
-            state: The initial state.
-                Choose between:
-
-                - "all-ground" for all atoms in ground state
-                - An ArrayLike with a shape compatible with the system
-                - A Qobj object
         """
         if not isinstance(cfg, SimConfig):
             raise ValueError(f"Object {cfg} is not a valid `SimConfig`.")
@@ -255,12 +249,6 @@ class QutipEmulator:
 
         Args:
             config: SimConfig to retrieve parameters from.
-            state: The initial state.
-                Choose between:
-
-                - "all-ground" for all atoms in ground state
-                - An ArrayLike with a shape compatible with the system
-                - A Qobj object
         """
         if not isinstance(config, SimConfig):
             raise ValueError(f"Object {config} is not a valid `SimConfig`")
