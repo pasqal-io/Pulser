@@ -289,7 +289,11 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
         sim._hamiltonian.op_matrix["sigma_hg"]
         == qutip.basis(dim, 2) * qutip.basis(dim, 1).dag()
     )
-
+    if leakage:
+        assert (
+            sim._hamiltonian.op_matrix["sigma_xr"]
+            == qutip.basis(dim, 3) * qutip.basis(dim, 0).dag()
+        )
     # Check local operator building method:
     with pytest.raises(ValueError, match="Duplicate atom"):
         sim.build_operator([("sigma_gg", ["target", "target"])])
@@ -328,7 +332,11 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
         sim2._hamiltonian.op_matrix["sigma_gr"]
         == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
-
+    if leakage:
+        assert (
+            sim2._hamiltonian.op_matrix["sigma_xr"]
+            == qutip.basis(dim, 2) * qutip.basis(dim, 0).dag()
+        )
     # Digital
     seq2b = Sequence(reg, DigitalAnalogDevice)
     seq2b.declare_channel("local", "raman_local", "target")
@@ -350,6 +358,11 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
         sim2b._hamiltonian.op_matrix["sigma_hg"]
         == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
+    if leakage:
+        assert (
+            sim2b._hamiltonian.op_matrix["sigma_xh"]
+            == qutip.basis(dim, 2) * qutip.basis(dim, 1).dag()
+        )
 
     # Local ground-rydberg
     seq2c = Sequence(reg, DigitalAnalogDevice)
@@ -374,7 +387,11 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
         sim2c._hamiltonian.op_matrix["sigma_gr"]
         == qutip.basis(dim, 1) * qutip.basis(dim, 0).dag()
     )
-
+    if leakage:
+        assert (
+            sim2c._hamiltonian.op_matrix["sigma_xg"]
+            == qutip.basis(dim, 2) * qutip.basis(dim, 1).dag()
+        )
     # Global XY
     seq2 = Sequence(reg, MockDevice)
     seq2.declare_channel("global", "mw_global")
@@ -406,6 +423,11 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
         sim2._hamiltonian.op_matrix["sigma_ud"]
         == qutip.basis(dim, 0) * qutip.basis(dim, 1).dag()
     )
+    if leakage:
+        assert (
+            sim2._hamiltonian.op_matrix["sigma_ux"]
+            == qutip.basis(dim, 0) * qutip.basis(dim, 2).dag()
+        )
 
 
 def test_empty_sequences(reg):
