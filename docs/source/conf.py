@@ -58,6 +58,7 @@ suppress_warnings = [
     # TODO: Remove these once the API ref is complete
     "ref.doc",
     "nbsphinx.localfile",
+    "autosummary.import_cycle",
 ]
 
 # Source file suffixes
