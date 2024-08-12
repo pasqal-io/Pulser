@@ -263,15 +263,17 @@ class NoisyResults(SimulationResults):
                 sequence ('ground-rydberg' or 'digital' - 'all' basis or any
                 basis with the suffix "with_error" make no sense after
                 projection on bitstrings). Defaults to 'digital' if given value
-                'all'.
+                'all' or 'all_with_error', and to 'ground-rydberg', 'XY',
+                'digital' if given respectively 'ground-rydberg_with_error',
+                'XY_with_error' or 'digital_with_error'.
             sim_times: Times at which Simulation object returned
                 the results.
             n_measures: Number of measurements needed to compute this
                 result when doing the simulation.
         """
         basis = basis_name.split("_with_error")
-        basis_name_ = "digital" if basis_name[0] == "all" else basis_name
         assert len(basis) == 1 or (len(basis) == 2 and basis[1] == "")
+        basis_name_ = "digital" if basis[0] == "all" else basis[0]
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
         self._results = tuple(run_output)
