@@ -70,7 +70,9 @@ class QutipResult(Result):
         if self.meas_basis == "XY":
             if self._dim == 3:
                 return "XY_with_error"
-            assert self._dim == 2
+            assert (
+                self._dim == 2
+            ), f"In XY, state's dimension can only be 2 or 3, not {self._dim}."
             return "XY"
         if self._dim == 4:
             return "all_with_error"
@@ -78,6 +80,9 @@ class QutipResult(Result):
             if self.matching_meas_basis:
                 return self.meas_basis + "_with_error"
             return "all"
+        assert (
+            self._dim == 2
+        ), f"In Ising, state's dimension can be 2, 3 or 4, not {self._dim}."
         if not self.matching_meas_basis:
             return (
                 "digital"
@@ -126,7 +131,7 @@ class QutipResult(Result):
             }
             if self.meas_basis not in one_state_dict:
                 raise RuntimeError(
-                    f"Unknown measurement basis '{self.meas_basis}' "
+                    f"Unknown measurement basis '{self.meas_basis}'."
                 )
             one_state_idx = self._eigenbasis.index(
                 one_state_dict[self.meas_basis]

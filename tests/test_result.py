@@ -77,6 +77,15 @@ def test_qutip_result_state():
         result.get_state(reduce_to_basis="ground-rydberg").full(),
         qubit_state.full(),
     )
+    with pytest.raises(
+        ValueError,
+        match="'reduce_to_basis' must be 'ground-rydberg', 'XY', or 'digital'",
+    ):
+        result.get_state("rydberg")
+    with pytest.raises(
+        ValueError, match="Can't reduce a state expressed in all into XY"
+    ):
+        result.get_state("XY")
 
     result.meas_basis = "digital"
     assert result.sampling_dist == {"00": 1.0}
@@ -121,6 +130,7 @@ def test_qutip_result_state():
     ):
         new_result.get_state(reduce_to_basis="ground-rydberg")
 
+    # Associated with "all_wih_error_basis"
     qudit_state = qutip.tensor(qutip.basis(4, 0), qutip.basis(4, 1))
     qudit_result = QutipResult(
         atom_order=("q0", "q1"),
@@ -137,8 +147,42 @@ def test_qutip_result_state():
     assert qudit_result.sampling_dist == {"00": 1.0}
 
     qudit_result.meas_basis = "XY"
-    with pytest.raises(AssertionError):
+    with pytest.raises(
+        AssertionError,
+        match="In XY, state's dimension can only be 2 or 3, not 4",
+    ):
         qudit_result._basis_name
+    wrong_result = QutipResult(
+        atom_order=("q0", "q1"),
+        meas_basis="ground-rydberg",
+        state=qutip.tensor(qutip.basis(5, 0), qutip.basis(5, 1)),
+        matching_meas_basis=False,
+    )
+    assert wrong_result._dim == 5
+    with pytest.raises(
+        AssertionError,
+        match="In Ising, state's dimension can be 2, 3 or 4, not 5.",
+    ):
+        wrong_result._basis_name
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Cannot sample system with single-atom state vectors of"
+        " dimension > 4",
+    ):
+        wrong_result.sampling_dist
+
+    qudit_result = QutipResult(
+        atom_order=("q0", "q1"),
+        meas_basis="rydberg",
+        state=qudit_state,
+        matching_meas_basis=False,
+    )
+    with pytest.raises(
+        RuntimeError,
+        match="Unknown measurement basis 'rydberg'.",
+    ):
+        qudit_result.sampling_dist
 
 
 def test_qutip_result_density_matrices():

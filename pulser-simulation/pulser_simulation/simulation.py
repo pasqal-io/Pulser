@@ -200,11 +200,7 @@ class QutipEmulator:
         """The current configuration, as a SimConfig instance."""
         return SimConfig.from_noise_model(self._hamiltonian.config)
 
-    def set_config(
-        self,
-        cfg: SimConfig,
-        state: Union[str, np.ndarray, qutip.Qobj] = "all-ground",
-    ) -> None:
+    def set_config(self, cfg: SimConfig) -> None:
         """Sets current config to cfg and updates simulation parameters.
 
         Args:
@@ -228,14 +224,27 @@ class QutipEmulator:
                 " support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(cfg.to_noise_model())
-        self.set_initial_state(state)
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting it to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
-    def add_config(
-        self,
-        config: SimConfig,
-        state: Union[str, np.ndarray, qutip.Qobj] = "all-ground",
-    ) -> None:
+    def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
 
         Mostly useful when dealing with multiple noise types in different
@@ -282,8 +291,25 @@ class QutipEmulator:
             param_dict[param] = getattr(noise_model, param)
         # set config with the new parameters:
         param_dict.pop("noise_types")
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(NoiseModel(**param_dict))
-        self.set_initial_state(state)
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting initial state to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""

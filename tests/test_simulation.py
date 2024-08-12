@@ -579,7 +579,7 @@ def test_run(seq, patch_plt_show):
     ):
         sim.run(progress_bar=1)
 
-    sim.set_config(SimConfig("SPAM", eta=0.1), good_initial_qobj_no_dims)
+    sim.set_config(SimConfig("SPAM", eta=0.1))
     with pytest.raises(
         NotImplementedError,
         match="Can't combine state preparation errors with an initial state "
@@ -699,7 +699,7 @@ def test_eval_times(seq):
     )
 
 
-def test_config():
+def test_config(matrices):
     np.random.seed(123)
     reg = Register.from_coordinates([(0, 0), (0, 5)], prefix="q")
     seq = Sequence(reg, DigitalAnalogDevice)
@@ -727,6 +727,31 @@ def test_config():
     assert (
         noisy_amp_ham[0, 0] == clean_ham[0, 0]
         and noisy_amp_ham[0, 1] != clean_ham[0, 1]
+    )
+    assert sim._initial_state == qutip.tensor(
+        [qutip.basis(2, 1) for _ in range(2)]
+    )
+    print("Final test")
+    # Currently in ground state => initial state is extended without warning
+    sim.set_config(
+        SimConfig(
+            noise=("leakage", "eff_noise"),
+            eff_noise_opers=[matrices["Z3"]],
+            eff_noise_rates=[0.1],
+        )
+    )
+    assert sim._initial_state == qutip.tensor(
+        [qutip.basis(3, 1) for _ in range(2)]
+    )
+    # Otherwise initial state is set to ground-state
+    sim.set_initial_state(qutip.tensor([qutip.basis(3, 0) for _ in range(2)]))
+    with pytest.warns(
+        UserWarning,
+        match="Current initial state's dimension does not match new dim",
+    ):
+        sim.set_config(SimConfig(noise="SPAM", eta=0.5))
+    assert sim._initial_state == qutip.tensor(
+        [qutip.basis(2, 1) for _ in range(2)]
     )
 
 
@@ -1047,6 +1072,31 @@ def test_add_config(matrices):
     sim.set_config(SimConfig(noise="SPAM", eta=0.5))
     sim.add_config(SimConfig(noise="depolarizing"))
     assert "depolarizing" in sim.config.noise
+    assert sim._initial_state == qutip.basis(2, 1)
+    # Currently in ground state => initial state is extended without warning
+    sim.add_config(
+        SimConfig(
+            noise=("leakage", "eff_noise"),
+            eff_noise_opers=[matrices["Z3"]],
+            eff_noise_rates=[0.1],
+        )
+    )
+    assert sim._initial_state == qutip.basis(3, 1)
+    # Otherwise initial state is set to ground-state
+    sim.set_config(SimConfig(noise="SPAM", eta=0.5))
+    sim.set_initial_state(qutip.basis(2, 0))
+    with pytest.warns(
+        UserWarning,
+        match="Current initial state's dimension does not match new dim",
+    ):
+        sim.add_config(
+            SimConfig(
+                noise=("leakage", "eff_noise"),
+                eff_noise_opers=[matrices["Z3"]],
+                eff_noise_rates=[0.1],
+            )
+        )
+    assert sim._initial_state == qutip.basis(3, 1)
 
 
 def test_concurrent_pulses():

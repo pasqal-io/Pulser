@@ -83,9 +83,6 @@ class Hamiltonian:
         )
 
         # Stores the qutip operators used in building the Hamiltonian
-        self.operators: dict[str, defaultdict[str, dict]] = {
-            addr: defaultdict(dict) for addr in ["Global", "Local"]
-        }
         self._collapse_ops: list[qutip.Qobj] = []
 
         self.set_config(config)
@@ -205,6 +202,9 @@ class Hamiltonian:
             self.basis = basis
             self.op_matrix = op_matrix
             self.dim = len(eigenbasis)
+            self.operators: dict[str, defaultdict[str, dict]] = {
+                addr: defaultdict(dict) for addr in ["Global", "Local"]
+            }
         else:
             self._build_collapse_operators(
                 cfg, self.basis_name, self.eigenbasis, self.op_matrix
