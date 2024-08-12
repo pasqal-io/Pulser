@@ -11,7 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Valid devices for Pulser Sequence execution."""
+"""Classes for specification of neutral-atom devices.
+
+The :class:`Device` class sets the structure of a physical device,
+while :class:`VirtualDevice` is a more permissive device type which can
+only be used in emulators, as it does not necessarily represent the
+constraints of a physical device.
+Illustrative instances of :class:`Device` (e.g. :class:`AnalogDevice`) and
+:class:`VirtualDevice` (the :class:`MockDevice`) come included in the
+module.
+"""
 
 from __future__ import annotations
 
@@ -20,9 +29,9 @@ from typing import TYPE_CHECKING
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.devices._devices import (
     AnalogDevice,
-    Chadoq2,
+    Chadoq2 as Chadoq2,
     DigitalAnalogDevice,
-    IroiseMVP,
+    IroiseMVP as IroiseMVP,
 )
 from pulser.devices._mock_device import MockDevice
 
@@ -41,6 +50,4 @@ __all__ = [
     "AnalogDevice",
     "DigitalAnalogDevice",
     "MockDevice",
-    "Chadoq2",
-    "IroiseMVP",
 ]

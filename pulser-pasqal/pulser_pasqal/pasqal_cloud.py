@@ -29,6 +29,7 @@ from pasqal_cloud.device.configuration import (
 )
 
 from pulser import Sequence
+from pulser.abstract_repr import deserialize_device
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
@@ -38,7 +39,6 @@ from pulser.backend.remote import (
     SubmissionStatus,
 )
 from pulser.devices import Device
-from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser.result import Result, SampledResult
 
 EMU_TYPE_TO_CONFIG: dict[pasqal_cloud.EmulatorType, Type[BaseConfig]] = {

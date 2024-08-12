@@ -42,9 +42,17 @@ from pulser.register.weight_maps import DetuningMap
 class RegisterLayout(Traps, RegDrawer):
     """A layout of traps out of which registers can be defined.
 
-    The traps are always sorted under the same convention: ascending order
-    along x, then along y, then along z (if applicable). Respecting this order,
-    the traps are then numbered starting from 0.
+    A ``RegisterLayout`` is used to define a register from a set of traps. It
+    is intended to be given to the user by the hardware provider as a way of
+    showing which layouts are already available on a given device. In turn,
+    the user can create a ``Register`` by selecting the traps on which to place
+    atoms, or even a ``MappableRegister``, which allows for the creation of
+    sequences whose register can be defined at build time.
+
+    Note:
+        The traps are always sorted under the same convention: ascending order
+        along x, then along y, then along z (if applicable). Respecting this
+        order, the traps are then numbered starting from 0.
 
     Args:
         trap_coordinates: The trap coordinates defining the layout.
@@ -118,7 +126,7 @@ class RegisterLayout(Traps, RegDrawer):
 
         Returns:
             A DetuningMap associating detuning weights to the trap coordinates
-                of the targeted traps.
+            of the targeted traps.
         """
         if not set(detuning_weights.keys()) <= set(self.traps_dict):
             raise ValueError(

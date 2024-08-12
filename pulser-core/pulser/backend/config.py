@@ -28,7 +28,7 @@ EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 class BackendConfig:
     """The base backend configuration.
 
-    Attributes:
+    Args:
         backend_options: A dictionary of backend specific options.
     """
 
@@ -39,7 +39,7 @@ class BackendConfig:
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
 
-    Attributes:
+    Args:
         backend_options: A dictionary of backend-specific options.
         sampling_rate: The fraction of samples to extract from the pulse
             sequence for emulation.

@@ -32,4 +32,5 @@ MockDevice = VirtualDevice(
         Microwave.Global(None, None, max_duration=None),
     ),
     dmm_objects=(DMM(),),
+    short_description="A virtual device for unconstrained prototyping.",
 )

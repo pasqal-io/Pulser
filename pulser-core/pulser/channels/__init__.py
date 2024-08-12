@@ -15,5 +15,14 @@
 
 from pulser.channels.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
+from pulser.channels.eom import BaseEOM, RydbergEOM, RydbergBeam
 
-__all__ = ["Microwave", "Raman", "Rydberg", "DMM"]
+__all__ = [
+    "Microwave",
+    "Raman",
+    "Rydberg",
+    "DMM",
+    "BaseEOM",
+    "RydbergEOM",
+    "RydbergBeam",
+]

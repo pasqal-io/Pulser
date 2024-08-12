@@ -113,9 +113,9 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 3
-   :caption: Documentation
+   :caption: API Reference
 
-   apidoc/pulser
+   apidoc/core
 
 
 Indices and tables

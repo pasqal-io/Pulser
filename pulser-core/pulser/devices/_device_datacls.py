@@ -54,7 +54,7 @@ PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 class BaseDevice(ABC):
     r"""Base class of a neutral-atom device.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
         channel_objects: The Channel subclass instances specifying each
@@ -108,6 +108,7 @@ class BaseDevice(ABC):
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
     default_noise_model: NoiseModel | None = None
+    short_description: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
         def type_check(
@@ -237,6 +238,8 @@ class BaseDevice(ABC):
 
         if self.default_noise_model is not None:
             type_check("default_noise_model", NoiseModel)
+
+        type_check("short_description", str)
 
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
@@ -448,7 +451,7 @@ class BaseDevice(ABC):
         return {
             f.name: getattr(self, f.name)
             for f in fields(self)
-            if not init_only or f.init
+            if (not init_only or f.init) and f.name != "short_description"
         }
 
     def _validate_coords(
@@ -505,11 +508,16 @@ class BaseDevice(ABC):
 class Device(BaseDevice):
     r"""Specifications of a neutral-atom device.
 
-    A Device instance is immutable and must have all of its parameters defined.
-    For usage in emulations, it can be converted to a VirtualDevice through the
-    `Device.to_virtual()` method.
+    Each ``Device`` instance holds the characteristics of a physical device,
+    which when associated with a :class:`pulser.Sequence` condition its
+    development.
 
-    Attributes:
+    Note:
+        A Device instance is immutable and must have all of its parameters
+        defined. For more unconstrained usage in emulations, it can be
+        converted to a VirtualDevice through the `Device.to_virtual()` method.`
+
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
         channel_objects: The Channel subclass instances specifying each
@@ -643,6 +651,7 @@ class Device(BaseDevice):
 
     def _specs(self, for_docs: bool = False) -> str:
         lines = [
+            self.short_description,
             "\nRegister parameters:",
             f" - Dimensions: {self.dimensions}D",
             f" - Rydberg level: {self.rydberg_level}",
@@ -725,7 +734,7 @@ class VirtualDevice(BaseDevice):
     to be declared multiple times in the same Sequence (when
     `reusable_channels=True`) and allows the Rydberg level to be changed.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
         channel_objects: The Channel subclass instances specifying each
@@ -771,6 +780,11 @@ class VirtualDevice(BaseDevice):
     # Needed to support SLM mask by default
     dmm_objects: tuple[DMM, ...] = (DMM(),)
     reusable_channels: bool = True
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        # TODO: Improve docstring for virtual devices
+        object.__setattr__(self, "__doc__", self.short_description)
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
