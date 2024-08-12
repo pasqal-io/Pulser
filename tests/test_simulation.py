@@ -97,7 +97,7 @@ def matrices():
 
 def test_bad_import():
     with pytest.warns(
-        UserWarning,
+        DeprecationWarning,
         match="'pulser.simulation' are changed to 'pulser_simulation'.",
     ):
         import pulser.simulation  # noqa: F401

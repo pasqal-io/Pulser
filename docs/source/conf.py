@@ -37,6 +37,7 @@ extensions = [
     "nbsphinx",
     "nbsphinx_link",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
@@ -50,13 +51,23 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+show_warning_types = True
+# Supress specific warnings
+suppress_warnings = [
+    "config.cache",
+    # TODO: Remove these once the API ref is complete
+    "ref.doc",
+    "nbsphinx.localfile",
+]
+
 # Source file suffixes
 source_suffix = [".rst", ".md"]
 
 # Autodoc config
 autosummary_generate = True
+autosummary_ignore_module_all = False
 autodoc_member_order = "bysource"
-autodoc_typehints = "none"
+autodoc_typehints = "signature"
 typehints_defaults = "comma"
 always_use_bars_union = True
 autodoc_type_aliases = {

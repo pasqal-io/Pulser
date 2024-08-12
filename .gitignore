@@ -13,6 +13,7 @@ _build
 __pycache__/
 build/
 docs/build/
+_autosummary/
 dist/
 env*
 *.egg-info/

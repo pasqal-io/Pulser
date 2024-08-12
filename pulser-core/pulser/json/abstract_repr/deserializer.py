@@ -575,7 +575,7 @@ def deserialize_device(obj_str: str) -> Device | VirtualDevice:
 
     Raises:
         DeserializeDeviceError: Whenever the device deserialization
-        fails due to an invalid 'obj_str'.
+            fails due to an invalid 'obj_str'.
     """
     if not isinstance(obj_str, str):
         type_error = TypeError(

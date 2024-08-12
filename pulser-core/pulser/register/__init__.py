@@ -22,6 +22,7 @@ from pulser.register.special_layouts import (
     TriangularLatticeLayout,
     RectangularLatticeLayout,
 )
+from pulser.register.weight_maps import DetuningMap
 
 __all__ = [
     "QubitId",
@@ -31,4 +32,5 @@ __all__ = [
     "SquareLatticeLayout",
     "TriangularLatticeLayout",
     "RectangularLatticeLayout",
+    "DetuningMap",
 ]

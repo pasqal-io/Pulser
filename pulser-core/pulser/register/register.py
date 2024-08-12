@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np

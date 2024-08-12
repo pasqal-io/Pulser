@@ -28,6 +28,7 @@ try:
     warnings.warn(
         main_msg + "It is recommended that all imports of/from "
         "'pulser.simulation' are changed to 'pulser_simulation'.",
+        DeprecationWarning,
         stacklevel=2,
     )
 except ImportError:  # pragma: no cover
