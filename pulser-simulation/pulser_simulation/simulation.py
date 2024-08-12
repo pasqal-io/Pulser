@@ -167,7 +167,7 @@ class QutipEmulator:
             if "all" in self.basis_name:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self.basis_name.split("_with_error")[0]
+                self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
 
     @property

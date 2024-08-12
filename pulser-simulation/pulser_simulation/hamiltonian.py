@@ -134,7 +134,7 @@ class Hamiltonian:
                 )
 
         if "depolarizing" in config.noise_types:
-            if "all" in basis_name == "all":
+            if "all" in basis_name:
                 # Go back to previous config
                 raise NotImplementedError(
                     "Cannot include depolarizing noise in all-basis."

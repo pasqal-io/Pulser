@@ -72,15 +72,16 @@ def results_noisy(sim):
 def results(sim):
     return sim.run()
 
+
 @pytest.mark.parametrize(
-    ["basis", "exp_basis"], 
+    ["basis", "exp_basis"],
     [
         ("ground-rydberg_with_error", "ground-rydberg"),
-        ("digital_with_error", "digital"), 
-        ("all_with_error", "digital"), 
-        ("all", "digital"), 
-        ("XY_with_error", "XY")
-    ]
+        ("digital_with_error", "digital"),
+        ("all_with_error", "digital"),
+        ("all", "digital"),
+        ("XY_with_error", "XY"),
+    ],
 )
 def test_initialization(results, basis, exp_basis):
     rr_state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
@@ -88,7 +89,8 @@ def test_initialization(results, basis, exp_basis):
         CoherentResults(rr_state, 2, "bad_basis", None, [0])
     if "all" in basis:
         with pytest.raises(
-            ValueError, match="`meas_basis` must be 'ground-rydberg' or 'digital'."
+            ValueError,
+            match="`meas_basis` must be 'ground-rydberg' or 'digital'.",
         ):
             CoherentResults(rr_state, 1, basis, None, "XY")
     else:
@@ -96,9 +98,7 @@ def test_initialization(results, basis, exp_basis):
             ValueError,
             match=f"`meas_basis` associated to basis_name '{basis}' must be",
         ):
-            CoherentResults(
-                rr_state, 1, basis, [0], "wrong_measurement_basis"
-            )
+            CoherentResults(rr_state, 1, basis, [0], "wrong_measurement_basis")
     with pytest.raises(
         ValueError, match="only values of 'epsilon' and 'epsilon_prime'"
     ):
@@ -119,15 +119,16 @@ def test_initialization(results, basis, exp_basis):
         [qutip.basis(2, 1), qutip.basis(2, 1)]
     )
 
+
 @pytest.mark.parametrize(
-    ["basis", "exp_basis"], 
+    ["basis", "exp_basis"],
     [
         ("ground-rydberg_with_error", "ground-rydberg"),
-        ("digital_with_error", "digital"), 
-        ("all_with_error", "digital"), 
-        ("all", "digital"), 
-        ("XY_with_error", "XY")
-    ]
+        ("digital_with_error", "digital"),
+        ("all_with_error", "digital"),
+        ("all", "digital"),
+        ("XY_with_error", "XY"),
+    ],
 )
 def test_init_noisy(basis, exp_basis):
     state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
@@ -224,7 +225,6 @@ def test_get_final_state_noisy(reg, pi_pulse):
     assert res3.results[-1] == Counter(
         {"10": 0.8666666666666667, "00": 0.12, "11": 0.013333333333333334}
     )
-    sim_leakage = QutipEmulator.from_sequence(seq_, config=noisy_config)
 
 
 def test_get_state_float_time(results):

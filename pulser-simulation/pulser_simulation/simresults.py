@@ -271,9 +271,8 @@ class NoisyResults(SimulationResults):
             n_measures: Number of measurements needed to compute this
                 result when doing the simulation.
         """
-        basis = basis_name.split("_with_error")
-        assert len(basis) == 1 or (len(basis) == 2 and basis[1] == "")
-        basis_name_ = "digital" if basis[0] == "all" else basis[0]
+        basis = basis_name.replace("_with_error", "")
+        basis_name_ = "digital" if basis == "all" else basis
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
         self._results = tuple(run_output)
@@ -397,11 +396,11 @@ class CoherentResults(SimulationResults):
                     "`meas_basis` must be 'ground-rydberg' or 'digital'."
                 )
         else:
-            if meas_basis != self._basis_name.split("_with_error")[0]:
+            expected_meas_basis = self._basis_name.replace("_with_error", "")
+            if meas_basis != expected_meas_basis:
                 raise ValueError(
                     f"`meas_basis` associated to basis_name '"
-                    f"{self._basis_name}' must be '"
-                    f"{self._basis_name.split("_with_error")[0]}'."
+                    f"{self._basis_name}' must be '{expected_meas_basis}'."
                 )
         self._meas_basis = meas_basis
         self._results = tuple(run_output)
