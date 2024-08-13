@@ -224,7 +224,14 @@ class Hamiltonian:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
         if set(self.config.noise_types).issubset(
-            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise"}
+            {
+                "dephasing",
+                "relaxation",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+                "leakage",
+            }
         ):
             local_noises = (
                 "SPAM" in self.config.noise_types

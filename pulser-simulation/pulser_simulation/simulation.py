@@ -615,6 +615,7 @@ class QutipEmulator:
                 "depolarizing",
                 "eff_noise",
                 "amplitude",
+                "leakage",
             }
         ) and (
             # If amplitude is in noise, not resampling needs amp_sigma=0.

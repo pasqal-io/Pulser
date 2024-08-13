@@ -829,7 +829,7 @@ def test_noise_with_zero_epsilons(seq, matrices):
         ("depolarizing", {"0": 587, "1": 413}, 3),
         (("dephasing", "depolarizing", "relaxation"), {"0": 587, "1": 413}, 5),
         (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
-        (("eff_noise", "leakage"), {"0": 519, "1": 481}, 1),
+        (("eff_noise", "leakage"), {"0": 595, "1": 405}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -847,9 +847,13 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
         config=SimConfig(
             noise=noise,
             eff_noise_opers=[
-                matrices["Z3"] if "leakage" in noise else matrices["Z"]
+                (
+                    qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+                    if "leakage" in noise
+                    else matrices["Z"]
+                )
             ],
-            eff_noise_rates=[0.025],
+            eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
         ),
     )
     res = sim.run()
@@ -858,6 +862,10 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops
     trace_2 = res.states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    if "leakage" in noise:
+        state = res.get_final_state()
+        assert np.all(np.isclose(state[2, :], np.zeros_like(state[2, :])))
+        assert np.all(np.isclose(state[:, 2], np.zeros_like(state[:, 2])))
 
 
 def test_relaxation_noise():
@@ -879,6 +887,7 @@ def test_relaxation_noise():
         ryd_pop = new_ryd_pop
 
 
+deph_res = {"111": 978, "110": 11, "011": 6, "101": 5}
 depo_res = {
     "111": 821,
     "110": 61,
@@ -904,12 +913,13 @@ eff_deph_res = {"111": 958, "110": 19, "011": 12, "101": 11}
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", {"111": 978, "110": 11, "011": 6, "101": 5}, 1),
-        ("eff_noise", {"111": 978, "110": 11, "011": 6, "101": 5}, 1),
+        ("dephasing", deph_res, 1),
+        ("eff_noise", deph_res, 1),
         ("depolarizing", depo_res, 3),
         (("dephasing", "depolarizing"), deph_depo_res, 4),
         (("eff_noise", "dephasing"), eff_deph_res, 2),
-        (("eff_noise", "leakage"), {"111": 991, "110": 9}, 1),
+        (("eff_noise", "leakage"), deph_res, 1),
+        (("eff_noise", "leakage", "dephasing"), eff_deph_res, 2),
     ],
 )
 def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
@@ -922,9 +932,13 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
             noise=noise,
             hyperfine_dephasing_rate=0.05,
             eff_noise_opers=[
-                matrices["Z3"] if "leakage" in noise else matrices["Z"]
+                (
+                    qutip.Qobj([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+                    if "leakage" in noise
+                    else matrices["Z"]
+                )
             ],
-            eff_noise_rates=[0.025],
+            eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
         ),
     )
 
@@ -942,6 +956,10 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     )
     trace_2 = res.states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    if "leakage" in noise:
+        state = res.get_final_state()
+        assert np.all(np.isclose(state[2, :], np.zeros_like(state[2, :])))
+        assert np.all(np.isclose(state[:, 2], np.zeros_like(state[:, 2])))
 
 
 res_deph_relax = {
@@ -972,7 +990,7 @@ res_deph_relax = {
         ),
         (
             ("eff_noise", "leakage"),
-            {"111": 948, "011": 43, "110": 9},
+            {"111": 958, "110": 19, "011": 12, "101": 11},
             2,
         ),
     ],
@@ -999,11 +1017,9 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
         hyp_deph_op = qutip.Qobj(
             [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
         )
-        eff_rate = 1.0
     else:
         deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
         hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
-        eff_rate = 0.2
     sim = QutipEmulator.from_sequence(
         seq,  # resulting state should be hhh
         sampling_rate=0.01,
@@ -1013,7 +1029,7 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
             hyperfine_dephasing_rate=0.1,
             relaxation_rate=1.0,
             eff_noise_opers=[deph_op, hyp_deph_op],
-            eff_noise_rates=[eff_rate, eff_rate],
+            eff_noise_rates=[0.2, 0.2],
         ),
     )
     with pytest.raises(
@@ -1044,6 +1060,10 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
     assert res_samples == Counter(result)
     trace_2 = res.states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    if "leakage" in noise:
+        state = res.get_final_state()
+        assert np.all(np.isclose(state[3, :], np.zeros_like(state[3, :])))
+        assert np.all(np.isclose(state[:, 3], np.zeros_like(state[:, 3])))
 
 
 def test_add_config(matrices):
@@ -1221,7 +1241,6 @@ res1 = {"0000": 892, "1000": 47, "0100": 25, "0001": 19, "0010": 17}
 res2 = {"0000": 962, "0010": 13, "1000": 13, "0100": 12}
 res3 = {"0000": 904, "0100": 43, "0010": 24, "1000": 19, "0001": 10}
 res4 = {"0000": 969, "0001": 18, "1000": 13}
-res5 = {"0000": 909, "0001": 34, "0010": 28, "1000": 17, "0100": 12}
 
 
 @pytest.mark.parametrize(
@@ -1229,7 +1248,7 @@ res5 = {"0000": 909, "0001": 34, "0010": 28, "1000": 17, "0100": 12}
     [
         (None, "dephasing", res1, 1),
         (None, "eff_noise", res1, 1),
-        (None, "leakage", res5, 1),
+        (None, "leakage", res1, 1),
         (None, "depolarizing", res2, 3),
         ("atom0", "dephasing", res3, 1),
         ("atom1", "dephasing", res4, 1),
