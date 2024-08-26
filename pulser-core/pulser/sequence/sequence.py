@@ -824,9 +824,6 @@ class Sequence(Generic[DeviceType]):
                 "fixed_retarget_t",
                 "clock_period",
             ]
-            if isinstance(old_ch_obj, DMM):
-                params_to_check.append("bottom_detuning")
-                params_to_check.append("total_bottom_detuning")
             if check_retarget(old_ch_obj) or check_retarget(new_ch_obj):
                 params_to_check.append("min_retarget_interval")
             for param_ in params_to_check:
@@ -934,8 +931,10 @@ class Sequence(Generic[DeviceType]):
                     call.name == "declare_channel"
                     or call.name == "config_detuning_map"
                     or call.name == "config_slm_mask"
+                    or call.name == "add_dmm_detuning"
                 ):
                     pass
+                # if calling declare_channel
                 elif "name" in sw_channel_kw_args:  # pragma: no cover
                     sw_channel_kw_args["channel_id"] = channel_match[
                         sw_channel_kw_args["name"]
@@ -944,21 +943,42 @@ class Sequence(Generic[DeviceType]):
                     sw_channel_kw_args["channel_id"] = channel_match[
                         sw_channel_args[0]
                     ]
-                elif "dmm_id" in sw_channel_kw_args:  # pragma: no cover
-                    sw_channel_kw_args["dmm_id"] = channel_match[
-                        _get_dmm_name(sw_channel_kw_args["dmm_id"], dmm_calls)
-                    ]
-                    dmm_calls.append(sw_channel_kw_args["dmm_id"])
                 elif call.name == "declare_channel":
                     sw_channel_args[1] = channel_match[sw_channel_args[0]]
-                else:
-                    sw_channel_args[1] = channel_match[
-                        _get_dmm_name(sw_channel_args[1], dmm_calls)
+                # if adding a detuning waveform to the dmm
+                elif "dmm_name" in sw_channel_kw_args:  # program: no cover
+                    sw_channel_kw_args["dmm_name"] = channel_match[
+                        sw_channel_kw_args["dmm_name"]
                     ]
-                    dmm_calls.append(sw_channel_args[1])
+                elif call.name == "add_dmm_detuning":
+                    sw_channel_args[1] = channel_match[sw_channel_args[1]]
+                # if configuring a detuning map or an SLM mask
+                else:
+                    assert (
+                        call.name == "config_detuning_map"
+                        or call.name == "config_slm_mask"
+                    )
+                    if "dmm_id" in sw_channel_kw_args:  # pragma: no cover
+                        dmm_called = _get_dmm_name(
+                            sw_channel_kw_args["dmm_id"], dmm_calls
+                        )
+                        sw_channel_kw_args["dmm_id"] = channel_match[
+                            dmm_called
+                        ]
+                    else:
+                        dmm_called = _get_dmm_name(
+                            sw_channel_args[1], dmm_calls
+                        )
+                        sw_channel_args[1] = channel_match[dmm_called]
+                    dmm_calls.append(dmm_called)
+                    channel_match[dmm_called] = _get_dmm_name(
+                        channel_match[dmm_called],
+                        list(new_seq.declared_channels.keys()),
+                    )
                 getattr(new_seq, call.name)(
                     *sw_channel_args, **sw_channel_kw_args
                 )
+
             if strict:
                 for eom_channel in active_eom_channels:
                     if (
@@ -1012,9 +1032,9 @@ class Sequence(Generic[DeviceType]):
                 err_channel_match[tuple(channel_match.items())] = e.args
                 continue
         raise ValueError(
-            "No matching found between declared channels and channels in the"
-            "new device that does not modify the samples of the Sequence."
-            "Here is a list of matching tested and their associated errors:"
+            "No matching found between declared channels and channels in the "
+            "new device that does not modify the samples of the Sequence. "
+            "Here is a list of matching tested and their associated errors: "
             f"{err_channel_match}"
         )
 

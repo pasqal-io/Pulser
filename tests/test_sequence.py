@@ -17,6 +17,7 @@ import contextlib
 import dataclasses
 import itertools
 import json
+import re
 from typing import Any
 from unittest.mock import patch
 
@@ -357,8 +358,9 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-2 * np.pi * 20,
-                total_bottom_detuning=-2 * np.pi * 2000,
+                # Better than DMM of DigitalAnalogDevice
+                bottom_detuning=-2 * np.pi * 40,
+                total_bottom_detuning=-2 * np.pi * 4000,
             ),
         ),
     )
@@ -742,40 +744,81 @@ def test_switch_device_down(
     ):
         # Can't find a match for the 2nd dmm_0
         seq.switch_device(phys_Chadoq2)
-    # Strict switch imposes to have same bottom detuning for DMMs
-    with pytest.raises(
-        ValueError,
-        match="No match for channel dmm_0_1 with the same bottom_detuning.",
-    ):
-        # Can't find a match for the 1st dmm_0
+    # There is no need to have same bottom detuning to have a strict switch
+    dmm_down = dataclasses.replace(
+        phys_Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+    )
+    new_seq = seq.switch_device(
+        dataclasses.replace(phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)),
+        strict=True,
+    )
+    assert list(new_seq.declared_channels.keys()) == [
+        "global",
+        "dmm_0",
+        "dmm_1",
+    ]
+    seq.add_dmm_detuning(ConstantWaveform(100, -20), "dmm_0_1")
+    # Still works with reusable channels
+    new_seq = seq.switch_device(
+        dataclasses.replace(
+            phys_Chadoq2.to_virtual(),
+            reusable_channels=True,
+            dmm_objects=(dataclasses.replace(dmm_down, bottom_detuning=-20),),
+        ),
+        strict=True,
+    )
+    assert list(new_seq.declared_channels.keys()) == [
+        "global",
+        "dmm_0",
+        "dmm_0_1",
+    ]
+    # Still one compatible configuration
+    new_seq = seq.switch_device(
+        dataclasses.replace(
+            phys_Chadoq2,
+            dmm_objects=(phys_Chadoq2.dmm_channels["dmm_0"], dmm_down),
+        ),
+        strict=True,
+    )
+    assert list(new_seq.declared_channels.keys()) == [
+        "global",
+        "dmm_1",
+        "dmm_0",
+    ]
+    # No compatible configuration
+    error_msg = (
+        "No matching found between declared channels and channels in the "
+        "new device that does not modify the samples of the Sequence. "
+        "Here is a list of matching tested and their associated errors: "
+        "{(('global', 'rydberg_global'), ('dmm_0', 'dmm_0'), ('dmm_0_1', "
+        "'dmm_1')): ('The detunings on some atoms go below the local bottom "
+        "detuning of the DMM (-10 rad/µs).',), (('global', 'rydberg_global'), "
+        "('dmm_0', 'dmm_1'), ('dmm_0_1', 'dmm_0')): ('The detunings on some "
+        "atoms go below the local bottom detuning of the DMM (-10 rad/µs).',)}"
+    )
+    with pytest.raises(ValueError, match=re.escape(error_msg)):
         seq.switch_device(
             dataclasses.replace(
-                phys_Chadoq2,
-                dmm_objects=(
-                    phys_Chadoq2.dmm_channels["dmm_0"],
-                    dataclasses.replace(
-                        phys_Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
-                    ),
-                ),
+                phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
             ),
             strict=True,
         )
-    with pytest.raises(
-        ValueError,
-        match="No match for channel dmm_0_1 with the same "
-        "total_bottom_detuning.",
-    ):
-        # Can't find a match for the 1st dmm_0
+    dmm_down = dataclasses.replace(
+        phys_Chadoq2.dmm_channels["dmm_0"],
+        bottom_detuning=-10,
+        total_bottom_detuning=-10,
+    )
+    seq.switch_device(
+        dataclasses.replace(
+            phys_Chadoq2,
+            dmm_objects=(phys_Chadoq2.dmm_channels["dmm_0"], dmm_down),
+        ),
+        strict=True,
+    )
+    with pytest.raises(ValueError, match=re.escape(error_msg)):
         seq.switch_device(
             dataclasses.replace(
-                phys_Chadoq2,
-                dmm_objects=(
-                    phys_Chadoq2.dmm_channels["dmm_0"],
-                    dataclasses.replace(
-                        phys_Chadoq2.dmm_channels["dmm_0"],
-                        total_bottom_detuning=-500,
-                    ),
-                ),
+                phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
             ),
             strict=True,
         )
