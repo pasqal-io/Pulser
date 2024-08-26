@@ -807,15 +807,11 @@ class Sequence(Generic[DeviceType]):
                 if new_ch_obj.eom_config is None:
                     return (" with an EOM configuration.", "")
                 if (
-                    # TODO: Improvements to this check:
-                    # 1. multiple_beam_control doesn't matter when there
-                    # is only one beam
-                    # 2. custom_buffer_time doesn't have to match as long
-                    # as `Channel_eom_buffer_time`` does
-                    new_ch_obj.eom_config != old_ch_obj.eom_config
+                    new_ch_obj.eom_config.mod_bandwidth
+                    != cast(RydbergEOM, old_ch_obj.eom_config).mod_bandwidth
                     and strict
                 ):
-                    return ("", " with the same EOM configuration.")
+                    return ("", " with the same mod_bandwidth for the EOM.")
             if not strict:
                 return ("", "")
 
@@ -981,9 +977,12 @@ class Sequence(Generic[DeviceType]):
 
             if strict:
                 for eom_channel in active_eom_channels:
+                    current_samples = self._schedule[eom_channel].get_samples()
+                    new_samples = new_seq._schedule[eom_channel].get_samples()
                     if (
-                        self._schedule[eom_channel].get_samples()
-                        != new_seq._schedule[eom_channel].get_samples()
+                        np.any(current_samples.amp != new_samples.amp)
+                        or np.any(current_samples.det != new_samples.det)
+                        or np.any(current_samples.phase != new_samples.phase)
                     ):
                         raise ValueError(
                             f"No match for channel {eom_channel} with an"

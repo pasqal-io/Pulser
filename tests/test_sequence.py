@@ -758,6 +758,7 @@ def test_switch_device_down(
         "dmm_1",
     ]
     seq.add_dmm_detuning(ConstantWaveform(100, -20), "dmm_0_1")
+    seq.add_dmm_detuning(ConstantWaveform(100, -20), dmm_name="dmm_0_1")
     # Still works with reusable channels
     new_seq = seq.switch_device(
         dataclasses.replace(
@@ -1083,6 +1084,7 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
         "rydberg_global",
         [],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
     seq.add_eom_pulse("rydberg", 100, 0.0)
@@ -1100,30 +1102,87 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
         seq.switch_device(DigitalAnalogDevice)
 
     ch_obj = seq.declared_channels["rydberg"]
+    # Can't switch to eom if the modulation bandwidth doesn't match
+    wrong_eom_config = dataclasses.replace(ch_obj.eom_config, mod_bandwidth=20)
+    wrong_ch_obj = dataclasses.replace(ch_obj, eom_config=wrong_eom_config)
+    wrong_analog = dataclasses.replace(
+        AnalogDevice, channel_objects=(wrong_ch_obj,), max_atom_num=28
+    )
+    with pytest.raises(
+        ValueError, match=err_base + "with the same mod_bandwidth for the EOM."
+    ):
+        seq.switch_device(wrong_analog, strict=True)
+    # Can if one Channel has a correct EOM configuration
+    new_seq = seq.switch_device(
+        dataclasses.replace(
+            wrong_analog,
+            channel_objects=(wrong_ch_obj, ch_obj),
+            channel_ids=("wrong_eom", "good_eom"),
+        ),
+        strict=True,
+    )
+    assert new_seq.declared_channels == {"rydberg": ch_obj}
+    # Can if eom extends current eom
+    up_eom_config = dataclasses.replace(
+        ch_obj.eom_config, max_limiting_amp=40 * 2 * np.pi
+    )
+    up_ch_obj = dataclasses.replace(ch_obj, eom_config=up_eom_config)
+    up_analog = dataclasses.replace(
+        AnalogDevice, channel_objects=(up_ch_obj,), max_atom_num=28
+    )
+    up_seq = seq.switch_device(up_analog, strict=True)
+    build_kwargs = {}
+    if parametrized:
+        build_kwargs["delay"] = 120
+    if mappable_reg:
+        build_kwargs["qubits"] = {"q0": 0}
+    og_eom_block = (
+        (seq.build(**build_kwargs) if build_kwargs else seq)
+        ._schedule["rydberg"]
+        .eom_blocks[0]
+    )
+    up_eom_block = (
+        (up_seq.build(**build_kwargs) if build_kwargs else up_seq)
+        ._schedule["rydberg"]
+        .eom_blocks[0]
+    )
+    assert og_eom_block.detuning_on == up_eom_block.detuning_on
+    assert og_eom_block.rabi_freq == up_eom_block.rabi_freq
+    assert og_eom_block.detuning_off == up_eom_block.detuning_off
+
+    # Some parameters might modify the samples
     mod_eom_config = dataclasses.replace(
-        ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
+        ch_obj.eom_config, max_limiting_amp=5 * 2 * np.pi
     )
     mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
     mod_analog = dataclasses.replace(
         AnalogDevice, channel_objects=(mod_ch_obj,), max_atom_num=28
     )
-    with pytest.raises(
-        ValueError, match=err_base + "with the same EOM configuration."
-    ):
-        seq.switch_device(mod_analog, strict=True)
-
-    mod_seq = seq.switch_device(mod_analog, strict=False)
-    if parametrized:
-        seq = seq.build(delay=120)
-        mod_seq = mod_seq.build(delay=120)
-    og_eom_block = seq._schedule["rydberg"].eom_blocks[0]
-    mod_eom_block = mod_seq._schedule["rydberg"].eom_blocks[0]
+    err_msg = (
+        "No matching found between declared channels and channels in "
+        "the new device that does not modify the samples of the "
+        "Sequence. Here is a list of matching tested and their "
+        "associated errors: {(('rydberg', 'rydberg_global'),): ('No "
+        "match for channel rydberg with an EOM configuration that "
+        "does not change the samples."
+    )
+    if not parametrized:
+        with pytest.raises(ValueError, match=re.escape(err_msg)):
+            seq.switch_device(mod_analog, strict=True)
+        mod_seq = seq.switch_device(mod_analog, strict=False)
+    else:
+        mod_seq = seq.switch_device(mod_analog, strict=True)
+    mod_eom_block = (
+        (mod_seq.build(**build_kwargs) if build_kwargs else mod_seq)
+        ._schedule["rydberg"]
+        .eom_blocks[0]
+    )
     assert og_eom_block.detuning_on == mod_eom_block.detuning_on
     assert og_eom_block.rabi_freq == mod_eom_block.rabi_freq
     assert og_eom_block.detuning_off != mod_eom_block.detuning_off
 
     # Test drawing in eom mode
-    seq.draw()
+    (seq.build(**build_kwargs) if build_kwargs else seq).draw()
 
 
 def test_target(reg, device):
