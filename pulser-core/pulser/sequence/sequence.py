@@ -806,12 +806,23 @@ class Sequence(Generic[DeviceType]):
                 # EOM configuration
                 if new_ch_obj.eom_config is None:
                     return (" with an EOM configuration.", "")
-                if (
-                    new_ch_obj.eom_config.mod_bandwidth
-                    != cast(RydbergEOM, old_ch_obj.eom_config).mod_bandwidth
-                    and strict
-                ):
-                    return ("", " with the same mod_bandwidth for the EOM.")
+                if strict:
+                    if (
+                        not self.is_parametrized()
+                        and new_ch_obj.eom_config.mod_bandwidth
+                        != cast(
+                            RydbergEOM, old_ch_obj.eom_config
+                        ).mod_bandwidth
+                    ):
+                        return (
+                            "",
+                            " with the same mod_bandwidth for the EOM.",
+                        )
+                    if (
+                        self.is_parametrized()
+                        and new_ch_obj.eom_config != old_ch_obj.eom_config
+                    ):
+                        return ("", " with the same EOM configuration.")
             if not strict:
                 return ("", "")
 

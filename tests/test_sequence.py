@@ -1102,16 +1102,24 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
         seq.switch_device(DigitalAnalogDevice)
 
     ch_obj = seq.declared_channels["rydberg"]
-    # Can't switch to eom if the modulation bandwidth doesn't match
     wrong_eom_config = dataclasses.replace(ch_obj.eom_config, mod_bandwidth=20)
     wrong_ch_obj = dataclasses.replace(ch_obj, eom_config=wrong_eom_config)
     wrong_analog = dataclasses.replace(
         AnalogDevice, channel_objects=(wrong_ch_obj,), max_atom_num=28
     )
-    with pytest.raises(
-        ValueError, match=err_base + "with the same mod_bandwidth for the EOM."
-    ):
-        seq.switch_device(wrong_analog, strict=True)
+    if parametrized:
+        # Can't switch if the two EOM configurations don't match
+        with pytest.raises(
+            ValueError, match=err_base + "with the same EOM configuration."
+        ):
+            seq.switch_device(wrong_analog, strict=True)
+    else:
+        # Can't switch to eom if the modulation bandwidth doesn't match
+        with pytest.raises(
+            ValueError,
+            match=err_base + "with the same mod_bandwidth for the EOM.",
+        ):
+            seq.switch_device(wrong_analog, strict=True)
     # Can if one Channel has a correct EOM configuration
     new_seq = seq.switch_device(
         dataclasses.replace(
@@ -1130,6 +1138,14 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
     up_analog = dataclasses.replace(
         AnalogDevice, channel_objects=(up_ch_obj,), max_atom_num=28
     )
+    if parametrized:
+        # Can't switch to eom if the modulation bandwidth doesn't match
+        with pytest.raises(
+            ValueError,
+            match=err_base + "with the same EOM configuration.",
+        ):
+            seq.switch_device(up_analog, strict=True)
+        return
     up_seq = seq.switch_device(up_analog, strict=True)
     build_kwargs = {}
     if parametrized:
@@ -1166,12 +1182,9 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
         "match for channel rydberg with an EOM configuration that "
         "does not change the samples."
     )
-    if not parametrized:
-        with pytest.raises(ValueError, match=re.escape(err_msg)):
-            seq.switch_device(mod_analog, strict=True)
-        mod_seq = seq.switch_device(mod_analog, strict=False)
-    else:
-        mod_seq = seq.switch_device(mod_analog, strict=True)
+    with pytest.raises(ValueError, match=re.escape(err_msg)):
+        seq.switch_device(mod_analog, strict=True)
+    mod_seq = seq.switch_device(mod_analog, strict=False)
     mod_eom_block = (
         (mod_seq.build(**build_kwargs) if build_kwargs else mod_seq)
         ._schedule["rydberg"]
