@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Base classes for remote backend execution."""
+
 from __future__ import annotations
 
 import typing
@@ -87,9 +88,7 @@ class RemoteResults(Results):
                 "The results are not available. The submission's status is "
                 f"{str(status)}."
             )
-        raise AttributeError(
-            f"'RemoteResults' object has no attribute '{name}'."
-        )
+        raise AttributeError(f"'RemoteResults' object has no attribute '{name}'.")
 
 
 class RemoteConnection(ABC):
@@ -100,7 +99,7 @@ class RemoteConnection(ABC):
         self,
         sequence: Sequence,
         wait: bool = False,
-        complete: bool = False,
+        open: bool = True,
         batch_id: str | None = None,
         **kwargs: Any,
     ) -> RemoteResults | tuple[RemoteResults, ...]:
@@ -124,8 +123,7 @@ class RemoteConnection(ABC):
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
         raise NotImplementedError(  # pragma: no cover
-            "Unable to fetch the available devices through this "
-            "remote connection."
+            "Unable to fetch the available devices through this " "remote connection."
         )
 
     def _close_batch(self, batch_id: str) -> None:
@@ -161,9 +159,7 @@ class RemoteBackend(Backend):
         """Starts a new remote backend instance."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(connection, RemoteConnection):
-            raise TypeError(
-                "'connection' must be a valid RemoteConnection instance."
-            )
+            raise TypeError("'connection' must be a valid RemoteConnection instance.")
         self._connection = connection
         self._batch_id: str | None = None
 
@@ -196,9 +192,7 @@ class _OpenBatchContextManager:
     def __enter__(self) -> _OpenBatchContextManager:
         batch = cast(
             RemoteResults,
-            self.backend._connection.submit(
-                self.backend._sequence, complete=True
-            ),
+            self.backend._connection.submit(self.backend._sequence, open=True),
         )
         self.backend._batch_id = batch._submission_id
         return self

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Allows to connect to PASQAL's cloud platform to run sequences."""
+
 from __future__ import annotations
 
 import copy
@@ -103,14 +104,11 @@ class PasqalCloud(RemoteConnection):
         self,
         sequence: Sequence,
         wait: bool = False,
-        complete: bool = True,
+        open: bool = False,
         batch_id: str | None = None,
         **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
-        # The complete indicates whether a batch is to be left `open` or not.
-        # An eventual rename to 'open' will come in the future, but this is
-        # left as `complete` to match the current cloud sdk interface.
 
         if not sequence.is_measured():
             bases = sequence.get_addressed_bases()
@@ -179,16 +177,14 @@ class PasqalCloud(RemoteConnection):
                 jobs=job_params or [],  # type: ignore[arg-type]
             )
         else:
-            create_batch_fn = backoff_decorator(
-                self._sdk_connection.create_batch
-            )
+            create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
             batch = create_batch_fn(
                 serialized_sequence=sequence.to_abstract_repr(),
                 jobs=job_params or [],  # type: ignore[arg-type]
                 emulator=emulator,
                 configuration=configuration,
                 wait=wait,
-                complete=complete,
+                complete=not open,
             )
         return RemoteResults(batch.id, self)
 

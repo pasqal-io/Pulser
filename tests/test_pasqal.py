@@ -59,9 +59,7 @@ test_device = dataclasses.replace(
         ),
     ),
 )
-virtual_device = dataclasses.replace(
-    test_device.to_virtual(), name="test-virtual"
-)
+virtual_device = dataclasses.replace(test_device.to_virtual(), name="test-virtual")
 
 
 @pytest.fixture
@@ -127,17 +125,13 @@ def fixt(mock_batch):
             return_value={test_device.name: test_device.to_abstract_repr()}
         )
 
-        yield CloudFixture(
-            pasqal_cloud=pasqal_cloud, mock_cloud_sdk=mock_cloud_sdk
-        )
+        yield CloudFixture(pasqal_cloud=pasqal_cloud, mock_cloud_sdk=mock_cloud_sdk)
 
         mock_cloud_sdk_class.assert_not_called()
 
 
 @pytest.mark.parametrize("mimic_qpu", [False, True])
-@pytest.mark.parametrize(
-    "emulator", [None, EmulatorType.EMU_TN, EmulatorType.EMU_FREE]
-)
+@pytest.mark.parametrize("emulator", [None, EmulatorType.EMU_TN, EmulatorType.EMU_FREE])
 @pytest.mark.parametrize("parametrized", [True, False])
 def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
     with pytest.raises(
@@ -176,9 +170,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
             )
         seq4 = seq3.switch_register(pulser.Register.square(4, spacing=5))
         # The sequence goes through QPUBackend.validate_sequence()
-        with pytest.raises(
-            ValueError, match="defined from a `RegisterLayout`"
-        ):
+        with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
             fixt.pasqal_cloud.submit(
                 seq4, job_params=[dict(runs=10)], mimic_qpu=mimic_qpu
             )
@@ -191,9 +183,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
             fixt.pasqal_cloud.submit(seq, job_params=[{}], mimic_qpu=mimic_qpu)
 
     if parametrized:
-        with pytest.raises(
-            TypeError, match="Did not receive values for variables"
-        ):
+        with pytest.raises(TypeError, match="Did not receive values for variables"):
             fixt.pasqal_cloud.submit(
                 seq.build(qubits={"q0": 1, "q1": 2, "q2": 4, "q3": 3}),
                 job_params=[{"runs": 10}],
@@ -201,16 +191,12 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
             )
 
     assert not seq.is_measured()
-    config = EmulatorConfig(
-        sampling_rate=0.5, backend_options=dict(with_noise=False)
-    )
+    config = EmulatorConfig(sampling_rate=0.5, backend_options=dict(with_noise=False))
 
     if emulator is None:
         sdk_config = None
     elif emulator == EmulatorType.EMU_FREE:
-        sdk_config = EmuFreeConfig(
-            with_noise=False, strict_validation=mimic_qpu
-        )
+        sdk_config = EmuFreeConfig(with_noise=False, strict_validation=mimic_qpu)
     else:
         sdk_config = EmuTNConfig(
             dt=2,
@@ -265,9 +251,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
     )
 
     job_params[0]["runs"] = {10}
-    with pytest.raises(
-        TypeError, match="Object of type set is not JSON serializable"
-    ):
+    with pytest.raises(TypeError, match="Object of type set is not JSON serializable"):
         # Check that the decoder still fails on unsupported types
         fixt.pasqal_cloud.submit(
             seq,
@@ -288,9 +272,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
 
     fixt.mock_cloud_sdk.get_batch.reset_mock()
     results = remote_results.results
-    fixt.mock_cloud_sdk.get_batch.assert_called_with(
-        id=remote_results._submission_id
-    )
+    fixt.mock_cloud_sdk.get_batch.assert_called_with(id=remote_results._submission_id)
     assert results == (
         SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
@@ -308,9 +290,7 @@ def test_emulators_init(fixt, seq, emu_cls, monkeypatch):
         match="'connection' must be a valid RemoteConnection instance.",
     ):
         emu_cls(seq, "connection")
-    with pytest.raises(
-        TypeError, match="'config' must be of type 'EmulatorConfig'"
-    ):
+    with pytest.raises(TypeError, match="'config' must be of type 'EmulatorConfig'"):
         emu_cls(seq, fixt.pasqal_cloud, {"with_noise": True})
 
     with pytest.raises(
