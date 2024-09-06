@@ -44,14 +44,18 @@ def sequence() -> pulser.Sequence:
 
 
 def test_abc_backend(sequence):
-    with pytest.raises(TypeError, match="Can't instantiate abstract class Backend"):
+    with pytest.raises(
+        TypeError, match="Can't instantiate abstract class Backend"
+    ):
         Backend(sequence)
 
     class ConcreteBackend(Backend):
         def run(self):
             pass
 
-    with pytest.raises(TypeError, match="'sequence' should be a `Sequence` instance"):
+    with pytest.raises(
+        TypeError, match="'sequence' should be a `Sequence` instance"
+    ):
         ConcreteBackend(sequence.to_abstract_repr())
 
 
@@ -127,16 +131,22 @@ class _MockConnection(RemoteConnection):
 def test_qpu_backend(sequence):
     connection = _MockConnection()
 
-    with pytest.raises(TypeError, match="must be a real device, instance of 'Device'"):
+    with pytest.raises(
+        TypeError, match="must be a real device, instance of 'Device'"
+    ):
         QPUBackend(sequence, connection)
 
-    with pytest.warns(UserWarning, match="device with a different Rydberg level"):
+    with pytest.warns(
+        UserWarning, match="device with a different Rydberg level"
+    ):
         seq = sequence.switch_device(AnalogDevice)
     with pytest.raises(ValueError, match="defined from a `RegisterLayout`"):
         QPUBackend(seq, connection)
     seq = seq.switch_register(SquareLatticeLayout(5, 5, 5).square_register(2))
 
-    with pytest.raises(ValueError, match="does not accept new register layouts"):
+    with pytest.raises(
+        ValueError, match="does not accept new register layouts"
+    ):
         QPUBackend(seq, connection)
     seq = seq.switch_register(
         AnalogDevice.pre_calibrated_layouts[0].define_register(1, 2, 3)
@@ -158,7 +168,9 @@ def test_qpu_backend(sequence):
 
     with pytest.raises(
         ValueError,
-        match=re.escape("All 'runs' must be below the maximum allowed by the device"),
+        match=re.escape(
+            "All 'runs' must be below the maximum allowed by the device"
+        ),
     ):
         qpu_backend.run(job_params=[{"runs": 100000}])
 

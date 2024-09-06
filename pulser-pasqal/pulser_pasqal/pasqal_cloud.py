@@ -177,7 +177,9 @@ class PasqalCloud(RemoteConnection):
                 jobs=job_params or [],  # type: ignore[arg-type]
             )
         else:
-            create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
+            create_batch_fn = backoff_decorator(
+                self._sdk_connection.create_batch
+            )
             batch = create_batch_fn(
                 serialized_sequence=sequence.to_abstract_repr(),
                 jobs=job_params or [],  # type: ignore[arg-type]

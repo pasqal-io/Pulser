@@ -88,7 +88,9 @@ class RemoteResults(Results):
                 "The results are not available. The submission's status is "
                 f"{str(status)}."
             )
-        raise AttributeError(f"'RemoteResults' object has no attribute '{name}'.")
+        raise AttributeError(
+            f"'RemoteResults' object has no attribute '{name}'."
+        )
 
 
 class RemoteConnection(ABC):
@@ -123,7 +125,8 @@ class RemoteConnection(ABC):
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
         raise NotImplementedError(  # pragma: no cover
-            "Unable to fetch the available devices through this " "remote connection."
+            "Unable to fetch the available devices through this "
+            "remote connection."
         )
 
     def _close_batch(self, batch_id: str) -> None:
@@ -159,7 +162,9 @@ class RemoteBackend(Backend):
         """Starts a new remote backend instance."""
         super().__init__(sequence, mimic_qpu=mimic_qpu)
         if not isinstance(connection, RemoteConnection):
-            raise TypeError("'connection' must be a valid RemoteConnection instance.")
+            raise TypeError(
+                "'connection' must be a valid RemoteConnection instance."
+            )
         self._connection = connection
         self._batch_id: str | None = None
 
