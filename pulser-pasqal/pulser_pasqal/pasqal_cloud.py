@@ -109,7 +109,6 @@ class PasqalCloud(RemoteConnection):
         **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
-
         if not sequence.is_measured():
             bases = sequence.get_addressed_bases()
             if len(bases) != 1:
