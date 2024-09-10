@@ -89,6 +89,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/phase_shifts_vz_gates
    tutorials/composite_wfs
    tutorials/paramseqs
+   tutorials/registers
    tutorials/reg_layouts
    tutorials/interpolated_wfs
    tutorials/serialization
