@@ -695,17 +695,7 @@ def test_noise(seq, matrices):
         {"000": 857, "110": 73, "100": 70}
     )
     with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(SimConfig(noise="dephasing"))
-    with pytest.raises(NotImplementedError, match="Cannot include"):
         sim2.set_config(SimConfig(noise="depolarizing"))
-    with pytest.raises(NotImplementedError, match="Cannot include"):
-        sim2.set_config(
-            SimConfig(
-                noise="eff_noise",
-                eff_noise_opers=[matrices["I"]],
-                eff_noise_rates=[1.0],
-            )
-        )
     with pytest.raises(
         NotImplementedError,
         match="mode 'ising' does not support simulation of",
@@ -864,6 +854,94 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops * len(
         seq_digital.register.qubits
     )
+    trace_2 = res.states[-1] ** 2
+    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+
+
+res_deph_relax = {
+    "000": 412,
+    "010": 230,
+    "001": 176,
+    "100": 174,
+    "101": 7,
+    "011": 1,
+}
+
+
+@pytest.mark.parametrize(
+    "noise, result, n_collapse_ops",
+    [
+        ("dephasing", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
+        ("eff_noise", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
+        (
+            "relaxation",
+            {"000": 421, "010": 231, "001": 172, "100": 171, "101": 5},
+            1,
+        ),
+        (("dephasing", "relaxation"), res_deph_relax, 3),
+        (
+            ("eff_noise", "dephasing"),
+            {"111": 922, "110": 33, "011": 23, "101": 21, "100": 1},
+            4,
+        ),
+    ],
+)
+def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
+    # Test with Digital+Rydberg Sequence
+    if "relaxation" in noise:
+        # Bring the states to ggg
+        seq.target("control1", "raman")
+        seq.add(pi_Y_pulse, "raman")
+        seq.target("target", "raman")
+        seq.add(pi_Y_pulse, "raman")
+        seq.target("control2", "raman")
+        seq.add(pi_Y_pulse, "raman")
+        # Apply a 2pi pulse on ggg
+        seq.declare_channel("ryd_glob", "rydberg_global")
+        seq.add(twopi_pulse, "ryd_glob")
+        # Measure in the rydberg basis
+        seq.measure()
+    deph_op = qutip.Qobj([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+    hyp_deph_op = qutip.Qobj([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+    sim = QutipEmulator.from_sequence(
+        seq,  # resulting state should be hhh
+        sampling_rate=0.01,
+        config=SimConfig(
+            noise=noise,
+            dephasing_rate=0.1,
+            hyperfine_dephasing_rate=0.1,
+            relaxation_rate=1.0,
+            eff_noise_opers=[deph_op, hyp_deph_op],
+            eff_noise_rates=[0.2, 0.2],
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Incompatible shape for effective noise operator n°0.",
+    ):
+        # Only raised if 'eff_noise' in noise
+        sim.set_config(
+            SimConfig(
+                noise=("eff_noise",),
+                eff_noise_opers=[matrices["Z"]],
+                eff_noise_rates=[1.0],
+            )
+        )
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Cannot include depolarizing noise in all-basis.",
+    ):
+        sim.set_config(SimConfig(noise="depolarizing"))
+
+    assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops * len(
+        seq.register.qubits
+    )
+    np.random.seed(123)
+    res = sim.run()
+    res_samples = res.sample_final_state()
+    assert res_samples == Counter(result)
     trace_2 = res.states[-1] ** 2
     assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
 

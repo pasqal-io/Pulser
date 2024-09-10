@@ -115,26 +115,18 @@ class Hamiltonian:
                     f"Cannot include {noise_type} noise in all-basis."
                 )
 
-        # NOTE: These operators only make sense when basis != "all"
-        b, a = self.eigenbasis[:2]
-        pauli_2d = {
-            "x": self.op_matrix[f"sigma_{a}{b}"]
-            + self.op_matrix[f"sigma_{b}{a}"],
-            "y": 1j * self.op_matrix[f"sigma_{a}{b}"]
-            - 1j * self.op_matrix[f"sigma_{b}{a}"],
-            "z": self.op_matrix[f"sigma_{b}{b}"]
-            - self.op_matrix[f"sigma_{a}{a}"],
-        }
-
         local_collapse_ops = []
         if "dephasing" in config.noise_types:
-            basis_check("dephasing")
-            rate = (
-                config.hyperfine_dephasing_rate
-                if self.basis_name == "digital"
-                else config.dephasing_rate
-            )
-            local_collapse_ops.append(np.sqrt(rate / 2) * pauli_2d["z"])
+            dephasing_rates = {
+                "d": config.dephasing_rate,
+                "r": config.dephasing_rate,
+                "h": config.hyperfine_dephasing_rate,
+            }
+            for state in self.eigenbasis:
+                if state in dephasing_rates:
+                    coeff = np.sqrt(2 * dephasing_rates[state])
+                    op = self.op_matrix[f"sigma_{state}{state}"]
+                    local_collapse_ops.append(coeff * op)
 
         if "relaxation" in config.noise_types:
             coeff = np.sqrt(config.relaxation_rate)
@@ -148,18 +140,32 @@ class Hamiltonian:
 
         if "depolarizing" in config.noise_types:
             basis_check("depolarizing")
+            # NOTE: These operators only make sense when basis != "all"
+            b, a = self.eigenbasis[:2]
+            pauli_2d = {
+                "x": self.op_matrix[f"sigma_{a}{b}"]
+                + self.op_matrix[f"sigma_{b}{a}"],
+                "y": 1j * self.op_matrix[f"sigma_{a}{b}"]
+                - 1j * self.op_matrix[f"sigma_{b}{a}"],
+                "z": self.op_matrix[f"sigma_{b}{b}"]
+                - self.op_matrix[f"sigma_{a}{a}"],
+            }
             coeff = np.sqrt(config.depolarizing_rate / 4)
             local_collapse_ops.append(coeff * pauli_2d["x"])
             local_collapse_ops.append(coeff * pauli_2d["y"])
             local_collapse_ops.append(coeff * pauli_2d["z"])
 
         if "eff_noise" in config.noise_types:
-            basis_check("effective")
             for id, rate in enumerate(config.eff_noise_rates):
-                local_collapse_ops.append(
-                    np.sqrt(rate) * np.array(config.eff_noise_opers[id])
-                )
-
+                op = np.array(config.eff_noise_opers[id])
+                basis_dim = len(self.eigenbasis)
+                op_shape = (basis_dim, basis_dim)
+                if op.shape != op_shape:
+                    raise ValueError(
+                        "Incompatible shape for effective noise operator n°"
+                        f"{id}. Operator {op} should be of shape {op_shape}."
+                    )
+                local_collapse_ops.append(np.sqrt(rate) * op)
         # Building collapse operators
         self._collapse_ops = []
         for operator in local_collapse_ops:

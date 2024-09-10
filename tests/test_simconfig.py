@@ -124,14 +124,6 @@ def test_eff_noise_opers(matrices):
             eff_noise_opers=[matrices["I4"]],
             eff_noise_rates=[1.0],
         )
-    with pytest.raises(
-        NotImplementedError, match="Without leakage, operator's shape"
-    ):
-        SimConfig(
-            noise=("eff_noise",),
-            eff_noise_opers=[matrices["I3"]],
-            eff_noise_rates=[1.0],
-        )
     SimConfig(
         noise=("eff_noise"),
         eff_noise_opers=[matrices["X"], matrices["I"]],
