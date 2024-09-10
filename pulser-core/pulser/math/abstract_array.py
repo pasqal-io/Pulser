@@ -35,6 +35,8 @@ class AbstractArray:
 
     Args:
         array: The array to store.
+        dtype: The data type of the array.
+        force_array: Forces the array to be at least 1D.
     """
 
     def __init__(

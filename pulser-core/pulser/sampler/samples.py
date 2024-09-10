@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast, get_args
 
 import numpy as np
 
@@ -446,6 +446,9 @@ class DMMSamples(ChannelSamples):
     qubits: dict[QubitId, pm.AbstractArray] = field(default_factory=dict)
 
 
+_SamplesType = Literal["abstract", "array", "tensor"]
+
+
 @dataclass
 class SequenceSamples:
     """Gather samples for each channel in a sequence."""
@@ -511,7 +514,7 @@ class SequenceSamples:
     def to_nested_dict(
         self,
         all_local: bool = False,
-        samples_type: Literal["abstract", "array", "tensor"] | None = "array",
+        samples_type: _SamplesType = "array",
     ) -> dict:
         """Format in the nested dictionary form.
 
@@ -520,13 +523,15 @@ class SequenceSamples:
         Args:
             all_local: Forces all samples to be distributed by their
                 individual targets, even when applied by a global channel.
+            samples_type: The array type to return the samples in. Can be
+                "array" (the default), "tensor" or "abstract".
 
         Returns:
             A nested dictionary splitting the samples according to their
             addressing ('Global' or 'Local'), the targeted basis
             and, in the 'Local' case, the targeted qubit.
         """
-        _samples_type_options = ("abstract", "array", "tensor")
+        _samples_type_options = get_args(_SamplesType)
         if samples_type not in _samples_type_options:
             raise ValueError(
                 f"'samples_type' must be one of {_samples_type_options!r}, "

@@ -385,6 +385,7 @@ class Channel(ABC):
                 "duration needs to be castable to an int but "
                 "type %s was provided" % type(duration)
             )
+
         if duration < self.min_duration:
             raise ValueError(
                 "duration has to be at least " + f"{self.min_duration} ns."

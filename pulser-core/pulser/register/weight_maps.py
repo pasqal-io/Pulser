@@ -74,7 +74,7 @@ class WeightMap(Traps, RegDrawer):
         return cast(np.ndarray, np.array(self.weights)[sorting])
 
     def get_qubit_weight_map(
-        self, qubits: Mapping[QubitId, pm.AbstractArray]
+        self, qubits: Mapping[QubitId, ArrayLike]
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
         qubit_weight_map = {}
@@ -85,7 +85,7 @@ class WeightMap(Traps, RegDrawer):
                 np.all(
                     np.isclose(
                         coords_arr,
-                        pos.as_array(detach=True),
+                        pm.AbstractArray(pos).as_array(detach=True),
                         atol=10 ** (-COORD_PRECISION),
                     ),
                     axis=1,
