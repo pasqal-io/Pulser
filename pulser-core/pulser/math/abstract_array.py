@@ -134,6 +134,15 @@ class AbstractArray:
         """The data type of the array elements."""
         return self._array.dtype
 
+    def detach(self) -> AbstractArray:
+        """Detaches the data from the computational graph.
+
+        Analogous to torch.Tensor.detach().
+        """
+        if self.is_tensor:
+            return AbstractArray(cast(torch.Tensor, self._array).detach())
+        return self
+
     def __array__(self, dtype: Any = None) -> np.ndarray:
         return self._array.__array__(dtype)
 

@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import cast, Protocol
+from typing import cast, Protocol, TypeVar
 
 import numpy as np
 import scipy.fft
@@ -32,8 +32,13 @@ except ImportError:  # pragma: no cover
     pass
 
 
-class Differentiable(Protocol):
+T = TypeVar("T", covariant=True)
+
+
+class Differentiable(Protocol[T]):
     """A type hint to signal that a parameter may be differentiable."""
+
+    def detach(self: T) -> T: ...
 
     # AbstractArray and torch.Tensor have this method, so it's a good proxy
     def __array__(self) -> np.ndarray: ...
