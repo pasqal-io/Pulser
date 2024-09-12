@@ -96,6 +96,7 @@ class TestAbstractArray:
         assert arr.real == 3.2
         assert arr.dtype is np.dtype(float)
         assert repr(arr) == repr(np.array(arr))
+        assert arr.detach() == arr
 
     @pytest.mark.parametrize("force_array", [False, True])
     @pytest.mark.parametrize("requires_grad", [False, True])
@@ -108,6 +109,7 @@ class TestAbstractArray:
         assert arr.is_tensor
         assert arr.as_tensor() == t
         assert arr.as_array(detach=requires_grad) == t.detach().numpy()
+        assert arr.detach() == pm.AbstractArray(t.detach())
         assert repr(arr) == repr(t[None] if force_array else t)
 
     @pytest.mark.parametrize("requires_grad", [False, True])
