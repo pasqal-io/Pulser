@@ -322,7 +322,7 @@ class Waveform(ABC):
 
     def __truediv__(self, other: float | ArrayLike) -> Waveform:
         other_ = pm.AbstractArray(other)
-        if other_ == 0:
+        if np.any(other_.as_array(detach=True) == 0):
             raise ZeroDivisionError("Can't divide a waveform by zero.")
         else:
             return self.__mul__(1 / other_)
