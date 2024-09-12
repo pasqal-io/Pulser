@@ -211,8 +211,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     @overload
     def calculate_detuning_off(
         self,
-        amp_on: float | pm.Differentiable,
-        detuning_on: float | pm.Differentiable,
+        amp_on: float | pm.TensorLike,
+        detuning_on: float | pm.TensorLike,
         optimal_detuning_off: float,
         return_switching_beams: Literal[False],
     ) -> pm.AbstractArray:
@@ -221,8 +221,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
     @overload
     def calculate_detuning_off(
         self,
-        amp_on: float | pm.Differentiable,
-        detuning_on: float | pm.Differentiable,
+        amp_on: float | pm.TensorLike,
+        detuning_on: float | pm.TensorLike,
         optimal_detuning_off: float,
         return_switching_beams: Literal[True],
     ) -> tuple[pm.AbstractArray, tuple[RydbergBeam, ...]]:
@@ -230,8 +230,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
 
     def calculate_detuning_off(
         self,
-        amp_on: float | pm.Differentiable,
-        detuning_on: float | pm.Differentiable,
+        amp_on: float | pm.TensorLike,
+        detuning_on: float | pm.TensorLike,
         optimal_detuning_off: float,
         return_switching_beams: bool = False,
     ) -> pm.AbstractArray | tuple[pm.AbstractArray, tuple[RydbergBeam, ...]]:
@@ -257,8 +257,8 @@ class RydbergEOM(_RydbergEOMDefaults, BaseEOM, _RydbergEOM):
 
     def detuning_off_options(
         self,
-        rabi_frequency: float | pm.Differentiable,
-        detuning_on: float | pm.Differentiable,
+        rabi_frequency: float | pm.TensorLike,
+        detuning_on: float | pm.TensorLike,
     ) -> pm.AbstractArray:
         """Calculates the possible detuning values when the amplitude is off.
 

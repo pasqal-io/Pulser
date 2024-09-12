@@ -35,12 +35,11 @@ except ImportError:  # pragma: no cover
 T = TypeVar("T", covariant=True)
 
 
-class Differentiable(Protocol[T]):
-    """A type hint to signal that a parameter may be differentiable."""
+class TensorLike(Protocol[T]):
+    """A type hint to signal that a parameter behaves like a torch Tensor."""
 
-    def detach(self: T) -> T: ...
+    def detach(self: T) -> T: ...  # noqa: D102
 
-    # AbstractArray and torch.Tensor have this method, so it's a good proxy
     def __array__(self) -> np.ndarray: ...
 
 

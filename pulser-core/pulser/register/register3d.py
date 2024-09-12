@@ -43,7 +43,7 @@ class Register3D(BaseRegister, RegDrawer):
 
     def __init__(
         self,
-        qubits: Mapping[Any, ArrayLike | pm.Differentiable],
+        qubits: Mapping[Any, ArrayLike | pm.TensorLike],
         **kwargs: Any,
     ):
         """Initializes a custom Register."""
@@ -60,7 +60,7 @@ class Register3D(BaseRegister, RegDrawer):
     def cubic(
         cls,
         side: int,
-        spacing: float | pm.Differentiable = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register3D:
         """Initializes the register with the qubits in a cubic array.
@@ -90,7 +90,7 @@ class Register3D(BaseRegister, RegDrawer):
         rows: int,
         columns: int,
         layers: int,
-        spacing: float | pm.Differentiable = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register3D:
         """Initializes the register with the qubits in a cuboid array.

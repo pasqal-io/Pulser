@@ -91,7 +91,7 @@ class Pulse:
         self,
         amplitude: Waveform | Parametrized,
         detuning: Waveform | Parametrized,
-        phase: float | pm.Differentiable | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ):
         """Initializes a new Pulse."""
@@ -130,8 +130,8 @@ class Pulse:
     def ConstantDetuning(
         cls,
         amplitude: Waveform | Parametrized,
-        detuning: float | pm.Differentiable | Parametrized,
-        phase: float | pm.Differentiable | Parametrized,
+        detuning: float | pm.TensorLike | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Creates a Pulse with an amplitude waveform and a constant detuning.
@@ -152,9 +152,9 @@ class Pulse:
     @parametrize
     def ConstantAmplitude(
         cls,
-        amplitude: float | pm.Differentiable | Parametrized,
+        amplitude: float | pm.TensorLike | Parametrized,
         detuning: Waveform | Parametrized,
-        phase: float | pm.Differentiable | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
@@ -175,9 +175,9 @@ class Pulse:
     def ConstantPulse(
         cls,
         duration: int | Parametrized,
-        amplitude: float | pm.Differentiable | Parametrized,
-        detuning: float | pm.Differentiable | Parametrized,
-        phase: float | pm.Differentiable | Parametrized,
+        amplitude: float | pm.TensorLike | Parametrized,
+        detuning: float | pm.TensorLike | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
         post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a constant detuning.

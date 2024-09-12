@@ -1097,8 +1097,8 @@ class Sequence(Generic[DeviceType]):
     def enable_eom_mode(
         self,
         channel: str,
-        amp_on: Union[float, pm.Differentiable, Parametrized],
-        detuning_on: Union[float, pm.Differentiable, Parametrized],
+        amp_on: Union[float, pm.TensorLike, Parametrized],
+        detuning_on: Union[float, pm.TensorLike, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
         correct_phase_drift: bool = False,
     ) -> None:
@@ -1252,8 +1252,8 @@ class Sequence(Generic[DeviceType]):
     def modify_eom_setpoint(
         self,
         channel: str,
-        amp_on: Union[float, pm.Differentiable, Parametrized],
-        detuning_on: Union[float, pm.Differentiable, Parametrized],
+        amp_on: Union[float, pm.TensorLike, Parametrized],
+        detuning_on: Union[float, pm.TensorLike, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
         correct_phase_drift: bool = False,
     ) -> None:
@@ -1350,7 +1350,7 @@ class Sequence(Generic[DeviceType]):
         self,
         channel: str,
         duration: Union[int, Parametrized],
-        phase: Union[float, pm.Differentiable, Parametrized],
+        phase: Union[float, pm.TensorLike, Parametrized],
         post_phase_shift: Union[float, Parametrized] = 0.0,
         protocol: PROTOCOLS = "min-delay",
         correct_phase_drift: bool = False,
@@ -1713,7 +1713,7 @@ class Sequence(Generic[DeviceType]):
         self,
         *,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, pm.Differentiable, float, int],
+        **vars: Union[ArrayLike, pm.TensorLike, float, int],
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
@@ -2494,8 +2494,8 @@ class Sequence(Generic[DeviceType]):
     def _process_eom_parameters(
         self,
         channel_obj: Channel,
-        amp_on: Union[float, pm.Differentiable, Parametrized],
-        detuning_on: Union[float, pm.Differentiable, Parametrized],
+        amp_on: Union[float, pm.TensorLike, Parametrized],
+        detuning_on: Union[float, pm.TensorLike, Parametrized],
         optimal_detuning_off: Union[float, Parametrized],
     ) -> tuple[
         float | pm.AbstractArray | Parametrized, tuple[RydbergBeam, ...]

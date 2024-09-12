@@ -143,7 +143,7 @@ class BaseRegister(ABC, CoordsCollection):
     @classmethod
     def from_coordinates(
         cls: Type[T],
-        coords: ArrayLike | pm.Differentiable,
+        coords: ArrayLike | pm.TensorLike,
         center: bool = True,
         prefix: Optional[str] = None,
         labels: Optional[abcSequence[QubitId]] = None,

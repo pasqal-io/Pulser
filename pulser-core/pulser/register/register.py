@@ -46,7 +46,7 @@ class Register(BaseRegister, RegDrawer):
 
     def __init__(
         self,
-        qubits: Mapping[Any, ArrayLike | pm.Differentiable],
+        qubits: Mapping[Any, ArrayLike | pm.TensorLike],
         **kwargs: Any,
     ):
         """Initializes a custom Register."""
@@ -63,7 +63,7 @@ class Register(BaseRegister, RegDrawer):
     def square(
         cls,
         side: int,
-        spacing: float | pm.Differentiable = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Initializes the register with the qubits in a square array.
@@ -92,7 +92,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         columns: int,
-        spacing: float | pm.Differentiable = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Creates a rectangular array of qubits on a square lattice.
@@ -115,8 +115,8 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         columns: int,
-        row_spacing: float | pm.Differentiable = 4.0,
-        col_spacing: float | pm.Differentiable = 2.0,
+        row_spacing: float | pm.TensorLike = 4.0,
+        col_spacing: float | pm.TensorLike = 2.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Creates a rectangular array of qubits on a rectangular lattice.
@@ -166,7 +166,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         atoms_per_row: int,
-        spacing: float | pm.Differentiable = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Initializes the register with the qubits in a triangular lattice.
@@ -219,7 +219,7 @@ class Register(BaseRegister, RegDrawer):
     def hexagon(
         cls,
         layers: int,
-        spacing: float | pm.Differentiable = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Initializes the register with the qubits in a hexagonal layout.
@@ -259,7 +259,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         n_qubits: int,
         device: pulser.devices._device_datacls.BaseDevice,
-        spacing: float | pm.Differentiable | None = None,
+        spacing: float | pm.TensorLike | None = None,
         prefix: str | None = None,
     ) -> Register:
         """Initializes the register with maximum connectivity for a device.
