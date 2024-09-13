@@ -51,17 +51,17 @@ class SimulationResults(ABC, Results[ResultType]):
         Args:
             size: The number of atoms in the register.
             basis_name: The basis indicating the addressed atoms after
-                the pulse sequence ('ground-rydberg', 'digital' or 'all').
+                the pulse sequence ('ground-rydberg', 'digital' or 'all' or one
+                of these 3 bases with the suffix "_with_error").
             sim_times: Array of times (in µs) when simulation results are
                 returned.
         """
         self._dim = 3 if basis_name == "all" else 2
         self._size = size
-        if basis_name not in {"ground-rydberg", "digital", "all", "XY"}:
-            raise ValueError(
-                "`basis_name` must be 'ground-rydberg', 'digital', 'all' or "
-                "'XY'."
-            )
+        bases = ["ground-rydberg", "digital", "all", "XY"]
+        bases += [basis + "_with_error" for basis in bases]
+        if basis_name not in bases:
+            raise ValueError(f"`basis_name` must be in {bases}")
         self._basis_name = basis_name
         self._sim_times = sim_times
 
@@ -259,16 +259,20 @@ class NoisyResults(SimulationResults):
                 represented as a bitstring. There is one Counter for each time
                 the simulation was asked to return a result.
             size: The number of atoms in the register.
-            basis_name: Basis indicating the addressed atoms after
-                the pulse sequence ('ground-rydberg' or 'digital' - 'all' basis
-                makes no sense after projection on bitstrings). Defaults to
-                'digital' if given value 'all'.
+            basis_name: Basis indicating the addressed atoms after the pulse
+                sequence ('ground-rydberg' or 'digital' - 'all' basis or any
+                basis with the suffix "with_error" make no sense after
+                projection on bitstrings). Defaults to 'digital' if given value
+                'all' or 'all_with_error', and to 'ground-rydberg', 'XY',
+                'digital' if given respectively 'ground-rydberg_with_error',
+                'XY_with_error' or 'digital_with_error'.
             sim_times: Times at which Simulation object returned
                 the results.
             n_measures: Number of measurements needed to compute this
                 result when doing the simulation.
         """
-        basis_name_ = "digital" if basis_name == "all" else basis_name
+        basis = basis_name.replace("_with_error", "")
+        basis_name_ = "digital" if basis == "all" else basis
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
         self._results = tuple(run_output)
@@ -375,25 +379,28 @@ class CoherentResults(SimulationResults):
                 simulated.
             size: The number of atoms in the register.
             basis_name: The basis indicating the addressed atoms after
-                the pulse sequence ('ground-rydberg', 'digital' or 'all').
+                the pulse sequence ('ground-rydberg', 'digital' or 'all' or
+                one of these bases with the suffix "_with_error").
             sim_times: Times at which Simulation object returned the
                 results.
             meas_basis: The basis in which a sampling measurement
-                is desired.
+                is desired (must be in "ground-rydberg" or "digital").
             meas_errors: If measurement errors
                 are involved, give them in a dictionary with "epsilon" and
                 "epsilon_prime".
         """
         super().__init__(size, basis_name, sim_times)
-        if self._basis_name == "all":
+        if "all" in self._basis_name:
             if meas_basis not in {"ground-rydberg", "digital"}:
                 raise ValueError(
                     "`meas_basis` must be 'ground-rydberg' or 'digital'."
                 )
         else:
-            if meas_basis != self._basis_name:
+            expected_meas_basis = self._basis_name.replace("_with_error", "")
+            if meas_basis != expected_meas_basis:
                 raise ValueError(
-                    "`meas_basis` and `basis_name` must have the same value."
+                    f"`meas_basis` associated to basis_name '"
+                    f"{self._basis_name}' must be '{expected_meas_basis}'."
                 )
         self._meas_basis = meas_basis
         self._results = tuple(run_output)
@@ -425,9 +432,8 @@ class CoherentResults(SimulationResults):
         Args:
             t: Time (in µs) at which to return the state.
             reduce_to_basis: Reduces the full state vector
-                to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible. Doesn't
-                apply to XY mode.
+                to the given basis ("ground-rydberg", "digital" or "XY"), if
+                the population of the states to be ignored is negligible.
             ignore_global_phase: If True and if the final state is a vector,
                 changes the final state's global phase such that the largest
                 term (in absolute value) is real.
@@ -461,9 +467,8 @@ class CoherentResults(SimulationResults):
 
         Args:
             reduce_to_basis: Reduces the full state vector
-                to the given basis ("ground-rydberg" or "digital"), if the
-                population of the states to be ignored is negligible. Doesn't
-                apply to XY mode.
+                to the given basis ("ground-rydberg", "digital" or "XY"), if
+                the population of the states to be ignored is negligible.
             ignore_global_phase: If True, changes the
                 final state's global phase such that the largest term (in
                 absolute value) is real.
@@ -499,7 +504,7 @@ class CoherentResults(SimulationResults):
             # ground-rydberg
             good = (
                 1 - state_n
-                if self._basis_name == "ground-rydberg"
+                if "ground-rydberg" in self._basis_name
                 else state_n
             )
             return (
