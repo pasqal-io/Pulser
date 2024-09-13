@@ -226,23 +226,14 @@ class TestDevice:
             obj_str: str,
             original_err: Type[Exception],
             err_msg: str = "",
-            check_from_abstract_repr=False,
+            func: Callable = deserialize_device,
         ) -> Exception:
-            func_to_test = [deserialize_device]
-            err_raised = []
-            if check_from_abstract_repr:
-                func_to_test += [
-                    Device.from_abstract_repr,
-                    VirtualDevice.from_abstract_repr,
-                ]
-            for func in func_to_test:
-                with pytest.raises(DeserializeDeviceError) as exc_info:
-                    func(obj_str)
-                err_raised.append(exc_info)
-            for exc_info in err_raised:
-                cause = exc_info.value.__cause__
-                assert isinstance(cause, original_err)
-                assert re.search(re.escape(err_msg), str(cause)) is not None
+            with pytest.raises(DeserializeDeviceError) as exc_info:
+                func(obj_str)
+
+            cause = exc_info.value.__cause__
+            assert isinstance(cause, original_err)
+            assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause
 
         dev_str = json.dumps(abstract_device)
@@ -279,7 +270,16 @@ class TestDevice:
         ) as err:
             json.loads(bad_str)
         err_msg = str(err.value)
-        check_error_raised(bad_str, json.JSONDecodeError, err_msg, True)
+        check_error_raised(bad_str, json.JSONDecodeError, err_msg)
+        check_error_raised(
+            bad_str, json.JSONDecodeError, err_msg, Device.from_abstract_repr
+        )
+        check_error_raised(
+            bad_str,
+            json.JSONDecodeError,
+            err_msg,
+            VirtualDevice.from_abstract_repr,
+        )
 
         # jsonschema.exceptions.ValidationError from jsonschema
         invalid_dev = abstract_device.copy()
@@ -290,7 +290,18 @@ class TestDevice:
             json.dumps(invalid_dev),
             jsonschema.exceptions.ValidationError,
             str(err.value),
-            True,
+        )
+        check_error_raised(
+            json.dumps(invalid_dev),
+            jsonschema.exceptions.ValidationError,
+            str(err.value),
+            Device.from_abstract_repr,
+        )
+        check_error_raised(
+            json.dumps(invalid_dev),
+            jsonschema.exceptions.ValidationError,
+            str(err.value),
+            VirtualDevice.from_abstract_repr,
         )
 
         # AbstractReprError from invalid RydbergEOM configuration
@@ -305,7 +316,20 @@ class TestDevice:
                 json.dumps(bad_eom_dev),
                 AbstractReprError,
                 "RydbergEOM deserialization failed.",
-                True,
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_eom_dev),
+                AbstractReprError,
+                "RydbergEOM deserialization failed.",
+                VirtualDevice.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_eom_dev),
+                AbstractReprError,
+                "RydbergEOM deserialization failed.",
             )
             assert isinstance(prev_err.__cause__, ValueError)
 
@@ -316,7 +340,20 @@ class TestDevice:
             json.dumps(bad_ch_dev1),
             AbstractReprError,
             "Channel deserialization failed.",
-            True,
+            Device.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev1),
+            AbstractReprError,
+            "Channel deserialization failed.",
+            VirtualDevice.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev1),
+            AbstractReprError,
+            "Channel deserialization failed.",
         )
         assert isinstance(prev_err.__cause__, ValueError)
 
@@ -327,7 +364,20 @@ class TestDevice:
             json.dumps(bad_ch_dev2),
             AbstractReprError,
             "Channel deserialization failed.",
-            True,
+            Device.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, NotImplementedError)
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev2),
+            AbstractReprError,
+            "Channel deserialization failed.",
+            VirtualDevice.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, NotImplementedError)
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev2),
+            AbstractReprError,
+            "Channel deserialization failed.",
         )
         assert isinstance(prev_err.__cause__, NotImplementedError)
 
@@ -341,7 +391,20 @@ class TestDevice:
                 json.dumps(bad_layout_dev),
                 AbstractReprError,
                 "Register layout deserialization failed.",
-                True,
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_layout_dev),
+                AbstractReprError,
+                "Register layout deserialization failed.",
+                VirtualDevice.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_layout_dev),
+                AbstractReprError,
+                "Register layout deserialization failed.",
             )
             assert isinstance(prev_err.__cause__, ValueError)
 
@@ -353,7 +416,20 @@ class TestDevice:
                 json.dumps(bad_xy_coeff_dev),
                 AbstractReprError,
                 "Device deserialization failed.",
-                True,
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
+                VirtualDevice.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
             )
             assert isinstance(prev_err.__cause__, TypeError)
 
@@ -364,7 +440,20 @@ class TestDevice:
             json.dumps(bad_dev),
             AbstractReprError,
             "Device deserialization failed.",
-            True,
+            Device.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+        prev_err = check_error_raised(
+            json.dumps(bad_dev),
+            AbstractReprError,
+            "Device deserialization failed.",
+            VirtualDevice.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+        prev_err = check_error_raised(
+            json.dumps(bad_dev),
+            AbstractReprError,
+            "Device deserialization failed.",
         )
         assert isinstance(prev_err.__cause__, ValueError)
 
