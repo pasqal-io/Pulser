@@ -792,6 +792,14 @@ class Sequence(Generic[DeviceType]):
             active_eom_channels: list,
             strict: bool,
         ) -> tuple[str, str]:
+            """Check whether two channels match.
+
+            Returns a tuple that contains a non-strict error message and a
+            strict error message. If the channel matches, the two error
+            messages are empty strings. If strict=False (True), the strict
+            (non-strict) error message - second (first) component of the
+            tuple - is always empty.
+            """
             old_ch_obj = self.declared_channels[old_ch_name]
             # We verify the channel class then
             # check whether the addressing is Global or Local
@@ -902,13 +910,7 @@ class Sequence(Generic[DeviceType]):
                         break
                     elif ch_match_err_suffix != "":
                         ch_match_err = (
-                            ch_match_err
-                            if (
-                                "type, basis and addressing"
-                                in ch_match_err_suffix
-                                and ch_match_err
-                            )
-                            else base_msg + ch_match_err_suffix
+                            ch_match_err or base_msg + ch_match_err_suffix
                         )
                     else:
                         strict_error_message = (
@@ -991,9 +993,17 @@ class Sequence(Generic[DeviceType]):
                     current_samples = self._schedule[eom_channel].get_samples()
                     new_samples = new_seq._schedule[eom_channel].get_samples()
                     if (
-                        np.any(current_samples.amp != new_samples.amp)
-                        or np.any(current_samples.det != new_samples.det)
-                        or np.any(current_samples.phase != new_samples.phase)
+                        not np.all(
+                            np.isclose(current_samples.amp, new_samples.amp)
+                        )
+                        or not np.all(
+                            np.isclose(current_samples.det, new_samples.det)
+                        )
+                        or not np.all(
+                            np.isclose(
+                                current_samples.phase, new_samples.phase
+                            )
+                        )
                     ):
                         raise ValueError(
                             f"No match for channel {eom_channel} with an"
