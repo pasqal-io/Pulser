@@ -718,10 +718,14 @@ class Device(BaseDevice):
 
     @staticmethod
     def from_abstract_repr(obj_str: str) -> Device:
-        """Deserialize a noise model from an abstract JSON object.
+        """Deserialize a Device from an abstract JSON object.
+
+        Warning:
+            Raises an error if the JSON string represents a VirtualDevice.
+            VirtualDevice.from_abstract_repr should be used for this case.
 
         Args:
-            obj_str (str): the JSON string representing the noise model
+            obj_str (str): the JSON string representing the Device
                 encoded in the abstract JSON format.
         """
         if not isinstance(obj_str, str):
@@ -823,7 +827,11 @@ class VirtualDevice(BaseDevice):
 
     @staticmethod
     def from_abstract_repr(obj_str: str) -> VirtualDevice:
-        """Deserialize a noise model from an abstract JSON object.
+        """Deserialize a VirtualDevice from an abstract JSON object.
+
+        Warning:
+            If the JSON string represents a Device, the Device is converted
+            into a VirtualDevice using the `Device.to_virtual` method.
 
         Args:
             obj_str (str): the JSON string representing the noise model
