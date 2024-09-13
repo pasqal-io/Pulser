@@ -753,7 +753,6 @@ def test_config(matrices):
     assert sim._initial_state == qutip.tensor(
         [qutip.basis(2, 1) for _ in range(2)]
     )
-    print("Final test")
     # Currently in ground state => initial state is extended without warning
     sim.set_config(
         SimConfig(
