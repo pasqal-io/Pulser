@@ -56,17 +56,20 @@ def test_sampled_result(patch_plt_show):
     result.plot_histogram()
 
 
-def test_qutip_result():
+def test_qutip_result_state():
     qutrit_state = qutip.tensor(qutip.basis(3, 0), qutip.basis(3, 1))
+
+    # Associated to "all" basis
     result = QutipResult(
         atom_order=("q0", "q1"),
         meas_basis="ground-rydberg",
         state=qutrit_state,
-        matching_meas_basis=True,
+        matching_meas_basis=False,
     )
     assert result.sampling_dist == {"10": 1.0}
     assert result.sampling_errors == {"10": 0.0}
     assert result._basis_name == "all"
+    assert result._eigenbasis == ["r", "g", "h"]
 
     assert result.get_state() == qutrit_state
     qubit_state = qutip.tensor(qutip.basis(2, 0), qutip.basis(2, 1))
@@ -74,13 +77,38 @@ def test_qutip_result():
         result.get_state(reduce_to_basis="ground-rydberg").full(),
         qubit_state.full(),
     )
+    with pytest.raises(
+        ValueError,
+        match="'reduce_to_basis' must be 'ground-rydberg', 'XY', or 'digital'",
+    ):
+        result.get_state("rydberg")
+    with pytest.raises(
+        ValueError, match="Can't reduce a state expressed in all into XY"
+    ):
+        result.get_state("XY")
 
     result.meas_basis = "digital"
     assert result.sampling_dist == {"00": 1.0}
+    assert result._basis_name == "all"
 
+    # Associated to bases with error state
+    # Associated to "digital_with_error"
+    result.matching_meas_basis = True
+    assert result._basis_name == "digital_with_error"
+    assert result._eigenbasis == ["g", "h", "x"]
+    assert result.sampling_dist == {"01": 1.0}
+
+    # Associated to "ground-rydberg_with_error"
+    result.meas_basis = "ground-rydberg"
+    assert result._basis_name == "ground-rydberg_with_error"
+    assert result._eigenbasis == ["r", "g", "x"]
+    assert result.sampling_dist == {"10": 1.0}
+
+    # Associated to "XY_with_error"
     result.meas_basis = "XY"
-    with pytest.raises(RuntimeError, match="Unknown measurement basis 'XY'"):
-        result.sampling_dist
+    assert result._basis_name == "XY_with_error"
+    assert result._eigenbasis == ["u", "d", "x"]
+    assert result.sampling_dist == {"01": 1.0}
 
     new_result = QutipResult(
         atom_order=("q0", "q1"),
@@ -102,15 +130,94 @@ def test_qutip_result():
     ):
         new_result.get_state(reduce_to_basis="ground-rydberg")
 
-    oversized_state = qutip.Qobj(np.eye(16) / 16)
-    result.state = oversized_state
-    assert result._dim == 4
+    # Associated with "all_wih_error_basis"
+    qudit_state = qutip.tensor(qutip.basis(4, 0), qutip.basis(4, 1))
+    qudit_result = QutipResult(
+        atom_order=("q0", "q1"),
+        meas_basis="ground-rydberg",
+        state=qudit_state,
+        matching_meas_basis=False,
+    )
+    assert qudit_result._dim == 4
+    assert qudit_result._basis_name == "all_with_error"
+    assert qudit_result._eigenbasis == ["r", "g", "h", "x"]
+    assert qudit_result.sampling_dist == {"10": 1.0}
+
+    qudit_result.meas_basis = "digital"
+    assert qudit_result.sampling_dist == {"00": 1.0}
+
+    qudit_result.meas_basis = "XY"
+    with pytest.raises(
+        AssertionError,
+        match="In XY, state's dimension can only be 2 or 3, not 4",
+    ):
+        qudit_result._basis_name
+    wrong_result = QutipResult(
+        atom_order=("q0", "q1"),
+        meas_basis="ground-rydberg",
+        state=qutip.tensor(qutip.basis(5, 0), qutip.basis(5, 1)),
+        matching_meas_basis=False,
+    )
+    assert wrong_result._dim == 5
+    with pytest.raises(
+        AssertionError,
+        match="In Ising, state's dimension can be 2, 3 or 4, not 5.",
+    ):
+        wrong_result._basis_name
+
     with pytest.raises(
         NotImplementedError,
         match="Cannot sample system with single-atom state vectors of"
-        " dimension > 3",
+        " dimension > 4",
     ):
-        result.sampling_dist
+        wrong_result.sampling_dist
+
+    qudit_result = QutipResult(
+        atom_order=("q0", "q1"),
+        meas_basis="rydberg",
+        state=qudit_state,
+        matching_meas_basis=False,
+    )
+    with pytest.raises(
+        RuntimeError,
+        match="Unknown measurement basis 'rydberg'.",
+    ):
+        qudit_result.sampling_dist
+
+
+def test_qutip_result_density_matrices():
+    qudit_density_matrix = qutip.Qobj(np.eye(16) / 16)
+    result = QutipResult(
+        atom_order=("a", "b"),
+        meas_basis="ground-rydberg",
+        state=qudit_density_matrix,
+        matching_meas_basis=False,
+    )
+    assert result._basis_name == "all_with_error"
+
+    density_matrix = qutip.Qobj(np.eye(8) / 8)
+    result = QutipResult(
+        atom_order=("a", "b"),
+        meas_basis="ground-rydberg",
+        state=density_matrix,
+        matching_meas_basis=False,
+    )
+    assert result._basis_name == "all"
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Reduce to basis not implemented for density matrix states.",
+    ):
+        result.get_state(reduce_to_basis="ground-rydberg")
+
+    result.matching_meas_basis = True
+    assert result._basis_name == "ground-rydberg_with_error"
+
+    result.meas_basis = "digital"
+    assert result._basis_name == "digital_with_error"
+
+    result.meas_basis = "XY"
+    assert result._basis_name == "XY_with_error"
 
     density_matrix = qutip.Qobj(np.eye(4) / 4)
     result = QutipResult(

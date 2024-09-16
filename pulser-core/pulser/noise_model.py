@@ -401,14 +401,8 @@ class NoiseModel:
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
 
-            # TODO: Modify when effective noise can be provided for qutrit
-            if operator.shape != possible_shapes[0]:
-                err_type = (
-                    NotImplementedError
-                    if operator.shape in possible_shapes
-                    else ValueError
-                )
-                raise err_type(
+            if operator.shape not in possible_shapes:
+                raise ValueError(
                     f"With{'' if with_leakage else 'out'} leakage, operator's "
                     f"shape must be {possible_shapes[0]}, "
                     f"not {operator.shape}."
