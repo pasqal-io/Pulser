@@ -17,7 +17,7 @@ from __future__ import annotations
 import copy
 import json
 from dataclasses import fields
-from typing import Any, Type, cast
+from typing import Any, Mapping, Type, cast
 
 import backoff
 import numpy as np
@@ -186,18 +186,16 @@ class PasqalCloud(RemoteConnection):
         full_results = self._query_result(submission_id)
 
         if job_ids is None:
-            job_ids = full_results.keys()
+            job_ids = list(full_results.keys())
 
         results = []
         for id in job_ids:
-            assert (
-                full_results[id].result is not None
-            ), "Failed to fetch the results."
-            results.append(full_results[id])
+            assert full_results[id] is not None, "Failed to fetch the results."
+            results.append(cast(Result, full_results[id]))
 
         return tuple(results)
 
-    def _query_result(self, submission_id: str) -> dict[str, Result | None]:
+    def _query_result(self, submission_id: str) -> Mapping[str, Result | None]:
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
         batch = get_batch_fn(id=submission_id)
 
@@ -206,7 +204,7 @@ class PasqalCloud(RemoteConnection):
         all_qubit_ids = reg.qubit_ids
         meas_basis = seq_builder.get_measurement_basis()
 
-        results = {}
+        results: dict[str, Result | None] = {}
         sdk_jobs = batch.ordered_jobs
 
         for job in sdk_jobs:

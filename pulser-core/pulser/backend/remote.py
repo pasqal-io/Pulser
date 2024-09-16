@@ -17,7 +17,7 @@ from __future__ import annotations
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, TypedDict
+from typing import Any, Mapping, TypedDict
 
 from pulser.backend.abc import Backend
 from pulser.devices import Device
@@ -108,6 +108,7 @@ class RemoteResults(Results):
         return {
             k: v
             for k, v in self._connection._query_result(submission_id).items()
+            if v is not None
         }
 
     def __getattr__(self, name: str) -> Any:
@@ -144,6 +145,10 @@ class RemoteConnection(ABC):
         self, submission_id: str, job_ids: list[str] | None
     ) -> typing.Sequence[Result]:
         """Fetches the results of a completed submission."""
+        pass
+
+    @abstractmethod
+    def _query_result(self, submission_id: str) -> Mapping[str, Result | None]:
         pass
 
     @abstractmethod
