@@ -198,7 +198,9 @@ class PasqalCloud(RemoteConnection):
             for name, dev_str in abstract_devices.items()
         }
 
-    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
+    def _fetch_result(
+        self, submission_id: str, job_ids: list[str] | None
+    ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
         batch = get_batch_fn(id=submission_id)
@@ -208,7 +210,16 @@ class PasqalCloud(RemoteConnection):
         meas_basis = seq_builder.get_measurement_basis()
 
         results = []
-        for job in batch.ordered_jobs:
+        sdk_jobs = batch.ordered_jobs
+        if job_ids is not None:
+            ind_job_pairs = [
+                (job_ids.index(job.id), job)
+                for job in sdk_jobs
+                if job.id in job_ids
+            ]
+            ind_job_pairs.sort()
+            sdk_jobs = [job for _, job in ind_job_pairs]
+        for job in sdk_jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:
@@ -228,6 +239,12 @@ class PasqalCloud(RemoteConnection):
         """Gets the status of a submission from its ID."""
         batch = self._sdk_connection.get_batch(id=submission_id)
         return SubmissionStatus[batch.status]
+
+    @backoff_decorator
+    def _get_job_ids(self, submission_id: str) -> list[str]:
+        """Gets all the job IDs within a submission."""
+        batch = self._sdk_connection.get_batch(id=submission_id)
+        return [job.id for job in batch.ordered_jobs]
 
     def _convert_configuration(
         self,

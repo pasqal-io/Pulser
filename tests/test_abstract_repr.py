@@ -78,10 +78,8 @@ phys_Chadoq2 = replace(
         replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
     ),
     default_noise_model=NoiseModel(
-        noise_types=("SPAM", "relaxation", "dephasing"),
         p_false_pos=0.02,
         p_false_neg=0.01,
-        state_prep_error=0.0,  # To avoid Hamiltonian resampling
         relaxation_rate=0.01,
         dephasing_rate=0.2,
     ),
@@ -177,10 +175,16 @@ def test_register(reg: Register | Register3D):
     "noise_model",
     [
         NoiseModel(),
+        NoiseModel(laser_waist=100),
+        NoiseModel(temperature=100, runs=10, samples_per_run=1),
         NoiseModel(
-            noise_types=("eff_noise",),
             eff_noise_rates=(0.1,),
             eff_noise_opers=(((0, -1j), (1j, 0)),),
+        ),
+        NoiseModel(
+            eff_noise_rates=(0.1,),
+            eff_noise_opers=(((0, -1j, 0), (1j, 0, 0), (0, 0, 1)),),
+            with_leakage=True,
         ),
     ],
 )
@@ -214,13 +218,7 @@ class TestDevice:
             device = deserialize_device(json.dumps(abstract_device))
             assert json.loads(device.to_abstract_repr()) == abstract_device
 
-        if abstract_device["name"] == "DigitalAnalogDevice":
-            with pytest.warns(
-                DeprecationWarning, match="From v0.18 and onwards"
-            ):
-                _roundtrip(abstract_device)
-        else:
-            _roundtrip(abstract_device)
+        _roundtrip(abstract_device)
 
     def test_exceptions(self, abstract_device):
         def check_error_raised(
@@ -234,13 +232,7 @@ class TestDevice:
             assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause
 
-        if abstract_device["name"] == "DigitalAnalogDevice":
-            with pytest.warns(
-                DeprecationWarning, match="From v0.18 and onwards"
-            ):
-                good_device = deserialize_device(json.dumps(abstract_device))
-        else:
-            good_device = deserialize_device(json.dumps(abstract_device))
+        good_device = deserialize_device(json.dumps(abstract_device))
 
         check_error_raised(
             abstract_device, TypeError, "'obj_str' must be a string"
@@ -936,6 +928,13 @@ class TestSerialization:
             "ryd", duration, 0.0, correct_phase_drift=correct_phase_drift
         )
         seq.delay(duration, "ryd", at_rest=delay_at_rest)
+        seq.modify_eom_setpoint(
+            "ryd",
+            amp_on=2.0,
+            detuning_on=-1.0,
+            optimal_detuning_off=det_off,
+            correct_phase_drift=correct_phase_drift,
+        )
         seq.disable_eom_mode("ryd", correct_phase_drift)
 
         abstract = json.loads(seq.to_abstract_repr())
@@ -993,6 +992,21 @@ class TestSerialization:
         }
 
         assert abstract["operations"][3] == {
+            **{
+                "op": "modify_eom_setpoint",
+                "channel": "ryd",
+                "amp_on": 2.0,
+                "detuning_on": -1.0,
+                "optimal_detuning_off": {
+                    "expression": "index",
+                    "lhs": {"variable": "det_off"},
+                    "rhs": 0,
+                },
+                "correct_phase_drift": correct_phase_drift,
+            },
+        }
+
+        assert abstract["operations"][4] == {
             **{
                 "op": "disable_eom_mode",
                 "channel": "ryd",
@@ -1231,7 +1245,11 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
                             *(op[wf][qty] for qty in wf_args)
                         )
                         op[wf] = reconstructed_wf._to_abstract_repr()
-        elif "eom" in op["op"] and not op.get("correct_phase_drift"):
+        elif (
+            "eom" in op["op"]
+            and not op.get("correct_phase_drift")
+            and op["op"] != "modify_eom_setpoint"
+        ):
             # Remove correct_phase_drift when at default, since the
             # roundtrip will delete it
             op.pop("correct_phase_drift", None)
@@ -1282,9 +1300,6 @@ def _get_expression(op: dict) -> Any:
 
 class TestDeserialization:
     @pytest.mark.parametrize("is_phys_Chadoq2", [True, False])
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_device_and_channels(self, is_phys_Chadoq2) -> None:
         kwargs = {}
         if is_phys_Chadoq2:
@@ -1306,9 +1321,6 @@ class TestDeserialization:
     _coords = np.concatenate((_coords, -_coords))
 
     @pytest.mark.parametrize("layout_coords", [None, _coords])
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_register(self, layout_coords):
         if layout_coords is not None:
             reg_layout = RegisterLayout(layout_coords)
@@ -1383,9 +1395,6 @@ class TestDeserialization:
             assert "layout" not in s
             assert seq.register.layout is None
 
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_mappable_register(self):
         layout_coords = (5 * np.arange(8)).reshape((4, 2))
         s = _get_serialized_seq(
@@ -1507,9 +1516,6 @@ class TestDeserialization:
         assert np.all(seq.magnetic_field == mag_field)
 
     @pytest.mark.parametrize("without_default", [True, False])
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_variables(self, without_default):
         s = _get_serialized_seq(
             variables={
@@ -1647,9 +1653,6 @@ class TestDeserialization:
         ],
         ids=_get_kind,
     )
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_non_parametrized_waveform(self, wf_obj):
         s = _get_serialized_seq(
             operations=[
@@ -1729,9 +1732,6 @@ class TestDeserialization:
             assert isinstance(wf, CustomWaveform)
             assert np.array_equal(wf._samples, wf_obj["samples"])
 
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_measurement(self):
         s = _get_serialized_seq()
         _check_roundtrip(s)
@@ -1818,9 +1818,6 @@ class TestDeserialization:
             },
         ],
         ids=_get_op,
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
     )
     def test_deserialize_parametrized_op(self, op):
         s = _get_serialized_seq(
@@ -1971,9 +1968,6 @@ class TestDeserialization:
             ),
         ],
     )
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_parametrized_pulse(self, op, pulse_cls):
         s = _get_serialized_seq(
             operations=[op],
@@ -2057,6 +2051,14 @@ class TestDeserialization:
                     "correct_phase_drift": correct_phase_drift,
                 },
                 {
+                    "op": "modify_eom_setpoint",
+                    "channel": "global",
+                    "amp_on": 1.0,
+                    "detuning_on": detuning_on,
+                    "optimal_detuning_off": -0.5,
+                    "correct_phase_drift": correct_phase_drift or False,
+                },
+                {
                     "op": "disable_eom_mode",
                     "channel": "global",
                     "correct_phase_drift": correct_phase_drift,
@@ -2071,13 +2073,14 @@ class TestDeserialization:
         )
         if correct_phase_drift is None:
             for op in s["operations"]:
-                del op["correct_phase_drift"]
+                if "modify" not in op["op"]:
+                    del op["correct_phase_drift"]
 
         seq = Sequence.from_abstract_repr(json.dumps(s))
         # init + declare_channel + enable_eom_mode (if not var_detuning_on)
         assert len(seq._calls) == 3 - var_detuning_on
         # add_eom_pulse + disable_eom + enable_eom_mode (if var_detuning_on)
-        assert len(seq._to_build_calls) == 2 + var_detuning_on
+        assert len(seq._to_build_calls) == 3 + var_detuning_on
 
         if var_detuning_on:
             enable_eom_call = seq._to_build_calls[0]
@@ -2102,6 +2105,21 @@ class TestDeserialization:
             "channel": "global",
             "amp_on": 3.0,
             "optimal_detuning_off": optimal_det_off,
+            "correct_phase_drift": bool(correct_phase_drift),
+        }
+        if var_detuning_on:
+            assert isinstance(detuning_on_kwarg, VariableItem)
+        else:
+            assert detuning_on_kwarg == detuning_on
+
+        modify_eom_call = seq._to_build_calls[-2]
+        assert modify_eom_call.name == "modify_eom_setpoint"
+        modify_eom_kwargs = modify_eom_call.kwargs.copy()
+        detuning_on_kwarg = modify_eom_kwargs.pop("detuning_on")
+        assert modify_eom_kwargs == {
+            "channel": "global",
+            "amp_on": 1.0,
+            "optimal_detuning_off": -0.5,
             "correct_phase_drift": bool(correct_phase_drift),
         }
         if var_detuning_on:
@@ -2179,9 +2197,6 @@ class TestDeserialization:
             },
         ],
         ids=_get_kind,
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
     )
     def test_deserialize_parametrized_waveform(self, wf_obj):
         # var1,2 = duration 1000, 2000
@@ -2303,9 +2318,6 @@ class TestDeserialization:
         ],
         ids=_get_expression,
     )
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_deserialize_param(self, json_param):
         s = _get_serialized_seq(
             operations=[
@@ -2424,9 +2436,6 @@ class TestDeserialization:
         ],
         ids=["bad_var", "bad_param", "bad_exp"],
     )
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_param_exceptions(self, param, msg, patch_jsonschema):
         s = _get_serialized_seq(
             [
@@ -2449,9 +2458,6 @@ class TestDeserialization:
         with pytest.raises(std_error, **extra_params):
             Sequence.from_abstract_repr(json.dumps(s))
 
-    @pytest.mark.filterwarnings(
-        "ignore:From v0.18 and onwards,.*:DeprecationWarning"
-    )
     def test_unknow_waveform(self):
         s = _get_serialized_seq(
             [

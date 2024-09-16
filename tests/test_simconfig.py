@@ -27,6 +27,7 @@ def matrices():
     pauli["Zh"] = 0.5 * sigmaz()
     pauli["ket"] = Qobj([[1.0], [2.0]])
     pauli["I3"] = qeye(3)
+    pauli["I4"] = qeye(4)
     return pauli
 
 
@@ -49,7 +50,7 @@ def test_init():
         and "100" in str_config
         and "Solver Options" in str_config
     )
-    config = SimConfig(noise=("depolarizing", "relaxation"))
+    config = SimConfig(noise=("depolarizing", "relaxation", "doppler"))
     assert config.temperature == 5e-5
     assert config.to_noise_model().temperature == 50
     str_config = config.__str__(True)
@@ -103,10 +104,22 @@ def test_eff_noise_opers(matrices):
             eff_noise_opers=[matrices["ket"]],
             eff_noise_rates=[1.0],
         )
-    with pytest.raises(NotImplementedError, match="Operator's shape"):
+    with pytest.raises(ValueError, match="With leakage, operator's shape"):
         SimConfig(
-            noise=("eff_noise"),
-            eff_noise_opers=[matrices["I3"]],
+            noise=("eff_noise", "leakage"),
+            eff_noise_opers=[matrices["I"]],
+            eff_noise_rates=[1.0],
+        )
+    with pytest.raises(ValueError, match="With leakage, operator's shape"):
+        SimConfig(
+            noise=("eff_noise", "leakage"),
+            eff_noise_opers=[qeye(5)],
+            eff_noise_rates=[1.0],
+        )
+    with pytest.raises(ValueError, match="Without leakage, operator's shape"):
+        SimConfig(
+            noise=("eff_noise",),
+            eff_noise_opers=[matrices["I4"]],
             eff_noise_rates=[1.0],
         )
     SimConfig(
@@ -116,13 +129,13 @@ def test_eff_noise_opers(matrices):
     )
 
 
-def test_from_noise_model():
+def test_noise_model_conversion():
     noise_model = NoiseModel(
-        noise_types=("SPAM",),
         p_false_neg=0.4,
         p_false_pos=0.1,
-        state_prep_error=0.05,
     )
-    assert SimConfig.from_noise_model(noise_model) == SimConfig(
-        noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.05
+    expected_simconfig = SimConfig(
+        noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.0
     )
+    assert SimConfig.from_noise_model(noise_model) == expected_simconfig
+    assert expected_simconfig.to_noise_model() == noise_model

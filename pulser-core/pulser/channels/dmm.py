@@ -14,7 +14,6 @@
 """Defines the detuning map modulator."""
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Optional
 
@@ -91,23 +90,12 @@ class DMM(Channel):
         return "ground-rydberg"
 
     def _undefined_fields(self) -> list[str]:
-        optional = [
-            "bottom_detuning",
-            "max_duration",
-            # TODO: "total_bottom_detuning"
-        ]
+        optional = ["bottom_detuning", "max_duration", "total_bottom_detuning"]
         return [field for field in optional if getattr(self, field) is None]
 
     def is_virtual(self) -> bool:
         """Whether the channel is virtual (i.e. partially defined)."""
-        virtual_dmm = bool(self._undefined_fields())
-        if not virtual_dmm and self.total_bottom_detuning is None:
-            warnings.warn(
-                "From v0.18 and onwards, `total_bottom_detuning` must be"
-                " defined to define a physical DMM.",
-                DeprecationWarning,
-            )
-        return virtual_dmm
+        return bool(self._undefined_fields())
 
     def validate_pulse(
         self,

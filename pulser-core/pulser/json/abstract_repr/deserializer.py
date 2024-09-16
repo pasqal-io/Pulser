@@ -291,6 +291,16 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             ),
             correct_phase_drift=op.get("correct_phase_drift", False),
         )
+    elif op["op"] == "modify_eom_setpoint":
+        seq.modify_eom_setpoint(
+            channel=op["channel"],
+            amp_on=_deserialize_parameter(op["amp_on"], vars),
+            detuning_on=_deserialize_parameter(op["detuning_on"], vars),
+            optimal_detuning_off=_deserialize_parameter(
+                op["optimal_detuning_off"], vars
+            ),
+            correct_phase_drift=op["correct_phase_drift"],
+        )
     elif op["op"] == "add_eom_pulse":
         seq.add_eom_pulse(
             channel=op["channel"],
@@ -410,7 +420,7 @@ def _deserialize_register3d(
 
 def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
 
-    def convert_complex(obj: list | tuple) -> list:
+    def convert_complex(obj: Any) -> Any:
         if isinstance(obj, (list, tuple)):
             return [convert_complex(e) for e in obj]
         elif isinstance(obj, dict):
@@ -423,11 +433,17 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
     for rate, oper in noise_model_obj.pop("eff_noise"):
         eff_noise_rates.append(rate)
         eff_noise_opers.append(convert_complex(oper))
-    return pulser.NoiseModel(
+
+    noise_types = noise_model_obj.pop("noise_types")
+    with_leakage = "leakage" in noise_types
+    noise_model = pulser.NoiseModel(
         **noise_model_obj,
         eff_noise_rates=tuple(eff_noise_rates),
         eff_noise_opers=tuple(eff_noise_opers),
+        with_leakage=with_leakage,
     )
+    assert set(noise_model.noise_types) == set(noise_types)
+    return noise_model
 
 
 def _deserialize_device_object(obj: dict[str, Any]) -> Device | VirtualDevice:

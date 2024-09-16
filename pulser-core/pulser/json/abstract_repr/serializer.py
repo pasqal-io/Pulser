@@ -358,6 +358,18 @@ def serialize_abstract_sequence(
                 data, call.name, "correct_phase_drift"
             )
             operations.append({"op": "enable_eom_mode", **data})
+        elif call.name == "modify_eom_setpoint":
+            data = get_all_args(
+                (
+                    "channel",
+                    "amp_on",
+                    "detuning_on",
+                    "optimal_detuning_off",
+                    "correct_phase_drift",
+                ),
+                call,
+            )
+            operations.append({"op": "modify_eom_setpoint", **data})
         elif call.name == "add_eom_pulse":
             data = get_all_args(
                 (
