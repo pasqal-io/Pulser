@@ -92,11 +92,10 @@ class PasqalCloud(RemoteConnection):
         **kwargs: Any,
     ):
         """Initializes a connection to the Pasqal cloud platform."""
-        project_id_ = project_id or kwargs.pop("group_id", "")
         self._sdk_connection = pasqal_cloud.SDK(
             username=username,
             password=password,
-            project_id=project_id_,
+            project_id=project_id,
             **kwargs,
         )
 
@@ -166,7 +165,7 @@ class PasqalCloud(RemoteConnection):
             strict_validation=mimic_qpu,
         )
 
-        # If batch_id is not empty, thedn we can submit new jobs to a
+        # If batch_id is not empty, then we can submit new jobs to a
         # batch we just created otherwise, create a new one with
         #  _sdk_connection.create_batch()
         if batch_id:
@@ -185,7 +184,7 @@ class PasqalCloud(RemoteConnection):
                 emulator=emulator,
                 configuration=configuration,
                 wait=wait,
-                complete=not open,
+                open=open,
             )
         return RemoteResults(batch.id, self)
 
