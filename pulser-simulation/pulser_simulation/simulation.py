@@ -28,6 +28,7 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
+from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
@@ -163,10 +164,10 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self._hamiltonian.basis_name in {"digital", "all"}:
+            if "all" in self.basis_name:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self._hamiltonian.basis_name
+                self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
 
     @property
@@ -190,7 +191,7 @@ class QutipEmulator:
         return self._hamiltonian.basis_name
 
     @property
-    def basis(self) -> dict[str, Any]:
+    def basis(self) -> dict[States, Any]:
         """The basis in which result is expressed."""
         return self._hamiltonian.basis
 
@@ -217,7 +218,25 @@ class QutipEmulator:
                 " support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(cfg.to_noise_model())
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting it to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
@@ -260,7 +279,25 @@ class QutipEmulator:
             param_dict[param] = getattr(noise_model, param)
         # set config with the new parameters:
         param_dict.pop("noise_types")
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(NoiseModel(**param_dict))
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting initial state to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -559,14 +596,14 @@ class QutipEmulator:
                     tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self._hamiltonian.basis_name,
+                    self._meas_basis in self.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
                 self._hamiltonian._size,
-                self._hamiltonian.basis_name,
+                self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -581,6 +618,7 @@ class QutipEmulator:
                 "depolarizing",
                 "eff_noise",
                 "amplitude",
+                "leakage",
             }
         ) and (
             # If amplitude is in noise, not resampling needs amp_sigma=0.
@@ -653,7 +691,7 @@ class QutipEmulator:
         return NoisyResults(
             results,
             self._hamiltonian._size,
-            self._hamiltonian.basis_name,
+            self.basis_name,
             self._eval_times_array,
             n_measures,
         )
