@@ -290,12 +290,20 @@ class TestDMM:
             DMM.Local(None, None, bottom_detuning=1)
 
     def test_validate_pulse(self, physical_dmm):
+        # both local and total bottom detuning must be defined to have a
+        # physical DMM
+        assert (virtual_local_dmm := DMM(bottom_detuning=-1)).is_virtual()
+        assert (virtual_dmm := DMM(total_bottom_detuning=-10)).is_virtual()
+        assert not physical_dmm.is_virtual()
+
+        # Detuning applied to DMM must be negative
         pos_det_pulse = Pulse.ConstantPulse(100, 0, 1e-3, 0)
         with pytest.raises(
             ValueError, match="The detuning in a DMM must not be positive."
         ):
             physical_dmm.validate_pulse(pos_det_pulse)
 
+        # Local detuning is given by Pulse.detuning * local_weight
         too_low_pulse = Pulse.ConstantPulse(
             100, 0, physical_dmm.bottom_detuning - 0.01, 0
         )
@@ -311,8 +319,6 @@ class TestDMM:
             physical_dmm.validate_pulse(too_low_pulse)
 
         # Should be valid in a virtual DMM without local bottom detuning
-        virtual_dmm = DMM(total_bottom_detuning=-10)
-        assert virtual_dmm.is_virtual()
         virtual_dmm.validate_pulse(too_low_pulse)
 
         # Not too low if weights of detuning map are lower than 1
@@ -329,8 +335,5 @@ class TestDMM:
             # local detunings match bottom_detuning, global don't
             physical_dmm.validate_pulse(too_low_pulse, det_map)
 
-        # Should be valid in a physical DMM without global bottom detuning
-        physical_dmm = DMM(bottom_detuning=-1)
-        with pytest.warns(DeprecationWarning, match="From v0.18 and onwards"):
-            assert not physical_dmm.is_virtual()
-        physical_dmm.validate_pulse(too_low_pulse, det_map)
+        # Should be valid in a virtual DMM without total bottom detuning
+        virtual_local_dmm.validate_pulse(too_low_pulse, det_map)
