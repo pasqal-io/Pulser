@@ -183,37 +183,46 @@ class PasqalCloud(RemoteConnection):
         self, submission_id: str, job_ids: list[str] | None
     ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
+        full_results = self._query_result(submission_id)
+
+        if job_ids is None:
+            job_ids = full_results.keys()
+
+        results = []
+        for id in job_ids:
+            assert (
+                full_results[id].result is not None
+            ), "Failed to fetch the results."
+            results.append(full_results[id])
+
+        return tuple(results)
+
+    def _query_result(self, submission_id: str) -> dict[str, Result | None]:
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
         batch = get_batch_fn(id=submission_id)
+
         seq_builder = Sequence.from_abstract_repr(batch.sequence_builder)
         reg = seq_builder.get_register(include_mappable=True)
         all_qubit_ids = reg.qubit_ids
         meas_basis = seq_builder.get_measurement_basis()
 
-        results = []
+        results = {}
         sdk_jobs = batch.ordered_jobs
-        if job_ids is not None:
-            ind_job_pairs = [
-                (job_ids.index(job.id), job)
-                for job in sdk_jobs
-                if job.id in job_ids
-            ]
-            ind_job_pairs.sort()
-            sdk_jobs = [job for _, job in ind_job_pairs]
+
         for job in sdk_jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:
                 size = len(vars["qubits"])
-            assert job.result is not None, "Failed to fetch the results."
-            results.append(
-                SampledResult(
+            if job.result is None:
+                results[job.id] = None
+            else:
+                results[job.id] = SampledResult(
                     atom_order=all_qubit_ids[slice(size)],
                     meas_basis=meas_basis,
                     bitstring_counts=job.result,
                 )
-            )
-        return tuple(results)
+        return results
 
     @backoff_decorator
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:

@@ -103,6 +103,13 @@ class RemoteResults(Results):
         """Gets the status of the remote submission."""
         return self._connection._get_submission_status(self._submission_id)
 
+    def _get_available_result(self, submission_id: str) -> dict[str, Result]:
+        """Return available results and ignore jobs with no results."""
+        return {
+            k: v
+            for k, v in self._connection._query_result(submission_id).items()
+        }
+
     def __getattr__(self, name: str) -> Any:
         if name == "_results":
             status = self.get_status()
