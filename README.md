@@ -39,6 +39,24 @@ If you wish to install only the core ``pulser`` features, you can instead run:
 pip install pulser-core
 ```
 
+### Including PyTorch
+
+To include PyTorch in your installation, append the ``[torch]`` suffix to the commands outlined above, i.e.
+
+```bash
+pip install pulser[torch]
+```
+
+for the standard ``pulser`` distribution with PyTorch, **or**
+
+```bash
+pip install pulser-core[torch]
+```
+
+for just the core features plus PyTorch support.
+
+### Development install
+
 If you wish to **install the development version of Pulser from source** instead, do the following from within this repository after cloning it:
 
 ```bash
