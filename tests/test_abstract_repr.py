@@ -1128,11 +1128,12 @@ class TestSerialization:
 
             assert abstract["operations"][1]["op"] == "config_detuning_map"
             assert abstract["operations"][1]["dmm_id"] == "dmm_0"
+            reg_coords = reg._coords_arr.as_array()
             assert abstract["operations"][1]["detuning_map"]["traps"] == [
                 {
                     "weight": weight,
-                    "x": reg._coords[i][0],
-                    "y": reg._coords[i][1],
+                    "x": reg_coords[i][0],
+                    "y": reg_coords[i][1],
                 }
                 for i, weight in enumerate(list(det_map.values()))
             ]
@@ -1244,7 +1245,12 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
                         reconstructed_wf = wf_cls(
                             *(op[wf][qty] for qty in wf_args)
                         )
-                        op[wf] = reconstructed_wf._to_abstract_repr()
+                        op[wf] = json.loads(
+                            json.dumps(
+                                reconstructed_wf._to_abstract_repr(),
+                                cls=AbstractReprEncoder,
+                            )
+                        )
         elif (
             "eom" in op["op"]
             and not op.get("correct_phase_drift")
@@ -1344,7 +1350,9 @@ class TestDeserialization:
         # Check layout
         if layout_coords is not None:
             assert seq.register.layout == reg_layout
-            q_coords = list(seq.qubit_info.values())
+            q_coords = [
+                q_coords.tolist() for q_coords in seq.qubit_info.values()
+            ]
             assert seq.register._layout_info.trap_ids == tuple(
                 reg_layout.get_traps_from_coordinates(*q_coords)
             )
@@ -1824,7 +1832,7 @@ class TestDeserialization:
             operations=[op],
             variables={
                 "var1": {"type": "int", "value": [0]},
-                "var2": {"type": "int", "value": [42]},
+                "var2": {"type": "int", "value": [44]},
             },
         )
         _check_roundtrip(s)
@@ -2088,8 +2096,8 @@ class TestDeserialization:
         else:
             enable_eom_call = seq._calls[-1]
             eom_conf = seq.declared_channels["global"].eom_config
-            optimal_det_off = eom_conf.calculate_detuning_off(
-                3.0, detuning_on, -1.0
+            optimal_det_off = float(
+                eom_conf.calculate_detuning_off(3.0, detuning_on, -1.0)
             )
 
         # Roundtrip will only match if the optimal detuning off matches
