@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -70,18 +71,22 @@ def seq():
     return Sequence(reg, test_device)
 
 
+class _MockJob:
+    def __init__(
+        self,
+        runs=10,
+        variables={"t": 100, "qubits": {"q0": 1, "q1": 2, "q2": 4, "q3": 3}},
+        result={"00": 5, "11": 5},
+    ) -> None:
+        self.runs = runs
+        self.variables = variables
+        self.result = result
+        self.id = str(np.random.randint(10000))
+
+
 @pytest.fixture
 def mock_job():
-    @dataclasses.dataclass
-    class MockJob:
-        runs = 10
-        variables = {"t": 100, "qubits": {"q0": 1, "q1": 2, "q2": 4, "q3": 3}}
-        result = {"00": 5, "11": 5}
-
-        def __post_init__(self) -> None:
-            self.id = str(np.random.randint(10000))
-
-    return MockJob()
+    return _MockJob()
 
 
 @pytest.fixture
@@ -94,7 +99,11 @@ def mock_batch(mock_job, seq):
     class MockBatch:
         id = "abcd"
         status = "DONE"
-        ordered_jobs = [mock_job]
+        ordered_jobs = [
+            mock_job,
+            _MockJob(result={"00": 10}),
+            _MockJob(result={"11": 10}),
+        ]
         sequence_builder = seq_.to_abstract_repr()
 
     return MockBatch()
@@ -132,12 +141,64 @@ def fixt(mock_batch):
         mock_cloud_sdk_class.assert_not_called()
 
 
+@pytest.mark.parametrize("with_job_id", [False, True])
+def test_remote_results(fixt, mock_batch, with_job_id):
+    with pytest.raises(
+        RuntimeError, match=re.escape("does not contain jobs ['badjobid']")
+    ):
+        RemoteResults(mock_batch.id, fixt.pasqal_cloud, job_ids=["badjobid"])
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+
+    select_jobs = (
+        mock_batch.ordered_jobs[::-1][:2]
+        if with_job_id
+        else mock_batch.ordered_jobs
+    )
+    select_job_ids = [j.id for j in select_jobs]
+
+    remote_results = RemoteResults(
+        mock_batch.id,
+        fixt.pasqal_cloud,
+        job_ids=select_job_ids if with_job_id else None,
+    )
+
+    assert remote_results.batch_id == mock_batch.id
+    assert remote_results.job_ids == select_job_ids
+    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
+        id=remote_results.batch_id
+    )
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+
+    assert remote_results.get_status() == SubmissionStatus.DONE
+    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
+        id=remote_results.batch_id
+    )
+
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+    results = remote_results.results
+    fixt.mock_cloud_sdk.get_batch.assert_called_with(
+        id=remote_results.batch_id
+    )
+    assert results == tuple(
+        SampledResult(
+            atom_order=("q0", "q1", "q2", "q3"),
+            meas_basis="ground-rydberg",
+            bitstring_counts=job.result,
+        )
+        for job in select_jobs
+    )
+
+    assert hasattr(remote_results, "_results")
+
+
 @pytest.mark.parametrize("mimic_qpu", [False, True])
 @pytest.mark.parametrize(
     "emulator", [None, EmulatorType.EMU_TN, EmulatorType.EMU_FREE]
 )
 @pytest.mark.parametrize("parametrized", [True, False])
-def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
+def test_submit(
+    fixt, parametrized, emulator, mimic_qpu, seq, mock_batch, mock_job
+):
     with pytest.raises(
         ValueError,
         match="The measurement basis can't be implicitly determined for a "
@@ -242,6 +303,8 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
         config=config,
         mimic_qpu=mimic_qpu,
     )
+    assert remote_results.batch_id == mock_batch.id
+
     assert not seq.is_measured()
     seq.measure(basis="ground-rydberg")
 
@@ -268,24 +331,6 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_job):
         )
 
     assert isinstance(remote_results, RemoteResults)
-    assert remote_results.get_status() == SubmissionStatus.DONE
-    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
-        id=remote_results._submission_id
-    )
-
-    fixt.mock_cloud_sdk.get_batch.reset_mock()
-    results = remote_results.results
-    fixt.mock_cloud_sdk.get_batch.assert_called_with(
-        id=remote_results._submission_id
-    )
-    assert results == (
-        SampledResult(
-            atom_order=("q0", "q1", "q2", "q3"),
-            meas_basis="ground-rydberg",
-            bitstring_counts=mock_job.result,
-        ),
-    )
-    assert hasattr(remote_results, "_results")
 
 
 @pytest.mark.parametrize("emu_cls", [EmuTNBackend, EmuFreeBackend])
