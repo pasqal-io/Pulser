@@ -40,6 +40,7 @@ from numpy.typing import ArrayLike
 
 import pulser
 import pulser.devices as devices
+import pulser.math as pm
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM, _dmm_id_from_name, _get_dmm_name
@@ -215,7 +216,7 @@ class Sequence(Generic[DeviceType]):
             self._set_slm_mask_dmm(self._slm_mask_dmm, self._slm_mask_targets)
 
     @property
-    def qubit_info(self) -> dict[QubitId, np.ndarray]:
+    def qubit_info(self) -> dict[QubitId, pm.AbstractArray]:
         """Dictionary with the qubit's IDs and positions."""
         if self.is_register_mappable():
             raise RuntimeError(
@@ -491,7 +492,7 @@ class Sequence(Generic[DeviceType]):
                 f"No declared channel targets the given 'basis' ('{basis}')."
             )
 
-        return self._basis_ref[basis][qubit].phase.last_phase
+        return float(self._basis_ref[basis][qubit].phase.last_phase)
 
     def set_magnetic_field(
         self, bx: float = 0.0, by: float = 0.0, bz: float = 30.0
@@ -924,8 +925,8 @@ class Sequence(Generic[DeviceType]):
     def enable_eom_mode(
         self,
         channel: str,
-        amp_on: Union[float, Parametrized],
-        detuning_on: Union[float, Parametrized],
+        amp_on: Union[float, pm.TensorLike, Parametrized],
+        detuning_on: Union[float, pm.TensorLike, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
         correct_phase_drift: bool = False,
     ) -> None:
@@ -976,25 +977,33 @@ class Sequence(Generic[DeviceType]):
             channel_obj, amp_on, detuning_on, optimal_detuning_off
         )
         if not self.is_parametrized():
-            detuning_off = cast(float, detuning_off)
+            assert not isinstance(amp_on, Parametrized)
+            amp_on_ = pm.AbstractArray(amp_on)
+            assert not isinstance(detuning_on, Parametrized)
+            detuning_on_ = pm.AbstractArray(detuning_on)
+            assert not isinstance(detuning_off, Parametrized)
+            detuning_off_ = pm.AbstractArray(detuning_off)
+
             phase_drift_params = _PhaseDriftParams(
-                drift_rate=-detuning_off,
+                drift_rate=-detuning_off_,
                 # enable_eom() calls wait for fall, so the block only
                 # starts after fall time
                 ti=self.get_duration(channel, include_fall_time=True),
             )
             self._schedule.enable_eom(
                 channel,
-                cast(float, amp_on),
-                cast(float, detuning_on),
-                detuning_off,
+                amp_on_,
+                detuning_on_,
+                detuning_off_,
                 switching_beams,
             )
             if correct_phase_drift:
                 buffer_slot = self._last(channel)
                 drift = phase_drift_params.calc_phase_drift(buffer_slot.tf)
                 self._phase_shift(
-                    -drift, *buffer_slot.targets, basis=channel_obj.basis
+                    -float(drift),
+                    *buffer_slot.targets,
+                    basis=channel_obj.basis,
                 )
 
         # Manually store the call to "enable_eom_mode" so that the updated
@@ -1010,7 +1019,11 @@ class Sequence(Generic[DeviceType]):
                     channel=channel,
                     amp_on=amp_on,
                     detuning_on=detuning_on,
-                    optimal_detuning_off=detuning_off,
+                    optimal_detuning_off=(
+                        detuning_off
+                        if isinstance(detuning_off, Parametrized)
+                        else float(detuning_off)
+                    ),
                     correct_phase_drift=correct_phase_drift,
                 ),
             )
@@ -1057,7 +1070,7 @@ class Sequence(Generic[DeviceType]):
                 last_eom_block_tf = cast(int, ch_schedule.eom_blocks[-1].tf)
                 drift_params = self._get_last_eom_pulse_phase_drift(channel)
                 self._phase_shift(
-                    -drift_params.calc_phase_drift(last_eom_block_tf),
+                    -float(drift_params.calc_phase_drift(last_eom_block_tf)),
                     *ch_schedule[-1].targets,
                     basis=ch_schedule.channel_obj.basis,
                 )
@@ -1067,8 +1080,8 @@ class Sequence(Generic[DeviceType]):
     def modify_eom_setpoint(
         self,
         channel: str,
-        amp_on: Union[float, Parametrized],
-        detuning_on: Union[float, Parametrized],
+        amp_on: Union[float, pm.TensorLike, Parametrized],
+        detuning_on: Union[float, pm.TensorLike, Parametrized],
         optimal_detuning_off: Union[float, Parametrized] = 0.0,
         correct_phase_drift: bool = False,
     ) -> None:
@@ -1101,20 +1114,26 @@ class Sequence(Generic[DeviceType]):
         )
 
         if not self.is_parametrized():
-            detuning_off = cast(float, detuning_off)
+            assert not isinstance(amp_on, Parametrized)
+            amp_on_ = pm.AbstractArray(amp_on)
+            assert not isinstance(detuning_on, Parametrized)
+            detuning_on_ = pm.AbstractArray(detuning_on)
+            assert not isinstance(detuning_off, Parametrized)
+            detuning_off_ = pm.AbstractArray(detuning_off)
+
             self._schedule.disable_eom(channel, _skip_buffer=True)
             old_phase_drift_params = self._get_last_eom_pulse_phase_drift(
                 channel
             )
             new_phase_drift_params = _PhaseDriftParams(
-                drift_rate=-detuning_off,
+                drift_rate=-detuning_off_,
                 ti=self.get_duration(channel, include_fall_time=False),
             )
             self._schedule.enable_eom(
                 channel,
-                cast(float, amp_on),
-                cast(float, detuning_on),
-                detuning_off,
+                amp_on_,
+                detuning_on_,
+                detuning_off_,
                 switching_beams,
                 _skip_wait_for_fall=True,
             )
@@ -1124,7 +1143,9 @@ class Sequence(Generic[DeviceType]):
                     buffer_slot.ti
                 ) + new_phase_drift_params.calc_phase_drift(buffer_slot.tf)
                 self._phase_shift(
-                    -drift, *buffer_slot.targets, basis=channel_obj.basis
+                    -float(drift),
+                    *buffer_slot.targets,
+                    basis=channel_obj.basis,
                 )
 
         # Manually store the call to "modify_eom_setpoint" so that the updated
@@ -1140,7 +1161,11 @@ class Sequence(Generic[DeviceType]):
                     channel=channel,
                     amp_on=amp_on,
                     detuning_on=detuning_on,
-                    optimal_detuning_off=detuning_off,
+                    optimal_detuning_off=(
+                        detuning_off
+                        if isinstance(detuning_off, Parametrized)
+                        else float(detuning_off)
+                    ),
                     correct_phase_drift=correct_phase_drift,
                 ),
             )
@@ -1153,7 +1178,7 @@ class Sequence(Generic[DeviceType]):
         self,
         channel: str,
         duration: Union[int, Parametrized],
-        phase: Union[float, Parametrized],
+        phase: Union[float, pm.TensorLike, Parametrized],
         post_phase_shift: Union[float, Parametrized] = 0.0,
         protocol: PROTOCOLS = "min-delay",
         correct_phase_drift: bool = False,
@@ -1203,7 +1228,13 @@ class Sequence(Generic[DeviceType]):
                 channel_obj = self.declared_channels[channel]
                 channel_obj.validate_duration(duration)
             for arg in (phase, post_phase_shift):
-                if not isinstance(arg, (Parametrized, float, int)):
+                if isinstance(arg, Parametrized):
+                    continue
+                try:
+                    if isinstance(arg, str):
+                        raise TypeError
+                    float(pm.AbstractArray(arg, dtype=float))
+                except TypeError:
                     raise TypeError("Phase values must be a numeric value.")
             return
 
@@ -1413,7 +1444,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def phase_shift(
         self,
-        phi: Union[float, Parametrized],
+        phi: float | Parametrized,
         *targets: QubitId,
         basis: str = "digital",
     ) -> None:
@@ -1435,8 +1466,8 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.store
     def phase_shift_index(
         self,
-        phi: Union[float, Parametrized],
-        *targets: Union[int, Parametrized],
+        phi: float | Parametrized,
+        *targets: int | Parametrized,
         basis: str = "digital",
     ) -> None:
         r"""Shifts the phase of a qubit's reference by 'phi', on a given basis.
@@ -1510,7 +1541,7 @@ class Sequence(Generic[DeviceType]):
         self,
         *,
         qubits: Optional[Mapping[QubitId, int]] = None,
-        **vars: Union[ArrayLike, float, int],
+        **vars: Union[ArrayLike, pm.TensorLike, float, int],
     ) -> Sequence:
         """Builds a sequence from the programmed instructions.
 
@@ -1559,9 +1590,12 @@ class Sequence(Generic[DeviceType]):
         # Eliminates the source of recursiveness errors
         seq._reset_parametrized()
 
-        # Deepcopy the base sequence (what remains)
-        seq = copy.deepcopy(seq)
-        # NOTE: Changes to seq are now safe to do
+        # Recreate the base sequence (what remains)
+        temp_seq = type(seq)(register=seq._register, device=seq._device)
+        assert not seq._to_build_calls
+        for call in seq._calls[1:]:
+            getattr(temp_seq, call.name)(*call.args, **call.kwargs)
+        seq = temp_seq
 
         if not (self.is_parametrized() or self.is_register_mappable()):
             warnings.warn(
@@ -2000,11 +2034,10 @@ class Sequence(Generic[DeviceType]):
             # The phase correction done to the EOM pulse's phase must
             # also be done to the phase shift, as the phase reference is
             # effectively changed by -drift
-            total_phase_shift = (
-                total_phase_shift
-                - phase_drift_params.calc_phase_drift(new_pulse_slot.ti)
+            total_phase_shift -= float(
+                phase_drift_params.calc_phase_drift(new_pulse_slot.ti)
             )
-        if total_phase_shift:
+        if total_phase_shift != 0.0:
             self._phase_shift(total_phase_shift, *last.targets, basis=basis)
         if (
             self._in_ising
@@ -2030,6 +2063,8 @@ class Sequence(Generic[DeviceType]):
     ) -> None:
         self._validate_channel(channel, block_eom_mode=True)
         channel_obj = self._schedule[channel].channel_obj
+        if isinstance(qubits, pm.AbstractArray):
+            qubits = qubits.tolist()
         try:
             qubits_set = (
                 set(cast(Collection, qubits))
@@ -2059,7 +2094,7 @@ class Sequence(Generic[DeviceType]):
         if not self.is_parametrized():
             basis = channel_obj.basis
             phase_refs = {
-                self._basis_ref[basis][q].phase.last_phase
+                float(self._basis_ref[basis][q].phase.last_phase)
                 for q in qubit_ids_set
             }
             if len(phase_refs) != 1:
@@ -2087,10 +2122,12 @@ class Sequence(Generic[DeviceType]):
                         )
                 return set()
             else:
-                qubits = cast(Tuple[int, ...], qubits)
                 try:
                     return {
-                        self._register.qubit_ids[index] for index in qubits
+                        self._register.qubit_ids[
+                            int(index)  # type: ignore[arg-type]
+                        ]
+                        for index in qubits
                     }
                 except IndexError:
                     raise IndexError("Indices must exist for the register.")
@@ -2120,8 +2157,8 @@ class Sequence(Generic[DeviceType]):
 
     def _phase_shift(
         self,
-        phi: Union[float, Parametrized],
-        *targets: Union[QubitId, Parametrized],
+        phi: float | Parametrized,
+        *targets: QubitId | Parametrized,
         basis: str,
         _index: bool = False,
     ) -> None:
@@ -2132,10 +2169,7 @@ class Sequence(Generic[DeviceType]):
         target_ids = self._check_qubits_give_ids(*targets, _index=_index)
 
         if not self.is_parametrized():
-            phi = cast(float, phi)
-            if phi % (2 * np.pi) == 0:
-                return
-
+            phi = float(cast(float, phi))
             for qubit in target_ids:
                 self._basis_ref[basis][qubit].increment_phase(phi)
 
@@ -2209,7 +2243,10 @@ class Sequence(Generic[DeviceType]):
             )
 
     def _validate_and_adjust_pulse(
-        self, pulse: Pulse, channel: str, phase_ref: Optional[float] = None
+        self,
+        pulse: Pulse,
+        channel: str,
+        phase_ref: float | None = None,
     ) -> Pulse:
         # Get the channel object and its detuning map if the channel is a DMM
         channel_obj: Channel
@@ -2285,19 +2322,23 @@ class Sequence(Generic[DeviceType]):
     def _process_eom_parameters(
         self,
         channel_obj: Channel,
-        amp_on: Union[float, Parametrized],
-        detuning_on: Union[float, Parametrized],
+        amp_on: Union[float, pm.TensorLike, Parametrized],
+        detuning_on: Union[float, pm.TensorLike, Parametrized],
         optimal_detuning_off: Union[float, Parametrized],
-    ) -> tuple[float | Parametrized, tuple[RydbergBeam, ...]]:
+    ) -> tuple[
+        float | pm.AbstractArray | Parametrized, tuple[RydbergBeam, ...]
+    ]:
         on_pulse = Pulse.ConstantPulse(
             channel_obj.min_duration, amp_on, detuning_on, 0.0
         )
-        stored_opt_detuning_off = optimal_detuning_off
+        stored_opt_detuning_off: float | pm.AbstractArray | Parametrized = (
+            optimal_detuning_off
+        )
         switching_beams: tuple[RydbergBeam, ...] = ()
         if not isinstance(on_pulse, Parametrized):
             channel_obj.validate_pulse(on_pulse)
-            amp_on = cast(float, amp_on)
-            detuning_on = cast(float, detuning_on)
+            assert not isinstance(amp_on, Parametrized)
+            assert not isinstance(detuning_on, Parametrized)
             eom_config = cast(RydbergEOM, channel_obj.eom_config)
             if not isinstance(optimal_detuning_off, Parametrized):
                 (
@@ -2306,7 +2347,7 @@ class Sequence(Generic[DeviceType]):
                 ) = eom_config.calculate_detuning_off(
                     amp_on,
                     detuning_on,
-                    optimal_detuning_off,
+                    float(optimal_detuning_off),
                     return_switching_beams=True,
                 )
                 off_pulse = Pulse.ConstantPulse(

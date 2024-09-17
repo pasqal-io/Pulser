@@ -236,7 +236,7 @@ def test_get_state_float_time(results):
         results.get_state(mean, t_tol=diff / 2)
     state = results.get_state(mean, t_tol=3 * diff / 2)
     assert state == results.get_state(results._sim_times[-2])
-    assert np.isclose(
+    np.testing.assert_allclose(
         state.full(),
         np.array(
             [
@@ -246,7 +246,8 @@ def test_get_state_float_time(results):
                 [-0.27977172 - 0.11031832j],
             ]
         ),
-    ).all()
+        atol=1e-5,
+    )
 
 
 def test_expect(results, pi_pulse, reg):

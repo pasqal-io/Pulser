@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from dataclasses import replace
 from typing import Literal
@@ -21,6 +22,7 @@ import numpy as np
 import pytest
 
 import pulser
+import pulser.math as pm
 import pulser_simulation
 from pulser.channels.dmm import DMM
 from pulser.devices import Device, MockDevice
@@ -168,12 +170,12 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
     blackman = np.clip(np.blackman(N), 0, np.inf)
     input = (np.pi / 2) / (np.sum(blackman) / N) * blackman
 
-    want_amp = chan.modulate(input)
+    want_amp = chan.modulate(input).as_array()
     mod_samples = sample(mod_seq, modulation=True)
     got_amp = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["amp"]
-    np.testing.assert_array_equal(got_amp, want_amp)
+    np.testing.assert_allclose(got_amp, want_amp)
 
-    want_det = chan.modulate(np.ones(N), keep_ends=True)
+    want_det = chan.modulate(np.ones(N), keep_ends=True).as_array()
     got_det = mod_samples.to_nested_dict()["Global"]["ground-rydberg"]["det"]
     np.testing.assert_array_equal(got_det, want_det)
 
@@ -189,8 +191,8 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
 
     for qty in ("amp", "det", "phase", "centered_phase"):
         np.testing.assert_array_equal(
-            getattr(input_ch_samples.modulate(chan), qty),
-            getattr(output_ch_samples, qty),
+            getattr(input_ch_samples.modulate(chan), qty).as_array(),
+            getattr(output_ch_samples, qty).as_array(),
         )
 
     # input samples don't have a custom centered phase, output samples do
@@ -294,11 +296,12 @@ def test_eom_modulation(mod_device, disable_eom):
         want = eom_output + aom_output
 
         # Check that modulation through sample() = sample() + modulation
-        got = getattr(mod_samples.channel_samples["ch0"], qty)
-        alt_got = getattr(input_samples.modulate(chan, full_duration), qty)
+        got = getattr(mod_samples.channel_samples["ch0"], qty).as_array()
+        alt_got = getattr(
+            input_samples.modulate(chan, full_duration), qty
+        ).as_array()
         np.testing.assert_array_equal(got, alt_got)
-
-        np.testing.assert_allclose(want, got, atol=1e-10)
+        np.testing.assert_allclose(want.as_array(), got, atol=1e-10)
 
 
 def test_seq_with_DMM_and_map_reg():
@@ -422,12 +425,12 @@ def test_extend_duration(seq_rydberg, with_custom_centered_phase):
     extended_short = short.extend_duration(long.duration)
     assert extended_short.duration == long.duration
     for qty in ("amp", "det", "phase", "centered_phase"):
-        new_qty_samples = getattr(extended_short, qty)
-        old_qty_samples = getattr(short, qty)
+        new_qty_samples = getattr(extended_short, qty).as_array()
+        old_qty_samples = getattr(short, qty).as_array()
         np.testing.assert_array_equal(
             new_qty_samples[: short.duration], old_qty_samples
         )
-        np.testing.assert_equal(
+        np.testing.assert_array_equal(
             new_qty_samples[short.duration :],
             old_qty_samples[-1] if "phase" in qty else 0.0,
         )
@@ -471,16 +474,20 @@ def test_phase_sampling(mod_device):
     expected_phase[transition3_4:] = 4.0
 
     got_phase = (ch_samples_ := sample(seq).channel_samples["ch0"]).phase
-    np.testing.assert_array_equal(expected_phase, got_phase)
+    np.testing.assert_array_equal(expected_phase, got_phase.as_array())
 
     # Test centered phase
     expected_phase[expected_phase > np.pi] -= 2 * np.pi
     np.testing.assert_array_equal(expected_phase, ch_samples_.centered_phase)
 
 
+@pytest.mark.parametrize("with_diff", [False, True])
 @pytest.mark.parametrize("off_center", [False, True])
-def test_phase_modulation(off_center):
+def test_phase_modulation(off_center, with_diff):
     start_phase = np.pi / 2 + np.pi * off_center
+    if with_diff:
+        torch = pytest.importorskip("torch")
+        start_phase = torch.tensor(start_phase, requires_grad=True)
     phase1 = pulser.RampWaveform(400, start_phase, 0)
     phase2 = pulser.BlackmanWaveform(500, np.pi)
     phase3 = pulser.InterpolatedWaveform(500, [0, 11, 1, 5])
@@ -494,9 +501,17 @@ def test_phase_modulation(off_center):
     seq.add(pulse, "rydberg_global")
     seq_samples = sample(seq).channel_samples["rydberg_global"]
 
+    if with_diff:
+        assert full_phase.samples.as_tensor().requires_grad
+        assert not seq_samples.amp.as_tensor().requires_grad
+        assert seq_samples.det.as_tensor().requires_grad
+        assert seq_samples.phase.as_tensor().requires_grad
+        assert seq_samples.phase_modulation.as_tensor().requires_grad
+
     np.testing.assert_allclose(
-        seq_samples.phase_modulation + 2 * np.pi * off_center,
-        full_phase.samples,
+        seq_samples.phase_modulation.as_array(detach=with_diff)
+        + 2 * np.pi * off_center,
+        full_phase.samples.as_array(detach=with_diff),
         atol=PHASE_PRECISION,
     )
 
@@ -524,6 +539,44 @@ def test_draw_samples(
         draw_phase_shifts=draw_phase_shifts,
         draw_phase_curve=draw_phase_curve,
     )
+
+
+@pytest.mark.parametrize("all_local", [False, True])
+@pytest.mark.parametrize("samples_type", ["array", "abstract", "tensor"])
+def test_to_nested_dict_samples_type(mod_seq, samples_type, all_local):
+    samples = sample(mod_seq)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'samples_type' must be one of ('abstract', 'array', 'tensor'),"
+            " not 'jax'."
+        ),
+    ):
+        samples.to_nested_dict(samples_type="jax")
+
+    if samples_type == "tensor":
+        expected_type = pytest.importorskip("torch").Tensor
+    elif samples_type == "array":
+        expected_type = np.ndarray
+    else:
+        assert samples_type == "abstract"
+        expected_type = pm.AbstractArray
+
+    nested_dict = samples.to_nested_dict(
+        samples_type=samples_type, all_local=all_local
+    )
+
+    if all_local:
+        assert not nested_dict["Global"]
+        samples_per_qubit = nested_dict["Local"]["ground-rydberg"]
+        for qsamples in samples_per_qubit.values():
+            for arr_ in qsamples.values():
+                assert isinstance(arr_, expected_type)
+    else:
+        assert not nested_dict["Local"]
+        samples_arrs = nested_dict["Global"]["ground-rydberg"]
+        for arr_ in samples_arrs.values():
+            assert isinstance(arr_, expected_type)
 
 
 # Fixtures
