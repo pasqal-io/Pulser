@@ -132,16 +132,20 @@ def switch_device(
                         )
                 else:
                     # Eom configs have to match is Sequence is parametrized
-                    new_eom_config = asdict(new_ch_obj.eom_config)
-                    old_eom_config = asdict(old_ch_obj.eom_config)
+                    new_eom_config = asdict(
+                        cast(RydbergEOM, new_ch_obj.eom_config)
+                    )
+                    old_eom_config = asdict(
+                        cast(RydbergEOM, old_ch_obj.eom_config)
+                    )
                     # However, multiple_beam_control only matters when
                     # the two beams are controlled
-                    if len(old_ch_obj.eom_config.controlled_beams) == 1:
+                    if len(old_eom_config["controlled_beams"]) == 1:
                         new_eom_config.pop("multiple_beam_control")
                         old_eom_config.pop("multiple_beam_control")
                         # Controlled beams only matter when only one beam
                         # is controlled by the new eom
-                        if len(new_ch_obj.eom_config.controlled_beams) > 1:
+                        if len(new_eom_config["controlled_beams"]) > 1:
                             new_eom_config.pop("controlled_beams")
                             old_eom_config.pop("controlled_beams")
                     # And custom_buffer_time doesn't have to match as long
