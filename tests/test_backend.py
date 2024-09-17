@@ -93,7 +93,9 @@ class _MockConnection(RemoteConnection):
     def submit(self, sequence, wait: bool = False, **kwargs) -> RemoteResults:
         return RemoteResults("abcd", self)
 
-    def _fetch_result(self, submission_id: str) -> typing.Sequence[Result]:
+    def _fetch_result(
+        self, submission_id: str, job_ids: list[str] | None = None
+    ) -> typing.Sequence[Result]:
         return (
             SampledResult(
                 ("q0", "q1"),
@@ -107,6 +109,18 @@ class _MockConnection(RemoteConnection):
         if self._status_calls == 1:
             return SubmissionStatus.RUNNING
         return SubmissionStatus.DONE
+
+
+def test_remote_connection():
+    connection = _MockConnection()
+
+    with pytest.raises(NotImplementedError, match="Unable to find job IDs"):
+        connection._get_job_ids("abc")
+
+    with pytest.raises(
+        NotImplementedError, match="Unable to fetch the available devices"
+    ):
+        connection.fetch_available_devices()
 
 
 def test_qpu_backend(sequence):
