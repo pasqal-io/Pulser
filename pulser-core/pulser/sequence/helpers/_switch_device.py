@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import itertools
 import warnings
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -52,7 +53,7 @@ def switch_device(
     """
     # Check if the device is new or not
 
-    if seq._device == new_device:
+    if seq.device == new_device:
         warnings.warn(
             "Switching a sequence to the same device"
             + " returns the sequence unchanged.",
@@ -98,9 +99,10 @@ def switch_device(
 
         Returns a tuple that contains a non-strict error message and a
         strict error message. If the channel matches, the two error
-        messages are empty strings. If strict=False (True), the strict
-        (non-strict) error message - second (first) component of the
-        tuple - is always empty.
+        messages are empty strings. If strict=False, only non-strict
+        conditions are checked, and only the non-strict error message
+        will eventually be filled. If strict=True, all the conditions are
+        checked - the returned error can either be non-strict or strict.
         """
         old_ch_obj = seq.declared_channels[old_ch_name]
         # We verify the channel class then
@@ -117,20 +119,41 @@ def switch_device(
             if new_ch_obj.eom_config is None:
                 return (" with an EOM configuration.", "")
             if strict:
-                if (
-                    not seq.is_parametrized()
-                    and new_ch_obj.eom_config.mod_bandwidth
-                    != cast(RydbergEOM, old_ch_obj.eom_config).mod_bandwidth
-                ):
-                    return (
-                        "",
-                        " with the same mod_bandwidth for the EOM.",
-                    )
-                if (
-                    seq.is_parametrized()
-                    and new_ch_obj.eom_config != old_ch_obj.eom_config
-                ):
-                    return ("", " with the same EOM configuration.")
+                if not seq.is_parametrized():
+                    if (
+                        new_ch_obj.eom_config.mod_bandwidth
+                        != cast(
+                            RydbergEOM, old_ch_obj.eom_config
+                        ).mod_bandwidth
+                    ):
+                        return (
+                            "",
+                            " with the same mod_bandwidth for the EOM.",
+                        )
+                else:
+                    # Eom configs have to match is Sequence is parametrized
+                    new_eom_config = asdict(new_ch_obj.eom_config)
+                    old_eom_config = asdict(old_ch_obj.eom_config)
+                    # However, multiple_beam_control only matters when
+                    # the two beams are controlled
+                    if len(old_ch_obj.eom_config.controlled_beams) == 1:
+                        new_eom_config.pop("multiple_beam_control")
+                        old_eom_config.pop("multiple_beam_control")
+                        # Controlled beams only matter when only one beam
+                        # is controlled by the new eom
+                        if len(new_ch_obj.eom_config.controlled_beams) > 1:
+                            new_eom_config.pop("controlled_beams")
+                            old_eom_config.pop("controlled_beams")
+                    # And custom_buffer_time doesn't have to match as long
+                    # as `Channel_eom_buffer_time`` does
+                    if (
+                        new_ch_obj._eom_buffer_time
+                        == new_ch_obj._eom_buffer_time
+                    ):
+                        new_eom_config.pop("custom_buffer_time")
+                        old_eom_config.pop("custom_buffer_time")
+                    if new_eom_config != old_eom_config:
+                        return ("", " with the same EOM configuration.")
         if not strict:
             return ("", "")
 
@@ -346,6 +369,6 @@ def switch_device(
     raise ValueError(
         "No matching found between declared channels and channels in the "
         "new device that does not modify the samples of the Sequence. "
-        "Here is a list of matching tested and their associated errors: "
+        "Here is a list of matchings tested and their associated errors: "
         f"{err_channel_match}"
     )

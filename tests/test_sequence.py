@@ -28,6 +28,7 @@ import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.channels.dmm import DMM
+from pulser.channels.eom import RydbergBeam
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.base_register import BaseRegister
@@ -790,7 +791,7 @@ def test_switch_device_down(
     error_msg = (
         "No matching found between declared channels and channels in the "
         "new device that does not modify the samples of the Sequence. "
-        "Here is a list of matching tested and their associated errors: "
+        "Here is a list of matchings tested and their associated errors: "
         "{(('global', 'rydberg_global'), ('dmm_0', 'dmm_0'), ('dmm_0_1', "
         "'dmm_1')): ('The detunings on some atoms go below the local bottom "
         "detuning of the DMM (-10 rad/µs).',), (('global', 'rydberg_global'), "
@@ -1075,7 +1076,10 @@ def test_switch_device_up(
 
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
+@pytest.mark.parametrize("extension_arg", ["amp", "control", "buffer_time"])
+def test_switch_device_eom(
+    reg, mappable_reg, parametrized, extension_arg, patch_plt_show
+):
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
@@ -1131,15 +1135,26 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
     )
     assert new_seq.declared_channels == {"rydberg": ch_obj}
     # Can if eom extends current eom
-    up_eom_config = dataclasses.replace(
-        ch_obj.eom_config, max_limiting_amp=40 * 2 * np.pi
-    )
+    up_eom_configs = {
+        "amp": dataclasses.replace(
+            ch_obj.eom_config, max_limiting_amp=40 * 2 * np.pi
+        ),
+        "control": dataclasses.replace(
+            ch_obj.eom_config,
+            controlled_beams=tuple(RydbergBeam),
+            multiple_beam_control=False,
+        ),
+        "buffer_time": dataclasses.replace(
+            ch_obj.eom_config,
+            custom_buffer_time=None,
+        ),
+    }
+    up_eom_config = up_eom_configs[extension_arg]
     up_ch_obj = dataclasses.replace(ch_obj, eom_config=up_eom_config)
     up_analog = dataclasses.replace(
         AnalogDevice, channel_objects=(up_ch_obj,), max_atom_num=28
     )
-    if parametrized:
-        # Can't switch to eom if the modulation bandwidth doesn't match
+    if parametrized and extension_arg == "amp":
         with pytest.raises(
             ValueError,
             match=err_base + "with the same EOM configuration.",
@@ -1177,11 +1192,18 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
     err_msg = (
         "No matching found between declared channels and channels in "
         "the new device that does not modify the samples of the "
-        "Sequence. Here is a list of matching tested and their "
+        "Sequence. Here is a list of matchings tested and their "
         "associated errors: {(('rydberg', 'rydberg_global'),): ('No "
         "match for channel rydberg with an EOM configuration that "
         "does not change the samples."
     )
+    if parametrized:
+        with pytest.raises(
+            ValueError,
+            match=err_base + "with the same EOM configuration.",
+        ):
+            seq.switch_device(mod_analog, strict=True)
+        return
     with pytest.raises(ValueError, match=re.escape(err_msg)):
         seq.switch_device(mod_analog, strict=True)
     mod_seq = seq.switch_device(mod_analog, strict=False)
