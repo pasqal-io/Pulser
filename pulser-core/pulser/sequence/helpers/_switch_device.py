@@ -148,11 +148,19 @@ def switch_device(
                         if len(new_eom_config["controlled_beams"]) > 1:
                             new_eom_config.pop("controlled_beams")
                             old_eom_config.pop("controlled_beams")
+                    # Controlled_beams doesn't matter if the two EOMs
+                    # control two beams
+                    elif set(new_eom_config["controlled_beams"]) == set(
+                        old_eom_config["controlled_beams"]
+                    ):
+                        new_eom_config.pop("controlled_beams")
+                        old_eom_config.pop("controlled_beams")
+
                     # And custom_buffer_time doesn't have to match as long
                     # as `Channel_eom_buffer_time`` does
                     if (
                         new_ch_obj._eom_buffer_time
-                        == new_ch_obj._eom_buffer_time
+                        == old_ch_obj._eom_buffer_time
                     ):
                         new_eom_config.pop("custom_buffer_time")
                         old_eom_config.pop("custom_buffer_time")

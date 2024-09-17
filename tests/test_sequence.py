@@ -1074,16 +1074,33 @@ def test_switch_device_up(
     assert "digital" in seq.switch_device(devices[1], True).declared_channels
 
 
+@pytest.mark.parametrize("device_type", ["analog", "extended"])
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-@pytest.mark.parametrize("extension_arg", ["amp", "control", "buffer_time"])
+@pytest.mark.parametrize(
+    "extension_arg", ["amp", "control", "2control", "buffer_time"]
+)
 def test_switch_device_eom(
-    reg, mappable_reg, parametrized, extension_arg, patch_plt_show
+    reg, device_type, mappable_reg, parametrized, extension_arg, patch_plt_show
 ):
+    if device_type == "analog":
+        device = AnalogDevice
+    elif device_type == "extended":
+        eom = dataclasses.replace(
+            AnalogDevice.channels["rydberg_global"].eom_config,
+            controlled_beams=tuple(RydbergBeam),
+            multiple_beam_control=True,
+            custom_buffer_time=None,
+        )
+        channel = dataclasses.replace(
+            AnalogDevice.channels["rydberg_global"], eom_config=eom
+        )
+        device = dataclasses.replace(AnalogDevice, channel_objects=(channel,))
+
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
-        dataclasses.replace(AnalogDevice, max_atom_num=28),
+        dataclasses.replace(device, max_atom_num=28),
         "rydberg",
         "rydberg_global",
         [],
@@ -1109,10 +1126,48 @@ def test_switch_device_eom(
     wrong_eom_config = dataclasses.replace(ch_obj.eom_config, mod_bandwidth=20)
     wrong_ch_obj = dataclasses.replace(ch_obj, eom_config=wrong_eom_config)
     wrong_analog = dataclasses.replace(
-        AnalogDevice, channel_objects=(wrong_ch_obj,), max_atom_num=28
+        device, channel_objects=(wrong_ch_obj,), max_atom_num=28
     )
     if parametrized:
         # Can't switch if the two EOM configurations don't match
+        # If the modulation bandwidth is different
+        with pytest.raises(
+            ValueError, match=err_base + "with the same EOM configuration."
+        ):
+            seq.switch_device(wrong_analog, strict=True)
+        down_eom_configs = {
+            # If the amplitude is different
+            "amp": dataclasses.replace(
+                ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
+            ),
+            # If less controlled beams/the controlled beam is not the same
+            "control": dataclasses.replace(
+                ch_obj.eom_config,
+                controlled_beams=(RydbergBeam.RED,),
+                multiple_beam_control=False,
+            ),
+            # If the multiple_beam_control is not the same
+            "2control": dataclasses.replace(
+                ch_obj.eom_config,
+                controlled_beams=(
+                    tuple(RydbergBeam)
+                    if device_type == "extended"
+                    else (RydbergBeam.RED,)
+                ),
+                multiple_beam_control=False,
+            ),
+            # If the buffer time is different
+            "buffer_time": dataclasses.replace(
+                ch_obj.eom_config,
+                custom_buffer_time=300,
+            ),
+        }
+        wrong_ch_obj = dataclasses.replace(
+            ch_obj, eom_config=down_eom_configs[extension_arg]
+        )
+        wrong_analog = dataclasses.replace(
+            device, channel_objects=(wrong_ch_obj,), max_atom_num=28
+        )
         with pytest.raises(
             ValueError, match=err_base + "with the same EOM configuration."
         ):
@@ -1136,14 +1191,26 @@ def test_switch_device_eom(
     assert new_seq.declared_channels == {"rydberg": ch_obj}
     # Can if eom extends current eom
     up_eom_configs = {
+        # Still raises for max_amplitude in parametrized Sequence
         "amp": dataclasses.replace(
             ch_obj.eom_config, max_limiting_amp=40 * 2 * np.pi
         ),
+        # With one controlled beam, don't care about multiple_beam_control
+        # Raises an error if device_type is extended (less options)
         "control": dataclasses.replace(
+            ch_obj.eom_config,
+            controlled_beams=(RydbergBeam.BLUE,),
+            multiple_beam_control=False,
+        ),
+        # Using 2 controlled beams
+        # Raises an error if device_type is extended (less options)
+        "2control": dataclasses.replace(
             ch_obj.eom_config,
             controlled_beams=tuple(RydbergBeam),
             multiple_beam_control=False,
         ),
+        # If custom buffer time is None
+        # Raises an error if device_type is analog
         "buffer_time": dataclasses.replace(
             ch_obj.eom_config,
             custom_buffer_time=None,
@@ -1152,16 +1219,44 @@ def test_switch_device_eom(
     up_eom_config = up_eom_configs[extension_arg]
     up_ch_obj = dataclasses.replace(ch_obj, eom_config=up_eom_config)
     up_analog = dataclasses.replace(
-        AnalogDevice, channel_objects=(up_ch_obj,), max_atom_num=28
+        device, channel_objects=(up_ch_obj,), max_atom_num=28
     )
-    if parametrized and extension_arg == "amp":
+    if (
+        (parametrized and extension_arg == "amp")
+        or (
+            parametrized
+            and extension_arg in ["control", "2control"]
+            and device_type == "extended"
+        )
+        or (
+            parametrized
+            and extension_arg == "buffer_time"
+            and device_type == "analog"
+        )
+    ):
         with pytest.raises(
             ValueError,
             match=err_base + "with the same EOM configuration.",
         ):
             seq.switch_device(up_analog, strict=True)
         return
-    up_seq = seq.switch_device(up_analog, strict=True)
+    if device_type == "extended":
+        if extension_arg in ["control", "2control"]:
+            with pytest.raises(
+                ValueError,
+                match="No match for channel rydberg with an EOM configuration",
+            ):
+                seq.switch_device(up_analog, strict=True)
+            return
+        elif extension_arg == "buffer_time":
+            with pytest.warns(
+                UserWarning, match="Switching a sequence to the same device"
+            ):
+                up_seq = seq.switch_device(up_analog, strict=True)
+        else:
+            up_seq = seq.switch_device(up_analog, strict=True)
+    else:
+        up_seq = seq.switch_device(up_analog, strict=True)
     build_kwargs = {}
     if parametrized:
         build_kwargs["delay"] = 120
@@ -1187,7 +1282,7 @@ def test_switch_device_eom(
     )
     mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
     mod_analog = dataclasses.replace(
-        AnalogDevice, channel_objects=(mod_ch_obj,), max_atom_num=28
+        device, channel_objects=(mod_ch_obj,), max_atom_num=28
     )
     err_msg = (
         "No matching found between declared channels and channels in "
