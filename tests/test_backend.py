@@ -91,6 +91,7 @@ class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
         self._support_open_batch = True
+        self._got_closed = ""
 
     def submit(
         self,
@@ -122,12 +123,10 @@ class _MockConnection(RemoteConnection):
         return SubmissionStatus.DONE
 
     def _close_batch(self, batch_id: str) -> None:
-        return None
+        self._got_closed = batch_id
 
     def supports_open_batch(self) -> bool:
-        if self._support_open_batch:
-            return True
-        return False
+        return bool(self._support_open_batch)
 
 
 def test_remote_connection():
@@ -207,14 +206,18 @@ def test_qpu_backend(sequence):
     # Test create a batch and submitting jobs via a context manager
     # behaves as expected.
     qpu = QPUBackend(seq, connection)
+    assert connection._got_closed == ""
     with qpu.open_batch() as ob:
+        assert ob.backend is qpu
         assert ob.backend._batch_id == "abcd"
         assert isinstance(ob, _OpenBatchContextManager)
         results = qpu.run(job_params=[{"runs": 200}])
-        # submission_id should differ, confirm the batch_id was provided
-        # to submit()
+        # submission_id should differ bc of how MockConnection is written
+        # confirms the batch_id was provided to submit()
         assert results._submission_id == "dcba"
         assert isinstance(results, RemoteResults)
+    assert qpu._batch_id is None
+    assert connection._got_closed == "abcd"
 
     connection._support_open_batch = False
     qpu = QPUBackend(seq, connection)

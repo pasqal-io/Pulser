@@ -297,6 +297,22 @@ def test_submit(
     ]
 
     remote_results = fixt.pasqal_cloud.submit(
+        seq, job_params=job_params, batch_id="open_batch"
+    )
+    fixt.mock_cloud_sdk.get_batch.assert_any_call(id="open_batch")
+    fixt.mock_cloud_sdk.add_jobs.assert_called_once_with(
+        "open_batch",
+        jobs=job_params,
+    )
+    # The MockBatch returned before and after submission is the same
+    # so no new job ids are found
+    assert remote_results.job_ids == []
+
+    assert fixt.pasqal_cloud.supports_open_batch() is True
+    fixt.pasqal_cloud._close_batch("open_batch")
+    fixt.mock_cloud_sdk.close_batch.assert_called_once_with("open_batch")
+
+    remote_results = fixt.pasqal_cloud.submit(
         seq,
         job_params=job_params,
         emulator=emulator,
@@ -318,14 +334,6 @@ def test_submit(
             open=False,
         )
     )
-    remote_results = fixt.pasqal_cloud.submit(
-        seq, job_params=job_params, batch_id="abcd"
-    )
-
-    fixt.mock_cloud_sdk.add_jobs.assert_called_once_with(
-        "abcd",
-        jobs=job_params,
-    )
 
     job_params[0]["runs"] = {10}
     with pytest.raises(
@@ -341,25 +349,22 @@ def test_submit(
 
     assert isinstance(remote_results, RemoteResults)
     assert remote_results.get_status() == SubmissionStatus.DONE
-    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
+    fixt.mock_cloud_sdk.get_batch.assert_called_with(
         id=remote_results._submission_id
     )
-    assert fixt.pasqal_cloud.supports_open_batch() is True
-
-    fixt.pasqal_cloud._close_batch("abcd")
-    fixt.mock_cloud_sdk.close_batch.assert_called_once_with("abcd")
 
     fixt.mock_cloud_sdk.get_batch.reset_mock()
     results = remote_results.results
     fixt.mock_cloud_sdk.get_batch.assert_called_with(
         id=remote_results._submission_id
     )
-    assert results == (
+    assert results == tuple(
         SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
             meas_basis="ground-rydberg",
-            bitstring_counts=mock_job.result,
-        ),
+            bitstring_counts=_job.result,
+        )
+        for _job in mock_batch.ordered_jobs
     )
     assert hasattr(remote_results, "_results")
 

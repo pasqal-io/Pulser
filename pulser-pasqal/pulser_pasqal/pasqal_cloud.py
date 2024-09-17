@@ -170,10 +170,16 @@ class PasqalCloud(RemoteConnection):
         #  _sdk_connection.create_batch()
         if batch_id:
             submit_jobs_fn = backoff_decorator(self._sdk_connection.add_jobs)
+            old_job_ids = self._get_job_ids(batch_id)
             batch = submit_jobs_fn(
                 batch_id,
                 jobs=job_params or [],  # type: ignore[arg-type]
             )
+            new_job_ids = [
+                job_id
+                for job_id in self._get_job_ids(batch_id)
+                if job_id not in old_job_ids
+            ]
         else:
             create_batch_fn = backoff_decorator(
                 self._sdk_connection.create_batch
@@ -186,7 +192,8 @@ class PasqalCloud(RemoteConnection):
                 wait=wait,
                 open=open,
             )
-        return RemoteResults(batch.id, self)
+            new_job_ids = self._get_job_ids(batch.id)
+        return RemoteResults(batch.id, self, job_ids=new_job_ids)
 
     @backoff_decorator
     def fetch_available_devices(self) -> dict[str, Device]:
