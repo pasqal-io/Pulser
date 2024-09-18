@@ -24,6 +24,7 @@ from typing import Any, Literal, cast, get_args
 import numpy as np
 from scipy.spatial.distance import squareform
 
+import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM
@@ -726,6 +727,33 @@ class Device(BaseDevice):
         d["is_virtual"] = False
         return d
 
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> Device:
+        """Deserialize a Device from an abstract JSON object.
+
+        Warning:
+            Raises an error if the JSON string represents a VirtualDevice.
+            VirtualDevice.from_abstract_repr should be used for this case.
+
+        Args:
+            obj_str (str): the JSON string representing the Device
+                encoded in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized Device must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+
+        # Avoids circular imports
+        device = pulser_abstract_repr.deserializer.deserialize_device(obj_str)
+        if not isinstance(device, Device):
+            raise TypeError(
+                "The given schema is not related to a Device, but to a"
+                f" {type(device).__name__}."
+            )
+        return device
+
 
 @dataclass(frozen=True)
 class VirtualDevice(BaseDevice):
@@ -807,3 +835,27 @@ class VirtualDevice(BaseDevice):
         d = super()._to_abstract_repr()
         d["is_virtual"] = True
         return d
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> VirtualDevice:
+        """Deserialize a VirtualDevice from an abstract JSON object.
+
+        Warning:
+            If the JSON string represents a Device, the Device is converted
+            into a VirtualDevice using the `Device.to_virtual` method.
+
+        Args:
+            obj_str (str): the JSON string representing the noise model
+                encoded in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized VirtualDevice must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+
+        # Avoids circular imports
+        device = pulser_abstract_repr.deserializer.deserialize_device(obj_str)
+        if isinstance(device, Device):
+            return device.to_virtual()
+        return device
