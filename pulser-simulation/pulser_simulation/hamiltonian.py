@@ -23,6 +23,7 @@ from typing import Union, cast
 import numpy as np
 import qutip
 
+import pulser.math as pm
 from pulser.channels.base_channel import STATES_RANK, States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
@@ -47,14 +48,14 @@ class Hamiltonian:
     def __init__(
         self,
         samples_obj: SequenceSamples,
-        qdict: dict[QubitId, np.ndarray],
+        qdict: dict[QubitId, pm.AbstractArray],
         device: BaseDevice,
         sampling_rate: float,
         config: NoiseModel,
     ) -> None:
         """Instantiates a Hamiltonian object."""
         self.samples_obj = samples_obj
-        self._qdict = qdict
+        self._qdict = {k: v.as_array(detach=True) for k, v in qdict.items()}
         self._device = device
         self._sampling_rate = sampling_rate
 
