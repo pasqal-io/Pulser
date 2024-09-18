@@ -225,8 +225,19 @@ def test_partial_results():
     )
 
     fixt.mock_cloud_sdk.get_batch.reset_mock()
-    with pytest.raises(RemoteResultsError):
+    with pytest.raises(
+        RemoteResultsError,
+        match=(
+            "Results are not available for all jobs. Use the "
+            "`get_available_results` method to retrieve partial results."
+        ),
+    ):
         remote_results.results
+    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
+        id=remote_results.batch_id
+    )
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+
     available_results = remote_results.get_available_results(batch.id)
     assert available_results == {
         job.id: SampledResult(
@@ -237,6 +248,10 @@ def test_partial_results():
         for job in batch.ordered_jobs
         if job.result is not None
     }
+    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
+        id=remote_results.batch_id
+    )
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
 
     batch = MockBatch(
         status="DONE",
@@ -252,8 +267,19 @@ def test_partial_results():
         fixt.pasqal_cloud,
     )
 
-    with pytest.raises(RemoteResultsError):
+    with pytest.raises(
+        RemoteResultsError,
+        match=(
+            "Results are not available for all jobs. Use the "
+            "`get_available_results` method to retrieve partial results."
+        ),
+    ):
         remote_results.results
+    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
+        id=remote_results.batch_id
+    )
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+
     available_results = remote_results.get_available_results(batch.id)
     assert available_results == {
         job.id: SampledResult(
@@ -264,6 +290,10 @@ def test_partial_results():
         for job in batch.ordered_jobs
         if job.result is not None
     }
+    fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
+        id=remote_results.batch_id
+    )
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
 
 
 @pytest.mark.parametrize("mimic_qpu", [False, True])
