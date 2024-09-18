@@ -66,14 +66,21 @@ virtual_device = dataclasses.replace(
     test_device.to_virtual(), name="test-virtual"
 )
 
-_seq = Sequence(
-    SquareLatticeLayout(5, 5, 5).make_mappable_register(10), test_device
-)
+
+def build_test_sequence() -> Sequence:
+    seq = Sequence(
+        SquareLatticeLayout(5, 5, 5).make_mappable_register(10), test_device
+    )
+    seq.declare_channel("rydberg_global", "rydberg_global")
+    seq.measure()
+    return seq
 
 
 @pytest.fixture
 def seq():
-    return copy.deepcopy(_seq)
+    return Sequence(
+        SquareLatticeLayout(5, 5, 5).make_mappable_register(10), test_device
+    )
 
 
 class _MockJob:
@@ -102,10 +109,7 @@ class MockBatch:
             _MockJob(result={"11": 10}),
         ]
     )
-    seq_ = copy.deepcopy(_seq)
-    seq_.declare_channel("rydberg_global", "rydberg_global")
-    seq_.measure()
-    sequence_builder = seq_.to_abstract_repr()
+    sequence_builder = build_test_sequence().to_abstract_repr()
 
 
 @pytest.fixture
