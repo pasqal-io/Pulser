@@ -18,7 +18,7 @@ import dataclasses
 import itertools
 import json
 import re
-from typing import Any
+from typing import Any, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -28,7 +28,7 @@ import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.channels.dmm import DMM
-from pulser.channels.eom import RydbergBeam
+from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.base_register import BaseRegister
@@ -1075,7 +1075,7 @@ def test_switch_device_up(
 
 
 extended_eom = dataclasses.replace(
-    AnalogDevice.channels["rydberg_global"].eom_config,
+    cast(RydbergEOM, AnalogDevice.channels["rydberg_global"].eom_config),
     controlled_beams=tuple(RydbergBeam),
     multiple_beam_control=True,
     custom_buffer_time=None,
