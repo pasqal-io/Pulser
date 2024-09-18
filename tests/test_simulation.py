@@ -159,7 +159,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
             for ch in sampled_seq.channels
         ]
     )
-    assert sim._hamiltonian._qdict == seq.qubit_info
+    assert Register(sim._hamiltonian._qdict) == Register(seq.qubit_info)
     assert sim._hamiltonian._size == len(seq.qubit_info)
     assert sim._tot_duration == 9000  # seq has 9 pulses of 1µs
     assert sim._hamiltonian._qid_index == {
@@ -218,35 +218,35 @@ def test_extraction_of_sequences(seq):
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
                     samples = sim._hamiltonian.samples[addr][basis]
-                    assert (
+                    assert np.all(
                         samples["amp"][slot.ti : slot.tf]
                         == slot.type.amplitude.samples
-                    ).all()
-                    assert (
+                    )
+                    assert np.all(
                         samples["det"][slot.ti : slot.tf]
                         == slot.type.detuning.samples
-                    ).all()
-                    assert (
+                    )
+                    assert np.all(
                         samples["phase"][slot.ti : slot.tf] == slot.type.phase
-                    ).all()
+                    )
 
         elif addr == "Local":
             for slot in seq._schedule[channel]:
                 if isinstance(slot.type, Pulse):
                     for qubit in slot.targets:  # TO DO: multiaddressing??
                         samples = sim._hamiltonian.samples[addr][basis][qubit]
-                        assert (
+                        assert np.all(
                             samples["amp"][slot.ti : slot.tf]
                             == slot.type.amplitude.samples
-                        ).all()
-                        assert (
+                        )
+                        assert np.all(
                             samples["det"][slot.ti : slot.tf]
                             == slot.type.detuning.samples
-                        ).all()
-                        assert (
+                        )
+                        assert np.all(
                             samples["phase"][slot.ti : slot.tf]
                             == slot.type.phase
-                        ).all()
+                        )
 
 
 @pytest.mark.parametrize("leakage", [False, True])
@@ -482,7 +482,7 @@ def test_get_hamiltonian():
         simple_seq, config=SimConfig(noise="doppler", temperature=20000)
     )
     simple_ham_noise = simple_sim_noise.get_hamiltonian(144)
-    assert np.isclose(
+    np.testing.assert_allclose(
         simple_ham_noise.full(),
         np.array(
             [
@@ -507,7 +507,7 @@ def test_get_hamiltonian():
                 [0.0 + 0.0j, 0.09606404 + 0.0j, 0.09606404 + 0.0j, 0.0 + 0.0j],
             ]
         ),
-    ).all()
+    )
 
 
 def test_single_atom_simulation():
@@ -1593,7 +1593,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
     seq.add(pulse1, "ch1")
     seq.add(pulse1, "ch0")
     ch1_obj = seq.declared_channels["ch1"]
-    pulse1_mod_samples = ch1_obj.modulate(pulse1.amplitude.samples)
+    pulse1_mod_samples = ch1_obj.modulate(pulse1.amplitude.samples).as_array()
     mod_dt = pulse1.duration + pulse1.fall_time(ch1_obj)
     assert pulse1_mod_samples.size == mod_dt
 
@@ -1621,11 +1621,11 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
             sim._hamiltonian._doppler_detune[qid],
         )
         np.testing.assert_allclose(
-            raman_samples[qid]["phase"][time_slice], pulse1.phase
+            raman_samples[qid]["phase"][time_slice], float(pulse1.phase)
         )
 
     def pos_factor(qid):
-        r = np.linalg.norm(reg.qubits[qid])
+        r = np.linalg.norm(reg.qubits[qid].as_array())
         w0 = sim_config.laser_waist
         return np.exp(-((r / w0) ** 2))
 
@@ -1645,7 +1645,7 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
             sim._hamiltonian._doppler_detune[qid],
         )
         np.testing.assert_allclose(
-            rydberg_samples[qid]["phase"][time_slice], pulse1.phase
+            rydberg_samples[qid]["phase"][time_slice], float(pulse1.phase)
         )
     with pytest.warns(
         DeprecationWarning, match="The `Simulation` class is deprecated"

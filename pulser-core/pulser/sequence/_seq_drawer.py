@@ -28,6 +28,7 @@ from matplotlib.figure import Figure
 from scipy.interpolate import CubicSpline
 
 import pulser
+import pulser.math as pm
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
@@ -118,6 +119,21 @@ class ChannelDrawContent:
     phase_modulated: bool = False
 
     def __post_init__(self) -> None:
+        # Make sure there are no tensors in the channel samples
+        self.samples.amp = pm.AbstractArray(
+            self.samples.amp.as_array(detach=True)
+        )
+        self.samples.det = pm.AbstractArray(
+            self.samples.det.as_array(detach=True)
+        )
+        self.samples.phase = pm.AbstractArray(
+            self.samples.phase.as_array(detach=True)
+        )
+        if self.samples._centered_phase is not None:
+            self.samples._centered_phase = pm.AbstractArray(
+                self.samples._centered_phase.as_array(detach=True)
+            )
+
         is_dmm = isinstance(self.samples, DMMSamples)
         self.curves_on = {
             "amplitude": not is_dmm,
@@ -171,7 +187,10 @@ class ChannelDrawContent:
     ) -> list[np.ndarray]:
         curves = []
         for qty in CURVES_ORDER:
-            qty_arr = getattr(samples, self._samples_from_curves[qty])
+            qty_arr = cast(
+                pm.AbstractArray,
+                getattr(samples, self._samples_from_curves[qty]),
+            ).as_array(detach=True)
             if "phase" in qty:
                 qty_arr = qty_arr / (2 * np.pi)
             curves.append(qty_arr)
@@ -370,7 +389,7 @@ def _draw_register_det_maps(
     )
     # Draw masked register
     if register:
-        pos = np.array(register._coords)
+        pos = register._coords_arr.as_array(detach=True)
         title = (
             "Register"
             if sampled_seq._slm_mask.targets == set()
@@ -430,7 +449,7 @@ def _draw_register_det_maps(
                 else cast(DMMSamples, sampled_seq.channel_samples[ch]).qubits
             )
             reg_det_map = det_map.get_qubit_weight_map(qubits)
-            pos = np.array(list(qubits.values()))
+            pos = np.array([c.as_array(detach=True) for c in qubits.values()])
             if need_init:
                 if det_map.dimensionality == 3:
                     labels = "xyz"
@@ -522,15 +541,15 @@ def _draw_channel_content(
         shown_duration: Total duration to be shown in the X axis.
     """
 
-    def phase_str(phi: float) -> str:
+    def phase_str(phi: Any) -> str:
         """Formats a phase value for printing."""
-        value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
+        value = (((float(phi) + np.pi) % (2 * np.pi)) - np.pi) / np.pi
         if value == -1:
             return r"$\pi$"
         elif value == 0:
             return "0"  # pragma: no cover - just for safety
         else:
-            return rf"{value:.2g}$\pi$"
+            return rf"{float(value):.2g}$\pi$"
 
     data = gather_data(sampled_seq, shown_duration)
     n_channels = len(sampled_seq.channels)
@@ -724,7 +743,7 @@ def _draw_channel_content(
                 area_fmt = (
                     r"A: $\pi$"
                     if round(area_val, 2) == 1
-                    else rf"A: {area_val:.2g}$\pi$"
+                    else rf"A: {float(area_val):.2g}$\pi$"
                 )
                 if not print_phase:
                     txt = area_fmt

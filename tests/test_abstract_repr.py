@@ -36,6 +36,7 @@ from pulser.devices import (
     DigitalAnalogDevice,
     IroiseMVP,
     MockDevice,
+    VirtualDevice,
 )
 from pulser.json.abstract_repr.deserializer import (
     VARIABLE_TYPE_MAP,
@@ -222,21 +223,45 @@ class TestDevice:
 
     def test_exceptions(self, abstract_device):
         def check_error_raised(
-            obj_str: str, original_err: Type[Exception], err_msg: str = ""
+            obj_str: str,
+            original_err: Type[Exception],
+            err_msg: str = "",
+            func: Callable = deserialize_device,
         ) -> Exception:
             with pytest.raises(DeserializeDeviceError) as exc_info:
-                deserialize_device(obj_str)
+                func(obj_str)
 
             cause = exc_info.value.__cause__
             assert isinstance(cause, original_err)
             assert re.search(re.escape(err_msg), str(cause)) is not None
             return cause
 
+        dev_str = json.dumps(abstract_device)
         good_device = deserialize_device(json.dumps(abstract_device))
-
+        deser_device = type(good_device).from_abstract_repr(dev_str)
+        assert good_device == deser_device
+        if isinstance(good_device, Device):
+            deser_device = VirtualDevice.from_abstract_repr(dev_str)
+            assert good_device.to_virtual() == deser_device
+        else:
+            with pytest.raises(
+                TypeError,
+                match="The given schema is not related to a Device, but to "
+                "a VirtualDevice.",
+            ):
+                Device.from_abstract_repr(dev_str)
         check_error_raised(
             abstract_device, TypeError, "'obj_str' must be a string"
         )
+        with pytest.raises(
+            TypeError, match="The serialized Device must be given as a string."
+        ):
+            Device.from_abstract_repr(abstract_device)
+        with pytest.raises(
+            TypeError,
+            match="The serialized VirtualDevice must be given as a string.",
+        ):
+            VirtualDevice.from_abstract_repr(abstract_device)
 
         # JSONDecodeError from json.loads()
         bad_str = "\ufeff"
@@ -246,6 +271,15 @@ class TestDevice:
             json.loads(bad_str)
         err_msg = str(err.value)
         check_error_raised(bad_str, json.JSONDecodeError, err_msg)
+        check_error_raised(
+            bad_str, json.JSONDecodeError, err_msg, Device.from_abstract_repr
+        )
+        check_error_raised(
+            bad_str,
+            json.JSONDecodeError,
+            err_msg,
+            VirtualDevice.from_abstract_repr,
+        )
 
         # jsonschema.exceptions.ValidationError from jsonschema
         invalid_dev = abstract_device.copy()
@@ -256,6 +290,18 @@ class TestDevice:
             json.dumps(invalid_dev),
             jsonschema.exceptions.ValidationError,
             str(err.value),
+        )
+        check_error_raised(
+            json.dumps(invalid_dev),
+            jsonschema.exceptions.ValidationError,
+            str(err.value),
+            Device.from_abstract_repr,
+        )
+        check_error_raised(
+            json.dumps(invalid_dev),
+            jsonschema.exceptions.ValidationError,
+            str(err.value),
+            VirtualDevice.from_abstract_repr,
         )
 
         # AbstractReprError from invalid RydbergEOM configuration
@@ -270,6 +316,20 @@ class TestDevice:
                 json.dumps(bad_eom_dev),
                 AbstractReprError,
                 "RydbergEOM deserialization failed.",
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_eom_dev),
+                AbstractReprError,
+                "RydbergEOM deserialization failed.",
+                VirtualDevice.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_eom_dev),
+                AbstractReprError,
+                "RydbergEOM deserialization failed.",
             )
             assert isinstance(prev_err.__cause__, ValueError)
 
@@ -280,12 +340,40 @@ class TestDevice:
             json.dumps(bad_ch_dev1),
             AbstractReprError,
             "Channel deserialization failed.",
+            Device.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev1),
+            AbstractReprError,
+            "Channel deserialization failed.",
+            VirtualDevice.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev1),
+            AbstractReprError,
+            "Channel deserialization failed.",
         )
         assert isinstance(prev_err.__cause__, ValueError)
 
         # AbstractReprError from NotImplementedError in channel creation
         bad_ch_dev2 = deepcopy(abstract_device)
         bad_ch_dev2["channels"][0]["mod_bandwidth"] = 1000
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev2),
+            AbstractReprError,
+            "Channel deserialization failed.",
+            Device.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, NotImplementedError)
+        prev_err = check_error_raised(
+            json.dumps(bad_ch_dev2),
+            AbstractReprError,
+            "Channel deserialization failed.",
+            VirtualDevice.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, NotImplementedError)
         prev_err = check_error_raised(
             json.dumps(bad_ch_dev2),
             AbstractReprError,
@@ -303,6 +391,20 @@ class TestDevice:
                 json.dumps(bad_layout_dev),
                 AbstractReprError,
                 "Register layout deserialization failed.",
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_layout_dev),
+                AbstractReprError,
+                "Register layout deserialization failed.",
+                VirtualDevice.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, ValueError)
+            prev_err = check_error_raised(
+                json.dumps(bad_layout_dev),
+                AbstractReprError,
+                "Register layout deserialization failed.",
             )
             assert isinstance(prev_err.__cause__, ValueError)
 
@@ -314,12 +416,40 @@ class TestDevice:
                 json.dumps(bad_xy_coeff_dev),
                 AbstractReprError,
                 "Device deserialization failed.",
+                Device.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
+                VirtualDevice.from_abstract_repr,
+            )
+            assert isinstance(prev_err.__cause__, TypeError)
+            prev_err = check_error_raised(
+                json.dumps(bad_xy_coeff_dev),
+                AbstractReprError,
+                "Device deserialization failed.",
             )
             assert isinstance(prev_err.__cause__, TypeError)
 
         # AbstractReprError from ValueError in device init
         bad_dev = abstract_device.copy()
         bad_dev["min_atom_distance"] = -1
+        prev_err = check_error_raised(
+            json.dumps(bad_dev),
+            AbstractReprError,
+            "Device deserialization failed.",
+            Device.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
+        prev_err = check_error_raised(
+            json.dumps(bad_dev),
+            AbstractReprError,
+            "Device deserialization failed.",
+            VirtualDevice.from_abstract_repr,
+        )
+        assert isinstance(prev_err.__cause__, ValueError)
         prev_err = check_error_raised(
             json.dumps(bad_dev),
             AbstractReprError,
@@ -341,6 +471,18 @@ class TestDevice:
         device = replace(og_device, **{field: value})
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
+        assert device == type(og_device).from_abstract_repr(dev_str)
+        if isinstance(og_device, Device):
+            assert device.to_virtual() == VirtualDevice.from_abstract_repr(
+                dev_str
+            )
+            return
+        with pytest.raises(
+            TypeError,
+            match="The given schema is not related to a Device, but to a "
+            "VirtualDevice.",
+        ):
+            Device.from_abstract_repr(dev_str)
 
     @pytest.mark.parametrize(
         "ch_obj",
@@ -406,6 +548,7 @@ class TestDevice:
         )
         dev_str = device.to_abstract_repr()
         assert device == deserialize_device(dev_str)
+        assert device == VirtualDevice.from_abstract_repr(dev_str)
 
 
 def validate_schema(instance):
@@ -1128,11 +1271,12 @@ class TestSerialization:
 
             assert abstract["operations"][1]["op"] == "config_detuning_map"
             assert abstract["operations"][1]["dmm_id"] == "dmm_0"
+            reg_coords = reg._coords_arr.as_array()
             assert abstract["operations"][1]["detuning_map"]["traps"] == [
                 {
                     "weight": weight,
-                    "x": reg._coords[i][0],
-                    "y": reg._coords[i][1],
+                    "x": reg_coords[i][0],
+                    "y": reg_coords[i][1],
                 }
                 for i, weight in enumerate(list(det_map.values()))
             ]
@@ -1244,7 +1388,12 @@ def _check_roundtrip(serialized_seq: dict[str, Any]):
                         reconstructed_wf = wf_cls(
                             *(op[wf][qty] for qty in wf_args)
                         )
-                        op[wf] = reconstructed_wf._to_abstract_repr()
+                        op[wf] = json.loads(
+                            json.dumps(
+                                reconstructed_wf._to_abstract_repr(),
+                                cls=AbstractReprEncoder,
+                            )
+                        )
         elif (
             "eom" in op["op"]
             and not op.get("correct_phase_drift")
@@ -1344,7 +1493,9 @@ class TestDeserialization:
         # Check layout
         if layout_coords is not None:
             assert seq.register.layout == reg_layout
-            q_coords = list(seq.qubit_info.values())
+            q_coords = [
+                q_coords.tolist() for q_coords in seq.qubit_info.values()
+            ]
             assert seq.register._layout_info.trap_ids == tuple(
                 reg_layout.get_traps_from_coordinates(*q_coords)
             )
@@ -1824,7 +1975,7 @@ class TestDeserialization:
             operations=[op],
             variables={
                 "var1": {"type": "int", "value": [0]},
-                "var2": {"type": "int", "value": [42]},
+                "var2": {"type": "int", "value": [44]},
             },
         )
         _check_roundtrip(s)
@@ -2088,8 +2239,8 @@ class TestDeserialization:
         else:
             enable_eom_call = seq._calls[-1]
             eom_conf = seq.declared_channels["global"].eom_config
-            optimal_det_off = eom_conf.calculate_detuning_off(
-                3.0, detuning_on, -1.0
+            optimal_det_off = float(
+                eom_conf.calculate_detuning_off(3.0, detuning_on, -1.0)
             )
 
         # Roundtrip will only match if the optimal detuning off matches

@@ -15,4 +15,5 @@ per-file-ignores =
   tests/*: D100, D101, D102, D103
   __init__.py: F401
   pulser-core/pulser/backends.py: F401
+  pulser-core/pulser/math/__init__.py: D103
   setup.py: D100
