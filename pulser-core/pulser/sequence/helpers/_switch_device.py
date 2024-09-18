@@ -14,9 +14,9 @@
 """Function to switch the Device in a Sequence."""
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import warnings
-from dataclasses import asdict
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -132,10 +132,10 @@ def switch_device(
                         )
                 else:
                     # Eom configs have to match is Sequence is parametrized
-                    new_eom_config = asdict(
+                    new_eom_config = dataclasses.asdict(
                         cast(RydbergEOM, new_ch_obj.eom_config)
                     )
-                    old_eom_config = asdict(
+                    old_eom_config = dataclasses.asdict(
                         cast(RydbergEOM, old_ch_obj.eom_config)
                     )
                     # However, multiple_beam_control only matters when

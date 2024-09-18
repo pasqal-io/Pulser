@@ -1074,29 +1074,29 @@ def test_switch_device_up(
     assert "digital" in seq.switch_device(devices[1], True).declared_channels
 
 
-@pytest.mark.parametrize("device_type", ["analog", "extended"])
+extended_eom = dataclasses.replace(
+    AnalogDevice.channels["rydberg_global"].eom_config,
+    controlled_beams=tuple(RydbergBeam),
+    multiple_beam_control=True,
+    custom_buffer_time=None,
+)
+extended_eom_channel = dataclasses.replace(
+    AnalogDevice.channels["rydberg_global"], eom_config=extended_eom
+)
+extended_eom_device = dataclasses.replace(
+    AnalogDevice, channel_objects=(extended_eom_channel,)
+)
+
+
+@pytest.mark.parametrize("device", [AnalogDevice, extended_eom_device])
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
 @pytest.mark.parametrize(
     "extension_arg", ["amp", "control", "2control", "buffer_time"]
 )
 def test_switch_device_eom(
-    reg, device_type, mappable_reg, parametrized, extension_arg, patch_plt_show
+    reg, device, mappable_reg, parametrized, extension_arg, patch_plt_show
 ):
-    if device_type == "analog":
-        device = AnalogDevice
-    elif device_type == "extended":
-        eom = dataclasses.replace(
-            AnalogDevice.channels["rydberg_global"].eom_config,
-            controlled_beams=tuple(RydbergBeam),
-            multiple_beam_control=True,
-            custom_buffer_time=None,
-        )
-        channel = dataclasses.replace(
-            AnalogDevice.channels["rydberg_global"], eom_config=eom
-        )
-        device = dataclasses.replace(AnalogDevice, channel_objects=(channel,))
-
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
@@ -1151,7 +1151,7 @@ def test_switch_device_eom(
                 ch_obj.eom_config,
                 controlled_beams=(
                     tuple(RydbergBeam)
-                    if device_type == "extended"
+                    if device == extended_eom_device
                     else (RydbergBeam.RED,)
                 ),
                 multiple_beam_control=False,
@@ -1196,21 +1196,21 @@ def test_switch_device_eom(
             ch_obj.eom_config, max_limiting_amp=40 * 2 * np.pi
         ),
         # With one controlled beam, don't care about multiple_beam_control
-        # Raises an error if device_type is extended (less options)
+        # Raises an error if device is extended_eom_device (less options)
         "control": dataclasses.replace(
             ch_obj.eom_config,
             controlled_beams=(RydbergBeam.BLUE,),
             multiple_beam_control=False,
         ),
         # Using 2 controlled beams
-        # Raises an error if device_type is extended (less options)
+        # Raises an error if device is extended_eom_device (less options)
         "2control": dataclasses.replace(
             ch_obj.eom_config,
             controlled_beams=tuple(RydbergBeam),
             multiple_beam_control=False,
         ),
         # If custom buffer time is None
-        # Raises an error if device_type is analog
+        # Raises an error if device is extended_eom_device
         "buffer_time": dataclasses.replace(
             ch_obj.eom_config,
             custom_buffer_time=None,
@@ -1226,12 +1226,12 @@ def test_switch_device_eom(
         or (
             parametrized
             and extension_arg in ["control", "2control"]
-            and device_type == "extended"
+            and device == extended_eom_device
         )
         or (
             parametrized
             and extension_arg == "buffer_time"
-            and device_type == "analog"
+            and device == AnalogDevice
         )
     ):
         with pytest.raises(
@@ -1240,7 +1240,7 @@ def test_switch_device_eom(
         ):
             seq.switch_device(up_analog, strict=True)
         return
-    if device_type == "extended":
+    if device == extended_eom_device:
         if extension_arg in ["control", "2control"]:
             with pytest.raises(
                 ValueError,
