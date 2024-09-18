@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import copy
 import dataclasses
 import re
 from pathlib import Path
