@@ -193,7 +193,7 @@ class PasqalCloud(RemoteConnection):
         results: list[Result] = []
         for id in job_ids:
             status, result = jobs[id]
-            if status != {JobStatus.PENDING, JobStatus.RUNNING}:
+            if status in {JobStatus.PENDING, JobStatus.RUNNING}:
                 raise RemoteResultsError(
                     f"The results are not yet available, job {id} status is {status}."
                 )
