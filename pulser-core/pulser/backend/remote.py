@@ -44,6 +44,17 @@ class SubmissionStatus(Enum):
     PAUSED = auto()
 
 
+class JobStatus(Enum):
+    """Status of a remote job."""
+
+    PENDING = auto()
+    RUNNING = auto()
+    DONE = auto()
+    CANCELED = auto()
+    ERROR = auto()
+    PAUSED = auto()
+
+
 class RemoteResultsError(Exception):
     """Error raised when fetching remote results fails."""
 
@@ -103,28 +114,42 @@ class RemoteResults(Results):
         """Gets the status of the remote submission."""
         return self._connection._get_submission_status(self._submission_id)
 
-    def _get_available_result(self, submission_id: str) -> dict[str, Result]:
-        """Return available results and ignore jobs with no results."""
-        return {
-            k: v
-            for k, v in self._connection._query_result(submission_id).items()
-            if v is not None
+    def get_available_results(self, submission_id: str) -> dict[str, Result]:
+        """Returns the available results of a submission.
+
+        Unlike the `results` property, this method does not raise an error if
+        some jobs associated to the submission do not have results.
+
+        It returns a dictionnary mapping the job ID to their results. Jobs with
+        no result are omitted.
+        """
+
+        results = {
+            k: v[1]
+            for k, v in self._connection._query_job_progress(
+                submission_id
+            ).items()
+            if v[1] is not None
         }
+
+        if self._job_ids:
+            return {k: v for k, v in results.items() if k in self._job_ids}
+        return results
 
     def __getattr__(self, name: str) -> Any:
         if name == "_results":
-            status = self.get_status()
-            if status == SubmissionStatus.DONE:
+            try:
                 self._results = tuple(
                     self._connection._fetch_result(
                         self._submission_id, self._job_ids
                     )
                 )
-                return self._results
-            raise RemoteResultsError(
-                "The results are not available. The submission's status is "
-                f"{str(status)}."
-            )
+            except RemoteResultsError as e:
+                raise RemoteResultsError(
+                    "Results are not available for all jobs. Use the "
+                    "`get_available_results` method to retrieve partial "
+                    "results."
+                ) from e
         raise AttributeError(
             f"'RemoteResults' object has no attribute '{name}'."
         )
@@ -148,7 +173,16 @@ class RemoteConnection(ABC):
         pass
 
     @abstractmethod
-    def _query_result(self, submission_id: str) -> Mapping[str, Result | None]:
+    def _query_job_progress(
+        self, submission_id: str
+    ) -> Mapping[str, tuple[JobStatus, Result | None]]:
+        """Fetches the status and results of a submission.
+
+        Unlike `_fetch_result`, this method does not raise an error if some
+        jobs associated to the submission do not have results.
+
+        It returns a dictionnary mapping the job ID to their status and results.
+        """
         pass
 
     @abstractmethod

@@ -23,6 +23,7 @@ from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
+    JobStatus,
     RemoteConnection,
     RemoteResults,
     RemoteResultsError,
@@ -89,6 +90,11 @@ def test_emulator_config_type_errors(param, msg):
 class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
+        self.result = SampledResult(
+            ("q0", "q1"),
+            meas_basis="ground-rydberg",
+            bitstring_counts={"00": 100},
+        )
 
     def submit(self, sequence, wait: bool = False, **kwargs) -> RemoteResults:
         return RemoteResults("abcd", self)
@@ -96,13 +102,12 @@ class _MockConnection(RemoteConnection):
     def _fetch_result(
         self, submission_id: str, job_ids: list[str] | None = None
     ) -> typing.Sequence[Result]:
-        return (
-            SampledResult(
-                ("q0", "q1"),
-                meas_basis="ground-rydberg",
-                bitstring_counts={"00": 100},
-            ),
-        )
+        return (self.result,)
+
+    def _query_job_progress(
+        self, submission_id: str
+    ) -> typing.Mapping[str, tuple[JobStatus, Result | None]]:
+        return {"abcd": (JobStatus.DONE, self.result)}
 
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
         self._status_calls += 1

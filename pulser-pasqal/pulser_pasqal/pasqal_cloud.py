@@ -33,8 +33,10 @@ from pulser.backend.config import EmulatorConfig
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     JobParams,
+    JobStatus,
     RemoteConnection,
     RemoteResults,
+    RemoteResultsError,
     SubmissionStatus,
 )
 from pulser.devices import Device
@@ -183,19 +185,27 @@ class PasqalCloud(RemoteConnection):
         self, submission_id: str, job_ids: list[str] | None
     ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
-        full_results = self._query_result(submission_id)
+        jobs = self._query_job_progress(submission_id)
 
         if job_ids is None:
-            job_ids = list(full_results.keys())
+            job_ids = list(jobs.keys())
 
-        results = []
+        results: list[Result] = []
         for id in job_ids:
-            assert full_results[id] is not None, "Failed to fetch the results."
-            results.append(cast(Result, full_results[id]))
+            status, result = jobs[id]
+            if status != {JobStatus.PENDING, JobStatus.RUNNING}:
+                raise RemoteResultsError(
+                    f"The results are not yet available, job {id} status is {status}."
+                )
+            if result is None:
+                raise RemoteResultsError(f"No results found for job {id}.")
+            results.append(result)
 
         return tuple(results)
 
-    def _query_result(self, submission_id: str) -> Mapping[str, Result | None]:
+    def _query_job_progress(
+        self, submission_id: str
+    ) -> Mapping[str, tuple[JobStatus, Result | None]]:
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
         batch = get_batch_fn(id=submission_id)
 
@@ -204,21 +214,23 @@ class PasqalCloud(RemoteConnection):
         all_qubit_ids = reg.qubit_ids
         meas_basis = seq_builder.get_measurement_basis()
 
-        results: dict[str, Result | None] = {}
-        sdk_jobs = batch.ordered_jobs
+        results: dict[str, tuple[JobStatus, Result | None]] = {}
 
-        for job in sdk_jobs:
+        for job in batch.ordered_jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:
                 size = len(vars["qubits"])
             if job.result is None:
-                results[job.id] = None
+                results[job.id] = (JobStatus[job.status], None)
             else:
-                results[job.id] = SampledResult(
-                    atom_order=all_qubit_ids[slice(size)],
-                    meas_basis=meas_basis,
-                    bitstring_counts=job.result,
+                results[job.id] = (
+                    JobStatus[job.status],
+                    SampledResult(
+                        atom_order=all_qubit_ids[slice(size)],
+                        meas_basis=meas_basis,
+                        bitstring_counts=job.result,
+                    ),
                 )
         return results
 
