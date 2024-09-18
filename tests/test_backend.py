@@ -23,6 +23,7 @@ from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
+    JobStatus,
     RemoteConnection,
     RemoteResults,
     RemoteResultsError,
@@ -92,6 +93,12 @@ class _MockConnection(RemoteConnection):
         self._status_calls = 0
         self._support_open_batch = True
         self._got_closed = ""
+        self._progress_calls = 0
+        self.result = SampledResult(
+            ("q0", "q1"),
+            meas_basis="ground-rydberg",
+            bitstring_counts={"00": 100},
+        )
 
     def submit(
         self,
@@ -108,18 +115,18 @@ class _MockConnection(RemoteConnection):
     def _fetch_result(
         self, submission_id: str, job_ids: list[str] | None = None
     ) -> typing.Sequence[Result]:
-        return (
-            SampledResult(
-                ("q0", "q1"),
-                meas_basis="ground-rydberg",
-                bitstring_counts={"00": 100},
-            ),
-        )
+        self._progress_calls += 1
+        if self._progress_calls == 1:
+            raise RemoteResultsError("Results not available")
+
+        return (self.result,)
+
+    def _query_job_progress(
+        self, submission_id: str
+    ) -> typing.Mapping[str, tuple[JobStatus, Result | None]]:
+        return {"abcd": (JobStatus.DONE, self.result)}
 
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
-        self._status_calls += 1
-        if self._status_calls == 1:
-            return SubmissionStatus.RUNNING
         return SubmissionStatus.DONE
 
     def _close_batch(self, batch_id: str) -> None:
@@ -195,8 +202,11 @@ def test_qpu_backend(sequence):
 
     with pytest.raises(
         RemoteResultsError,
-        match="The results are not available. The submission's status is"
-        " SubmissionStatus.RUNNING",
+        match=(
+            "Results are not available for all jobs. "
+            "Use the `get_available_results` method to retrieve partial "
+            "results."
+        ),
     ):
         remote_results.results
 
@@ -226,3 +236,6 @@ def test_qpu_backend(sequence):
         match="Unable to execute open_batch using this remote connection",
     ):
         qpu.open_batch()
+
+    available_results = remote_results.get_available_results("id")
+    assert available_results == {"abcd": connection.result}
