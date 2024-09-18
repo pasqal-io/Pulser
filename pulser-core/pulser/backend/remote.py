@@ -121,10 +121,9 @@ class RemoteResults(Results):
         some jobs associated to the submission do not have results.
 
         Returns:
-            dict[str, Result]: A dictionary mapping the job ID to their results.
+            dict[str, Result]: A dictionary mapping the job ID to its results.
             Jobs with no result are omitted.
         """
-
         results = {
             k: v[1]
             for k, v in self._connection._query_job_progress(
@@ -183,7 +182,7 @@ class RemoteConnection(ABC):
         Unlike `_fetch_result`, this method does not raise an error if some
         jobs associated to the submission do not have results.
 
-        It returns a dictionnary mapping the job ID to their status and results.
+        It returns a dictionnary mapping the job ID to its status and results.
         """
         pass
 

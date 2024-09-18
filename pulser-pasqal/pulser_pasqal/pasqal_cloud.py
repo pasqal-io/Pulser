@@ -195,7 +195,8 @@ class PasqalCloud(RemoteConnection):
             status, result = jobs[id]
             if status in {JobStatus.PENDING, JobStatus.RUNNING}:
                 raise RemoteResultsError(
-                    f"The results are not yet available, job {id} status is {status}."
+                    f"The results are not yet available, job {id} status is "
+                    f"{status}."
                 )
             if result is None:
                 raise RemoteResultsError(f"No results found for job {id}.")
