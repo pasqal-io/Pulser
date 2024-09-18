@@ -121,7 +121,7 @@ class RemoteResults(Results):
         some jobs associated to the submission do not have results.
 
         Returns:
-            dict[str, Result]: A dictionary mapping the job ID to their results. 
+            dict[str, Result]: A dictionary mapping the job ID to their results.
             Jobs with no result are omitted.
         """
 
@@ -145,6 +145,7 @@ class RemoteResults(Results):
                         self._submission_id, self._job_ids
                     )
                 )
+                return self._results
             except RemoteResultsError as e:
                 raise RemoteResultsError(
                     "Results are not available for all jobs. Use the "

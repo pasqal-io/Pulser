@@ -28,8 +28,10 @@ import pulser
 import pulser_pasqal
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
+    JobStatus,
     RemoteConnection,
     RemoteResults,
+    RemoteResultsError,
     SubmissionStatus,
 )
 from pulser.devices import DigitalAnalogDevice
@@ -64,11 +66,14 @@ virtual_device = dataclasses.replace(
     test_device.to_virtual(), name="test-virtual"
 )
 
+_seq = Sequence(
+    SquareLatticeLayout(5, 5, 5).make_mappable_register(10), test_device
+)
+
 
 @pytest.fixture
 def seq():
-    reg = SquareLatticeLayout(5, 5, 5).make_mappable_register(10)
-    return Sequence(reg, test_device)
+    return copy.deepcopy(_seq)
 
 
 class _MockJob:
@@ -77,40 +82,38 @@ class _MockJob:
         runs=10,
         variables={"t": 100, "qubits": {"q0": 1, "q1": 2, "q2": 4, "q3": 3}},
         result={"00": 5, "11": 5},
+        status=JobStatus.DONE.name,
     ) -> None:
         self.runs = runs
         self.variables = variables
         self.result = result
         self.id = str(np.random.randint(10000))
+        self.status = status
 
 
-@pytest.fixture
-def mock_job():
-    return _MockJob()
-
-
-@pytest.fixture
-def mock_batch(mock_job, seq):
-    seq_ = copy.deepcopy(seq)
-    seq_.declare_channel("rydberg_global", "rydberg_global")
-    seq_.measure()
-
-    @dataclasses.dataclass
-    class MockBatch:
-        id = "abcd"
-        status = "DONE"
-        ordered_jobs = [
-            mock_job,
+@dataclasses.dataclass
+class MockBatch:
+    id = "abcd"
+    status: str = "DONE"
+    ordered_jobs: list[_MockJob] = dataclasses.field(
+        default_factory=lambda: [
+            _MockJob(),
             _MockJob(result={"00": 10}),
             _MockJob(result={"11": 10}),
         ]
-        sequence_builder = seq_.to_abstract_repr()
-
-    return MockBatch()
+    )
+    seq_ = copy.deepcopy(_seq)
+    seq_.declare_channel("rydberg_global", "rydberg_global")
+    seq_.measure()
+    sequence_builder = seq_.to_abstract_repr()
 
 
 @pytest.fixture
-def fixt(mock_batch):
+def mock_batch():
+    return MockBatch()
+
+
+def mock_pasqal_cloud_sdk(mock_batch):
     with patch("pasqal_cloud.SDK", autospec=True) as mock_cloud_sdk_class:
         pasqal_cloud_kwargs = dict(
             username="abc",
@@ -134,11 +137,14 @@ def fixt(mock_batch):
             return_value={test_device.name: test_device.to_abstract_repr()}
         )
 
-        yield CloudFixture(
+        return CloudFixture(
             pasqal_cloud=pasqal_cloud, mock_cloud_sdk=mock_cloud_sdk
         )
 
-        mock_cloud_sdk_class.assert_not_called()
+
+@pytest.fixture
+def fixt(mock_batch):
+    yield mock_pasqal_cloud_sdk(mock_batch)
 
 
 @pytest.mark.parametrize("with_job_id", [False, True])
@@ -190,15 +196,82 @@ def test_remote_results(fixt, mock_batch, with_job_id):
 
     assert hasattr(remote_results, "_results")
 
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+    available_results = remote_results.get_available_results("id")
+    assert available_results == {
+        job.id: SampledResult(
+            atom_order=("q0", "q1", "q2", "q3"),
+            meas_basis="ground-rydberg",
+            bitstring_counts=job.result,
+        )
+        for job in select_jobs
+    }
+
+
+def test_partial_results():
+    batch = MockBatch(
+        status="RUNNING",
+        ordered_jobs=[
+            _MockJob(),
+            _MockJob(status="RUNNING", result=None),
+        ],
+    )
+
+    fixt = mock_pasqal_cloud_sdk(batch)
+
+    remote_results = RemoteResults(
+        batch.id,
+        fixt.pasqal_cloud,
+    )
+
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+    with pytest.raises(RemoteResultsError):
+        remote_results.results
+    available_results = remote_results.get_available_results(batch.id)
+    assert available_results == {
+        job.id: SampledResult(
+            atom_order=("q0", "q1", "q2", "q3"),
+            meas_basis="ground-rydberg",
+            bitstring_counts=job.result,
+        )
+        for job in batch.ordered_jobs
+        if job.result is not None
+    }
+
+    batch = MockBatch(
+        status="DONE",
+        ordered_jobs=[
+            _MockJob(),
+            _MockJob(status="DONE", result=None),
+        ],
+    )
+
+    fixt = mock_pasqal_cloud_sdk(batch)
+    remote_results = RemoteResults(
+        batch.id,
+        fixt.pasqal_cloud,
+    )
+
+    with pytest.raises(RemoteResultsError):
+        remote_results.results
+    available_results = remote_results.get_available_results(batch.id)
+    assert available_results == {
+        job.id: SampledResult(
+            atom_order=("q0", "q1", "q2", "q3"),
+            meas_basis="ground-rydberg",
+            bitstring_counts=job.result,
+        )
+        for job in batch.ordered_jobs
+        if job.result is not None
+    }
+
 
 @pytest.mark.parametrize("mimic_qpu", [False, True])
 @pytest.mark.parametrize(
     "emulator", [None, EmulatorType.EMU_TN, EmulatorType.EMU_FREE]
 )
 @pytest.mark.parametrize("parametrized", [True, False])
-def test_submit(
-    fixt, parametrized, emulator, mimic_qpu, seq, mock_batch, mock_job
-):
+def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_batch):
     with pytest.raises(
         ValueError,
         match="The measurement basis can't be implicitly determined for a "

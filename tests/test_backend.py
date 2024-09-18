@@ -90,6 +90,7 @@ def test_emulator_config_type_errors(param, msg):
 class _MockConnection(RemoteConnection):
     def __init__(self):
         self._status_calls = 0
+        self._progress_calls = 0
         self.result = SampledResult(
             ("q0", "q1"),
             meas_basis="ground-rydberg",
@@ -102,6 +103,10 @@ class _MockConnection(RemoteConnection):
     def _fetch_result(
         self, submission_id: str, job_ids: list[str] | None = None
     ) -> typing.Sequence[Result]:
+        self._progress_calls += 1
+        if self._progress_calls == 1:
+            raise RemoteResultsError("Results not available")
+
         return (self.result,)
 
     def _query_job_progress(
@@ -110,9 +115,6 @@ class _MockConnection(RemoteConnection):
         return {"abcd": (JobStatus.DONE, self.result)}
 
     def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
-        self._status_calls += 1
-        if self._status_calls == 1:
-            return SubmissionStatus.RUNNING
         return SubmissionStatus.DONE
 
 
@@ -181,10 +183,16 @@ def test_qpu_backend(sequence):
 
     with pytest.raises(
         RemoteResultsError,
-        match="The results are not available. The submission's status is"
-        " SubmissionStatus.RUNNING",
+        match=(
+            "Results are not available for all jobs. "
+            "Use the `get_available_results` method to retrieve partial "
+            "results."
+        ),
     ):
         remote_results.results
 
     results = remote_results.results
     assert results[0].sampling_dist == {"00": 1.0}
+
+    available_results = remote_results.get_available_results("id")
+    assert available_results == {"abcd": connection.result}
