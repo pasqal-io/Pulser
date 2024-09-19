@@ -116,7 +116,7 @@ class RemoteResults(Results):
         """Gets the status of the remote submission."""
         return self._connection._get_submission_status(self._submission_id)
 
-    def get_available_results(self, submission_id: str) -> dict[str, Result]:
+    def get_available_results(self) -> dict[str, Result]:
         """Returns the available results of a submission.
 
         Unlike the `results` property, this method does not raise an error if
@@ -129,7 +129,7 @@ class RemoteResults(Results):
         results = {
             k: v[1]
             for k, v in self._connection._query_job_progress(
-                submission_id
+                self.batch_id
             ).items()
             if v[1] is not None
         }

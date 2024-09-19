@@ -237,5 +237,5 @@ def test_qpu_backend(sequence):
     ):
         qpu.open_batch()
 
-    available_results = remote_results.get_available_results("id")
+    available_results = remote_results.get_available_results()
     assert available_results == {"abcd": connection.result}

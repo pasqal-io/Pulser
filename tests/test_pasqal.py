@@ -202,7 +202,7 @@ def test_remote_results(fixt, mock_batch, with_job_id):
     assert hasattr(remote_results, "_results")
 
     fixt.mock_cloud_sdk.get_batch.reset_mock()
-    available_results = remote_results.get_available_results("id")
+    available_results = remote_results.get_available_results()
     assert available_results == {
         job.id: SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
@@ -243,7 +243,7 @@ def test_partial_results():
     )
     fixt.mock_cloud_sdk.get_batch.reset_mock()
 
-    available_results = remote_results.get_available_results(batch.id)
+    available_results = remote_results.get_available_results()
     assert available_results == {
         job.id: SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
@@ -285,7 +285,7 @@ def test_partial_results():
     )
     fixt.mock_cloud_sdk.get_batch.reset_mock()
 
-    available_results = remote_results.get_available_results(batch.id)
+    available_results = remote_results.get_available_results()
     assert available_results == {
         job.id: SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
