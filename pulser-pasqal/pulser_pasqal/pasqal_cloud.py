@@ -32,12 +32,12 @@ from pulser import Sequence
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
+    BatchStatus,
     JobParams,
     JobStatus,
     RemoteConnection,
     RemoteResults,
     RemoteResultsError,
-    SubmissionStatus,
 )
 from pulser.devices import Device
 from pulser.json.abstract_repr.deserializer import deserialize_device
@@ -210,10 +210,10 @@ class PasqalCloud(RemoteConnection):
         }
 
     def _fetch_result(
-        self, submission_id: str, job_ids: list[str] | None
+        self, batch_id: str, job_ids: list[str] | None
     ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
-        jobs = self._query_job_progress(submission_id)
+        jobs = self._query_job_progress(batch_id)
 
         if job_ids is None:
             job_ids = list(jobs.keys())
@@ -233,10 +233,10 @@ class PasqalCloud(RemoteConnection):
         return tuple(results)
 
     def _query_job_progress(
-        self, submission_id: str
+        self, batch_id: str
     ) -> Mapping[str, tuple[JobStatus, Result | None]]:
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
-        batch = get_batch_fn(id=submission_id)
+        batch = get_batch_fn(id=batch_id)
 
         seq_builder = Sequence.from_abstract_repr(batch.sequence_builder)
         reg = seq_builder.get_register(include_mappable=True)
@@ -264,15 +264,15 @@ class PasqalCloud(RemoteConnection):
         return results
 
     @backoff_decorator
-    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
-        """Gets the status of a submission from its ID."""
-        batch = self._sdk_connection.get_batch(id=submission_id)
-        return SubmissionStatus[batch.status]
+    def _get_batch_status(self, batch_id: str) -> BatchStatus:
+        """Gets the status of a batch from its ID."""
+        batch = self._sdk_connection.get_batch(id=batch_id)
+        return BatchStatus[batch.status]
 
     @backoff_decorator
-    def _get_job_ids(self, submission_id: str) -> list[str]:
-        """Gets all the job IDs within a submission."""
-        batch = self._sdk_connection.get_batch(id=submission_id)
+    def _get_job_ids(self, batch_id: str) -> list[str]:
+        """Gets all the job IDs within a batch."""
+        batch = self._sdk_connection.get_batch(id=batch_id)
         return [job.id for job in batch.ordered_jobs]
 
     def _convert_configuration(

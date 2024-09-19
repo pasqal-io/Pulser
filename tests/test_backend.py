@@ -23,11 +23,11 @@ from pulser.backend.abc import Backend
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
+    BatchStatus,
     JobStatus,
     RemoteConnection,
     RemoteResults,
     RemoteResultsError,
-    SubmissionStatus,
     _OpenBatchContextManager,
 )
 from pulser.devices import AnalogDevice, MockDevice
@@ -113,7 +113,7 @@ class _MockConnection(RemoteConnection):
         return RemoteResults("abcd", self)
 
     def _fetch_result(
-        self, submission_id: str, job_ids: list[str] | None = None
+        self, batch_id: str, job_ids: list[str] | None = None
     ) -> typing.Sequence[Result]:
         self._progress_calls += 1
         if self._progress_calls == 1:
@@ -122,12 +122,12 @@ class _MockConnection(RemoteConnection):
         return (self.result,)
 
     def _query_job_progress(
-        self, submission_id: str
+        self, batch_id: str
     ) -> typing.Mapping[str, tuple[JobStatus, Result | None]]:
         return {"abcd": (JobStatus.DONE, self.result)}
 
-    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
-        return SubmissionStatus.DONE
+    def _get_batch_status(self, batch_id: str) -> BatchStatus:
+        return BatchStatus.DONE
 
     def _close_batch(self, batch_id: str) -> None:
         self._got_closed = batch_id
@@ -222,9 +222,9 @@ def test_qpu_backend(sequence):
         assert ob.backend._batch_id == "abcd"
         assert isinstance(ob, _OpenBatchContextManager)
         results = qpu.run(job_params=[{"runs": 200}])
-        # submission_id should differ bc of how MockConnection is written
+        # batch_id should differ bc of how MockConnection is written
         # confirms the batch_id was provided to submit()
-        assert results._submission_id == "dcba"
+        assert results.batch_id == "dcba"
         assert isinstance(results, RemoteResults)
     assert qpu._batch_id is None
     assert connection._got_closed == "abcd"
