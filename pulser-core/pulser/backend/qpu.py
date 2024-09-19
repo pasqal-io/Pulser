@@ -65,13 +65,7 @@ class QPUBackend(RemoteBackend):
         self.validate_job_params(
             job_params or [], self._sequence.device.max_runs
         )
-        results = self._connection.submit(
-            self._sequence,
-            job_params=job_params,
-            wait=wait,
-            batch_id=self._batch_id,
-        )
-        return cast(RemoteResults, results)
+        return cast(RemoteResults, super().run(job_params, wait))
 
     @staticmethod
     def validate_job_params(

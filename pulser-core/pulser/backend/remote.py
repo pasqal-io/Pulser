@@ -273,6 +273,38 @@ class RemoteBackend(Backend):
         self._connection = connection
         self._batch_id: str | None = None
 
+    def run(
+        self, job_params: list[JobParams] | None = None, wait: bool = False
+    ) -> RemoteResults | tuple[RemoteResults, ...]:
+        """Runs the sequence on the remote backend and returns the result.
+
+        Args:
+            job_params: A list of parameters for each job to execute. Each
+                mapping must contain a defined 'runs' field specifying
+                the number of times to run the same sequence. If the sequence
+                is parametrized, the values for all the variables necessary
+                to build the sequence must be given in it's own mapping, for
+                each job, under the 'variables' field.
+            wait: Whether to wait until the results of the jobs become
+                available.  If set to False, the call is non-blocking and the
+                obtained results' status can be checked using their `status`
+                property.
+
+        Returns:
+            The results, which can be accessed once all sequences have been
+            successfully executed.
+        """
+        return self._connection.submit(
+            self._sequence,
+            job_params=job_params,
+            wait=wait,
+            **self._submit_kwargs(),
+        )
+
+    def _submit_kwargs(self) -> dict[str, Any]:
+        """Keyword arguments given to any call to RemoteConnection.submit()."""
+        return dict(batch_id=self._batch_id)
+
     @staticmethod
     def _type_check_job_params(job_params: list[JobParams] | None) -> None:
         if not isinstance(job_params, list):
@@ -302,7 +334,11 @@ class _OpenBatchContextManager:
     def __enter__(self) -> _OpenBatchContextManager:
         batch = cast(
             RemoteResults,
-            self.backend._connection.submit(self.backend._sequence, open=True),
+            self.backend._connection.submit(
+                self.backend._sequence,
+                open=True,
+                **self.backend._submit_kwargs(),
+            ),
         )
         self.backend._batch_id = batch.batch_id
         return self
