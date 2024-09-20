@@ -1,2 +1,2 @@
-pasqal-cloud ~= 0.12.0
+pasqal-cloud ~= 0.12
 backoff ~= 2.2
