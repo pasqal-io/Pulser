@@ -27,6 +27,7 @@ import pulser
 import pulser_pasqal
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
+    BatchStatus,
     JobStatus,
     RemoteConnection,
     RemoteResults,
@@ -136,6 +137,8 @@ def mock_pasqal_cloud_sdk(mock_batch):
 
         mock_cloud_sdk.create_batch = MagicMock(return_value=mock_batch)
         mock_cloud_sdk.get_batch = MagicMock(return_value=mock_batch)
+        mock_cloud_sdk.add_jobs = MagicMock(return_value=mock_batch)
+        mock_cloud_sdk._close_batch = MagicMock(return_value=None)
         mock_cloud_sdk.get_device_specs_dict = MagicMock(
             return_value={test_device.name: test_device.to_abstract_repr()}
         )
@@ -152,6 +155,36 @@ def fixt(mock_batch):
 
 @pytest.mark.parametrize("with_job_id", [False, True])
 def test_remote_results(fixt, mock_batch, with_job_id):
+    with pytest.raises(
+        ValueError,
+        match="'submission_id' and 'batch_id' cannot be simultaneously",
+    ):
+        RemoteResults(
+            mock_batch.id,
+            submission_id=mock_batch.id,
+            connection=fixt.pasqal_cloud,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="'submission_id' and 'batch_id' cannot be simultaneously",
+    ):
+        RemoteResults(
+            batch_id=mock_batch.id,
+            submission_id=mock_batch.id,
+            connection=fixt.pasqal_cloud,
+        )
+
+    with pytest.warns(
+        DeprecationWarning,
+        match="'submission_id' has been deprecated and replaced by 'batch_id'",
+    ):
+        res_ = RemoteResults(
+            submission_id=mock_batch.id,
+            connection=fixt.pasqal_cloud,
+        )
+        assert res_.batch_id == mock_batch.id
+
     with pytest.raises(
         RuntimeError, match=re.escape("does not contain jobs ['badjobid']")
     ):
@@ -176,9 +209,16 @@ def test_remote_results(fixt, mock_batch, with_job_id):
     fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
         id=remote_results.batch_id
     )
+
+    with pytest.warns(
+        DeprecationWarning,
+        match=re.escape("'RemoteResults.get_status()' has been deprecated,"),
+    ):
+        assert remote_results.get_status() == SubmissionStatus.DONE
     fixt.mock_cloud_sdk.get_batch.reset_mock()
 
-    assert remote_results.get_status() == SubmissionStatus.DONE
+    assert remote_results.get_batch_status() == BatchStatus.DONE
+
     fixt.mock_cloud_sdk.get_batch.assert_called_once_with(
         id=remote_results.batch_id
     )
@@ -200,7 +240,7 @@ def test_remote_results(fixt, mock_batch, with_job_id):
     assert hasattr(remote_results, "_results")
 
     fixt.mock_cloud_sdk.get_batch.reset_mock()
-    available_results = remote_results.get_available_results("id")
+    available_results = remote_results.get_available_results()
     assert available_results == {
         job.id: SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
@@ -241,7 +281,7 @@ def test_partial_results():
     )
     fixt.mock_cloud_sdk.get_batch.reset_mock()
 
-    available_results = remote_results.get_available_results(batch.id)
+    available_results = remote_results.get_available_results()
     assert available_results == {
         job.id: SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
@@ -283,7 +323,7 @@ def test_partial_results():
     )
     fixt.mock_cloud_sdk.get_batch.reset_mock()
 
-    available_results = remote_results.get_available_results(batch.id)
+    available_results = remote_results.get_available_results()
     assert available_results == {
         job.id: SampledResult(
             atom_order=("q0", "q1", "q2", "q3"),
@@ -403,6 +443,22 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_batch):
     ]
 
     remote_results = fixt.pasqal_cloud.submit(
+        seq, job_params=job_params, batch_id="open_batch"
+    )
+    fixt.mock_cloud_sdk.get_batch.assert_any_call(id="open_batch")
+    fixt.mock_cloud_sdk.add_jobs.assert_called_once_with(
+        "open_batch",
+        jobs=job_params,
+    )
+    # The MockBatch returned before and after submission is the same
+    # so no new job ids are found
+    assert remote_results.job_ids == []
+
+    assert fixt.pasqal_cloud.supports_open_batch() is True
+    fixt.pasqal_cloud._close_batch("open_batch")
+    fixt.mock_cloud_sdk.close_batch.assert_called_once_with("open_batch")
+
+    remote_results = fixt.pasqal_cloud.submit(
         seq,
         job_params=job_params,
         emulator=emulator,
@@ -421,6 +477,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_batch):
             emulator=emulator,
             configuration=sdk_config,
             wait=False,
+            open=False,
         )
     )
 
@@ -437,6 +494,37 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_batch):
         )
 
     assert isinstance(remote_results, RemoteResults)
+    with pytest.warns(
+        DeprecationWarning,
+        match=re.escape("'RemoteResults.get_status()' has been deprecated,"),
+    ):
+        assert remote_results.get_status() == SubmissionStatus.DONE
+    assert remote_results.get_batch_status() == BatchStatus.DONE
+
+    with pytest.warns(
+        DeprecationWarning,
+        match=re.escape("'RemoteResults._submission_id' has been deprecated,"),
+    ):
+        assert remote_results._submission_id == remote_results.batch_id
+
+    fixt.mock_cloud_sdk.get_batch.assert_called_with(
+        id=remote_results.batch_id
+    )
+
+    fixt.mock_cloud_sdk.get_batch.reset_mock()
+    results = remote_results.results
+    fixt.mock_cloud_sdk.get_batch.assert_called_with(
+        id=remote_results.batch_id
+    )
+    assert results == tuple(
+        SampledResult(
+            atom_order=("q0", "q1", "q2", "q3"),
+            meas_basis="ground-rydberg",
+            bitstring_counts=_job.result,
+        )
+        for _job in mock_batch.ordered_jobs
+    )
+    assert hasattr(remote_results, "_results")
 
 
 @pytest.mark.parametrize("emu_cls", [EmuTNBackend, EmuFreeBackend])
@@ -536,4 +624,5 @@ def test_emulators_run(fixt, seq, emu_cls, parametrized: bool, mimic_qpu):
         emulator=emulator_type,
         configuration=sdk_config,
         wait=False,
+        open=False,
     )
