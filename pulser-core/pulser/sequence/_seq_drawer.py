@@ -28,6 +28,7 @@ from matplotlib.figure import Figure
 from scipy.interpolate import CubicSpline
 
 import pulser
+import pulser.math as pm
 from pulser import Register, Register3D
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
@@ -118,7 +119,27 @@ class ChannelDrawContent:
     phase_modulated: bool = False
 
     def __post_init__(self) -> None:
-        self.curves_on = {"amplitude": True, "detuning": False, "phase": False}
+        # Make sure there are no tensors in the channel samples
+        self.samples.amp = pm.AbstractArray(
+            self.samples.amp.as_array(detach=True)
+        )
+        self.samples.det = pm.AbstractArray(
+            self.samples.det.as_array(detach=True)
+        )
+        self.samples.phase = pm.AbstractArray(
+            self.samples.phase.as_array(detach=True)
+        )
+        if self.samples._centered_phase is not None:
+            self.samples._centered_phase = pm.AbstractArray(
+                self.samples._centered_phase.as_array(detach=True)
+            )
+
+        is_dmm = isinstance(self.samples, DMMSamples)
+        self.curves_on = {
+            "amplitude": not is_dmm,
+            "detuning": is_dmm,
+            "phase": False,
+        }
 
     @property
     def _samples_from_curves(self) -> dict[str, str]:
@@ -166,7 +187,10 @@ class ChannelDrawContent:
     ) -> list[np.ndarray]:
         curves = []
         for qty in CURVES_ORDER:
-            qty_arr = getattr(samples, self._samples_from_curves[qty])
+            qty_arr = cast(
+                pm.AbstractArray,
+                getattr(samples, self._samples_from_curves[qty]),
+            ).as_array(detach=True)
             if "phase" in qty:
                 qty_arr = qty_arr / (2 * np.pi)
             curves.append(qty_arr)
@@ -365,7 +389,7 @@ def _draw_register_det_maps(
     )
     # Draw masked register
     if register:
-        pos = np.array(register._coords)
+        pos = register._coords_arr.as_array(detach=True)
         title = (
             "Register"
             if sampled_seq._slm_mask.targets == set()
@@ -425,7 +449,7 @@ def _draw_register_det_maps(
                 else cast(DMMSamples, sampled_seq.channel_samples[ch]).qubits
             )
             reg_det_map = det_map.get_qubit_weight_map(qubits)
-            pos = np.array(list(qubits.values()))
+            pos = np.array([c.as_array(detach=True) for c in qubits.values()])
             if need_init:
                 if det_map.dimensionality == 3:
                     labels = "xyz"
@@ -517,15 +541,15 @@ def _draw_channel_content(
         shown_duration: Total duration to be shown in the X axis.
     """
 
-    def phase_str(phi: float) -> str:
+    def phase_str(phi: Any) -> str:
         """Formats a phase value for printing."""
-        value = (((phi + np.pi) % (2 * np.pi)) - np.pi) / np.pi
+        value = (((float(phi) + np.pi) % (2 * np.pi)) - np.pi) / np.pi
         if value == -1:
             return r"$\pi$"
         elif value == 0:
             return "0"  # pragma: no cover - just for safety
         else:
-            return rf"{value:.2g}$\pi$"
+            return rf"{float(value):.2g}$\pi$"
 
     data = gather_data(sampled_seq, shown_duration)
     n_channels = len(sampled_seq.channels)
@@ -533,13 +557,20 @@ def _draw_channel_content(
     time_scale = 1e3 if total_duration > 1e4 else 1
     for ch in sampled_seq.channels:
         data[ch].phase_modulated = phase_modulated
-        if np.count_nonzero(data[ch].samples.det) > 0:
-            data[ch].curves_on["detuning"] = not phase_modulated
-            data[ch].curves_on["phase"] = phase_modulated
-        if (phase_modulated or draw_phase_curve) and np.count_nonzero(
-            data[ch].samples.phase
-        ) > 0:
-            data[ch].curves_on["phase"] = True
+        curves_on = data[ch].curves_on.copy()
+        _, det_samples_, phase_samples_ = data[ch].get_input_curves()
+        non_zero_det = np.count_nonzero(det_samples_) > 0
+        non_zero_phase = np.count_nonzero(phase_samples_) > 0
+        curves_on["detuning"] = non_zero_det ^ (
+            phase_modulated and non_zero_phase
+        )
+        curves_on["phase"] = (
+            phase_modulated or draw_phase_curve
+        ) and non_zero_phase
+
+        if any(curve_on for curve_on in curves_on.values()):
+            # The channel is not empty
+            data[ch].curves_on = curves_on
 
     # Boxes for qubit and phase text
     q_box = dict(boxstyle="round", facecolor="orange")
@@ -712,7 +743,7 @@ def _draw_channel_content(
                 area_fmt = (
                     r"A: $\pi$"
                     if round(area_val, 2) == 1
-                    else rf"A: {area_val:.2g}$\pi$"
+                    else rf"A: {float(area_val):.2g}$\pi$"
                 )
                 if not print_phase:
                     txt = area_fmt
@@ -730,6 +761,7 @@ def _draw_channel_content(
                 )
 
         target_regions = []  # [[start1, [targets1], end1],...]
+        tgt_txt_ymax = ax_lims[0][1] * 0.92
         for coords in ch_data.target:
             targets = list(ch_data.target[coords])
             tgt_strs = [str(q) for q in targets]
@@ -737,7 +769,7 @@ def _draw_channel_content(
                 tgt_strs = ["⚄"]
             elif ch_obj.addressing == "Global":
                 tgt_strs = ["GLOBAL"]
-            tgt_txt_y = max_amp * 1.1 - 0.25 * (len(tgt_strs) - 1)
+            tgt_txt_y = tgt_txt_ymax - 0.25 * (len(tgt_strs) - 1)
             tgt_str = "\n".join(tgt_strs)
             if coords == "initial":
                 x = t_min + final_t * 0.005
@@ -745,7 +777,7 @@ def _draw_channel_content(
                 if ch_obj.addressing == "Global":
                     axes[0].text(
                         x,
-                        amp_top * 0.98,
+                        tgt_txt_ymax * 1.065,
                         tgt_strs[0],
                         fontsize=13 if tgt_strs == ["GLOBAL"] else 17,
                         rotation=90 if tgt_strs == ["GLOBAL"] else 0,
@@ -767,7 +799,7 @@ def _draw_channel_content(
                         msg = r"$\phi=$" + phase_str(phase)
                         axes[0].text(
                             0,
-                            max_amp * 1.1,
+                            tgt_txt_ymax,
                             msg,
                             ha="left",
                             fontsize=12,
@@ -798,7 +830,7 @@ def _draw_channel_content(
                     x = tf + final_t * 0.01 * (wrd_len + 1)
                     axes[0].text(
                         x,
-                        max_amp * 1.1,
+                        tgt_txt_ymax,
                         msg,
                         ha="left",
                         fontsize=12,
@@ -826,7 +858,7 @@ def _draw_channel_content(
                 msg = "\u27F2 " + phase_str(delta)
                 axes[0].text(
                     t_ - final_t * 8e-3,
-                    max_amp * 1.1,
+                    tgt_txt_ymax,
                     msg,
                     ha="right",
                     fontsize=14,
@@ -875,7 +907,7 @@ def _draw_channel_content(
             msg = f"Basis: {data['measurement']}"
             if len(axes) == 1:
                 mid_ax = axes[0]
-                mid_point = (amp_top + amp_bottom) / 2
+                mid_point = sum(ax_lims[0]) / 2
                 fontsize = 12
             else:
                 mid_ax = axes[-1]

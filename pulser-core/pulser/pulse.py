@@ -18,12 +18,13 @@ from __future__ import annotations
 import functools
 import itertools
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 import pulser
+import pulser.math as pm
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.utils import obj_to_dict
 from pulser.parametrized import Parametrized, ParamObj
@@ -75,7 +76,7 @@ class Pulse:
 
     amplitude: Waveform = field(init=False)
     detuning: Waveform = field(init=False)
-    phase: float = field(init=False)
+    phase: pm.AbstractArray = field(init=False)
     post_phase_shift: float = field(default=0.0, init=False)
 
     def __new__(cls, *args, **kwargs):  # type: ignore
@@ -88,10 +89,10 @@ class Pulse:
 
     def __init__(
         self,
-        amplitude: Union[Waveform, Parametrized],
-        detuning: Union[Waveform, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        amplitude: Waveform | Parametrized,
+        detuning: Waveform | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ):
         """Initializes a new Pulse."""
         if not (
@@ -103,15 +104,17 @@ class Pulse:
             raise ValueError(
                 "The duration of detuning and amplitude waveforms must match."
             )
-        if np.any(amplitude.samples < 0):
+        if np.any(amplitude.samples.as_array(detach=True) < 0):
             raise ValueError(
                 "All samples of an amplitude waveform must be "
                 "greater than or equal to zero."
             )
         object.__setattr__(self, "amplitude", amplitude)
         object.__setattr__(self, "detuning", detuning)
-        phase = cast(float, phase)
-        object.__setattr__(self, "phase", float(phase) % (2 * np.pi))
+        assert not isinstance(phase, Parametrized)
+        if (phase_ := pm.AbstractArray(phase, dtype=float)).size != 1:
+            raise TypeError(f"'phase' must be a single float, not {phase!r}.")
+        object.__setattr__(self, "phase", phase_ % (2 * np.pi))
         post_phase_shift = cast(float, post_phase_shift)
         object.__setattr__(
             self, "post_phase_shift", float(post_phase_shift) % (2 * np.pi)
@@ -126,10 +129,10 @@ class Pulse:
     @parametrize
     def ConstantDetuning(
         cls,
-        amplitude: Union[Waveform, Parametrized],
-        detuning: Union[float, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        amplitude: Waveform | Parametrized,
+        detuning: float | pm.TensorLike | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Creates a Pulse with an amplitude waveform and a constant detuning.
 
@@ -149,10 +152,10 @@ class Pulse:
     @parametrize
     def ConstantAmplitude(
         cls,
-        amplitude: Union[float, Parametrized],
-        detuning: Union[Waveform, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        amplitude: float | pm.TensorLike | Parametrized,
+        detuning: Waveform | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a detuning waveform.
 
@@ -171,11 +174,11 @@ class Pulse:
     @classmethod
     def ConstantPulse(
         cls,
-        duration: Union[int, Parametrized],
-        amplitude: Union[float, Parametrized],
-        detuning: Union[float, Parametrized],
-        phase: Union[float, Parametrized],
-        post_phase_shift: Union[float, Parametrized] = 0.0,
+        duration: int | Parametrized,
+        amplitude: float | pm.TensorLike | Parametrized,
+        detuning: float | pm.TensorLike | Parametrized,
+        phase: float | pm.TensorLike | Parametrized,
+        post_phase_shift: float | Parametrized = 0.0,
     ) -> Pulse:
         """Pulse with a constant amplitude and a constant detuning.
 
@@ -236,15 +239,15 @@ class Pulse:
         if isinstance(phase, ConstantWaveform):
             detuning = ConstantWaveform(phase.duration, 0.0)
         elif isinstance(phase, RampWaveform):
-            detuning = ConstantWaveform(phase.duration, -phase.slope * 1e3)
+            detuning = ConstantWaveform(phase.duration, -phase._slope * 1e3)
         else:
-            detuning_samples = -np.diff(phase.samples) * 1e3  # rad/ns->rad/µs
+            detuning_samples = -pm.diff(phase.samples) * 1e3  # rad/ns->rad/µs
             # Use the same value in the first two detuning samples
             detuning = CustomWaveform(
-                np.pad(detuning_samples, (1, 0), mode="edge")
+                pm.pad(detuning_samples, (1, 0), mode="edge")
             )
         # Adjust phase_c to incorporate the first detuning sample
-        phase_c = phase.first_value + detuning.first_value * 1e-3
+        phase_c = phase[0] + detuning[0] * 1e-3
         return cls(amplitude, detuning, phase_c, post_phase_shift)
 
     def draw(self) -> None:
@@ -319,15 +322,15 @@ class Pulse:
         return (
             f"Pulse(Amp={self.amplitude!s} rad/µs, "
             f"Detuning={self.detuning!s} rad/µs, "
-            f"Phase={self.phase:.3g})"
+            f"Phase={float(self.phase):.3g})"
         )
 
     def __repr__(self) -> str:
         return (
             f"Pulse(amp={self.amplitude!r} rad/µs, "
             f"detuning={self.detuning!r} rad/µs, "
-            f"phase={self.phase:.3g}, "
-            f"post_phase_shift={self.post_phase_shift:.3g})"
+            f"phase={float(self.phase):.3g}, "
+            f"post_phase_shift={float(self.post_phase_shift):.3g})"
         )
 
     def __eq__(self, other: Any) -> bool:
@@ -346,7 +349,7 @@ class Pulse:
         return bool(
             self.amplitude == other.amplitude
             and self.detuning == other.detuning
-            and check_phase_eq(self.phase, other.phase)
+            and check_phase_eq(float(self.phase), float(other.phase))
             and check_phase_eq(self.post_phase_shift, other.post_phase_shift)
         )
 

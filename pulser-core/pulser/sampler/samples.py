@@ -5,11 +5,17 @@ from __future__ import annotations
 import itertools
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast, get_args
 
 import numpy as np
 
-from pulser.channels.base_channel import Channel
+import pulser.math as pm
+from pulser.channels.base_channel import (
+    EIGENSTATES,
+    Channel,
+    States,
+    get_states_from_bases,
+)
 from pulser.channels.eom import BaseEOM
 from pulser.register import QubitId
 from pulser.register.weight_maps import DetuningMap
@@ -34,9 +40,9 @@ def _prepare_dict(N: int, in_xy: bool = False) -> dict:
 
     def new_qty_dict() -> dict:
         return {
-            _AMP: np.zeros(N),
-            _DET: np.zeros(N),
-            _PHASE: np.zeros(N),
+            _AMP: pm.AbstractArray(np.zeros(N)),
+            _DET: pm.AbstractArray(np.zeros(N)),
+            _PHASE: pm.AbstractArray(np.zeros(N)),
         }
 
     def new_qdict() -> dict:
@@ -90,15 +96,15 @@ class _SlmMask:
 class ChannelSamples:
     """Gathers samples of a channel."""
 
-    amp: np.ndarray
-    det: np.ndarray
-    phase: np.ndarray
+    amp: pm.AbstractArray
+    det: pm.AbstractArray
+    phase: pm.AbstractArray
     slots: list[_PulseTargetSlot] = field(default_factory=list)
     eom_blocks: list[_EOMSettings] = field(default_factory=list)
     eom_start_buffers: list[tuple[int, int]] = field(default_factory=list)
     eom_end_buffers: list[tuple[int, int]] = field(default_factory=list)
     target_time_slots: list[_TimeSlot] = field(default_factory=list)
-    _centered_phase: np.ndarray | None = None
+    _centered_phase: pm.AbstractArray | None = None
 
     def __post_init__(self) -> None:
         assert (
@@ -124,7 +130,7 @@ class ChannelSamples:
         )
 
     @property
-    def centered_phase(self) -> np.ndarray:
+    def centered_phase(self) -> pm.AbstractArray:
         """The phase samples centered in ]-π, π]."""
         if self._centered_phase is not None:
             return self._centered_phase
@@ -133,7 +139,7 @@ class ChannelSamples:
         return phase_
 
     @property
-    def phase_modulation(self) -> np.ndarray:
+    def phase_modulation(self) -> pm.AbstractArray:
         r"""The phase modulation samples (in rad).
 
         Constructed by combining the integral of the detuning samples with the
@@ -141,9 +147,7 @@ class ChannelSamples:
 
         .. math:: \phi(t) = \phi_c(t) - \sum_{k=0}^{t} \delta(k)
         """
-        return cast(
-            np.ndarray, self.centered_phase - np.cumsum(self.det * 1e-3)
-        )
+        return self.centered_phase - pm.cumsum(self.det * 1e-3)
 
     def extend_duration(self, new_duration: int) -> ChannelSamples:
         """Extends the duration of the samples.
@@ -162,26 +166,26 @@ class ChannelSamples:
         if extension < 0:
             raise ValueError("Can't extend samples to a lower duration.")
 
-        new_amp = np.pad(self.amp, (0, extension))
+        new_amp = pm.pad(self.amp, (0, extension))
         # When in EOM mode, we need to keep the detuning at detuning_off
         if self.eom_blocks and self.eom_blocks[-1].tf is None:
-            final_detuning = self.eom_blocks[-1].detuning_off
+            final_detuning = float(self.eom_blocks[-1].detuning_off)
         else:
             final_detuning = 0.0
-        new_detuning = np.pad(
+        new_detuning = pm.pad(
             self.det,
             (0, extension),
-            constant_values=(final_detuning,),
             mode="constant",
+            constant_values=final_detuning,
         )
-        new_phase = np.pad(
+        new_phase = pm.pad(
             self.phase,
             (0, extension),
             mode="edge" if self.phase.size > 0 else "constant",
         )
         _new_centered_phase = None
         if self._centered_phase is not None:
-            _new_centered_phase = np.pad(
+            _new_centered_phase = pm.pad(
                 self._centered_phase,
                 (0, extension),
                 mode="edge" if self._centered_phase.size > 0 else "constant",
@@ -201,7 +205,11 @@ class ChannelSamples:
         The channel is considered empty if all amplitude and detuning
         samples are zero.
         """
-        return np.count_nonzero(self.amp) + np.count_nonzero(self.det) == 0
+        return (
+            np.count_nonzero(self.amp.as_array(detach=True))
+            + np.count_nonzero(self.det.as_array(detach=True))
+            == 0
+        )
 
     def _generate_std_samples(self) -> ChannelSamples:
         new_samples = {
@@ -253,10 +261,10 @@ class ChannelSamples:
         """
 
         def masked(
-            samples: np.ndarray,
+            samples: pm.AbstractArray,
             mask: np.ndarray,
             keep_end_values: bool = False,
-        ) -> np.ndarray:
+        ) -> pm.AbstractArray:
             new_samples = samples.copy()
             # Extend the mask to fit the size of the samples
             mask = np.pad(mask, (0, len(new_samples) - len(mask)), mode="edge")
@@ -289,9 +297,9 @@ class ChannelSamples:
                 new_samples[~mask] = 0
             return new_samples
 
-        new_samples: dict[str, np.ndarray] = {}
+        new_samples: dict[str, pm.AbstractArray] = {}
 
-        eom_samples = {
+        eom_samples: dict[str, pm.AbstractArray] = {
             key: getattr(self, key).copy() for key in ("amp", "det")
         }
 
@@ -351,7 +359,7 @@ class ChannelSamples:
                     )
                 else:
                     std_mask = ~eom_mask
-                    modulated_buffer = np.zeros_like(modulated_std)
+                    modulated_buffer = pm.AbstractArray(modulated_std) * 0.0
 
                 std = masked(modulated_std, std_mask)
                 buffers = masked(
@@ -379,10 +387,13 @@ class ChannelSamples:
                     # such that the modulation starts off from that value
                     # We then remove the extra value after modulation
                     if eom_mask[0]:
-                        samples_ = np.insert(
+                        samples_ = pm.pad(
                             samples_,
-                            0,
-                            self.eom_blocks[0].detuning_off,
+                            (1, 0),
+                            "constant",
+                            constant_values=float(
+                                self.eom_blocks[0].detuning_off
+                            ),
                         )
                     # Finally, the modified EOM samples are modulated
                     modulated_eom = channel_obj.modulate(
@@ -403,7 +414,7 @@ class ChannelSamples:
                 # Extend shortest arrays to match the longest before summing
                 new_samples[key] = sample_arrs[-1]
                 for arr in sample_arrs[:-1]:
-                    arr = np.pad(
+                    arr = pm.pad(
                         arr,
                         (0, sample_arrs[-1].size - arr.size),
                     )
@@ -418,7 +429,9 @@ class ChannelSamples:
             self.centered_phase, keep_ends=True
         )
         for key in new_samples:
-            new_samples[key] = new_samples[key][slice(0, max_duration)]
+            new_samples[key] = new_samples[key].astype(float)[
+                slice(0, max_duration)
+            ]
         return replace(self, **new_samples)
 
 
@@ -430,7 +443,10 @@ class DMMSamples(ChannelSamples):
     # Although these shouldn't have a default, in this way we can
     # subclass ChannelSamples
     detuning_map: DetuningMap | None = None
-    qubits: dict[QubitId, np.ndarray] = field(default_factory=dict)
+    qubits: dict[QubitId, pm.AbstractArray] = field(default_factory=dict)
+
+
+_SamplesType = Literal["abstract", "array", "tensor"]
 
 
 @dataclass
@@ -469,6 +485,13 @@ class SequenceSamples:
         }
 
     @property
+    def eigenbasis(self) -> list[States]:
+        """The basis of eigenstates used for simulation."""
+        if len(self.used_bases) == 0:
+            return EIGENSTATES["XY" if self._in_xy else "ground-rydberg"]
+        return get_states_from_bases(self.used_bases)
+
+    @property
     def _in_xy(self) -> bool:
         """Checks if the sequence is in XY mode."""
         bases = {ch_obj.basis for ch_obj in self._ch_objs.values()}
@@ -488,7 +511,11 @@ class SequenceSamples:
             ],
         )
 
-    def to_nested_dict(self, all_local: bool = False) -> dict:
+    def to_nested_dict(
+        self,
+        all_local: bool = False,
+        samples_type: _SamplesType = "array",
+    ) -> dict:
         """Format in the nested dictionary form.
 
         This is the format expected by `pulser_simulation.Simulation()`.
@@ -496,12 +523,21 @@ class SequenceSamples:
         Args:
             all_local: Forces all samples to be distributed by their
                 individual targets, even when applied by a global channel.
+            samples_type: The array type to return the samples in. Can be
+                "array" (the default), "tensor" or "abstract".
 
         Returns:
             A nested dictionary splitting the samples according to their
             addressing ('Global' or 'Local'), the targeted basis
             and, in the 'Local' case, the targeted qubit.
         """
+        _samples_type_options = get_args(_SamplesType)
+        if samples_type not in _samples_type_options:
+            raise ValueError(
+                f"'samples_type' must be one of {_samples_type_options!r}, "
+                f"not {samples_type!r}."
+            )
+
         d = _prepare_dict(self.max_duration, in_xy=self._in_xy)
         for chname, samples in zip(self.channels, self.samples_list):
             cs = (
@@ -551,7 +587,25 @@ class SequenceSamples:
                         )
                         d[_LOCAL][basis][t][_PHASE][times] += cs.phase[times]
 
-        return _default_to_regular(d)
+        regular_dict = _default_to_regular(d)
+
+        def cast_arrays(arr_dict: dict) -> dict:
+            for k in arr_dict:
+                if isinstance(arr_dict[k], dict):
+                    arr_dict[k] = cast_arrays(arr_dict[k])
+                    continue
+                assert isinstance(arr := arr_dict[k], pm.AbstractArray)
+                arr_dict[k] = (
+                    arr.as_tensor()
+                    if samples_type == "tensor"
+                    else arr.as_array(detach=True)
+                )
+            return arr_dict
+
+        if samples_type != "abstract":
+            regular_dict = cast_arrays(regular_dict)
+
+        return regular_dict
 
     def __repr__(self) -> str:
         blocks = [

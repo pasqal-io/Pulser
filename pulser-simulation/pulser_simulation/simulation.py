@@ -28,6 +28,7 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
+from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
@@ -163,10 +164,10 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self._hamiltonian.basis_name in {"digital", "all"}:
+            if "all" in self.basis_name:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self._hamiltonian.basis_name
+                self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
 
     @property
@@ -190,7 +191,7 @@ class QutipEmulator:
         return self._hamiltonian.basis_name
 
     @property
-    def basis(self) -> dict[str, Any]:
+    def basis(self) -> dict[States, Any]:
         """The basis in which result is expressed."""
         return self._hamiltonian.basis
 
@@ -217,7 +218,25 @@ class QutipEmulator:
                 " support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(cfg.to_noise_model())
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting it to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
@@ -250,34 +269,35 @@ class QutipEmulator:
         diff_noise_set = new_noise_set - old_noise_set
         # Create temporary param_dict to add noise parameters:
         param_dict: dict[str, Any] = asdict(self._hamiltonian.config)
-        # Begin populating with added noise parameters:
-        param_dict["noise_types"] = tuple(new_noise_set)
-        if "SPAM" in diff_noise_set:
-            param_dict["state_prep_error"] = noise_model.state_prep_error
-            param_dict["p_false_pos"] = noise_model.p_false_pos
-            param_dict["p_false_neg"] = noise_model.p_false_neg
-        if "doppler" in diff_noise_set:
-            param_dict["temperature"] = noise_model.temperature
-        if "amplitude" in diff_noise_set:
-            param_dict["laser_waist"] = noise_model.laser_waist
-            param_dict["amp_sigma"] = noise_model.amp_sigma
-        if "dephasing" in diff_noise_set:
-            param_dict["dephasing_rate"] = noise_model.dephasing_rate
-            param_dict["hyperfine_dephasing_rate"] = (
-                noise_model.hyperfine_dephasing_rate
-            )
-        if "relaxation" in diff_noise_set:
-            param_dict["relaxation_rate"] = noise_model.relaxation_rate
-        if "depolarizing" in diff_noise_set:
-            param_dict["depolarizing_rate"] = noise_model.depolarizing_rate
-        if "eff_noise" in diff_noise_set:
-            param_dict["eff_noise_opers"] = noise_model.eff_noise_opers
-            param_dict["eff_noise_rates"] = noise_model.eff_noise_rates
-        # update runs:
-        param_dict["runs"] = noise_model.runs
-        param_dict["samples_per_run"] = noise_model.samples_per_run
+        relevant_params = NoiseModel._find_relevant_params(
+            diff_noise_set,
+            noise_model.state_prep_error,
+            noise_model.amp_sigma,
+            noise_model.laser_waist,
+        )
+        for param in relevant_params:
+            param_dict[param] = getattr(noise_model, param)
         # set config with the new parameters:
+        param_dict.pop("noise_types")
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(NoiseModel(**param_dict))
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting initial state to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -484,7 +504,10 @@ class QutipEmulator:
         def get_min_variation(ch_sample: ChannelSamples) -> int:
             end_point = ch_sample.duration - 1
             min_variations: list[int] = []
-            for sample in (ch_sample.amp, ch_sample.det):
+            for sample in (
+                ch_sample.amp.as_array(detach=True),
+                ch_sample.det.as_array(detach=True),
+            ):
                 min_variations.append(
                     int(
                         np.min(
@@ -546,6 +569,7 @@ class QutipEmulator:
                 raise ValueError("`progress_bar` must be a bool.")
 
             if (
+                # TODO: Check that the relevant dephasing parameter is > 0.
                 "dephasing" in self.config.noise
                 or "relaxation" in self.config.noise
                 or "depolarizing" in self.config.noise
@@ -572,14 +596,14 @@ class QutipEmulator:
                     tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self._hamiltonian.basis_name,
+                    self._meas_basis in self.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
                 self._hamiltonian._size,
-                self._hamiltonian.basis_name,
+                self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -587,7 +611,19 @@ class QutipEmulator:
 
         # Check if noises ask for averaging over multiple runs:
         if set(self.config.noise).issubset(
-            {"dephasing", "relaxation", "SPAM", "depolarizing", "eff_noise"}
+            {
+                "dephasing",
+                "relaxation",
+                "SPAM",
+                "depolarizing",
+                "eff_noise",
+                "amplitude",
+                "leakage",
+            }
+        ) and (
+            # If amplitude is in noise, not resampling needs amp_sigma=0.
+            "amplitude" not in self.config.noise
+            or self.config.amp_sigma == 0.0
         ):
             # If there is "SPAM", the preparation errors must be zero
             if "SPAM" not in self.config.noise or self.config.eta == 0:
@@ -655,7 +691,7 @@ class QutipEmulator:
         return NoisyResults(
             results,
             self._hamiltonian._size,
-            self._hamiltonian.basis_name,
+            self.basis_name,
             self._eval_times_array,
             n_measures,
         )

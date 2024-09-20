@@ -22,7 +22,12 @@ import pytest
 import pulser
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
-from pulser.devices import Device, DigitalAnalogDevice, VirtualDevice
+from pulser.devices import (
+    Device,
+    DigitalAnalogDevice,
+    MockDevice,
+    VirtualDevice,
+)
 from pulser.register import Register, Register3D
 from pulser.register.register_layout import RegisterLayout
 from pulser.register.special_layouts import (
@@ -188,6 +193,30 @@ def test_default_channel_ids(test_params):
     )
 
 
+@pytest.mark.parametrize(
+    "channels, states",
+    [
+        ((Rydberg.Local(None, None),), ["r", "g"]),
+        ((Raman.Local(None, None),), ["g", "h"]),
+        (DigitalAnalogDevice.channel_objects, ["r", "g", "h"]),
+        (
+            (
+                Microwave.Global(None, None),
+                Raman.Global(None, None),
+            ),
+            ["u", "d", "g", "h"],
+        ),
+        ((Microwave.Global(None, None),), ["u", "d"]),
+        (MockDevice.channel_objects, ["u", "d", "r", "g", "h"]),
+    ],
+)
+def test_eigenstates(test_params, channels, states):
+    test_params["interaction_coeff_xy"] = 10000.0
+    test_params["channel_objects"] = channels
+    dev = VirtualDevice(**test_params)
+    assert dev.supported_states == states
+
+
 def test_tuple_conversion(test_params):
     test_params["channel_objects"] = [Rydberg.Global(None, None)]
     test_params["channel_ids"] = ["custom_channel"]
@@ -241,27 +270,39 @@ def test_rydberg_blockade():
     )
 
 
-def test_validate_register():
+@pytest.mark.parametrize("with_diff", [False, True])
+def test_validate_register(with_diff):
+    bad_coords1 = [(100.0, 0.0), (-100.0, 0.0)]
+    bad_coords2 = [(-10, 4, 0), (0, 0, 0)]
+    good_spacing = 5.0
+    if with_diff:
+        torch = pytest.importorskip("torch")
+        bad_coords1 = torch.tensor(
+            bad_coords1, dtype=float, requires_grad=True
+        )
+        bad_coords2 = torch.tensor(
+            bad_coords2, dtype=float, requires_grad=True
+        )
+        good_spacing = torch.tensor(good_spacing, requires_grad=True)
+
     with pytest.raises(ValueError, match="The number of atoms"):
         DigitalAnalogDevice.validate_register(Register.square(50))
 
-    coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
-        DigitalAnalogDevice.validate_register(coords)
+        DigitalAnalogDevice.validate_register(bad_coords1)
     with pytest.raises(ValueError, match="at most 50 μm away from the center"):
         DigitalAnalogDevice.validate_register(
-            Register.from_coordinates(coords)
+            Register.from_coordinates(bad_coords1)
         )
 
     with pytest.raises(ValueError, match="at most 2D vectors"):
-        coords = [(-10, 4, 0), (0, 0, 0)]
         DigitalAnalogDevice.validate_register(
-            Register3D(dict(enumerate(coords)))
+            Register3D(dict(enumerate(bad_coords2)))
         )
 
     with pytest.raises(ValueError, match="The minimal distance between atoms"):
         DigitalAnalogDevice.validate_register(
-            Register.triangular_lattice(3, 4, spacing=3.9)
+            Register.triangular_lattice(3, 4, spacing=good_spacing // 2)
         )
 
     with pytest.raises(
@@ -272,7 +313,9 @@ def test_validate_register():
             tri_layout.hexagonal_register(10)
         )
 
-    DigitalAnalogDevice.validate_register(Register.rectangle(5, 10, spacing=5))
+    DigitalAnalogDevice.validate_register(
+        Register.rectangle(5, 10, spacing=good_spacing)
+    )
 
 
 def test_validate_layout():
@@ -296,7 +339,7 @@ def test_validate_layout():
     valid_layout = RegisterLayout(
         Register.square(
             int(np.sqrt(DigitalAnalogDevice.max_atom_num * 2))
-        )._coords
+        )._coords_arr
     )
     DigitalAnalogDevice.validate_layout(valid_layout)
 

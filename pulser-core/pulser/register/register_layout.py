@@ -247,7 +247,7 @@ class RegisterLayout(Traps, RegDrawer):
         # Allows for serialization of subclasses without a special _to_dict()
         return obj_to_dict(
             self,
-            self._coords,
+            self._coords_arr.tolist(),
             slug=self.slug,
             _module=__name__,
             _name="RegisterLayout",

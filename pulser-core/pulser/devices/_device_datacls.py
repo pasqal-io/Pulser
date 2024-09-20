@@ -17,13 +17,16 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, cast, get_args
 
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import squareform
 
-from pulser.channels.base_channel import Channel
+import pulser.json.abstract_repr as pulser_abstract_repr
+import pulser.math as pm
+from pulser.channels.base_channel import Channel, States, get_states_from_bases
 from pulser.channels.dmm import DMM
 from pulser.devices.interaction_coefficients import c6_dict
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
@@ -271,6 +274,11 @@ class BaseDevice(ABC):
         return {ch.basis for ch in self.channel_objects}
 
     @property
+    def supported_states(self) -> list[States]:
+        """Available states ranked by their energy levels (highest first)."""
+        return get_states_from_bases(self.supported_bases)
+
+    @property
     def interaction_coeff(self) -> float:
         r"""The interaction coefficient for the chosen Rydberg level.
 
@@ -381,7 +389,7 @@ class BaseDevice(ABC):
                 f"{max_qubits} qubits."
             )
 
-    def _validate_atom_number(self, coords: list[np.ndarray]) -> None:
+    def _validate_atom_number(self, coords: list[pm.AbstractArray]) -> None:
         max_atom_num = cast(int, self.max_atom_num)
         if len(coords) > max_atom_num:
             raise ValueError(
@@ -392,7 +400,7 @@ class BaseDevice(ABC):
             )
 
     def _validate_atom_distance(
-        self, ids: list[QubitId], coords: list[np.ndarray], kind: str
+        self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
     ) -> None:
         def invalid_dists(dists: np.ndarray) -> np.ndarray:
             cond1 = dists - self.min_atom_distance < -(
@@ -404,9 +412,11 @@ class BaseDevice(ABC):
             return cast(np.ndarray, np.logical_or(cond1, cond2))
 
         if len(coords) > 1:
-            distances = pdist(coords)  # Pairwise distance between atoms
-            if np.any(invalid_dists(distances)):
-                sq_dists = squareform(distances)
+            distances = pm.pdist(
+                pm.vstack(coords)
+            )  # Pairwise distance between atoms
+            if np.any(invalid_dists(distances.as_array(detach=True))):
+                sq_dists = squareform(distances.as_array(detach=True))
                 mask = np.triu(np.ones(len(coords), dtype=bool), k=1)
                 bad_pairs = np.argwhere(
                     np.logical_and(invalid_dists(sq_dists), mask)
@@ -420,9 +430,12 @@ class BaseDevice(ABC):
                 )
 
     def _validate_radial_distance(
-        self, ids: list[QubitId], coords: list[np.ndarray], kind: str
+        self, ids: list[QubitId], coords: list[pm.AbstractArray], kind: str
     ) -> None:
-        too_far = np.linalg.norm(coords, axis=1) > self.max_radial_distance
+        too_far = (
+            np.linalg.norm(pm.vstack(coords).as_array(detach=True), axis=1)
+            > self.max_radial_distance
+        )
         if np.any(too_far):
             raise ValueError(
                 f"All {kind} must be at most {self.max_radial_distance} μm "
@@ -447,10 +460,14 @@ class BaseDevice(ABC):
         }
 
     def _validate_coords(
-        self, coords_dict: dict[QubitId, np.ndarray], kind: str = "atoms"
+        self,
+        coords_dict: (
+            Mapping[QubitId, pm.AbstractArray] | Mapping[int, np.ndarray]
+        ),
+        kind: Literal["atoms", "traps"] = "atoms",
     ) -> None:
         ids = list(coords_dict.keys())
-        coords = list(coords_dict.values())
+        coords = list(map(pm.AbstractArray, coords_dict.values()))
         if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
             and self.max_atom_num is None
@@ -710,6 +727,33 @@ class Device(BaseDevice):
         d["is_virtual"] = False
         return d
 
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> Device:
+        """Deserialize a Device from an abstract JSON object.
+
+        Warning:
+            Raises an error if the JSON string represents a VirtualDevice.
+            VirtualDevice.from_abstract_repr should be used for this case.
+
+        Args:
+            obj_str (str): the JSON string representing the Device
+                encoded in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized Device must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+
+        # Avoids circular imports
+        device = pulser_abstract_repr.deserializer.deserialize_device(obj_str)
+        if not isinstance(device, Device):
+            raise TypeError(
+                "The given schema is not related to a Device, but to a"
+                f" {type(device).__name__}."
+            )
+        return device
+
 
 @dataclass(frozen=True)
 class VirtualDevice(BaseDevice):
@@ -791,3 +835,27 @@ class VirtualDevice(BaseDevice):
         d = super()._to_abstract_repr()
         d["is_virtual"] = True
         return d
+
+    @staticmethod
+    def from_abstract_repr(obj_str: str) -> VirtualDevice:
+        """Deserialize a VirtualDevice from an abstract JSON object.
+
+        Warning:
+            If the JSON string represents a Device, the Device is converted
+            into a VirtualDevice using the `Device.to_virtual` method.
+
+        Args:
+            obj_str (str): the JSON string representing the noise model
+                encoded in the abstract JSON format.
+        """
+        if not isinstance(obj_str, str):
+            raise TypeError(
+                "The serialized VirtualDevice must be given as a string. "
+                f"Instead, got object of type {type(obj_str)}."
+            )
+
+        # Avoids circular imports
+        device = pulser_abstract_repr.deserializer.deserialize_device(obj_str)
+        if isinstance(device, Device):
+            return device.to_virtual()
+        return device

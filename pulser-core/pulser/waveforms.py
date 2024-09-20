@@ -23,7 +23,7 @@ import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Tuple, TypeVar, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,6 +31,7 @@ import scipy.interpolate as interpolate
 from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.abstract_repr.serializer import abstract_repr
 from pulser.json.exceptions import AbstractReprError
 from pulser.json.utils import obj_to_dict
@@ -51,6 +52,18 @@ __all__ = [
     "KaiserWaveform",
 ]
 
+T = TypeVar("T", int, float)
+
+
+def _cast_check(type_: type[T], value: Any, name: str) -> T:
+    try:
+        return type_(value)
+    except (ValueError, TypeError) as e:
+        raise TypeError(
+            f"'{name}' needs to be castable to {type_.__name__!s} "
+            f"but type {type(value)} was provided."
+        ) from e
+
 
 class Waveform(ABC):
     """The abstract class for a pulse's waveform."""
@@ -69,14 +82,9 @@ class Waveform(ABC):
         Args:
             duration: The waveforms duration (in ns).
         """
-        duration = cast(int, duration)
-        try:
-            _duration = int(duration)
-        except (TypeError, ValueError):
-            raise TypeError(
-                "duration needs to be castable to an int but "
-                f"type {type(duration)} was provided."
-            )
+        assert not isinstance(duration, Parametrized)
+        _duration = _cast_check(int, duration, "duration")
+
         if _duration <= 0:
             raise ValueError(
                 "A waveform must have a positive duration, "
@@ -100,11 +108,11 @@ class Waveform(ABC):
 
     @cached_property
     @abstractmethod
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         pass
 
     @property
-    def samples(self) -> np.ndarray:
+    def samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
@@ -125,7 +133,7 @@ class Waveform(ABC):
     @property
     def integral(self) -> float:
         """Integral of the waveform (in [waveform units].µs)."""
-        return float(np.sum(self.samples)) * 1e-3  # ns * rad/µs = 1e-3
+        return float(pm.sum(self._samples)) * 1e-3  # ns * rad/µs = 1e-3
 
     def draw(
         self,
@@ -169,7 +177,7 @@ class Waveform(ABC):
 
     def modulated_samples(
         self, channel: Channel, eom: bool = False
-    ) -> np.ndarray:
+    ) -> pm.AbstractArray:
         """The waveform samples as output of a given channel.
 
         This duration is adjusted according to the minimal buffer times.
@@ -181,11 +189,22 @@ class Waveform(ABC):
         Returns:
             The array of samples after modulation.
         """
+        detach = True  # We detach unless...
+        if self.samples.is_tensor and self.samples.as_tensor().requires_grad:
+            # ... the samples require grad. In this case, we clear the cache
+            # so that the modulation is recalculated with the current samples
+            self._modulated_samples.cache_clear()
+            detach = False
         start, end = self.modulation_buffers(channel)
         mod_samples = self._modulated_samples(channel, eom=eom)
         tr = channel.rise_time
         trim = slice(tr - start, len(mod_samples) - tr + end)
-        return mod_samples[trim]
+        final_samples = mod_samples[trim]
+        if detach:
+            # This ensures that we don't carry the `requires_grad` of a
+            # cached results
+            return pm.AbstractArray(final_samples.as_array(detach=True))
+        return final_samples
 
     @functools.lru_cache()
     def modulation_buffers(
@@ -212,7 +231,7 @@ class Waveform(ABC):
     @functools.lru_cache()
     def _modulated_samples(
         self, channel: Channel, eom: bool = False
-    ) -> np.ndarray:
+    ) -> pm.AbstractArray:
         """The waveform samples as output of a given channel.
 
         This is not adjusted to the minimal buffer times. Use
@@ -245,13 +264,13 @@ class Waveform(ABC):
 
     def __getitem__(
         self, index_or_slice: Union[int, slice]
-    ) -> Union[float, np.ndarray]:
+    ) -> pm.AbstractArray:
         if isinstance(index_or_slice, slice):
             s: slice = self._check_slice(index_or_slice)
             return self._samples[s]
         else:
             index: int = self._check_index(index_or_slice)
-            return cast(float, self._samples[index])
+            return self._samples[index]
 
     def _check_index(self, i: int) -> int:
         if i < -self.duration or i >= self.duration:
@@ -295,17 +314,18 @@ class Waveform(ABC):
         return slice(start, stop)
 
     @abstractmethod
-    def __mul__(self, other: float) -> Waveform:
+    def __mul__(self, other: float | ArrayLike) -> Waveform:
         pass
 
     def __neg__(self) -> Waveform:
         return self.__mul__(-1.0)
 
-    def __truediv__(self, other: float) -> Waveform:
-        if other == 0:
+    def __truediv__(self, other: float | ArrayLike) -> Waveform:
+        other_ = pm.AbstractArray(other)
+        if np.any(other_.as_array(detach=True) == 0):
             raise ZeroDivisionError("Can't divide a waveform by zero.")
         else:
-            return self.__mul__(1 / other)
+            return self.__mul__(1 / other_)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Waveform):
@@ -313,10 +333,17 @@ class Waveform(ABC):
         elif self.duration != other.duration:
             return False
         else:
-            return bool(np.all(np.isclose(self.samples, other.samples)))
+            return bool(
+                np.all(
+                    np.isclose(
+                        self.samples.as_array(detach=True),
+                        other.samples.as_array(detach=True),
+                    )
+                )
+            )
 
     def __hash__(self) -> int:
-        return hash(tuple(self.samples))
+        return hash(tuple(self.samples.tolist()))
 
     def _plot(
         self,
@@ -332,7 +359,7 @@ class Waveform(ABC):
             self.samples
             if channel is None
             else self.modulated_samples(channel)
-        )
+        ).as_array(detach=True)
         ts = np.arange(len(samples)) + start_t
         if not channel and start_t:
             # Adds zero on both ends to show rise and fall
@@ -385,15 +412,13 @@ class CompositeWaveform(Waveform):
         return duration
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
             A numpy array with a value for each time step.
         """
-        return cast(
-            np.ndarray, np.concatenate([wf.samples for wf in self._waveforms])
-        )
+        return pm.concatenate([wf.samples for wf in self._waveforms])
 
     @property
     def waveforms(self) -> list[Waveform]:
@@ -422,8 +447,9 @@ class CompositeWaveform(Waveform):
     def __repr__(self) -> str:
         return f"CompositeWaveform({self.duration} ns, {self._waveforms!r})"
 
-    def __mul__(self, other: float) -> CompositeWaveform:
-        return CompositeWaveform(*(wf * other for wf in self._waveforms))
+    def __mul__(self, other: float | ArrayLike) -> CompositeWaveform:
+        other_ = pm.AbstractArray(other, dtype=float)
+        return CompositeWaveform(*(wf * other_ for wf in self._waveforms))
 
 
 class CustomWaveform(Waveform):
@@ -434,19 +460,19 @@ class CustomWaveform(Waveform):
             The number of samples dictates the duration, in ns.
     """
 
-    def __init__(self, samples: ArrayLike):
+    def __init__(self, samples: ArrayLike | pm.TensorLike):
         """Initializes a custom waveform."""
-        samples_arr = np.array(samples, dtype=float)
-        self._samples_arr: np.ndarray = samples_arr
+        samples_arr = pm.AbstractArray(samples, dtype=float)
+        self._samples_arr: pm.AbstractArray = samples_arr
         super().__init__(len(samples_arr))
 
     @property
     def duration(self) -> int:
         """The duration of the pulse (in ns)."""
-        return self._duration
+        return int(self._duration)
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
@@ -466,8 +492,10 @@ class CustomWaveform(Waveform):
     def __repr__(self) -> str:
         return f"CustomWaveform({self.duration} ns, {self.samples!r})"
 
-    def __mul__(self, other: float) -> CustomWaveform:
-        return CustomWaveform(self._samples * float(other))
+    def __mul__(self, other: float | ArrayLike) -> CustomWaveform:
+        return CustomWaveform(
+            self._samples * pm.AbstractArray(other, dtype=float)
+        )
 
 
 class ConstantWaveform(Waveform):
@@ -481,12 +509,13 @@ class ConstantWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        value: Union[float, Parametrized],
+        value: Union[float, pm.TensorLike, Parametrized],
     ):
         """Initializes a constant waveform."""
         super().__init__(duration)
-        value = cast(float, value)
-        self._value = float(value)
+        assert not isinstance(value, Parametrized)
+        _cast_check(float, value, "value")
+        self._value = pm.AbstractArray(value, dtype=float)
 
     @property
     def duration(self) -> int:
@@ -494,13 +523,13 @@ class ConstantWaveform(Waveform):
         return self._duration
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
             A numpy array with a value for each time step.
         """
-        return np.full(self.duration, self._value)
+        return self._value * np.ones(self.duration)
 
     def change_duration(self, new_duration: int) -> ConstantWaveform:
         """Returns a new waveform with modified duration.
@@ -520,13 +549,17 @@ class ConstantWaveform(Waveform):
         return abstract_repr("ConstantWaveform", self._duration, self._value)
 
     def __str__(self) -> str:
-        return f"{self._value:.3g}"
+        return f"{float(self._value):.3g}"
 
     def __repr__(self) -> str:
-        return f"ConstantWaveform({self._duration} ns, {self._value:.3g})"
+        return (
+            f"ConstantWaveform({self._duration} ns, {float(self._value):.3g})"
+        )
 
-    def __mul__(self, other: float) -> ConstantWaveform:
-        return ConstantWaveform(self._duration, self._value * float(other))
+    def __mul__(self, other: float | ArrayLike) -> ConstantWaveform:
+        return ConstantWaveform(
+            self._duration, self._value * pm.AbstractArray(other, dtype=float)
+        )
 
 
 class RampWaveform(Waveform):
@@ -541,15 +574,17 @@ class RampWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        start: Union[float, Parametrized],
-        stop: Union[float, Parametrized],
+        start: Union[float, pm.TensorLike, Parametrized],
+        stop: Union[float, pm.TensorLike, Parametrized],
     ):
         """Initializes a ramp waveform."""
         super().__init__(duration)
-        start = cast(float, start)
-        self._start: float = float(start)
-        stop = cast(float, stop)
-        self._stop: float = float(stop)
+        assert not isinstance(start, Parametrized)
+        assert not isinstance(stop, Parametrized)
+        _cast_check(float, start, "start")
+        _cast_check(float, stop, "stop")
+        self._start = pm.AbstractArray(start, dtype=float)
+        self._stop = pm.AbstractArray(stop, dtype=float)
 
     @property
     def duration(self) -> int:
@@ -557,18 +592,24 @@ class RampWaveform(Waveform):
         return self._duration
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
             A numpy array with a value for each time step.
         """
-        return np.linspace(self._start, self._stop, num=self._duration)
+        return (
+            self._slope * np.arange(self._duration, dtype=float) + self._start
+        )
+
+    @property
+    def _slope(self) -> pm.AbstractArray:
+        return (self._stop - self._start) / (self._duration - 1)
 
     @property
     def slope(self) -> float:
         r"""Slope of the ramp, in [waveform units] / ns."""
-        return (self._stop - self._start) / (self._duration - 1)
+        return float(self._slope)
 
     def change_duration(self, new_duration: int) -> RampWaveform:
         """Returns a new waveform with modified duration.
@@ -590,16 +631,16 @@ class RampWaveform(Waveform):
         )
 
     def __str__(self) -> str:
-        return f"Ramp({self._start:.3g}->{self._stop:.3g})"
+        return f"Ramp({float(self._start):.3g}->{float(self._stop):.3g})"
 
     def __repr__(self) -> str:
         return (
             f"RampWaveform({self._duration} ns, "
-            + f"{self._start:.3g}->{self._stop:.3g})"
+            f"{float(self._start):.3g}->{float(self._stop):.3g})"
         )
 
-    def __mul__(self, other: float) -> RampWaveform:
-        k = float(other)
+    def __mul__(self, other: float | ArrayLike) -> RampWaveform:
+        k = pm.AbstractArray(other, dtype=float)
         return RampWaveform(self._duration, self._start * k, self._stop * k)
 
 
@@ -621,31 +662,25 @@ class BlackmanWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        area: Union[float, Parametrized],
+        area: Union[float, pm.TensorLike, Parametrized],
     ):
         """Initializes a Blackman waveform."""
         super().__init__(duration)
-        try:
-            self._area: float = float(cast(float, area))
-        except (TypeError, ValueError):
-            raise TypeError(
-                "area needs to be castable to a float but "
-                f"type {type(area)} was provided."
-            )
+        assert not isinstance(area, Parametrized)
+        _cast_check(float, area, "area")
+        self._area = pm.AbstractArray(area, dtype=float)
 
-        self._norm_samples: np.ndarray = np.clip(
-            np.blackman(self._duration), 0, np.inf
+        self._norm_samples = pm.AbstractArray(
+            np.clip(np.blackman(self._duration), 0, np.inf)
         )
-        self._scaling: float = (
-            self._area / float(np.sum(self._norm_samples)) / 1e-3
-        )
+        self._scaling = self._area / pm.sum(self._norm_samples) * 1e3
 
     @classmethod
     @parametrize
     def from_max_val(
         cls,
         max_val: Union[float, Parametrized],
-        area: Union[float, Parametrized],
+        area: Union[float, pm.TensorLike, Parametrized],
     ) -> BlackmanWaveform:
         """Creates a Blackman waveform with a threshold on the maximum value.
 
@@ -666,24 +701,25 @@ class BlackmanWaveform(Waveform):
             area: The area under the waveform.
         """
         max_val = cast(float, max_val)
-        area = cast(float, area)
-        area_sign = np.sign(area)
+        assert not isinstance(area, Parametrized)
+        area_float = _cast_check(float, area, "area")
+        area_sign = np.sign(area_float)
         if np.sign(max_val) != area_sign:
             raise ValueError(
-                "The maximum value and the area must have " "matching signs."
+                "The maximum value and the area must have matching signs."
             )
 
         # Deal only with positive areas
-        area *= float(area_sign)
+        area = pm.AbstractArray(area, dtype=float) * float(area_sign)
         max_val *= float(area_sign)
 
         # A normalized Blackman waveform has an area of 0.42 * duration
-        duration = np.ceil(area / (0.42 * max_val) * 1e3)  # in ns
+        duration = np.ceil(float(area) / (0.42 * max_val) * 1e3)  # in ns
         wf = cls(duration, area)
         previous_wf = None
 
         # Adjust for rounding errors to make sure max_val is not surpassed
-        while wf._scaling > max_val:
+        while float(wf._scaling) > max_val:
             duration += 1
             previous_wf = wf
             wf = cls(duration, area)
@@ -694,7 +730,9 @@ class BlackmanWaveform(Waveform):
         if (
             previous_wf is not None
             and duration % 2 == 1
-            and np.max(wf.samples) < np.max(previous_wf.samples) <= max_val
+            and np.max(wf.samples.as_array(detach=True))
+            < np.max(previous_wf.samples.as_array(detach=True))
+            <= max_val
         ):
             wf = previous_wf
 
@@ -707,13 +745,13 @@ class BlackmanWaveform(Waveform):
         return self._duration
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
             A numpy array with a value for each time step.
         """
-        return cast(np.ndarray, self._norm_samples * self._scaling)
+        return self._norm_samples * self._scaling
 
     def change_duration(self, new_duration: int) -> BlackmanWaveform:
         """Returns a new waveform with modified duration.
@@ -734,13 +772,18 @@ class BlackmanWaveform(Waveform):
         return abstract_repr("BlackmanWaveform", self._duration, self._area)
 
     def __str__(self) -> str:
-        return f"Blackman(Area: {self._area:.3g})"
+        return f"Blackman(Area: {float(self._area):.3g})"
 
     def __repr__(self) -> str:
-        return f"BlackmanWaveform({self._duration} ns, Area: {self._area:.3g})"
+        return (
+            f"BlackmanWaveform({self._duration} ns, "
+            f"Area: {float(self._area):.3g})"
+        )
 
-    def __mul__(self, other: float) -> BlackmanWaveform:
-        return BlackmanWaveform(self._duration, self._area * float(other))
+    def __mul__(self, other: float | ArrayLike) -> BlackmanWaveform:
+        return BlackmanWaveform(
+            self._duration, self._area * pm.AbstractArray(other, dtype=float)
+        )
 
 
 class InterpolatedWaveform(Waveform):
@@ -826,14 +869,14 @@ class InterpolatedWaveform(Waveform):
         return self._duration
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform."""
         samples = self._interp_func(np.arange(self._duration))
         value_range = np.max(np.abs(samples))
         decimals = int(
             min(np.finfo(samples.dtype).precision - np.log10(value_range), 9)
         )  # Reduces decimal values below 9 for large ranges
-        return cast(np.ndarray, np.round(samples, decimals=decimals))
+        return pm.AbstractArray(np.round(samples, decimals=decimals))
 
     @property
     def interp_function(
@@ -907,9 +950,11 @@ class InterpolatedWaveform(Waveform):
         interp_str = f", Interpolator={self._kwargs['interpolator']})"
         return self.__str__()[:-1] + interp_str
 
-    def __mul__(self, other: float) -> InterpolatedWaveform:
+    def __mul__(self, other: float | ArrayLike) -> InterpolatedWaveform:
         return InterpolatedWaveform(
-            self._duration, self._values * other, **self._kwargs
+            self._duration,
+            self._values * np.array(other, dtype=float),
+            **self._kwargs,
         )
 
 
@@ -938,27 +983,20 @@ class KaiserWaveform(Waveform):
     def __init__(
         self,
         duration: Union[int, Parametrized],
-        area: Union[float, Parametrized],
+        area: Union[float, pm.TensorLike, Parametrized],
         beta: Optional[Union[float, Parametrized]] = 14.0,
     ):
         """Initializes a Kaiser waveform."""
         super().__init__(duration)
 
-        try:
-            self._area: float = float(cast(float, area))
-        except (TypeError, ValueError):
-            raise TypeError(
-                "area needs to be castable to a float but "
-                f"type {type(area)} was provided."
-            )
+        assert not isinstance(area, Parametrized)
+        _cast_check(float, area, "area")
+        self._area = pm.AbstractArray(area, dtype=float)
 
-        try:
-            self._beta: float = float(cast(float, beta))
-        except (TypeError, ValueError):
-            raise TypeError(
-                "beta needs to be castable to a float but "
-                f"type {type(beta)} was provided."
-            )
+        beta = cast(float, beta)
+        # This makes sure 'beta' is not a tensor that requires grad
+        pm.AbstractArray(beta).as_array()
+        self._beta = _cast_check(float, beta, "beta")
 
         if self._beta < 0.0:
             raise ValueError(
@@ -966,20 +1004,18 @@ class KaiserWaveform(Waveform):
                 " must be greater than 0."
             )
 
-        self._norm_samples: np.ndarray = np.clip(
-            np.kaiser(self._duration, self._beta), 0, np.inf
+        self._norm_samples = pm.AbstractArray(
+            np.clip(np.kaiser(self._duration, self._beta), 0, np.inf)
         )
 
-        self._scaling: float = (
-            self._area / float(np.sum(self._norm_samples)) / 1e-3
-        )
+        self._scaling = self._area / pm.sum(self._norm_samples) * 1e3
 
     @classmethod
     @parametrize
     def from_max_val(
         cls,
         max_val: Union[float, Parametrized],
-        area: Union[float, Parametrized],
+        area: Union[float, pm.TensorLike, Parametrized],
         beta: Optional[Union[float, Parametrized]] = 14.0,
     ) -> KaiserWaveform:
         """Creates a Kaiser waveform with a threshold on the maximum value.
@@ -1003,26 +1039,27 @@ class KaiserWaveform(Waveform):
                 The default value is 14.
         """
         max_val = cast(float, max_val)
-        area = cast(float, area)
+        assert not isinstance(area, Parametrized)
+        area_float = _cast_check(float, area, "area")
         beta = cast(float, beta)
 
-        if np.sign(max_val) != np.sign(area):
+        if np.sign(max_val) != np.sign(area_float):
             raise ValueError(
                 "The maximum value and the area must have matching signs."
             )
 
         # All computations will be done on a positive area
-
-        is_negative: bool = area < 0
+        area = pm.AbstractArray(area, dtype=float)
+        is_negative: bool = area_float < 0
         if is_negative:
-            area = -area
+            area_float = -area_float
             max_val = -max_val
 
         # Compute the ratio area / duration for a long duration
         # and use this value for a first guess of the best duration
 
         ratio: float = max_val * np.sum(np.kaiser(100, beta)) / 100
-        duration_guess: int = int(area * 1000.0 / ratio)
+        duration_guess: int = int(area_float * 1000.0 / ratio)
 
         duration_best: int = 0
 
@@ -1033,7 +1070,7 @@ class KaiserWaveform(Waveform):
             max_val_best: float = 0
             for duration in range(1, 16):
                 kaiser_temp = np.kaiser(duration, beta)
-                scaling_temp = 1000 * area / np.sum(kaiser_temp)
+                scaling_temp = 1000 * area_float / np.sum(kaiser_temp)
                 max_val_temp = np.max(kaiser_temp) * scaling_temp
                 if max_val_best < max_val_temp <= max_val:
                     max_val_best = max_val_temp
@@ -1043,7 +1080,7 @@ class KaiserWaveform(Waveform):
             # Start with a waveform based on the duration guess
 
             kaiser_guess = np.kaiser(duration_guess, beta)
-            scaling_guess = 1000 * area / np.sum(kaiser_guess)
+            scaling_guess = 1000 * area_float / np.sum(kaiser_guess)
             max_val_temp = np.max(kaiser_guess) * scaling_guess
 
             # Increase or decrease duration depending on
@@ -1055,15 +1092,10 @@ class KaiserWaveform(Waveform):
             while np.sign(max_val_temp - max_val) == step:
                 duration += step
                 kaiser_temp = np.kaiser(duration, beta)
-                scaling = 1000 * area / np.sum(kaiser_temp)
+                scaling = 1000 * area_float / np.sum(kaiser_temp)
                 max_val_temp = np.max(kaiser_temp) * scaling
 
             duration_best = duration if step == 1 else duration + 1
-
-        # Restore the original area if it was negative
-
-        if is_negative:
-            area = -area
 
         return cls(duration_best, area, beta)
 
@@ -1073,13 +1105,13 @@ class KaiserWaveform(Waveform):
         return self._duration
 
     @cached_property
-    def _samples(self) -> np.ndarray:
+    def _samples(self) -> pm.AbstractArray:
         """The value at each time step that describes the waveform.
 
         Returns:
             A numpy array with a value for each time step.
         """
-        return cast(np.ndarray, self._norm_samples * self._scaling)
+        return self._norm_samples * self._scaling
 
     def change_duration(self, new_duration: int) -> KaiserWaveform:
         """Returns a new waveform with modified duration.
@@ -1104,18 +1136,20 @@ class KaiserWaveform(Waveform):
     def __str__(self) -> str:
         return (
             f"Kaiser({self._duration} ns, "
-            f"Area: {self._area:.3g}, Beta: {self._beta:.3g})"
+            f"Area: {float(self._area):.3g}, Beta: {self._beta:.3g})"
         )
 
     def __repr__(self) -> str:
         return (
             f"KaiserWaveform(duration: {self._duration}, "
-            f"area: {self._area:.3g}, beta: {self._beta:.3g})"
+            f"area: {float(self._area):.3g}, beta: {self._beta:.3g})"
         )
 
-    def __mul__(self, other: float) -> KaiserWaveform:
+    def __mul__(self, other: float | ArrayLike) -> KaiserWaveform:
         return KaiserWaveform(
-            self._duration, self._area * float(other), self._beta
+            self._duration,
+            self._area * pm.AbstractArray(other, dtype=float),
+            self._beta,
         )
 
 

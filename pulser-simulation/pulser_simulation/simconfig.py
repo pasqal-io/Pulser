@@ -15,13 +15,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from math import sqrt
 from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
-from pulser.noise_model import NOISE_TYPES, NoiseModel
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel, NoiseTypes
 
 MASS = 1.45e-25  # kg
 KB = 1.38e-23  # J/K
@@ -38,13 +38,17 @@ SUPPORTED_NOISES: dict = {
         "doppler",
         "eff_noise",
         "SPAM",
+        "leakage",
     },
-    "XY": {
-        "dephasing",
-        "depolarizing",
-        "eff_noise",
-        "SPAM",
-    },
+    "XY": {"dephasing", "depolarizing", "eff_noise", "SPAM", "leakage"},
+}
+
+# Maps the noise model parameters with a different name in SimConfig
+_DIFF_NOISE_PARAMS = {
+    "noise_types": "noise",
+    "state_prep_error": "eta",
+    "p_false_pos": "epsilon",
+    "p_false_neg": "epsilon_prime",
 }
 
 
@@ -70,6 +74,9 @@ class SimConfig:
             simulation. You may specify just one, or a tuple of the allowed
             noise types:
 
+            - "leakage": Adds an error state 'x' to the computational
+              basis, that can interact with the other states via an
+              effective noise channel (which must be defined).
             - "relaxation": Relaxation from the Rydberg to the ground state.
             - "dephasing": Random phase (Z) flip.
             - "depolarizing": Quantum noise where the state (rho) is
@@ -99,19 +106,21 @@ class SimConfig:
         solver_options: Options for the qutip solver.
     """
 
-    noise: Union[NOISE_TYPES, tuple[NOISE_TYPES, ...]] = ()
-    runs: int = 15
-    samples_per_run: int = 5
-    temperature: float = 50.0
-    laser_waist: float = 175.0
-    amp_sigma: float = 5e-2
-    eta: float = 0.005
-    epsilon: float = 0.01
-    epsilon_prime: float = 0.05
-    relaxation_rate: float = 0.01
-    dephasing_rate: float = 0.05
-    hyperfine_dephasing_rate: float = 1e-3
-    depolarizing_rate: float = 0.05
+    noise: Union[NoiseTypes, tuple[NoiseTypes, ...]] = ()
+    runs: int = cast(int, _LEGACY_DEFAULTS["runs"])
+    samples_per_run: int = cast(int, _LEGACY_DEFAULTS["samples_per_run"])
+    temperature: float = _LEGACY_DEFAULTS["temperature"]
+    laser_waist: float = _LEGACY_DEFAULTS["laser_waist"]
+    amp_sigma: float = _LEGACY_DEFAULTS["amp_sigma"]
+    eta: float = _LEGACY_DEFAULTS["state_prep_error"]
+    epsilon: float = _LEGACY_DEFAULTS["p_false_pos"]
+    epsilon_prime: float = _LEGACY_DEFAULTS["p_false_neg"]
+    relaxation_rate: float = _LEGACY_DEFAULTS["relaxation_rate"]
+    dephasing_rate: float = _LEGACY_DEFAULTS["dephasing_rate"]
+    hyperfine_dephasing_rate: float = _LEGACY_DEFAULTS[
+        "hyperfine_dephasing_rate"
+    ]
+    depolarizing_rate: float = _LEGACY_DEFAULTS["depolarizing_rate"]
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
     solver_options: Optional[qutip.Options] = None
@@ -119,43 +128,34 @@ class SimConfig:
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
         """Creates a SimConfig from a NoiseModel."""
-        return cls(
-            noise=noise_model.noise_types,
-            runs=noise_model.runs,
-            samples_per_run=noise_model.samples_per_run,
-            temperature=noise_model.temperature,
-            laser_waist=noise_model.laser_waist,
-            amp_sigma=noise_model.amp_sigma,
-            eta=noise_model.state_prep_error,
-            epsilon=noise_model.p_false_pos,
-            epsilon_prime=noise_model.p_false_neg,
-            dephasing_rate=noise_model.dephasing_rate,
-            hyperfine_dephasing_rate=noise_model.hyperfine_dephasing_rate,
-            relaxation_rate=noise_model.relaxation_rate,
-            depolarizing_rate=noise_model.depolarizing_rate,
-            eff_noise_rates=list(noise_model.eff_noise_rates),
-            eff_noise_opers=list(map(qutip.Qobj, noise_model.eff_noise_opers)),
+        kwargs: dict[str, Any] = dict(noise=noise_model.noise_types)
+        relevant_params = NoiseModel._find_relevant_params(
+            noise_model.noise_types,
+            noise_model.state_prep_error,
+            noise_model.amp_sigma,
+            noise_model.laser_waist,
         )
+        for param in relevant_params:
+            kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
+                noise_model, param
+            )
+        kwargs.pop("with_leakage", None)
+        return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
         """Creates a NoiseModel from the SimConfig."""
-        return NoiseModel(
-            noise_types=cast(Tuple[NOISE_TYPES, ...], self.noise),
-            runs=self.runs,
-            samples_per_run=self.samples_per_run,
-            state_prep_error=self.eta,
-            p_false_pos=self.epsilon,
-            p_false_neg=self.epsilon_prime,
-            temperature=self.temperature * 1e6,  # Converts back to µK
-            laser_waist=self.laser_waist,
-            amp_sigma=self.amp_sigma,
-            dephasing_rate=self.dephasing_rate,
-            hyperfine_dephasing_rate=self.hyperfine_dephasing_rate,
-            relaxation_rate=self.relaxation_rate,
-            depolarizing_rate=self.depolarizing_rate,
-            eff_noise_rates=tuple(self.eff_noise_rates),
-            eff_noise_opers=tuple(op.full() for op in self.eff_noise_opers),
+        relevant_params = NoiseModel._find_relevant_params(
+            cast(Tuple[NoiseTypes, ...], self.noise),
+            self.eta,
+            self.amp_sigma,
+            self.laser_waist,
         )
+        kwargs = {}
+        for param in relevant_params:
+            kwargs[param] = getattr(self, _DIFF_NOISE_PARAMS.get(param, param))
+        if "temperature" in kwargs:
+            kwargs["temperature"] *= 1e6  # Converts back to µK
+        return NoiseModel(**kwargs)
 
     def __post_init__(self) -> None:
         # only one noise was given as argument : convert it to a tuple
@@ -169,13 +169,17 @@ class SimConfig:
             )
         self._change_attribute("temperature", self.temperature / 1e6)
 
-        # Kept to show error messages with the right parameter names
+        NoiseModel._check_noise_types(cast(Tuple[NoiseTypes], self.noise))
         self._check_spam_dict()
+        self._check_eff_noise()
+        NoiseModel._validate_parameters(
+            {f.name: getattr(self, f.name) for f in fields(self)}
+        )
 
-        self._check_eff_noise_opers_type()
-
-        # Runs the noise model checks
-        self.to_noise_model()
+    @property
+    def with_leakage(self) -> bool:
+        """Whether or not 'leakage' is included in the noise types."""
+        return "leakage" in self.noise
 
     @property
     def spam_dict(self) -> dict[str, float]:
@@ -240,7 +244,7 @@ class SimConfig:
     def _change_attribute(self, attr_name: str, new_value: Any) -> None:
         object.__setattr__(self, attr_name, new_value)
 
-    def _check_eff_noise_opers_type(self) -> None:
+    def _check_eff_noise(self) -> None:
         # Check the validity of operators
         for operator in self.eff_noise_opers:
             # type checking
@@ -250,6 +254,12 @@ class SimConfig:
                 raise TypeError(
                     "Operators are supposed to be of Qutip type 'oper'."
                 )
+        NoiseModel._check_eff_noise(
+            self.eff_noise_rates,
+            self.eff_noise_opers,
+            "eff_noise" in self.noise,
+            self.with_leakage,
+        )
 
     @property
     def supported_noises(self) -> dict:
