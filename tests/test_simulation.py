@@ -813,13 +813,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", {"0": 595, "1": 405}, 1),
-        ("relaxation", {"0": 595, "1": 405}, 1),
-        ("eff_noise", {"0": 595, "1": 405}, 1),
-        ("depolarizing", {"0": 587, "1": 413}, 3),
-        (("dephasing", "depolarizing", "relaxation"), {"0": 587, "1": 413}, 5),
-        (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
-        (("eff_noise", "leakage"), {"0": 595, "1": 405}, 1),
+        ("dephasing", {"0": 586, "1": 414}, 1),
+        ("relaxation", {"0": 586, "1": 414}, 1),
+        ("eff_noise", {"0": 586, "1": 414}, 1),
+        ("depolarizing", {"0": 581, "1": 419}, 3),
+        (("dephasing", "depolarizing", "relaxation"), {"0": 582, "1": 418}, 5),
+        (("eff_noise", "dephasing"), {"0": 587, "1": 413}, 2),
+        (("eff_noise", "leakage"), {"0": 586, "1": 414}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):

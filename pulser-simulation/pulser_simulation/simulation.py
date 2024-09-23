@@ -491,7 +491,7 @@ class QutipEmulator:
         Args:
             progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
-            options: Used as arguments for qutip.Options(). If specified, will
+            options: Given directly to the Qutip Solver. If specified, will
                 override SimConfig solver_options. If no `max_step` value is
                 provided, an automatic one is calculated from the `Sequence`'s
                 schedule (half of the shortest duration among pulses and
@@ -536,7 +536,6 @@ class QutipEmulator:
             options["nsteps"] = max(
                 1000, self._tot_duration // options["max_step"]
             )
-        solv_ops = qutip.Options(**options)
 
         meas_errors: Optional[Mapping[str, float]] = None
         if "SPAM" in self.config.noise:
@@ -580,16 +579,14 @@ class QutipEmulator:
                     self.initial_state,
                     self._eval_times_array,
                     self._hamiltonian._collapse_ops,
-                    progress_bar=p_bar,
-                    options=solv_ops,
+                    options=dict(progress_bar=p_bar, **options),
                 )
             else:
                 result = qutip.sesolve(
                     self._hamiltonian._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
-                    progress_bar=p_bar,
-                    options=solv_ops,
+                    options=dict(progress_bar=p_bar, **options),
                 )
             results = [
                 QutipResult(

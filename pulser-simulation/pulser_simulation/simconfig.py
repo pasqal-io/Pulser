@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
 from math import sqrt
-from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
@@ -123,7 +123,7 @@ class SimConfig:
     depolarizing_rate: float = _LEGACY_DEFAULTS["depolarizing_rate"]
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
-    solver_options: Optional[qutip.Options] = None
+    solver_options: dict[str, Any] | None = None
 
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
