@@ -39,7 +39,6 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
-import pulser.devices as devices
 import pulser.math as pm
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
@@ -123,25 +122,6 @@ class Sequence(Generic[DeviceType]):
             raise TypeError(
                 f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            if device == devices.Chadoq2:
-                warnings.warn(
-                    "The 'Chadoq2' device has been deprecated. For a "
-                    "similar device combining global and local addressing, "
-                    "consider using `DigitalAnalogDevice`.",
-                    category=DeprecationWarning,
-                    stacklevel=2,
-                )
-
-            if device == devices.IroiseMVP:
-                warnings.warn(
-                    "The 'IroiseMVP' device has been deprecated. For a "
-                    "similar analog device consider using `AnalogDevice`.",
-                    category=DeprecationWarning,
-                    stacklevel=2,
-                )
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):

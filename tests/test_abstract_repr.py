@@ -31,10 +31,8 @@ from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
     AnalogDevice,
-    Chadoq2,
     Device,
     DigitalAnalogDevice,
-    IroiseMVP,
     MockDevice,
     VirtualDevice,
 )
@@ -76,7 +74,9 @@ phys_Chadoq2 = replace(
     DigitalAnalogDevice,
     name="phys_Chadoq2",
     dmm_objects=(
-        replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
+        replace(
+            DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-2000
+        ),
     ),
     default_noise_model=NoiseModel(
         p_false_pos=0.02,
@@ -2641,24 +2641,12 @@ class TestDeserialization:
             with patch("jsonschema.validate"):
                 Sequence.from_abstract_repr(json.dumps(s))
 
-    @pytest.mark.parametrize(
-        "device, deprecated",
-        [(Chadoq2, True), (IroiseMVP, True), (MockDevice, False)],
-    )
-    def test_legacy_device(self, device, deprecated):
+    def test_legacy_device(self):
         s = _get_serialized_seq(
-            device=device.name, channels={"global": "rydberg_global"}
+            device="MockDevice", channels={"global": "rydberg_global"}
         )
-        if deprecated:
-            # This is necessary because warnings.catch_warnings (being
-            # used in Sequence) overrides pytest.mark.filterwarnings
-            with pytest.warns(
-                DeprecationWarning, match="device has been deprecated"
-            ):
-                seq = Sequence.from_abstract_repr(json.dumps(s))
-        else:
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-        assert seq.device == device
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert seq.device == MockDevice
 
     def test_bad_type(self):
         s = _get_serialized_seq()
