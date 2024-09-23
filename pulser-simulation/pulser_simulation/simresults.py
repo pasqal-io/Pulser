@@ -180,7 +180,7 @@ class SimulationResults(ABC, Results[ResultType]):
             return int(np.where(abs(t_float - self._sim_times) < tol)[0][0])
         except IndexError:
             raise IndexError(
-                f"Given time {t_float} is absent from Simulation times within"
+                f"Given time {t_float} is absent from simulation times within"
                 + f" tolerance {tol}."
             )
 
@@ -229,7 +229,7 @@ class NoisyResults(SimulationResults):
 
     Contrary to a CoherentResults object, this object contains a list of
     Counters describing the state distribution at the time it was created by
-    using Simulation.run() with a noisy simulation.
+    using QutipEmulator.run() with a noisy simulation.
     Contains methods for studying the populations and extracting useful
     information from them.
     """
@@ -266,7 +266,7 @@ class NoisyResults(SimulationResults):
                 'all' or 'all_with_error', and to 'ground-rydberg', 'XY',
                 'digital' if given respectively 'ground-rydberg_with_error',
                 'XY_with_error' or 'digital_with_error'.
-            sim_times: Times at which Simulation object returned
+            sim_times: Times at which QutipEmulator object returned
                 the results.
             n_measures: Number of measurements needed to compute this
                 result when doing the simulation.
@@ -381,7 +381,7 @@ class CoherentResults(SimulationResults):
             basis_name: The basis indicating the addressed atoms after
                 the pulse sequence ('ground-rydberg', 'digital' or 'all' or
                 one of these bases with the suffix "_with_error").
-            sim_times: Times at which Simulation object returned the
+            sim_times: Times at which QutipEmulator object returned the
                 results.
             meas_basis: The basis in which a sampling measurement
                 is desired (must be in "ground-rydberg" or "digital").
@@ -463,7 +463,7 @@ class CoherentResults(SimulationResults):
         tol: float = 1e-6,
         normalize: bool = True,
     ) -> qutip.Qobj:
-        """Returns the final state of the Simulation.
+        """Returns the final state of the simulation.
 
         Args:
             reduce_to_basis: Reduces the full state vector

@@ -698,7 +698,7 @@ def _draw_channel_content(
                         alpha=0.3,
                         hatch="////",
                     )
-                else:
+                else:  # pragma: no cover
                     ax.plot(
                         t,
                         ys_mod[i][:total_duration],
