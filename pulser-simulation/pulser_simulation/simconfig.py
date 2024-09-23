@@ -140,6 +140,10 @@ class SimConfig:
                 noise_model, param
             )
         kwargs.pop("with_leakage", None)
+        if "eff_noise_opers" in kwargs:
+            kwargs["eff_noise_opers"] = list(
+                map(qutip.Qobj, kwargs["eff_noise_opers"])
+            )
         return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
@@ -155,6 +159,10 @@ class SimConfig:
             kwargs[param] = getattr(self, _DIFF_NOISE_PARAMS.get(param, param))
         if "temperature" in kwargs:
             kwargs["temperature"] *= 1e6  # Converts back to µK
+        if "eff_noise_opers" in kwargs:
+            kwargs["eff_noise_opers"] = [
+                op.full() for op in kwargs["eff_noise_opers"]
+            ]
         return NoiseModel(**kwargs)
 
     def __post_init__(self) -> None:
@@ -256,7 +264,7 @@ class SimConfig:
                 )
         NoiseModel._check_eff_noise(
             self.eff_noise_rates,
-            self.eff_noise_opers,
+            [op.full() for op in self.eff_noise_opers],
             "eff_noise" in self.noise,
             self.with_leakage,
         )

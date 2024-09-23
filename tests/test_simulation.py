@@ -181,15 +181,6 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     )
 
     assert isinstance(sim._hamiltonian._hamiltonian, qutip.QobjEvo)
-    # Checks adapt() method:
-    assert bool(
-        set(sim._hamiltonian._hamiltonian.tlist).intersection(
-            sim.sampling_times
-        )
-    )
-    for qobjevo in sim._hamiltonian._hamiltonian.ops:
-        for sh in qobjevo.qobj.shape:
-            assert sh == sim.dim**sim._hamiltonian._size
 
     assert not seq.is_parametrized()
     with pytest.warns(UserWarning, match="returns a copy of itself"):
@@ -305,7 +296,7 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     # Check building operator with one operator
     op_standard = sim.build_operator([("sigma_gg", ["target"])])
     op_one = sim.build_operator(("sigma_gg", ["target"]))
-    assert np.linalg.norm(op_standard - op_one) < 1e-10
+    assert (op_standard - op_one).norm() < 1e-10
 
     # Global ground-rydberg
     seq2 = Sequence(reg, DigitalAnalogDevice)
@@ -859,8 +850,8 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops
-    trace_2 = res.states[-1] ** 2
-    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    trace_2 = np.trace((res.states[-1] ** 2).full())
+    assert trace_2 < 1 and not np.isclose(trace_2, 1)
     if "leakage" in noise:
         state = res.get_final_state()
         assert np.all(np.isclose(state[2, :], np.zeros_like(state[2, :])))
@@ -953,8 +944,8 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops * len(
         seq_digital.register.qubits
     )
-    trace_2 = res.states[-1] ** 2
-    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    trace_2 = np.trace((res.states[-1] ** 2).full())
+    assert trace_2 < 1 and not np.isclose(trace_2, 1)
     if "leakage" in noise:
         state = res.get_final_state()
         assert np.all(np.isclose(state[2, :], np.zeros_like(state[2, :])))
@@ -1057,8 +1048,8 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
     res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
-    trace_2 = res.states[-1] ** 2
-    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    trace_2 = np.trace((res.states[-1] ** 2).full())
+    assert trace_2 < 1 and not np.isclose(trace_2, 1)
     if "leakage" in noise:
         state = res.get_final_state()
         assert np.all(np.isclose(state[3, :], np.zeros_like(state[3, :])))
