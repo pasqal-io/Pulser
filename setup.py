@@ -25,8 +25,13 @@ if "dev" in __version__:
         "`make dev-install` instead."
     )
 
+# Pulser packages not pinned to __version__
+requirements = [
+    "pulser-pasqal",
+]
+# Adding packages pinned to __version__
 with open("packages.txt", "r", encoding="utf-8") as f:
-    requirements = [f"{pkg.strip()}=={__version__}" for pkg in f.readlines()]
+    requirements += [f"{pkg.strip()}=={__version__}" for pkg in f.readlines()]
 
 # Just a meta-package that requires all pulser packages
 setup(
