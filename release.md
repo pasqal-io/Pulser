@@ -7,7 +7,7 @@ Pulser version follows the [Semantic Versioning 2.0.0 specifcation](https://semv
 According to this specification, three types of releases are envisioned:
 
 - A major release, where breaking changes may be introduced. Here, the MAJOR is bumped and the MINOR and PATCH are reset (`{x}.{y}.{z} -> {x+1}.0.0`)
-- A minor release, where only the backwards compatible changes are added. Here, the MINOR is bumped and the PATCH is reset (`{x}.{y}.{z} -> {x}.{y}0`)
+- A minor release, where only the backwards compatible changes are added. Here, the MINOR is bumped and the PATCH is reset (`{x}.{y}.{z} -> {x}.{y+1}.0`).
 - A hotfix, where the PATCH is bumped (`{x}.{y}.{z} -> {x}.{y}.{z+1}`)
 
 Only releases are tracked and tagged in the `master` branch, while development is done in the `develop` branch. To signal this, the version in the `develop` branch should always be one MINOR ahead of `master` and follow the `MAJOR.{MINOR+1}dev{PATCH}` format (e.g. if the latest release tagged in `master` was `1.4.3`, then the version in `develop` should be `1.5dev3`). Through this format, we mark which release is under development and how many patches have occured since its development started (which tells us how many times we brought in changes done directly in `master` through an hotfix).
