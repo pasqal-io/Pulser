@@ -48,12 +48,9 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Installation and First Steps
+   :caption: Installation
 
    installation
-   intro_rydberg_blockade
-   tutorials/creating
-   tutorials/simulating
 
 .. toctree::
    :maxdepth: 2
@@ -64,8 +61,16 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Sequence creation
+
+   tutorials/sequence/intro
+   tutorials/sequence/rydberg_blockade
+   tutorials/sequence/local
+
+.. toctree::
+   :maxdepth: 2
    :caption: Backend Execution
-   
+
    tutorials/backends
 
 .. toctree::
@@ -84,6 +89,7 @@ computers and simulators, check the pages in :doc:`review`.
    tutorials/phase_shifts_vz_gates
    tutorials/composite_wfs
    tutorials/paramseqs
+   tutorials/registers
    tutorials/reg_layouts
    tutorials/interpolated_wfs
    tutorials/serialization
