@@ -121,8 +121,7 @@ class WeightMap(Traps, RegDrawer):
                 need to set this flag to False.
         """
         pos = self.trap_coordinates
-        if custom_ax is None:
-            _, custom_ax = self._initialize_fig_axes(pos)
+        custom_ax = custom_ax or cast(Axes, self._initialize_fig_axes(pos)[1])
 
         labels_ = labels if labels is not None else list(range(len(pos)))
 
