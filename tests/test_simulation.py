@@ -1189,11 +1189,10 @@ def test_get_xy_hamiltonian():
         simple_sim.get_hamiltonian(-10)
     # Constant detuning, so |ud><du| term is C_3/r^3 - 2*detuning for any time
     simple_ham = simple_sim.get_hamiltonian(143)
-    assert simple_ham[1, 2] == 0.5 * MockDevice.interaction_coeff_xy / 10**3
+    assert simple_ham[1, 2] == MockDevice.interaction_coeff_xy / 10**3
     assert (
         np.abs(
-            simple_ham[1, 4]
-            - (-2 * 0.5 * MockDevice.interaction_coeff_xy / 10**3)
+            simple_ham[1, 4] - (-2 * MockDevice.interaction_coeff_xy / 10**3)
         )
         < 1e-10
     )
@@ -1236,10 +1235,10 @@ def test_run_xy():
     assert sim.samples_obj._measurement == "XY"
 
 
-res1 = {"0000": 892, "1000": 47, "0100": 25, "0001": 19, "0010": 17}
-res2 = {"0000": 962, "0010": 13, "1000": 13, "0100": 12}
-res3 = {"0000": 904, "0100": 43, "0010": 24, "1000": 19, "0001": 10}
-res4 = {"0000": 969, "0001": 18, "1000": 13}
+res1 = {"0000": 950, "0100": 19, "0001": 21, "0010": 10}
+res2 = {"0000": 944, "0010": 15, "1000": 33, "0100": 8}
+res3 = {"0000": 950, "0100": 19, "0010": 10, "0001": 21}
+res4 = {"0000": 951, "0100": 19, "1000": 30}
 
 
 @pytest.mark.parametrize(
