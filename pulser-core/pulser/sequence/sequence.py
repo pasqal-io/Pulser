@@ -1815,8 +1815,8 @@ class Sequence(Generic[DeviceType]):
                 need to set this flag to False.
 
         See Also:
-            Simulation.draw(): Draws the provided sequence and the one used by
-            the solver.
+            QutipEmulator.draw(): Draws the provided sequence and the one used
+            by the solver.
         """
         valid_modes = ("input", "output", "input+output")
         if mode not in valid_modes:

@@ -25,9 +25,7 @@ description = (
 current_directory = Path(__file__).parent
 
 # Reads the version from the VERSION.txt file
-with open(
-    current_directory.parent / "VERSION.txt", "r", encoding="utf-8"
-) as f:
+with open(current_directory / "VERSION.txt", "r", encoding="utf-8") as f:
     __version__ = f.read().strip()
 
 # Changes to the directory where setup.py is
@@ -35,7 +33,6 @@ os.chdir(current_directory)
 
 with open("requirements.txt", encoding="utf-8") as f:
     requirements = f.read().splitlines()
-requirements.append(f"pulser-core=={__version__}")
 
 # Stashes the source code for the local version file
 local_version_fpath = Path(package_name) / "_version.py"
