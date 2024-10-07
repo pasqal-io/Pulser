@@ -1535,7 +1535,7 @@ def test_effective_size_disjoint(channel_type):
             )
 
 
-def test_simulation_with_modulation(mod_device, reg):
+def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.config_slm_mask({"control1"})
