@@ -24,7 +24,7 @@ from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.register.register_layout import RegisterLayout
 from pulser.sampler import sampler
 from pulser.waveforms import BlackmanWaveform, ConstantWaveform, RampWaveform
-from pulser_simulation import QutipEmulator, SimConfig, Simulation
+from pulser_simulation import QutipEmulator, SimConfig
 
 
 @pytest.fixture
@@ -95,17 +95,6 @@ def matrices():
     pauli["I3"] = qutip.qeye(3)
     pauli["Z3"] = qutip.Qobj([[1, 0, 0], [0, -1, 0], [0, 0, 0]])
     return pauli
-
-
-def test_bad_import():
-    with pytest.warns(
-        UserWarning,
-        match="'pulser.simulation' are changed to 'pulser_simulation'.",
-    ):
-        import pulser.simulation  # noqa: F401
-
-    assert pulser.simulation.Simulation is Simulation
-    assert pulser.simulation.SimConfig is SimConfig
 
 
 def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
@@ -569,16 +558,6 @@ def test_run(seq, patch_plt_show):
     ):
         sim.set_initial_state(qutip.Qobj(bad_initial))
 
-    with pytest.warns(
-        DeprecationWarning, match="Setting `initial_state` is deprecated"
-    ):
-        with pytest.warns(
-            DeprecationWarning, match="The `Simulation` class is deprecated"
-        ):
-            _sim = Simulation(seq, sampling_rate=0.01)
-        _sim.initial_state = good_initial_qobj
-        assert _sim.initial_state == good_initial_qobj
-
     sim.set_initial_state(good_initial_array)
     sim.run()
     sim.set_initial_state(good_initial_qobj)
@@ -639,20 +618,6 @@ def test_eval_times(seq):
         sim.set_evaluation_times([0, sim.sampling_times[-1] + 10])
 
     sim = QutipEmulator.from_sequence(seq, sampling_rate=1.0)
-    with pytest.warns(
-        DeprecationWarning, match="Setting `evaluation_times` is deprecated"
-    ):
-        with pytest.warns(
-            DeprecationWarning, match="The `Simulation` class is deprecated"
-        ):
-            _sim = Simulation(seq, sampling_rate=1.0)
-        _sim.evaluation_times = "Full"
-        assert np.array_equal(
-            _sim.evaluation_times,
-            np.union1d(_sim.sampling_times, [0.0, _sim._tot_duration / 1000]),
-        )
-        assert _sim._eval_times_instruction == "Full"
-
     sim.set_evaluation_times("Full")
     assert sim._eval_times_instruction == "Full"
     np.testing.assert_almost_equal(
@@ -1646,19 +1611,5 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
         np.testing.assert_allclose(
             rydberg_samples[qid]["phase"][time_slice], float(pulse1.phase)
         )
-    with pytest.warns(
-        DeprecationWarning, match="The `Simulation` class is deprecated"
-    ):
-        _sim = Simulation(seq, with_modulation=True, config=sim_config)
-
-    with pytest.raises(
-        ValueError,
-        match="Can't draw the interpolation points when the sequence "
-        "is modulated",
-    ):
-        _sim.draw(draw_interp_pts=True)
-
-    with patch("matplotlib.pyplot.savefig"):
-        _sim.draw(draw_phase_area=True, fig_name="my_fig.pdf")
     # Drawing with modulation
     sim.draw()

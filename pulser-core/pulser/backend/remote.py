@@ -16,13 +16,10 @@
 from __future__ import annotations
 
 import typing
-import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from enum import Enum, auto
-from functools import wraps
 from types import TracebackType
-from typing import Any, Mapping, Type, TypedDict, TypeVar, cast
+from typing import Any, Mapping, Type, TypedDict, cast
 
 from pulser.backend.abc import Backend
 from pulser.devices import Device
@@ -37,23 +34,8 @@ class JobParams(TypedDict, total=False):
     variables: dict[str, Any]
 
 
-class SubmissionStatus(Enum):
-    """Status of a remote submission."""
-
-    PENDING = auto()
-    RUNNING = auto()
-    DONE = auto()
-    CANCELED = auto()
-    TIMED_OUT = auto()
-    ERROR = auto()
-    PAUSED = auto()
-
-
 class BatchStatus(Enum):
-    """Status of a batch.
-
-    Same as SubmissionStatus, needed because we renamed Submission -> Batch.
-    """
+    """Status of a batch."""
 
     PENDING = auto()
     RUNNING = auto()
@@ -81,37 +63,8 @@ class RemoteResultsError(Exception):
     pass
 
 
-F = TypeVar("F", bound=Callable)
-
-
-def _deprecate_submission_id(func: F) -> F:
-    @wraps(func)
-    def wrapper(self: RemoteResults, *args: Any, **kwargs: Any) -> Any:
-        if "submission_id" in kwargs:
-            # 'batch_id' is the first positional arg so if len(args) > 0,
-            # then it is being given
-            if "batch_id" in kwargs or args:
-                raise ValueError(
-                    "'submission_id' and 'batch_id' cannot be simultaneously"
-                    " specified. Please provide only the 'batch_id'."
-                )
-            warnings.warn(
-                "'submission_id' has been deprecated and replaced by "
-                "'batch_id'.",
-                category=DeprecationWarning,
-                stacklevel=3,
-            )
-            kwargs["batch_id"] = kwargs.pop("submission_id")
-        return func(self, *args, **kwargs)
-
-    return cast(F, wrapper)
-
-
 class RemoteResults(Results):
     """A collection of results obtained through a remote connection.
-
-    Warns:
-        DeprecationWarning: If 'submission_id' is given instead of 'batch_id'.
 
     Args:
         batch_id: The ID that identifies the batch linked to the results.
@@ -122,7 +75,6 @@ class RemoteResults(Results):
             all jobs are included.
     """
 
-    @_deprecate_submission_id
     def __init__(
         self,
         batch_id: str,
@@ -148,17 +100,6 @@ class RemoteResults(Results):
         return self._results
 
     @property
-    def _submission_id(self) -> str:
-        """The same as the batch ID, kept for backwards compatibility."""
-        warnings.warn(
-            "'RemoteResults._submission_id' has been deprecated, please use"
-            "'RemoteResults.batch_id' instead.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._batch_id
-
-    @property
     def batch_id(self) -> str:
         """The ID of the batch containing these results."""
         return self._batch_id
@@ -169,21 +110,6 @@ class RemoteResults(Results):
         if self._job_ids is None:
             return self._connection._get_job_ids(self._batch_id)
         return self._job_ids
-
-    def get_status(self) -> SubmissionStatus:
-        """Gets the status of the remote submission.
-
-        Warning:
-            This method has been deprecated, please use
-            `RemoteResults.get_batch_status()` instead.
-        """
-        warnings.warn(
-            "'RemoteResults.get_status()' has been deprecated, please use"
-            "'RemoteResults.get_batch_status()' instead.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return SubmissionStatus[self.get_batch_status().name]
 
     def get_batch_status(self) -> BatchStatus:
         """Gets the status of the batch linked to these results."""
