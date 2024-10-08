@@ -367,6 +367,7 @@ class Waveform(ABC):
             # Repeats the times on the edges once
             ts = np.pad(ts, 1, mode="edge")
 
+        color_dict: dict[str, Any]
         if color:
             color_dict = {"color": color}
             hline_color = color

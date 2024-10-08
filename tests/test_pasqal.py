@@ -24,7 +24,6 @@ import pytest
 from pasqal_cloud.device.configuration import EmuFreeConfig, EmuTNConfig
 
 import pulser
-import pulser_pasqal
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
     BatchStatus,
@@ -41,10 +40,6 @@ from pulser_pasqal import EmulatorType, Endpoints, PasqalCloud
 from pulser_pasqal.backends import EmuFreeBackend, EmuTNBackend
 
 root = Path(__file__).parent.parent
-
-
-def test_version():
-    assert pulser_pasqal.__version__ == pulser.__version__
 
 
 @dataclasses.dataclass

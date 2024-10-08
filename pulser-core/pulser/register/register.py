@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -408,10 +408,13 @@ class Register(BaseRegister, RegDrawer):
 
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
-            _, custom_ax = self._initialize_fig_axes(
-                pos,
-                blockade_radius=blockade_radius,
-                draw_half_radius=draw_half_radius,
+            custom_ax = cast(
+                plt.Axes,
+                self._initialize_fig_axes(
+                    pos,
+                    blockade_radius=blockade_radius,
+                    draw_half_radius=draw_half_radius,
+                )[1],
             )
         super()._draw_2D(
             custom_ax,

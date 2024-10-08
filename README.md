@@ -23,7 +23,7 @@ For a comprehensive overview of Pulser, check out [Pulser's white paper](https:/
 
 **Note**: *Pulser v0.6 introduced a split of the ``pulser`` package that prevents it from being correctly upgraded. If you have an older version of ``pulser`` installed and wish to upgrade, make sure to uninstall it first by running ``pip uninstall pulser``.*
 
-To install the latest release of ``pulser``, have Python 3.8 or higher installed, then use ``pip``:
+To install the latest release of ``pulser``, have Python 3.9 or higher installed, then use ``pip``:
 
 ```bash
 pip install pulser

@@ -20,17 +20,13 @@ from typing import TYPE_CHECKING
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.devices._devices import (
     AnalogDevice,
-    Chadoq2,
     DigitalAnalogDevice,
-    IroiseMVP,
 )
 from pulser.devices._mock_device import MockDevice
 
 # Registers which devices can be used to avoid definition of custom devices
 _mock_devices: tuple[VirtualDevice, ...] = (MockDevice,)
 _valid_devices: tuple[Device, ...] = (
-    Chadoq2,
-    IroiseMVP,
     AnalogDevice,
     DigitalAnalogDevice,
 )
@@ -41,6 +37,4 @@ __all__ = [
     "AnalogDevice",
     "DigitalAnalogDevice",
     "MockDevice",
-    "Chadoq2",
-    "IroiseMVP",
 ]

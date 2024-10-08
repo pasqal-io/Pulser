@@ -457,22 +457,20 @@ class Hamiltonian:
             The units are given so that the coefficient
             includes a 1/hbar factor.
             """
-            dist = np.linalg.norm(self._qdict[q1] - self._qdict[q2])
-            coords_dim = len(self._qdict[q1])
-            mag_field = cast(np.ndarray, self.samples_obj._magnetic_field)[
-                :coords_dim
-            ]
+            diff_vector = np.zeros(3, dtype=float)
+            diff_vector[: len(self._qdict[q1])] = (
+                self._qdict[q1] - self._qdict[q2]
+            )
+            dist = np.linalg.norm(diff_vector)
+            mag_field = cast(np.ndarray, self.samples_obj._magnetic_field)
             mag_norm = np.linalg.norm(mag_field)
-            if mag_norm < 1e-8:
-                cosine = 0.0
-            else:
-                cosine = np.dot(
-                    (self._qdict[q1] - self._qdict[q2]),
-                    mag_field,
-                ) / (dist * mag_norm)
+            assert mag_norm > 0, "There must be a magnetic field in XY mode."
+            cosine = np.dot(
+                diff_vector,
+                mag_field,
+            ) / (dist * mag_norm)
             U = (
-                0.5
-                * cast(float, self._device.interaction_coeff_xy)
+                cast(float, self._device.interaction_coeff_xy)
                 * (1 - 3 * cosine**2)
                 / dist**3
             )
