@@ -684,19 +684,21 @@ class Device(BaseDevice):
                     (
                         "\t"
                         + r"- Maximum :math:`\Omega`:"
-                        + f" {ch.max_amp:.4g} rad/µs"
+                        + f" {float(cast(float,ch.max_amp)):.4g} rad/µs"
                     ),
                     (
                         (
                             "\t"
                             + r"- Maximum :math:`|\delta|`:"
-                            + f" {ch.max_abs_detuning:.4g} rad/µs"
+                            + f" {float(cast(float, ch.max_abs_detuning)):.4g}"
+                            + " rad/µs"
                         )
                         if not isinstance(ch, DMM)
                         else (
                             "\t"
                             + r"- Bottom :math:`|\delta|`:"
-                            + f" {ch.bottom_detuning:.4g} rad/µs"
+                            + f" {float(cast(float,ch.bottom_detuning)):.4g}"
+                            + " rad/µs"
                         )
                     ),
                     f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",

@@ -47,7 +47,7 @@ from pulser.json.abstract_repr.serializer import (
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
-from pulser.noise_model import NoiseModel
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem
@@ -194,7 +194,24 @@ def test_noise_model(noise_model: NoiseModel):
     re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
     assert noise_model == re_noise_model
 
+    # Define parameters with defaults, like it was done before
+    # pulser-core < 0.20, and check deserialization still works
     ser_noise_model_obj = json.loads(ser_noise_model_str)
+    for param in ser_noise_model_obj:
+        if param in _LEGACY_DEFAULTS and (
+            # Case where only laser_waist is defined and adding non-zero
+            # amp_sigma adds requirement for "runs" and "samples_per_run"
+            param != "amp_sigma"
+            or "amplitude" not in noise_model.noise_types
+        ):
+            ser_noise_model_obj[param] = (
+                ser_noise_model_obj[param] or _LEGACY_DEFAULTS[param]
+            )
+    assert (
+        NoiseModel.from_abstract_repr(json.dumps(ser_noise_model_obj))
+        == re_noise_model
+    )
+
     with pytest.raises(TypeError, match="must be given as a string"):
         NoiseModel.from_abstract_repr(ser_noise_model_obj)
 
