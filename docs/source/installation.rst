@@ -1,7 +1,7 @@
 Installation
 ==============
 
-To install the latest release of ``pulser``, have Python 3.8 or higher
+To install the latest release of ``pulser``, have Python 3.9 or higher
 installed, then use ``pip``: ::
 
   pip install pulser

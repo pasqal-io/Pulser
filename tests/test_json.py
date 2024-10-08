@@ -17,7 +17,6 @@ import re
 import numpy as np
 import pytest
 
-import pulser
 from pulser import Register, Register3D, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
@@ -279,20 +278,3 @@ def test_deprecated_device_args():
     s = json.dumps(seq_dict)
     new_seq = Sequence._deserialize(s)
     assert new_seq.device == MockDevice
-
-
-def test_deprecation_warning():
-    msg = re.escape(
-        "`Sequence.serialize()` and `Sequence.deserialize()` have "
-        "been deprecated and will be removed in Pulser v1.0.0. "
-        "Use `Sequence.to_abstract_repr()` and "
-        "`Sequence.from_abstract_repr()` instead."
-    )
-    seq = Sequence(Register.square(1), MockDevice)
-    with pytest.warns(DeprecationWarning, match=msg):
-        s = seq.serialize()
-
-    with pytest.warns(DeprecationWarning, match=msg):
-        Sequence.deserialize(s)
-
-    assert pulser.__version__ < "1.0", "Remove legacy serializer methods"

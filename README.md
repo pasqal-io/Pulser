@@ -21,7 +21,7 @@ For a comprehensive overview of Pulser, check out [Pulser's white paper](https:/
 
 ## Installation
 
-To install the latest release of ``pulser``, have Python 3.8 or higher installed, then use ``pip``:
+To install the latest release of ``pulser``, have Python 3.9 or higher installed, then use ``pip``:
 
 ```bash
 pip install pulser

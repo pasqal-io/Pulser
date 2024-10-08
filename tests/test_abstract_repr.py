@@ -31,10 +31,8 @@ from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import (
     AnalogDevice,
-    Chadoq2,
     Device,
     DigitalAnalogDevice,
-    IroiseMVP,
     MockDevice,
     VirtualDevice,
 )
@@ -49,7 +47,7 @@ from pulser.json.abstract_repr.serializer import (
 )
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.exceptions import AbstractReprError, DeserializeDeviceError
-from pulser.noise_model import NoiseModel
+from pulser.noise_model import _LEGACY_DEFAULTS, NoiseModel
 from pulser.parametrized.decorators import parametrize
 from pulser.parametrized.paramobj import ParamObj
 from pulser.parametrized.variable import Variable, VariableItem
@@ -76,7 +74,9 @@ phys_Chadoq2 = replace(
     DigitalAnalogDevice,
     name="phys_Chadoq2",
     dmm_objects=(
-        replace(Chadoq2.dmm_objects[0], total_bottom_detuning=-2000),
+        replace(
+            DigitalAnalogDevice.dmm_objects[0], total_bottom_detuning=-2000
+        ),
     ),
     default_noise_model=NoiseModel(
         p_false_pos=0.02,
@@ -194,7 +194,24 @@ def test_noise_model(noise_model: NoiseModel):
     re_noise_model = NoiseModel.from_abstract_repr(ser_noise_model_str)
     assert noise_model == re_noise_model
 
+    # Define parameters with defaults, like it was done before
+    # pulser-core < 0.20, and check deserialization still works
     ser_noise_model_obj = json.loads(ser_noise_model_str)
+    for param in ser_noise_model_obj:
+        if param in _LEGACY_DEFAULTS and (
+            # Case where only laser_waist is defined and adding non-zero
+            # amp_sigma adds requirement for "runs" and "samples_per_run"
+            param != "amp_sigma"
+            or "amplitude" not in noise_model.noise_types
+        ):
+            ser_noise_model_obj[param] = (
+                ser_noise_model_obj[param] or _LEGACY_DEFAULTS[param]
+            )
+    assert (
+        NoiseModel.from_abstract_repr(json.dumps(ser_noise_model_obj))
+        == re_noise_model
+    )
+
     with pytest.raises(TypeError, match="must be given as a string"):
         NoiseModel.from_abstract_repr(ser_noise_model_obj)
 
@@ -2641,24 +2658,12 @@ class TestDeserialization:
             with patch("jsonschema.validate"):
                 Sequence.from_abstract_repr(json.dumps(s))
 
-    @pytest.mark.parametrize(
-        "device, deprecated",
-        [(Chadoq2, True), (IroiseMVP, True), (MockDevice, False)],
-    )
-    def test_legacy_device(self, device, deprecated):
+    def test_legacy_device(self):
         s = _get_serialized_seq(
-            device=device.name, channels={"global": "rydberg_global"}
+            device="MockDevice", channels={"global": "rydberg_global"}
         )
-        if deprecated:
-            # This is necessary because warnings.catch_warnings (being
-            # used in Sequence) overrides pytest.mark.filterwarnings
-            with pytest.warns(
-                DeprecationWarning, match="device has been deprecated"
-            ):
-                seq = Sequence.from_abstract_repr(json.dumps(s))
-        else:
-            seq = Sequence.from_abstract_repr(json.dumps(s))
-        assert seq.device == device
+        seq = Sequence.from_abstract_repr(json.dumps(s))
+        assert seq.device == MockDevice
 
     def test_bad_type(self):
         s = _get_serialized_seq()
