@@ -518,7 +518,7 @@ class SequenceSamples:
     ) -> dict:
         """Format in the nested dictionary form.
 
-        This is the format expected by `pulser_simulation.Simulation()`.
+        This is the format expected by `pulser_simulation.QutipEmulator()`.
 
         Args:
             all_local: Forces all samples to be distributed by their

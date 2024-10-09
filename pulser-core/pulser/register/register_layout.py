@@ -21,7 +21,7 @@ from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
 from operator import itemgetter
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -180,7 +180,7 @@ class RegisterLayout(Traps, RegDrawer):
                 draw_half_radius=draw_half_radius,
             )
             self._draw_2D(
-                ax,
+                cast(plt.Axes, ax),
                 coords,
                 ids,
                 blockade_radius=blockade_radius,

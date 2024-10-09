@@ -78,6 +78,11 @@ def test_init():
     ):
         SimConfig(amp_sigma=-0.001)
 
+    with pytest.raises(
+        ValueError, match="'bad_noise' is not a valid noise type."
+    ):
+        SimConfig(noise=("bad_noise",))
+
 
 def test_eff_noise_opers(matrices):
     # Some of these checks are repeated in the NoiseModel UTs
