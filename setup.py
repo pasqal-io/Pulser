@@ -46,7 +46,7 @@ setup(
     python_requires=">=3.9",
     license="Apache 2.0",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 3",
     ],
     url="https://github.com/pasqal-io/Pulser",
