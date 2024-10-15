@@ -13,6 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+import re
+
 import numpy as np
 import pytest
 
@@ -86,7 +88,14 @@ class TestNoiseModel:
     )
     @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
     def test_unused_params(self, unused_param, noise_param):
-        with pytest.warns(UserWarning, match=f"'{unused_param}' is not used"):
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                f"'{unused_param}' is not used by any active noise type in"
+                f" {(_PARAM_TO_NOISE_TYPE[noise_param],)} when the only "
+                f"defined parameters are {[noise_param]}"
+            ),
+        ):
             NoiseModel(**{unused_param: 100, noise_param: 1.0})
 
     @pytest.mark.parametrize(
