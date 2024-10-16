@@ -26,6 +26,7 @@ import jsonschema.exceptions
 import numpy as np
 import pytest
 
+import pulser
 from pulser import Pulse, Register, Register3D, Sequence, devices
 from pulser.channels import Rydberg
 from pulser.channels.eom import RydbergBeam, RydbergEOM
@@ -573,6 +574,19 @@ class TestDevice:
 
 def validate_schema(instance):
     validate_abstract_repr(json.dumps(instance), "sequence")
+
+
+def test_pulser_version_mismatch():
+    curr_ver = pulser.__version__
+    higher_ver = f"{int(curr_ver[0])+1}{curr_ver[1:]}"
+    obj_str = json.dumps({"pulser_version": higher_ver})
+    with pytest.raises(
+        AbstractReprError,
+        match="It is possible validation failed because new features have "
+        "since been added; consider upgrading your pulser "
+        "installation and retrying.",
+    ):
+        validate_abstract_repr(obj_str, "device")
 
 
 class TestSerialization:
