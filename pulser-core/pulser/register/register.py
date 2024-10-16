@@ -31,7 +31,7 @@ from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_register,
 )
 from pulser.json.utils import stringify_qubit_ids
-from pulser.register._layout_gen import generate_register_layout
+from pulser.register._layout_gen import generate_layout_trap_coordinates
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 
@@ -356,15 +356,16 @@ class Register(BaseRegister, RegDrawer):
             raise TypeError(
                 f"'device' must be of type Device, not {type(device)}."
             )
-        layout = generate_register_layout(
+        trap_coords = generate_layout_trap_coordinates(
             self.sorted_coords,
             min_trap_dist=device.min_atom_distance,
             max_radial_dist=device.max_radial_distance,
             max_layout_filling=device.max_layout_filling,
             optimal_layout_filling=device.optimal_layout_filling,
             min_traps=device.min_layout_traps,
-            slug=layout_slug,
+            max_traps=device.max_layout_traps,
         )
+        layout = pulser.register.RegisterLayout(trap_coords, slug=layout_slug)
         trap_ids = layout.get_traps_from_coordinates(*self.sorted_coords)
         reg_from_layout = layout.define_register(*trap_ids)
         if validate:
