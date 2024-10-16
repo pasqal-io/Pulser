@@ -479,6 +479,9 @@ class TestDevice:
         [
             (MockDevice, "max_sequence_duration", 1000),
             (MockDevice, "max_runs", 100),
+            (MockDevice, "optimal_layout_filling", 0.4),
+            (MockDevice, "min_layout_traps", 10),
+            (MockDevice, "max_layout_traps", 200),
             (MockDevice, "requires_layout", True),
             (AnalogDevice, "requires_layout", False),
             (AnalogDevice, "accepts_new_layouts", False),
