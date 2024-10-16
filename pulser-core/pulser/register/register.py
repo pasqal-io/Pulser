@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -331,7 +331,6 @@ class Register(BaseRegister, RegDrawer):
     def with_automatic_layout(
         self,
         device: Device,
-        validate: bool = True,
         layout_slug: str | None = None,
     ) -> Register:
         """Replicates the register with an automatically generated layout.
@@ -340,8 +339,6 @@ class Register(BaseRegister, RegDrawer):
 
         Args:
             device: The device constraints for the layout generation.
-            validate: Whether to validate the generated RegisterLayout
-                against the provided device.
             layout_slug: An optional slug for the generated layout.
 
         Raises:
@@ -367,16 +364,7 @@ class Register(BaseRegister, RegDrawer):
         )
         layout = pulser.register.RegisterLayout(trap_coords, slug=layout_slug)
         trap_ids = layout.get_traps_from_coordinates(*self.sorted_coords)
-        reg_from_layout = layout.define_register(*trap_ids)
-        if validate:
-            try:
-                device.validate_register(reg_from_layout)
-            except Exception as e:
-                raise RuntimeError(
-                    "When defined from the layout, the register fails device "
-                    "validation."
-                ) from e
-        return cast(Register, reg_from_layout)
+        return cast(Register, layout.define_register(*trap_ids))
 
     def rotated(self, degrees: float) -> Register:
         """Makes a new rotated register.

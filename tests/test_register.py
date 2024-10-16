@@ -13,13 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 
+import dataclasses
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 from pulser import Register, Register3D
-from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
+from pulser.register import RegisterLayout
 
 
 def test_creation():
@@ -587,3 +589,56 @@ def test_register_recipes_torch(
     }
     reg = reg_classmethod(**kwargs)
     _assert_reg_requires_grad(reg, invert=not requires_grad)
+
+
+@pytest.mark.parametrize("optimal_filling", [None, 0.4, 0.1])
+def test_automatic_layout(optimal_filling):
+    reg = Register.square(4, spacing=5)
+    max_layout_filling = 0.5
+    min_traps = int(np.ceil(len(reg.qubits) / max_layout_filling))
+    optimal_traps = int(
+        np.ceil(len(reg.qubits) / (optimal_filling or max_layout_filling))
+    )
+    device = dataclasses.replace(
+        AnalogDevice,
+        max_atom_num=20,
+        max_layout_filling=max_layout_filling,
+        optimal_layout_filling=optimal_filling,
+        pre_calibrated_layouts=(),
+    )
+    device.validate_register(reg)
+
+    # On its own, it works
+    new_reg = reg.with_automatic_layout(device, layout_slug="foo")
+    assert isinstance(new_reg.layout, RegisterLayout)
+    assert str(new_reg.layout) == "foo"
+    trap_num = new_reg.layout.number_of_traps
+    assert min_traps <= trap_num <= optimal_traps
+    # To test the device limits on trap number are enforced
+    if not optimal_filling:
+        assert trap_num == min_traps
+        bound_below_dev = dataclasses.replace(
+            device, min_layout_traps=trap_num + 1
+        )
+        assert (
+            reg.with_automatic_layout(bound_below_dev).layout.number_of_traps
+            == bound_below_dev.min_layout_traps
+        )
+    elif trap_num < optimal_traps:
+        assert trap_num > min_traps
+        bound_above_dev = dataclasses.replace(
+            device, max_layout_traps=trap_num - 1
+        )
+        assert (
+            reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
+            == bound_above_dev.max_layout_traps
+        )
+
+    with pytest.raises(TypeError, match="must be of type Device"):
+        reg.with_automatic_layout(MockDevice)
+
+    # Minimum number of traps is too high
+    with pytest.raises(RuntimeError, match="Failed to find a site"):
+        reg.with_automatic_layout(
+            dataclasses.replace(device, min_layout_traps=200)
+        )
