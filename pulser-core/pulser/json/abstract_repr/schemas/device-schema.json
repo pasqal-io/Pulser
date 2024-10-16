@@ -166,6 +166,10 @@
               "description": "The largest fraction of a layout that can be filled with atoms.",
               "type": "number"
             },
+            "max_layout_traps": {
+              "description": "The maximum number of traps a layout can have.",
+              "type": "number"
+            },
             "max_radial_distance": {
               "description": "Maximum distance an atom can be from the center of the array (in µm).",
               "type": "number"
@@ -182,9 +186,17 @@
               "description": "The closest together two atoms can be (in μm).",
               "type": "number"
             },
+            "min_layout_traps": {
+              "description": "The minimum number of traps a layout can have.",
+              "type": "number"
+            },
             "name": {
               "description": "A unique name for the device.",
               "type": "string"
+            },
+            "optimal_layout_filling": {
+              "description": "The optimal fraction of a layout that should be filled with atoms.",
+              "type": "number"
             },
             "pre_calibrated_layouts": {
               "description": "Register layouts already calibrated on the device.",
@@ -288,6 +300,10 @@
               "description": "The largest fraction of a layout that can be filled with atoms.",
               "type": "number"
             },
+            "max_layout_traps": {
+              "description": "The maximum number of traps a layout can have.",
+              "type": "number"
+            },
             "max_radial_distance": {
               "description": "Maximum distance an atom can be from the center of the array (in µm).",
               "type": [
@@ -307,9 +323,17 @@
               "description": "The closest together two atoms can be (in μm).",
               "type": "number"
             },
+            "min_layout_traps": {
+              "description": "The minimum number of traps a layout can have.",
+              "type": "number"
+            },
             "name": {
               "description": "A unique name for the device.",
               "type": "string"
+            },
+            "optimal_layout_filling": {
+              "description": "The optimal fraction of a layout that should be filled with atoms.",
+              "type": "number"
             },
             "requires_layout": {
               "description": "Whether the register used in the sequence must be created from a register layout.  Only enforced in QPU execution.",
