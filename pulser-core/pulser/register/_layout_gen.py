@@ -17,7 +17,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 
-def generate_layout_trap_coordinates(
+def generate_trap_coordinates(
     atom_coords: np.ndarray,
     min_trap_dist: float,
     max_radial_dist: int,
@@ -27,14 +27,20 @@ def generate_layout_trap_coordinates(
     min_traps: int = 1,
     max_traps: int | None = None,
 ) -> list[np.ndarray]:
-    """Generates layout traps for a collection of atomic coordinates.
+    """Generates trap coordinates for a collection of atom coordinates.
+
+    Generates a mesh of resolution `mesh_resolution` covering a disk of radius
+    `max_radial_dist`. Deletes all the points of the mesh that are below a
+    radius `min_trap_dist` of any atoms or traps and iteratively selects from
+    the remaining points the necessary number of traps such that the ratio
+    number of atoms to number of traps is at most max_layout_filling and as
+    close as possible to optimal_layout_filling, while being above min_traps
+    and below max_traps.
 
     Args:
         atom_coords: The coordinates where atoms will be placed.
-        device: The Pulser device on which the layout and register
-            will be implemented.
-        min_trap_dist: The minimum distance between traps.
-        max_radial_dist: The maximum distance from the origin.
+        min_trap_dist: The minimum distance between traps, in µm.
+        max_radial_dist: The maximum distance from the origin, in µm.
         max_layout_filling: The maximum ratio of atoms to traps.
         optimal_layout_filling: An optional value for the optimal ratio of
             atoms to traps. If not given, takes max_layout_filling.
@@ -44,6 +50,8 @@ def generate_layout_trap_coordinates(
         max_traps: The maximum number of traps in the resulting layout.
     """
     optimal_layout_filling = optimal_layout_filling or max_layout_filling
+    assert optimal_layout_filling <= max_layout_filling
+    assert max_traps is None or min_traps <= max_traps
 
     # Generate all coordinates where a trap can be placed
     lx = 2 * max_radial_dist
@@ -54,7 +62,7 @@ def generate_layout_trap_coordinates(
 
     # Get the atoms in the register (the "seeds")
     seeds: list[np.ndarray] = list(atom_coords)
-    N_seeds = len(seeds)
+    n_seeds = len(seeds)
 
     # Record indices and distances between coords and seeds
     c_indx = np.arange(len(coords))
@@ -62,12 +70,12 @@ def generate_layout_trap_coordinates(
 
     # Accounts for the case when the needed number is less than min_traps
     min_traps = max(
-        np.ceil(N_seeds / max_layout_filling).astype(int), min_traps
+        np.ceil(n_seeds / max_layout_filling).astype(int), min_traps
     )
 
     # Use max() in case min_traps is larger than the optimal number
     target_traps = max(
-        np.ceil(N_seeds / optimal_layout_filling).astype(int),
+        np.round(n_seeds / optimal_layout_filling).astype(int),
         min_traps,
     )
     if max_traps:
@@ -77,16 +85,16 @@ def generate_layout_trap_coordinates(
     region_left = np.all(all_dists > min_trap_dist, axis=1)
     # The traps start out as being just the seeds
     traps = seeds.copy()
-    for i in range(N_seeds, target_traps):
+    for i in range(n_seeds, target_traps):
         if not np.any(region_left):
-            if i < (min_extra_traps := min_traps - N_seeds):
+            if i < (min_extra_traps := min_traps - n_seeds):
                 raise RuntimeError(
                     f"Failed to find a site for {min_extra_traps - i} traps."
                 )
             break
         # Select the point in the valid region that is closest to a seed
         selected = c_indx[region_left][
-            np.argmin(np.min(all_dists[region_left][:, :N_seeds], axis=1))
+            np.argmin(np.min(all_dists[region_left][:, :n_seeds], axis=1))
         ]
         # Add the selected point to the traps
         traps.append(coords[selected])
