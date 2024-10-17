@@ -40,7 +40,12 @@ from pulser.register.traps import COORD_PRECISION
 
 DIMENSIONS = Literal[2, 3]
 
-ALWAYS_OPTIONAL_PARAMS = ("max_sequence_duration", "max_runs")
+ALWAYS_OPTIONAL_PARAMS = (
+    "max_sequence_duration",
+    "max_runs",
+    "optimal_layout_filling",
+    "max_layout_traps",
+)
 OPTIONAL_IN_ABSTR_REPR = tuple(
     list(ALWAYS_OPTIONAL_PARAMS)
     + [
@@ -48,6 +53,7 @@ OPTIONAL_IN_ABSTR_REPR = tuple(
         "default_noise_model",
         "requires_layout",
         "accepts_new_layouts",
+        "min_layout_traps",
     ]
 )
 PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
@@ -83,6 +89,11 @@ class BaseDevice(ABC):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -103,6 +114,9 @@ class BaseDevice(ABC):
     interaction_coeff_xy: float | None = None
     supports_slm_mask: bool = False
     max_layout_filling: float = 0.5
+    optimal_layout_filling: float | None = None
+    min_layout_traps: int = 1
+    max_layout_traps: int | None = None
     max_sequence_duration: int | None = None
     max_runs: int | None = None
     requires_layout: bool = False
@@ -141,6 +155,8 @@ class BaseDevice(ABC):
             "max_radial_distance",
             "max_sequence_duration",
             "max_runs",
+            "min_layout_traps",
+            "max_layout_traps",
         ):
             value = getattr(self, param)
             if (
@@ -179,6 +195,40 @@ class BaseDevice(ABC):
                 "greater than 0. and less than or equal to 1., "
                 f"not {self.max_layout_filling}."
             )
+
+        if self.optimal_layout_filling is not None and not (
+            0.0 < self.optimal_layout_filling <= self.max_layout_filling
+        ):
+            raise ValueError(
+                "When defined, the optimal layout filling fraction "
+                "must be greater than 0. and less than or equal to "
+                f"`max_layout_filling` ({self.max_layout_filling}), "
+                f"not {self.optimal_layout_filling}."
+            )
+
+        if self.max_layout_traps is not None:
+            if self.max_layout_traps < self.min_layout_traps:
+                raise ValueError(
+                    "The maximum number of layout traps "
+                    f"({self.max_layout_traps}) must be greater than "
+                    "or equal to the minimum number of layout traps "
+                    f"({self.min_layout_traps})."
+                )
+            if (
+                self.max_atom_num is not None
+                and (
+                    max_atoms_ := int(
+                        self.max_layout_filling * self.max_layout_traps
+                    )
+                )
+                < self.max_atom_num
+            ):
+                raise ValueError(
+                    "With the given maximum layout filling and maximum number "
+                    f"of traps, a layout supports at most {max_atoms_} atoms, "
+                    "which is less than the maximum number of atoms allowed"
+                    f"({self.max_atom_num})."
+                )
 
         for ch_obj in self.channel_objects:
             type_check("All channels", Channel, value_override=ch_obj)
@@ -358,6 +408,23 @@ class BaseDevice(ABC):
             raise ValueError(
                 "The device supports register layouts of at most "
                 f"{self.dimensions} dimensions."
+            )
+
+        if layout.number_of_traps < self.min_layout_traps:
+            raise ValueError(
+                "The device requires register layouts to have "
+                f"at least {self.min_layout_traps} traps; "
+                f"{layout!s} has only {layout.number_of_traps}."
+            )
+
+        if (
+            self.max_layout_traps is not None
+            and layout.number_of_traps > self.max_layout_traps
+        ):
+            raise ValueError(
+                "The device requires register layouts to have "
+                f"at most {self.max_layout_traps} traps; "
+                f"{layout!s} has {layout.number_of_traps}."
             )
 
         self._validate_coords(layout.traps_dict, kind="traps")
@@ -547,6 +614,11 @@ class Device(BaseDevice):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used
@@ -792,6 +864,11 @@ class VirtualDevice(BaseDevice):
         supports_slm_mask: Whether the device supports the SLM mask feature.
         max_layout_filling: The largest fraction of a layout that can be filled
             with atoms.
+        optimal_layout_filling: An optional value for the fraction of a layout
+            that should be filled with atoms.
+        min_layout_traps: The minimum number of traps a layout can have.
+        max_layout_traps: An optional value for the maximum number of traps a
+            layout can have.
         max_sequence_duration: The maximum allowed duration for a sequence
             (in ns).
         max_runs: The maximum number of runs allowed on the device. Only used

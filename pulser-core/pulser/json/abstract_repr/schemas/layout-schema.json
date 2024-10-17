@@ -29,6 +29,10 @@
           },
           "type": "array"
         },
+        "pulser_version": {
+          "description": "The pulser version used to serialize the object.",
+          "type": "string"
+        },
         "slug": {
           "description": "An optional name for the layout.",
           "type": "string"
@@ -53,6 +57,10 @@
             "type": "array"
           },
           "type": "array"
+        },
+        "pulser_version": {
+          "description": "The pulser version used to serialize the object.",
+          "type": "string"
         },
         "slug": {
           "description": "An optional name for the layout.",

@@ -599,8 +599,9 @@ class RampWaveform(Waveform):
         Returns:
             A numpy array with a value for each time step.
         """
-        return (
-            self._slope * np.arange(self._duration, dtype=float) + self._start
+        return pm.clip(
+            self._slope * np.arange(self._duration, dtype=float) + self._start,
+            *sorted(map(float, [self._start, self._stop])),
         )
 
     @property

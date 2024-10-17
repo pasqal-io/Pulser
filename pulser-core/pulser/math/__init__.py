@@ -200,6 +200,13 @@ def diff(a: AbstractArrayLike) -> AbstractArray:
     return AbstractArray(np.diff(a.as_array()))
 
 
+def clip(a: AbstractArrayLike, a_min: float, a_max: float) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.clamp(a.as_tensor(), a_min, a_max))
+    return AbstractArray(np.clip(a.as_array(), a_min, a_max))
+
+
 def dot(a: AbstractArrayLike, b: AbstractArrayLike) -> AbstractArray:
     a, b = map(AbstractArray, (a, b))
     if a.is_tensor or b.is_tensor:

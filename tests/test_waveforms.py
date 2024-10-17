@@ -164,6 +164,11 @@ def test_custom():
 def test_ramp():
     assert np.isclose(ramp.slope, 7e-3, atol=1e-5)
 
+    ramp_samples = RampWaveform(
+        3000, top := 25.757450291031688, 0
+    ).samples.as_array()
+    assert np.all(np.logical_and(ramp_samples <= top, ramp_samples >= 0))
+
 
 def test_blackman():
     with pytest.raises(TypeError):
