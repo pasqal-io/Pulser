@@ -642,3 +642,18 @@ def test_automatic_layout(optimal_filling):
         reg.with_automatic_layout(
             dataclasses.replace(device, min_layout_traps=200)
         )
+
+    # The Register is larger than max_traps
+    big_reg = Register.square(8, spacing=5)
+    min_traps = np.ceil(len(big_reg.qubit_ids) / max_layout_filling)
+    with pytest.raises(
+        RuntimeError, match="Failed to find a site for 2 traps"
+    ):
+        big_reg.with_automatic_layout(
+            dataclasses.replace(device, max_layout_traps=int(min_traps - 2))
+        )
+    # Without max_traps, it would still work
+    assert (
+        big_reg.with_automatic_layout(device).layout.number_of_traps
+        >= min_traps
+    )

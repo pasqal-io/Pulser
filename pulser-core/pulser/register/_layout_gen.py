@@ -85,12 +85,8 @@ def generate_trap_coordinates(
     region_left = np.all(all_dists > min_trap_dist, axis=1)
     # The traps start out as being just the seeds
     traps = seeds.copy()
-    for i in range(n_seeds, target_traps):
+    for _ in range(target_traps - n_seeds):
         if not np.any(region_left):
-            if i < (min_extra_traps := min_traps - n_seeds):
-                raise RuntimeError(
-                    f"Failed to find a site for {min_extra_traps - i} traps."
-                )
             break
         # Select the point in the valid region that is closest to a seed
         selected = c_indx[region_left][
@@ -101,4 +97,8 @@ def generate_trap_coordinates(
         # Add the distances to the new trap
         all_dists = np.append(all_dists, cdist(coords, [traps[-1]]), axis=1)
         region_left *= all_dists[:, -1] > min_trap_dist
+    if len(traps) < min_traps:
+        raise RuntimeError(
+            f"Failed to find a site for {min_traps - len(traps)} traps."
+        )
     return traps
