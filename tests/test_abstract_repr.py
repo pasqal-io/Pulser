@@ -587,6 +587,9 @@ def test_pulser_version_mismatch():
         "installation and retrying.",
     ):
         validate_abstract_repr(obj_str, "device")
+    obj_str = json.dumps({"pulser_version": "bad_version"})
+    with pytest.raises(jsonschema.ValidationError):
+        validate_abstract_repr(obj_str, "device")
 
 
 class TestSerialization:

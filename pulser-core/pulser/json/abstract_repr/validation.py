@@ -17,7 +17,7 @@ from importlib.metadata import version
 from typing import Literal
 
 import jsonschema
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 from referencing import Registry, Resource
 
 import pulser
@@ -60,7 +60,11 @@ def validate_abstract_repr(
     try:
         jsonschema.validate(**validate_args)
     except Exception as exc:
-        ser_pulser_version = Version(obj.get("pulser_version", "0.0.0"))
+        try:
+            ser_pulser_version = Version(obj.get("pulser_version", "0.0.0"))
+        except InvalidVersion:
+            # In case the serialized version is invalid
+            raise exc
         if Version(pulser.__version__) < ser_pulser_version:
             raise AbstractReprError(
                 "The provided object is invalid under the current abstract "
