@@ -205,6 +205,10 @@
               },
               "type": "array"
             },
+            "pulser_version": {
+              "description": "The pulser version used to serialize the object.",
+              "type": "string"
+            },
             "requires_layout": {
               "description": "Whether the register used in the sequence must be created from a register layout.  Only enforced in QPU execution.",
               "type": "boolean"
@@ -334,6 +338,10 @@
             "optimal_layout_filling": {
               "description": "The optimal fraction of a layout that should be filled with atoms.",
               "type": "number"
+            },
+            "pulser_version": {
+              "description": "The pulser version used to serialize the object.",
+              "type": "string"
             },
             "requires_layout": {
               "description": "Whether the register used in the sequence must be created from a register layout.  Only enforced in QPU execution.",

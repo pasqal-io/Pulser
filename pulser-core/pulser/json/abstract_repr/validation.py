@@ -17,11 +17,16 @@ from importlib.metadata import version
 from typing import Literal
 
 import jsonschema
+from packaging.version import InvalidVersion, Version
 from referencing import Registry, Resource
 
+import pulser
 from pulser.json.abstract_repr import SCHEMAS, SCHEMAS_PATH
+from pulser.json.exceptions import AbstractReprError
 
-LEGACY_JSONSCHEMA = "4.18" > version("jsonschema") >= "4.17.3"
+LEGACY_JSONSCHEMA = (
+    Version("4.18") > Version(version("jsonschema")) >= Version("4.17.3")
+)
 
 REGISTRY: Registry = Registry(
     [
@@ -52,4 +57,22 @@ def validate_abstract_repr(
         )
     else:  # pragma: no cover
         validate_args["registry"] = REGISTRY
-    jsonschema.validate(**validate_args)
+    try:
+        jsonschema.validate(**validate_args)
+    except Exception as exc:
+        try:
+            ser_pulser_version = Version(obj.get("pulser_version", "0.0.0"))
+        except InvalidVersion:
+            # In case the serialized version is invalid
+            raise exc
+        if Version(pulser.__version__) < ser_pulser_version:
+            raise AbstractReprError(
+                "The provided object is invalid under the current abstract "
+                "representation schema. It appears it was serialized with a "
+                f"more recent version of pulser ({ser_pulser_version!s}) than "
+                f"the one currently being used ({pulser.__version__}). "
+                "It is possible validation failed because new features have "
+                "since been added; consider upgrading your pulser "
+                "installation and retrying."
+            ) from exc
+        raise exc
