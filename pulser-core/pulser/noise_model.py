@@ -258,12 +258,16 @@ class NoiseModel:
         object.__setattr__(
             self, "noise_types", tuple(sorted(true_noise_types))
         )
+        non_zero_relevant_params = [
+            p for p in relevant_params if param_vals[p]
+        ]
         for param_, val_ in param_vals.items():
             object.__setattr__(self, param_, val_)
             if val_ and param_ not in relevant_params:
                 warnings.warn(
                     f"{param_!r} is not used by any active noise type "
-                    f"{self.noise_types}.",
+                    f"in {self.noise_types} when the only defined parameters "
+                    f"are {non_zero_relevant_params}.",
                     stacklevel=2,
                 )
 
