@@ -455,8 +455,12 @@ class Register(BaseRegister, RegDrawer):
 
         if draw_empty_sites:
             layout_ids = list(self.layout.traps_dict.keys())
-            empty_layout = self.layout.define_register(*layout_ids, qubit_ids=layout_ids)
-            empty_qubit_colors={trap: empty_color or "r" for trap in layout_ids} 
+            empty_layout = self.layout.define_register(
+                *layout_ids, qubit_ids=layout_ids
+            )
+            empty_qubit_colors = {
+                trap: empty_color or "r" for trap in layout_ids
+            }
             breakpoint()
             empty_pos = empty_layout._coords_arr.as_array(detach=True)
 
@@ -469,9 +473,8 @@ class Register(BaseRegister, RegDrawer):
                     blockade_radius=blockade_radius,
                     draw_half_radius=draw_half_radius
                     )[1],
-            )
-            
-        
+                )
+
         draw_kwargs = dict(
             ax=custom_ax,
             blockade_radius=blockade_radius,
@@ -485,10 +488,10 @@ class Register(BaseRegister, RegDrawer):
                 pos=empty_pos,
                 qubit_colors=empty_qubit_colors,
                 with_labels=False,
-                label_name="empty",   
+                label_name="empty",
                 **draw_kwargs,
             )
-    
+
         super()._draw_2D(
             ids=self._ids,
             pos=pos,
