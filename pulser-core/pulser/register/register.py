@@ -445,7 +445,6 @@ class Register(BaseRegister, RegDrawer):
             This representation is preferred over drawing the full Rydberg
             radius because it helps in seeing the interactions between atoms.
         """
-
         super()._draw_checks(
             len(self._ids),
             blockade_radius=blockade_radius,
@@ -454,14 +453,19 @@ class Register(BaseRegister, RegDrawer):
         )
 
         if draw_empty_sites:
+            if self.layout is None:
+                raise ValueError(
+                    "The register must have an associated RegisterLayout "
+                    "to draw the empty sites."
+                )
             layout_ids = list(self.layout.traps_dict.keys())
             empty_layout = self.layout.define_register(
                 *layout_ids, qubit_ids=layout_ids
             )
-            empty_qubit_colors = {
+            breakpoint()
+            empty_qubit_colors : Mapping[Union[int, str], str] = {
                 trap: empty_color or "r" for trap in layout_ids
             }
-            breakpoint()
             empty_pos = empty_layout._coords_arr.as_array(detach=True)
 
         pos = self._coords_arr.as_array(detach=True)
@@ -483,7 +487,7 @@ class Register(BaseRegister, RegDrawer):
         )
 
         if draw_empty_sites:
-            empty_layout._draw_2D(
+            RegDrawer._draw_2D(empty_layout,
                 ids=empty_layout._ids,
                 pos=empty_pos,
                 qubit_colors=empty_qubit_colors,
