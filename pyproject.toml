@@ -14,3 +14,7 @@ filterwarnings = [
     # Except these particular warnings, which are ignored
     'ignore:A duration of \d+ ns is not a multiple of:UserWarning',
     ]
+
+[build-system]
+requires = ["setuptools >= 64"]
+build-backend = "setuptools.build_meta"
