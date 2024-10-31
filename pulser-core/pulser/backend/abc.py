@@ -17,11 +17,9 @@ from __future__ import annotations
 import typing
 from abc import ABC, abstractmethod
 
+from pulser.backend.results import Results
 from pulser.devices import Device
-from pulser.result import Result
 from pulser.sequence import Sequence
-
-Results = typing.Sequence[Result]
 
 
 class Backend(ABC):

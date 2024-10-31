@@ -14,27 +14,38 @@
 """Classes to store measurement results."""
 from __future__ import annotations
 
-import collections.abc
-import typing
+import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, TypeVar, overload
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pulser.register import QubitId
+import pulser.backend.results as backend_results
 
-__all__ = ["Result", "SampledResult", "Results", "ResultType"]
+
+def __getattr__(name: str) -> Any:
+    name_map = {"Results": "ResultsSequence", "ResultType": "ResultsType"}
+    if name not in name_map:
+        raise AttributeError(f"Module {__name__!r} has no attribute {name!r}.")
+    warnings.warn(
+        f"The 'pulser.result.{name}' class has been renamed to "
+        f"'{name_map[name]}' and moved to 'pulser.backend.results'. "
+        "Importing it as '{name}' from 'pulser.results' is deprecated.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+    return getattr(backend_results, name_map[name])
+
+
+__all__ = ["Result", "SampledResult"]
 
 
 @dataclass
-class Result(ABC):
-    """Base class for storing the result of a sequence run."""
-
-    atom_order: tuple[QubitId, ...]
-    meas_basis: str
+class Result(ABC, backend_results.Results):
+    """Base class for storing the result of an observable at specific time."""
 
     @property
     def sampling_dist(self) -> dict[str, float]:
@@ -136,11 +147,20 @@ class SampledResult(Result):
         meas_basis: The measurement basis.
         bitstring_counts: The number of times each bitstring was
             measured.
+        evaluation_time: Relative time at which the samples were
+            taken.
     """
 
     bitstring_counts: dict[str, int]
+    evaluation_time: float = 1.0
 
     def __post_init__(self) -> None:
+        super().__post_init__()
+        self._store(
+            observable_name="bitstrings",
+            time=self.evaluation_time,
+            value=self.bitstring_counts,
+        )
         self.n_samples = sum(self.bitstring_counts.values())
 
     @property
@@ -159,32 +179,3 @@ class SampledResult(Result):
         for bitstr, counts in self.bitstring_counts.items():
             weights[int(bitstr, base=2)] = counts / self.n_samples
         return weights / sum(weights)
-
-
-ResultType = TypeVar("ResultType", bound=Result)
-
-
-class Results(typing.Sequence[ResultType]):
-    """An immutable sequence of results."""
-
-    _results: tuple[ResultType, ...]
-
-    @overload
-    def __getitem__(self, key: int) -> ResultType:
-        pass
-
-    @overload
-    def __getitem__(self, key: slice) -> tuple[ResultType, ...]:
-        pass
-
-    def __getitem__(
-        self, key: int | slice
-    ) -> ResultType | tuple[ResultType, ...]:
-        return self._results[key]
-
-    def __len__(self) -> int:
-        return len(self._results)
-
-    def __iter__(self) -> collections.abc.Iterator[ResultType]:
-        for res in self._results:
-            yield res
