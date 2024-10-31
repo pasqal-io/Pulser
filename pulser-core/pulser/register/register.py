@@ -363,8 +363,13 @@ class Register(BaseRegister, RegDrawer):
             max_traps=device.max_layout_traps,
         )
         layout = pulser.register.RegisterLayout(trap_coords, slug=layout_slug)
-        trap_ids = layout.get_traps_from_coordinates(*self.sorted_coords)
-        return cast(Register, layout.define_register(*trap_ids))
+        trap_ids = layout.get_traps_from_coordinates(
+            *self._coords_arr.as_array()
+        )
+        return cast(
+            Register,
+            layout.define_register(*trap_ids, qubit_ids=self.qubit_ids),
+        )
 
     def rotated(self, degrees: float) -> Register:
         """Makes a new rotated register.
