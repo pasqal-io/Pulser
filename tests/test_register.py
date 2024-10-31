@@ -593,7 +593,7 @@ def test_register_recipes_torch(
 
 @pytest.mark.parametrize("optimal_filling", [None, 0.4, 0.1])
 def test_automatic_layout(optimal_filling):
-    reg = Register.square(4, spacing=5)
+    reg = Register.square(4, spacing=5, prefix="test")
     max_layout_filling = 0.5
     min_traps = int(np.ceil(len(reg.qubits) / max_layout_filling))
     optimal_traps = int(
@@ -610,6 +610,8 @@ def test_automatic_layout(optimal_filling):
 
     # On its own, it works
     new_reg = reg.with_automatic_layout(device, layout_slug="foo")
+    assert new_reg.qubit_ids == reg.qubit_ids  # Same IDs in the same order
+    assert new_reg == reg  # The register itself is identical
     assert isinstance(new_reg.layout, RegisterLayout)
     assert str(new_reg.layout) == "foo"
     trap_num = new_reg.layout.number_of_traps
@@ -657,3 +659,14 @@ def test_automatic_layout(optimal_filling):
         big_reg.with_automatic_layout(device).layout.number_of_traps
         >= min_traps
     )
+
+
+def test_automatic_layout_diff():
+    torch = pytest.importorskip("torch")
+    with pytest.raises(
+        NotImplementedError,
+        match="does not support registers with differentiable coordinates",
+    ):
+        Register.square(
+            2, spacing=torch.tensor(10.0, requires_grad=True)
+        ).with_automatic_layout(AnalogDevice)
