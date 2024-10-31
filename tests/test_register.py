@@ -659,3 +659,14 @@ def test_automatic_layout(optimal_filling):
         big_reg.with_automatic_layout(device).layout.number_of_traps
         >= min_traps
     )
+
+
+def test_automatic_layout_diff():
+    torch = pytest.importorskip("torch")
+    with pytest.raises(
+        NotImplementedError,
+        match="does not support registers with differentiable coordinates",
+    ):
+        Register.square(
+            2, spacing=torch.tensor(10.0, requires_grad=True)
+        ).with_automatic_layout(AnalogDevice)

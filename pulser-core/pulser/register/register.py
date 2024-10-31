@@ -344,6 +344,8 @@ class Register(BaseRegister, RegDrawer):
         Raises:
             RuntimeError: If the automatic layout generation fails to meet
                 the device constraints.
+            NotImplementedError: When the register has differentiable
+                coordinates (ie torch Tensors with requires_grad=True).
 
         Returns:
             Register: A new register instance with identical qubit IDs and
@@ -353,6 +355,15 @@ class Register(BaseRegister, RegDrawer):
             raise TypeError(
                 f"'device' must be of type Device, not {type(device)}."
             )
+        if (
+            self._coords_arr.is_tensor
+            and self._coords_arr.as_tensor().requires_grad
+        ):
+            raise NotImplementedError(
+                "'Register.with_automatic_layout()' does not support "
+                "registers with differentiable coordinates."
+            )
+
         trap_coords = generate_trap_coordinates(
             self.sorted_coords,
             min_trap_dist=device.min_atom_distance,
