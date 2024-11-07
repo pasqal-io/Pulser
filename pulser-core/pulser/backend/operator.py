@@ -16,25 +16,27 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
-from typing import Generic, TypeVar
+from typing import Generic, Type, TypeVar
 
-from pulser.backend.state import State
+from pulser.backend.state import State, Eigenstate
 
-ScalarType = TypeVar("ScalarType")
+ArgScalarType = TypeVar("ArgScalarType")
+ReturnScalarType = TypeVar("ReturnScalarType")
+StateType = TypeVar("StateType", bound=State)
+OperatorType = TypeVar("OperatorType", bound="Operator")
 
-
-QuditOp = Mapping[str, ScalarType]  # single qudit operator
+QuditOp = Mapping[str, ArgScalarType]  # single qudit operator
 TensorOp = Sequence[
     tuple[QuditOp, Collection[int]]
 ]  # QuditOp applied to set of qudits
-FullOp = Sequence[tuple[ScalarType, TensorOp]]  # weighted sum of TensorOp
+FullOp = Sequence[tuple[ArgScalarType, TensorOp]]  # weighted sum of TensorOp
 
 
-class Operator(ABC, Generic[ScalarType]):
+class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
     """Base class for a quantum operator."""
 
     @abstractmethod
-    def __mul__(self, other: State) -> State:
+    def apply_to(self, other: StateType, /) -> StateType:
         """Apply the operator to a state.
 
         Args:
@@ -46,19 +48,7 @@ class Operator(ABC, Generic[ScalarType]):
         pass
 
     @abstractmethod
-    def __add__(self, other: Operator) -> Operator:
-        """Computes the sum of two operators.
-
-        Args:
-            other: The other operator.
-
-        Returns:
-            The summed operator.
-        """
-        pass
-
-    @abstractmethod
-    def expect(self, state: State) -> ScalarType:
+    def expect(self, state: StateType, /) -> ReturnScalarType:
         """Compute the expectation value of self on the given state.
 
         Args:
@@ -70,7 +60,19 @@ class Operator(ABC, Generic[ScalarType]):
         pass
 
     @abstractmethod
-    def __rmul__(self, scalar: ScalarType) -> Operator:
+    def __add__(self: OperatorType, other: OperatorType, /) -> OperatorType:
+        """Computes the sum of two operators.
+
+        Args:
+            other: The other operator.
+
+        Returns:
+            The summed operator.
+        """
+        pass
+
+    @abstractmethod
+    def __rmul__(self: OperatorType, scalar: ArgScalarType) -> OperatorType:
         """Scale the operator by a scalar factor.
 
         Args:
@@ -82,7 +84,7 @@ class Operator(ABC, Generic[ScalarType]):
         pass
 
     @abstractmethod
-    def __matmul__(self, other: Operator) -> Operator:
+    def __matmul__(self: OperatorType, other: OperatorType) -> OperatorType:
         """Compose two operators where 'self' is applied after 'other'.
 
         Args:
@@ -96,13 +98,13 @@ class Operator(ABC, Generic[ScalarType]):
     @classmethod
     @abstractmethod
     def from_operator_repr(
-        cls,
+        cls: Type[OperatorType],
         *,
-        eigenstates: Sequence[str],
+        eigenstates: Sequence[Eigenstate],
         n_qudits: int,
         operations: FullOp,
         custom_operators: dict[str, QuditOp] = {},
-    ) -> Operator:
+    ) -> OperatorType:
         """Create an operator from the operator representation.
 
         The full operator representation (FullOp0 is a weigthed sum of tensor

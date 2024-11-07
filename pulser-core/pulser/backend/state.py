@@ -17,24 +17,30 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Sequence
-from typing import Generic, TypeVar
+from typing import Generic, Type, TypeVar
 
-ScalarType = TypeVar("ScalarType")
+from pulser.channels.base_channel import States as Eigenstate
+
+ArgScalarType = TypeVar("ArgScalarType")
+ReturnScalarType = TypeVar("ReturnScalarType")
+StateType = TypeVar("StateType", bound="State")
 
 
-class State(ABC, Generic[ScalarType]):
+class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     """Base class enforcing an API for quantum states.
 
     Each backend will implement its own type of state and the
     methods below.
     """
 
-    @abstractmethod
-    def inner(self, other: State) -> ScalarType:
-        """Compute the inner product between this state and other.
+    eigenstates: Sequence[Eigenstate]
 
-        Note that self is the left state in the inner product,
-        so this function is linear in other, and anti-linear in self.
+    @abstractmethod
+    def overlap(self: StateType, other: StateType, /) -> ReturnScalarType:
+        """Compute the overlap between this state and another of the same type.
+
+        Generally computes Tr[AB] for mixed states A and B, which
+        corresponds to |<a|b>|^2 for pure states A=|a><a| and B=|b><b|.
 
         Args:
             other: The other state.
@@ -48,6 +54,7 @@ class State(ABC, Generic[ScalarType]):
     def sample(
         self,
         num_shots: int,
+        one_state: Eigenstate | None = None,
         p_false_pos: float = 0.0,
         p_false_neg: float = 0.0,
     ) -> Counter[str]:
@@ -55,6 +62,9 @@ class State(ABC, Generic[ScalarType]):
 
         Args:
             num_shots: How many bitstrings to sample.
+            one_state: The eigenstate that measures to 1. Can be left undefined
+                if the eigenstates form a known eigenbasis with a defined
+                "one state".
             p_false_pos: The rate at which a 0 is read as a 1.
             p_false_neg: The rate at which a 1 is read as a 0.
 
@@ -63,38 +73,14 @@ class State(ABC, Generic[ScalarType]):
         """
         pass
 
-    @abstractmethod
-    def __add__(self, other: State) -> State:
-        """Computes the sum of two states.
-
-        Args:
-            other: The other state.
-
-        Returns:
-            The summed state.
-        """
-        pass
-
-    @abstractmethod
-    def __rmul__(self, scalar: ScalarType) -> State:
-        """Scale the state by a scale factor.
-
-        Args:
-            scalar: The scale factor.
-
-        Returns:
-            The scaled state.
-        """
-        pass
-
     @classmethod
     @abstractmethod
     def from_state_amplitudes(
-        cls,
+        cls: Type[StateType],
         *,
-        eigenstates: Sequence[str],
-        amplitudes: dict[str, ScalarType],
-    ) -> State:
+        eigenstates: Sequence[Eigenstate],
+        amplitudes: dict[str, ArgScalarType],
+    ) -> StateType:
         """Construct the state from its basis states' amplitudes.
 
         Args:
