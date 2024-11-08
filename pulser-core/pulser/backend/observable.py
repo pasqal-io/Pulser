@@ -16,12 +16,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from pulser.backend.config import EmulatorConfig
 from pulser.backend.state import State
 from pulser.backend.operator import Operator
 from pulser.backend.results import Results
+
+if TYPE_CHECKING:
+    from pulser.backend.config import EmulationConfig
 
 
 class Callback(ABC):
@@ -30,7 +32,7 @@ class Callback(ABC):
     @abstractmethod
     def __call__(
         self,
-        config: EmulatorConfig,
+        config: EmulationConfig,
         t: float,
         state: State,
         hamiltonian: Operator,
@@ -60,7 +62,7 @@ class Observable(Callback):
     Args:
         evaluation_times: The times at which to add a result to Results.
             If left as `None`, uses the `default_evaluation_times` of the
-            `EmulatorConfig` it is added to.
+            `EmulationConfig` it is added to.
     """
 
     def __init__(self, evaluation_times: Sequence[float] | None = None):
@@ -69,7 +71,7 @@ class Observable(Callback):
 
     def __call__(
         self,
-        config: EmulatorConfig,
+        config: EmulationConfig,
         t: float,
         state: State,
         hamiltonian: Operator,
@@ -112,7 +114,7 @@ class Observable(Callback):
     @abstractmethod
     def apply(
         self,
-        config: EmulatorConfig,
+        config: EmulationConfig,
         t: float,
         state: State,
         hamiltonian: Operator,

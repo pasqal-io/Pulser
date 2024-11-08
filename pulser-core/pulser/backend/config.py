@@ -15,27 +15,115 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal, Sequence, get_args
+from typing import (
+    Any,
+    Generic,
+    Literal,
+    Sequence,
+    SupportsFloat,
+    TypeVar,
+    get_args,
+)
 
 import numpy as np
+from numpy.typing import ArrayLike
 
+import pulser.math as pm
+from pulser.backend.state import State
+from pulser.backend.observable import Observable
 from pulser.noise_model import NoiseModel
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]
 
+StateType = TypeVar("StateType", bound=State)
 
-@dataclass(frozen=True)
+
 class BackendConfig:
-    """The base backend configuration.
+    """The base backend configuration."""
 
-    Attributes:
-        backend_options: A dictionary of backend specific options.
-    """
+    def __init__(self, **backend_options: Any) -> None:
+        """Initializes the backend config."""
+        object.__setattr__(self, "_backend_options", backend_options)
+        # TODO: Deprecate use of backend_options kwarg
 
-    backend_options: dict[str, Any] = field(default_factory=dict)
+    def __getattr__(self, name: str) -> Any:
+        if (
+            # Needed to avoid recursion error
+            "_backend_options" in self.__dict__
+            and name in self._backend_options
+        ):
+            return self._backend_options[name]
+        raise AttributeError  # TODO:
 
 
-@dataclass(frozen=True)
+class EmulationConfig(BackendConfig, Generic[StateType]):
+    """Configurates an emulation on a backend."""
+
+    # TODO: Complete docstring
+    observables: Sequence[Observable]
+    default_evaluation_times: tuple[float]
+    initial_state: StateType | None
+    with_modulation: bool
+    interaction_matrix: pm.AbstractArray | None
+    prefer_device_noise_model: bool
+    noise_model: NoiseModel
+
+    def __init__(
+        self,
+        *,
+        observables: Sequence[Observable] = (),
+        # Default evaluation times for observables that don't specify one
+        default_evaluation_times: Sequence[SupportsFloat] = (1.0,),
+        initial_state: StateType | None = None,  # Default is ggg...
+        with_modulation: bool = False,
+        interaction_matrix: ArrayLike | None = None,
+        prefer_device_noise_model: bool = False,
+        noise_model: NoiseModel = NoiseModel(),
+        **backend_options: Any,
+    ) -> None:
+        """Initializes the EmulationConfig."""
+        for obs in observables:
+            if not isinstance(obs, Observable):
+                raise TypeError(
+                    "All entries in 'observables' must be instances of "
+                    f"Observable. Instead, got instance of type {type(obs)}."
+                )
+
+        default_evaluation_times = tuple(map(float, default_evaluation_times))
+        eval_times_arr = np.array(default_evaluation_times, dtype=float)
+        if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
+            raise ValueError("All evaluation times must be between 0. and 1.")
+
+        if initial_state is not None and not isinstance(initial_state, State):
+            raise TypeError(
+                "When defined, 'initial_state' must be an instance of State;"
+                f" got object of type {type(initial_state)} instead."
+            )
+
+        # TODO: Validate interaction matrix
+
+        if not isinstance(noise_model, NoiseModel):
+            raise TypeError(
+                "'noise_model' must be a NoiseModel instance,"
+                f" not {type(noise_model)}."
+            )
+
+        super().__init__(
+            observables=tuple(observables),
+            default_evaluation_times=default_evaluation_times,
+            initial_state=initial_state,
+            with_modulation=bool(with_modulation),
+            interaction_matrix=interaction_matrix,
+            prefer_device_noise_model=bool(prefer_device_noise_model),
+            noise_model=noise_model,
+            **backend_options,
+        )
+
+
+# Legacy class
+
+
+@dataclass
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
 
@@ -74,6 +162,7 @@ class EmulatorConfig(BackendConfig):
             `prefer_device_noise_model=True`.
     """
 
+    backend_options: dict[str, Any] = field(default_factory=dict)
     sampling_rate: float = 1.0
     evaluation_times: float | Sequence[float] | EVAL_TIMES_LITERAL = "Full"
     initial_state: Literal["all-ground"] | Sequence[complex] = "all-ground"
@@ -82,6 +171,7 @@ class EmulatorConfig(BackendConfig):
     noise_model: NoiseModel = field(default_factory=NoiseModel)
 
     def __post_init__(self) -> None:
+        # TODO: Raise deprecation warning
         if not (0 < self.sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "
