@@ -36,11 +36,11 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
     """Base class for a quantum operator."""
 
     @abstractmethod
-    def apply_to(self, other: StateType, /) -> StateType:
+    def apply_to(self, state: StateType, /) -> StateType:
         """Apply the operator to a state.
 
         Args:
-            other: The state to apply this operator to.
+            state: The state to apply this operator to.
 
         Returns:
             The resulting state.
@@ -103,11 +103,11 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
         operations: FullOp,
-        custom_operators: dict[str, QuditOp] = {},
+        custom_operators: Mapping[str, QuditOp] = {},
     ) -> OperatorType:
         """Create an operator from the operator representation.
 
-        The full operator representation (FullOp0 is a weigthed sum of tensor
+        The full operator representation (FullOp is a weigthed sum of tensor
         operators (TensorOp), written as a sequence of coefficient and tensor
         operator pairs, ie
 

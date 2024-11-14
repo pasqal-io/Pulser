@@ -62,10 +62,10 @@ class Observable(Callback):
     Args:
         evaluation_times: The times at which to add a result to Results.
             If left as `None`, uses the `default_evaluation_times` of the
-            `EmulationConfig` it is added to.
+            backend's `EmulationConfig`.
     """
 
-    def __init__(self, evaluation_times: Sequence[float] | None = None):
+    def __init__(self, *, evaluation_times: Sequence[float] | None = None):
         """Initializes the observable."""
         self.evaluation_times = evaluation_times
 
@@ -93,7 +93,9 @@ class Observable(Callback):
             result: The Results object to store the result in.
         """
         if t in (self.evaluation_times or config.default_evaluation_times):
-            value_to_store = self.apply(config, t, state, hamiltonian)
+            value_to_store = self.apply(
+                config=config, t=t, state=state, hamiltonian=hamiltonian
+            )
             result._store(
                 observable_name=self.name(), time=t, value=value_to_store
             )
@@ -114,6 +116,7 @@ class Observable(Callback):
     @abstractmethod
     def apply(
         self,
+        *,
         config: EmulationConfig,
         t: float,
         state: State,

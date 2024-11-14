@@ -17,9 +17,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Sequence
-from typing import Generic, Type, TypeVar
+from typing import Generic, Literal, Type, TypeVar
 
-from pulser.channels.base_channel import States as Eigenstate
+from pulser.channels.base_channel import States
+
+Eigenstate = States | Literal["O", "1"]
 
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")
@@ -36,6 +38,12 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     eigenstates: Sequence[Eigenstate]
 
     @abstractmethod
+    @property
+    def n_qudits(self) -> int:
+        """The number of qudits in the state."""
+        pass
+
+    @abstractmethod
     def overlap(self: StateType, other: StateType, /) -> ReturnScalarType:
         """Compute the overlap between this state and another of the same type.
 
@@ -46,13 +54,14 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             other: The other state.
 
         Returns:
-            The inner product between the two states.
+            The overlap between the two states.
         """
         pass
 
     @abstractmethod
     def sample(
         self,
+        *,
         num_shots: int,
         one_state: Eigenstate | None = None,
         p_false_pos: float = 0.0,
@@ -63,8 +72,8 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         Args:
             num_shots: How many bitstrings to sample.
             one_state: The eigenstate that measures to 1. Can be left undefined
-                if the eigenstates form a known eigenbasis with a defined
-                "one state".
+                if the state's eigenstates form a known eigenbasis with a
+                defined "one state".
             p_false_pos: The rate at which a 0 is read as a 1.
             p_false_neg: The rate at which a 1 is read as a 0.
 
@@ -92,3 +101,36 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             The state constructed from the amplitudes.
         """
         pass
+
+    def get_correlation_matrix(
+        self, one_state: Eigenstate | None = None
+    ) -> list[list[ReturnScalarType]]:
+        """Calculates the correlation matrix of the state.
+
+        Allows a state to define a custom method for calculating its
+        correlation matrix. By default, it's not implemented.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__!r} does not define "
+            "`get_correlation_matrix()`."
+        )
+
+    def infer_one_state(self) -> Eigenstate:
+        """Infers the state measured as 1 from the eigenstates.
+
+        Only works when the eigenstates form a known eigenbasis with
+        a well-defined "one state".
+        """
+        eigenstates = set(self.eigenstates)
+        if eigenstates == {"0", "1"}:
+            return "1"
+        if eigenstates == {"r", "g"}:
+            return "r"
+        if eigenstates == {"g", "h"}:
+            return "h"
+        if eigenstates == {"u", "d"}:
+            return "d"
+        raise RuntimeError(
+            "Failed to infer the 'one state' from the "
+            f"eigenstates: {self.eigenstates}"
+        )
