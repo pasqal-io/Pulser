@@ -37,6 +37,7 @@ class Callback(ABC):
         state: State,
         hamiltonian: Operator,
         result: Results,
+        time_tol: float,
     ) -> None:
         """Specifies a call to the callback at a specific time.
 
@@ -52,6 +53,8 @@ class Callback(ABC):
             state: The current state.
             hamiltonian: The Hamiltonian at this time.
             result: The Results object to store the result in.
+            time_tol: Tolerance below which two time values are considered
+                equal.
         """
         pass
 
@@ -76,6 +79,7 @@ class Observable(Callback):
         state: State,
         hamiltonian: Operator,
         result: Results,
+        time_tol: float,
     ) -> None:
         """Specifies a call to the observable at a specific time.
 
@@ -91,8 +95,15 @@ class Observable(Callback):
             state: The current state.
             hamiltonian: The Hamiltonian at this time.
             result: The Results object to store the result in.
+            time_tol: Tolerance below which two time values are considered
+                equal.
         """
-        if t in (self.evaluation_times or config.default_evaluation_times):
+        if (
+            self.evaluation_times is not None
+            and config.is_time_in_evaluation_times(
+                t, self.evaluation_times, tol=time_tol
+            )
+        ) or config.is_evaluation_time(t, tol=time_tol):
             value_to_store = self.apply(
                 config=config, t=t, state=state, hamiltonian=hamiltonian
             )

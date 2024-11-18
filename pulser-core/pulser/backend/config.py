@@ -22,6 +22,7 @@ from typing import (
     Sequence,
     SupportsFloat,
     TypeVar,
+    cast,
     get_args,
 )
 
@@ -41,10 +42,13 @@ StateType = TypeVar("StateType", bound=State)
 class BackendConfig:
     """The base backend configuration."""
 
+    _backend_options: dict[str, Any]
+
     def __init__(self, **backend_options: Any) -> None:
         """Initializes the backend config."""
-        object.__setattr__(self, "_backend_options", backend_options)
+        self._backend_options = backend_options
         # TODO: Deprecate use of backend_options kwarg
+        # TODO: Filter for accepted kwargs
 
     def __getattr__(self, name: str) -> Any:
         if (
@@ -61,7 +65,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
     # TODO: Complete docstring
     observables: Sequence[Observable]
-    default_evaluation_times: tuple[float]
+    default_evaluation_times: np.ndarray | Literal["Full"]
     initial_state: StateType | None
     with_modulation: bool
     interaction_matrix: pm.AbstractArray | None
@@ -73,7 +77,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         *,
         observables: Sequence[Observable] = (),
         # Default evaluation times for observables that don't specify one
-        default_evaluation_times: Sequence[SupportsFloat] = (1.0,),
+        default_evaluation_times: Sequence[SupportsFloat] | Literal["Full"] = (
+            1.0,
+        ),
         initial_state: StateType | None = None,  # Default is ggg...
         with_modulation: bool = False,
         interaction_matrix: ArrayLike | None = None,
@@ -89,10 +95,13 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                     f"Observable. Instead, got instance of type {type(obs)}."
                 )
 
-        default_evaluation_times = tuple(map(float, default_evaluation_times))
-        eval_times_arr = np.array(default_evaluation_times, dtype=float)
-        if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
-            raise ValueError("All evaluation times must be between 0. and 1.")
+        if default_evaluation_times != "Full":
+            eval_times_arr = np.array(default_evaluation_times, dtype=float)
+            if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
+                raise ValueError(
+                    "All evaluation times must be between 0. and 1."
+                )
+            default_evaluation_times = cast(Sequence[float], eval_times_arr)
 
         if initial_state is not None and not isinstance(initial_state, State):
             raise TypeError(
@@ -117,6 +126,24 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             prefer_device_noise_model=bool(prefer_device_noise_model),
             noise_model=noise_model,
             **backend_options,
+        )
+
+    def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
+        """Assesses whether a relative time is an evaluation time."""
+        return 0.0 <= t <= 1.0 and (
+            self.default_evaluation_times == "Full"
+            or self.is_time_in_evaluation_times(
+                t, self.default_evaluation_times, tol=tol
+            )
+        )
+
+    @staticmethod
+    def is_time_in_evaluation_times(
+        t: float, evaluation_times: ArrayLike, tol: float = 1e-6
+    ) -> bool:
+        """Checks if a time is within a collection of evaluation times."""
+        return bool(
+            np.any(np.abs(np.array(evaluation_times, dtype=float) - t) <= tol)
         )
 
 

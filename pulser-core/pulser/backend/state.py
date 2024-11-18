@@ -37,8 +37,8 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
 
     eigenstates: Sequence[Eigenstate]
 
-    @abstractmethod
     @property
+    @abstractmethod
     def n_qudits(self) -> int:
         """The number of qudits in the state."""
         pass
