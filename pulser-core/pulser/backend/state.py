@@ -35,13 +35,28 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     methods below.
     """
 
-    eigenstates: Sequence[Eigenstate]
+    _eigenstates: Sequence[Eigenstate]
 
     @property
     @abstractmethod
     def n_qudits(self) -> int:
         """The number of qudits in the state."""
         pass
+
+    @property
+    def eigenstates(self) -> tuple[Eigenstate, ...]:
+        """The eigenstates that form a qudit's eigenbasis.
+
+        The order of the states should match the order in a
+        numerical (ie state vector or density matrix)
+        representation.
+        """
+        return tuple(self._eigenstates)
+
+    @property
+    def qudit_dim(self) -> int:
+        """The dimensions (ie number of eigenstates) of a qudit."""
+        return len(self.eigenstates)
 
     @abstractmethod
     def overlap(self: StateType, other: StateType, /) -> ReturnScalarType:

@@ -14,6 +14,8 @@
 """Defines the backend configuration classes."""
 from __future__ import annotations
 
+import copy
+import warnings
 from dataclasses import dataclass, field
 from typing import (
     Any,
@@ -46,9 +48,33 @@ class BackendConfig:
 
     def __init__(self, **backend_options: Any) -> None:
         """Initializes the backend config."""
-        self._backend_options = backend_options
-        # TODO: Deprecate use of backend_options kwarg
-        # TODO: Filter for accepted kwargs
+        cls_name = self.__class__.__name__
+        if invalid_kwargs := (
+            set(backend_options)
+            - (self._expected_kwargs() | {"backend_options"})
+        ):
+            warnings.warn(
+                f"{cls_name!r} received unexpected keyword arguments: "
+                f"{invalid_kwargs}; only the following keyword "
+                f"arguments are expected: {self._expected_kwargs()}.",
+                stacklevel=2,
+            )
+        # Prevents potential issues with mutable arguments
+        self._backend_options = copy.deepcopy(backend_options)
+        if "backend_options" in backend_options:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("always")
+                warnings.warn(
+                    f"The 'backend_options' argument of {cls_name!r} "
+                    "has been deprecated. Please provide the options "
+                    f"as keyword arguments directly to '{cls_name}()'.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            self._backend_options.update(backend_options["backend_options"])
+
+    def _expected_kwargs(self) -> set[str]:
+        return set()
 
     def __getattr__(self, name: str) -> Any:
         if (
@@ -57,13 +83,40 @@ class BackendConfig:
             and name in self._backend_options
         ):
             return self._backend_options[name]
-        raise AttributeError  # TODO:
+        raise AttributeError(f"{name!r} has not been passed to {self!r}.")
 
 
 class EmulationConfig(BackendConfig, Generic[StateType]):
-    """Configurates an emulation on a backend."""
+    """Configures an emulation on a backend.
 
-    # TODO: Complete docstring
+    Args:
+        observables: A sequence of observables to compute at specific
+            evaluation times. The observables without specified evaluation
+            times will use this configuration's 'default_evaluation_times'.
+        default_evaluation_times: The default times at which observables
+            are computed. Can be a sequence of relative times between 0
+            (the start of the sequence) and 1 (the end of the sequence).
+            Can also be specified as "Full", in which case every step in the
+            emulation will also be an evaluation times.
+        initial_state: The initial state from which emulation starts. If
+            specified, the state type needs to be compatible with the emulator
+            backend. If left undefined, defaults to starting with all qudits
+            in the ground state.
+        with_modulation: Whether to emulate the sequence with the programmed
+            input or the expected output.
+        interaction_matrix: An optional interaction matrix to replace the
+            interaction terms in the Hamiltonian. For an N-qudit system,
+            must be an NxN symmetric matrix where entry (i, j) dictates
+            the interaction coefficient between qudits i and j, ie it replaces
+            the C/r_{ij}^6.
+        prefer_device_noise_model: If the sequence's device has a default noise
+            model, this option signals the backend to prefer it over the noise
+            model given with this configuration.
+        noise_model: An optional noise model to emulate the sequence with.
+            Ignored if the sequence's device has default noise model and
+            `prefer_device_noise_model=True`.
+    """
+
     observables: Sequence[Observable]
     default_evaluation_times: np.ndarray | Literal["Full"]
     initial_state: StateType | None
@@ -109,7 +162,23 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                 f" got object of type {type(initial_state)} instead."
             )
 
-        # TODO: Validate interaction matrix
+        if interaction_matrix is not None:
+            interaction_matrix = pm.AbstractArray(interaction_matrix)
+            _shape = interaction_matrix.shape
+            if len(_shape) != 2 or _shape[0] != _shape[1]:
+                raise ValueError(
+                    "'interaction_matrix' must be a square matrix. Instead, "
+                    f"an array of shape {_shape} was given."
+                )
+            if (
+                initial_state is not None
+                and _shape[0] != initial_state.n_qudits
+            ):
+                raise ValueError(
+                    f"The received interaction matrix of shape {_shape} is "
+                    "incompatible with the received initial state of "
+                    f"{initial_state.n_qudits} qudits."
+                )
 
         if not isinstance(noise_model, NoiseModel):
             raise TypeError(
@@ -127,6 +196,17 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             noise_model=noise_model,
             **backend_options,
         )
+
+    def _expected_kwargs(self) -> set[str]:
+        return super()._expected_kwargs() | {
+            "observables",
+            "default_evaluation_times",
+            "initial_state",
+            "with_modulation",
+            "interaction_matrix",
+            "prefer_device_noise_model",
+            "noise_model",
+        }
 
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
         """Assesses whether a relative time is an evaluation time."""
@@ -198,7 +278,7 @@ class EmulatorConfig(BackendConfig):
     noise_model: NoiseModel = field(default_factory=NoiseModel)
 
     def __post_init__(self) -> None:
-        # TODO: Raise deprecation warning
+        # TODO: Deprecate
         if not (0 < self.sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "
