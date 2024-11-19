@@ -618,8 +618,8 @@ class BaseDevice(ABC):
             device_lines.append(f" - Maximum number of runs: {self.max_runs}")
         device_lines += [
             f" - Channels can be reused: {'Yes' if self.reusable_channels else 'No'}",
-            f" - Supported bases: {", ".join(self.supported_bases)}",
-            f" - Supported states: {", ".join(self.supported_states)}",
+            f" - Supported bases: {', '.join(self.supported_bases)}",
+            f" - Supported states: {', '.join(self.supported_states)}",
         ]
         if self.interaction_coeff is not None:
             device_lines.append(
