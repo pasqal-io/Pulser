@@ -666,16 +666,12 @@ class BaseDevice(ABC):
                 max_abs_detuning = "None"
                 if ch.max_abs_detuning is not None:
                     max_abs_detuning = (
-                        f"{float(cast(float, ch.max_abs_detuning)):.4g} rad/µs"
+                        f"{float(ch.max_abs_detuning):.4g} rad/µs"
                     )
 
                 bottom_detuning = "None"
-                if hasattr(ch, "bottom_detuning"):
-                    if ch.bottom_detuning is not None:
-                        bottom_detuning = (
-                            f"{float(cast(float, ch.bottom_detuning)):.4g}"
-                            " rad/µs"
-                        )
+                if isinstance(ch, DMM) and ch.bottom_detuning is not None:
+                    bottom_detuning = f"{float(ch.bottom_detuning):.4g} rad/µs"
 
                 ch_lines += [
                     f" - ID: '{name}'",
