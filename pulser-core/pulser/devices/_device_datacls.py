@@ -617,7 +617,11 @@ class BaseDevice(ABC):
         if self.max_runs is not None:
             device_lines.append(f" - Maximum number of runs: {self.max_runs}")
         device_lines += [
-            f" - Channels can be reused: {'Yes' if self.reusable_channels else 'No'}",
+            (
+                " - Channels can be reused: " "Yes"
+                if self.reusable_channels
+                else "No"
+            ),
             f" - Supported bases: {', '.join(self.supported_bases)}",
             f" - Supported states: {', '.join(self.supported_states)}",
         ]
@@ -639,12 +643,12 @@ class BaseDevice(ABC):
             "\nLayout parameters:",
             f" - Requires layout: {'Yes' if self.requires_layout else 'No'}",
         ]
-        try:
+        if hasattr(self, "accepts_new_layouts"):
             layout_lines.append(
-                f" - Accepts new layout: {'Yes' if self.accepts_new_layouts else 'No'}"
+                " - Accepts new layout: " "Yes"
+                if self.accepts_new_layouts
+                else "No"
             )
-        except AttributeError:
-            pass
 
         layout_lines += [
             f" - Minimal number of traps: {self.min_layout_traps}",
@@ -659,11 +663,15 @@ class BaseDevice(ABC):
                 except (AttributeError, TypeError):
                     max_amp = "None"
                 try:
-                    max_abs_detuning = f"{float(cast(float, ch.max_abs_detuning)):.4g} rad/µs"
+                    max_abs_detuning = (
+                        f"{float(cast(float, ch.max_abs_detuning)):.4g} rad/µs"
+                    )
                 except (AttributeError, TypeError):
                     max_abs_detuning = "None"
                 try:
-                    bottom_detuning = f"{float(cast(float, ch.bottom_detuning)):.4g} rad/µs"
+                    bottom_detuning = (
+                        f"{float(cast(float, ch.bottom_detuning)):.4g} rad/µs"
+                    )
                 except (AttributeError, TypeError):
                     bottom_detuning = "None"
 
