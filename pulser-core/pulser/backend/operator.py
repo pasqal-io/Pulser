@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
 from typing import Generic, Type, TypeVar
 
-from pulser.backend.state import State, Eigenstate
+from pulser.backend.state import Eigenstate, State
 
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")

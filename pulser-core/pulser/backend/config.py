@@ -32,8 +32,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser.math as pm
-from pulser.backend.state import State
 from pulser.backend.observable import Observable
+from pulser.backend.state import State
 from pulser.noise_model import NoiseModel
 
 EVAL_TIMES_LITERAL = Literal["Full", "Minimal", "Final"]

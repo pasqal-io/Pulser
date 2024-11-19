@@ -16,11 +16,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from pulser.backend.state import State
 from pulser.backend.operator import Operator
 from pulser.backend.results import Results
+from pulser.backend.state import State
 
 if TYPE_CHECKING:
     from pulser.backend.config import EmulationConfig
