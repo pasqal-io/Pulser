@@ -588,7 +588,7 @@ class BaseDevice(ABC):
 
     @property
     def specs(self) -> str:
-        """ Text summarizing the specifications of the device. """
+        """Text summarizing the specifications of the device."""
         return self._specs(for_docs=False)
 
     def _specs(self, for_docs: bool = False) -> str:
@@ -659,22 +659,23 @@ class BaseDevice(ABC):
         ch_lines = ["\nChannels:"]
         for name, ch in {**self.channels, **self.dmm_channels}.items():
             if for_docs:
-                try:
+                max_amp = "None"
+                if ch.max_abs_detuning is not None:
                     max_amp = f"{float(cast(float, ch.max_amp)):.4g} rad/µs"
-                except (AttributeError, TypeError):
-                    max_amp = "None"
-                try:
+
+                max_abs_detuning = "None"
+                if ch.max_abs_detuning is not None:
                     max_abs_detuning = (
                         f"{float(cast(float, ch.max_abs_detuning)):.4g} rad/µs"
                     )
-                except (AttributeError, TypeError):
-                    max_abs_detuning = "None"
-                try:
-                    bottom_detuning = (
-                        f"{float(cast(float, ch.bottom_detuning)):.4g} rad/µs"
-                    )
-                except (AttributeError, TypeError):
-                    bottom_detuning = "None"
+
+                bottom_detuning = "None"
+                if hasattr(ch, "bottom_detuning"):
+                    if ch.bottom_detuning is not None:
+                        bottom_detuning = (
+                            f"{float(cast(float, ch.bottom_detuning)):.4g}"
+                            " rad/µs"
+                        )
 
                 ch_lines += [
                     f" - ID: '{name}'",
