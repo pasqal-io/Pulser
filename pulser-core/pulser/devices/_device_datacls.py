@@ -725,6 +725,10 @@ class Device(BaseDevice):
         print("\n".join(header))
         print(self._specs())
 
+    @property
+    def specs(self) -> str:
+        return self._specs(for_docs=True)
+
     def _specs(self, for_docs: bool = False) -> str:
         lines = [
             "\nRegister parameters:",
