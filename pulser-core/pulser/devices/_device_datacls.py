@@ -746,6 +746,40 @@ class Device(BaseDevice):
                 f"{self.max_sequence_duration} ns"
             )
 
+        device_lines = [
+            "\nDevice parameters:",
+        ]
+        if self.max_runs is not None:
+            device_lines.append(
+                f" - Maximum number of runs: {self.max_runs}"
+            )
+        device_lines += [
+            f" - Channels can be reused: {'Yes' if self.reusable_channels else 'No'}",
+            f" - Supported bases: {", ".join(self.supported_bases)}",
+            f" - Supported states: {", ".join(self.supported_states)}",
+        ]
+        if self.interaction_coeff is not None:
+            device_lines.append(
+                f" - Ising interaction coefficient: {self.interaction_coeff}"
+            )
+        if self.interaction_coeff_xy is not None:
+            device_lines.append(
+                f" - XY interaction coefficient: {self.interaction_coeff_xy}"
+            )
+
+        if self.default_noise_model is not None:
+            device_lines.append(
+                f" - Default noise model: {self.default_noise_model}"
+            )
+
+        layout_lines = [
+            "\nLayout parameters:",
+            f" - Requires layout: {'Yes' if self.requires_layout else 'No'}",
+            f" - Accepts new layout: {'Yes' if self.accepts_new_layouts else 'No'}",
+            f" - Minimal number of traps: {self.min_layout_traps}",
+            f" - Maximal number of traps: {self.max_layout_traps}"
+        ]
+
         ch_lines = ["\nChannels:"]
         for name, ch in {**self.channels, **self.dmm_channels}.items():
             if for_docs:
@@ -789,7 +823,7 @@ class Device(BaseDevice):
             else:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
-        return "\n".join(lines + ch_lines)
+        return "\n".join(lines + device_lines + layout_lines + ch_lines)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
