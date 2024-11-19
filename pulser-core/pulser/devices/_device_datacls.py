@@ -588,7 +588,11 @@ class BaseDevice(ABC):
 
     @property
     def specs(self) -> str:
-        return self._specs(for_docs=True)
+        """
+        Text summarizing the specifications of the device.
+        """
+
+        return self._specs(for_docs=False)
 
     def _specs(self, for_docs: bool = False) -> str:
         lines = [
