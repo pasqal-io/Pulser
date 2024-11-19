@@ -1746,7 +1746,7 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             mode: The curves to draw. 'input'
-                draws only the programmed curves, 'output' the excepted curves
+                draws only the programmed curves, 'output' the expected curves
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
