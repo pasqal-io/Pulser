@@ -579,6 +579,130 @@ class BaseDevice(ABC):
         validate_abstract_repr(abstr_dev_str, "device")
         return abstr_dev_str
 
+    def print_specs(self) -> None:
+        """Prints the device specifications."""
+        title = f"{self.name} Specifications"
+        header = ["-" * len(title), title, "-" * len(title)]
+        print("\n".join(header))
+        print(self._specs())
+
+    @property
+    def specs(self) -> str:
+        return self._specs(for_docs=True)
+
+    def _specs(self, for_docs: bool = False) -> str:
+        lines = [
+            "\nRegister parameters:",
+            f" - Dimensions: {self.dimensions}D",
+            f" - Rydberg level: {self.rydberg_level}",
+            f" - Maximum number of atoms: {self.max_atom_num}",
+            f" - Maximum distance from origin: {self.max_radial_distance} μm",
+            (
+                " - Minimum distance between neighbouring atoms: "
+                f"{self.min_atom_distance} μm"
+            ),
+            f" - Maximum layout filling fraction: {self.max_layout_filling}",
+            f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
+        ]
+
+        if self.max_sequence_duration is not None:
+            lines.append(
+                " - Maximum sequence duration: "
+                f"{self.max_sequence_duration} ns"
+            )
+
+        device_lines = [
+            "\nDevice parameters:",
+        ]
+        if self.max_runs is not None:
+            device_lines.append(f" - Maximum number of runs: {self.max_runs}")
+        device_lines += [
+            f" - Channels can be reused: {'Yes' if self.reusable_channels else 'No'}",
+            f" - Supported bases: {", ".join(self.supported_bases)}",
+            f" - Supported states: {", ".join(self.supported_states)}",
+        ]
+        if self.interaction_coeff is not None:
+            device_lines.append(
+                f" - Ising interaction coefficient: {self.interaction_coeff}"
+            )
+        if self.interaction_coeff_xy is not None:
+            device_lines.append(
+                f" - XY interaction coefficient: {self.interaction_coeff_xy}"
+            )
+
+        if self.default_noise_model is not None:
+            device_lines.append(
+                f" - Default noise model: {self.default_noise_model}"
+            )
+
+        layout_lines = [
+            "\nLayout parameters:",
+            f" - Requires layout: {'Yes' if self.requires_layout else 'No'}",
+        ]
+        try:
+            layout_lines.append(
+                f" - Accepts new layout: {'Yes' if self.accepts_new_layouts else 'No'}"
+            )
+        except AttributeError:
+            pass
+
+        layout_lines += [
+            f" - Minimal number of traps: {self.min_layout_traps}",
+            f" - Maximal number of traps: {self.max_layout_traps}",
+        ]
+
+        ch_lines = ["\nChannels:"]
+        for name, ch in {**self.channels, **self.dmm_channels}.items():
+            if for_docs:
+                try:
+                    max_amp = f"{float(cast(float, ch.max_amp)):.4g} rad/µs"
+                except (AttributeError, TypeError):
+                    max_amp = "None"
+                try:
+                    max_abs_detuning = f"{float(cast(float, ch.max_abs_detuning)):.4g} rad/µs"
+                except (AttributeError, TypeError):
+                    max_abs_detuning = "None"
+                try:
+                    bottom_detuning = f"{float(cast(float, ch.bottom_detuning)):.4g} rad/µs"
+                except (AttributeError, TypeError):
+                    bottom_detuning = "None"
+
+                ch_lines += [
+                    f" - ID: '{name}'",
+                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
+                    f"\t- Addressing: {ch.addressing}",
+                    ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
+                    (
+                        (
+                            "\t"
+                            + r"- Maximum :math:`|\delta|`: "
+                            + max_abs_detuning
+                        )
+                        if not isinstance(ch, DMM)
+                        else (
+                            "\t"
+                            + r"- Bottom :math:`|\delta|`: "
+                            + bottom_detuning
+                        )
+                    ),
+                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
+                ]
+                if ch.addressing == "Local":
+                    ch_lines += [
+                        "\t- Minimum time between retargets: "
+                        f"{ch.min_retarget_interval} ns",
+                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
+                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
+                    ]
+                ch_lines += [
+                    f"\t- Clock period: {ch.clock_period} ns",
+                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
+                ]
+            else:
+                ch_lines.append(f" - '{name}': {ch!r}")
+
+        return "\n".join(lines + device_lines + layout_lines + ch_lines)
+
 
 @dataclass(frozen=True, repr=False)
 class Device(BaseDevice):
@@ -717,117 +841,6 @@ class Device(BaseDevice):
         for param in all_params_names - target_params_names:
             del params[param]
         return VirtualDevice(**params)
-
-    def print_specs(self) -> None:
-        """Prints the device specifications."""
-        title = f"{self.name} Specifications"
-        header = ["-" * len(title), title, "-" * len(title)]
-        print("\n".join(header))
-        print(self._specs())
-
-    @property
-    def specs(self) -> str:
-        return self._specs(for_docs=True)
-
-    def _specs(self, for_docs: bool = False) -> str:
-        lines = [
-            "\nRegister parameters:",
-            f" - Dimensions: {self.dimensions}D",
-            f" - Rydberg level: {self.rydberg_level}",
-            f" - Maximum number of atoms: {self.max_atom_num}",
-            f" - Maximum distance from origin: {self.max_radial_distance} μm",
-            (
-                " - Minimum distance between neighbouring atoms: "
-                f"{self.min_atom_distance} μm"
-            ),
-            f" - Maximum layout filling fraction: {self.max_layout_filling}",
-            f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
-        ]
-
-        if self.max_sequence_duration is not None:
-            lines.append(
-                " - Maximum sequence duration: "
-                f"{self.max_sequence_duration} ns"
-            )
-
-        device_lines = [
-            "\nDevice parameters:",
-        ]
-        if self.max_runs is not None:
-            device_lines.append(
-                f" - Maximum number of runs: {self.max_runs}"
-            )
-        device_lines += [
-            f" - Channels can be reused: {'Yes' if self.reusable_channels else 'No'}",
-            f" - Supported bases: {", ".join(self.supported_bases)}",
-            f" - Supported states: {", ".join(self.supported_states)}",
-        ]
-        if self.interaction_coeff is not None:
-            device_lines.append(
-                f" - Ising interaction coefficient: {self.interaction_coeff}"
-            )
-        if self.interaction_coeff_xy is not None:
-            device_lines.append(
-                f" - XY interaction coefficient: {self.interaction_coeff_xy}"
-            )
-
-        if self.default_noise_model is not None:
-            device_lines.append(
-                f" - Default noise model: {self.default_noise_model}"
-            )
-
-        layout_lines = [
-            "\nLayout parameters:",
-            f" - Requires layout: {'Yes' if self.requires_layout else 'No'}",
-            f" - Accepts new layout: {'Yes' if self.accepts_new_layouts else 'No'}",
-            f" - Minimal number of traps: {self.min_layout_traps}",
-            f" - Maximal number of traps: {self.max_layout_traps}"
-        ]
-
-        ch_lines = ["\nChannels:"]
-        for name, ch in {**self.channels, **self.dmm_channels}.items():
-            if for_docs:
-                ch_lines += [
-                    f" - ID: '{name}'",
-                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
-                    f"\t- Addressing: {ch.addressing}",
-                    (
-                        "\t"
-                        + r"- Maximum :math:`\Omega`:"
-                        + f" {float(cast(float,ch.max_amp)):.4g} rad/µs"
-                    ),
-                    (
-                        (
-                            "\t"
-                            + r"- Maximum :math:`|\delta|`:"
-                            + f" {float(cast(float, ch.max_abs_detuning)):.4g}"
-                            + " rad/µs"
-                        )
-                        if not isinstance(ch, DMM)
-                        else (
-                            "\t"
-                            + r"- Bottom :math:`|\delta|`:"
-                            + f" {float(cast(float,ch.bottom_detuning)):.4g}"
-                            + " rad/µs"
-                        )
-                    ),
-                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
-                ]
-                if ch.addressing == "Local":
-                    ch_lines += [
-                        "\t- Minimum time between retargets: "
-                        f"{ch.min_retarget_interval} ns",
-                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
-                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
-                    ]
-                ch_lines += [
-                    f"\t- Clock period: {ch.clock_period} ns",
-                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
-                ]
-            else:
-                ch_lines.append(f" - '{name}': {ch!r}")
-
-        return "\n".join(lines + device_lines + layout_lines + ch_lines)
 
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
