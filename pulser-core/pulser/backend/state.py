@@ -17,11 +17,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Sequence
-from typing import Generic, Literal, Type, TypeVar
+from typing import Generic, Literal, Type, TypeVar, Union
 
 from pulser.channels.base_channel import States
 
-Eigenstate = States | Literal["O", "1"]
+Eigenstate = Union[States, Literal["0", "1"]]
 
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")
