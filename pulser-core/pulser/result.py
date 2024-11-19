@@ -17,7 +17,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -46,6 +46,8 @@ __all__ = ["Result", "SampledResult"]
 @dataclass
 class Result(ABC, backend_results.Results):
     """Base class for storing the result of an observable at specific time."""
+
+    total_duration: int = field(default=0, init=False)
 
     @property
     def sampling_dist(self) -> dict[str, float]:

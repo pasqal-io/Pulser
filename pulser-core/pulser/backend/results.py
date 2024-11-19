@@ -24,10 +24,17 @@ from pulser.register import QubitId
 
 @dataclass
 class Results:
-    """A collection of results."""
+    """A collection of results.
+
+    Args:
+        atoms_order: The order of the atoms/qudits in the results.
+        meas_basis: The measurement basis.
+        total_duration: The total duration of the sequence, in ns.
+    """
 
     atom_order: tuple[QubitId, ...]
     meas_basis: str
+    total_duration: int
     _results: dict[str, dict[float, Any]] = field(init=False)
 
     def __post_init__(self) -> None:

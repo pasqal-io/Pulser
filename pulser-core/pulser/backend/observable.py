@@ -37,7 +37,6 @@ class Callback(ABC):
         state: State,
         hamiltonian: Operator,
         result: Results,
-        time_tol: float,
     ) -> None:
         """Specifies a call to the callback at a specific time.
 
@@ -53,8 +52,6 @@ class Callback(ABC):
             state: The current state.
             hamiltonian: The Hamiltonian at this time.
             result: The Results object to store the result in.
-            time_tol: Tolerance below which two time values are considered
-                equal.
         """
         pass
 
@@ -79,7 +76,6 @@ class Observable(Callback):
         state: State,
         hamiltonian: Operator,
         result: Results,
-        time_tol: float,
     ) -> None:
         """Specifies a call to the observable at a specific time.
 
@@ -98,6 +94,9 @@ class Observable(Callback):
             time_tol: Tolerance below which two time values are considered
                 equal.
         """
+        time_tol = (
+            (0.5 / result.total_duration) if result.total_duration else 1e-6
+        )
         if (
             self.evaluation_times is not None
             and config.is_time_in_evaluation_times(
@@ -105,7 +104,7 @@ class Observable(Callback):
             )
         ) or config.is_evaluation_time(t, tol=time_tol):
             value_to_store = self.apply(
-                config=config, t=t, state=state, hamiltonian=hamiltonian
+                config=config, state=state, hamiltonian=hamiltonian
             )
             result._store(
                 observable_name=self.name(), time=t, value=value_to_store
@@ -129,7 +128,6 @@ class Observable(Callback):
         self,
         *,
         config: EmulationConfig,
-        t: float,
         state: State,
         hamiltonian: Operator,
     ) -> Any:
@@ -137,7 +135,6 @@ class Observable(Callback):
 
         Args:
             config: The config object passed to the backend.
-            t: The relative time as a float between 0 and 1.
             state: The current state.
             hamiltonian: The Hamiltonian at this time.
 

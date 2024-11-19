@@ -597,7 +597,7 @@ class QutipEmulator:
                     self._meas_basis,
                     state,
                     self._meas_basis in self.basis_name,
-                    evaluation_time=t / self._tot_duration * 1e-3,
+                    evaluation_time=t / self._tot_duration * 1e3,
                 )
                 for state, t in zip(result.states, self._eval_times_array)
             ]
@@ -685,7 +685,7 @@ class QutipEmulator:
                 tuple(self._hamiltonian._qdict),
                 self._meas_basis,
                 total_count[ind],
-                evaluation_time=t / self._tot_duration * 1e-3,
+                evaluation_time=t / self._tot_duration * 1e3,
             )
             for ind, t in enumerate(self._eval_times_array)
         ]
