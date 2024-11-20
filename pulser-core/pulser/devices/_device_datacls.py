@@ -595,67 +595,70 @@ class BaseDevice(ABC):
         def yes_no_fn(cond: bool) -> str:
             return "Yes" if cond else "No"
 
-        lines = [
-            "\nRegister parameters:",
-            f" - Dimensions: {self.dimensions}D",
-            f" - Rydberg level: {self.rydberg_level}",
-            f" - Maximum number of atoms: {self.max_atom_num}",
-            f" - Maximum distance from origin: {self.max_radial_distance} μm",
-            (
-                " - Minimum distance between neighbouring atoms: "
-                f"{self.min_atom_distance} μm"
-            ),
-            f" - Maximum layout filling fraction: {self.max_layout_filling}",
-            f" - SLM Mask: {yes_no_fn(self.supports_slm_mask)}",
-        ]
+        def check_none(var: Any, line: str) -> str:
+            if var is None:
+                return ""
+            else:
+                return line.format(var)
 
-        if self.max_sequence_duration is not None:
-            lines.append(
-                " - Maximum sequence duration: "
-                f"{self.max_sequence_duration} ns"
+        reg_lines = (
+            "\nRegister parameters:\n"
+            + f" - Dimensions: {self.dimensions}D\n"
+            + f" - Rydberg level: {self.rydberg_level}\n"
+            + check_none(self.max_atom_num, " - Maximum number of atoms: {}\n")
+            + check_none(
+                self.max_radial_distance,
+                " - Maximum distance from origin: {} µm\n",
             )
+            + " - Minimum distance between neighbouring atoms: "
+            + f"{self.min_atom_distance} μm\n"
+            + f" - SLM Mask: {yes_no_fn(self.supports_slm_mask)}\n"
+        )
 
-        device_lines = [
-            "\nDevice parameters:",
-        ]
-
-        if self.max_runs is not None:
-            device_lines.append(f" - Maximum number of runs: {self.max_runs}")
-        device_lines += [
-            f" - Channels can be reused: {yes_no_fn(self.reusable_channels)}",
-            f" - Supported bases: {', '.join(self.supported_bases)}",
-            f" - Supported states: {', '.join(self.supported_states)}",
-        ]
-
-        if self.interaction_coeff is not None:
-            device_lines.append(
-                f" - Ising interaction coefficient: {self.interaction_coeff}"
-            )
-
-        if self.interaction_coeff_xy is not None:
-            device_lines.append(
-                f" - XY interaction coefficient: {self.interaction_coeff_xy}"
-            )
-
-        if self.default_noise_model is not None:
-            device_lines.append(
-                f" - Default noise model: {self.default_noise_model}"
-            )
-
-        layout_lines = [
-            "\nLayout parameters:",
-            f" - Requires layout: {yes_no_fn(self.requires_layout)}",
-        ]
+        layout_lines = (
+            "\nLayout parameters:\n"
+            + f" - Requires layout: {yes_no_fn(self.requires_layout)}\n"
+        )
 
         if hasattr(self, "accepts_new_layouts"):
-            layout_lines.append(
-                f" - Accepts new layout: {yes_no_fn(self.accepts_new_layouts)}"
+            layout_lines += (
+                " - Accepts new layout: "
+                + f"{yes_no_fn(self.accepts_new_layouts)}\n"
             )
 
-        layout_lines += [
-            f" - Minimal number of traps: {self.min_layout_traps}",
-            f" - Maximal number of traps: {self.max_layout_traps}",
-        ]
+        layout_lines += (
+            f" - Minimal number of traps: {self.min_layout_traps}\n"
+            + check_none(
+                self.max_layout_traps, " - Maximal number of traps: {}\n"
+            )
+            + " - Maximum layout filling fraction: "
+            + f"{self.max_layout_filling}\n"
+        )
+
+        device_lines = (
+            "\nDevice parameters:\n"
+            + check_none(self.max_runs, " - Maximum number of runs: {}\n")
+            + check_none(
+                self.max_sequence_duration,
+                " - Maximum sequence duration: {} ns\n",
+            )
+            + " - Channels can be reused: "
+            + f"{yes_no_fn(self.reusable_channels)}\n"
+            + f" - Supported bases: {', '.join(self.supported_bases)}\n"
+            + f" - Supported states: {', '.join(self.supported_states)}\n"
+            + check_none(
+                self.interaction_coeff,
+                " - Ising interaction coefficient: {}\n",
+            )
+            + check_none(
+                self.interaction_coeff_xy,
+                " - XY interaction coefficient: {}\n",
+            )
+            + check_none(
+                self.default_noise_model,
+                " - Default noise model: {}\n",
+            )
+        )
 
         ch_lines = ["\nChannels:"]
         for name, ch in {**self.channels, **self.dmm_channels}.items():
@@ -708,7 +711,7 @@ class BaseDevice(ABC):
             else:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
-        return "\n".join(lines + device_lines + layout_lines + ch_lines)
+        return reg_lines + layout_lines + device_lines + "\n".join(ch_lines)
 
 
 @dataclass(frozen=True, repr=False)

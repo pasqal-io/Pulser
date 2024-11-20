@@ -258,7 +258,10 @@ def test_tuple_conversion(test_params):
     assert dev.channel_ids == ("custom_channel",)
 
 
-def test_device_specs():
+@pytest.mark.parametrize(
+    "device", [MockDevice, AnalogDevice, DigitalAnalogDevice]
+)
+def test_device_specs(device):
     def yes_no_fn(dev, attr, text):
         if hasattr(dev, attr):
             cond = getattr(dev, attr)
@@ -279,20 +282,30 @@ def test_device_specs():
             "\nRegister parameters:\n"
             + f" - Dimensions: {dev.dimensions}D\n"
             + f" - Rydberg level: {dev.rydberg_level}\n"
-            + f" - Maximum number of atoms: {dev.max_atom_num}\n"
-            + " - Maximum distance from origin: "
-            + f"{dev.max_radial_distance} μm\n"
+            + check_none_fn(dev, "max_atom_num", "Maximum number of atoms: {}")
+            + check_none_fn(
+                dev,
+                "max_radial_distance",
+                "Maximum distance from origin: {} µm",
+            )
             + " - Minimum distance between neighbouring atoms: "
             + f"{dev.min_atom_distance} μm\n"
-            + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
             + yes_no_fn(dev, "supports_slm_mask", "SLM Mask")
+            + "\nLayout parameters:\n"
+            + yes_no_fn(dev, "requires_layout", "Requires layout")
+            + yes_no_fn(dev, "accepts_new_layouts", "Accepts new layout")
+            + f" - Minimal number of traps: {dev.min_layout_traps}\n"
+            + check_none_fn(
+                dev, "max_layout_traps", "Maximal number of traps: {}"
+            )
+            + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
+            + "\nDevice parameters:\n"
+            + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
             + check_none_fn(
                 dev,
                 "max_sequence_duration",
                 "Maximum sequence duration: {} ns",
             )
-            + "\nDevice parameters:\n"
-            + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
             + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
             + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
             + f" - Supported states: {', '.join(dev.supported_states)}\n"
@@ -300,11 +313,6 @@ def test_device_specs():
             + check_none_fn(
                 dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
             )
-            + "\nLayout parameters:\n"
-            + yes_no_fn(dev, "requires_layout", "Requires layout")
-            + yes_no_fn(dev, "accepts_new_layouts", "Accepts new layout")
-            + f" - Minimal number of traps: {dev.min_layout_traps}\n"
-            + f" - Maximal number of traps: {dev.max_layout_traps}\n"
             + "\nChannels:\n"
             + "\n".join(
                 f" - '{name}': {ch!r}"
@@ -312,9 +320,7 @@ def test_device_specs():
             )
         )
 
-    assert MockDevice.specs == specs(MockDevice)
-    assert AnalogDevice.specs == specs(AnalogDevice)
-    assert DigitalAnalogDevice.specs == specs(DigitalAnalogDevice)
+    assert device.specs == specs(device)
 
 
 def test_valid_devices():
