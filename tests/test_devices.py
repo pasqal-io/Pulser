@@ -23,8 +23,8 @@ import pulser
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
 from pulser.devices import (
-    Device,
     AnalogDevice,
+    Device,
     DigitalAnalogDevice,
     MockDevice,
     VirtualDevice,
