@@ -592,6 +592,9 @@ class BaseDevice(ABC):
         return self._specs(for_docs=False)
 
     def _specs(self, for_docs: bool = False) -> str:
+        def yes_no_fn(cond: bool) -> str:
+            return "Yes" if cond else "No"
+
         lines = [
             "\nRegister parameters:",
             f" - Dimensions: {self.dimensions}D",
@@ -603,7 +606,7 @@ class BaseDevice(ABC):
                 f"{self.min_atom_distance} μm"
             ),
             f" - Maximum layout filling fraction: {self.max_layout_filling}",
-            f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
+            f" - SLM Mask: {yes_no_fn(self.supports_slm_mask)}",
         ]
 
         if self.max_sequence_duration is not None:
@@ -615,21 +618,20 @@ class BaseDevice(ABC):
         device_lines = [
             "\nDevice parameters:",
         ]
+
         if self.max_runs is not None:
             device_lines.append(f" - Maximum number of runs: {self.max_runs}")
         device_lines += [
-            (
-                " - Channels can be reused: " "Yes"
-                if self.reusable_channels
-                else "No"
-            ),
+            f" - Channels can be reused: {yes_no_fn(self.reusable_channels)}",
             f" - Supported bases: {', '.join(self.supported_bases)}",
             f" - Supported states: {', '.join(self.supported_states)}",
         ]
+
         if self.interaction_coeff is not None:
             device_lines.append(
                 f" - Ising interaction coefficient: {self.interaction_coeff}"
             )
+
         if self.interaction_coeff_xy is not None:
             device_lines.append(
                 f" - XY interaction coefficient: {self.interaction_coeff_xy}"
@@ -642,13 +644,12 @@ class BaseDevice(ABC):
 
         layout_lines = [
             "\nLayout parameters:",
-            f" - Requires layout: {'Yes' if self.requires_layout else 'No'}",
+            f" - Requires layout: {yes_no_fn(self.requires_layout)}",
         ]
+
         if hasattr(self, "accepts_new_layouts"):
             layout_lines.append(
-                " - Accepts new layout: " "Yes"
-                if self.accepts_new_layouts
-                else "No"
+                f" - Accepts new layout: {yes_no_fn(self.accepts_new_layouts)}"
             )
 
         layout_lines += [

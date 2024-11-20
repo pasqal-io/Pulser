@@ -24,6 +24,7 @@ from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
 from pulser.devices import (
     Device,
+    AnalogDevice,
     DigitalAnalogDevice,
     MockDevice,
     VirtualDevice,
@@ -255,6 +256,65 @@ def test_tuple_conversion(test_params):
     dev = VirtualDevice(**test_params)
     assert dev.channel_objects == (Rydberg.Global(None, None),)
     assert dev.channel_ids == ("custom_channel",)
+
+
+def test_device_specs():
+    def yes_no_fn(dev, attr, text):
+        if hasattr(dev, attr):
+            cond = getattr(dev, attr)
+            return f" - {text}: {'Yes' if cond else 'No'}\n"
+
+        return ""
+
+    def check_none_fn(dev, attr, text):
+        if hasattr(dev, attr):
+            var = getattr(dev, attr)
+            if var is not None:
+                return " - " + text.format(var) + "\n"
+
+        return ""
+
+    def specs(dev):
+        return (
+            "\nRegister parameters:\n"
+            + f" - Dimensions: {dev.dimensions}D\n"
+            + f" - Rydberg level: {dev.rydberg_level}\n"
+            + f" - Maximum number of atoms: {dev.max_atom_num}\n"
+            + " - Maximum distance from origin: "
+            + f"{dev.max_radial_distance} μm\n"
+            + " - Minimum distance between neighbouring atoms: "
+            + f"{dev.min_atom_distance} μm\n"
+            + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
+            + yes_no_fn(dev, "supports_slm_mask", "SLM Mask")
+            + check_none_fn(
+                dev,
+                "max_sequence_duration",
+                "Maximum sequence duration: {} ns",
+            )
+            + "\nDevice parameters:\n"
+            + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
+            + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
+            + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
+            + f" - Supported states: {', '.join(dev.supported_states)}\n"
+            + f" - Ising interaction coefficient: {dev.interaction_coeff}\n"
+            + check_none_fn(
+                dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
+            )
+            + "\nLayout parameters:\n"
+            + yes_no_fn(dev, "requires_layout", "Requires layout")
+            + yes_no_fn(dev, "accepts_new_layouts", "Accepts new layout")
+            + f" - Minimal number of traps: {dev.min_layout_traps}\n"
+            + f" - Maximal number of traps: {dev.max_layout_traps}\n"
+            + "\nChannels:\n"
+            + "\n".join(
+                f" - '{name}': {ch!r}"
+                for name, ch in {**dev.channels, **dev.dmm_channels}.items()
+            )
+        )
+
+    assert MockDevice.specs == specs(MockDevice)
+    assert AnalogDevice.specs == specs(AnalogDevice)
+    assert DigitalAnalogDevice.specs == specs(DigitalAnalogDevice)
 
 
 def test_valid_devices():
