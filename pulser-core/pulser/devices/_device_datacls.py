@@ -19,7 +19,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, cast, get_args
+from typing import Any, Callable, Literal, cast, get_args
 
 import numpy as np
 from scipy.spatial.distance import squareform
@@ -591,74 +591,65 @@ class BaseDevice(ABC):
         """Text summarizing the specifications of the device."""
         return self._specs(for_docs=False)
 
-    def _specs(self, for_docs: bool = False) -> str:
-        def yes_no_fn(cond: bool) -> str:
-            return "Yes" if cond else "No"
+    def _param_yes_no(self, param: Any) -> str:
+        return "Yes" if param is True else "No"
 
-        def check_none(var: Any, line: str) -> str:
-            if var is None:
+    def _param_check_none(self, param: Any) -> Callable[[str], str]:
+        def empty_str_if_none(line: str) -> str:
+            if param is None:
                 return ""
             else:
-                return line.format(var)
+                return line.format(param)
 
-        reg_lines = (
-            "\nRegister parameters:\n"
-            + f" - Dimensions: {self.dimensions}D\n"
-            + f" - Rydberg level: {self.rydberg_level}\n"
-            + check_none(self.max_atom_num, " - Maximum number of atoms: {}\n")
-            + check_none(
-                self.max_radial_distance,
-                " - Maximum distance from origin: {} µm\n",
-            )
-            + " - Minimum distance between neighbouring atoms: "
-            + f"{self.min_atom_distance} μm\n"
-            + f" - SLM Mask: {yes_no_fn(self.supports_slm_mask)}\n"
-        )
+        return empty_str_if_none
 
-        layout_lines = (
-            "\nLayout parameters:\n"
-            + f" - Requires layout: {yes_no_fn(self.requires_layout)}\n"
-        )
+    def _register_lines(self) -> str:
 
-        if hasattr(self, "accepts_new_layouts"):
-            layout_lines += (
-                " - Accepts new layout: "
-                + f"{yes_no_fn(self.accepts_new_layouts)}\n"
-            )
+        register_lines = [
+            "\nRegister parameters:",
+            f" - Dimensions: {self.dimensions}D",
+            f" - Rydberg level: {self.rydberg_level}",
+            self._param_check_none(self.max_atom_num)(
+                " - Maximum number of atoms: {}"
+            ),
+            self._param_check_none(self.max_radial_distance)(
+                " - Maximum distance from origin: {} µm"
+            ),
+            " - Minimum distance between neighbouring atoms: "
+            + f"{self.min_atom_distance} μm",
+            f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
+        ]
 
-        layout_lines += (
-            f" - Minimal number of traps: {self.min_layout_traps}\n"
-            + check_none(
-                self.max_layout_traps, " - Maximal number of traps: {}\n"
-            )
-            + " - Maximum layout filling fraction: "
-            + f"{self.max_layout_filling}\n"
-        )
+        return "\n".join(line for line in register_lines if line != "")
 
-        device_lines = (
-            "\nDevice parameters:\n"
-            + check_none(self.max_runs, " - Maximum number of runs: {}\n")
-            + check_none(
-                self.max_sequence_duration,
-                " - Maximum sequence duration: {} ns\n",
-            )
-            + " - Channels can be reused: "
-            + f"{yes_no_fn(self.reusable_channels)}\n"
-            + f" - Supported bases: {', '.join(self.supported_bases)}\n"
-            + f" - Supported states: {', '.join(self.supported_states)}\n"
-            + check_none(
-                self.interaction_coeff,
-                " - Ising interaction coefficient: {}\n",
-            )
-            + check_none(
-                self.interaction_coeff_xy,
-                " - XY interaction coefficient: {}\n",
-            )
-            + check_none(
-                self.default_noise_model,
-                " - Default noise model: {}\n",
-            )
-        )
+    def _device_lines(self) -> str:
+
+        device_lines = [
+            "\nDevice parameters:",
+            self._param_check_none(self.max_runs)(
+                " - Maximum number of runs: {}"
+            ),
+            self._param_check_none(self.max_sequence_duration)(
+                " - Maximum sequence duration: {} ns",
+            ),
+            " - Channels can be reused: "
+            + self._param_yes_no(self.reusable_channels),
+            f" - Supported bases: {', '.join(self.supported_bases)}",
+            f" - Supported states: {', '.join(self.supported_states)}",
+            self._param_check_none(self.interaction_coeff)(
+                " - Ising interaction coefficient: {}",
+            ),
+            self._param_check_none(self.interaction_coeff_xy)(
+                " - XY interaction coefficient: {}",
+            ),
+            self._param_check_none(self.default_noise_model)(
+                " - Default noise model: {}",
+            ),
+        ]
+
+        return "\n".join(line for line in device_lines if line != "")
+
+    def _channel_lines(self, for_docs: bool = False) -> str:
 
         ch_lines = ["\nChannels:"]
         for name, ch in {**self.channels, **self.dmm_channels}.items():
@@ -711,7 +702,17 @@ class BaseDevice(ABC):
             else:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
-        return reg_lines + layout_lines + device_lines + "\n".join(ch_lines)
+        return "\n".join(line for line in ch_lines if line != "")
+
+    def _specs(self, for_docs: bool = False) -> str:
+
+        return "\n".join(
+            [
+                self._register_lines(),
+                self._device_lines(),
+                self._channel_lines(for_docs=for_docs),
+            ]
+        )
 
 
 @dataclass(frozen=True, repr=False)
@@ -888,6 +889,33 @@ class Device(BaseDevice):
                 f" {type(device).__name__}."
             )
         return device
+
+    def _layout_lines(self) -> str:
+
+        layout_lines = [
+            "\nLayout parameters:",
+            f" - Requires layout: {self._param_yes_no(self.requires_layout)}",
+            " - Accepts new layout: "
+            + self._param_yes_no(self.accepts_new_layouts),
+            f" - Minimal number of traps: {self.min_layout_traps}",
+            self._param_check_none(self.max_layout_traps)(
+                " - Maximal number of traps: {}"
+            ),
+            f" - Maximum layout filling fraction: {self.max_layout_filling}",
+        ]
+
+        return "\n".join(line for line in layout_lines if line != "")
+
+    def _specs(self, for_docs: bool = False) -> str:
+
+        return "\n".join(
+            [
+                self._register_lines(),
+                self._layout_lines(),
+                self._device_lines(),
+                self._channel_lines(for_docs=for_docs),
+            ]
+        )
 
 
 @dataclass(frozen=True)
