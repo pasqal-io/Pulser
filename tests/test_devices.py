@@ -278,7 +278,7 @@ def test_device_specs(device):
         return ""
 
     def specs(dev):
-        return (
+        register_str = (
             "\nRegister parameters:\n"
             + f" - Dimensions: {dev.dimensions}D\n"
             + f" - Rydberg level: {dev.rydberg_level}\n"
@@ -291,6 +291,9 @@ def test_device_specs(device):
             + " - Minimum distance between neighbouring atoms: "
             + f"{dev.min_atom_distance} μm\n"
             + yes_no_fn(dev, "supports_slm_mask", "SLM Mask")
+        )
+
+        layout_str = (
             + "\nLayout parameters:\n"
             + yes_no_fn(dev, "requires_layout", "Requires layout")
             + yes_no_fn(dev, "accepts_new_layouts", "Accepts new layout")
@@ -299,6 +302,9 @@ def test_device_specs(device):
                 dev, "max_layout_traps", "Maximal number of traps: {}"
             )
             + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
+        )
+
+        device_str = (
             + "\nDevice parameters:\n"
             + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
             + check_none_fn(
@@ -313,12 +319,20 @@ def test_device_specs(device):
             + check_none_fn(
                 dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
             )
+        )
+
+        channel_str = (
             + "\nChannels:\n"
             + "\n".join(
                 f" - '{name}': {ch!r}"
                 for name, ch in {**dev.channels, **dev.dmm_channels}.items()
             )
         )
+
+        if isinstance(device, MockDevice):
+            return register_str + device_str + channel_str
+        else:
+            return register_str + layout_str + device_str + channel_str
 
     assert device.specs == specs(device)
 
@@ -628,3 +642,4 @@ def test_dmm_channels():
             channel_objects=(Rydberg.Global(None, None),),
             channel_ids=("dmm_0",),
         )
+
