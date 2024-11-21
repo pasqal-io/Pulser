@@ -642,4 +642,3 @@ def test_dmm_channels():
             channel_objects=(Rydberg.Global(None, None),),
             channel_ids=("dmm_0",),
         )
-
