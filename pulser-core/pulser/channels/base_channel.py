@@ -34,7 +34,7 @@ warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
-OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
+OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp", "propagation_dir")
 
 # States ranked in decreasing order of their associated eigenenergy
 States = Literal["u", "d", "r", "g", "h", "x"]
@@ -78,6 +78,8 @@ class Channel(ABC):
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
+        propagation_dir: The propagation direction of the beam leaving the
+            channel, given as a vector in 3D space.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -96,6 +98,7 @@ class Channel(ABC):
     min_avg_amp: float = 0
     mod_bandwidth: Optional[float] = None  # MHz
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
+    propagation_dir: tuple[float, float, float] | None = None
 
     @property
     def name(self) -> str:
@@ -244,6 +247,14 @@ class Channel(ABC):
                 "modulation bandwidth."
             )
 
+        if self.propagation_dir is not None:
+            dir_vector = np.array(self.propagation_dir, dtype=float)
+            if dir_vector.size != 3 or np.sum(dir_vector) == 0.0:
+                raise ValueError(
+                    "'propagation_dir' must be given as a non-zero 3D vector;"
+                    f" got {self.propagation_dir} instead."
+                )
+
     @property
     def rise_time(self) -> int:
         """The rise time (in ns).
@@ -340,6 +351,7 @@ class Channel(ABC):
         cls: Type[ChannelType],
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
+        # TODO: Impose a default propagation_dir in pulser-core 1.3
         **kwargs: Any,
     ) -> ChannelType:
         """Initializes the channel with global addressing.
