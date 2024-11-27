@@ -244,6 +244,7 @@ class Hamiltonian:
             slot: _PulseTargetSlot,
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
+            amp_fluctuation: float,
         ) -> None:
             """Builds hamiltonian coefficients.
 
@@ -260,22 +261,23 @@ class Hamiltonian:
                 # Gaussian beam loss in amplitude for global pulses only
                 # Noise is drawn at random for each pulse
                 if "amplitude" in self.config.noise_types and is_global_pulse:
-                    amp_fraction = 1.0
+                    amp_fraction = amp_fluctuation
                     if self.config.laser_waist is not None:
-                        position = self._qdict[qid]
-                        r = np.linalg.norm(position)
-                        w0 = self.config.laser_waist
-                        amp_fraction = np.exp(-((r / w0) ** 2))
-                    noise_amp = noise_amp_base * amp_fraction
-                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= noise_amp
+                    samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
 
         if local_noises:
             for ch, ch_samples in self.samples_obj.channel_samples.items():
-                addr = self.samples_obj._ch_objs[ch].addressing
-                basis = self.samples_obj._ch_objs[ch].basis
-                samples_dict = samples["Local"][basis]
+                _ch_obj = self.samples_obj._ch_objs[ch]
+                samples_dict = samples["Local"][_ch_obj.basis]
                 for slot in ch_samples.slots:
-                    add_noise(slot, samples_dict, addr == "Global")
+                    add_noise(
+                        slot,
+                        samples_dict,
+                        _ch_obj.addressing == "Global",
+                        amp_fluctuation=max(
+                            0, np.random.normal(1.0, self.config.amp_sigma)
+                        ),
+                    )
             # Delete samples for badly prepared atoms
             for basis in samples["Local"]:
                 for qid in samples["Local"][basis]:
