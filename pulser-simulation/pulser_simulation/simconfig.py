@@ -15,8 +15,8 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field, fields
-from math import sqrt
 from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 import qutip
@@ -58,7 +58,7 @@ def doppler_sigma(temperature: float) -> float:
     Arg:
         temperature: The temperature in K.
     """
-    return KEFF * sqrt(KB * temperature / MASS)
+    return KEFF * math.sqrt(KB * temperature / MASS)
 
 
 @dataclass(frozen=True)
@@ -133,7 +133,7 @@ class SimConfig:
             noise_model.noise_types,
             noise_model.state_prep_error,
             noise_model.amp_sigma,
-            noise_model.laser_waist,
+            noise_model.laser_waist or float("inf"),
         )
         for param in relevant_params:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
@@ -148,7 +148,7 @@ class SimConfig:
             cast(Tuple[NoiseTypes, ...], self.noise),
             self.eta,
             self.amp_sigma,
-            self.laser_waist,
+            None if math.isinf(self.laser_waist) else self.laser_waist,
         )
         kwargs = {}
         for param in relevant_params:
