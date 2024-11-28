@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import functools
 import itertools
 from collections import defaultdict
 from collections.abc import Mapping
@@ -221,6 +222,30 @@ class Hamiltonian:
         # Noise, samples and Hamiltonian update routine
         self._construct_hamiltonian()
 
+    @staticmethod
+    @functools.cache
+    def _finite_waist_amp_fraction(
+        coords: tuple[float, ...],
+        propagation_dir: tuple[float, float, float],
+        laser_waist: float,
+    ) -> float:
+        pos_vec = np.zeros(3, dtype=float)
+        pos_vec[: len(coords)] = np.array(coords, dtype=float)
+        u_vec = np.array(propagation_dir, dtype=float)
+        u_vec = u_vec / np.linalg.norm(u_vec)
+        # Given a line crossing the origin with normalized direction vector
+        # u_vec, the closest point along said line and an arbitrary point
+        # pos_vec is at k*u_vec, where
+        k = np.dot(pos_vec, u_vec)
+        # The distance between pos_vec and the line is then given by
+        dist = np.linalg.norm(pos_vec - k * u_vec)
+        # We assume the Rayleigh length of the gaussian beam is very large,
+        # resulting in a negligble drop in amplitude along the propagation
+        # direction. Therefore, the drop in amplitude at a given position
+        # is dictated solely by its distance to the optical axis (as dictated
+        # by the propagation direction), ie
+        return float(np.exp(-((dist / laser_waist) ** 2)))
+
     def _extract_samples(self) -> None:
         """Populates samples dictionary with every pulse in the sequence."""
         local_noises = True
@@ -245,15 +270,13 @@ class Hamiltonian:
             samples_dict: Mapping[QubitId, dict[str, np.ndarray]],
             is_global_pulse: bool,
             amp_fluctuation: float,
+            propagation_dir: tuple | None,
         ) -> None:
             """Builds hamiltonian coefficients.
 
             Taking into account, if necessary, noise effects, which are local
             and depend on the qubit's id qid.
             """
-            noise_amp_base = max(
-                0, np.random.normal(1.0, self.config.amp_sigma)
-            )
             for qid in slot.targets:
                 if "doppler" in self.config.noise_types:
                     noise_det = self._doppler_detune[qid]
@@ -263,6 +286,13 @@ class Hamiltonian:
                 if "amplitude" in self.config.noise_types and is_global_pulse:
                     amp_fraction = amp_fluctuation
                     if self.config.laser_waist is not None:
+                        # Default to an optical axis along y
+                        prop_dir = propagation_dir or (0.0, 1.0, 0.0)
+                        amp_fraction *= self._finite_waist_amp_fraction(
+                            tuple(self._qdict[qid]),
+                            tuple(prop_dir),
+                            self.config.laser_waist,
+                        )
                     samples_dict[qid]["amp"][slot.ti : slot.tf] *= amp_fraction
 
         if local_noises:
@@ -277,6 +307,7 @@ class Hamiltonian:
                         amp_fluctuation=max(
                             0, np.random.normal(1.0, self.config.amp_sigma)
                         ),
+                        propagation_dir=_ch_obj.propagation_dir,
                     )
             # Delete samples for badly prepared atoms
             for basis in samples["Local"]:
