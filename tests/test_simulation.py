@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 from collections import Counter
 from unittest.mock import patch
 
@@ -1535,7 +1536,19 @@ def test_effective_size_disjoint(channel_type):
             )
 
 
-def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
+@pytest.mark.parametrize(
+    "propagation_dir", (None, (1, 0, 0), (0, 1, 0), (0, 0, 1))
+)
+def test_simulation_with_modulation(
+    mod_device, reg, propagation_dir, patch_plt_show
+):
+    channels = mod_device.channels
+    channels["rydberg_global"] = dataclasses.replace(
+        channels["rydberg_global"], propagation_dir=propagation_dir
+    )
+    mod_device = dataclasses.replace(
+        mod_device, channel_objects=tuple(channels.values()), channel_ids=None
+    )
     seq = Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
     seq.config_slm_mask({"control1"})
@@ -1589,7 +1602,17 @@ def test_simulation_with_modulation(mod_device, reg, patch_plt_show):
         )
 
     def pos_factor(qid):
-        r = np.linalg.norm(reg.qubits[qid].as_array())
+        if propagation_dir is None or propagation_dir == (0, 1, 0):
+            # Optical axis long y, x dicates the distance
+            r = reg.qubits[qid].as_array()[0]
+        elif propagation_dir == (1, 0, 0):
+            # Optical axis long x, y dicates the distance
+            r = reg.qubits[qid].as_array()[1]
+        else:
+            # Optical axis long z, use distance to origin
+            assert propagation_dir == (0, 0, 1)
+            r = np.linalg.norm(reg.qubits[qid].as_array())
+
         w0 = sim_config.laser_waist
         return np.exp(-((r / w0) ** 2))
 

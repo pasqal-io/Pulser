@@ -254,6 +254,10 @@ class Channel(ABC):
                     "'propagation_dir' must be given as a non-zero 3D vector;"
                     f" got {self.propagation_dir} instead."
                 )
+            # Make sure it's stored as a tuple
+            object.__setattr__(
+                self, "propagation_dir", tuple(self.propagation_dir)
+            )
 
     @property
     def rise_time(self) -> int:
