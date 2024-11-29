@@ -133,22 +133,29 @@ class SimConfig:
             noise_model.noise_types,
             noise_model.state_prep_error,
             noise_model.amp_sigma,
-            noise_model.laser_waist or float("inf"),
+            noise_model.laser_waist,
         )
         for param in relevant_params:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
                 noise_model, param
             )
+        # When laser_waist is None, it should be given as inf instead
+        # Otherwise, the legacy default laser_waist value will be taken
+        if "amplitude" in noise_model.noise_types:
+            kwargs.setdefault("laser_waist", float("inf"))
         kwargs.pop("with_leakage", None)
         return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
         """Creates a NoiseModel from the SimConfig."""
+        laser_waist_ = (
+            None if math.isinf(self.laser_waist) else self.laser_waist
+        )
         relevant_params = NoiseModel._find_relevant_params(
             cast(Tuple[NoiseTypes, ...], self.noise),
             self.eta,
             self.amp_sigma,
-            None if math.isinf(self.laser_waist) else self.laser_waist,
+            laser_waist_,
         )
         kwargs = {}
         for param in relevant_params:
