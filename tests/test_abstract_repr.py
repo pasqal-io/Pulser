@@ -232,6 +232,9 @@ class TestDevice:
     def test_device_schema(self, abstract_device):
         validate_abstract_repr(json.dumps(abstract_device), "device")
 
+    def test_pulser_version(self, abstract_device):
+        assert abstract_device["pulser_version"] == pulser.__version__
+
     def test_roundtrip(self, abstract_device):
         def _roundtrip(abstract_device):
             device = deserialize_device(json.dumps(abstract_device))

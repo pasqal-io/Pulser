@@ -24,6 +24,7 @@ from typing import Any, Literal, cast, get_args
 import numpy as np
 from scipy.spatial.distance import squareform
 
+import pulser
 import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
@@ -565,7 +566,13 @@ class BaseDevice(ABC):
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
         # Add version and channels to params
-        params.update({"version": "1", "channels": ch_list})
+        params.update(
+            {
+                "version": "1",
+                "pulser_version": pulser.__version__,
+                "channels": ch_list,
+            }
+        )
         dmm_list = []
         for dmm_name, dmm_obj in self.dmm_channels.items():
             dmm_list.append(dmm_obj._to_abstract_repr(dmm_name))
