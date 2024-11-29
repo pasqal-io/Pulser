@@ -36,6 +36,8 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
         ("mod_bandwidth", 0),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
         ("min_avg_amp", -1e-3),
+        ("propagation_dir", (0, 0, 0)),
+        ("propagation_dir", [1, 0]),
     ],
 )
 def test_bad_init_global_channel(bad_param, bad_value):
