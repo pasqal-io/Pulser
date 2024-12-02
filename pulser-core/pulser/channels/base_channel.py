@@ -54,7 +54,7 @@ def get_states_from_bases(bases: Collection[str]) -> list[States]:
     return [state for state in STATES_RANK if state in all_states]
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class Channel(ABC):
     """Base class of a hardware channel.
 
@@ -618,7 +618,7 @@ class Channel(ABC):
         rise_time_us = self._eom_buffer_time / 2 * 1e-3
         return MODBW_TO_TR / rise_time_us
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
             f"{self.max_abs_detuning}"
