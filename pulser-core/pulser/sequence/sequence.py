@@ -1734,7 +1734,7 @@ class Sequence(Generic[DeviceType]):
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
-        draw_phase_curve: bool = False,
+        draw_phase_curve: bool = True,
         draw_detuning_maps: bool = False,
         draw_qubit_amp: bool = False,
         draw_qubit_det: bool = False,
