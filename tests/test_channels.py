@@ -65,12 +65,15 @@ def test_bad_init_global_channel(bad_param, bad_value):
         ("mod_bandwidth", -1e4),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
         ("min_avg_amp", -1e-3),
+        ("propagation_dir", (1, 0, 0)),
     ],
 )
 def test_bad_init_local_channel(bad_param, bad_value):
     kwargs = dict(max_abs_detuning=None, max_amp=None)
     kwargs[bad_param] = bad_value
-    if bad_param == "mod_bandwidth" and bad_value > 1:
+    if (
+        bad_param == "mod_bandwidth" and bad_value > 1
+    ) or bad_param == "propagation_dir":
         error_type = NotImplementedError
     else:
         error_type = ValueError

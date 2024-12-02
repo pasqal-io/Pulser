@@ -78,8 +78,8 @@ class Channel(ABC):
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
-        propagation_dir: The propagation direction of the beam leaving the
-            channel, given as a vector in 3D space.
+        propagation_dir: The propagation direction of the beam associated with
+            the channel, given as a vector in 3D space.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -199,7 +199,12 @@ class Channel(ABC):
                     getattr(self, p) is None
                 ), f"'{p}' must be left as None in a Global channel."
         else:
+            assert self.addressing == "Local"
             parameters += local_only
+            if self.propagation_dir is not None:
+                raise NotImplementedError(
+                    "'propagation_dir' must be left as None in Local channels."
+                )
 
         for param in parameters:
             value = getattr(self, param)
@@ -377,6 +382,8 @@ class Channel(ABC):
                 bandwidth at -3dB (50% reduction), in MHz.
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
+            propagation_dir: The propagation direction of the beam associated
+                with the channel, given as a vector in 3D space.
         """
         # Can't initialize a channel whose addressing is determined internally
         for cls_field in fields(cls):
