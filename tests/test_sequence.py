@@ -1782,6 +1782,19 @@ def test_estimate_added_delay(eom):
         seq.estimate_added_delay(
             pulser.Pulse.ConstantPulse(4000, 1, 0, np.pi), "ising"
         )
+    var = seq.declare_variable("var", dtype=int)
+    with pytest.raises(
+        ValueError, match="Can't compute the delay to add before a pulse"
+    ):
+        seq.estimate_added_delay(Pulse.ConstantPulse(var, 1, 0, 0), "ising")
+    # We shift the phase of just one qubit, which blocks addition
+    # of new pulses on this basis
+    seq.phase_shift(1.0, 0, basis="ground-rydberg")
+    with pytest.raises(
+        ValueError,
+        match="Cannot do a multiple-target pulse on qubits with different",
+    ):
+        seq.estimate_added_delay(pulse_0, "ising")
 
 
 @pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
