@@ -244,8 +244,11 @@ class CorrelationMatrix(Observable):
         ]
 
 
-class QubitDensity(Observable):  # TODO: Rename
-    """Stores the population of an eigenstate on each qudit.
+class Occupation(Observable):
+    """Stores the occupation number of an eigenstate on each qudit.
+
+    For every qudit i, calculates <φ(t)|n_i|φ(t)>, where
+    n_i = |one_state><one_state|.
 
     Args:
         evaluation_times: The relative times at which to compute the
@@ -269,7 +272,7 @@ class QubitDensity(Observable):  # TODO: Rename
 
     def name(self) -> str:
         """Returns the name of the observable."""
-        return "qubit_density"
+        return "occupation" + f"_{self.one_state or ''}"
 
     def apply(
         self, *, state: State, hamiltonian: Operator, **kwargs: Any
