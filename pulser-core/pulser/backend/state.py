@@ -117,19 +117,6 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         """
         pass
 
-    def get_correlation_matrix(
-        self, one_state: Eigenstate | None = None
-    ) -> list[list[ReturnScalarType]]:
-        """Calculates the correlation matrix of the state.
-
-        Allows a state to define a custom method for calculating its
-        correlation matrix. By default, it's not implemented.
-        """
-        raise NotImplementedError(
-            f"{self.__class__.__name__!r} does not define "
-            "`get_correlation_matrix()`."
-        )
-
     def infer_one_state(self) -> Eigenstate:
         """Infers the state measured as 1 from the eigenstates.
 

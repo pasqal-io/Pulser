@@ -21,6 +21,7 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import Any, Type
 
+import pulser.math as pm
 from pulser.backend.config import EmulationConfig
 from pulser.backend.observable import Observable
 from pulser.backend.operator import Operator, OperatorType
@@ -223,10 +224,6 @@ class CorrelationMatrix(Observable):
         self, *, state: State, hamiltonian: Operator, **kwargs: Any
     ) -> list[list]:
         """Calculates the observable to store in the Results."""
-        try:
-            return state.get_correlation_matrix(one_state=self.one_state)
-        except NotImplementedError:
-            pass
 
         @functools.cache
         def calc_expectation(qudit_ids: frozenset[int]) -> Any:
@@ -330,12 +327,7 @@ class EnergyVariance(Observable):
         # This works for state vectors and density matrices and avoids
         # squaring the hamiltonian
         h_state = hamiltonian.apply_to(state)
-        identity = hamiltonian.from_operator_repr(
-            eigenstates=state.eigenstates,
-            n_qudits=state.n_qudits,
-            operations=[(1.0, [])],
-        )
-        return identity.expect(h_state) - state.overlap(h_state)
+        return pm.sqrt(h_state.overlap(h_state).real) - state.overlap(h_state)
 
 
 class SecondMomentOfEnergy(Observable):
@@ -361,9 +353,4 @@ class SecondMomentOfEnergy(Observable):
         # This works for state vectors and density matrices and avoids
         # squaring the hamiltonian
         h_state = hamiltonian.apply_to(state)
-        identity = hamiltonian.from_operator_repr(
-            eigenstates=state.eigenstates,
-            n_qudits=state.n_qudits,
-            operations=[(1.0, [])],
-        )
-        return identity.expect(h_state)
+        return pm.sqrt(h_state.overlap(h_state).real)
