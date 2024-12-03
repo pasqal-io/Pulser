@@ -1729,6 +1729,61 @@ def test_sequence(reg, device, patch_plt_show):
     assert str(seq) == str(seq_)
 
 
+@pytest.mark.parametrize("eom", [False, True])
+def test_estimate_added_delay(eom):
+    seq = Sequence(Register.square(2, 5), AnalogDevice)
+    pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
+    pulse_pi_2 = Pulse.ConstantPulse(100, 1, 0, np.pi / 2)
+
+    with pytest.raises(
+        ValueError, match="Use the name of a declared channel."
+    ):
+        seq.estimate_added_delay(pulse_0, "ising", "min-delay")
+    seq.declare_channel("ising", "rydberg_global")
+    ising_obj = seq.declared_channels["ising"]
+    if eom:
+        seq.enable_eom_mode("ising", 1, 0)
+        with pytest.warns(
+            UserWarning,
+            match="Channel ising is in EOM mode, amplitude of the pulse",
+        ):
+            assert (
+                seq.estimate_added_delay(
+                    Pulse.ConstantPulse(100, 2, 0, 0), "ising"
+                )
+                == 0
+            )
+        with pytest.warns(
+            UserWarning,
+            match="Channel ising is in EOM mode, detuning of the pulse",
+        ):
+            assert (
+                seq.estimate_added_delay(
+                    Pulse.ConstantPulse(100, 1, 1, 0), "ising"
+                )
+                == 0
+            )
+    assert seq.estimate_added_delay(pulse_0, "ising", "min-delay") == 0
+    seq._add(pulse_0, "ising", "min-delay")
+    first_pulse = seq._last("ising")
+    assert first_pulse.ti == 0
+    delay = pulse_0.fall_time(ising_obj, eom) + ising_obj.phase_jump_time
+    assert seq.estimate_added_delay(pulse_pi_2, "ising") == delay
+    seq._add(pulse_pi_2, "ising", "min-delay")
+    second_pulse = seq._last("ising")
+    assert second_pulse.ti - first_pulse.tf == delay
+    assert seq.estimate_added_delay(pulse_0, "ising") == delay
+    seq.delay(100, "ising")
+    assert seq.estimate_added_delay(pulse_0, "ising") == delay - 100
+    with pytest.warns(
+        UserWarning,
+        match="The sequence's duration exceeded the maximum duration",
+    ):
+        seq.estimate_added_delay(
+            pulser.Pulse.ConstantPulse(4000, 1, 0, np.pi), "ising"
+        )
+
+
 @pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
 def test_config_slm_mask(qubit_ids, device, det_map):
     reg: Register | MappableRegister
