@@ -1824,7 +1824,7 @@ class Sequence(Generic[DeviceType]):
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
-        draw_phase_curve: bool = False,
+        draw_phase_curve: bool = True,
         draw_detuning_maps: bool = False,
         draw_qubit_amp: bool = False,
         draw_qubit_det: bool = False,
@@ -1844,8 +1844,7 @@ class Sequence(Generic[DeviceType]):
                 offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
-                'output' mode. If `draw_phase_curve=True`, phase values are
-                ommited.
+                'output' mode.
             draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective input waveforms (defaults to True).
