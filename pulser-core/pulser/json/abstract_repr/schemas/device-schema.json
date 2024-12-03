@@ -82,6 +82,22 @@
             "null"
           ]
         },
+        "propagation_dir": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The propagation direction of the beam leaving the channel."
+        },
         "total_bottom_detuning": {
           "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
           "type": [
@@ -520,6 +536,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -610,6 +642,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -700,6 +748,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -857,6 +921,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -950,6 +1030,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1043,6 +1139,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1193,6 +1305,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1274,6 +1402,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1355,6 +1499,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1500,6 +1660,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1581,6 +1757,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1662,6 +1854,22 @@
                 "number",
                 "null"
               ]
+            },
+            "propagation_dir": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The propagation direction of the beam leaving the channel."
             }
           },
           "required": [
@@ -1750,6 +1958,22 @@
             "number",
             "null"
           ]
+        },
+        "propagation_dir": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The propagation direction of the beam leaving the channel."
         },
         "total_bottom_detuning": {
           "description": "Minimum possible detuning of the whole DMM channel (in rad/µs), must be below zero.",
