@@ -1731,7 +1731,8 @@ def test_sequence(reg, device, patch_plt_show):
 
 @pytest.mark.parametrize("eom", [False, True])
 def test_estimate_added_delay(eom):
-    seq = Sequence(Register.square(2, 5), AnalogDevice)
+    reg = Register.square(2, 5)
+    seq = Sequence(reg, AnalogDevice)
     pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
     pulse_pi_2 = Pulse.ConstantPulse(100, 1, 0, np.pi / 2)
 
@@ -1795,6 +1796,26 @@ def test_estimate_added_delay(eom):
         match="Cannot do a multiple-target pulse on qubits with different",
     ):
         seq.estimate_added_delay(pulse_0, "ising")
+
+    # With DMM
+    det_pulse = Pulse.ConstantPulse(100, 0, -1, 0)
+    seq = Sequence(Register.square(2, 5), DigitalAnalogDevice)
+    seq.declare_channel("ising", "rydberg_global")
+    seq.config_slm_mask([0, 1])
+    with pytest.raises(
+        ValueError, match="You should add a Pulse to a Global Channel"
+    ):
+        seq.estimate_added_delay(det_pulse, "dmm_0")
+    seq.add(pulse_0, "ising")
+    assert seq.estimate_added_delay(det_pulse, "dmm_0") == 0
+    with pytest.raises(
+        ValueError, match="The detuning in a DMM must not be positive."
+    ):
+        seq.estimate_added_delay(Pulse.ConstantPulse(100, 0, 1, 0), "dmm_0")
+    with pytest.raises(
+        ValueError, match="The pulse's amplitude goes over the maximum"
+    ):
+        seq.estimate_added_delay(pulse_0, "dmm_0")
 
 
 @pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
