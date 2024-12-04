@@ -1746,7 +1746,7 @@ def test_estimate_added_delay(eom):
         seq.enable_eom_mode("ising", 1, 0)
         with pytest.warns(
             UserWarning,
-            match="Channel ising is in EOM mode, amplitude of the pulse",
+            match="Channel ising is in EOM mode, the amplitude",
         ):
             assert (
                 seq.estimate_added_delay(
@@ -1756,7 +1756,7 @@ def test_estimate_added_delay(eom):
             )
         with pytest.warns(
             UserWarning,
-            match="Channel ising is in EOM mode, detuning of the pulse",
+            match="Channel ising is in EOM mode, the detuning",
         ):
             assert (
                 seq.estimate_added_delay(
