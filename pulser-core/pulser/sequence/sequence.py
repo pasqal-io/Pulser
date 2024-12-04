@@ -1430,14 +1430,16 @@ class Sequence(Generic[DeviceType]):
             eom_settings = self._schedule[channel].eom_blocks[-1]
             if np.any(pulse.amplitude.samples != eom_settings.rabi_freq):
                 warnings.warn(
-                    f"Channel {channel} is in EOM mode, amplitude of the pulse"
-                    f" must be constant, equal to {eom_settings.rabi_freq}.",
+                    f"Channel {channel} is in EOM mode, the amplitude of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.rabi_freq}.",
                     UserWarning,
                 )
             if np.any(pulse.detuning.samples != eom_settings.detuning_on):
                 warnings.warn(
-                    f"Channel {channel} is in EOM mode, detuning of the pulse "
-                    f"must be constant, equal to {eom_settings.detuning_on}.",
+                    f"Channel {channel} is in EOM mode, the detuning of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.detuning_on}.",
                     UserWarning,
                 )
         channel_obj = self._schedule[channel].channel_obj
@@ -1462,7 +1464,7 @@ class Sequence(Generic[DeviceType]):
         phase_barriers = [
             self._basis_ref[basis][q].phase.last_time for q in last.targets
         ]
-        next_time_slot = self._schedule.get_next_time_slot(
+        next_time_slot = self._schedule.make_next_pulse_slot(
             pulse,
             channel,
             phase_barriers,

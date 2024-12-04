@@ -1797,7 +1797,9 @@ def test_estimate_added_delay(eom):
     ):
         seq.estimate_added_delay(pulse_0, "ising")
 
-    # With DMM
+
+def test_estimate_added_delay_dmm():
+    pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
     det_pulse = Pulse.ConstantPulse(100, 0, -1, 0)
     seq = Sequence(Register.square(2, 5), DigitalAnalogDevice)
     seq.declare_channel("ising", "rydberg_global")

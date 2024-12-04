@@ -396,14 +396,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             else:
                 self.wait_for_fall(channel_id)
 
-    def get_next_time_slot(
+    def make_next_pulse_slot(
         self,
         pulse: Pulse,
         channel: str,
         phase_barrier_ts: list[int],
         protocol: str,
         phase_drift_params: _PhaseDriftParams | None = None,
-        block_if_exceeds: bool = False,
+        block_over_max_duration: bool = False,
     ) -> _TimeSlot:
         def corrected_phase(tf: int) -> pm.AbstractArray:
             phase_drift = pm.AbstractArray(
@@ -451,7 +451,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         ti = t0 + delay_duration
         tf = ti + pulse.duration
-        self._check_duration(tf, block_if_exceeds)
+        self._check_duration(tf, block_over_max_duration)
         # dataclasses.replace() does not work on Pulse (because init=False)
         if phase_drift_params is not None:
             pulse = Pulse(
@@ -471,7 +471,7 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         phase_drift_params: _PhaseDriftParams | None = None,
     ) -> None:
         last = self[channel][-1]
-        time_slot = self.get_next_time_slot(
+        time_slot = self.make_next_pulse_slot(
             pulse,
             channel,
             phase_barrier_ts,
@@ -579,12 +579,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             phase = pm.AbstractArray(0.0)
         return phase
 
-    def _check_duration(self, t: int, block_if_exceeds: bool = True) -> None:
+    def _check_duration(
+        self, t: int, block_over_max_duration: bool = True
+    ) -> None:
         if self.max_duration is not None and t > self.max_duration:
             msg = (
                 "The sequence's duration exceeded the maximum duration allowed"
                 f" by the device ({self.max_duration} ns)."
             )
-            if block_if_exceeds:
+            if block_over_max_duration:
                 raise RuntimeError(msg)
             warnings.warn(msg, UserWarning)
