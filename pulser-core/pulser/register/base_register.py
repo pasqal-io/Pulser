@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
@@ -77,6 +78,16 @@ class BaseRegister(ABC, CoordsCollection):
             [pm.AbstractArray(v, dtype=float) for v in qubits.values()]
         )
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
+        not_str = [id for id in self._ids if not isinstance(id, str)]
+        if not_str:
+            warnings.simplefilter("always")
+            warnings.warn(
+                "Usage of `int`s as `QubitId`s will be deprecated. Define "
+                "your `QubitId`s as `str`s, prefer setting `prefix='q'` "
+                " when using classmethods.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)
 

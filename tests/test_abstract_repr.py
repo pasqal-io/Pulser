@@ -820,6 +820,9 @@ class TestSerialization:
             UserWarning, match="converts all qubit ID's to strings"
         ), pytest.raises(
             AbstractReprError, match="Name collisions encountered"
+        ), pytest.warns(
+            DeprecationWarning,
+            match="Usage of `int`s as `QubitId`s will be deprecated.",
         ):
             Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
 
