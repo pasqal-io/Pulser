@@ -84,7 +84,8 @@ class BaseRegister(ABC, CoordsCollection):
             warnings.warn(
                 "Usage of `int`s as `QubitId`s will be deprecated. Define "
                 "your `QubitId`s as `str`s, prefer setting `prefix='q'` "
-                " when using classmethods.",
+                "when using classmethods, as that will become the new "
+                "default once `int` qubit IDs become invalid.",
                 DeprecationWarning,
                 stacklevel=2,
             )
