@@ -45,8 +45,7 @@ class _ProbabilityType(Protocol):
 class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     """Base class enforcing an API for quantum states.
 
-    Each backend will implement its own type of state and the
-    methods below.
+    Each backend will implement its own type of state and the methods below.
     """
 
     _eigenstates: Sequence[Eigenstate]
@@ -61,9 +60,10 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
     def eigenstates(self) -> tuple[Eigenstate, ...]:
         """The eigenstates that form a qudit's eigenbasis.
 
-        The order of the states should match the order in a
-        numerical (ie state vector or density matrix)
-        representation.
+        The order of the states should match the order in a numerical (ie
+        state vector or density matrix) representation.
+        For example, with eigenstates ("a", "b", ...),  "a" will be associated
+        to eigenvector (1, 0, ...), "b" to (0, 1, ...) and so on.
         """
         return tuple(self._eigenstates)
 

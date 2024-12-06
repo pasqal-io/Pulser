@@ -108,7 +108,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             interaction terms in the Hamiltonian. For an N-qudit system,
             must be an NxN symmetric matrix where entry (i, j) dictates
             the interaction coefficient between qudits i and j, ie it replaces
-            the C/r_{ij}^6.
+            the C_n/r_{ij}^n term.
         prefer_device_noise_model: If the sequence's device has a default noise
             model, this option signals the backend to prefer it over the noise
             model given with this configuration.
