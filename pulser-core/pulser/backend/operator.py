@@ -103,7 +103,6 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
         eigenstates: Sequence[Eigenstate],
         n_qudits: int,
         operations: FullOp,
-        custom_operators: Mapping[str, QuditOp] = {},
     ) -> OperatorType:
         """Create an operator from the operator representation.
 
@@ -129,14 +128,11 @@ class Operator(ABC, Generic[ArgScalarType, ReturnScalarType, StateType]):
 
         By default it identifies strings 'ij' as single-qudit operators, where
         i and j are eigenstates that denote |i><j|.
-        Nonetheless, additional symbols can be defined in custom_operators.
 
         Args:
             eigenstates: The eigenstates to use.
             n_qubits: How many qubits there are in the system.
             operations: The full operator representation.
-            custom_operators: Additional symbols and their corresponding
-                single-qudit operators.
 
         Returns:
             The constructed operator.
