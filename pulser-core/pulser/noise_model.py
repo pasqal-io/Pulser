@@ -102,7 +102,7 @@ class NoiseModel:
 
     Supported noise types:
 
-    - "leakage": Adds an error state 'x' to the computational
+    - **leakage**: Adds an error state 'x' to the computational
         basis, that can interact with the other states via an
         effective noise channel. Must be defined with an effective
         noise channel, but is incompatible with dephasing and
@@ -132,10 +132,6 @@ class NoiseModel:
       ``p_false_pos`` and ``p_false_neg``.
 
     Args:
-        noise_types: *Deprecated, simply define the approriate parameters
-            instead*. Noise types to include in the emulation. Defining
-            noise in this way will rely on legacy defaults for the relevant
-            parameters whenever a custom value is not provided.
         runs: When reconstructing the Hamiltonian from random noise is
             necessary, this determines how many times that happens. Not
             to be confused with the number of times the resulting
@@ -148,10 +144,11 @@ class NoiseModel:
         p_false_neg: Probability of measuring a false negative.
         temperature: Temperature, set in µK, of the atoms in the array.
             Also sets the standard deviation of the speed of the atoms.
-        laser_waist: Waist of the gaussian laser, set in µm, for global
-            pulses.
-        amp_sigma: Dictates the fluctuations in amplitude as a standard
-            deviation of a normal distribution centered in 1.
+        laser_waist: Waist of the gaussian lasers, set in µm, for global
+            pulses. Assumed to be the same for all global channels.
+        amp_sigma: Dictates the fluctuations in amplitude of global pulses
+            from run to run as a standard deviation of a normal distribution
+            centered in 1. Assumed to be the same for all global channels.
         relaxation_rate: The rate of relaxation from the Rydberg to the
             ground state (in 1/µs). Corresponds to 1/T1.
         dephasing_rate: The rate of a dephasing occuring (in 1/µs) in a
@@ -188,7 +185,6 @@ class NoiseModel:
 
     def __init__(
         self,
-        noise_types: tuple[NoiseTypes, ...] | None = None,
         runs: int | None = None,
         samples_per_run: int | None = None,
         state_prep_error: float | None = None,
@@ -229,30 +225,6 @@ class NoiseModel:
             eff_noise_opers=to_tuple(eff_noise_opers),
             with_leakage=with_leakage,
         )
-        if noise_types is not None:
-            with warnings.catch_warnings():
-                warnings.simplefilter("always")
-                warnings.warn(
-                    "The explicit definition of noise types is deprecated; "
-                    "doing so will use legacy default values for all relevant "
-                    "parameters that are not given a custom value. Instead, "
-                    "defining only the necessary parameters is recommended; "
-                    "doing so (when the noise types are not explicitly given) "
-                    "will disregard all undefined parameters.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-            self._check_noise_types(noise_types)
-            for nt_ in noise_types:
-                if nt_ == "leakage":
-                    raise ValueError(
-                        "'leakage' cannot be explicitely defined in the noise"
-                        " types. Set 'with_leakage' to True instead."
-                    )
-                for p_ in _NOISE_TYPE_PARAMS[nt_]:
-                    # Replace undefined relevant params by the legacy default
-                    if param_vals[p_] is None:
-                        param_vals[p_] = _LEGACY_DEFAULTS[p_]
         true_noise_types: set[NoiseTypes] = {
             _PARAM_TO_NOISE_TYPE[p_]
             for p_ in param_vals
@@ -262,7 +234,7 @@ class NoiseModel:
         self._check_eff_noise(
             cast(tuple, param_vals["eff_noise_rates"]),
             cast(tuple, param_vals["eff_noise_opers"]),
-            "eff_noise" in (noise_types or true_noise_types),
+            "eff_noise" in true_noise_types,
             with_leakage=cast(bool, param_vals["with_leakage"]),
         )
 
@@ -277,21 +249,6 @@ class NoiseModel:
             cast(Union[float, None], param_vals["laser_waist"]),
         )
 
-        if noise_types is not None:
-            if true_noise_types != set(noise_types):
-                raise ValueError(
-                    "The explicit definition of noise types (deprecated) is"
-                    " not compatible with the modification of unrelated noise "
-                    "parameters. Defining only the relevant noise parameters "
-                    "(without specifying the noise types) is recommended."
-                )
-            # Only now that we know the relevant_params can we determine if
-            # we need to use the legacy defaults for the run parameters (ie in
-            # case they were not provided by the user)
-            run_params_ = relevant_params & {"runs", "samples_per_run"}
-            for p_ in run_params_:
-                param_vals[p_] = param_vals[p_] or _LEGACY_DEFAULTS[p_]
-
         relevant_param_vals = {
             p: param_vals[p]
             for p in param_vals
@@ -302,12 +259,16 @@ class NoiseModel:
         object.__setattr__(
             self, "noise_types", tuple(sorted(true_noise_types))
         )
+        non_zero_relevant_params = [
+            p for p in relevant_params if param_vals[p]
+        ]
         for param_, val_ in param_vals.items():
             object.__setattr__(self, param_, val_)
             if val_ and param_ not in relevant_params:
                 warnings.warn(
                     f"{param_!r} is not used by any active noise type "
-                    f"{self.noise_types}.",
+                    f"in {self.noise_types} when the only defined parameters "
+                    f"are {non_zero_relevant_params}.",
                     stacklevel=2,
                 )
 

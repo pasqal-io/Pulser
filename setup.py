@@ -25,8 +25,13 @@ if "dev" in __version__:
         "`make dev-install` instead."
     )
 
+# Pulser packages not pinned to __version__
+requirements = [
+    "pulser-pasqal",
+]
+# Adding packages pinned to __version__
 with open("packages.txt", "r", encoding="utf-8") as f:
-    requirements = [f"{pkg.strip()}=={__version__}" for pkg in f.readlines()]
+    requirements += [f"{pkg.strip()}=={__version__}" for pkg in f.readlines()]
 
 # Just a meta-package that requires all pulser packages
 setup(
@@ -38,10 +43,10 @@ setup(
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     license="Apache 2.0",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 3",
     ],
     url="https://github.com/pasqal-io/Pulser",

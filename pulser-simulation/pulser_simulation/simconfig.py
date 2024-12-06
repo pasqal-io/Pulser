@@ -15,8 +15,8 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field, fields
-from math import sqrt
 from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
@@ -58,7 +58,7 @@ def doppler_sigma(temperature: float) -> float:
     Arg:
         temperature: The temperature in K.
     """
-    return KEFF * sqrt(KB * temperature / MASS)
+    return KEFF * math.sqrt(KB * temperature / MASS)
 
 
 @dataclass(frozen=True)
@@ -139,6 +139,10 @@ class SimConfig:
             kwargs[_DIFF_NOISE_PARAMS.get(param, param)] = getattr(
                 noise_model, param
             )
+        # When laser_waist is None, it should be given as inf instead
+        # Otherwise, the legacy default laser_waist value will be taken
+        if "amplitude" in noise_model.noise_types:
+            kwargs.setdefault("laser_waist", float("inf"))
         kwargs.pop("with_leakage", None)
         if "eff_noise_opers" in kwargs:
             kwargs["eff_noise_opers"] = list(
@@ -148,11 +152,14 @@ class SimConfig:
 
     def to_noise_model(self) -> NoiseModel:
         """Creates a NoiseModel from the SimConfig."""
+        laser_waist_ = (
+            None if math.isinf(self.laser_waist) else self.laser_waist
+        )
         relevant_params = NoiseModel._find_relevant_params(
             cast(Tuple[NoiseTypes, ...], self.noise),
             self.eta,
             self.amp_sigma,
-            self.laser_waist,
+            laser_waist_,
         )
         kwargs = {}
         for param in relevant_params:

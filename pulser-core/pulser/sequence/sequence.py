@@ -39,7 +39,6 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 import pulser
-import pulser.devices as devices
 import pulser.math as pm
 import pulser.sequence._decorators as seq_decorators
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
@@ -123,25 +122,6 @@ class Sequence(Generic[DeviceType]):
             raise TypeError(
                 f"'device' must be of type 'BaseDevice', not {type(device)}."
             )
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            if device == devices.Chadoq2:
-                warnings.warn(
-                    "The 'Chadoq2' device has been deprecated. For a "
-                    "similar device combining global and local addressing, "
-                    "consider using `DigitalAnalogDevice`.",
-                    category=DeprecationWarning,
-                    stacklevel=2,
-                )
-
-            if device == devices.IroiseMVP:
-                warnings.warn(
-                    "The 'IroiseMVP' device has been deprecated. For a "
-                    "similar analog device consider using `AnalogDevice`.",
-                    category=DeprecationWarning,
-                    stacklevel=2,
-                )
 
         # Checks if register is compatible with the device
         if isinstance(register, MappableRegister):
@@ -1401,6 +1381,98 @@ class Sequence(Generic[DeviceType]):
         """
         self._delay(duration, channel, at_rest)
 
+    def estimate_added_delay(
+        self,
+        pulse: Union[Pulse, Parametrized],
+        channel: str,
+        protocol: PROTOCOLS = "min-delay",
+    ) -> int:
+        """Delay that will be added before the pulse when added to a channel.
+
+        When adding a pulse to a channel of the Sequence, a delay can be added
+        to account for the modulation bandwidth of the channel or the protocol
+        chosen. This method estimates the delay that will be added before the
+        pulse if this pulse was added to this channel with this protocol. It
+        works even if the channel is in EOM mode, but to be appropriate, the
+        Pulse should be a ConstantPulse with amplitude and detuning
+        respectively the rabi_freq and detuning_on of the EOM block.
+
+        Args:
+            pulse: The pulse object to add to the channel.
+            channel: The channel's name provided when declared.
+            protocol: Stipulates how to deal with
+                eventual conflicts with other channels, specifically in terms
+                of having multiple channels act on the same target
+                simultaneously.
+
+                - ``'min-delay'``: Before adding the pulse, introduces the
+                  smallest possible delay that avoids all exisiting conflicts.
+                - ``'no-delay'``: Adds the pulse to the channel, regardless of
+                  existing conflicts.
+                - ``'wait-for-all'``: Before adding the pulse, adds a delay
+                  that idles the channel until the end of the other channels'
+                  latest pulse.
+
+        Returns:
+            The delay that would be added before the pulse.
+        """
+        self._validate_channel(
+            channel,
+            block_if_slm=channel.startswith("dmm_"),
+        )
+        self._validate_add_protocol(protocol)
+        if self.is_parametrized() or isinstance(pulse, Parametrized):
+            raise ValueError(
+                "Can't compute the delay to add before a pulse if sequence or"
+                "pulse is parametrized."
+            )
+        if self.is_in_eom_mode(channel):
+            eom_settings = self._schedule[channel].eom_blocks[-1]
+            if np.any(pulse.amplitude.samples != eom_settings.rabi_freq):
+                warnings.warn(
+                    f"Channel {channel} is in EOM mode, the amplitude of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.rabi_freq}.",
+                    UserWarning,
+                )
+            if np.any(pulse.detuning.samples != eom_settings.detuning_on):
+                warnings.warn(
+                    f"Channel {channel} is in EOM mode, the detuning of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.detuning_on}.",
+                    UserWarning,
+                )
+        channel_obj = self._schedule[channel].channel_obj
+        last = self._last(channel)
+        basis = channel_obj.basis
+
+        ph_refs = {
+            self._basis_ref[basis][q].phase.last_phase for q in last.targets
+        }
+        if isinstance(channel_obj, DMM):
+            phase_ref = None
+        elif len(ph_refs) != 1:
+            raise ValueError(
+                "Cannot do a multiple-target pulse on qubits with different "
+                "phase references for the same basis."
+            )
+        else:
+            phase_ref = ph_refs.pop()
+
+        pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
+
+        phase_barriers = [
+            self._basis_ref[basis][q].phase.last_time for q in last.targets
+        ]
+        next_time_slot = self._schedule.make_next_pulse_slot(
+            pulse,
+            channel,
+            phase_barriers,
+            protocol,
+            # phase_drift_params does not impact delay between pulses
+        )
+        return next_time_slot.ti - last.tf
+
     @seq_decorators.store
     @seq_decorators.block_if_measured
     def measure(self, basis: str = "ground-rydberg") -> None:
@@ -1625,39 +1697,6 @@ class Sequence(Generic[DeviceType]):
 
         return seq
 
-    def serialize(self, **kwargs: Any) -> str:
-        """Serializes the Sequence into a JSON formatted string.
-
-        Other Parameters:
-            kwargs: Valid keyword-arguments for ``json.dumps()``, except for
-                ``cls``.
-
-        Returns:
-            The sequence encoded in a JSON formatted string.
-
-        Warning:
-            This method has been deprecated and is scheduled for removal
-            in Pulser v1.0.0. For sequence serialization and deserialization,
-            use ``Sequence.to_abstract_repr()`` and
-            ``Sequence.from_abstract_repr()`` instead.
-
-        See Also:
-            ``json.dumps``: Built-in function for serialization to a JSON
-            formatted string.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(
-                DeprecationWarning(
-                    "`Sequence.serialize()` and `Sequence.deserialize()` have "
-                    "been deprecated and will be removed in Pulser v1.0.0. "
-                    "Use `Sequence.to_abstract_repr()` and "
-                    "`Sequence.from_abstract_repr()` instead."
-                )
-            )
-
-        return self._serialize(**kwargs)
-
     def _serialize(self, **kwargs: Any) -> str:
         """Serializes the Sequence into a JSON formatted string.
 
@@ -1729,44 +1768,6 @@ class Sequence(Generic[DeviceType]):
             raise e  # pragma: no cover
 
     @staticmethod
-    def deserialize(obj: str, **kwargs: Any) -> Sequence:
-        """Deserializes a JSON formatted string.
-
-        Args:
-            obj: The JSON formatted string to deserialize, coming from
-                the serialization of a ``Sequence`` through
-                ``Sequence.serialize()``.
-
-        Other Parameters:
-            kwargs: Valid keyword-arguments for ``json.loads()``, except for
-                ``cls`` and ``object_hook``.
-
-        Returns:
-            The deserialized Sequence object.
-
-        Warning:
-            This method has been deprecated and is scheduled for removal
-            in Pulser v1.0.0. For sequence serialization and deserialization,
-            use ``Sequence.to_abstract_repr()`` and
-            ``Sequence.from_abstract_repr()`` instead.
-
-        See Also:
-            ``json.loads``: Built-in function for deserialization from a JSON
-            formatted string.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(
-                DeprecationWarning(
-                    "`Sequence.serialize()` and `Sequence.deserialize()` have "
-                    "been deprecated and will be removed in Pulser v1.0.0. "
-                    "Use `Sequence.to_abstract_repr()` and "
-                    "`Sequence.from_abstract_repr()` instead."
-                )
-            )
-        return Sequence._deserialize(obj, **kwargs)
-
-    @staticmethod
     def _deserialize(obj: str, **kwargs: Any) -> Sequence:
         """Deserializes a JSON formatted string.
 
@@ -1825,7 +1826,7 @@ class Sequence(Generic[DeviceType]):
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
-        draw_phase_curve: bool = False,
+        draw_phase_curve: bool = True,
         draw_detuning_maps: bool = False,
         draw_qubit_amp: bool = False,
         draw_qubit_det: bool = False,
@@ -1837,7 +1838,7 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             mode: The curves to draw. 'input'
-                draws only the programmed curves, 'output' the excepted curves
+                draws only the programmed curves, 'output' the expected curves
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
@@ -1845,8 +1846,7 @@ class Sequence(Generic[DeviceType]):
                 offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
-                'output' mode. If `draw_phase_curve=True`, phase values are
-                ommited.
+                'output' mode.
             draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective input waveforms (defaults to True).
@@ -1886,8 +1886,8 @@ class Sequence(Generic[DeviceType]):
                 need to set this flag to False.
 
         See Also:
-            Simulation.draw(): Draws the provided sequence and the one used by
-            the solver.
+            QutipEmulator.draw(): Draws the provided sequence and the one used
+            by the solver.
         """
         valid_modes = ("input", "output", "input+output")
         if mode not in valid_modes:

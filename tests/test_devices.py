@@ -47,6 +47,8 @@ def test_params():
         min_atom_distance=1,
         max_atom_num=None,
         max_radial_distance=None,
+        min_layout_traps=10,
+        max_layout_traps=100,
     )
 
 
@@ -121,6 +123,36 @@ def test_post_init_type_checks(test_params, param, value, msg):
             0.0,
             "maximum layout filling fraction must be greater than 0. and"
             " less than or equal to 1.",
+        ),
+        (
+            "optimal_layout_filling",
+            0.0,
+            "When defined, the optimal layout filling fraction must be greater"
+            " than 0. and less than or equal to `max_layout_filling`",
+        ),
+        (
+            "optimal_layout_filling",
+            0.9,
+            "When defined, the optimal layout filling fraction must be greater"
+            " than 0. and less than or equal to `max_layout_filling`",
+        ),
+        (
+            "min_layout_traps",
+            0,
+            "'min_layout_traps' must be greater than zero",
+        ),
+        ("max_layout_traps", 0, None),
+        (
+            "max_atom_num",
+            100,
+            "With the given maximum layout filling and maximum number "
+            "of traps, a layout supports at most 50 atoms",
+        ),
+        (
+            "max_layout_traps",
+            9,
+            "must be greater than or equal to the minimum number of "
+            "layout traps",
         ),
         (
             "channel_ids",
@@ -335,6 +367,22 @@ def test_validate_layout():
                 12, DigitalAnalogDevice.min_atom_distance - 1e-6
             )
         )
+
+    restricted_device = replace(
+        DigitalAnalogDevice, min_layout_traps=10, max_layout_traps=200
+    )
+    with pytest.raises(
+        ValueError,
+        match="The device requires register layouts to have "
+        "at least 10 traps",
+    ):
+        restricted_device.validate_layout(TriangularLatticeLayout(9, 10))
+    with pytest.raises(
+        ValueError,
+        match="The device requires register layouts to have "
+        "at most 200 traps",
+    ):
+        restricted_device.validate_layout(TriangularLatticeLayout(201, 10))
 
     valid_layout = RegisterLayout(
         Register.square(

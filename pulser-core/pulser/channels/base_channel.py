@@ -34,7 +34,7 @@ warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
-OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
+OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp", "propagation_dir")
 
 # States ranked in decreasing order of their associated eigenenergy
 States = Literal["u", "d", "r", "g", "h", "x"]
@@ -54,7 +54,7 @@ def get_states_from_bases(bases: Collection[str]) -> list[States]:
     return [state for state in STATES_RANK if state in all_states]
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class Channel(ABC):
     """Base class of a hardware channel.
 
@@ -78,6 +78,8 @@ class Channel(ABC):
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
+        propagation_dir: The propagation direction of the beam associated with
+            the channel, given as a vector in 3D space.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -96,6 +98,7 @@ class Channel(ABC):
     min_avg_amp: float = 0
     mod_bandwidth: Optional[float] = None  # MHz
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
+    propagation_dir: tuple[float, float, float] | None = None
 
     @property
     def name(self) -> str:
@@ -196,7 +199,12 @@ class Channel(ABC):
                     getattr(self, p) is None
                 ), f"'{p}' must be left as None in a Global channel."
         else:
+            assert self.addressing == "Local"
             parameters += local_only
+            if self.propagation_dir is not None:
+                raise NotImplementedError(
+                    "'propagation_dir' must be left as None in Local channels."
+                )
 
         for param in parameters:
             value = getattr(self, param)
@@ -242,6 +250,18 @@ class Channel(ABC):
             raise ValueError(
                 "'eom_config' can't be defined in a Channel without a "
                 "modulation bandwidth."
+            )
+
+        if self.propagation_dir is not None:
+            dir_vector = np.array(self.propagation_dir, dtype=float)
+            if dir_vector.size != 3 or np.sum(dir_vector) == 0.0:
+                raise ValueError(
+                    "'propagation_dir' must be given as a non-zero 3D vector;"
+                    f" got {self.propagation_dir} instead."
+                )
+            # Make sure it's stored as a tuple
+            object.__setattr__(
+                self, "propagation_dir", tuple(self.propagation_dir)
             )
 
     @property
@@ -340,6 +360,7 @@ class Channel(ABC):
         cls: Type[ChannelType],
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
+        # TODO: Impose a default propagation_dir in pulser-core 1.3
         **kwargs: Any,
     ) -> ChannelType:
         """Initializes the channel with global addressing.
@@ -361,6 +382,8 @@ class Channel(ABC):
                 bandwidth at -3dB (50% reduction), in MHz.
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
+            propagation_dir: The propagation direction of the beam associated
+                with the channel, given as a vector in 3D space.
         """
         # Can't initialize a channel whose addressing is determined internally
         for cls_field in fields(cls):
@@ -595,7 +618,7 @@ class Channel(ABC):
         rise_time_us = self._eom_buffer_time / 2 * 1e-3
         return MODBW_TO_TR / rise_time_us
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
             f"{self.max_abs_detuning}"

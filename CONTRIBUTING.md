@@ -53,7 +53,7 @@ Here are the steps you should follow to make your contribution:
     git pull upstream develop
     ```
 
-   you will fetch the latest changes in `upstream/develop` and merge them with your working branch, at which point you'll have to solve any merge conflicts that may    arise. This will keep your working branch in sync with `upstream/develop`.
+   you will fetch the latest changes in `upstream/develop` and merge them with your working branch, at which point you'll have to solve any merge conflicts that may arise. This will keep your working branch in sync with `upstream/develop`.
 
 5. Finally, you push your code to your local branch:
 

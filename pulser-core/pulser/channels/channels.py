@@ -22,7 +22,7 @@ from pulser.channels.base_channel import Channel, Literal
 from pulser.channels.eom import RydbergEOM
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class Raman(Channel):
     """Raman beam channel.
 
@@ -36,7 +36,7 @@ class Raman(Channel):
         return "digital"
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class Rydberg(Channel):
     """Rydberg beam channel.
 
@@ -62,7 +62,7 @@ class Rydberg(Channel):
         return "ground-rydberg"
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class Microwave(Channel):
     """Microwave adressing channel.
 

@@ -53,10 +53,10 @@ setup(
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="Pulser Development Team",
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     license="Apache 2.0",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 3",
     ],
     url="https://github.com/pasqal-io/Pulser",

@@ -297,7 +297,7 @@ def test_expect_noisy(results_noisy):
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7333333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7466666666666667)
 
 
 def test_plot(results_noisy, results):
@@ -314,7 +314,7 @@ def test_sim_without_measurement(seq_no_meas):
     )
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
-        {"11": 587, "10": 165, "01": 164, "00": 84}
+        {"11": 580, "10": 173, "01": 167, "00": 80}
     )
 
 
@@ -346,7 +346,7 @@ def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
 def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 725, "10": 265, "01": 192, "00": 52}
+        {"11": 676, "10": 244, "01": 218, "00": 96}
     )
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas, config=SimConfig(noise=("SPAM", "doppler"), runs=10)

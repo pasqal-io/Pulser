@@ -395,6 +395,10 @@
           },
           "type": "array"
         },
+        "pulser_version": {
+          "description": "The pulser version used to serialize the object.",
+          "type": "string"
+        },
         "slug": {
           "description": "An optional name for the layout.",
           "type": "string"
@@ -419,6 +423,10 @@
             "type": "array"
           },
           "type": "array"
+        },
+        "pulser_version": {
+          "description": "The pulser version used to serialize the object.",
+          "type": "string"
         },
         "slug": {
           "description": "An optional name for the layout.",
@@ -1013,6 +1021,10 @@
               },
               "type": "array"
             },
+            "pulser_version": {
+              "description": "The pulser version used to serialize the object.",
+              "type": "string"
+            },
             "register": {
               "description": "A 2D register containing a set of atoms.",
               "items": {
@@ -1110,6 +1122,10 @@
               },
               "type": "array"
             },
+            "pulser_version": {
+              "description": "The pulser version used to serialize the object.",
+              "type": "string"
+            },
             "register": {
               "description": "A 3D register containing a set of atoms.",
               "items": {
@@ -1206,6 +1222,10 @@
                 "$ref": "#/definitions/Operation"
               },
               "type": "array"
+            },
+            "pulser_version": {
+              "description": "The pulser version used to serialize the object.",
+              "type": "string"
             },
             "register": {
               "description": "A  list of qubit IDs.",

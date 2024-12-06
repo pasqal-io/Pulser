@@ -396,14 +396,15 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             else:
                 self.wait_for_fall(channel_id)
 
-    def add_pulse(
+    def make_next_pulse_slot(
         self,
         pulse: Pulse,
         channel: str,
         phase_barrier_ts: list[int],
         protocol: str,
         phase_drift_params: _PhaseDriftParams | None = None,
-    ) -> None:
+        block_over_max_duration: bool = False,
+    ) -> _TimeSlot:
         def corrected_phase(tf: int) -> pm.AbstractArray:
             phase_drift = pm.AbstractArray(
                 phase_drift_params.calc_phase_drift(tf)
@@ -447,11 +448,10 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         delay_duration = max(current_max_t - t0, phase_jump_buffer)
         if delay_duration > 0:
             delay_duration = self[channel].adjust_duration(delay_duration)
-            self.add_delay(delay_duration, channel)
 
         ti = t0 + delay_duration
         tf = ti + pulse.duration
-        self._check_duration(tf)
+        self._check_duration(tf, block_over_max_duration)
         # dataclasses.replace() does not work on Pulse (because init=False)
         if phase_drift_params is not None:
             pulse = Pulse(
@@ -460,7 +460,29 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                 phase=corrected_phase(ti),
                 post_phase_shift=pulse.post_phase_shift,
             )
-        self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
+        return _TimeSlot(pulse, ti, tf, last.targets)
+
+    def add_pulse(
+        self,
+        pulse: Pulse,
+        channel: str,
+        phase_barrier_ts: list[int],
+        protocol: str,
+        phase_drift_params: _PhaseDriftParams | None = None,
+    ) -> None:
+        last = self[channel][-1]
+        time_slot = self.make_next_pulse_slot(
+            pulse,
+            channel,
+            phase_barrier_ts,
+            protocol,
+            phase_drift_params,
+            True,
+        )
+        delay_duration = time_slot.ti - last.tf
+        if delay_duration > 0:
+            self.add_delay(delay_duration, channel)
+        self[channel].slots.append(time_slot)
 
     def add_delay(self, duration: int, channel: str) -> None:
         last = self[channel][-1]
@@ -557,9 +579,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             phase = pm.AbstractArray(0.0)
         return phase
 
-    def _check_duration(self, t: int) -> None:
+    def _check_duration(
+        self, t: int, block_over_max_duration: bool = True
+    ) -> None:
         if self.max_duration is not None and t > self.max_duration:
-            raise RuntimeError(
+            msg = (
                 "The sequence's duration exceeded the maximum duration allowed"
                 f" by the device ({self.max_duration} ns)."
             )
+            if block_over_max_duration:
+                raise RuntimeError(msg)
+            warnings.warn(msg, UserWarning)

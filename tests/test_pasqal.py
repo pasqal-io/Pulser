@@ -24,7 +24,6 @@ import pytest
 from pasqal_cloud.device.configuration import EmuFreeConfig, EmuTNConfig
 
 import pulser
-import pulser_pasqal
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.remote import (
     BatchStatus,
@@ -32,7 +31,6 @@ from pulser.backend.remote import (
     RemoteConnection,
     RemoteResults,
     RemoteResultsError,
-    SubmissionStatus,
 )
 from pulser.devices import DigitalAnalogDevice
 from pulser.register.special_layouts import SquareLatticeLayout
@@ -42,10 +40,6 @@ from pulser_pasqal import EmulatorType, Endpoints, PasqalCloud
 from pulser_pasqal.backends import EmuFreeBackend, EmuTNBackend
 
 root = Path(__file__).parent.parent
-
-
-def test_version():
-    assert pulser_pasqal.__version__ == pulser.__version__
 
 
 @dataclasses.dataclass
@@ -156,36 +150,6 @@ def fixt(mock_batch):
 @pytest.mark.parametrize("with_job_id", [False, True])
 def test_remote_results(fixt, mock_batch, with_job_id):
     with pytest.raises(
-        ValueError,
-        match="'submission_id' and 'batch_id' cannot be simultaneously",
-    ):
-        RemoteResults(
-            mock_batch.id,
-            submission_id=mock_batch.id,
-            connection=fixt.pasqal_cloud,
-        )
-
-    with pytest.raises(
-        ValueError,
-        match="'submission_id' and 'batch_id' cannot be simultaneously",
-    ):
-        RemoteResults(
-            batch_id=mock_batch.id,
-            submission_id=mock_batch.id,
-            connection=fixt.pasqal_cloud,
-        )
-
-    with pytest.warns(
-        DeprecationWarning,
-        match="'submission_id' has been deprecated and replaced by 'batch_id'",
-    ):
-        res_ = RemoteResults(
-            submission_id=mock_batch.id,
-            connection=fixt.pasqal_cloud,
-        )
-        assert res_.batch_id == mock_batch.id
-
-    with pytest.raises(
         RuntimeError, match=re.escape("does not contain jobs ['badjobid']")
     ):
         RemoteResults(mock_batch.id, fixt.pasqal_cloud, job_ids=["badjobid"])
@@ -210,11 +174,6 @@ def test_remote_results(fixt, mock_batch, with_job_id):
         id=remote_results.batch_id
     )
 
-    with pytest.warns(
-        DeprecationWarning,
-        match=re.escape("'RemoteResults.get_status()' has been deprecated,"),
-    ):
-        assert remote_results.get_status() == SubmissionStatus.DONE
     fixt.mock_cloud_sdk.get_batch.reset_mock()
 
     assert remote_results.get_batch_status() == BatchStatus.DONE
@@ -494,18 +453,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_batch):
         )
 
     assert isinstance(remote_results, RemoteResults)
-    with pytest.warns(
-        DeprecationWarning,
-        match=re.escape("'RemoteResults.get_status()' has been deprecated,"),
-    ):
-        assert remote_results.get_status() == SubmissionStatus.DONE
     assert remote_results.get_batch_status() == BatchStatus.DONE
-
-    with pytest.warns(
-        DeprecationWarning,
-        match=re.escape("'RemoteResults._submission_id' has been deprecated,"),
-    ):
-        assert remote_results._submission_id == remote_results.batch_id
 
     fixt.mock_cloud_sdk.get_batch.assert_called_with(
         id=remote_results.batch_id

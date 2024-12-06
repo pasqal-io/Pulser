@@ -1,3 +1,2 @@
 pulser-core
 pulser-simulation
-pulser-pasqal

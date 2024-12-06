@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import dataclasses
 import re
 
 import numpy as np
@@ -89,7 +88,14 @@ class TestNoiseModel:
     )
     @pytest.mark.parametrize("unused_param", ["runs", "samples_per_run"])
     def test_unused_params(self, unused_param, noise_param):
-        with pytest.warns(UserWarning, match=f"'{unused_param}' is not used"):
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                f"'{unused_param}' is not used by any active noise type in"
+                f" {(_PARAM_TO_NOISE_TYPE[noise_param],)} when the only "
+                f"defined parameters are {[noise_param]}"
+            ),
+        ):
             NoiseModel(**{unused_param: 100, noise_param: 1.0})
 
     @pytest.mark.parametrize(
@@ -349,87 +355,3 @@ class TestNoiseModel:
             "eff_noise_rates=(0.1,), eff_noise_opers=(((1, 0, 0), (0, 1, 0), "
             "(0, 0, 1)),), with_leakage=True)"
         )
-
-
-class TestLegacyNoiseModel:
-    def test_noise_type_errors(self):
-        with pytest.raises(
-            ValueError, match="'bad_noise' is not a valid noise type."
-        ):
-            with pytest.deprecated_call():
-                NoiseModel(noise_types=("bad_noise",))
-
-        with pytest.raises(
-            ValueError,
-            match="The effective noise parameters have not been filled.",
-        ):
-            with pytest.deprecated_call():
-                NoiseModel(noise_types=("eff_noise",))
-
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "The explicit definition of noise types (deprecated) is"
-                " not compatible with the modification of unrelated noise "
-                "parameters"
-            ),
-        ):
-            with pytest.deprecated_call():
-                NoiseModel(noise_types=("SPAM",), laser_waist=100.0)
-
-    @pytest.mark.parametrize(
-        "noise_type", ["SPAM", "doppler", "amplitude", "dephasing"]
-    )
-    def test_legacy_init(self, noise_type):
-        expected_relevant_params = dict(
-            SPAM={
-                "state_prep_error",
-                "p_false_pos",
-                "p_false_neg",
-                "runs",
-                "samples_per_run",
-            },
-            amplitude={"laser_waist", "amp_sigma", "runs", "samples_per_run"},
-            doppler={"temperature", "runs", "samples_per_run"},
-            dephasing={"dephasing_rate", "hyperfine_dephasing_rate"},
-        )
-        non_zero_param = tuple(expected_relevant_params[noise_type])[0]
-
-        with pytest.warns(
-            DeprecationWarning,
-            match="The explicit definition of noise types is deprecated",
-        ):
-            noise_model = NoiseModel(
-                **{"noise_types": (noise_type,), non_zero_param: 1}
-            )
-
-        # Check that the parameter is not overwritten by the default
-        assert getattr(noise_model, non_zero_param) == 1
-
-        with pytest.raises(
-            ValueError,
-            match="'leakage' cannot be explicitely defined in the noise",
-        ):
-            with pytest.warns(
-                DeprecationWarning,
-                match="The explicit definition of noise types is deprecated",
-            ):
-                NoiseModel(noise_types=("leakage",))
-
-        relevant_params = NoiseModel._find_relevant_params(
-            {noise_type},
-            # These values don't matter, they just have to be > 0
-            state_prep_error=0.1,
-            amp_sigma=0.5,
-            laser_waist=100.0,
-        )
-        assert relevant_params == expected_relevant_params[noise_type]
-
-        for f in dataclasses.fields(noise_model):
-            val = getattr(noise_model, f.name)
-            if f.name == "noise_types":
-                assert val == (noise_type,)
-            elif f.name in relevant_params:
-                assert val > 0.0
-            else:
-                assert not val

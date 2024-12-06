@@ -78,6 +78,11 @@ def test_init():
     ):
         SimConfig(amp_sigma=-0.001)
 
+    with pytest.raises(
+        ValueError, match="'bad_noise' is not a valid noise type."
+    ):
+        SimConfig(noise=("bad_noise",))
+
 
 def test_eff_noise_opers(matrices):
     # Some of these checks are repeated in the NoiseModel UTs
@@ -133,9 +138,19 @@ def test_noise_model_conversion():
     noise_model = NoiseModel(
         p_false_neg=0.4,
         p_false_pos=0.1,
+        amp_sigma=1e-3,
+        runs=10,
+        samples_per_run=1,
     )
     expected_simconfig = SimConfig(
-        noise="SPAM", epsilon=0.1, epsilon_prime=0.4, eta=0.0
+        noise=("SPAM", "amplitude"),
+        epsilon=0.1,
+        epsilon_prime=0.4,
+        eta=0.0,
+        amp_sigma=1e-3,
+        laser_waist=float("inf"),
+        runs=10,
+        samples_per_run=1,
     )
     assert SimConfig.from_noise_model(noise_model) == expected_simconfig
     assert expected_simconfig.to_noise_model() == noise_model

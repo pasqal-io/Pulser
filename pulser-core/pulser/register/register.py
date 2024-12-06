@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,8 +31,12 @@ from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_register,
 )
 from pulser.json.utils import stringify_qubit_ids
+from pulser.register._layout_gen import generate_trap_coordinates
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
+
+if TYPE_CHECKING:
+    from pulser.devices import Device
 
 
 class Register(BaseRegister, RegDrawer):
@@ -324,6 +328,60 @@ class Register(BaseRegister, RegDrawer):
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
+    def with_automatic_layout(
+        self,
+        device: Device,
+        layout_slug: str | None = None,
+    ) -> Register:
+        """Replicates the register with an automatically generated layout.
+
+        The generated `RegisterLayout` can be accessed via `Register.layout`.
+
+        Args:
+            device: The device constraints for the layout generation.
+            layout_slug: An optional slug for the generated layout.
+
+        Raises:
+            RuntimeError: If the automatic layout generation fails to meet
+                the device constraints.
+            NotImplementedError: When the register has differentiable
+                coordinates (ie torch Tensors with requires_grad=True).
+
+        Returns:
+            Register: A new register instance with identical qubit IDs and
+            coordinates but also the newly generated RegisterLayout.
+        """
+        if not isinstance(device, pulser.devices.Device):
+            raise TypeError(
+                f"'device' must be of type Device, not {type(device)}."
+            )
+        if (
+            self._coords_arr.is_tensor
+            and self._coords_arr.as_tensor().requires_grad
+        ):
+            raise NotImplementedError(
+                "'Register.with_automatic_layout()' does not support "
+                "registers with differentiable coordinates."
+            )
+
+        trap_coords = generate_trap_coordinates(
+            self.sorted_coords,
+            min_trap_dist=device.min_atom_distance,
+            max_radial_dist=device.max_radial_distance,
+            max_layout_filling=device.max_layout_filling,
+            optimal_layout_filling=device.optimal_layout_filling,
+            min_traps=device.min_layout_traps,
+            max_traps=device.max_layout_traps,
+        )
+        layout = pulser.register.RegisterLayout(trap_coords, slug=layout_slug)
+        trap_ids = layout.get_traps_from_coordinates(
+            *self._coords_arr.as_array()
+        )
+        return cast(
+            Register,
+            layout.define_register(*trap_ids, qubit_ids=self.qubit_ids),
+        )
+
     def rotated(self, degrees: float) -> Register:
         """Makes a new rotated register.
 
@@ -408,10 +466,13 @@ class Register(BaseRegister, RegDrawer):
 
         pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
-            _, custom_ax = self._initialize_fig_axes(
-                pos,
-                blockade_radius=blockade_radius,
-                draw_half_radius=draw_half_radius,
+            custom_ax = cast(
+                plt.Axes,
+                self._initialize_fig_axes(
+                    pos,
+                    blockade_radius=blockade_radius,
+                    draw_half_radius=draw_half_radius,
+                )[1],
             )
         super()._draw_2D(
             custom_ax,

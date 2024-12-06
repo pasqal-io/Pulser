@@ -13,13 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 
+import dataclasses
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 from pulser import Register, Register3D
-from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
+from pulser.register import RegisterLayout
 
 
 def test_creation():
@@ -587,3 +589,84 @@ def test_register_recipes_torch(
     }
     reg = reg_classmethod(**kwargs)
     _assert_reg_requires_grad(reg, invert=not requires_grad)
+
+
+@pytest.mark.parametrize("optimal_filling", [None, 0.4, 0.1])
+def test_automatic_layout(optimal_filling):
+    reg = Register.square(4, spacing=5, prefix="test")
+    max_layout_filling = 0.5
+    min_traps = int(np.ceil(len(reg.qubits) / max_layout_filling))
+    optimal_traps = int(
+        np.ceil(len(reg.qubits) / (optimal_filling or max_layout_filling))
+    )
+    device = dataclasses.replace(
+        AnalogDevice,
+        max_atom_num=20,
+        max_layout_filling=max_layout_filling,
+        optimal_layout_filling=optimal_filling,
+        pre_calibrated_layouts=(),
+    )
+    device.validate_register(reg)
+
+    # On its own, it works
+    new_reg = reg.with_automatic_layout(device, layout_slug="foo")
+    assert new_reg.qubit_ids == reg.qubit_ids  # Same IDs in the same order
+    assert new_reg == reg  # The register itself is identical
+    assert isinstance(new_reg.layout, RegisterLayout)
+    assert str(new_reg.layout) == "foo"
+    trap_num = new_reg.layout.number_of_traps
+    assert min_traps <= trap_num <= optimal_traps
+    # To test the device limits on trap number are enforced
+    if not optimal_filling:
+        assert trap_num == min_traps
+        bound_below_dev = dataclasses.replace(
+            device, min_layout_traps=trap_num + 1
+        )
+        assert (
+            reg.with_automatic_layout(bound_below_dev).layout.number_of_traps
+            == bound_below_dev.min_layout_traps
+        )
+    elif trap_num < optimal_traps:
+        assert trap_num > min_traps
+        bound_above_dev = dataclasses.replace(
+            device, max_layout_traps=trap_num - 1
+        )
+        assert (
+            reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
+            == bound_above_dev.max_layout_traps
+        )
+
+    with pytest.raises(TypeError, match="must be of type Device"):
+        reg.with_automatic_layout(MockDevice)
+
+    # Minimum number of traps is too high
+    with pytest.raises(RuntimeError, match="Failed to find a site"):
+        reg.with_automatic_layout(
+            dataclasses.replace(device, min_layout_traps=200)
+        )
+
+    # The Register is larger than max_traps
+    big_reg = Register.square(8, spacing=5)
+    min_traps = np.ceil(len(big_reg.qubit_ids) / max_layout_filling)
+    with pytest.raises(
+        RuntimeError, match="Failed to find a site for 2 traps"
+    ):
+        big_reg.with_automatic_layout(
+            dataclasses.replace(device, max_layout_traps=int(min_traps - 2))
+        )
+    # Without max_traps, it would still work
+    assert (
+        big_reg.with_automatic_layout(device).layout.number_of_traps
+        >= min_traps
+    )
+
+
+def test_automatic_layout_diff():
+    torch = pytest.importorskip("torch")
+    with pytest.raises(
+        NotImplementedError,
+        match="does not support registers with differentiable coordinates",
+    ):
+        Register.square(
+            2, spacing=torch.tensor(10.0, requires_grad=True)
+        ).with_automatic_layout(AnalogDevice)

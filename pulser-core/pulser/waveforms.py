@@ -367,6 +367,7 @@ class Waveform(ABC):
             # Repeats the times on the edges once
             ts = np.pad(ts, 1, mode="edge")
 
+        color_dict: dict[str, Any]
         if color:
             color_dict = {"color": color}
             hline_color = color
@@ -598,8 +599,9 @@ class RampWaveform(Waveform):
         Returns:
             A numpy array with a value for each time step.
         """
-        return (
-            self._slope * np.arange(self._duration, dtype=float) + self._start
+        return pm.clip(
+            self._slope * np.arange(self._duration, dtype=float) + self._start,
+            *sorted(map(float, [self._start, self._stop])),
         )
 
     @property

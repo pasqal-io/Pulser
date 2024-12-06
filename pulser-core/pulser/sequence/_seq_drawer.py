@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import warnings
 from collections import defaultdict
+from collections.abc import Iterable
+from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass, field
 from itertools import chain, combinations
 from typing import Any, Optional, Union, cast
@@ -76,8 +78,8 @@ class EOMSegment:
         """Draws a rectangle between the start and end value."""
         if not self.isempty:
             ax.axvspan(
-                self.ti,
-                self.tf,
+                cast(int, self.ti),
+                cast(int, self.tf),
                 color=self.color,
                 alpha=self.alpha,
                 zorder=-100,
@@ -98,7 +100,7 @@ class EOMSegment:
                     zorder=-100,
                 )
             ax.axvline(
-                self.tf if decreasing else self.ti,
+                cast(int, self.tf if decreasing else self.ti),
                 ax.get_ylim()[0],
                 ax.get_ylim()[1],
                 color=self.color,
@@ -387,6 +389,9 @@ def _draw_register_det_maps(
     nregisters = (
         int(register is not None) + int(draw_detuning_maps) * n_det_maps
     )
+    axes_reg: (
+        plt.Axes | abcSequence[plt.Axes] | abcSequence[abcSequence[plt.Axes]]
+    )
     # Draw masked register
     if register:
         pos = register._coords_arr.as_array(detach=True)
@@ -403,10 +408,12 @@ def _draw_register_det_maps(
                 draw_half_radius=True,
                 nregisters=nregisters,
             )
-
             for ax_reg, (ix, iy) in zip(
-                axes_reg if nregisters == 1 else axes_reg[0],
-                combinations(np.arange(3), 2),
+                cast(
+                    abcSequence[plt.Axes],
+                    axes_reg if nregisters == 1 else axes_reg[0],
+                ),
+                cast(Iterable, combinations((0, 1, 2), 2)),
             ):
                 register._draw_2D(
                     ax=ax_reg,
@@ -430,7 +437,9 @@ def _draw_register_det_maps(
                 draw_half_radius=True,
                 nregisters=nregisters,
             )
-            ax_reg = axes_reg if nregisters == 1 else axes_reg[0]
+            ax_reg = (
+                axes_reg if isinstance(axes_reg, plt.Axes) else axes_reg[0]
+            )
             register._draw_2D(
                 ax=ax_reg,
                 pos=pos,
@@ -466,14 +475,23 @@ def _draw_register_det_maps(
                         nregisters=nregisters,
                     )
                 need_init = False
-            ax_reg = (
-                axes_reg
-                if nregisters == 1
-                else axes_reg[i + int(register is not None)]
+            ax_reg_ = cast(
+                Union[plt.Axes, abcSequence[plt.Axes]],
+                (
+                    axes_reg
+                    if nregisters == 1
+                    else cast(
+                        Union[
+                            abcSequence[plt.Axes],
+                            abcSequence[abcSequence[plt.Axes]],
+                        ],
+                        axes_reg,
+                    )[i + int(register is not None)]
+                ),
             )
-            if det_map.dimensionality == 3:
+            if not isinstance(ax_reg_, plt.Axes):
                 for sub_ax_reg, (ix, iy) in zip(
-                    ax_reg, combinations(np.arange(3), 2)
+                    ax_reg_, combinations(np.arange(3), 2)
                 ):
                     det_map._draw_2D(
                         ax=sub_ax_reg,
@@ -490,12 +508,12 @@ def _draw_register_det_maps(
                     )
             else:
                 det_map._draw_2D(
-                    ax=ax_reg,
+                    ax=ax_reg_,
                     pos=pos,
                     ids=list(qubits.keys()),
                     dmm_qubits=reg_det_map,
                 )
-                ax_reg.set_title(ch, pad=10)
+                ax_reg_.set_title(ch, pad=10)
     return fig_reg
 
 
@@ -522,8 +540,7 @@ def _draw_channel_content(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False. If `draw_phase_curve=True`,
-            phase values are ommited.
+            as text on the plot, defaults to False.
         draw_phase_shifts: Whether phase shift and reference information
             should be added to the plot, defaults to False.
         draw_input: Draws the programmed pulses on the channels, defaults
@@ -588,8 +605,10 @@ def _draw_channel_content(
     )
     gs = fig.add_gridspec(n_channels, 1, hspace=0.075, height_ratios=ratios)
 
-    ch_axes = {}
-    for i, (ch, gs_) in enumerate(zip(sampled_seq.channels, gs)):
+    ch_axes: dict[str, abcSequence[plt.Axes]] = {}
+    for i, (ch, gs_) in enumerate(
+        zip(sampled_seq.channels, gs)  # type: ignore[call-overload]
+    ):
         ax = fig.add_subplot(gs_)
         for side in ("top", "bottom", "left", "right"):
             ax.spines[side].set_color("none")
@@ -698,22 +717,20 @@ def _draw_channel_content(
                         alpha=0.3,
                         hatch="////",
                     )
-                else:
+                else:  # pragma: no cover
                     ax.plot(
                         t,
                         ys_mod[i][:total_duration],
                         color=COLORS[i],
                         linestyle="dotted",
                     )
-            special_kwargs = dict(labelpad=10) if i == 0 else {}
+            special_kwargs: dict[str, Any] = (
+                dict(labelpad=10) if i == 0 else {}
+            )
             ax.set_ylabel(LABELS[i], fontsize=14, **special_kwargs)
 
         if draw_phase_area:
             top = False  # Variable to track position of box, top or center.
-            print_phase = not draw_phase_curve and any(
-                np.any(ch_data.samples.phase[slot.ti : slot.tf] != 0)
-                for slot in ch_data.samples.slots
-            )
 
             for slot in ch_data.samples.slots:
                 if sampling_rate:
@@ -745,11 +762,8 @@ def _draw_channel_content(
                     if round(area_val, 2) == 1
                     else rf"A: {float(area_val):.2g}$\pi$"
                 )
-                if not print_phase:
-                    txt = area_fmt
-                else:
-                    phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
-                    txt = "\n".join([phase_fmt, area_fmt])
+                phase_fmt = rf"$\phi$: {phase_str(phase_val)}"
+                txt = "\n".join([phase_fmt, area_fmt])
                 axes[0].text(
                     x_plot,
                     y_plot,
@@ -852,7 +866,9 @@ def _draw_channel_content(
             if end != total_duration - 1 or "measurement" in data:
                 end += 1 / time_scale
             for t_, delta in ref.changes(start, end, time_scale=time_scale):
-                conf = dict(linestyle="--", linewidth=1.5, color="black")
+                conf: dict[str, Any] = dict(
+                    linestyle="--", linewidth=1.5, color="black"
+                )
                 for ax in axes:
                     ax.axvline(t_, **conf)
                 msg = "\u27F2 " + phase_str(delta)
@@ -902,7 +918,9 @@ def _draw_channel_content(
                 bbox=slm_box,
             )
 
-        hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
+        hline_kwargs: dict[str, Any] = dict(
+            linestyle="-", linewidth=0.5, color="grey"
+        )
         if "measurement" in data:
             msg = f"Basis: {data['measurement']}"
             if len(axes) == 1:
@@ -1011,7 +1029,9 @@ def _draw_qubit_content(
 
     fig.suptitle("Quantities per qubit over time", fontsize=16)
     cmap = LinearSegmentedColormap.from_list("", COLORS)
-    hline_kwargs = dict(linestyle="-", linewidth=0.5, color="grey")
+    hline_kwargs: dict[str, Any] = dict(
+        linestyle="-", linewidth=0.5, color="grey"
+    )
     max_targets = 20  # maximum number of targets shown in legend
     # If qubits can be defined, another figure is added to display legend
     dmm_samples: list[DMMSamples] = [
@@ -1031,7 +1051,7 @@ def _draw_qubit_content(
             UserWarning,
         )
     fig_legend: None | Figure = None
-    axes_legend: None | Axes = None
+    axes_legend: Axes | abcSequence[Axes] | abcSequence[abcSequence[Axes]]
     dimensionality_3d: bool | None = None
     if register or dmm_samples:
         dimensionality_3d = isinstance(register, Register3D) or (
@@ -1218,7 +1238,7 @@ def draw_samples(
     sampling_rate: Optional[float] = None,
     draw_phase_area: bool = False,
     draw_phase_shifts: bool = False,
-    draw_phase_curve: bool = False,
+    draw_phase_curve: bool = True,
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
@@ -1235,8 +1255,7 @@ def draw_samples(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False. If `draw_phase_curve=True`,
-            phase values are ommited.
+            as text on the plot, defaults to False.
         draw_phase_shifts: Whether phase shift and reference information
             should be added to the plot, defaults to False.
         draw_phase_curve: Draws the changes in phase in its own curve (ignored
@@ -1294,7 +1313,7 @@ def draw_sequence(
     draw_register: bool = False,
     draw_input: bool = True,
     draw_modulation: bool = False,
-    draw_phase_curve: bool = False,
+    draw_phase_curve: bool = True,
     draw_detuning_maps: bool = False,
     draw_qubit_amp: bool = False,
     draw_qubit_det: bool = False,
@@ -1308,8 +1327,7 @@ def draw_sequence(
             the solver. If present, plots the effective pulse alongside the
             input pulse.
         draw_phase_area: Whether phase and area values need to be shown
-            as text on the plot, defaults to False. If `draw_phase_curve=True`,
-            phase values are ommited.
+            as text on the plot, defaults to False.
         draw_interp_pts: When the sequence has pulses with waveforms of
             type InterpolatedWaveform, draws the points of interpolation on
             top of the respective waveforms (defaults to True).
