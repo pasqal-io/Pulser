@@ -34,6 +34,7 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "myst_parser",
     "nbsphinx",
     "nbsphinx_link",
     "sphinx.ext.autodoc",
