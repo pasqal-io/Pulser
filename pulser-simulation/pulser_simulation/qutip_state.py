@@ -195,6 +195,6 @@ class QutipState(State[SupportsComplex, complex]):
         expected_n_qudits = math.log(shape[0], qudit_dim)
         if not np.isclose(expected_n_qudits, round(expected_n_qudits)):
             raise ValueError(
-                f"A qutip.Qobj with shape {shape} can't represent "
-                f"a collection of {qudit_dim}-level qudits."
+                f"A qutip.Qobj with shape {shape} is incompatible with "
+                f"a system of {qudit_dim}-level qudits."
             )
