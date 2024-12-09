@@ -17,7 +17,7 @@ from typing import cast
 import numpy as np
 import pytest
 import qutip
-from qutip.piqs import isdiagonal
+from qutip.piqs.piqs import isdiagonal
 
 from pulser import AnalogDevice, Pulse, Register, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice

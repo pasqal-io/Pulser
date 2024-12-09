@@ -355,10 +355,13 @@ class NoiseModel:
             # type checking
             try:
                 operator = np.array(op, dtype=complex)
-            except Exception:
-                raise TypeError(
-                    f"Operator {op!r} is not castable to a Numpy array."
-                )
+            except TypeError as e1:
+                try:
+                    operator = np.array(op.data_as("ndarray"), dtype=complex)
+                except AttributeError as e2:
+                    raise TypeError(
+                        f"Operator {op!r} is not castable to a Numpy array."
+                    ) from e1
             if operator.ndim != 2:
                 raise ValueError(f"Operator '{op!r}' is not a 2D array.")
 
