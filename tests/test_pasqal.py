@@ -196,7 +196,7 @@ def test_remote_results(fixt, mock_batch, with_job_id):
         for job in select_jobs
     )
 
-    assert hasattr(remote_results, "_results")
+    assert hasattr(remote_results, "_results_seq")
 
     fixt.mock_cloud_sdk.get_batch.reset_mock()
     available_results = remote_results.get_available_results()
@@ -472,7 +472,7 @@ def test_submit(fixt, parametrized, emulator, mimic_qpu, seq, mock_batch):
         )
         for _job in mock_batch.ordered_jobs
     )
-    assert hasattr(remote_results, "_results")
+    assert hasattr(remote_results, "_results_seq")
 
 
 @pytest.mark.parametrize("emu_cls", [EmuTNBackend, EmuFreeBackend])
