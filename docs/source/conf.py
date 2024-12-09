@@ -43,6 +43,23 @@ extensions = [
     "sphinx_autodoc_typehints",
 ]
 
+myst_enable_extensions = [
+    "amsmath",
+    "attrs_inline",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    # "fieldlist",
+    # "html_admonition",
+    "html_image",
+    # "linkify",
+    # "replacements",
+    # "smartquotes",
+    # "strikethrough",
+    # "substitution",
+    # "tasklist",
+]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
