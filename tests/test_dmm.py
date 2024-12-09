@@ -37,7 +37,9 @@ class TestDetuningMap:
 
     @pytest.fixture
     def register(self, layout: RegisterLayout) -> BaseRegister:
-        return layout.define_register(0, 1, 2, 3, qubit_ids=(0, 1, 2, 3))
+        return layout.define_register(
+            0, 1, 2, 3, qubit_ids=("0", "1", "2", "3")
+        )
 
     @pytest.fixture
     def map_reg(self, layout: RegisterLayout) -> MappableRegister:
@@ -227,7 +229,7 @@ class TestDetuningMap:
                 )[1],
                 np.array(slm_map.trap_coordinates),
                 [
-                    i
+                    str(i)
                     for i, _ in enumerate(cast(list, slm_map.trap_coordinates))
                 ],
                 with_labels=True,

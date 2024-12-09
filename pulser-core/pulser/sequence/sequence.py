@@ -1344,7 +1344,7 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             qubits: The new target for this channel. Must correspond to a
-                qubit index or an collection of qubit indices, when multi-qubit
+                qubit index or a collection of qubit indices, when multi-qubit
                 addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -2057,7 +2057,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.block_if_measured
     def _target(
         self,
-        qubits: Union[Collection[QubitId], QubitId, Parametrized],
+        qubits: Union[Collection[QubitId | int], QubitId | int, Parametrized],
         channel: str,
         _index: bool = False,
     ) -> None:
@@ -2105,7 +2105,7 @@ class Sequence(Generic[DeviceType]):
             self._schedule.add_target(qubit_ids_set, channel)
 
     def _check_qubits_give_ids(
-        self, *qubits: Union[QubitId, Parametrized], _index: bool = False
+        self, *qubits: Union[QubitId, int, Parametrized], _index: bool = False
     ) -> set[QubitId]:
         if _index:
             if self.is_parametrized():
@@ -2158,7 +2158,7 @@ class Sequence(Generic[DeviceType]):
     def _phase_shift(
         self,
         phi: float | Parametrized,
-        *targets: QubitId | Parametrized,
+        *targets: QubitId | int | Parametrized,
         basis: str,
         _index: bool = False,
     ) -> None:
