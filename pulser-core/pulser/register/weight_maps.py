@@ -123,7 +123,9 @@ class WeightMap(Traps, RegDrawer):
         pos = self.trap_coordinates
         custom_ax = custom_ax or cast(Axes, self._initialize_fig_axes(pos)[1])
 
-        labels_ = labels if labels is not None else list(range(len(pos)))
+        labels_ = (
+            labels if labels is not None else [str(i) for i in range(len(pos))]
+        )
 
         super()._draw_2D(
             custom_ax,

@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from pulser.register.register_layout import RegisterLayout
 
 T = TypeVar("T", bound="BaseRegister")
-QubitId = Union[int, str]
+QubitId = str
 
 
 class _LayoutInfo(NamedTuple):

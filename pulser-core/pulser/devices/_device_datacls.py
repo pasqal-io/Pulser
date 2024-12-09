@@ -534,7 +534,7 @@ class BaseDevice(ABC):
         ),
         kind: Literal["atoms", "traps"] = "atoms",
     ) -> None:
-        ids = list(coords_dict.keys())
+        ids = [str(id) for id in list(coords_dict.keys())]
         coords = list(map(pm.AbstractArray, coords_dict.values()))
         if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
@@ -763,7 +763,7 @@ class Device(BaseDevice):
                     (
                         "\t"
                         + r"- Maximum :math:`\Omega`:"
-                        + f" {float(cast(float,ch.max_amp)):.4g} rad/µs"
+                        + f" {float(cast(float, ch.max_amp)):.4g} rad/µs"
                     ),
                     (
                         (
@@ -776,7 +776,7 @@ class Device(BaseDevice):
                         else (
                             "\t"
                             + r"- Bottom :math:`|\delta|`:"
-                            + f" {float(cast(float,ch.bottom_detuning)):.4g}"
+                            + f" {float(cast(float, ch.bottom_detuning)):.4g}"
                             + " rad/µs"
                         )
                     ),
