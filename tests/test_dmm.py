@@ -182,6 +182,7 @@ class TestDetuningMap:
             DetuningMap([(0, 0), (1, 0)], [0])
 
         for reg in (layout, map_reg, register):
+            bad_weights: dict[int | str, float]
             if reg == register:
                 bad_weights = {"0": -1.0, "1": 1.0, "2": 1.0}
             else:
@@ -202,13 +203,16 @@ class TestDetuningMap:
 
         for reg in (layout, map_reg, register):
             for detuning_map_dict in (det_dict, slm_dict):
+                reg_det_map_dict: dict[int | str, float]
                 if reg == register:
                     reg_det_map_dict = {
                         str(id): weight
                         for (id, weight) in detuning_map_dict.items()
                     }
                 else:
-                    reg_det_map_dict = detuning_map_dict.copy()
+                    reg_det_map_dict = cast(
+                        dict[int | str, float], detuning_map_dict
+                    )
                 detuning_map = cast(
                     DetuningMap,
                     reg.define_detuning_map(reg_det_map_dict),  # type: ignore
