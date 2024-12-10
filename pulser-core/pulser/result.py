@@ -47,6 +47,7 @@ __all__ = ["Result", "SampledResult"]
 class Result(ABC, backend_results.Results):
     """Base class for storing the result of an observable at specific time."""
 
+    meas_basis: str
     total_duration: int = field(default=0, init=False)
 
     @property

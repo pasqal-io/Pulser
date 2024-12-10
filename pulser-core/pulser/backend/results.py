@@ -28,12 +28,10 @@ class Results:
 
     Args:
         atoms_order: The order of the atoms/qudits in the results.
-        meas_basis: The measurement basis.
         total_duration: The total duration of the sequence, in ns.
     """
 
     atom_order: tuple[QubitId, ...]
-    meas_basis: str
     total_duration: int
     _results: dict[str, dict[float, Any]] = field(init=False)
 
