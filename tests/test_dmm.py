@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import re
-from typing import cast
+from typing import cast, Union
 from unittest.mock import patch
 
 import numpy as np
@@ -211,7 +211,7 @@ class TestDetuningMap:
                     }
                 else:
                     reg_det_map_dict = cast(
-                        dict[int | str, float], detuning_map_dict
+                        dict[Union[int, str], float], detuning_map_dict
                     )
                 detuning_map = cast(
                     DetuningMap,
