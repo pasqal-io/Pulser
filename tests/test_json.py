@@ -119,15 +119,24 @@ def test_detuning_map():
 
 
 @pytest.mark.parametrize(
-    "reg",
+    "reg_dict",
     [
-        Register(dict(enumerate([(2, 3), (5, 1), (10, 0)]))),
-        Register3D({3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)}),
+        dict(enumerate([(2, 3), (5, 1), (10, 0)])),
+        {3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)},
     ],
 )
-def test_register_numbered_keys(reg):
+def test_register_numbered_keys(reg_dict):
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s as `QubitId`s will be deprecated.",
+    ):
+        reg = (Register if len(reg_dict[2]) == 2 else Register3D)(reg_dict)
     j = json.dumps(reg, cls=PulserEncoder)
-    decoded_reg = json.loads(j, cls=PulserDecoder)
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s as `QubitId`s will be deprecated.",
+    ):
+        decoded_reg = json.loads(j, cls=PulserDecoder)
     assert reg == decoded_reg
     assert all([type(i) is int for i in decoded_reg.qubit_ids])
 

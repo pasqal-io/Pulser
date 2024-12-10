@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import re
-from typing import cast, Union
+from typing import Union, cast
 from unittest.mock import patch
 
 import numpy as np
