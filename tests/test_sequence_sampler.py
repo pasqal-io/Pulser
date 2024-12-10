@@ -202,7 +202,7 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
 
 def test_modulation_local(mod_device):
     seq = pulser.Sequence(pulser.Register.square(2, prefix="q"), mod_device)
-    seq.declare_channel("ch0", "rydberg_local", initial_target=0)
+    seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
     ch_obj = seq.declared_channels["ch0"]
     pulse1 = Pulse.ConstantPulse(500, 1, -1, 0)
     pulse2 = Pulse.ConstantPulse(200, 2.5, 0, 0)
