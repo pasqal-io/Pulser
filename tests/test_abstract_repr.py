@@ -822,7 +822,7 @@ class TestSerialization:
             AbstractReprError, match="Name collisions encountered"
         ), pytest.warns(
             DeprecationWarning,
-            match="Usage of `int`s as `QubitId`s will be deprecated.",
+            match="Usage of `int`s or any non-`str`types as `QubitId`s",
         ):
             Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
 

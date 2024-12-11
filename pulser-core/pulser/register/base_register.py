@@ -78,14 +78,13 @@ class BaseRegister(ABC, CoordsCollection):
             [pm.AbstractArray(v, dtype=float) for v in qubits.values()]
         )
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
-        not_str = [id for id in self._ids if not isinstance(id, str)]
-        if not_str:
+        if any(not isinstance(id, str) for id in self._ids):
             warnings.simplefilter("always")
             warnings.warn(
-                "Usage of `int`s as `QubitId`s will be deprecated. Define "
-                "your `QubitId`s as `str`s, prefer setting `prefix='q'` "
-                "when using classmethods, as that will become the new "
-                "default once `int` qubit IDs become invalid.",
+                "Usage of `int`s or any non-`str`types as `QubitId`s will be "
+                "deprecated. Define your `QubitId`s as `str`s, prefer setting "
+                "`prefix='q'` when using classmethods, as that will become the"
+                " new default once `int` qubit IDs become invalid.",
                 DeprecationWarning,
                 stacklevel=2,
             )

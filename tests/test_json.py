@@ -128,13 +128,13 @@ def test_detuning_map():
 def test_register_numbered_keys(reg_dict):
     with pytest.warns(
         DeprecationWarning,
-        match="Usage of `int`s as `QubitId`s will be deprecated.",
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
     ):
         reg = (Register if len(reg_dict[2]) == 2 else Register3D)(reg_dict)
     j = json.dumps(reg, cls=PulserEncoder)
     with pytest.warns(
         DeprecationWarning,
-        match="Usage of `int`s as `QubitId`s will be deprecated.",
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
     ):
         decoded_reg = json.loads(j, cls=PulserDecoder)
     assert reg == decoded_reg
