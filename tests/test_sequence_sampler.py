@@ -438,7 +438,15 @@ def test_extend_duration(seq_rydberg, with_custom_centered_phase):
     assert extended_short.slots == short.slots
 
 
-def test_phase_sampling(mod_device):
+@pytest.mark.parametrize("custom_phase_jump_time", [None, 0, 100])
+def test_phase_sampling(mod_device, custom_phase_jump_time):
+    ryd_ch_obj = replace(
+        mod_device.channels["rydberg_global"],
+        custom_phase_jump_time=custom_phase_jump_time,
+    )
+    mod_device = replace(
+        mod_device, channel_objects=(ryd_ch_obj,), channel_ids=None
+    )
     reg = pulser.Register.from_coordinates(np.array([[0.0, 0.0]]), prefix="q")
     seq = pulser.Sequence(reg, mod_device)
     seq.declare_channel("ch0", "rydberg_global")
@@ -463,7 +471,10 @@ def test_phase_sampling(mod_device):
     assert end_of_detuned_delay == full_duration - dt
 
     ph_jump_time = seq.declared_channels["ch0"].phase_jump_time
-    assert ph_jump_time > 0
+    if custom_phase_jump_time is not None:
+        assert ph_jump_time == custom_phase_jump_time
+    else:
+        assert ph_jump_time > 0
     expected_phase = np.zeros(full_duration)
     expected_phase[:dt] = 1.0
     transition2_3 = pulse3_start - ph_jump_time
@@ -474,12 +485,21 @@ def test_phase_sampling(mod_device):
     expected_phase[transition2_3:transition3_4] = 3.0
     expected_phase[transition3_4:] = 4.0
 
-    got_phase = (ch_samples_ := sample(seq).channel_samples["ch0"]).phase
-    np.testing.assert_array_equal(expected_phase, got_phase.as_array())
+    ch_samples = sample(seq).channel_samples["ch0"]
+    ch_samples_mod = sample(seq, modulation=True).channel_samples["ch0"]
+
+    np.testing.assert_array_equal(expected_phase, ch_samples.phase.as_array())
+    # No difference when modulated, just longer
+    np.testing.assert_array_equal(
+        expected_phase, ch_samples_mod.phase.as_array()[:full_duration]
+    )
 
     # Test centered phase
     expected_phase[expected_phase > np.pi] -= 2 * np.pi
-    np.testing.assert_array_equal(expected_phase, ch_samples_.centered_phase)
+    np.testing.assert_array_equal(expected_phase, ch_samples.centered_phase)
+    np.testing.assert_array_equal(
+        expected_phase, ch_samples_mod.centered_phase[:full_duration]
+    )
 
 
 @pytest.mark.parametrize("with_diff", [False, True])
@@ -649,5 +669,4 @@ def mod_seq(mod_device: Device) -> pulser.Sequence:
         Pulse.ConstantDetuning(BlackmanWaveform(1000, np.pi / 2), 1.0, 1.0),
         "ch0",
     )
-    seq.measure()
     return seq

@@ -513,6 +513,7 @@ class TestDevice:
         [
             Rydberg.Global(None, None, min_avg_amp=1),
             Rydberg.Global(None, None, propagation_dir=(1, 0, 0)),
+            Rydberg.Global(None, None, custom_phase_jump_time=0),
             Rydberg.Global(
                 None,
                 None,
