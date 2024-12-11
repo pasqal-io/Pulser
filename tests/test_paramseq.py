@@ -24,7 +24,7 @@ from pulser.parametrized import Variable
 from pulser.parametrized.variable import VariableItem
 from pulser.waveforms import BlackmanWaveform
 
-reg = Register.rectangle(4, 3)
+reg = Register.rectangle(4, 3, prefix="q")
 device = DigitalAnalogDevice
 
 
@@ -50,10 +50,10 @@ def test_parametrized_channel_initial_target():
     var = sb.declare_variable("var")
     sb.declare_channel("ch1", "rydberg_local")
     sb.target_index(var, "ch1")
-    sb.declare_channel("ch0", "raman_local", initial_target=0)
+    sb.declare_channel("ch0", "raman_local", initial_target="q0")
     assert sb._calls[-1].name == "declare_channel"
     assert sb._to_build_calls[-1].name == "target"
-    assert sb._to_build_calls[-1].args == (0, "ch0")
+    assert sb._to_build_calls[-1].args == ("q0", "ch0")
 
 
 def test_stored_calls():
@@ -125,7 +125,9 @@ def test_stored_calls():
         sb.target_index(q_var, "ch1")
 
     sb2 = Sequence(reg, MockDevice)
-    sb2.declare_channel("ch1", "rydberg_local", initial_target={3, 4, 5})
+    sb2.declare_channel(
+        "ch1", "rydberg_local", initial_target={"q3", "q4", "q5"}
+    )
     q_var2 = sb2.declare_variable("q_var2", size=5, dtype=int)
     var2 = sb2.declare_variable("var2")
     assert sb2._building
@@ -229,7 +231,7 @@ def test_str():
 def test_screen():
     sb = Sequence(reg, device)
     sb.declare_channel("ch1", "rydberg_global")
-    assert sb.current_phase_ref(4, basis="ground-rydberg") == 0
+    assert sb.current_phase_ref("q4", basis="ground-rydberg") == 0
     var = sb.declare_variable("var")
     sb.delay(var, "ch1")
     with pytest.raises(RuntimeError, match="can't be called in parametrized"):
@@ -239,7 +241,7 @@ def test_screen():
 def test_parametrized_in_eom_mode(mod_device):
     # Case 1: Sequence becomes parametrized while in EOM mode
     seq = Sequence(reg, mod_device)
-    seq.declare_channel("ch0", "rydberg_local", initial_target=0)
+    seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
 
     assert not seq.is_in_eom_mode("ch0")
     seq.enable_eom_mode("ch0", amp_on=2.0, detuning_on=0.0)
@@ -278,8 +280,8 @@ def test_parametrized_before_eom_mode(mod_device):
     # Case 2: Sequence is parametrized before entering EOM mode
     seq = Sequence(reg, mod_device)
 
-    seq.declare_channel("ch0", "rydberg_local", initial_target=0)
-    seq.declare_channel("raman", "raman_local", initial_target=2)
+    seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
+    seq.declare_channel("raman", "raman_local", initial_target="q2")
     amp = seq.declare_variable("amp", dtype=float)
     seq.add(Pulse.ConstantPulse(200, amp, -1, 0), "ch0")
 
