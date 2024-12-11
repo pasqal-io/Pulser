@@ -294,7 +294,7 @@ class Channel(ABC):
         Corresponds to two times the rise time when `custom_phase_jump_time`
         is not defined.
         """
-        return (
+        return int(
             self.rise_time * 2
             if self.custom_phase_jump_time is None
             else self.custom_phase_jump_time
