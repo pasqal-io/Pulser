@@ -51,8 +51,15 @@ Finally, the laser channel applied on the atoms has a propagation direction (`pr
 
 The `Device` object stores all the physical information to take into account when making a quantum computation using a neutral-atom Quantum Processing Unit. An example of such a `Device` is detailed below with the `AnalogDevice`. As we have seen above, there are lots of physical constraints that are taken into account when you add an operation to your `Sequence`. However, for development perspectives, you could want to relax some conditions: what if there was no condition on the duration of the sequence ? or on the amplitude of the pulses applied to a specific channel ? You can work with a `VirtualDevice`, a kind of device that allows some of the physical constraints to not be defined. Check the [section on `VirtualDevice`](./tutorials/virtual_devices.nblink) to learn more.
 
+## Example of devices
 
+### pulser.devices
 
+Each QPU has a different `Device` associated to it. This `Device` is accessible via the `Backend` that represents that QPU. The `Device` object fetched from the QPU varies along time: sometimes, the performance of the QPU can be enhanced (more atoms can be available for instance), sometimes the performance can be a bit downgraded (the maximum amplitude a laser can be a bit below what is used to be for instance).
+
+However, pulser provides examples of devices that present relevant values for neutral-atom QPUs. Even though these values are relevant, they are set to be ideal values for the QPUs, meaning that we cannot garantee that a Sequence built with this examples of device can work on a QPU, but we can garantee that a device built with the constrains of a QPU is to valid under the constrains of these QPU examples.
+
+We provide three examples of Device. The `AnalogDevice`, that is detailed below, the `DigitalAnalogDevice` and the `MockDevice`. The `AnalogDevice` represents a device with the minimum elements to perform analog computations with the Rydberg interaction. The `DigitalAnalogDevice` represents a device to perform analog computations with either the Rydberg or the XY interaction. digital computations using
 
 
 
