@@ -36,7 +36,7 @@ The device can also define some parameters used at execution on the backend. A b
 
 Each pulse modifying the state of the atoms is applied via a laser channel. A channel targets a specific transition between two states, named the eigenstates. These two eigenstates form a basis. You can check the basis currently implemented in Pulser and their associated eigenstates in the [conventions page](./conventions.md). A laser channel can address the atoms globally (all the atoms are addressed at the same time) or locally (atoms are targeted separately). This is described by the `addressing` attribute of the `Channel` object.
 
-The pulses that are applied on these laser channels are defined by four parameters: their duration, amplitude, detuning and phase (learn more about pulses [here](./apidoc/core.rst##pulse)). The laser channels constrain these parameters: 
+The pulses that are applied on these laser channels are defined by four parameters: their duration, amplitude, detuning and phase (learn more about pulses [here](./apidoc/core.rst)). The laser channels constrain these parameters: 
 - the duration must to be longer than `min_duration` but shorter than `max_duration`. It also has to be a multiple of `clock_duration`. 
 - the amplitude must be between 0 and `max_amp`. If the amplitude of a pulse is not constant equal to zero, its average must be higher than `min_avg_amp`.
 - the detuning must be between -`max_abs_detuning` and `max_abs_detuning`.
