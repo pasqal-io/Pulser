@@ -61,6 +61,7 @@ computers and simulators, check the pages in :doc:`review`.
 
    review
    conventions
+   hardware
 
 .. toctree::
    :maxdepth: 2
