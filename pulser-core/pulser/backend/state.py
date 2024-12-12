@@ -16,9 +16,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Mapping, Sequence
-from itertools import product
-from typing import Any, Generic, Literal, Protocol, Type, TypeVar, Union
+from collections.abc import Sequence
+from typing import Generic, Literal, Type, TypeVar, Union
 
 import numpy as np
 
@@ -29,17 +28,6 @@ Eigenstate = Union[States, Literal["0", "1"]]
 ArgScalarType = TypeVar("ArgScalarType")
 ReturnScalarType = TypeVar("ReturnScalarType")
 StateType = TypeVar("StateType", bound="State")
-
-
-class _ProbabilityType(Protocol):
-    """A protocol for probability types.
-
-    Defines only the methods needed to correctly type hint State.
-    """
-
-    def __float__(self) -> float: ...
-
-    def __add__(self, other: Any) -> float: ...
 
 
 class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
@@ -68,19 +56,33 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         return tuple(self._eigenstates)
 
     @property
-    def basis_states(self) -> tuple[str, ...]:
-        """The basis states combinations, in order."""
-        return tuple(
-            map(
-                "".join,
-                product("".join(self.eigenstates), repeat=self.n_qudits),
-            )
-        )
-
-    @property
     def qudit_dim(self) -> int:
         """The dimensions (ie number of eigenstates) of a qudit."""
         return len(self.eigenstates)
+
+    def get_basis_state_from_index(self, index: int) -> str:
+        """Generates a basis state combination from its index in the state.
+
+        Assumes a state vector representation regardless of the actual support
+        of the state.
+
+        Args:
+            index: The position of the state in a state vector.
+
+        Returns:
+            The basis state combination for the desired index.
+        """
+        if index < 0:
+            raise ValueError(
+                f"'index' must be a non-negative integer;"
+                f" got {index} instead."
+            )
+        return "".join(
+            self.eigenstates[int(dig)]
+            for dig in np.base_repr(index, base=self.qudit_dim).zfill(
+                self.n_qudits
+            )
+        )
 
     @abstractmethod
     def overlap(self: StateType, other: StateType, /) -> ReturnScalarType:
@@ -98,49 +100,6 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         pass
 
     @abstractmethod
-    def probabilities(
-        self, *, cutoff: float = 1e-10
-    ) -> Mapping[str, _ProbabilityType]:
-        """Extracts the probabilties of measuring each basis state combination.
-
-        Args:
-            cutoff: The value below which a probability is considered to be
-                zero.
-
-        Returns:
-            A mapping between basis state combinations and their respective
-            probabilities.
-        """
-        pass
-
-    def bitstring_probabilities(
-        self, *, one_state: Eigenstate | None = None, cutoff: float = 1e-10
-    ) -> Mapping[str, _ProbabilityType]:
-        """Extracts the probabilties of measuring each bitstring.
-
-        Args:
-            one_state: The eigenstate that measures to 1. Can be left undefined
-                if the state's eigenstates form a known eigenbasis with a
-                defined "one state".
-            cutoff: The value below which a probability is considered to be
-                zero.
-
-        Returns:
-            A mapping between bitstrings and their respective probabilities.
-        """
-        one_state = one_state or self.infer_one_state()
-        zero_states = set(self.eigenstates) - {one_state}
-        probs = self.probabilities(cutoff=cutoff)
-        bitstring_probs: dict[str, _ProbabilityType] = {}
-        for state_str in probs:
-            bitstring = state_str.replace(one_state, "1")
-            for s_ in zero_states:
-                bitstring = bitstring.replace(s_, "0")
-            # Avoid defaultdict for typing reasons
-            curr_val = bitstring_probs.setdefault(bitstring, 0.0)
-            bitstring_probs[bitstring] = probs[state_str] + curr_val
-        return dict(bitstring_probs)
-
     def sample(
         self,
         *,
@@ -162,38 +121,7 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
         Returns:
             The measured bitstrings, by count.
         """
-        bitstring_probs = self.bitstring_probabilities(
-            one_state=one_state, cutoff=1 / (1000 * num_shots)
-        )
-        bitstrings = np.array(list(bitstring_probs))
-        probs = np.array(list(map(float, bitstring_probs.values())))
-        dist = np.random.multinomial(num_shots, probs)
-        # Filter out bitstrings without counts
-        non_zero_counts = dist > 0
-        bitstrings = bitstrings[non_zero_counts]
-        dist = dist[non_zero_counts]
-        if p_false_pos == 0.0 and p_false_neg == 0.0:
-            return Counter(dict(zip(bitstrings, dist)))
-
-        # Convert bitstrings to a 2D array
-        bitstr_arr = np.array([list(bs) for bs in bitstrings], dtype=int)
-        # If 1 is measured, flip_prob=p_false_neg else flip_prob=p_false_pos
-        flip_probs = np.where(bitstr_arr == 1, p_false_neg, p_false_pos)
-        # Repeat flip_probs of a bitstring as many times as it was measured
-        flip_probs_repeated = np.repeat(flip_probs, dist, axis=0)
-        # Generate random matrix of same shape
-        random_matrix = np.random.uniform(size=flip_probs_repeated.shape)
-        # Compare random matrix with flip probabilities to get the flips
-        flips = random_matrix < flip_probs_repeated
-        # Apply the flips with an XOR between original array and flips
-        new_bitstrings = bitstr_arr.repeat(dist, axis=0) ^ flips
-
-        # Count all the new_bitstrings
-        # Not converting to str right away because tuple indexing is faster
-        new_counts: Counter = Counter(map(tuple, new_bitstrings))
-        return Counter(
-            {"".join(map(str, k)): v for k, v in new_counts.items()}
-        )
+        pass
 
     @classmethod
     @abstractmethod
