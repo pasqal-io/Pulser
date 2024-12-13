@@ -16,10 +16,14 @@ from __future__ import annotations
 
 import collections.abc
 import typing
+import uuid
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from pulser.register import QubitId
+
+if TYPE_CHECKING:
+    from pulser.backend.observable import Observable
 
 
 @dataclass
@@ -33,64 +37,82 @@ class Results:
 
     atom_order: tuple[QubitId, ...]
     total_duration: int
-    _results: dict[str, dict[float, Any]] = field(init=False)
+    _results: dict[uuid.UUID, dict[float, Any]] = field(init=False)
+    _tagmap: dict[str, uuid.UUID] = field(init=False)
 
     def __post_init__(self) -> None:
         self._results = {}
+        self._tagmap = {}
 
-    def _store(self, *, observable_name: str, time: float, value: Any) -> None:
+    def _store(
+        self, *, observable: Observable, time: float, value: Any
+    ) -> None:
         """Store the result of an observable at a specific time.
 
         Args:
-            observable_name: The name of the observable under which to store
-                the result.
+            observable: The observable computing the result.
             time: The relative time at which the observable was taken.
             value: The value of the observable.
         """
-        self._results.setdefault(observable_name, {})
+        self._results.setdefault(observable.uuid, {})
 
-        if time in self._results[observable_name]:
+        if time in self._results[observable.uuid]:
             raise ValueError(
-                f"A value is already stored for observable '{observable_name}'"
+                f"A value is already stored for observable '{observable.tag}'"
                 f" at time {time}."
             )
-
-        self._results[observable_name][time] = value
+        self._tagmap[observable.tag] = observable.uuid
+        self._results[observable.uuid][time] = value
 
     def __getattr__(self, name: str) -> Any:
-        if name in self._results:
-            return dict(self._results[name])
+        if name in self._tagmap:
+            return dict(self._results[self._tagmap[name]])
         raise AttributeError(f"{name!r} is not in the results.")
 
-    def get_result_names(self) -> list[str]:
-        """Get a list of results names present in this object."""
-        return list(self._results.keys())
+    def get_result_tags(self) -> list[str]:
+        """Get a list of results tags present in this object."""
+        return list(self._tagmap.keys())
 
-    def get_result_times(self, name: str) -> list[float]:
+    def get_result_times(self, observable: Observable | str) -> list[float]:
         """Get a list of times for which the given result has been stored.
 
         Args:
-            name: Name of the result to get times of.
+            observable: The observable instance used to calculate the result
+                or its tag.
 
         Returns:
             List of relative times.
         """
-        return list(getattr(self, name).keys())
+        return list(self._results[self._find_uuid(observable)].keys())
 
-    def get_result(self, name: str, time: float) -> Any:
+    def get_result(self, observable: Observable | str, time: float) -> Any:
         """Get the given result at the given time.
 
         Args:
-            name: Name of the result to get.
+            observable: The observable instance used to calculate the result
+                or its tag.
             time: Relative time at which to get the result.
 
         Returns:
             The result.
         """
         try:
-            return getattr(self, name)[time]
+            return self._results[self._find_uuid(observable)][time]
         except KeyError:
-            raise ValueError(f"{name!r} is not available at time {time}.")
+            raise ValueError(
+                f"{observable!r} is not available at time {time}."
+            )
+
+    def _find_uuid(self, observable: Observable | str) -> uuid.UUID:
+        if isinstance(observable, Observable):
+            return observable.uuid
+        try:
+            return self._tagmap[observable]
+        except KeyError:
+            raise ValueError(
+                f"{observable!r} is not an Observable instance "
+                "nor a known observable tag in the results."
+            )
 
 
 ResultsType = TypeVar("ResultsType", bound=Results)

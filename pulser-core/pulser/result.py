@@ -14,6 +14,7 @@
 """Classes to store measurement results."""
 from __future__ import annotations
 
+import uuid
 import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
@@ -24,6 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import pulser.backend.results as backend_results
+from pulser.backend.default_observables import BitStrings
 
 
 def __getattr__(name: str) -> Any:
@@ -159,12 +161,19 @@ class SampledResult(Result):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        self.n_samples = sum(self.bitstring_counts.values())
+        # TODO: Make sure this is not too hacky
+        bitstrings_obs = BitStrings()
+        # Override UUID so that two SampledResult instances with
+        # the same counts are identical
+        bitstrings_obs._uuid = uuid.UUID(
+            "00000000-0000-0000-0000-000000000000"
+        )
         self._store(
-            observable_name="bitstrings",
+            observable=bitstrings_obs,
             time=self.evaluation_time,
             value=self.bitstring_counts,
         )
-        self.n_samples = sum(self.bitstring_counts.values())
 
     @property
     def sampling_errors(self) -> dict[str, float]:

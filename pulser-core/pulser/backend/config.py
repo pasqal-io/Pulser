@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import warnings
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import (
     Any,
@@ -141,12 +142,22 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         **backend_options: Any,
     ) -> None:
         """Initializes the EmulationConfig."""
+        obs_tags = []
         for obs in observables:
             if not isinstance(obs, Observable):
                 raise TypeError(
                     "All entries in 'observables' must be instances of "
                     f"Observable. Instead, got instance of type {type(obs)}."
                 )
+            obs_tags.append(obs.tag)
+        repeated_tags = [k for k, v in Counter(obs_tags).items() if v > 1]
+        if repeated_tags:
+            raise ValueError(
+                "Some of the provided 'observables' share identical tags. Use "
+                "'tag_suffix' when instantiating multiple instances of the "
+                "same observable so they can be distinguished. "
+                f"Repeated tags found: {repeated_tags}"
+            )
 
         if default_evaluation_times != "Full":
             eval_times_arr = np.array(default_evaluation_times, dtype=float)

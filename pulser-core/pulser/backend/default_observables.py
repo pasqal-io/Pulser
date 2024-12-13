@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import copy
 import functools
-import itertools
 from collections import Counter
 from collections.abc import Sequence
 from typing import Any, Type
@@ -35,10 +34,13 @@ class StateResult(Observable):
         evaluation_times: The relative times at which to store the state.
             If left as `None`, uses the `default_evaluation_times` of the
             backend's `EmulationConfig`.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
+    @property
+    def _base_tag(self) -> str:
         return "state"
 
     def apply(self, *, state: StateType, **kwargs: Any) -> StateType:
@@ -61,6 +63,9 @@ class BitStrings(Observable):
         one_state: The eigenstate that measures to 1. Can be left undefined
             if the state's eigenstates form a known eigenbasis with a
             defined "one state".
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
     def __init__(
@@ -69,14 +74,17 @@ class BitStrings(Observable):
         evaluation_times: Sequence[float] | None = None,
         num_shots: int = 1000,
         one_state: Eigenstate | None = None,
+        tag_suffix: str | None = None,
     ):
         """Initializes the observable."""
-        super().__init__(evaluation_times=evaluation_times)
+        super().__init__(
+            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+        )
         self.num_shots = num_shots
         self.one_state = one_state
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
+    @property
+    def _base_tag(self) -> str:
         return "bitstrings"
 
     def apply(
@@ -95,22 +103,7 @@ class BitStrings(Observable):
         )
 
 
-class _Counted:
-    """A class with counted instances."""
-
-    _counter = itertools.count(0)
-
-    @classmethod
-    def reset_count(cls) -> None:
-        cls._counter = itertools.count(0)
-
-    @functools.cached_property
-    def index(self) -> int:
-        """The instance count."""
-        return next(self._counter)
-
-
-class Fidelity(Observable, _Counted):
+class Fidelity(Observable):
     """Stores the fidelity with a pure state at the evaluation times.
 
     The fidelity uses the overlap between the given state and the state of
@@ -124,6 +117,9 @@ class Fidelity(Observable, _Counted):
         evaluation_times: The relative times at which to compute the fidelity.
             If left as `None`, uses the `default_evaluation_times` of the
             backend's `EmulationConfig`.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
     def __init__(
@@ -131,22 +127,25 @@ class Fidelity(Observable, _Counted):
         state: State,
         *,
         evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
     ):
         """Initializes the observable."""
-        super().__init__(evaluation_times=evaluation_times)
+        super().__init__(
+            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+        )
         # TODO: Checks
         self.state = state
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
-        return f"fidelity_{self.index}"
+    @property
+    def _base_tag(self) -> str:
+        return "fidelity"
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
         return self.state.overlap(state)
 
 
-class Expectation(Observable, _Counted):
+class Expectation(Observable):
     """Stores the expectation of the given operator on the current state.
 
     Args:
@@ -155,6 +154,9 @@ class Expectation(Observable, _Counted):
             `default_evaluation_times` of the backend's `EmulationConfig`.
         operator: The operator to measure. Must be of the appropriate type
             for the backend.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
     def __init__(
@@ -162,15 +164,18 @@ class Expectation(Observable, _Counted):
         operator: Operator,
         *,
         evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
     ):
         """Initializes the observable."""
-        super().__init__(evaluation_times=evaluation_times)
+        super().__init__(
+            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+        )
         # TODO: Checks
         self.operator = operator
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
-        return f"expectation_{self.index}"
+    @property
+    def _base_tag(self) -> str:
+        return "expectation"
 
     def apply(self, *, state: State, **kwargs: Any) -> Any:
         """Calculates the observable to store in the Results."""
@@ -187,6 +192,9 @@ class CorrelationMatrix(Observable):
         one_state: The eigenstate to measure the population of in the
             correlation matrix. Can be left undefined if the state's
             eigenstates form a known eigenbasis with a defined "one state".
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
     def __init__(
@@ -194,14 +202,17 @@ class CorrelationMatrix(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         one_state: Eigenstate | None = None,
+        tag_suffix: str | None = None,
     ):
         """Initializes the observable."""
-        super().__init__(evaluation_times=evaluation_times)
+        super().__init__(
+            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+        )
         # TODO: Checks
         self.one_state = one_state
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
+    @property
+    def _base_tag(self) -> str:
         return "correlation_matrix"
 
     @staticmethod
@@ -257,6 +268,9 @@ class Occupation(Observable):
         one_state: The eigenstate to measure the population of. Can be left
             undefined if the state's eigenstates form a known eigenbasis with
             a defined "one state".
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
     def __init__(
@@ -264,15 +278,18 @@ class Occupation(Observable):
         *,
         evaluation_times: Sequence[float] | None = None,
         one_state: Eigenstate | None = None,
+        tag_suffix: str | None = None,
     ):
         """Initializes the observable."""
-        super().__init__(evaluation_times=evaluation_times)
+        super().__init__(
+            evaluation_times=evaluation_times, tag_suffix=tag_suffix
+        )
         # TODO: Checks
         self.one_state = one_state
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
-        return "occupation" + f"_{self.one_state or ''}"
+    @property
+    def _base_tag(self) -> str:
+        return "occupation"
 
     def apply(
         self, *, state: State, hamiltonian: Operator, **kwargs: Any
@@ -297,10 +314,13 @@ class Energy(Observable):
         evaluation_times: The relative times at which to compute the energy.
             If left as `None`, uses the `default_evaluation_times` of the
             backend's `EmulationConfig`.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
+    @property
+    def _base_tag(self) -> str:
         return "energy"
 
     def apply(
@@ -317,10 +337,13 @@ class EnergyVariance(Observable):
         evaluation_times: The relative times at which to compute the variance.
             If left as `None`, uses the `default_evaluation_times` of the
             backend's `EmulationConfig`.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
+    @property
+    def _base_tag(self) -> str:
         return "energy_variance"
 
     def apply(
@@ -343,10 +366,13 @@ class SecondMomentOfEnergy(Observable):
         evaluation_times: The relative times at which to compute the variance.
             If left as `None`, uses the `default_evaluation_times` of the
             backend's `EmulationConfig`.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
-    def name(self) -> str:
-        """Returns the name of the observable."""
+    @property
+    def _base_tag(self) -> str:
         return "second_moment_of_energy"
 
     def apply(

@@ -14,6 +14,7 @@
 """Defines the abstract base class for a callback and an observable."""
 from __future__ import annotations
 
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
@@ -28,6 +29,15 @@ if TYPE_CHECKING:
 
 class Callback(ABC):
     """A general Callback that is called during the emulation."""
+
+    def __init__(self) -> None:
+        """Initializes a Callback."""
+        self._uuid: uuid.UUID = uuid.uuid4()
+
+    @property
+    def uuid(self) -> uuid.UUID:
+        """A universal unique identifier for this instance."""
+        return self._uuid
 
     @abstractmethod
     def __call__(
@@ -63,11 +73,40 @@ class Observable(Callback):
         evaluation_times: The times at which to add a result to Results.
             If left as `None`, uses the `default_evaluation_times` of the
             backend's `EmulationConfig`.
+        tag_suffix: An optional suffix to append to the tag. Needed if
+            multiple instances of the same observable are given to the
+            same EmulationConfig.
     """
 
-    def __init__(self, *, evaluation_times: Sequence[float] | None = None):
+    def __init__(
+        self,
+        *,
+        evaluation_times: Sequence[float] | None = None,
+        tag_suffix: str | None = None,
+    ):
         """Initializes the observable."""
+        super().__init__()
         self.evaluation_times = evaluation_times
+        self._tag_suffix = tag_suffix
+
+    @property
+    @abstractmethod
+    def _base_tag(self) -> str:
+        pass
+
+    @property
+    def tag(self) -> str:
+        """Label for the observable, used to index the Results object.
+
+        Within a Results instance, all computed observables must have different
+        tags.
+
+        Returns:
+            The tag of the observable.
+        """
+        if self._tag_suffix is None:
+            return self._base_tag
+        return f"{self._base_tag}_{self._tag_suffix}"
 
     def __call__(
         self,
@@ -106,22 +145,7 @@ class Observable(Callback):
             value_to_store = self.apply(
                 config=config, state=state, hamiltonian=hamiltonian
             )
-            result._store(
-                observable_name=self.name(), time=t, value=value_to_store
-            )
-
-    @abstractmethod
-    def name(self) -> str:
-        """Name of the observable, normally used to index the Results object.
-
-        Some Observables might have multiple instances, such as an observable
-        to compute a fidelity on some given state. In that case, this method
-        could make sure each instance has a unique name.
-
-        Returns:
-            The name of the observable.
-        """
-        pass
+            result._store(observable=self, time=t, value=value_to_store)
 
     @abstractmethod
     def apply(
@@ -142,3 +166,6 @@ class Observable(Callback):
             The result to put in Results.
         """
         pass
+
+    def __repr__(self) -> str:
+        return f"{self.tag}:{self.uuid}"
