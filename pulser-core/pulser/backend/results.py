@@ -103,6 +103,18 @@ class Results:
                 f"{observable!r} is not available at time {time}."
             )
 
+    def get_tagged_results(self) -> dict[str, dict[float, Any]]:
+        """Gets the results for every tag.
+
+        Returns:
+            A mapping between a tag and the results associated to it,
+            at every evaluation time.
+        """
+        return {
+            tag: dict(self._results[uuid_])
+            for tag, uuid_ in self._tagmap.items()
+        }
+
     def _find_uuid(self, observable: Observable | str) -> uuid.UUID:
         if isinstance(observable, Observable):
             return observable.uuid
