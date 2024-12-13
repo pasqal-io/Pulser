@@ -133,7 +133,10 @@ class Fidelity(Observable):
         super().__init__(
             evaluation_times=evaluation_times, tag_suffix=tag_suffix
         )
-        # TODO: Checks
+        if not isinstance(state, State):
+            raise TypeError(
+                f"'state' must be a State instance; got {type(state)} instead."
+            )
         self.state = state
 
     @property
@@ -170,7 +173,11 @@ class Expectation(Observable):
         super().__init__(
             evaluation_times=evaluation_times, tag_suffix=tag_suffix
         )
-        # TODO: Checks
+        if not isinstance(operator, Operator):
+            raise TypeError(
+                "'operator' must be a Operator instance;"
+                f" got {type(operator)} instead."
+            )
         self.operator = operator
 
     @property
@@ -208,7 +215,6 @@ class CorrelationMatrix(Observable):
         super().__init__(
             evaluation_times=evaluation_times, tag_suffix=tag_suffix
         )
-        # TODO: Checks
         self.one_state = one_state
 
     @property
@@ -284,7 +290,6 @@ class Occupation(Observable):
         super().__init__(
             evaluation_times=evaluation_times, tag_suffix=tag_suffix
         )
-        # TODO: Checks
         self.one_state = one_state
 
     @property

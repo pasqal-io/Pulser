@@ -98,7 +98,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             are computed. Can be a sequence of relative times between 0
             (the start of the sequence) and 1 (the end of the sequence).
             Can also be specified as "Full", in which case every step in the
-            emulation will also be an evaluation times.
+            emulation will also be an evaluation time.
         initial_state: The initial state from which emulation starts. If
             specified, the state type needs to be compatible with the emulator
             backend. If left undefined, defaults to starting with all qudits
@@ -289,7 +289,7 @@ class EmulatorConfig(BackendConfig):
     noise_model: NoiseModel = field(default_factory=NoiseModel)
 
     def __post_init__(self) -> None:
-        # TODO: Deprecate
+        # TODO: Deprecate once QutipBackendV2 is feature complete
         if not (0 < self.sampling_rate <= 1.0):
             raise ValueError(
                 "The sampling rate (`sampling_rate` = "

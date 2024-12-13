@@ -84,6 +84,7 @@ class EmulatorBackend(Backend):
     def __init__(
         self,
         sequence: pulser.Sequence,
+        *,
         config: EmulationConfig | None = None,
         mimic_qpu: bool = False,
     ) -> None:

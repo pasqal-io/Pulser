@@ -48,7 +48,6 @@ class QutipResult(Result):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        # TODO: Store QutipState at evaluation_time
 
     @property
     def sampling_errors(self) -> dict[str, float]:
