@@ -296,7 +296,13 @@ def test_device_specs(device):
         layout_str = (
             "\nLayout parameters:\n"
             + yes_no_fn(dev, "requires_layout", "Requires layout")
-            + yes_no_fn(dev, "accepts_new_layouts", "Accepts new layout")
+            + (
+                ""
+                if device is MockDevice
+                else yes_no_fn(
+                    dev, "accepts_new_layouts", "Accepts new layout"
+                )
+            )
             + f" - Minimal number of traps: {dev.min_layout_traps}\n"
             + check_none_fn(
                 dev, "max_layout_traps", "Maximal number of traps: {}"
@@ -326,10 +332,7 @@ def test_device_specs(device):
             for name, ch in {**dev.channels, **dev.dmm_channels}.items()
         )
 
-        if device is MockDevice:
-            return register_str + device_str + channel_str
-        else:
-            return register_str + layout_str + device_str + channel_str
+        return register_str + layout_str + device_str + channel_str
 
     assert device.specs == specs(device)
 

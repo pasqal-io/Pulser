@@ -603,7 +603,7 @@ class BaseDevice(ABC):
 
         return empty_str_if_none
 
-    def _register_lines(self) -> str:
+    def _register_lines(self) -> list[str]:
 
         register_lines = [
             "\nRegister parameters:",
@@ -620,9 +620,23 @@ class BaseDevice(ABC):
             f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
         ]
 
-        return "\n".join(line for line in register_lines if line != "")
+        return [line for line in register_lines if line != ""]
 
-    def _device_lines(self) -> str:
+    def _layout_lines(self) -> list[str]:
+
+        layout_lines = [
+            "\nLayout parameters:",
+            f" - Requires layout: {self._param_yes_no(self.requires_layout)}",
+            f" - Minimal number of traps: {self.min_layout_traps}",
+            self._param_check_none(self.max_layout_traps)(
+                " - Maximal number of traps: {}"
+            ),
+            f" - Maximum layout filling fraction: {self.max_layout_filling}",
+        ]
+
+        return [line for line in layout_lines if line != ""]
+
+    def _device_lines(self) -> list[str]:
 
         device_lines = [
             "\nDevice parameters:",
@@ -647,9 +661,9 @@ class BaseDevice(ABC):
             ),
         ]
 
-        return "\n".join(line for line in device_lines if line != "")
+        return [line for line in device_lines if line != ""]
 
-    def _channel_lines(self, for_docs: bool = False) -> str:
+    def _channel_lines(self, for_docs: bool = False) -> list[str]:
 
         ch_lines = ["\nChannels:"]
         for name, ch in {**self.channels, **self.dmm_channels}.items():
@@ -702,16 +716,15 @@ class BaseDevice(ABC):
             else:
                 ch_lines.append(f" - '{name}': {ch!r}")
 
-        return "\n".join(line for line in ch_lines if line != "")
+        return [line for line in ch_lines if line != ""]
 
     def _specs(self, for_docs: bool = False) -> str:
 
         return "\n".join(
-            [
-                self._register_lines(),
-                self._device_lines(),
-                self._channel_lines(for_docs=for_docs),
-            ]
+            self._register_lines()
+            + self._layout_lines()
+            + self._device_lines()
+            + self._channel_lines(for_docs=for_docs)
         )
 
 
@@ -890,32 +903,15 @@ class Device(BaseDevice):
             )
         return device
 
-    def _layout_lines(self) -> str:
-
-        layout_lines = [
-            "\nLayout parameters:",
-            f" - Requires layout: {self._param_yes_no(self.requires_layout)}",
+    def _layout_lines(self) -> list[str]:
+        layout_lines = super()._layout_lines()
+        layout_lines.insert(
+            2,
             " - Accepts new layout: "
             + self._param_yes_no(self.accepts_new_layouts),
-            f" - Minimal number of traps: {self.min_layout_traps}",
-            self._param_check_none(self.max_layout_traps)(
-                " - Maximal number of traps: {}"
-            ),
-            f" - Maximum layout filling fraction: {self.max_layout_filling}",
-        ]
-
-        return "\n".join(line for line in layout_lines if line != "")
-
-    def _specs(self, for_docs: bool = False) -> str:
-
-        return "\n".join(
-            [
-                self._register_lines(),
-                self._layout_lines(),
-                self._device_lines(),
-                self._channel_lines(for_docs=for_docs),
-            ]
         )
+
+        return layout_lines
 
 
 @dataclass(frozen=True)
