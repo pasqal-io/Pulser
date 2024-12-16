@@ -172,7 +172,7 @@ class RegisterLayout(Traps, RegDrawer):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
-        ids = list(range(self.number_of_traps))
+        ids = [str(i) for i in range(self.number_of_traps)]
         if self.dimensionality == 2:
             fig, ax = self._initialize_fig_axes(
                 coords,

@@ -1614,8 +1614,11 @@ def test_str(reg, device, mod_device, det_map):
 
     measure_msg = "\n\nMeasured in basis: digital"
     assert seq.__str__() == msg_ch0 + msg_ch1 + msg_det_map + measure_msg
-
-    seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
     seq2.declare_channel("ch1", "rydberg_global")
     with pytest.raises(
         NotImplementedError,
