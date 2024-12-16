@@ -105,8 +105,7 @@ def test_var_diff(a, b, requires_grad):
 
     for var in [a, b]:
         assert (
-            a.value is not None
-            and a.value.as_tensor().requires_grad == requires_grad
+            a.value is not None and a.value.is_differentiable == requires_grad
         )
 
 
@@ -167,7 +166,7 @@ def test_paramobj(bwf, t, a, b):
 def test_opsupport(a, b, with_diff_tensor):
     def check_var_grad(var):
         if with_diff_tensor:
-            assert var.build().as_tensor().requires_grad
+            assert var.build().is_differentiable
 
     a._assign(-2.0)
     if with_diff_tensor:

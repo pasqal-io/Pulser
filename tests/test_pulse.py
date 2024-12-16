@@ -234,9 +234,9 @@ def test_eq():
 
 
 def _assert_pulse_requires_grad(pulse: Pulse, invert: bool = False) -> None:
-    assert pulse.amplitude.samples.as_tensor().requires_grad == (not invert)
-    assert pulse.detuning.samples.as_tensor().requires_grad == (not invert)
-    assert pulse.phase.as_tensor().requires_grad == (not invert)
+    assert pulse.amplitude.samples.is_differentiable == (not invert)
+    assert pulse.detuning.samples.is_differentiable == (not invert)
+    assert pulse.phase.is_differentiable == (not invert)
 
 
 @pytest.mark.parametrize("requires_grad", [True, False])
