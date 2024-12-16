@@ -20,7 +20,7 @@ import typing
 from abc import ABC, abstractmethod
 from collections import Counter
 from functools import lru_cache
-from typing import Mapping, Optional, Tuple, Union, cast
+from typing import Mapping, Optional, Tuple, TypeVar, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,11 +28,14 @@ import qutip
 from numpy.typing import ArrayLike
 from qutip.piqs import isdiagonal
 
-from pulser.result import Results, ResultType, SampledResult
+from pulser.backend.results import ResultsSequence
+from pulser.result import SampledResult
 from pulser_simulation.qutip_result import QutipResult
 
+ResultType = TypeVar("ResultType", SampledResult, QutipResult)
 
-class SimulationResults(ABC, Results[ResultType]):
+
+class SimulationResults(ABC, ResultsSequence[ResultType]):
     """Results of a simulation run of a pulse sequence.
 
     Parent class for NoisyResults and CoherentResults.
@@ -224,7 +227,7 @@ class SimulationResults(ABC, Results[ResultType]):
         return qutip.basis(2, state_n).proj()
 
 
-class NoisyResults(SimulationResults):
+class NoisyResults(SimulationResults[SampledResult]):
     """Results of a noisy simulation run of a pulse sequence.
 
     Contrary to a CoherentResults object, this object contains a list of
@@ -275,7 +278,7 @@ class NoisyResults(SimulationResults):
         basis_name_ = "digital" if basis == "all" else basis
         super().__init__(size, basis_name_, sim_times)
         self.n_measures = n_measures
-        self._results = tuple(run_output)
+        self._results_seq = tuple(run_output)
 
     @property
     def states(self) -> list[qutip.Qobj]:
@@ -355,7 +358,7 @@ class NoisyResults(SimulationResults):
             super().plot(op, fmt, label)
 
 
-class CoherentResults(SimulationResults):
+class CoherentResults(SimulationResults[QutipResult]):
     """Results of a coherent simulation run of a pulse sequence.
 
     Contains methods for studying the states and extracting useful information
@@ -403,7 +406,7 @@ class CoherentResults(SimulationResults):
                     f"{self._basis_name}' must be '{expected_meas_basis}'."
                 )
         self._meas_basis = meas_basis
-        self._results = tuple(run_output)
+        self._results_seq = tuple(run_output)
         if meas_errors is not None:
             if set(meas_errors) != {"epsilon", "epsilon_prime"}:
                 raise ValueError(
