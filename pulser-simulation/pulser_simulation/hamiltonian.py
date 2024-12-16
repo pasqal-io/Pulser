@@ -157,6 +157,7 @@ class Hamiltonian:
         if "eff_noise" in config.noise_types:
             for id, rate in enumerate(config.eff_noise_rates):
                 op = np.array(config.eff_noise_opers[id])
+                print(op)
                 basis_dim = len(eigenbasis)
                 op_shape = (basis_dim, basis_dim)
                 if op.shape != op_shape:
@@ -366,10 +367,14 @@ class Hamiltonian:
                         operator = self.op_matrix[operator]
                     except KeyError:
                         raise ValueError(f"{operator} is not a valid operator")
+                elif isinstance(operator, qutip.Qobj):
+                    operator = operator.to(qutip.core.data.CSR)
+                else:
+                    operator = qutip.Qobj(operator).to(qutip.core.data.CSR)
                 for qubit in qubits:
                     k = self._qid_index[qubit]
                     op_list[k] = operator
-        return qutip.tensor(list(map(qutip.Qobj, op_list)))
+        return qutip.tensor(op_list)
 
     def build_operator(self, operations: Union[list, tuple]) -> qutip.Qobj:
         """Creates an operator with non-trivial actions on some qubits.
@@ -443,8 +448,9 @@ class Hamiltonian:
     ) -> tuple[dict[States, qutip.Qobj], dict[str, qutip.Qobj]]:
         """Determine basis and projector operators."""
         dim = len(eigenbasis)
-        basis = {b: qutip.basis(dim, i) for i, b in enumerate(eigenbasis)}
-        op_matrix = {"I": qutip.qeye(dim)}
+        with qutip.CoreOptions(default_dtype="CSR"):
+            basis = {b: qutip.basis(dim, i) for i, b in enumerate(eigenbasis)}
+            op_matrix = {"I": qutip.qeye(dim)}
         for proj0 in eigenbasis:
             for proj1 in eigenbasis:
                 proj_name = "sigma_" + proj0 + proj1
@@ -522,7 +528,8 @@ class Hamiltonian:
                     return 0 * self.build_operator([("I", "global")])
 
             # make interaction term
-            dipole_interaction = cast(qutip.Qobj, 0)
+            with qutip.CoreOptions(default_dtype="CSR"):
+                dipole_interaction = cast(qutip.Qobj, 0)
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 if (
                     self._bad_atoms[q1]
