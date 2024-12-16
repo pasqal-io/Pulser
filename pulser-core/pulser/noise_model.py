@@ -357,7 +357,9 @@ class NoiseModel:
                 operator = np.array(op, dtype=complex)
             except TypeError as e1:
                 try:
-                    operator = np.array(op.to("Dense").data_as("ndarray"), dtype=complex)
+                    operator = np.array(
+                        op.to("Dense").data_as("ndarray"), dtype=complex
+                    )
                 except AttributeError as e2:
                     raise TypeError(
                         f"Operator {op!r} is not castable to a Numpy array."

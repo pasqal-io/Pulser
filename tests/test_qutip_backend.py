@@ -88,10 +88,21 @@ def test_with_default_noise(sequence):
     assert isinstance(new_results, NoisyResults)
     assert backend._sim_obj.config == SimConfig.from_noise_model(spam_noise)
 
+
 proj = [[0, 0], [0, 1]]
 
-@pytest.mark.parametrize("collapse_op", [qutip.sigmax(), qutip.Qobj(proj), np.array(proj), proj])
+
+@pytest.mark.parametrize(
+    "collapse_op", [qutip.sigmax(), qutip.Qobj(proj), np.array(proj), proj]
+)
 def test_collapse_op(sequence, collapse_op):
-    noise_model = pulser.NoiseModel(eff_noise_opers=[collapse_op], eff_noise_rates=[0.1])
-    backend = QutipBackend(sequence, config=pulser.EmulatorConfig(noise_model=noise_model))
-    assert [op.type == qutip.core.data.CSR for op in backend._sim_obj._hamiltonian._collapse_ops]
+    noise_model = pulser.NoiseModel(
+        eff_noise_opers=[collapse_op], eff_noise_rates=[0.1]
+    )
+    backend = QutipBackend(
+        sequence, config=pulser.EmulatorConfig(noise_model=noise_model)
+    )
+    assert [
+        op.type == qutip.core.data.CSR
+        for op in backend._sim_obj._hamiltonian._collapse_ops
+    ]

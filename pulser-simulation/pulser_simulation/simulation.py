@@ -580,9 +580,7 @@ class QutipEmulator:
                     self._eval_times_array,
                     self._hamiltonian._collapse_ops,
                     options=dict(
-                        progress_bar=p_bar,
-                        normalize_output=False,
-                        **options
+                        progress_bar=p_bar, normalize_output=False, **options
                     ),
                 )
             else:
@@ -591,9 +589,7 @@ class QutipEmulator:
                     self.initial_state,
                     self._eval_times_array,
                     options=dict(
-                        progress_bar=p_bar,
-                        normalize_output=False,
-                        **options
+                        progress_bar=p_bar, normalize_output=False, **options
                     ),
                 )
             results = [

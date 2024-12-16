@@ -813,7 +813,9 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
             eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
         ),
     )
-    assert [op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops]
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
@@ -834,7 +836,9 @@ def test_relaxation_noise():
 
     sim = QutipEmulator.from_sequence(seq)
     sim.add_config(SimConfig(noise="relaxation", relaxation_rate=0.1))
-    assert [op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops]
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     res = sim.run()
     start_samples = res.sample_state(1)
     ryd_pop = start_samples["1"]
@@ -900,7 +904,9 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
             eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
         ),
     )
-    assert [op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops]
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     with pytest.raises(
         ValueError,
         match="'relaxation' noise requires addressing of the 'ground-rydberg'",
@@ -991,7 +997,9 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
             eff_noise_rates=[0.2, 0.2],
         ),
     )
-    assert [op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops]
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     with pytest.raises(
         ValueError,
         match="Incompatible shape for effective noise operator n°0.",
