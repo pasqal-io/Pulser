@@ -1344,7 +1344,7 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             qubits: The new target for this channel. Must correspond to a
-                qubit index or an collection of qubit indices, when multi-qubit
+                qubit index or a collection of qubit indices, when multi-qubit
                 addressing is possible.
                 A qubit index is a number between 0 and the number of qubits.
                 It is then converted to a Qubit ID using the order in which
@@ -1380,6 +1380,98 @@ class Sequence(Generic[DeviceType]):
             take into account the output modulation.
         """
         self._delay(duration, channel, at_rest)
+
+    def estimate_added_delay(
+        self,
+        pulse: Union[Pulse, Parametrized],
+        channel: str,
+        protocol: PROTOCOLS = "min-delay",
+    ) -> int:
+        """Delay that will be added before the pulse when added to a channel.
+
+        When adding a pulse to a channel of the Sequence, a delay can be added
+        to account for the modulation bandwidth of the channel or the protocol
+        chosen. This method estimates the delay that will be added before the
+        pulse if this pulse was added to this channel with this protocol. It
+        works even if the channel is in EOM mode, but to be appropriate, the
+        Pulse should be a ConstantPulse with amplitude and detuning
+        respectively the rabi_freq and detuning_on of the EOM block.
+
+        Args:
+            pulse: The pulse object to add to the channel.
+            channel: The channel's name provided when declared.
+            protocol: Stipulates how to deal with
+                eventual conflicts with other channels, specifically in terms
+                of having multiple channels act on the same target
+                simultaneously.
+
+                - ``'min-delay'``: Before adding the pulse, introduces the
+                  smallest possible delay that avoids all exisiting conflicts.
+                - ``'no-delay'``: Adds the pulse to the channel, regardless of
+                  existing conflicts.
+                - ``'wait-for-all'``: Before adding the pulse, adds a delay
+                  that idles the channel until the end of the other channels'
+                  latest pulse.
+
+        Returns:
+            The delay that would be added before the pulse.
+        """
+        self._validate_channel(
+            channel,
+            block_if_slm=channel.startswith("dmm_"),
+        )
+        self._validate_add_protocol(protocol)
+        if self.is_parametrized() or isinstance(pulse, Parametrized):
+            raise ValueError(
+                "Can't compute the delay to add before a pulse if sequence or"
+                "pulse is parametrized."
+            )
+        if self.is_in_eom_mode(channel):
+            eom_settings = self._schedule[channel].eom_blocks[-1]
+            if np.any(pulse.amplitude.samples != eom_settings.rabi_freq):
+                warnings.warn(
+                    f"Channel {channel} is in EOM mode, the amplitude of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.rabi_freq}.",
+                    UserWarning,
+                )
+            if np.any(pulse.detuning.samples != eom_settings.detuning_on):
+                warnings.warn(
+                    f"Channel {channel} is in EOM mode, the detuning of the "
+                    "pulse will be constant and equal to "
+                    f"{eom_settings.detuning_on}.",
+                    UserWarning,
+                )
+        channel_obj = self._schedule[channel].channel_obj
+        last = self._last(channel)
+        basis = channel_obj.basis
+
+        ph_refs = {
+            self._basis_ref[basis][q].phase.last_phase for q in last.targets
+        }
+        if isinstance(channel_obj, DMM):
+            phase_ref = None
+        elif len(ph_refs) != 1:
+            raise ValueError(
+                "Cannot do a multiple-target pulse on qubits with different "
+                "phase references for the same basis."
+            )
+        else:
+            phase_ref = ph_refs.pop()
+
+        pulse = self._validate_and_adjust_pulse(pulse, channel, phase_ref)
+
+        phase_barriers = [
+            self._basis_ref[basis][q].phase.last_time for q in last.targets
+        ]
+        next_time_slot = self._schedule.make_next_pulse_slot(
+            pulse,
+            channel,
+            phase_barriers,
+            protocol,
+            # phase_drift_params does not impact delay between pulses
+        )
+        return next_time_slot.ti - last.tf
 
     @seq_decorators.store
     @seq_decorators.block_if_measured
@@ -1734,7 +1826,7 @@ class Sequence(Generic[DeviceType]):
         draw_interp_pts: bool = True,
         draw_phase_shifts: bool = False,
         draw_register: bool = False,
-        draw_phase_curve: bool = False,
+        draw_phase_curve: bool = True,
         draw_detuning_maps: bool = False,
         draw_qubit_amp: bool = False,
         draw_qubit_det: bool = False,
@@ -1746,7 +1838,7 @@ class Sequence(Generic[DeviceType]):
 
         Args:
             mode: The curves to draw. 'input'
-                draws only the programmed curves, 'output' the excepted curves
+                draws only the programmed curves, 'output' the expected curves
                 after modulation. 'input+output' will draw both curves except
                 for channels without a defined modulation bandwidth, in which
                 case only the input is drawn.
@@ -1754,8 +1846,7 @@ class Sequence(Generic[DeviceType]):
                 offsets, displays the equivalent phase modulation.
             draw_phase_area: Whether phase and area values need to be
                 shown as text on the plot, defaults to False. Doesn't work in
-                'output' mode. If `draw_phase_curve=True`, phase values are
-                ommited.
+                'output' mode.
             draw_interp_pts: When the sequence has pulses with waveforms
                 of type InterpolatedWaveform, draws the points of interpolation
                 on top of the respective input waveforms (defaults to True).
@@ -1966,7 +2057,7 @@ class Sequence(Generic[DeviceType]):
     @seq_decorators.block_if_measured
     def _target(
         self,
-        qubits: Union[Collection[QubitId], QubitId, Parametrized],
+        qubits: Union[Collection[QubitId | int], QubitId | int, Parametrized],
         channel: str,
         _index: bool = False,
     ) -> None:
@@ -2014,7 +2105,7 @@ class Sequence(Generic[DeviceType]):
             self._schedule.add_target(qubit_ids_set, channel)
 
     def _check_qubits_give_ids(
-        self, *qubits: Union[QubitId, Parametrized], _index: bool = False
+        self, *qubits: Union[QubitId, int, Parametrized], _index: bool = False
     ) -> set[QubitId]:
         if _index:
             if self.is_parametrized():
@@ -2067,7 +2158,7 @@ class Sequence(Generic[DeviceType]):
     def _phase_shift(
         self,
         phi: float | Parametrized,
-        *targets: QubitId | Parametrized,
+        *targets: QubitId | int | Parametrized,
         basis: str,
         _index: bool = False,
     ) -> None:

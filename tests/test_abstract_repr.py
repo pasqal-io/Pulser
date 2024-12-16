@@ -232,6 +232,9 @@ class TestDevice:
     def test_device_schema(self, abstract_device):
         validate_abstract_repr(json.dumps(abstract_device), "device")
 
+    def test_pulser_version(self, abstract_device):
+        assert abstract_device["pulser_version"] == pulser.__version__
+
     def test_roundtrip(self, abstract_device):
         def _roundtrip(abstract_device):
             device = deserialize_device(json.dumps(abstract_device))
@@ -509,6 +512,7 @@ class TestDevice:
         "ch_obj",
         [
             Rydberg.Global(None, None, min_avg_amp=1),
+            Rydberg.Global(None, None, propagation_dir=(1, 0, 0)),
             Rydberg.Global(
                 None,
                 None,
@@ -816,6 +820,9 @@ class TestSerialization:
             UserWarning, match="converts all qubit ID's to strings"
         ), pytest.raises(
             AbstractReprError, match="Name collisions encountered"
+        ), pytest.warns(
+            DeprecationWarning,
+            match="Usage of `int`s or any non-`str`types as `QubitId`s",
         ):
             Register({"0": (0, 0), 0: (20, 20)})._to_abstract_repr()
 
