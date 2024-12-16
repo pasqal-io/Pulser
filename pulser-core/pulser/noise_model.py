@@ -358,7 +358,7 @@ class NoiseModel:
             except TypeError as e1:
                 try:
                     operator = np.array(
-                        op.to("Dense").data_as("ndarray"), dtype=complex
+                        op.to("Dense").data_as("ndarray"), dtype=complex  # type: ignore
                     )
                 except AttributeError as e2:
                     raise TypeError(
