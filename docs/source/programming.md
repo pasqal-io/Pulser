@@ -29,11 +29,14 @@ and $j$.
 The driving Hamiltonian describes the effect of a pulse of Rabi frequency $\Omega(t)$, detuning $\delta(t)$ and phase $\phi(t)$ on an individual atom, exciting the transition
 between two of its energies levels, $|a\rangle$ and $|b\rangle$.
 
-
 :::{figure} files/two_level_ab.png
 :align: center
 :alt: The energy levels for the driving Hamiltonian.
 :width: 200
+
+The coherent excitation is driven between a lower energy level, $|a\rangle$, and a higher energy level,
+$|b\rangle$, with Rabi frequency $\Omega(t)$ and detuning $\delta(t)$.
+:::
 
 $$
 H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
