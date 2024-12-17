@@ -367,9 +367,9 @@ class Hamiltonian:
                     except KeyError:
                         raise ValueError(f"{operator} is not a valid operator")
                 elif isinstance(operator, qutip.Qobj):
-                    operator = operator.to(qutip.core.data.CSR)
+                    operator = operator.to("CSR")
                 else:
-                    operator = qutip.Qobj(operator).to(qutip.core.data.CSR)
+                    operator = qutip.Qobj(operator).to("CSR")
                 for qubit in qubits:
                     k = self._qid_index[qubit]
                     op_list[k] = operator
@@ -527,8 +527,7 @@ class Hamiltonian:
                     return 0 * self.build_operator([("I", "global")])
 
             # make interaction term
-            with qutip.CoreOptions(default_dtype="CSR"):
-                dipole_interaction = cast(qutip.Qobj, 0)
+            dipole_interaction = cast(qutip.Qobj, 0)
             for q1, q2 in itertools.combinations(self._qdict.keys(), r=2):
                 if (
                     self._bad_atoms[q1]
