@@ -157,7 +157,6 @@ class Hamiltonian:
         if "eff_noise" in config.noise_types:
             for id, rate in enumerate(config.eff_noise_rates):
                 op = np.array(config.eff_noise_opers[id])
-                print(op)
                 basis_dim = len(eigenbasis)
                 op_shape = (basis_dim, basis_dim)
                 if op.shape != op_shape:
