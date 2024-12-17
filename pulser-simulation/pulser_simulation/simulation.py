@@ -348,7 +348,7 @@ class QutipEmulator:
                     "Incompatible shape of initial state."
                     + f"Expected {legal_shape}, got {shape}."
                 )
-            self._initial_state = qutip.Qobj(state, dims=legal_dims)
+            self._initial_state = qutip.Qobj(state, dims=legal_dims).to("CSR")
 
     @property
     def evaluation_times(self) -> np.ndarray:
