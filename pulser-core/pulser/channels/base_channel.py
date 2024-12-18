@@ -84,7 +84,7 @@ class Channel(ABC):
             MHz.
         custom_phase_jump_time: An optional custom value for the phase jump
             time that overrides the default value estimated from the modulation
-            bandwidth.
+            bandwidth. It is not enforced in EOM mode.
         propagation_dir: The propagation direction of the beam associated with
             the channel, given as a vector in 3D space.
 
@@ -354,7 +354,7 @@ class Channel(ABC):
                 zero).
             custom_phase_jump_time: An optional custom value for the phase jump
                 time that overrides the default value estimated from the
-                modulation bandwidth.
+                modulation bandwidth. It is not enforced in EOM mode.
         """
         # Can't initialize a channel whose addressing is determined internally
         for cls_field in fields(cls):
@@ -403,7 +403,7 @@ class Channel(ABC):
                 zero).
             custom_phase_jump_time: An optional custom value for the phase jump
                 time that overrides the default value estimated from the
-                modulation bandwidth.
+                modulation bandwidth. It is not enforced in EOM mode.
             propagation_dir: The propagation direction of the beam associated
                 with the channel, given as a vector in 3D space.
         """
