@@ -93,8 +93,8 @@ class RegDrawer:
 
         if dmm_qubits:
             dmm_pos = []
-            for i, c in zip(ids, pos):
-                if i in dmm_qubits.keys():
+            for id, c in zip(ids, pos):
+                if id in dmm_qubits.keys():
                     dmm_pos.append(c)
             dmm_arr = np.array(dmm_pos)
             max_weight = max(dmm_qubits.values())
