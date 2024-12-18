@@ -83,11 +83,11 @@ As outlined above, Pulser lets you program an Hamiltonian so that you can manipu
 ```{mermaid}
 
 flowchart TB
-  A[Picking a Device] --> B{Do I want to run on a QPU}
-  B -->|Yes| C[Pick the Device from the QPU backend]
-  B -->|No| D[Do I want to be constrained by all the QPU specs ?]
-  D -->|Yes| E[Use a `Device` (like `pulser.AnalogDevice`)]
-  D --> |No| F[Use a `VirtualDevice` (like `pulser.MockDevice`)]
+  A[Picking a Device] --> B{Do I want to run on a QPU ?}
+  B -->|Yes| C["`Pick the Device from the [QPU backend](./tutorials/backends.nblink)`"]
+  B -->|No| D["`Do I want to be constrained by all the QPU specs ?`"]
+  D -->|Yes| E["`Use a Device (like _pulser.AnalogDevice_)`"]
+  D --> |No| F["`Use a [_VirtualDevice_](./tutorials/virtual_devices.nblink) (like _pulser.MockDevice_)`"]
 
 ```
 
