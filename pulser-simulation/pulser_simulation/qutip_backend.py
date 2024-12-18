@@ -72,7 +72,7 @@ class QutipBackend(Backend):
         Args:
             progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
-            options: Used as arguments for qutip.Options(). If specified, will
+            options: Given directly to the Qutip solver. If specified, will
                 override SimConfig solver_options. If no `max_step` value is
                 provided, an automatic one is calculated from the `Sequence`'s
                 schedule (half of the shortest duration among pulses and

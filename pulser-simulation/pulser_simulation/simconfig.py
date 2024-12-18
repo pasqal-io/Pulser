@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, fields
-from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Tuple, Type, TypeVar, Union, cast
 
 import qutip
 
@@ -123,7 +123,7 @@ class SimConfig:
     depolarizing_rate: float = _LEGACY_DEFAULTS["depolarizing_rate"]
     eff_noise_rates: list[float] = field(default_factory=list, repr=False)
     eff_noise_opers: list[qutip.Qobj] = field(default_factory=list, repr=False)
-    solver_options: Optional[qutip.Options] = None
+    solver_options: dict[str, Any] | None = None
 
     @classmethod
     def from_noise_model(cls: Type[T], noise_model: NoiseModel) -> T:
@@ -144,6 +144,10 @@ class SimConfig:
         if "amplitude" in noise_model.noise_types:
             kwargs.setdefault("laser_waist", float("inf"))
         kwargs.pop("with_leakage", None)
+        if "eff_noise_opers" in kwargs:
+            kwargs["eff_noise_opers"] = list(
+                map(qutip.Qobj, kwargs["eff_noise_opers"])
+            )
         return cls(**kwargs)
 
     def to_noise_model(self) -> NoiseModel:
@@ -162,6 +166,10 @@ class SimConfig:
             kwargs[param] = getattr(self, _DIFF_NOISE_PARAMS.get(param, param))
         if "temperature" in kwargs:
             kwargs["temperature"] *= 1e6  # Converts back to µK
+        if "eff_noise_opers" in kwargs:
+            kwargs["eff_noise_opers"] = [
+                op.full() for op in kwargs["eff_noise_opers"]
+            ]
         return NoiseModel(**kwargs)
 
     def __post_init__(self) -> None:
@@ -263,7 +271,7 @@ class SimConfig:
                 )
         NoiseModel._check_eff_noise(
             self.eff_noise_rates,
-            self.eff_noise_opers,
+            [op.full() for op in self.eff_noise_opers],
             "eff_noise" in self.noise,
             self.with_leakage,
         )
