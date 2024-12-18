@@ -490,10 +490,7 @@ def test_waveform_diff(
 
     samples_tensor = wf.samples.as_tensor()
     assert samples_tensor.requires_grad == requires_grad
-    assert (
-        wf.modulated_samples(rydberg_global).as_tensor().requires_grad
-        == requires_grad
-    )
+    assert wf.modulated_samples(rydberg_global).requires_grad == requires_grad
     wfx2_tensor = (-wf * 2).samples.as_tensor()
     assert torch.equal(wfx2_tensor, samples_tensor * -2.0)
     assert wfx2_tensor.requires_grad == requires_grad
@@ -501,15 +498,12 @@ def test_waveform_diff(
     wfdiv2 = wf / torch.tensor(2.0, requires_grad=True)
     assert torch.equal(wfdiv2.samples.as_tensor(), samples_tensor / 2.0)
     # Should always be true because it was divided by diff tensor
-    assert wfdiv2.samples.as_tensor().requires_grad
+    assert wfdiv2.samples.requires_grad
 
-    assert wf[-1].as_tensor().requires_grad == requires_grad
+    assert wf[-1].requires_grad == requires_grad
 
     try:
-        assert (
-            wf.change_duration(1000).samples.as_tensor().requires_grad
-            == requires_grad
-        )
+        assert wf.change_duration(1000).samples.requires_grad == requires_grad
     except NotImplementedError:
         pass
 

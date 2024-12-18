@@ -2886,12 +2886,12 @@ def test_sequence_diff(device, parametrized, with_modulation, with_eom):
 
     seq_samples = sample(seq, modulation=with_modulation)
     ryd_ch_samples = seq_samples.channel_samples["ryd_global"]
-    assert ryd_ch_samples.amp.as_tensor().requires_grad
-    assert ryd_ch_samples.det.as_tensor().requires_grad
-    assert ryd_ch_samples.phase.as_tensor().requires_grad
+    assert ryd_ch_samples.amp.requires_grad
+    assert ryd_ch_samples.det.requires_grad
+    assert ryd_ch_samples.phase.requires_grad
     if "dmm_0" in seq_samples.channel_samples:
         dmm_ch_samples = seq_samples.channel_samples["dmm_0"]
         # Only detuning is modulated
-        assert not dmm_ch_samples.amp.as_tensor().requires_grad
-        assert dmm_ch_samples.det.as_tensor().requires_grad
-        assert not dmm_ch_samples.phase.as_tensor().requires_grad
+        assert not dmm_ch_samples.amp.requires_grad
+        assert dmm_ch_samples.det.requires_grad
+        assert not dmm_ch_samples.phase.requires_grad
