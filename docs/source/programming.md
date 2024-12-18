@@ -4,7 +4,7 @@
 
 ### 1. Atoms encode the state
 
-Neutral atoms store the quantum information in their energy levels (also known as [_eigenstates_](./conventions.md#Bases)). When only two eigenstates are used to encode information, each atom is a qubit. If these eigenstates are $\left|a\right>$ and $\left|b\right>$, then the state of an atom is described by $\left|\psi\right> = \alpha \left|a\right> + \beta \left|b\right>$, with $|\alpha|^2 + |\beta|^2 = 1$.
+Neutral atoms store the quantum information in their energy levels (also known as [_eigenstates_](./conventions.md)). When only two eigenstates are used to encode information, each atom is a qubit. If these eigenstates are $\left|a\right>$ and $\left|b\right>$, then the state of an atom is described by $\left|\psi\right> = \alpha \left|a\right> + \beta \left|b\right>$, with $|\alpha|^2 + |\beta|^2 = 1$.
 
 When multiple atoms are used, the state of the system is described by a linear combination of the _eigenstates_ of the multi-atom system, whose set is obtained by making the cross product of the set of eigenstate of each atom. If each atom is described by $d$ eigenstates labelled ${\left|a_1\right>, \left|a_2\right>...\left|a_d\right>}$ (each atom is a _qudit_), and if there are $N$ atoms in the system, then the state of the whole system is provided by $\left|\Psi\right> = \sum_{i_1, ..., i_N \in [1, ..., d]} c_{i_1, ..., i_N} \left|a_{i_1}...a_{i_N}\right>$, with $\sum_{i_1, ..., i_N \in [1, ..., d]} |c_{i_1, ..., i_N}|^2 = 1$.
 
@@ -91,7 +91,7 @@ flowchart TB
 
 ```
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the interaction Hamiltonian are defined by the device. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst#structure-of-a-device).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the interaction Hamiltonian are defined by the device. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
 
 ### 2. Create the Register
 
