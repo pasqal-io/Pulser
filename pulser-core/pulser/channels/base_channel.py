@@ -34,7 +34,11 @@ warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
-OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp", "propagation_dir")
+OPTIONAL_ABSTR_CH_FIELDS = (
+    "min_avg_amp",
+    "custom_phase_jump_time",
+    "propagation_dir",
+)
 
 # States ranked in decreasing order of their associated eigenenergy
 States = Literal["u", "d", "r", "g", "h", "x"]
@@ -78,6 +82,9 @@ class Channel(ABC):
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
+        custom_phase_jump_time: An optional custom value for the phase jump
+            time that overrides the default value estimated from the modulation
+            bandwidth. It is not enforced in EOM mode.
         propagation_dir: The propagation direction of the beam associated with
             the channel, given as a vector in 3D space.
 
@@ -97,6 +104,7 @@ class Channel(ABC):
     max_duration: Optional[int] = int(1e8)  # ns
     min_avg_amp: float = 0
     mod_bandwidth: Optional[float] = None  # MHz
+    custom_phase_jump_time: int | None = None
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
     propagation_dir: tuple[float, float, float] | None = None
 
@@ -172,6 +180,7 @@ class Channel(ABC):
             "max_duration",
             "mod_bandwidth",
             "min_avg_amp",
+            "custom_phase_jump_time",
         ]
         non_negative = [
             "max_amp",
@@ -179,6 +188,7 @@ class Channel(ABC):
             "min_retarget_interval",
             "fixed_retarget_t",
             "min_avg_amp",
+            "custom_phase_jump_time",
         ]
         local_only = [
             "min_retarget_interval",
@@ -191,6 +201,7 @@ class Channel(ABC):
             "max_duration",
             "mod_bandwidth",
             "max_targets",
+            "custom_phase_jump_time",
         ]
 
         if self.addressing == "Global":
@@ -280,9 +291,14 @@ class Channel(ABC):
     def phase_jump_time(self) -> int:
         """Time taken to change the phase between consecutive pulses (in ns).
 
-        Corresponds to two times the rise time.
+        Corresponds to two times the rise time when `custom_phase_jump_time`
+        is not defined.
         """
-        return self.rise_time * 2
+        return int(
+            self.rise_time * 2
+            if self.custom_phase_jump_time is None
+            else self.custom_phase_jump_time
+        )
 
     def is_virtual(self) -> bool:
         """Whether the channel is virtual (i.e. partially defined)."""
@@ -336,6 +352,9 @@ class Channel(ABC):
                 bandwidth at -3dB (50% reduction), in MHz.
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
+            custom_phase_jump_time: An optional custom value for the phase jump
+                time that overrides the default value estimated from the
+                modulation bandwidth. It is not enforced in EOM mode.
         """
         # Can't initialize a channel whose addressing is determined internally
         for cls_field in fields(cls):
@@ -382,6 +401,9 @@ class Channel(ABC):
                 bandwidth at -3dB (50% reduction), in MHz.
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
+            custom_phase_jump_time: An optional custom value for the phase jump
+                time that overrides the default value estimated from the
+                modulation bandwidth. It is not enforced in EOM mode.
             propagation_dir: The propagation direction of the beam associated
                 with the channel, given as a vector in 3D space.
         """

@@ -1732,10 +1732,16 @@ def test_sequence(reg, device, patch_plt_show):
     assert str(seq) == str(seq_)
 
 
+@pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
 @pytest.mark.parametrize("eom", [False, True])
-def test_estimate_added_delay(eom):
+def test_estimate_added_delay(eom, custom_phase_jump_time):
+    ryd_ch_obj = dataclasses.replace(
+        AnalogDevice.channels["rydberg_global"],
+        custom_phase_jump_time=custom_phase_jump_time,
+    )
+    device = dataclasses.replace(AnalogDevice, channel_objects=(ryd_ch_obj,))
     reg = Register.square(2, 5)
-    seq = Sequence(reg, AnalogDevice)
+    seq = Sequence(reg, device)
     pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
     pulse_pi_2 = Pulse.ConstantPulse(100, 1, 0, np.pi / 2)
 
@@ -1771,7 +1777,14 @@ def test_estimate_added_delay(eom):
     seq._add(pulse_0, "ising", "min-delay")
     first_pulse = seq._last("ising")
     assert first_pulse.ti == 0
-    delay = pulse_0.fall_time(ising_obj, eom) + ising_obj.phase_jump_time
+    phase_jump_time = (
+        custom_phase_jump_time
+        if custom_phase_jump_time is not None and not eom
+        else 2 * ising_obj.rise_time
+    )
+    if not eom:
+        assert ising_obj.phase_jump_time == phase_jump_time
+    delay = pulse_0.fall_time(ising_obj, eom) + phase_jump_time
     assert seq.estimate_added_delay(pulse_pi_2, "ising") == delay
     seq._add(pulse_pi_2, "ising", "min-delay")
     second_pulse = seq._last("ising")
@@ -2004,7 +2017,7 @@ def test_draw_slm_mask_in_ising(
             seq1.draw(
                 draw_qubit_det=True, draw_interp_pts=False, mode="output"
             )  # Drawing Sequence with only a DMM
-        assert len(record) == 9
+        assert len(record) == 5
         assert np.all(
             str(record[i].message).startswith(
                 "No modulation bandwidth defined"
@@ -2500,6 +2513,7 @@ def test_multiple_index_targets(reg):
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
+@pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
 @pytest.mark.parametrize("check_wait_for_fall", (True, False))
 @pytest.mark.parametrize("correct_phase_drift", (True, False))
 @pytest.mark.parametrize("custom_buffer_time", (None, 400))
@@ -2509,6 +2523,7 @@ def test_eom_mode(
     custom_buffer_time,
     correct_phase_drift,
     check_wait_for_fall,
+    custom_phase_jump_time,
     patch_plt_show,
 ):
     # Setting custom_buffer_time
@@ -2518,7 +2533,9 @@ def test_eom_mode(
         custom_buffer_time=custom_buffer_time,
     )
     channels["rydberg_global"] = dataclasses.replace(
-        channels["rydberg_global"], eom_config=eom_config
+        channels["rydberg_global"],
+        eom_config=eom_config,
+        custom_phase_jump_time=custom_phase_jump_time,
     )
     dev_ = dataclasses.replace(
         mod_device, channel_ids=None, channel_objects=tuple(channels.values())
@@ -2586,8 +2603,7 @@ def test_eom_mode(
     )
     second_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
     phase_buffer = (
-        eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
-        + seq.declared_channels["ch0"].phase_jump_time
+        eom_pulse.fall_time(ch0_obj, in_eom_mode=True) + 2 * ch0_obj.rise_time
     )
     assert second_pulse_slot.ti == first_pulse_slot.tf + phase_buffer
     # Corrects the phase acquired during the phase buffer

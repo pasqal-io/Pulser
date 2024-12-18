@@ -31,6 +31,13 @@
           "description": "The duration of a clock cycle (in ns).",
           "type": "number"
         },
+        "custom_phase_jump_time": {
+          "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "eom_config": {
           "description": "Configuration of an associated EOM.",
           "type": "null"
@@ -417,6 +424,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -587,6 +601,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -692,6 +713,13 @@
             "clock_period": {
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
+            },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
             },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
@@ -799,6 +827,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -972,6 +1007,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1080,6 +1122,13 @@
             "clock_period": {
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
+            },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
             },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
@@ -1195,6 +1244,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -1356,6 +1412,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1452,6 +1515,13 @@
             "clock_period": {
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
+            },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
             },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
@@ -1550,6 +1620,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "anyOf": [
                 {
@@ -1711,6 +1788,13 @@
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
             },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
               "type": "null"
@@ -1807,6 +1891,13 @@
             "clock_period": {
               "description": "The duration of a clock cycle (in ns).",
               "type": "number"
+            },
+            "custom_phase_jump_time": {
+              "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+              "type": [
+                "number",
+                "null"
+              ]
             },
             "eom_config": {
               "description": "Configuration of an associated EOM.",
@@ -1910,6 +2001,13 @@
         "clock_period": {
           "description": "The duration of a clock cycle (in ns).",
           "type": "number"
+        },
+        "custom_phase_jump_time": {
+          "description": "An optional custom value for the phase jump time that overrides the  default value estimated from the modulation bandwidth.",
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "eom_config": {
           "description": "Configuration of an associated EOM.",
