@@ -290,7 +290,7 @@ def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
         tr,
         tr,
     )
-    assert out_.is_differentiable == requires_grad
+    assert out_.requires_grad == requires_grad
 
     wf2 = BlackmanWaveform(800, wf_vals[1])
     out_ = channel.modulate(wf2.samples, eom=eom)
@@ -299,7 +299,7 @@ def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
         side_buffer_len,
         side_buffer_len,
     )
-    assert out_.is_differentiable == requires_grad
+    assert out_.requires_grad == requires_grad
 
 
 @pytest.mark.parametrize(

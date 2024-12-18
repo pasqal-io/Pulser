@@ -72,8 +72,8 @@ class AbstractArray:
         return self.has_torch() and isinstance(self._array, torch.Tensor)
 
     @property
-    def is_differentiable(self) -> bool:
-        """Whether the stored array is a differentiable tensor."""
+    def requires_grad(self) -> bool:
+        """Whether the stored array is a tensor that needs a gradient."""
         return self.is_tensor and cast(torch.Tensor, self._array).requires_grad
 
     def astype(self, dtype: DTypeLike) -> AbstractArray:
@@ -276,7 +276,7 @@ class AbstractArray:
                 self._process_indices(indices)
             ] = values  # type: ignore[assignment]
         except RuntimeError as e:
-            if self.is_differentiable:
+            if self.requires_grad:
                 raise RuntimeError(
                     "Failed to modify a tensor that requires grad in place."
                 ) from e

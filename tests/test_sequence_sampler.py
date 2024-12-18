@@ -503,11 +503,11 @@ def test_phase_modulation(off_center, with_diff):
     seq_samples = sample(seq).channel_samples["rydberg_global"]
 
     if with_diff:
-        assert full_phase.samples.is_differentiable
-        assert not seq_samples.amp.is_differentiable
-        assert seq_samples.det.is_differentiable
-        assert seq_samples.phase.is_differentiable
-        assert seq_samples.phase_modulation.is_differentiable
+        assert full_phase.samples.requires_grad
+        assert not seq_samples.amp.requires_grad
+        assert seq_samples.det.requires_grad
+        assert seq_samples.phase.requires_grad
+        assert seq_samples.phase_modulation.requires_grad
 
     np.testing.assert_allclose(
         seq_samples.phase_modulation.as_array(detach=with_diff)

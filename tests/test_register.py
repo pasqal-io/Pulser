@@ -508,9 +508,9 @@ def _assert_reg_requires_grad(
 ) -> None:
     for coords in reg.qubits.values():
         if invert:
-            assert not coords.is_differentiable
+            assert not coords.requires_grad
         else:
-            assert coords.is_tensor and coords.is_differentiable
+            assert coords.is_tensor and coords.requires_grad
 
 
 @pytest.mark.parametrize(

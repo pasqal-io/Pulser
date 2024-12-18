@@ -39,7 +39,7 @@ def test_pad(cast_to, requires_grad):
         arr = torch.tensor(arr, requires_grad=requires_grad)
 
     def check_match(arr1: pm.AbstractArray, arr2):
-        assert arr1.is_differentiable == requires_grad
+        assert arr1.requires_grad == requires_grad
         np.testing.assert_array_equal(
             arr1.as_array(detach=requires_grad), arr2
         )
@@ -259,7 +259,7 @@ class TestAbstractArray:
             assert item == val[i]
             assert isinstance(item, pm.AbstractArray)
             assert item.is_tensor == use_tensor
-            assert item.is_differentiable == requires_grad
+            assert item.requires_grad == requires_grad
 
         # setitem
         if not requires_grad:
@@ -291,7 +291,7 @@ class TestAbstractArray:
             assert np.all(arr_np == new_val)
             assert arr_np.is_tensor
             # The resulting tensor requires grad if the assigned one did
-            assert arr_np.is_differentiable == requires_grad
+            assert arr_np.requires_grad == requires_grad
 
     @pytest.mark.parametrize("scalar", [False, True])
     @pytest.mark.parametrize(
