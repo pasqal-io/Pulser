@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
+    "sphinxcontrib.mermaid",
 ]
 
 myst_enable_extensions = [
@@ -60,7 +61,7 @@ myst_enable_extensions = [
     # "tasklist",
 ]
 
-myst_heading_anchors = 3
+myst_heading_anchors = 5
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
