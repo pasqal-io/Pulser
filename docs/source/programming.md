@@ -117,7 +117,7 @@ When providing the distance between atoms, Pulser ensures that you respect the c
 
 ## Writing a Pulser program
 
-As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$](./programming.md#2-hamiltonian-evolves-the-state)) so that you can manipulate the quantum state of a system of atoms. The series of necessary instructions is encapsulated in the so-called Pulser `Sequence`. Here is a step-by-step guide to create your own Pulser `Sequence`.
+As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$](programming.md#2-hamiltonian-evolves-the-state)) so that you can manipulate the quantum state of a system of atoms. The series of necessary instructions is encapsulated in the so-called Pulser `Sequence`. Here is a step-by-step guide to create your own Pulser `Sequence`.
 
 ### 1. Pick a Device
 
@@ -132,25 +132,25 @@ flowchart TB
 
 ```
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](./programming.md/#22-interaction-hamiltonian) are defined by the device. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
 
 ### 2. Create the Register
 
 The `Register` defines the position of the atoms. This determines:
 
 - the number of atoms to use in the quantum computation, i.e, the size of the system (let's note it $N$).
-- the distance between the atoms, the $R_{ij} (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](./programming.md/#22-interaction-hamiltonian).
+- the distance between the atoms, the $R_{ij} (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian).
 
 ### 3. Pick the Channels
 
 A `Channel` targets the transition between two energy levels. Therefore, picking channels defines the energy levels that will be used in the computation. The channels must be picked from the `Device.channels`, so your device selection should take into account the channels it supports.
 
-Picking the channel will initialize the state of the system, and fully determine the [interaction Hamiltonian](./programming.md#22-interaction-hamiltonian):
-- If the selected Channel is the `Rydberg` or the `Raman` channel, the system is initialized in $\left|gg...g\right>$ and the interaction Hamiltonian is the [Ising Hamiltonian](./programming.md#ising-hamiltonian)
+Picking the channel will initialize the state of the system, and fully determine the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian):
+- If the selected Channel is the `Rydberg` or the `Raman` channel, the system is initialized in $\left|gg...g\right>$ and the interaction Hamiltonian is the [Ising Hamiltonian](programming.md#ising-hamiltonian)
 
 $$H^\text{int}_{ij} =\frac{C_6}{R_{ij}^6}|r\rangle\langle r|_i |r\rangle\langle r|_j$$
 
-- If the selected Channel is the `Microwave` channel, the system is initialized in $\left|00...0\right>$ and the interaction Hamiltonian is the [XY Hamiltonian](./programming.md#xy-hamiltonian) 
+- If the selected Channel is the `Microwave` channel, the system is initialized in $\left|00...0\right>$ and the interaction Hamiltonian is the [XY Hamiltonian](programming.md#xy-hamiltonian) 
 $$H^\text{int}_{ij} =\frac{C_3}{R_{ij}^3}|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j$$
 
 :::{note}
@@ -158,15 +158,15 @@ It is possible to pick a `Rydberg` and a `Raman` channel, the information will t
 :::
 
 :::{important}
-At this stage, the [interaction Hamiltonian](./programming.md#22-interaction-hamiltonian) is fully determined.
+At this stage, the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) is fully determined.
 :::
 
 ### 4. Add the Pulses
 
-By adding pulses to a channel, we incrementally construct the [driving Hamiltonian](./programming.md#21-driving-hamiltonian):
+By adding pulses to a channel, we incrementally construct the [driving Hamiltonian](programming.md#21-driving-hamiltonian):
 - Each `Pulse` defines the Rabi frequency $\Omega(t)$, the detuning $\delta(t)$ and the phase $\phi$ of the driving Hamiltonian over a duration $\Delta t$. Similarly, a delay sets all these parameters to zero for a given amount of time.
 - The channel dictates the states $\left|a\right>$ and $\left|b\right>$ of the driving Hamiltonian.
 
 By applying a series of pulses and delays, one defines the entire driving Hamiltonian of each atom over time.
 
-**Conclusion**: We have successfully defined the [Hamiltonian](./programming.md#2-hamiltonian-evolves-the-state) $H$ describing the evolution of the system over time.
+**Conclusion**: We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evolves-the-state) $H$ describing the evolution of the system over time.
