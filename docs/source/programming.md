@@ -15,11 +15,13 @@ $$
 \end{align}
 $$
 
-where $\sum_{i_1, ..., i_N \in [1, ..., d]} |c_{i_1, ..., i_N}|^2 = 1$. If $d=2$ and $N=1$, you have the state of a qubit as above. If $d=2$, then for any number of atoms $N$ this becomes
+where $\sum_{i_1, ..., i_N \in [1, ..., d]} |c_{i_1, ..., i_N}|^2 = 1$. If $d=2$, then this becomes
 
 $$
 \left|\Psi\right> = c_{1, 1, ..., 1}\left|a_{1}a_{1}...a_{1}\right> + c_{1, 1, ..., 2}\left|a_{1}a_{1}...a_{2}\right> + ... + c_{2, 2, ..., 2}\left|a_{2}a_{2}...a_{2}\right>
 $$
+
+If $d=2$ and $N=1$, you have the state of a qubit as above $\left|\Psi\right> = c_{1}\left|a_{1}\right> + c_{2}\left|a_{2}\right>$.
 
 ### 2. Hamiltonian evolves the state
 
@@ -58,7 +60,7 @@ In the Bloch sphere representation, this Hamiltonian describes a rotation around
 :::{figure} files/bloch_rotation_a_b.png
 :align: center
 :alt: Representation of the drive Hamiltonian's dynamics as a rotation in the Bloch sphere.
-:width: 200
+:width: 300
 
 Representation of the drive Hamiltonian's dynamics as a rotation in the Bloch sphere. The coherent excitation is driven between a lower energy level, $|a\rangle$, and a higher energy level,
 $|b\rangle$, with Rabi frequency $\Omega(t)$ and detuning $\delta(t)$.
@@ -121,16 +123,26 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 
 ### 1. Pick a Device
 
+
+:::{figure} files/decision_diagram_device.png
+:align: center
+:alt: Decision Diagram to select a Device for the computation
+:width: 600
+:::
+
+ 
+<!---
 ```{mermaid}
 
-flowchart TB
-  A[Picking a Device] --> B{Do I want to run on a QPU ?}
-  B -->|Yes| C["`Pick the Device from the QPU backend`"]
-  B -->|No| D["`Do I want to be constrained by all the QPU specs ?`"]
-  D -->|Yes| E["`Use a Device (like _pulser.AnalogDevice_)`"]
-  D --> |No| F["`Use a _VirtualDevice_ (like _pulser.MockDevice_)`"]
+flowchart TD
+    A[Picking a Device] --> B(Do I want to run on a QPU ?)
+    B --> |Yes| C(Pick the Device from the QPU backend)
+    B -->|No| D(Do I want to be constrained by all the QPU specs ?)
+    D -->|Yes| E("`Use a Device (like _pulser.AnalogDevice_)`")
+    D -->|No| F("`Use a _VirtualDevice_ (like _pulser.MockDevice_)`")
 
-```
+``` 
+-->
 
 The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
 
