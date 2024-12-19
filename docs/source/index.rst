@@ -51,6 +51,7 @@ computers and simulators, check the pages in :doc:`review`.
    :caption: Installation and First Steps
 
    installation
+   programming
    intro_rydberg_blockade
    tutorials/creating
    tutorials/simulating
