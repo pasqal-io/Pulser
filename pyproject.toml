@@ -13,4 +13,9 @@ filterwarnings = [
     "error",
     # Except these particular warnings, which are ignored
     'ignore:A duration of \d+ ns is not a multiple of:UserWarning',
+    'ignore:Usage of `int`s or any non-`str`types as `QubitId`s:DeprecationWarning',
     ]
+
+[build-system]
+requires = ["setuptools >= 64"]
+build-backend = "setuptools.build_meta"

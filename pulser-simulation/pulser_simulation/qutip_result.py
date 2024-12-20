@@ -229,11 +229,16 @@ class QutipResult(Result):
                     ]
                 )
             ]
-            ex_probs = np.abs(state.extract_states(ex_inds).full()) ** 2
+            state_arr = state.full()
+            ex_probs = np.abs(state_arr[ex_inds]) ** 2
             if not np.all(np.isclose(ex_probs, 0, atol=tol)):
                 raise TypeError(
                     "Can't reduce to chosen basis because the population of a "
                     "state to eliminate is above the allowed tolerance."
                 )
-            state = state.eliminate_states(ex_inds, normalize=normalize)
+            mask = np.ones_like(state_arr, dtype=bool)
+            mask[ex_inds] = False
+            state = qutip.Qobj(state_arr[mask])
+            if normalize:
+                state.unit(inplace=True)
         return state.tidyup()
