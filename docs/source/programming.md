@@ -52,7 +52,7 @@ and $j$.
 The driving Hamiltonian describes the effect of a pulse on two of energies levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi(t)$.
 
 $$
-H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
+H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{j\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
 $$
 
 In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis **$\Omega$**$(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |$**$\Omega$**$(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$.
@@ -130,20 +130,6 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 :width: 600
 :::
 
- 
-<!---
-```{mermaid}
-
-flowchart TD
-    A[Picking a Device] --> B(Do I want to run on a QPU ?)
-    B --> |Yes| C(Pick the Device from the QPU backend)
-    B -->|No| D(Do I want to be constrained by all the QPU specs ?)
-    D -->|Yes| E("`Use a Device (like _pulser.AnalogDevice_)`")
-    D -->|No| F("`Use a _VirtualDevice_ (like _pulser.MockDevice_)`")
-
-``` 
--->
-
 The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
 
 ### 2. Create the Register
@@ -158,19 +144,35 @@ The `Register` defines the position of the atoms. This determines:
 A `Channel` targets the transition between two energy levels. Therefore, picking channels defines the energy levels that will be used in the computation. The channels must be picked from the `Device.channels`, so your device selection should take into account the channels it supports.
 
 Picking the channel will initialize the state of the system, and fully determine the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian):
+
 - If the selected Channel is the `Rydberg` or the `Raman` channel, the system is initialized in $\left|gg...g\right>$ and the interaction Hamiltonian is the [Ising Hamiltonian](programming.md#ising-hamiltonian)
 
 $$H^\text{int}_{ij} =\frac{C_6}{R_{ij}^6}|r\rangle\langle r|_i |r\rangle\langle r|_j$$
 
-- If the selected Channel is the `Microwave` channel, the system is initialized in $\left|00...0\right>$ and the interaction Hamiltonian is the [XY Hamiltonian](programming.md#xy-hamiltonian) 
-$$H^\text{int}_{ij} =\frac{C_3}{R_{ij}^3}|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j$$
+- If the selected Channel is the `Microwave` channel, the system is initialized in $\left|00...0\right>$ and the interaction Hamiltonian is the [XY Hamiltonian](programming.md#xy-hamiltonian)
 
-:::{note}
-It is possible to pick a `Rydberg` and a `Raman` channel, the information will then be encoded in 3 energy levels $\left|r\right>$, $\left|g\right>$ and $\left|h\right>$: the atoms are no-longer qubits but qutrits. However, it is not possible to pick the `Microwave` channel and another channel.
-:::
+$$H^\text{int}_{ij} =\frac{C_3}{R_{ij}^3}|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j$$
 
 :::{important}
 At this stage, the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) is fully determined.
+:::
+
+A `Channel` is also determined by its addressing. This defines the number of atoms that are going to be targeted by a pulse. If the addressing of a `Channel` is `Global`, all the atoms will experience the same pulse targetting the same transition. In the [Hamiltonian $H$](programming.md#2-hamiltonian-evolves-the-state), all the driving Hamiltonians $H^D_i$ are expressed as
+
+$$
+H^D_i(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi(t)} |a\rangle_i \langle b|_i + \frac{\Omega(t)}{2} e^{j\phi(t)} |b\rangle_i\langle a|_i - \delta(t) |b\rangle_i\langle b|_i
+$$
+
+If the addressing of a `Channel` is `Local`, then only certain atoms (the atoms "target") will experience the pulse and have their evolution follow $H^D_i$. The driving hamiltonian of the other atoms is $H^D_i = \hat{0}_i$. The hamiltonian $H$ can also be rewritten:
+
+$$
+H(t) = \sum_{i \in targeted\_ atoms} H^D_i(t) + \sum_i \sum_{j<i}H^\text{int}_{ij},
+$$
+
+:::{important}
+The addressing of a `Channel` defines the number of atoms whose transition will be targeted by a pulse.
+
+The most common addressing for a `Channel` is the `Global` one: all the atoms evolve under the same [driving Hamiltonian](programming.md#21-driving-hamiltonian). 
 :::
 
 ### 4. Add the Pulses
@@ -181,4 +183,18 @@ By adding pulses to a channel, we incrementally construct the [driving Hamiltoni
 
 By applying a series of pulses and delays, one defines the entire driving Hamiltonian of each atom over time.
 
-**Conclusion**: We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evolves-the-state) $H$ describing the evolution of the system over time.
+## Conclusion
+
+We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evolves-the-state) $H$ describing the evolution of the system over time, by:
+- picking a `Device`, that defined the value of the $C_6$ or $C_3$ coefficients.
+- creating a `Register` of atoms, that defined the number of atoms used and the distance between the atoms $R_{ij}$.
+- Selecting the `Channels` of the `Device` to use, that defined the energy levels of the atoms to use: that step completely defined the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian). The addressing property of each `Channel` also dictates the atoms that will be targeted by the `Pulse`.
+- Adding `Pulse` and delays to the `Channel`s defines the [driving Hamiltonian](programming.md#21-driving-hamiltonian) of each atom along time.    
+
+You can now simulate your first Hamiltonian by programming your first `Sequence` ! [In this tutorial](tutorials/creating.nblink), you will simulate the evolution of the state of an atom initialized in $\left|g\right>$ under a Hamiltonian $H(t)=\frac{\Omega(t)}{2} |g\rangle_i \langle r|_i+\frac{\Omega(t)}{2} |r\rangle\langle g|$, with $\Omega$ chosen such that the final state of the atom is the excited state $\left|r\right>$.
+
+Many concepts have been introduced here and you might want further explanations.
+- The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](apidoc/core.rst) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), this is a most advanced feature described [here](tutorials/virtual_devices.nblink).
+- There are multiple ways of defining a `Register`, this is further detailed [in this section](tutorials/reg_layouts.nblink).
+- The energy levels associated with each `Channel` and the interaction Hamiltonian they implement are summed up in [the conventions page](conventions.md). The channels contain lots of constraints and physical informations, they are detailed in [the same section as the `Device`](apidoc/core.rst).
+- The quantities in a `Pulse` are defined using `Waveform`s, read more about this [on this page](tutorials/composite_wfs.nblink).

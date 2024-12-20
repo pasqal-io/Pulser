@@ -41,7 +41,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
-    "sphinxcontrib.mermaid",
 ]
 
 myst_enable_extensions = [
