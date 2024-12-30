@@ -190,7 +190,7 @@ class Waveform(ABC):
             The array of samples after modulation.
         """
         detach = True  # We detach unless...
-        if self.samples.is_tensor and self.samples.as_tensor().requires_grad:
+        if self.samples.requires_grad:
             # ... the samples require grad. In this case, we clear the cache
             # so that the modulation is recalculated with the current samples
             self._modulated_samples.cache_clear()

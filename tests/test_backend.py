@@ -16,11 +16,17 @@ from __future__ import annotations
 import re
 import typing
 
+import numpy as np
 import pytest
 
 import pulser
-from pulser.backend.abc import Backend
-from pulser.backend.config import EmulatorConfig
+from pulser.backend.abc import Backend, EmulatorBackend
+from pulser.backend.config import (
+    BackendConfig,
+    EmulationConfig,
+    EmulatorConfig,
+)
+from pulser.backend.default_observables import BitStrings
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     BatchStatus,
@@ -239,3 +245,81 @@ def test_qpu_backend(sequence):
 
     available_results = remote_results.get_available_results()
     assert available_results == {"abcd": connection.result}
+
+
+def test_emulator_backend(sequence):
+
+    class ConcreteEmulator(EmulatorBackend):
+
+        default_config = EmulationConfig(with_modulation=True)
+
+        def run(self):
+            pass
+
+    with pytest.raises(
+        TypeError, match="must be an instance of 'EmulationConfig'"
+    ):
+        ConcreteEmulator(sequence, config=EmulatorConfig)
+
+    emu = ConcreteEmulator(
+        sequence, config=EmulationConfig(default_evaluation_times="Full")
+    )
+    assert emu._config.default_evaluation_times == "Full"
+    assert not emu._config.with_modulation
+
+    # Uses the default config
+    assert ConcreteEmulator(sequence)._config.with_modulation
+
+
+def test_backend_config():
+    with pytest.warns(
+        UserWarning,
+        match="'BackendConfig' received unexpected keyword arguments",
+    ):
+        config1 = BackendConfig(prefer_device_noise_model=True)
+        assert config1.prefer_device_noise_model
+
+    with pytest.raises(AttributeError, match="'dt' has not been passed"):
+        config1.dt
+
+    with pytest.warns(
+        DeprecationWarning,
+        match="The 'backend_options' argument of 'BackendConfig' has been "
+        "deprecated",
+    ):
+        config2 = BackendConfig(backend_options={"dt": 10})
+        assert config2.backend_options["dt"] == 10
+        assert config2.dt == 10
+
+
+def test_emulation_config():
+    with pytest.raises(
+        TypeError,
+        match="All entries in 'observables' must be instances of Observable",
+    ):
+        EmulationConfig(observables=["fidelity"])
+    with pytest.raises(
+        ValueError,
+        match="Some of the provided 'observables' share identical tags",
+    ):
+        EmulationConfig(
+            observables=[BitStrings(), BitStrings(num_shots=200000)]
+        )
+    with pytest.raises(
+        ValueError, match="All evaluation times must be between 0. and 1."
+    ):
+        EmulationConfig(default_evaluation_times=[-1e15, 0.0, 0.5, 1.0])
+    with pytest.raises(
+        TypeError, match="'initial_state' must be an instance of State"
+    ):
+        EmulationConfig(initial_state=[[1], [0]])
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "'interaction_matrix' must be a square matrix. Instead, an array"
+            " of shape (4, 3) was given"
+        ),
+    ):
+        EmulationConfig(interaction_matrix=np.arange(12).reshape((4, 3)))
+    with pytest.raises(TypeError, match="must be a NoiseModel"):
+        EmulationConfig(noise_model={"p_false_pos": 0.1})

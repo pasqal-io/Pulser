@@ -96,6 +96,5 @@ class EmulatorBackend(Backend):
                 "'config' must be an instance of 'EmulationConfig', "
                 f"not {type(config)}."
             )
-        self._config = config
-        # See the BackendConfig definition to see how this would work
+        # See the BackendConfig definition to see why this works
         self._config = type(self.default_config)(**config._backend_options)

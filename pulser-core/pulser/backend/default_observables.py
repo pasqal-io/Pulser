@@ -358,7 +358,13 @@ class EnergyVariance(Observable):
         # This works for state vectors and density matrices and avoids
         # squaring the hamiltonian
         h_state = hamiltonian.apply_to(state)
-        return pm.sqrt(h_state.overlap(h_state).real) - state.overlap(h_state)
+        result: pm.AbstractArray = pm.sqrt(
+            h_state.overlap(h_state).real
+        ) - state.overlap(h_state)
+        if not result.requires_grad:
+            return float(result)
+        # If the result requires_grad, return the AbstractArray
+        return result
 
 
 class SecondMomentOfEnergy(Observable):
@@ -387,4 +393,7 @@ class SecondMomentOfEnergy(Observable):
         # This works for state vectors and density matrices and avoids
         # squaring the hamiltonian
         h_state = hamiltonian.apply_to(state)
-        return pm.sqrt(h_state.overlap(h_state).real)
+        result = pm.sqrt(h_state.overlap(h_state).real)
+        if not result.requires_grad:
+            return float(result)
+        return result

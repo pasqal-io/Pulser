@@ -163,7 +163,8 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             eval_times_arr = np.array(default_evaluation_times, dtype=float)
             if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
                 raise ValueError(
-                    "All evaluation times must be between 0. and 1."
+                    "All evaluation times must be between 0. and 1. "
+                    f"Instead, got {default_evaluation_times}."
                 )
             default_evaluation_times = cast(Sequence[float], eval_times_arr)
 
