@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import qutip
 from numpy.typing import ArrayLike
-from qutip.piqs import isdiagonal
+from qutip.piqs.piqs import isdiagonal
 
 from pulser.backend.results import ResultsSequence
 from pulser.result import SampledResult

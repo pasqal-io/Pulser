@@ -19,11 +19,12 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, cast, get_args
+from typing import Any, Callable, Literal, cast, get_args
 
 import numpy as np
 from scipy.spatial.distance import squareform
 
+import pulser
 import pulser.json.abstract_repr as pulser_abstract_repr
 import pulser.math as pm
 from pulser.channels.base_channel import Channel, States, get_states_from_bases
@@ -533,7 +534,7 @@ class BaseDevice(ABC):
         ),
         kind: Literal["atoms", "traps"] = "atoms",
     ) -> None:
-        ids = list(coords_dict.keys())
+        ids = [str(id) for id in list(coords_dict.keys())]
         coords = list(map(pm.AbstractArray, coords_dict.values()))
         if kind == "atoms" and not (
             "max_atom_num" in self._optional_parameters
@@ -565,7 +566,13 @@ class BaseDevice(ABC):
         for ch_name, ch_obj in self.channels.items():
             ch_list.append(ch_obj._to_abstract_repr(ch_name))
         # Add version and channels to params
-        params.update({"version": "1", "channels": ch_list})
+        params.update(
+            {
+                "version": "1",
+                "pulser_version": pulser.__version__,
+                "channels": ch_list,
+            }
+        )
         dmm_list = []
         for dmm_name, dmm_obj in self.dmm_channels.items():
             dmm_list.append(dmm_obj._to_abstract_repr(dmm_name))
@@ -578,6 +585,154 @@ class BaseDevice(ABC):
         abstr_dev_str = json.dumps(self, cls=AbstractReprEncoder)
         validate_abstract_repr(abstr_dev_str, "device")
         return abstr_dev_str
+
+    def print_specs(self) -> None:
+        """Prints the device specifications."""
+        title = f"{self.name} Specifications"
+        header = ["-" * len(title), title, "-" * len(title)]
+        print("\n".join(header))
+        print(self._specs())
+
+    @property
+    def specs(self) -> str:
+        """Text summarizing the specifications of the device."""
+        return self._specs(for_docs=False)
+
+    def _param_yes_no(self, param: Any) -> str:
+        return "Yes" if param is True else "No"
+
+    def _param_check_none(self, param: Any) -> Callable[[str], str]:
+        def empty_str_if_none(line: str) -> str:
+            if param is None:
+                return ""
+            else:
+                return line.format(param)
+
+        return empty_str_if_none
+
+    def _register_lines(self) -> list[str]:
+
+        register_lines = [
+            "\nRegister parameters:",
+            f" - Dimensions: {self.dimensions}D",
+            f" - Rydberg level: {self.rydberg_level}",
+            self._param_check_none(self.max_atom_num)(
+                " - Maximum number of atoms: {}"
+            ),
+            self._param_check_none(self.max_radial_distance)(
+                " - Maximum distance from origin: {} µm"
+            ),
+            " - Minimum distance between neighbouring atoms: "
+            + f"{self.min_atom_distance} μm",
+            f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
+        ]
+
+        return [line for line in register_lines if line != ""]
+
+    def _layout_lines(self) -> list[str]:
+
+        layout_lines = [
+            "\nLayout parameters:",
+            f" - Requires layout: {self._param_yes_no(self.requires_layout)}",
+            f" - Minimal number of traps: {self.min_layout_traps}",
+            self._param_check_none(self.max_layout_traps)(
+                " - Maximal number of traps: {}"
+            ),
+            f" - Maximum layout filling fraction: {self.max_layout_filling}",
+        ]
+
+        return [line for line in layout_lines if line != ""]
+
+    def _device_lines(self) -> list[str]:
+
+        device_lines = [
+            "\nDevice parameters:",
+            self._param_check_none(self.max_runs)(
+                " - Maximum number of runs: {}"
+            ),
+            self._param_check_none(self.max_sequence_duration)(
+                " - Maximum sequence duration: {} ns",
+            ),
+            " - Channels can be reused: "
+            + self._param_yes_no(self.reusable_channels),
+            f" - Supported bases: {', '.join(self.supported_bases)}",
+            f" - Supported states: {', '.join(self.supported_states)}",
+            self._param_check_none(self.interaction_coeff)(
+                " - Ising interaction coefficient: {}",
+            ),
+            self._param_check_none(self.interaction_coeff_xy)(
+                " - XY interaction coefficient: {}",
+            ),
+            self._param_check_none(self.default_noise_model)(
+                " - Default noise model: {}",
+            ),
+        ]
+
+        return [line for line in device_lines if line != ""]
+
+    def _channel_lines(self, for_docs: bool = False) -> list[str]:
+
+        ch_lines = ["\nChannels:"]
+        for name, ch in {**self.channels, **self.dmm_channels}.items():
+            if for_docs:
+                max_amp = "None"
+                if ch.max_abs_detuning is not None:
+                    max_amp = f"{float(cast(float, ch.max_amp)):.4g} rad/µs"
+
+                max_abs_detuning = "None"
+                if ch.max_abs_detuning is not None:
+                    max_abs_detuning = (
+                        f"{float(ch.max_abs_detuning):.4g} rad/µs"
+                    )
+
+                bottom_detuning = "None"
+                if isinstance(ch, DMM) and ch.bottom_detuning is not None:
+                    bottom_detuning = f"{float(ch.bottom_detuning):.4g} rad/µs"
+
+                ch_lines += [
+                    f" - ID: '{name}'",
+                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
+                    f"\t- Addressing: {ch.addressing}",
+                    ("\t" + r"- Maximum :math:`\Omega`: " + max_amp),
+                    (
+                        (
+                            "\t"
+                            + r"- Maximum :math:`|\delta|`: "
+                            + max_abs_detuning
+                        )
+                        if not isinstance(ch, DMM)
+                        else (
+                            "\t"
+                            + r"- Bottom :math:`|\delta|`: "
+                            + bottom_detuning
+                        )
+                    ),
+                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
+                ]
+                if ch.addressing == "Local":
+                    ch_lines += [
+                        "\t- Minimum time between retargets: "
+                        f"{ch.min_retarget_interval} ns",
+                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
+                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
+                    ]
+                ch_lines += [
+                    f"\t- Clock period: {ch.clock_period} ns",
+                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
+                ]
+            else:
+                ch_lines.append(f" - '{name}': {ch!r}")
+
+        return [line for line in ch_lines if line != ""]
+
+    def _specs(self, for_docs: bool = False) -> str:
+
+        return "\n".join(
+            self._register_lines()
+            + self._layout_lines()
+            + self._device_lines()
+            + self._channel_lines(for_docs=for_docs)
+        )
 
 
 @dataclass(frozen=True, repr=False)
@@ -718,79 +873,6 @@ class Device(BaseDevice):
             del params[param]
         return VirtualDevice(**params)
 
-    def print_specs(self) -> None:
-        """Prints the device specifications."""
-        title = f"{self.name} Specifications"
-        header = ["-" * len(title), title, "-" * len(title)]
-        print("\n".join(header))
-        print(self._specs())
-
-    def _specs(self, for_docs: bool = False) -> str:
-        lines = [
-            "\nRegister parameters:",
-            f" - Dimensions: {self.dimensions}D",
-            f" - Rydberg level: {self.rydberg_level}",
-            f" - Maximum number of atoms: {self.max_atom_num}",
-            f" - Maximum distance from origin: {self.max_radial_distance} μm",
-            (
-                " - Minimum distance between neighbouring atoms: "
-                f"{self.min_atom_distance} μm"
-            ),
-            f" - Maximum layout filling fraction: {self.max_layout_filling}",
-            f" - SLM Mask: {'Yes' if self.supports_slm_mask else 'No'}",
-        ]
-
-        if self.max_sequence_duration is not None:
-            lines.append(
-                " - Maximum sequence duration: "
-                f"{self.max_sequence_duration} ns"
-            )
-
-        ch_lines = ["\nChannels:"]
-        for name, ch in {**self.channels, **self.dmm_channels}.items():
-            if for_docs:
-                ch_lines += [
-                    f" - ID: '{name}'",
-                    f"\t- Type: {ch.name} (*{ch.basis}* basis)",
-                    f"\t- Addressing: {ch.addressing}",
-                    (
-                        "\t"
-                        + r"- Maximum :math:`\Omega`:"
-                        + f" {float(cast(float,ch.max_amp)):.4g} rad/µs"
-                    ),
-                    (
-                        (
-                            "\t"
-                            + r"- Maximum :math:`|\delta|`:"
-                            + f" {float(cast(float, ch.max_abs_detuning)):.4g}"
-                            + " rad/µs"
-                        )
-                        if not isinstance(ch, DMM)
-                        else (
-                            "\t"
-                            + r"- Bottom :math:`|\delta|`:"
-                            + f" {float(cast(float,ch.bottom_detuning)):.4g}"
-                            + " rad/µs"
-                        )
-                    ),
-                    f"\t- Minimum average amplitude: {ch.min_avg_amp} rad/µs",
-                ]
-                if ch.addressing == "Local":
-                    ch_lines += [
-                        "\t- Minimum time between retargets: "
-                        f"{ch.min_retarget_interval} ns",
-                        f"\t- Fixed retarget time: {ch.fixed_retarget_t} ns",
-                        f"\t- Maximum simultaneous targets: {ch.max_targets}",
-                    ]
-                ch_lines += [
-                    f"\t- Clock period: {ch.clock_period} ns",
-                    f"\t- Minimum instruction duration: {ch.min_duration} ns",
-                ]
-            else:
-                ch_lines.append(f" - '{name}': {ch!r}")
-
-        return "\n".join(lines + ch_lines)
-
     def _to_dict(self) -> dict[str, Any]:
         return obj_to_dict(
             self, _build=False, _module="pulser.devices", _name=self.name
@@ -827,6 +909,16 @@ class Device(BaseDevice):
                 f" {type(device).__name__}."
             )
         return device
+
+    def _layout_lines(self) -> list[str]:
+        layout_lines = super()._layout_lines()
+        layout_lines.insert(
+            2,
+            " - Accepts new layout: "
+            + self._param_yes_no(self.accepts_new_layouts),
+        )
+
+        return layout_lines
 
 
 @dataclass(frozen=True)

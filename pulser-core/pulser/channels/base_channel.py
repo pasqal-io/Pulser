@@ -34,7 +34,11 @@ warnings.filterwarnings("once", "A duration of")
 
 ChannelType = TypeVar("ChannelType", bound="Channel")
 
-OPTIONAL_ABSTR_CH_FIELDS = ("min_avg_amp",)
+OPTIONAL_ABSTR_CH_FIELDS = (
+    "min_avg_amp",
+    "custom_phase_jump_time",
+    "propagation_dir",
+)
 
 # States ranked in decreasing order of their associated eigenenergy
 States = Literal["u", "d", "r", "g", "h", "x"]
@@ -54,7 +58,7 @@ def get_states_from_bases(bases: Collection[str]) -> list[States]:
     return [state for state in STATES_RANK if state in all_states]
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class Channel(ABC):
     """Base class of a hardware channel.
 
@@ -78,6 +82,11 @@ class Channel(ABC):
         min_avg_amp: The minimum average amplitude of a pulse (when not zero).
         mod_bandwidth: The modulation bandwidth at -3dB (50% reduction), in
             MHz.
+        custom_phase_jump_time: An optional custom value for the phase jump
+            time that overrides the default value estimated from the modulation
+            bandwidth. It is not enforced in EOM mode.
+        propagation_dir: The propagation direction of the beam associated with
+            the channel, given as a vector in 3D space.
 
     Example:
         To create a channel targeting the 'ground-rydberg' transition globally,
@@ -95,7 +104,9 @@ class Channel(ABC):
     max_duration: Optional[int] = int(1e8)  # ns
     min_avg_amp: float = 0
     mod_bandwidth: Optional[float] = None  # MHz
+    custom_phase_jump_time: int | None = None
     eom_config: Optional[BaseEOM] = field(init=False, default=None)
+    propagation_dir: tuple[float, float, float] | None = None
 
     @property
     def name(self) -> str:
@@ -169,6 +180,7 @@ class Channel(ABC):
             "max_duration",
             "mod_bandwidth",
             "min_avg_amp",
+            "custom_phase_jump_time",
         ]
         non_negative = [
             "max_amp",
@@ -176,6 +188,7 @@ class Channel(ABC):
             "min_retarget_interval",
             "fixed_retarget_t",
             "min_avg_amp",
+            "custom_phase_jump_time",
         ]
         local_only = [
             "min_retarget_interval",
@@ -188,6 +201,7 @@ class Channel(ABC):
             "max_duration",
             "mod_bandwidth",
             "max_targets",
+            "custom_phase_jump_time",
         ]
 
         if self.addressing == "Global":
@@ -196,7 +210,12 @@ class Channel(ABC):
                     getattr(self, p) is None
                 ), f"'{p}' must be left as None in a Global channel."
         else:
+            assert self.addressing == "Local"
             parameters += local_only
+            if self.propagation_dir is not None:
+                raise NotImplementedError(
+                    "'propagation_dir' must be left as None in Local channels."
+                )
 
         for param in parameters:
             value = getattr(self, param)
@@ -244,6 +263,18 @@ class Channel(ABC):
                 "modulation bandwidth."
             )
 
+        if self.propagation_dir is not None:
+            dir_vector = np.array(self.propagation_dir, dtype=float)
+            if dir_vector.size != 3 or np.sum(dir_vector) == 0.0:
+                raise ValueError(
+                    "'propagation_dir' must be given as a non-zero 3D vector;"
+                    f" got {self.propagation_dir} instead."
+                )
+            # Make sure it's stored as a tuple
+            object.__setattr__(
+                self, "propagation_dir", tuple(self.propagation_dir)
+            )
+
     @property
     def rise_time(self) -> int:
         """The rise time (in ns).
@@ -260,9 +291,14 @@ class Channel(ABC):
     def phase_jump_time(self) -> int:
         """Time taken to change the phase between consecutive pulses (in ns).
 
-        Corresponds to two times the rise time.
+        Corresponds to two times the rise time when `custom_phase_jump_time`
+        is not defined.
         """
-        return self.rise_time * 2
+        return int(
+            self.rise_time * 2
+            if self.custom_phase_jump_time is None
+            else self.custom_phase_jump_time
+        )
 
     def is_virtual(self) -> bool:
         """Whether the channel is virtual (i.e. partially defined)."""
@@ -316,6 +352,9 @@ class Channel(ABC):
                 bandwidth at -3dB (50% reduction), in MHz.
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
+            custom_phase_jump_time: An optional custom value for the phase jump
+                time that overrides the default value estimated from the
+                modulation bandwidth. It is not enforced in EOM mode.
         """
         # Can't initialize a channel whose addressing is determined internally
         for cls_field in fields(cls):
@@ -340,6 +379,7 @@ class Channel(ABC):
         cls: Type[ChannelType],
         max_abs_detuning: Optional[float],
         max_amp: Optional[float],
+        # TODO: Impose a default propagation_dir in pulser-core 1.3
         **kwargs: Any,
     ) -> ChannelType:
         """Initializes the channel with global addressing.
@@ -361,6 +401,11 @@ class Channel(ABC):
                 bandwidth at -3dB (50% reduction), in MHz.
             min_avg_amp: The minimum average amplitude of a pulse (when not
                 zero).
+            custom_phase_jump_time: An optional custom value for the phase jump
+                time that overrides the default value estimated from the
+                modulation bandwidth. It is not enforced in EOM mode.
+            propagation_dir: The propagation direction of the beam associated
+                with the channel, given as a vector in 3D space.
         """
         # Can't initialize a channel whose addressing is determined internally
         for cls_field in fields(cls):
@@ -595,7 +640,7 @@ class Channel(ABC):
         rise_time_us = self._eom_buffer_time / 2 * 1e-3
         return MODBW_TO_TR / rise_time_us
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         config = (
             f".{self.addressing}(Max Absolute Detuning: "
             f"{self.max_abs_detuning}"

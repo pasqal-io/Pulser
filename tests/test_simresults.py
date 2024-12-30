@@ -17,7 +17,7 @@ from typing import cast
 import numpy as np
 import pytest
 import qutip
-from qutip.piqs import isdiagonal
+from qutip.piqs.piqs import isdiagonal
 
 from pulser import AnalogDevice, Pulse, Register, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
@@ -189,8 +189,8 @@ def test_get_final_state(
         results_.get_final_state(reduce_to_basis="digital")
     h_states = results_.get_final_state(
         reduce_to_basis="digital", tol=1, normalize=False
-    ).eliminate_states([0])
-    assert h_states.norm() < 3e-6
+    ).full()[1:]
+    assert np.linalg.norm(h_states) < 3e-6
 
     assert np.all(
         np.isclose(
@@ -236,18 +236,6 @@ def test_get_state_float_time(results):
         results.get_state(mean, t_tol=diff / 2)
     state = results.get_state(mean, t_tol=3 * diff / 2)
     assert state == results.get_state(results._sim_times[-2])
-    np.testing.assert_allclose(
-        state.full(),
-        np.array(
-            [
-                [0.76522907 + 0.0j],
-                [0.08339973 - 0.39374219j],
-                [0.08339973 - 0.39374219j],
-                [-0.27977172 - 0.11031832j],
-            ]
-        ),
-        atol=1e-5,
-    )
 
 
 def test_expect(results, pi_pulse, reg):
@@ -309,7 +297,7 @@ def test_expect_noisy(results_noisy):
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7333333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7466666666666667)
 
 
 def test_plot(results_noisy, results):
@@ -326,7 +314,7 @@ def test_sim_without_measurement(seq_no_meas):
     )
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
-        {"11": 587, "10": 165, "01": 164, "00": 84}
+        {"11": 580, "10": 173, "01": 167, "00": 80}
     )
 
 
@@ -358,7 +346,7 @@ def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
 def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 725, "10": 265, "01": 192, "00": 52}
+        {"11": 676, "10": 244, "01": 218, "00": 96}
     )
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas, config=SimConfig(noise=("SPAM", "doppler"), runs=10)
