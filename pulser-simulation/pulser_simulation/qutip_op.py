@@ -15,10 +15,9 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
-from typing import SupportsComplex, Type, TypeVar, cast
+from typing import Any, SupportsComplex, Type, TypeVar, cast
 
 import qutip
-import qutip.qobj
 
 from pulser.backend.operator import Operator
 from pulser.backend.state import Eigenstate
@@ -53,7 +52,7 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         self._eigenstates = tuple(eigenstates)
         if not isinstance(operator, qutip.Qobj) or not operator.isoper:
             raise TypeError(
-                "'state' must be a qutip.Qobj with type 'oper', not "
+                "'operator' must be a qutip.Qobj with type 'oper', not "
                 f"{operator!r}."
             )
         QutipState._validate_shape(operator.shape, len(self._eigenstates))
@@ -69,6 +68,10 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         to eigenvector (1, 0, ...), "b" to (0, 1, ...) and so on.
         """
         return tuple(self._eigenstates)
+
+    def to_qobj(self) -> qutip.Qobj:
+        """Returns a copy of the operators's Qobj representation."""
+        return self._operator.copy()
 
     def apply_to(self, state: QutipStateType, /) -> QutipStateType:
         """Apply the operator to a state.
@@ -189,14 +192,14 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
         qudit_dim = len(eigenstates)
 
         def build_qudit_op(qudit_op: QuditOp) -> qutip.Qobj:
-            op = qutip.Qobj(dims=[[qudit_dim], [qudit_dim]])
+            op = qutip.identity(qudit_dim) * 0
             for proj_str, coeff in qudit_op.items():
                 if len(proj_str) != 2 or any(
                     s_ not in eigenstates for s_ in proj_str
                 ):
                     raise ValueError(
                         "Every QuditOp key must be made up of two eigenstates;"
-                        f" instead, got {proj_str}."
+                        f" instead, got '{proj_str}'."
                     )
                 ket = qutip.basis(qudit_dim, eigenstates.index(proj_str[0]))
                 bra = qutip.basis(
@@ -235,6 +238,14 @@ class QutipOperator(Operator[SupportsComplex, complex, QutipStateType]):
                 f"Eigenstates: {self.eigenstates}",
                 self._operator.__repr__(),
             ]
+        )
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, QutipOperator):
+            return False
+        return (
+            self.eigenstates == other.eigenstates
+            and self._operator == other._operator
         )
 
     def _validate_other(

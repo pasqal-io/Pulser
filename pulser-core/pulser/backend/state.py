@@ -162,3 +162,12 @@ class State(ABC, Generic[ArgScalarType, ReturnScalarType]):
             "Failed to infer the 'one state' from the "
             f"eigenstates: {self.eigenstates}"
         )
+
+    @staticmethod
+    def _validate_eigenstates(eigenstates: Sequence[Eigenstate]) -> None:
+        if any(not isinstance(s, str) or len(s) != 1 for s in eigenstates):
+            raise ValueError(
+                "All eigenstates must be represented by single characters."
+            )
+        if len(eigenstates) != len(set(eigenstates)):
+            raise ValueError("'eigenstates' can't contain repeated entries.")

@@ -17,11 +17,10 @@ from __future__ import annotations
 import math
 from collections import Counter, defaultdict
 from collections.abc import Collection, Mapping, Sequence
-from typing import SupportsComplex, Type, TypeVar
+from typing import Any, SupportsComplex, Type, TypeVar
 
 import numpy as np
 import qutip
-import qutip.qobj
 
 from pulser.backend.state import Eigenstate, State
 
@@ -98,7 +97,7 @@ class QutipState(State[SupportsComplex, complex]):
             )
         if self.eigenstates != other.eigenstates:
             msg = (
-                "Can't calculate the overlap between states with eigenstates"
+                "Can't calculate the overlap between states with eigenstates "
                 f"{self.eigenstates} and {other.eigenstates}."
             )
             if set(self.eigenstates) != set(other.eigenstates):
@@ -107,10 +106,12 @@ class QutipState(State[SupportsComplex, complex]):
         overlap = self._state.overlap(other._state)
         if self._state.isket and other._state.isket:
             overlap = np.abs(overlap) ** 2
-        return float(overlap)
+        return float(overlap.real)
 
     def probabilities(self, *, cutoff: float = 1e-10) -> dict[str, float]:
         """Extracts the probabilties of measuring each basis state combination.
+
+        The probabilities are normalized to sum to 1.
 
         Args:
             cutoff: The value below which a probability is considered to be
@@ -121,15 +122,14 @@ class QutipState(State[SupportsComplex, complex]):
             probabilities.
         """
         if not self._state.isket:
-            probs = np.abs(self._state.diag())
+            probs = np.abs(self._state.diag()).real
         else:
-            probs = (np.abs(self._state.full()) ** 2).flatten()
+            probs = (np.abs(self._state.full()) ** 2).flatten().real
         non_zero = np.argwhere(probs > cutoff).flatten()
-        return dict(
-            zip(
-                map(self.get_basis_state_from_index, non_zero), probs[non_zero]
-            )
-        )
+        # Renormalize to make the non-zero probablilites sum to 1.
+        probs = probs[non_zero]
+        probs = probs / np.sum(probs)
+        return dict(zip(map(self.get_basis_state_from_index, non_zero), probs))
 
     def bitstring_probabilities(
         self, *, one_state: Eigenstate | None = None, cutoff: float = 1e-10
@@ -238,7 +238,7 @@ class QutipState(State[SupportsComplex, complex]):
             raise ValueError(
                 "All basis states must be combinations of eigenstates with the"
                 f" same length. Expected combinations of {eigenstates}, each "
-                f" with {n_qudits} elements."
+                f"with {n_qudits} elements."
             )
 
         qudit_dim = len(eigenstates)
@@ -268,14 +268,13 @@ class QutipState(State[SupportsComplex, complex]):
             ]
         )
 
-    @staticmethod
-    def _validate_eigenstates(eigenstates: Sequence[Eigenstate]) -> None:
-        if any(not isinstance(s, str) or len(s) != 1 for s in eigenstates):
-            raise ValueError(
-                "All eigenstates must be represented by single characters."
-            )
-        if len(eigenstates) != len(set(eigenstates)):
-            raise ValueError("'eigenstates' can't contain repeated entries.")
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, QutipState):
+            return False
+        return (
+            self.eigenstates == other.eigenstates
+            and self._state == other._state
+        )
 
     @staticmethod
     def _validate_shape(shape: tuple[int, int], qudit_dim: int) -> None:
