@@ -166,7 +166,7 @@ of $|a\rangle$ and $|b\rangle$.
 
 ##### Pulser's state-vector definition
 
-In Pulser, we consistently define the state vectors according to their relative energy.
+In Pulser, we consistently define the state vectors according to their relative energy (i.e. from the lowest to the highest energy level).
 In this way we have, for any given basis, that
 
 $$

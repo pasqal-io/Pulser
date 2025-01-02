@@ -152,7 +152,7 @@ The `Register` defines the position of the atoms. This determines:
 - the number of atoms to use in the quantum computation, i.e, the size of the system (let's note it $N$).
 - the distance between the atoms, the $R_{ij} (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian).
 
-### 3. Pick the Channels
+### 3. Pick the Channels {#3-pick-the-channels}
 
 A `Channel` targets the transition between two energy levels. Therefore, picking channels defines the energy levels that will be used in the computation. The channels must be picked from the `Device.channels`, so your device selection should take into account the channels it supports.
 
