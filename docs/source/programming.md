@@ -1,5 +1,10 @@
 # Programming a neutral-atom QPU
 
+Pulser enables to program Quantum Processing Units (QPUs) based on neutral atoms (also named _cold-atom Quantum Processing Units_). In this page, you will learn:
+
+- What are the objects that you are programming with neutral-atom QPUs.
+- How to program these objects using Pulser.
+
 ## Introduction
 
 ### 1. Atoms encode the state
