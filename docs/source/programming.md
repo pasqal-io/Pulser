@@ -23,6 +23,14 @@ $$
 
 If $d=2$ and $N=1$, you have the state of a qubit as above $\left|\Psi\right> = c_{1}\left|a_{1}\right> + c_{2}\left|a_{2}\right>$.
 
+:::{figure} files/programming_qutrit.png
+:align: center
+:alt: Rubidium atom and 3 of its levels
+:width: 300
+
+Example of a neutral atom: The Rubidium atom has one valence electron (e- in left picture), who has multiple energy levels (represented by lines in right picture). Among these energy levels, some of the most used one are the ground-rydberg level $\left|g\right>$, the rydberg level $\left|r\right>$ and the hyperfine level $\left|h\right>$.
+:::
+
 ### 2. Hamiltonian evolves the state
 
 In quantum physics, the state of a quantum system evolves along time following the Schrödinger equation: 
@@ -55,7 +63,7 @@ $$
 H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{j\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
 $$
 
-In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis **$\Omega$**$(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |$**$\Omega$**$(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$.
+In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis $\overrightarrow{\Omega}(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |\overrightarrow{\Omega}(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$.
 
 :::{figure} files/bloch_rotation_a_b.png
 :align: center
@@ -63,7 +71,7 @@ In the Bloch sphere representation, this Hamiltonian describes a rotation around
 :width: 300
 
 Representation of the drive Hamiltonian's dynamics as a rotation in the Bloch sphere. The coherent excitation is driven between a lower energy level, $|a\rangle$, and a higher energy level,
-$|b\rangle$, with Rabi frequency $\Omega(t)$ and detuning $\delta(t)$.
+$|b\rangle$, with Rabi frequency $\Omega(t)$, detuning $\delta(t)$ and phase $\phi$.
 :::
 
 
@@ -130,7 +138,7 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 :width: 600
 :::
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, that have a direct impact on the Hamiltonian that can be implemented (see [the section below](#3-pick-the-channels)). For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
 
 ### 2. Create the Register
 
