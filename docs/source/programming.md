@@ -143,7 +143,7 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 :width: 600
 :::
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, that have a direct impact on the Hamiltonian that can be implemented (see [the section below](#3-pick-the-channels)). For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, that have a direct impact on the Hamiltonian that can be implemented (see [the section below](programming.md#3-pick-the-channels)). For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
 
 ### 2. Create the Register
 
