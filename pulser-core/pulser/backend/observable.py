@@ -19,12 +19,14 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 from pulser.backend.operator import Operator
-from pulser.backend.results import Results
 from pulser.backend.state import State
 
 if TYPE_CHECKING:
     from pulser.backend.config import EmulationConfig
+    from pulser.backend.results import Results
 
 
 class Callback(ABC):
@@ -86,6 +88,13 @@ class Observable(Callback):
     ):
         """Initializes the observable."""
         super().__init__()
+        if evaluation_times is not None:
+            eval_times_arr = np.array(evaluation_times, dtype=float)
+            if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
+                raise ValueError(
+                    "All evaluation times must be between 0. and 1. "
+                    f"Instead, got {evaluation_times}."
+                )
         self.evaluation_times = evaluation_times
         self._tag_suffix = tag_suffix
 

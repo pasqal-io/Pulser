@@ -80,7 +80,12 @@ class BitStrings(Observable):
         super().__init__(
             evaluation_times=evaluation_times, tag_suffix=tag_suffix
         )
-        self.num_shots = num_shots
+        if num_shots < 1:
+            raise ValueError(
+                "'num_shots' must be greater than or equal to 1, "
+                f"not {num_shots}."
+            )
+        self.num_shots = int(num_shots)
         self.one_state = one_state
 
     @property
@@ -175,7 +180,7 @@ class Expectation(Observable):
         )
         if not isinstance(operator, Operator):
             raise TypeError(
-                "'operator' must be a Operator instance;"
+                "'operator' must be an Operator instance;"
                 f" got {type(operator)} instead."
             )
         self.operator = operator
@@ -191,6 +196,10 @@ class Expectation(Observable):
 
 class CorrelationMatrix(Observable):
     """Stores the correlation matrix for the current state.
+
+    The correlation matrix is calculated as
+    [[<φ(t)|n_i n_j|φ(t)> for j in qubits] for i in qubits]
+    where n_k = |one_state><one_state|.
 
     Args:
         evaluation_times: The relative times at which to compute the
@@ -336,7 +345,11 @@ class Energy(Observable):
 
 
 class EnergyVariance(Observable):
-    """Stores the varaiance of the Hamiltonian at the evaluation times.
+    r"""Stores the varaiance of the Hamiltonian at the evaluation times.
+
+    The variance of the Hamiltonian at time t is calculated by
+    $\\langle φ(t)|H(t)^2|φ(t)\\rangle - \\langle φ(t)|H(t)|φ(t)\\rangle^2$
+
 
     Args:
         evaluation_times: The relative times at which to compute the variance.
@@ -364,7 +377,7 @@ class EnergyVariance(Observable):
         if not result.requires_grad:
             return float(result)
         # If the result requires_grad, return the AbstractArray
-        return result
+        return result  # pragma: no cover
 
 
 class SecondMomentOfEnergy(Observable):
@@ -396,4 +409,4 @@ class SecondMomentOfEnergy(Observable):
         result = pm.sqrt(h_state.overlap(h_state).real)
         if not result.requires_grad:
             return float(result)
-        return result
+        return result  # pragma: no cover

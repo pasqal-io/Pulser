@@ -18,12 +18,10 @@ import collections.abc
 import typing
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import Any, TypeVar, overload
 
+from pulser.backend.observable import Observable
 from pulser.register import QubitId
-
-if TYPE_CHECKING:
-    from pulser.backend.observable import Observable
 
 
 @dataclass
@@ -57,7 +55,7 @@ class Results:
         self._results.setdefault(observable.uuid, {})
 
         if time in self._results[observable.uuid]:
-            raise ValueError(
+            raise RuntimeError(
                 f"A value is already stored for observable '{observable.tag}'"
                 f" at time {time}."
             )

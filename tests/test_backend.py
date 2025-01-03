@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import re
 import typing
+import uuid
+from collections import Counter
 
 import numpy as np
 import pytest
@@ -26,7 +28,17 @@ from pulser.backend.config import (
     EmulationConfig,
     EmulatorConfig,
 )
-from pulser.backend.default_observables import BitStrings
+from pulser.backend.default_observables import (
+    BitStrings,
+    CorrelationMatrix,
+    Energy,
+    EnergyVariance,
+    Expectation,
+    Fidelity,
+    Occupation,
+    SecondMomentOfEnergy,
+    StateResult,
+)
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
     BatchStatus,
@@ -36,9 +48,11 @@ from pulser.backend.remote import (
     RemoteResultsError,
     _OpenBatchContextManager,
 )
+from pulser.backend.results import Results
 from pulser.devices import AnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
+from pulser_simulation import QutipState, QutipOperator
 
 
 @pytest.fixture
@@ -323,3 +337,259 @@ def test_emulation_config():
         EmulationConfig(interaction_matrix=np.arange(12).reshape((4, 3)))
     with pytest.raises(TypeError, match="must be a NoiseModel"):
         EmulationConfig(noise_model={"p_false_pos": 0.1})
+
+
+class TestObservables:
+    @pytest.fixture
+    def ghz_state(self):
+        return QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"),
+            amplitudes={"rrr": np.sqrt(0.5), "ggg": np.sqrt(0.5)},
+        )
+
+    @pytest.fixture
+    def ham(self):
+        return QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            operations=[(1.0, [])],
+        )
+
+    @pytest.fixture
+    def config(self):
+        return EmulationConfig()
+
+    @pytest.fixture
+    def results(self):
+        return Results(atom_order=("q0", "q1", "q2"), total_duration=1000)
+
+    @pytest.mark.parametrize("tag_suffix", [None, "foo"])
+    @pytest.mark.parametrize("eval_times", [None, (0.0, 0.5, 1.0)])
+    def test_base_init(self, eval_times, tag_suffix):
+        # We use StateResult because Observable is an ABC
+        obs = StateResult(evaluation_times=eval_times, tag_suffix=tag_suffix)
+        assert isinstance(obs.uuid, uuid.UUID)
+        assert obs.evaluation_times == eval_times
+        expected_tag = "state_foo" if tag_suffix else "state"
+        assert obs.tag == expected_tag
+        assert repr(obs) == f"{expected_tag}:{obs.uuid}"
+        with pytest.raises(
+            ValueError, match="All evaluation times must be between 0. and 1."
+        ):
+            StateResult(evaluation_times=[1.000001])
+
+    @pytest.mark.parametrize("eval_times", [None, (0.0, 0.5, 1.0)])
+    def test_call(
+        self,
+        config: EmulationConfig,
+        results: Results,
+        ghz_state,
+        ham,
+        eval_times,
+    ):
+        assert not results.get_result_tags()  # ie it's empty
+        assert config.default_evaluation_times == (1.0,)
+        # We use StateResult because Observable is an ABC
+        obs = StateResult(evaluation_times=eval_times)
+        assert obs.apply(state=ghz_state) == ghz_state
+        true_eval_times = eval_times or config.default_evaluation_times
+
+        t_ = 0.1
+        assert not config.is_time_in_evaluation_times(t_, true_eval_times)
+        obs(config, t_, ghz_state, ham, results)
+        assert not results.get_result_tags()  # ie it's still empty
+
+        t_ = 1.0
+        assert config.is_time_in_evaluation_times(t_, true_eval_times)
+        obs(config, t_, ghz_state, ham, results)
+        assert results.get_result_tags() == ["state"]
+        assert (
+            results.get_result_times("state")
+            == results.get_result_times(obs)
+            == [t_]
+        )
+        assert results.get_result(obs, t_) == ghz_state
+        with pytest.raises(
+            RuntimeError,
+            match="A value is already stored for observable 'state' at time "
+            f"{t_}",
+        ):
+            obs(config, t_, ghz_state, ham, results)
+
+        expected_tol = 0.5 / results.total_duration
+        t_minus_tol = t_ - expected_tol
+        assert config.is_time_in_evaluation_times(
+            t_minus_tol, true_eval_times, tol=expected_tol
+        )
+        obs(config, t_minus_tol, ghz_state, ham, results)
+        assert results.get_result_times(obs) == [t_, t_minus_tol]
+        assert results.get_result(obs, t_minus_tol) == ghz_state
+
+        t_plus_tol = t_ + expected_tol
+        assert t_plus_tol > 1.0  # ie it's not an evaluation time
+        assert not config.is_time_in_evaluation_times(
+            t_plus_tol, true_eval_times, tol=expected_tol
+        )
+        obs(config, t_plus_tol, ghz_state, ham, results)
+        assert t_plus_tol not in results.get_result_times(obs)
+
+    def test_state_result(self, ghz_state):
+        obs = StateResult()
+        assert obs.apply(state=ghz_state) == ghz_state
+
+    @pytest.mark.parametrize("p_false_pos", [None, 0.4])
+    @pytest.mark.parametrize("p_false_neg", [None, 0.3])
+    @pytest.mark.parametrize("one_state", [None, "g"])
+    @pytest.mark.parametrize("num_shots", [None, 100])
+    def test_bitstrings(
+        self,
+        config: EmulationConfig,
+        ghz_state: QutipState,
+        num_shots,
+        one_state,
+        p_false_pos,
+        p_false_neg,
+    ):
+        with pytest.raises(ValueError, match="greater than or equal to 1"):
+            BitStrings(num_shots=0)
+        kwargs = {}
+        if num_shots:
+            kwargs["num_shots"] = num_shots
+        obs = BitStrings(one_state=one_state, **kwargs)
+        assert obs.tag == "bitstrings"
+        noise_model = pulser.NoiseModel(
+            p_false_pos=p_false_pos, p_false_neg=p_false_neg
+        )
+        config.noise_model = noise_model
+        assert config.noise_model.noise_types == (
+            ("SPAM",) if p_false_pos or p_false_neg else ()
+        )
+        np.random.seed(123)
+        expected_shots = num_shots or obs.num_shots
+        expected_counts = ghz_state.sample(
+            num_shots=expected_shots,
+            one_state=one_state or ghz_state.infer_one_state(),
+            p_false_pos=p_false_pos or 0,
+            p_false_neg=p_false_neg or 0,
+        )
+        np.random.seed(123)
+        counts = obs.apply(config=config, state=ghz_state)
+        assert isinstance(counts, Counter)
+        assert counts.total() == expected_shots
+        if noise_model == pulser.NoiseModel():
+            assert set(counts) == {"000", "111"}
+        assert counts == expected_counts
+
+    @pytest.mark.parametrize("one_state", [None, "r", "g"])
+    def test_correlation_matrix_and_occupation(
+        self, ghz_state, ham, one_state
+    ):
+        corr = CorrelationMatrix(one_state=one_state)
+        assert corr.tag == "correlation_matrix"
+        occ = Occupation(one_state=one_state)
+        assert occ.tag == "occupation"
+        expected_corr_matrix = np.full((3, 3), 0.5)
+        np.testing.assert_allclose(
+            corr.apply(state=ghz_state, hamiltonian=ham), expected_corr_matrix
+        )
+        np.testing.assert_allclose(
+            occ.apply(state=ghz_state, hamiltonian=ham),
+            expected_corr_matrix.diagonal(),
+        )
+
+        ggg_state = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"ggg": 1.0}
+        )
+        expected_corr_matrix = np.ones((3, 3)) * int(one_state == "g")
+        np.testing.assert_allclose(
+            corr.apply(state=ggg_state, hamiltonian=ham), expected_corr_matrix
+        )
+        np.testing.assert_allclose(
+            occ.apply(state=ggg_state, hamiltonian=ham),
+            expected_corr_matrix.diagonal(),
+        )
+
+        ggr_state = QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"ggr": 1.0}
+        )
+        if one_state == "g":
+            expected_corr_matrix = np.array([[1, 1, 0], [1, 1, 0], [0, 0, 0]])
+        else:
+            expected_corr_matrix = np.zeros((3, 3))
+            expected_corr_matrix[2, 2] = 1
+        np.testing.assert_allclose(
+            corr.apply(state=ggr_state, hamiltonian=ham), expected_corr_matrix
+        )
+        np.testing.assert_allclose(
+            occ.apply(state=ggr_state, hamiltonian=ham),
+            expected_corr_matrix.diagonal(),
+        )
+
+    @pytest.fixture
+    def zzz(self):
+        return QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            operations=[(1.0, [({"rr": 1.0, "gg": -1.0}, {0, 1, 2})])],
+        )
+
+    def test_energy_observables(self, ghz_state, ham, zzz):
+        energy = Energy()
+        assert energy.tag == "energy"
+        var = EnergyVariance()
+        assert var.tag == "energy_variance"
+        energy2 = SecondMomentOfEnergy()
+        assert energy2.tag == "second_moment_of_energy"
+        assert np.isclose(energy.apply(state=ghz_state, hamiltonian=ham), 1.0)
+        assert np.isclose(energy2.apply(state=ghz_state, hamiltonian=ham), 1.0)
+        assert np.isclose(var.apply(state=ghz_state, hamiltonian=ham), 0.0)
+
+        assert np.isclose(energy.apply(state=ghz_state, hamiltonian=zzz), 0.0)
+        assert np.isclose(energy2.apply(state=ghz_state, hamiltonian=zzz), 1.0)
+        assert np.isclose(var.apply(state=ghz_state, hamiltonian=zzz), 1.0)
+
+        custom_op = QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"),
+            n_qudits=3,
+            operations=[(1.0, [({"gg": -1}, {0, 1, 2})])],
+        )
+        assert np.isclose(
+            energy.apply(state=ghz_state, hamiltonian=custom_op), -0.5
+        )
+        assert np.isclose(
+            energy2.apply(state=ghz_state, hamiltonian=custom_op), 0.5
+        )
+        assert np.isclose(
+            var.apply(state=ghz_state, hamiltonian=custom_op), 0.25
+        )
+
+    def test_expectation(self, ghz_state, ham, zzz):
+        with pytest.raises(
+            TypeError, match="'operator' must be an Operator instance"
+        ):
+            Expectation(ham.to_qobj())
+        h_exp = Expectation(ham)
+        assert h_exp.tag == "expectation"
+        assert h_exp.apply(state=ghz_state) == ham.expect(ghz_state)
+        z_exp = Expectation(zzz, tag_suffix="zzz")
+        assert z_exp.tag == "expectation_zzz"
+        assert z_exp.apply(state=ghz_state) == zzz.expect(ghz_state)
+
+    def test_fidelity(self, ghz_state):
+        with pytest.raises(
+            TypeError, match="'state' must be a State instance"
+        ):
+            Fidelity(ghz_state.to_qobj())
+
+        fid_ggg = Fidelity(
+            QutipState.from_state_amplitudes(
+                eigenstates=("r", "g"), amplitudes={"ggg": 1.0}
+            ),
+            tag_suffix="ggg",
+        )
+        assert fid_ggg.tag == "fidelity_ggg"
+        assert np.isclose(fid_ggg.apply(state=ghz_state), 0.5)
+
+        fid_ghz = Fidelity(ghz_state)
+        assert fid_ghz.tag == "fidelity"
+        assert np.isclose(fid_ghz.apply(state=ghz_state), 1.0)

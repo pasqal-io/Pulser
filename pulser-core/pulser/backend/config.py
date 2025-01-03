@@ -222,9 +222,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
     def is_evaluation_time(self, t: float, tol: float = 1e-6) -> bool:
         """Assesses whether a relative time is an evaluation time."""
-        return 0.0 <= t <= 1.0 and (
-            self.default_evaluation_times == "Full"
-            or self.is_time_in_evaluation_times(
+        return (
+            self.default_evaluation_times == "Full" and 0.0 <= t <= 1.0
+        ) or (
+            self.is_time_in_evaluation_times(
                 t, self.default_evaluation_times, tol=tol
             )
         )
@@ -234,7 +235,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
         t: float, evaluation_times: ArrayLike, tol: float = 1e-6
     ) -> bool:
         """Checks if a time is within a collection of evaluation times."""
-        return bool(
+        return 0.0 <= t <= 1.0 and bool(
             np.any(np.abs(np.array(evaluation_times, dtype=float) - t) <= tol)
         )
 
