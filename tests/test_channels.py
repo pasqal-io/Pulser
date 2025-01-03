@@ -38,6 +38,7 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
         ("min_avg_amp", -1e-3),
         ("propagation_dir", (0, 0, 0)),
         ("propagation_dir", [1, 0]),
+        ("custom_phase_jump_time", -10),
     ],
 )
 def test_bad_init_global_channel(bad_param, bad_value):
@@ -66,6 +67,7 @@ def test_bad_init_global_channel(bad_param, bad_value):
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
         ("min_avg_amp", -1e-3),
         ("propagation_dir", (1, 0, 0)),
+        ("custom_phase_jump_time", -0.5),
     ],
 )
 def test_bad_init_local_channel(bad_param, bad_value):
@@ -290,8 +292,7 @@ def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
         tr,
         tr,
     )
-    if requires_grad:
-        assert out_.as_tensor().requires_grad
+    assert out_.requires_grad == requires_grad
 
     wf2 = BlackmanWaveform(800, wf_vals[1])
     out_ = channel.modulate(wf2.samples, eom=eom)
@@ -300,8 +301,7 @@ def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
         side_buffer_len,
         side_buffer_len,
     )
-    if requires_grad:
-        assert out_.as_tensor().requires_grad
+    assert out_.requires_grad == requires_grad
 
 
 @pytest.mark.parametrize(
