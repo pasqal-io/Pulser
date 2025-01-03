@@ -201,8 +201,8 @@ def test_modulation(mod_seq: pulser.Sequence) -> None:
 
 
 def test_modulation_local(mod_device):
-    seq = pulser.Sequence(pulser.Register.square(2), mod_device)
-    seq.declare_channel("ch0", "rydberg_local", initial_target=0)
+    seq = pulser.Sequence(pulser.Register.square(2, prefix="q"), mod_device)
+    seq.declare_channel("ch0", "rydberg_local", initial_target="q0")
     ch_obj = seq.declared_channels["ch0"]
     pulse1 = Pulse.ConstantPulse(500, 1, -1, 0)
     pulse2 = Pulse.ConstantPulse(200, 2.5, 0, 0)
@@ -210,7 +210,7 @@ def test_modulation_local(mod_device):
     seq.add(pulse1, "ch0")
     seq.delay(partial_fall, "ch0")
     seq.add(pulse2, "ch0")
-    seq.target(1, "ch0")
+    seq.target("q1", "ch0")
     seq.add(pulse1, "ch0")
 
     input_samples = sample(seq)
@@ -236,7 +236,8 @@ def test_modulation_local(mod_device):
     samples_dict = output_samples.to_nested_dict()
     for qty in ("amp", "det", "phase"):
         combined = sum(
-            samples_dict["Local"]["ground-rydberg"][t][qty] for t in range(2)
+            samples_dict["Local"]["ground-rydberg"][f"q{t}"][qty]
+            for t in range(2)
         )
         np.testing.assert_array_equal(getattr(out_ch_samples, qty), combined)
 
