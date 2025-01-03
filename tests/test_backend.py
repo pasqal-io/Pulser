@@ -539,7 +539,7 @@ class TestObservables:
         np.random.seed(123)
         counts = obs.apply(config=config, state=ghz_state)
         assert isinstance(counts, Counter)
-        assert counts.total() == expected_shots
+        assert sum(counts.values()) == expected_shots
         if noise_model == pulser.NoiseModel():
             assert set(counts) == {"000", "111"}
         assert counts == expected_counts
