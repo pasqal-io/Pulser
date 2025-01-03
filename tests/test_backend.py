@@ -52,7 +52,7 @@ from pulser.backend.results import Results
 from pulser.devices import AnalogDevice, MockDevice
 from pulser.register import SquareLatticeLayout
 from pulser.result import Result, SampledResult
-from pulser_simulation import QutipState, QutipOperator
+from pulser_simulation import QutipOperator, QutipState
 
 
 @pytest.fixture
@@ -335,8 +335,72 @@ def test_emulation_config():
         ),
     ):
         EmulationConfig(interaction_matrix=np.arange(12).reshape((4, 3)))
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "interaction matrix of shape (2, 2) is incompatible with "
+            "the received initial state of 3 qudits"
+        ),
+    ):
+        EmulationConfig(
+            interaction_matrix=np.eye(2),
+            initial_state=QutipState.from_state_amplitudes(
+                eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
+            ),
+        )
     with pytest.raises(TypeError, match="must be a NoiseModel"):
         EmulationConfig(noise_model={"p_false_pos": 0.1})
+
+
+def test_results():
+    res = Results(atom_order=(), total_duration=0)
+    assert res.get_result_tags() == []
+    assert res.get_tagged_results() == {}
+    with pytest.raises(
+        AttributeError, match="'bitstrings' is not in the results"
+    ):
+        assert res.bitstrings
+    with pytest.raises(
+        ValueError,
+        match="'bitstrings' is not an Observable instance nor a known "
+        "observable tag",
+    ):
+        assert res.get_result_times("bitstrings")
+
+    obs = BitStrings(tag_suffix="test")
+    with pytest.raises(
+        ValueError,
+        match=f"'bitstrings_test:{obs.uuid}' has not been stored",
+    ):
+        assert res.get_result(obs, 1.0)
+
+    obs(
+        config=EmulationConfig(),
+        t=1.0,
+        state=QutipState.from_state_amplitudes(
+            eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
+        ),
+        hamiltonian=QutipOperator.from_operator_repr(
+            eigenstates=("r", "g"), n_qudits=3, operations=[(1.0, [])]
+        ),
+        result=res,
+    )
+    assert res.get_result_tags() == ["bitstrings_test"]
+    expected_val = {1.0: Counter({"111": obs.num_shots})}
+    assert res.get_tagged_results() == {"bitstrings_test": expected_val}
+    assert res.bitstrings_test == expected_val
+    assert (
+        res.get_result_times("bitstrings_test")
+        == res.get_result_times(obs)
+        == [1.0]
+    )
+    assert (
+        res.get_result(obs, 1.0)
+        == res.get_result("bitstrings_test", 1.0)
+        == expected_val[1.0]
+    )
+    with pytest.raises(ValueError, match="not available at time 0.912"):
+        res.get_result(obs, 0.912)
 
 
 class TestObservables:

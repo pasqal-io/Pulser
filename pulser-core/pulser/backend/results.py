@@ -84,7 +84,7 @@ class Results:
         return list(self._results[self._find_uuid(observable)].keys())
 
     def get_result(self, observable: Observable | str, time: float) -> Any:
-        """Get the given result at the given time.
+        """Get the a specific result at a given time.
 
         Args:
             observable: The observable instance used to calculate the result
@@ -115,6 +115,10 @@ class Results:
 
     def _find_uuid(self, observable: Observable | str) -> uuid.UUID:
         if isinstance(observable, Observable):
+            if observable.uuid not in self._results:
+                raise ValueError(
+                    f"'{observable!r}' has not been stored in the results"
+                )
             return observable.uuid
         try:
             return self._tagmap[observable]
