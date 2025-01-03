@@ -14,9 +14,45 @@
 """Classes for backend execution."""
 
 import pulser.noise_model as noise_model  # For backwards compat
-from pulser.backend.config import EmulatorConfig
+from pulser.backend.abc import Backend, EmulatorBackend
+from pulser.backend.config import EmulatorConfig, EmulationConfig
 from pulser.noise_model import NoiseModel  # For backwards compat
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.results import Results
+from pulser.backend.state import State
+from pulser.backend.operator import Operator
+from pulser.backend.observable import Callback, Observable
+from pulser.backend.default_observables import (
+    BitStrings,
+    CorrelationMatrix,
+    Energy,
+    EnergyVariance,
+    Expectation,
+    Fidelity,
+    Occupation,
+    SecondMomentOfEnergy,
+    StateResult,
+)
 
-__all__ = ["EmulatorConfig", "NoiseModel", "QPUBackend", "Results"]
+__all__ = [
+    "Backend",
+    "Callback",
+    "EmulatorBackend",
+    "EmulatorConfig",
+    "EmulationConfig",
+    "NoiseModel",
+    "Observable",
+    "Operator",
+    "QPUBackend",
+    "Results",
+    "State",
+    "BitStrings",
+    "CorrelationMatrix",
+    "Energy",
+    "EnergyVariance",
+    "Expectation",
+    "Fidelity",
+    "Occupation",
+    "SecondMomentOfEnergy",
+    "StateResult",
+]
