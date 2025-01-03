@@ -52,7 +52,6 @@ computers and simulators, check the pages in :doc:`review`.
 
    installation
    programming
-   intro_rydberg_blockade
    tutorials/creating
    tutorials/simulating
 
