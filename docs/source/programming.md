@@ -2,12 +2,16 @@
 
 Pulser enables to program Quantum Processing Units (QPUs) based on neutral atoms (also named _cold-atom Quantum Processing Units_). In this page, you will learn:
 
-- What are the objects that you are programming with neutral-atom QPUs.
-- How to program these objects using Pulser.
+- **What are the mathematical objects your are programming with Pulser ?** In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser ? What are the Hamiltonians that can be defined in Pulser ?
+- **How do you program these mathematical objects ?** How do you define the quantum state in Pulser ? How do you define the Hamiltonian ? We will propose you a receipe to design your quantum program using Pulser. 
 
 ## Introduction
 
 ### 1. Atoms encode the state
+
+<details>
+
+  <summary>Click to expand</summary>
 
 Neutral atoms store the quantum information in their energy levels (also known as [_eigenstates_](./conventions.md)). When only two eigenstates are used to encode information, each atom is a qubit. If these eigenstates are $\left|a\right>$ and $\left|b\right>$, then the state of an atom is described by $\left|\psi\right> = \alpha \left|a\right> + \beta \left|b\right>$, with $|\alpha|^2 + |\beta|^2 = 1$.
 
@@ -28,13 +32,7 @@ $$
 
 If $d=2$ and $N=1$, you have the state of a qubit as above $\left|\Psi\right> = c_{1}\left|a_{1}\right> + c_{2}\left|a_{2}\right>$.
 
-:::{figure} files/programming_qutrit.png
-:align: center
-:alt: Rubidium atom and 3 of its levels
-:width: 300
-
-Example of a neutral atom: The Rubidium atom has one valence electron (e- in left picture), who has multiple energy levels (represented by lines in right picture). Among these energy levels, some of the most used one are the ground-rydberg level $\left|g\right>$, the rydberg level $\left|r\right>$ and the hyperfine level $\left|h\right>$.
-:::
+</details>
 
 ### 2. Hamiltonian evolves the state
 
@@ -62,6 +60,10 @@ and $j$.
 
 #### 2.1. Driving Hamiltonian
 
+<details>
+
+  <summary>Click to expand</summary>
+
 The driving Hamiltonian describes the effect of a pulse on two of energies levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi(t)$.
 
 $$
@@ -84,7 +86,13 @@ $|b\rangle$, with Rabi frequency $\Omega(t)$, detuning $\delta(t)$ and phase $\p
 With Pulser, you program the driving Hamiltonian by setting $\Omega(t)$, $\delta(t)$ and $\phi(t)$, all the while Pulser ensures that you respect the constraints of your chosen device.
 :::
 
+</details>
+
 #### 2.2. Interaction Hamiltonian
+
+<details>
+
+  <summary>Click to expand</summary>
 
 The interaction Hamiltonian depends on the distance between the atoms $i$ and $j$, $R_{ij}$, and the energy levels in which the information is encoded in these atoms, that define the interaction between the atoms $\hat{U}_{ij}$
 
@@ -130,6 +138,8 @@ $H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i\hat{n}_j$
 When providing the distance between atoms, Pulser ensures that you respect the constraints of your chosen device.
 :::
 
+</details>
+
 ## Writing a Pulser program
 
 As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$](programming.md#2-hamiltonian-evolves-the-state)) so that you can manipulate the quantum state of a system of atoms. The series of necessary instructions is encapsulated in the so-called Pulser `Sequence`. Here is a step-by-step guide to create your own Pulser `Sequence`.
@@ -152,7 +162,7 @@ The `Register` defines the position of the atoms. This determines:
 - the number of atoms to use in the quantum computation, i.e, the size of the system (let's note it $N$).
 - the distance between the atoms, the $R_{ij} (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian).
 
-### 3. Pick the Channels {#3-pick-the-channels}
+### 3. Pick the Channels
 
 A `Channel` targets the transition between two energy levels. Therefore, picking channels defines the energy levels that will be used in the computation. The channels must be picked from the `Device.channels`, so your device selection should take into account the channels it supports.
 
@@ -204,7 +214,7 @@ We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evol
 - Selecting the `Channels` of the `Device` to use, that defined the energy levels of the atoms to use: that step completely defined the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian). The addressing property of each `Channel` also dictates the atoms that will be targeted by the `Pulse`.
 - Adding `Pulse` and delays to the `Channel`s defines the [driving Hamiltonian](programming.md#21-driving-hamiltonian) of each atom along time.    
 
-You can now simulate your first Hamiltonian by programming your first `Sequence` ! [In this tutorial](tutorials/creating.nblink), you will simulate the evolution of the state of an atom initialized in $\left|g\right>$ under a Hamiltonian $H(t)=\frac{\Omega(t)}{2} |g\rangle_i \langle r|_i+\frac{\Omega(t)}{2} |r\rangle\langle g|$, with $\Omega$ chosen such that the final state of the atom is the excited state $\left|r\right>$.
+You can now simulate your first Hamiltonian by programming your first `Sequence` ! [In this tutorial](tutorials/creating.nblink), you will simulate the evolution of the state of an atom initialized in $\left|g\right>$ under a Hamiltonian $H(t)=\frac{\Omega(t)}{2} |g\rangle \langle r|+\frac{\Omega(t)}{2} |r\rangle\langle g|$, with $\Omega$ chosen such that the final state of the atom is the excited state $\left|r\right>$.
 
 Many concepts have been introduced here and you might want further explanations.
 - The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](apidoc/core.rst) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), this is a most advanced feature described [here](tutorials/virtual_devices.nblink).
