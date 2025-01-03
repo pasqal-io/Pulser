@@ -21,7 +21,6 @@ from dataclasses import dataclass, field
 from typing import Any, TypeVar, overload
 
 from pulser.backend.observable import Observable
-from pulser.register import QubitId
 
 
 @dataclass
@@ -29,11 +28,11 @@ class Results:
     """A collection of results.
 
     Args:
-        atoms_order: The order of the atoms/qudits in the results.
+        atom_order: The order of the atoms/qudits in the results.
         total_duration: The total duration of the sequence, in ns.
     """
 
-    atom_order: tuple[QubitId, ...]
+    atom_order: tuple[str, ...]
     total_duration: int
     _results: dict[uuid.UUID, dict[float, Any]] = field(init=False)
     _tagmap: dict[str, uuid.UUID] = field(init=False)
