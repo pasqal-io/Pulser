@@ -39,7 +39,7 @@ Additionally, Pulser features built-in tools for classical simulation to aid in
 the development and testing of new pulse sequences.
 
 To get started with Pulser, follow the instructions in :doc:`installation` and
-check out the :doc:`intro_rydberg_blockade` page. For a more in-depth
+check out the :doc:`programming` page. For a more in-depth
 introduction, consult the tutorials on :doc:`tutorials/creating` and
 :doc:`tutorials/simulating`.
 To better understand neutral atom devices and how they serve as quantum

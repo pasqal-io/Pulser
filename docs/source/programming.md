@@ -1,19 +1,19 @@
 # Programming a neutral-atom QPU
 
-Pulser enables to program Quantum Processing Units (QPUs) based on neutral atoms (also named _cold-atom Quantum Processing Units_). In this page, you will learn:
+Pulser establishes a framework for programming Quantum Processing Units (QPUs) based on neutral atoms (also named _cold-atom Quantum Processing Units_). In this page, you will learn:
 
-- **What are the mathematical objects your are programming with Pulser ?** In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser ? What are the Hamiltonians that can be defined in Pulser ?
-- **How do you program these mathematical objects ?** How do you define the quantum state in Pulser ? How do you define the Hamiltonian ? We will propose you a receipe to design your quantum program using Pulser. 
+- [**What mathematical objects are your programming with Pulser ?**](programming.md#introduction) In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser ? What are the Hamiltonians that can be defined in Pulser ?
+- [**How to program these mathematical objects with Pulser ?**](programming.md#writing-a-pulser-program) How do you define the quantum state in Pulser ? How do you define the Hamiltonian ? We give you a step-by-step guide on how to create a quantum program using Pulser.
 
 ## Introduction
 
 ### 1. Atoms encode the state
 
+Neutral atoms store the quantum information in their energy levels (also known as [_eigenstates_](./conventions.md)). When only two eigenstates are used to encode information, each atom is a qubit. If these eigenstates are $\left|a\right>$ and $\left|b\right>$, then the state of an atom is described by $\left|\psi\right> = \alpha \left|a\right> + \beta \left|b\right>$, with $|\alpha|^2 + |\beta|^2 = 1$.
+
 <details>
 
-  <summary>Click to expand</summary>
-
-Neutral atoms store the quantum information in their energy levels (also known as [_eigenstates_](./conventions.md)). When only two eigenstates are used to encode information, each atom is a qubit. If these eigenstates are $\left|a\right>$ and $\left|b\right>$, then the state of an atom is described by $\left|\psi\right> = \alpha \left|a\right> + \beta \left|b\right>$, with $|\alpha|^2 + |\beta|^2 = 1$.
+  <summary>Definition of a quantum state with multiple atoms</summary>
 
 When multiple atoms are used, the state of the system is described by a linear combination of the _eigenstates_ of the multi-atom system, whose set is obtained by making the cross product of the set of eigenstate of each atom. If each atom is described by $d$ eigenstates labelled ${\left|a_1\right>, \left|a_2\right>...\left|a_d\right>}$ (each atom is a _qudit_), and if there are $N$ atoms in the system, then the state of the whole system is provided by 
 
@@ -60,15 +60,14 @@ and $j$.
 
 #### 2.1. Driving Hamiltonian
 
-<details>
-
-  <summary>Click to expand</summary>
-
 The driving Hamiltonian describes the effect of a pulse on two of energies levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi(t)$.
 
 $$
 H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{j\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
 $$
+<details>
+
+  <summary>Rotations on the Bloch sphere</summary>
 
 In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis $\overrightarrow{\Omega}(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |\overrightarrow{\Omega}(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$.
 
@@ -81,18 +80,13 @@ Representation of the drive Hamiltonian's dynamics as a rotation in the Bloch sp
 $|b\rangle$, with Rabi frequency $\Omega(t)$, detuning $\delta(t)$ and phase $\phi$.
 :::
 
+</details>
 
 :::{important}
 With Pulser, you program the driving Hamiltonian by setting $\Omega(t)$, $\delta(t)$ and $\phi(t)$, all the while Pulser ensures that you respect the constraints of your chosen device.
 :::
 
-</details>
-
 #### 2.2. Interaction Hamiltonian
-
-<details>
-
-  <summary>Click to expand</summary>
 
 The interaction Hamiltonian depends on the distance between the atoms $i$ and $j$, $R_{ij}$, and the energy levels in which the information is encoded in these atoms, that define the interaction between the atoms $\hat{U}_{ij}$
 
@@ -113,9 +107,14 @@ If the Rydberg state $\left|r\right>$ is involved in the computation, then
 $$
 \hat{U}_{ij}(R_{ij}) = \frac{C_6}{R_{ij}^6} \hat{n}_i \hat{n}_j
 $$
+<details>
+
+  <summary>Interaction strength and entangling operator</summary>
 
 - The interaction strength is $\frac{C_6}{R_{ij}^6}$, with $C_6$ a coefficient that depends on the principal quantum number of the Rydberg state.
 - The entangling operator between atom $i$ and $j$ is $\hat{n}_i\hat{n}_j = |r\rangle\langle r|_i |r\rangle\langle r|_j$. 
+
+</details>
 
 Together with the driving Hamiltonian, this interaction encodes the _Ising Hamiltonian_ and is the **most common choice in neutral-atom devices.**
 
@@ -126,9 +125,14 @@ If the information is stored in the Rydberg states $\left|0\right>$ and $\left|1
 $$
 \hat{U}_{ij}(R_{ij}) =\frac{C_3}{R_{ij}^3} (|1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j)
 $$
+<details>
+
+  <summary>Interaction strength and entangling operator</summary>
 
 - The interaction strength is $\frac{C_3}{R_{ij}^3}$, with $C_3$ a coefficient that depends on the energy levels used to encode $\left|0\right>$ and $\left|1\right>$. 
 - The entangling operator between atom $i$ and $j$ is $\hat{\sigma}_i^{+}\hat{\sigma}_j^{-} + \hat{\sigma}_i^{-}\hat{\sigma}_j^{+} = |1\rangle\langle 0|_i |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_j$. 
+
+</details>
 
 This interaction hamiltonian is associated with the _XY Hamiltonian_ and is a less common mode of operation, usually accessible only in select neutral-atom devices.
 
@@ -137,8 +141,6 @@ With Pulser, you program the interaction Hamiltonian by setting the distance bet
 $H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i\hat{n}_j$   
 When providing the distance between atoms, Pulser ensures that you respect the constraints of your chosen device.
 :::
-
-</details>
 
 ## Writing a Pulser program
 
@@ -209,15 +211,15 @@ By applying a series of pulses and delays, one defines the entire driving Hamilt
 ## Conclusion
 
 We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evolves-the-state) $H$ describing the evolution of the system over time, by:
-- picking a `Device`, that defined the value of the $C_6$ or $C_3$ coefficients.
-- creating a `Register` of atoms, that defined the number of atoms used and the distance between the atoms $R_{ij}$.
-- Selecting the `Channels` of the `Device` to use, that defined the energy levels of the atoms to use: that step completely defined the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian). The addressing property of each `Channel` also dictates the atoms that will be targeted by the `Pulse`.
+- Picking a `Device`, which defines the value of the $C_6$ or $C_3$ coefficients.
+- Creating a `Register` of atoms, which defines the number of atoms used and the distance between the atoms them, $R_{ij}$.
+- Selecting the `Channels` of the `Device` to use, which define the energy levels of the atoms to use - this step completely defines the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian). The addressing property of each `Channel` also dictates the atoms that will be targeted by the `Pulse`.
 - Adding `Pulse` and delays to the `Channel`s defines the [driving Hamiltonian](programming.md#21-driving-hamiltonian) of each atom along time.    
 
 You can now simulate your first Hamiltonian by programming your first `Sequence` ! [In this tutorial](tutorials/creating.nblink), you will simulate the evolution of the state of an atom initialized in $\left|g\right>$ under a Hamiltonian $H(t)=\frac{\Omega(t)}{2} |g\rangle \langle r|+\frac{\Omega(t)}{2} |r\rangle\langle g|$, with $\Omega$ chosen such that the final state of the atom is the excited state $\left|r\right>$.
 
 Many concepts have been introduced here and you might want further explanations.
-- The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](apidoc/core.rst) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), this is a most advanced feature described [here](tutorials/virtual_devices.nblink).
-- There are multiple ways of defining a `Register`, this is further detailed [in this section](tutorials/reg_layouts.nblink).
+- The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](apidoc/core.rst) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), which is a more advanced feature described [here](tutorials/virtual_devices.nblink).
+- There are multiple ways of defining a `Register`, as is further detailed [in this section](tutorials/reg_layouts.nblink).
 - The energy levels associated with each `Channel` and the interaction Hamiltonian they implement are summed up in [the conventions page](conventions.md). The channels contain lots of constraints and physical informations, they are detailed in [the same section as the `Device`](apidoc/core.rst).
-- The quantities in a `Pulse` are defined using `Waveform`s, read more about this [on this page](tutorials/composite_wfs.nblink).
+- The quantities in a `Pulse` are defined using `Waveform`s, you can read more about these [on this page](tutorials/composite_wfs.nblink).
