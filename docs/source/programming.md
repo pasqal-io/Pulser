@@ -60,16 +60,17 @@ and $j$.
 
 #### 2.1. Driving Hamiltonian
 
-The driving Hamiltonian describes the effect of a pulse on two of energies levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi(t)$.
+The driving Hamiltonian describes the effect of a pulse on two of energies levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its duration $\Delta t$, its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi$ (constant along the duration of the pulse). Between $0$ and $\Delta t$, the driving Hamiltonian is:
 
 $$
-H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi(t)} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{j\phi(t)} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
+H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{j\phi} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
 $$
+
 <details>
 
   <summary>Rotations on the Bloch sphere</summary>
 
-In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis $\overrightarrow{\Omega}(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |\overrightarrow{\Omega}(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$.
+In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis $\overrightarrow{\Omega}(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |\overrightarrow{\Omega}(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$. For a resonant pulse ($\delta(t)=0$) of duration $\Delta t$, we rotate of an angle $\int_0^{\Delta t} \Omega (t) dt$ around the fixed axis $(\cos(\phi), -\sin(\phi), 0)$ (on the equator of the Bloch sphere).
 
 :::{figure} files/bloch_rotation_a_b.png
 :align: center
