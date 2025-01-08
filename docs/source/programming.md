@@ -2,7 +2,7 @@
 
 Pulser establishes a framework for programming Quantum Processing Units (QPUs) based on neutral atoms (also named _cold-atom Quantum Processing Units_). In this page, you will learn:
 
-- [**What mathematical objects are your programming with Pulser ?**](programming.md#introduction) In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser ? What are the Hamiltonians that can be defined in Pulser ?
+- [**What mathematical objects are you programming with Pulser ?**](programming.md#introduction) In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser ? What are the Hamiltonians that can be defined in Pulser ?
 - [**How to program these mathematical objects with Pulser ?**](programming.md#writing-a-pulser-program) How do you define the quantum state in Pulser ? How do you define the Hamiltonian ? We give you a step-by-step guide on how to create a quantum program using Pulser.
 
 ## Introduction
