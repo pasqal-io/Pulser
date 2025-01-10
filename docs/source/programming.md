@@ -2,8 +2,8 @@
 
 Pulser establishes a framework for programming Quantum Processing Units (QPUs) based on neutral atoms (also named _cold-atom Quantum Processing Units_). In this page, you will learn:
 
-- [**What mathematical objects are you programming with Pulser ?**](programming.md#introduction) In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser ? What are the Hamiltonians that can be defined in Pulser ?
-- [**How to program these mathematical objects with Pulser ?**](programming.md#writing-a-pulser-program) How do you define the quantum state in Pulser ? How do you define the Hamiltonian ? We give you a step-by-step guide on how to create a quantum program using Pulser.
+- [**What mathematical objects are you programming with Pulser?**](programming.md#introduction) In quantum computing, the evolution of a quantum state is defined by an Hamiltonian. What is a quantum state in Pulser? What are the Hamiltonians that can be defined in Pulser?
+- [**How to program these mathematical objects with Pulser?**](programming.md#writing-a-pulser-program) How do you define the quantum state in Pulser? How do you define the Hamiltonian? We give you a step-by-step guide on how to create a quantum program using Pulser.
 
 ## Introduction
 
@@ -60,7 +60,7 @@ and $j$.
 
 #### 2.1. Driving Hamiltonian
 
-The driving Hamiltonian describes the effect of a pulse on two of energies levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its duration $\Delta t$, its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi$ (constant along the duration of the pulse). Between $0$ and $\Delta t$, the driving Hamiltonian is:
+The driving Hamiltonian describes the effect of a pulse on two energy levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its duration $\Delta t$, its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi$ (constant along the duration of the pulse). Between $0$ and $\Delta t$, the driving Hamiltonian is:
 
 $$
 H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{j\phi} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
@@ -98,7 +98,7 @@ $$
 The interaction operator $\hat{U}_{ij}$ is composed of an entangling operator and an interaction strength.
 
 :::{note}
-The interaction Hamiltonian is time-independent. It is always on, no matter the values of the drive Hamiltonian (even if the values of the parameters $\Omega$, $\delta$, $\phi$ are equal to $0$ over a time $\Delta t$).
+The interaction Hamiltonian is constant along time. It is always on, no matter the values of the drive Hamiltonian (even if the values of the parameters $\Omega$, $\delta$, $\phi$ are equal to $0$ over a time $\Delta t$).
 :::
 
 ##### Ising Hamiltonian
@@ -139,7 +139,9 @@ This interaction hamiltonian is associated with the _XY Hamiltonian_ and is a le
 
 :::{important}
 With Pulser, you program the interaction Hamiltonian by setting the distance between atoms, $R_{ij}$. Additionally, the choice of eigenstates used in the computation and the Rydberg level(s) targeted by the device fully determine the interaction strength. Most commonly, the ground and Rydberg states ($\left|g\right>$ and $\left|r\right>$) are used, such that   
-$H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i\hat{n}_j$   
+
+$$H^\text{int}_{ij} = \frac{C_6}{R_{ij}^6} \hat{n}_i\hat{n}_j$$
+
 When providing the distance between atoms, Pulser ensures that you respect the constraints of your chosen device.
 :::
 
@@ -156,7 +158,7 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 :width: 600
 :::
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, that have a direct impact on the Hamiltonian that can be implemented. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
 
 ### 2. Create the Register
 
@@ -183,16 +185,16 @@ $$H^\text{int}_{ij} =\frac{C_3}{R_{ij}^3}|1\rangle\langle 0|_i |0\rangle\langle 
 At this stage, the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) is fully determined.
 :::
 
-A `Channel` is also determined by its addressing. This defines the number of atoms that are going to be targeted by a pulse. If the addressing of a `Channel` is `Global`, all the atoms will experience the same pulse targetting the same transition. In the [Hamiltonian $H$](programming.md#2-hamiltonian-evolves-the-state), all the driving Hamiltonians $H^D_i$ are expressed as
+A `Channel` is also characterized by its addressing, which defines the number of atoms that are going to be targeted by a pulse. If the addressing of a `Channel` is `Global`, all the atoms will experience the same pulse targetting the same transition. In the [Hamiltonian $H$](programming.md#2-hamiltonian-evolves-the-state), all the driving Hamiltonians $H^D_i$ are expressed as
 
 $$
 H^D_i(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi(t)} |a\rangle_i \langle b|_i + \frac{\Omega(t)}{2} e^{j\phi(t)} |b\rangle_i\langle a|_i - \delta(t) |b\rangle_i\langle b|_i
 $$
 
-If the addressing of a `Channel` is `Local`, then only certain atoms (the atoms "target") will experience the pulse and have their evolution follow $H^D_i$. The driving hamiltonian of the other atoms is $H^D_i = \hat{0}_i$. The hamiltonian $H$ can also be rewritten:
+If the addressing of a `Channel` is `Local`, then only certain atoms (the "targets") will experience the pulse and have their evolution follow $H^D_i$. The driving Hamiltonian of the other atoms is $H^D_i = \hat{0}_i$. The Hamiltonian $H$ can also be rewritten:
 
 $$
-H(t) = \sum_{i \in targeted\_ atoms} H^D_i(t) + \sum_i \sum_{j<i}H^\text{int}_{ij},
+H(t) = \sum_{i \in targets} H^D_i(t) + \sum_i \sum_{j<i}H^\text{int}_{ij},
 $$
 
 :::{important}
@@ -213,7 +215,7 @@ By applying a series of pulses and delays, one defines the entire driving Hamilt
 
 We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evolves-the-state) $H$ describing the evolution of the system over time, by:
 - Picking a `Device`, which defines the value of the $C_6$ or $C_3$ coefficients.
-- Creating a `Register` of atoms, which defines the number of atoms used and the distance between the atoms them, $R_{ij}$.
+- Creating a `Register` of atoms, which defines the number of atoms used and the distance between them, $R_{ij}$.
 - Selecting the `Channels` of the `Device` to use, which define the energy levels of the atoms to use - this step completely defines the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian). The addressing property of each `Channel` also dictates the atoms that will be targeted by the `Pulse`.
 - Adding `Pulse` and delays to the `Channel`s defines the [driving Hamiltonian](programming.md#21-driving-hamiltonian) of each atom along time.    
 
