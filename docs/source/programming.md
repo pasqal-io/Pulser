@@ -34,6 +34,8 @@ If $d=2$ and $N=1$, you have the state of a qubit as above $\left|\Psi\right> = 
 
 </details>
 
+<br>
+
 ### 2. Hamiltonian evolves the state
 
 In quantum physics, the state of a quantum system evolves along time following the Schrödinger equation: 
@@ -70,7 +72,10 @@ $$
 
   <summary>Rotations on the Bloch sphere</summary>
 
-In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis $\overrightarrow{\Omega}(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |\overrightarrow{\Omega}(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$. For a resonant pulse ($\delta(t)=0$) of duration $\Delta t$, we rotate of an angle $\int_0^{\Delta t} \Omega (t) dt$ around the fixed axis $(\cos(\phi), -\sin(\phi), 0)$ (on the equator of the Bloch sphere).
+
+In the Bloch sphere representation, this Hamiltonian describes a rotation around the axis $\overrightarrow{\Omega}(t) = (\Omega(t)\cos(\phi), -\Omega(t)\sin(\phi), -\delta(t))^T$, with angular velocity $\Omega_{eff}(t) = |\overrightarrow{\Omega}(t)| = \sqrt{\Omega^2(t) + \delta^2(t)}$. 
+
+For a resonant pulse ($\delta(t)=0$) of duration $\Delta t$, we rotate of an angle $\int_0^{\Delta t} \Omega (t) dt$ around the fixed axis $(\cos(\phi), -\sin(\phi), 0)$ (on the equator of the Bloch sphere).
 
 :::{figure} files/bloch_rotation_a_b.png
 :align: center
@@ -82,6 +87,8 @@ $|b\rangle$, with Rabi frequency $\Omega(t)$, detuning $\delta(t)$ and phase $\p
 :::
 
 </details>
+
+<br>
 
 :::{important}
 With Pulser, you program the driving Hamiltonian by setting $\Omega(t)$, $\delta(t)$ and $\phi(t)$, all the while Pulser ensures that you respect the constraints of your chosen device.
@@ -98,7 +105,7 @@ $$
 The interaction operator $\hat{U}_{ij}$ is composed of an entangling operator and an interaction strength.
 
 :::{note}
-The interaction Hamiltonian is constant along time. It is always on, no matter the values of the drive Hamiltonian (even if the values of the parameters $\Omega$, $\delta$, $\phi$ are equal to $0$ over a time $\Delta t$).
+The interaction Hamiltonian is constant over time. It is always on, no matter the values of the drive Hamiltonian (even if the values of the parameters $\Omega$, $\delta$, $\phi$ are equal to $0$ over a time $\Delta t$).
 :::
 
 ##### Ising Hamiltonian
@@ -165,7 +172,7 @@ The `Device` you select will dictate some parameters and constrain others. For i
 The `Register` defines the position of the atoms. This determines:
 
 - the number of atoms to use in the quantum computation, i.e, the size of the system (let's note it $N$).
-- the distance between the atoms, the $R_{ij} (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian).
+- the distance between the atoms, the $R_{ij}\ (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian).
 
 ### 3. Pick the Channels
 
