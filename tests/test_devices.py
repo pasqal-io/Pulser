@@ -23,6 +23,7 @@ import pulser
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
 from pulser.devices import (
+    AnalogDevice,
     Device,
     DigitalAnalogDevice,
     MockDevice,
@@ -255,6 +256,85 @@ def test_tuple_conversion(test_params):
     dev = VirtualDevice(**test_params)
     assert dev.channel_objects == (Rydberg.Global(None, None),)
     assert dev.channel_ids == ("custom_channel",)
+
+
+@pytest.mark.parametrize(
+    "device", [MockDevice, AnalogDevice, DigitalAnalogDevice]
+)
+def test_device_specs(device):
+    def yes_no_fn(dev, attr, text):
+        if hasattr(dev, attr):
+            cond = getattr(dev, attr)
+            return f" - {text}: {'Yes' if cond else 'No'}\n"
+
+        return ""
+
+    def check_none_fn(dev, attr, text):
+        if hasattr(dev, attr):
+            var = getattr(dev, attr)
+            if var is not None:
+                return " - " + text.format(var) + "\n"
+
+        return ""
+
+    def specs(dev):
+        register_str = (
+            "\nRegister parameters:\n"
+            + f" - Dimensions: {dev.dimensions}D\n"
+            + f" - Rydberg level: {dev.rydberg_level}\n"
+            + check_none_fn(dev, "max_atom_num", "Maximum number of atoms: {}")
+            + check_none_fn(
+                dev,
+                "max_radial_distance",
+                "Maximum distance from origin: {} µm",
+            )
+            + " - Minimum distance between neighbouring atoms: "
+            + f"{dev.min_atom_distance} μm\n"
+            + yes_no_fn(dev, "supports_slm_mask", "SLM Mask")
+        )
+
+        layout_str = (
+            "\nLayout parameters:\n"
+            + yes_no_fn(dev, "requires_layout", "Requires layout")
+            + (
+                ""
+                if device is MockDevice
+                else yes_no_fn(
+                    dev, "accepts_new_layouts", "Accepts new layout"
+                )
+            )
+            + f" - Minimal number of traps: {dev.min_layout_traps}\n"
+            + check_none_fn(
+                dev, "max_layout_traps", "Maximal number of traps: {}"
+            )
+            + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
+        )
+
+        device_str = (
+            "\nDevice parameters:\n"
+            + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
+            + check_none_fn(
+                dev,
+                "max_sequence_duration",
+                "Maximum sequence duration: {} ns",
+            )
+            + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
+            + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
+            + f" - Supported states: {', '.join(dev.supported_states)}\n"
+            + f" - Ising interaction coefficient: {dev.interaction_coeff}\n"
+            + check_none_fn(
+                dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
+            )
+        )
+
+        channel_str = "\nChannels:\n" + "\n".join(
+            f" - '{name}': {ch!r}"
+            for name, ch in {**dev.channels, **dev.dmm_channels}.items()
+        )
+
+        return register_str + layout_str + device_str + channel_str
+
+    assert device.specs == specs(device)
 
 
 def test_valid_devices():

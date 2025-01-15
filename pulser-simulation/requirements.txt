@@ -1,3 +1,1 @@
-qutip~=4.7.5
-# This is needed until qutip fixes the incompatibility with scipy 1.12
-scipy<1.13
+qutip >= 5, < 6

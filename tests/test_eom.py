@@ -190,8 +190,7 @@ def test_detuning_off(
         ]
     )
     assert calculated_det_off == min(det_off_options, key=abs)
-    if requires_grad:
-        assert calculated_det_off.as_tensor().requires_grad
+    assert calculated_det_off.requires_grad == requires_grad
 
     # Case where the EOM pulses are off-resonant
     detuning_on = detuning_on + 1.0
@@ -210,5 +209,4 @@ def test_detuning_off(
         assert off_options[0] == eom_.calculate_detuning_off(
             amp, detuning_on, optimal_detuning_off=0.0
         )
-        if requires_grad:
-            assert off_options.as_tensor().requires_grad
+        assert off_options.requires_grad == requires_grad

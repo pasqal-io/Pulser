@@ -434,11 +434,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     # last pulse from the phase_jump_time and adds the
                     # fall_time to let the last pulse ramp down
                     ch_obj = self[channel].channel_obj
+                    in_eom_mode = self[channel].in_eom_mode()
                     phase_jump_buffer = (
-                        ch_obj.phase_jump_time
-                        + last_pulse.fall_time(
-                            ch_obj, in_eom_mode=self[channel].in_eom_mode()
+                        max(
+                            ch_obj.phase_jump_time,
+                            # In EOM mode, we must wait at least 2*rise_time
+                            2 * ch_obj.rise_time * in_eom_mode,
                         )
+                        + last_pulse.fall_time(ch_obj, in_eom_mode=in_eom_mode)
                         - (t0 - last_pulse_slot.tf)
                     )
             except RuntimeError:

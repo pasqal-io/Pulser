@@ -171,15 +171,7 @@ def test_initialization_and_construction_of_hamiltonian(seq, mod_device):
     )
 
     assert isinstance(sim._hamiltonian._hamiltonian, qutip.QobjEvo)
-    # Checks adapt() method:
-    assert bool(
-        set(sim._hamiltonian._hamiltonian.tlist).intersection(
-            sim.sampling_times
-        )
-    )
-    for qobjevo in sim._hamiltonian._hamiltonian.ops:
-        for sh in qobjevo.qobj.shape:
-            assert sh == sim.dim**sim._hamiltonian._size
+    assert sim._hamiltonian._hamiltonian(0).dtype == qutip.core.data.CSR
 
     assert not seq.is_parametrized()
     with pytest.warns(UserWarning, match="returns a copy of itself"):
@@ -295,7 +287,7 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     # Check building operator with one operator
     op_standard = sim.build_operator([("sigma_gg", ["target"])])
     op_one = sim.build_operator(("sigma_gg", ["target"]))
-    assert np.linalg.norm(op_standard - op_one) < 1e-10
+    assert (op_standard - op_one).to("dense").norm() < 1e-10
 
     # Global ground-rydberg
     seq2 = Sequence(reg, DigitalAnalogDevice)
@@ -788,13 +780,13 @@ def test_noise_with_zero_epsilons(seq, matrices):
 @pytest.mark.parametrize(
     "noise, result, n_collapse_ops",
     [
-        ("dephasing", {"0": 595, "1": 405}, 1),
-        ("relaxation", {"0": 595, "1": 405}, 1),
-        ("eff_noise", {"0": 595, "1": 405}, 1),
-        ("depolarizing", {"0": 587, "1": 413}, 3),
-        (("dephasing", "depolarizing", "relaxation"), {"0": 587, "1": 413}, 5),
-        (("eff_noise", "dephasing"), {"0": 595, "1": 405}, 2),
-        (("eff_noise", "leakage"), {"0": 595, "1": 405}, 1),
+        ("dephasing", {"0": 586, "1": 414}, 1),
+        ("relaxation", {"0": 586, "1": 414}, 1),
+        ("eff_noise", {"0": 586, "1": 414}, 1),
+        ("depolarizing", {"0": 581, "1": 419}, 3),
+        (("dephasing", "depolarizing", "relaxation"), {"0": 582, "1": 418}, 5),
+        (("eff_noise", "dephasing"), {"0": 587, "1": 413}, 2),
+        (("eff_noise", "leakage"), {"0": 586, "1": 414}, 1),
     ],
 )
 def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
@@ -821,12 +813,15 @@ def test_noises_rydberg(matrices, noise, result, n_collapse_ops):
             eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
         ),
     )
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops
-    trace_2 = res.states[-1] ** 2
-    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    trace_2 = np.trace((res.states[-1] ** 2).full())
+    assert trace_2 < 1 and not np.isclose(trace_2, 1)
     if "leakage" in noise:
         state = res.get_final_state()
         assert np.all(np.isclose(state[2, :], np.zeros_like(state[2, :])))
@@ -841,6 +836,9 @@ def test_relaxation_noise():
 
     sim = QutipEmulator.from_sequence(seq)
     sim.add_config(SimConfig(noise="relaxation", relaxation_rate=0.1))
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     res = sim.run()
     start_samples = res.sample_state(1)
     ryd_pop = start_samples["1"]
@@ -906,7 +904,9 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
             eff_noise_rates=[0.1 if "leakage" in noise else 0.025],
         ),
     )
-
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     with pytest.raises(
         ValueError,
         match="'relaxation' noise requires addressing of the 'ground-rydberg'",
@@ -919,8 +919,8 @@ def test_noises_digital(matrices, noise, result, n_collapse_ops, seq_digital):
     assert len(sim._hamiltonian._collapse_ops) == n_collapse_ops * len(
         seq_digital.register.qubits
     )
-    trace_2 = res.states[-1] ** 2
-    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    trace_2 = np.trace((res.states[-1] ** 2).full())
+    assert trace_2 < 1 and not np.isclose(trace_2, 1)
     if "leakage" in noise:
         state = res.get_final_state()
         assert np.all(np.isclose(state[2, :], np.zeros_like(state[2, :])))
@@ -944,7 +944,7 @@ res_deph_relax = {
         ("eff_noise", {"111": 958, "110": 19, "011": 12, "101": 11}, 2),
         (
             "relaxation",
-            {"000": 421, "010": 231, "001": 172, "100": 171, "101": 5},
+            {"000": 420, "010": 231, "001": 173, "100": 171, "101": 5},
             1,
         ),
         (("dephasing", "relaxation"), res_deph_relax, 3),
@@ -997,6 +997,9 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
             eff_noise_rates=[0.2, 0.2],
         ),
     )
+    assert [
+        op.type == qutip.core.data.CSR for op in sim._hamiltonian._collapse_ops
+    ]
     with pytest.raises(
         ValueError,
         match="Incompatible shape for effective noise operator n°0.",
@@ -1023,8 +1026,8 @@ def test_noises_all(matrices, reg, noise, result, n_collapse_ops, seq):
     res = sim.run()
     res_samples = res.sample_final_state()
     assert res_samples == Counter(result)
-    trace_2 = res.states[-1] ** 2
-    assert np.trace(trace_2) < 1 and not np.isclose(np.trace(trace_2), 1)
+    trace_2 = np.trace((res.states[-1] ** 2).full())
+    assert trace_2 < 1 and not np.isclose(trace_2, 1)
     if "leakage" in noise:
         state = res.get_final_state()
         assert np.all(np.isclose(state[3, :], np.zeros_like(state[3, :])))
