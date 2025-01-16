@@ -200,7 +200,8 @@ def test_repr():
         "Max Amplitude: None, Clock period: 1 ns, "
         "Minimum pulse duration: 1 ns, "
         "Maximum pulse duration: 100000000 ns, "
-        "Modulation Bandwidth: 4 MHz, Supports EOM: False, Basis: 'ground-rydberg')"
+        "Modulation Bandwidth: 4 MHz, Supports EOM: False, "
+        "Basis: 'ground-rydberg')"
     )
     assert ryd.__str__() == r2
 
