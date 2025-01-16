@@ -323,7 +323,7 @@ def test_device_specs(device):
                 dev,
                 "max_sequence_duration",
                 "Maximum sequence duration: {} ns",
-            )            
+            )
             + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
         )
 
