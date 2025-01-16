@@ -662,7 +662,7 @@ class BaseDevice(ABC):
             ),
             self._param_check_none(self.max_runs)(
                 " - Maximum number of runs: {}"
-            ),            
+            ),
             self._param_check_none(self.default_noise_model)(
                 " - Default noise model: {}",
             ),
