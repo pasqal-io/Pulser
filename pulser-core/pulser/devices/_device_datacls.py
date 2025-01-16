@@ -615,7 +615,6 @@ class BaseDevice(ABC):
         register_lines = [
             "\nRegister parameters:",
             f" - Dimensions: {self.dimensions}D",
-            f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.max_atom_num)(
                 " - Maximum number of atoms: {}"
             ),
@@ -624,7 +623,6 @@ class BaseDevice(ABC):
             ),
             " - Minimum distance between neighbouring atoms: "
             + f"{self.min_atom_distance} μm",
-            f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
         ]
 
         return [line for line in register_lines if line != ""]
@@ -647,22 +645,24 @@ class BaseDevice(ABC):
 
         device_lines = [
             "\nDevice parameters:",
-            self._param_check_none(self.max_runs)(
-                " - Maximum number of runs: {}"
-            ),
-            self._param_check_none(self.max_sequence_duration)(
-                " - Maximum sequence duration: {} ns",
-            ),
-            " - Channels can be reused: "
-            + self._param_yes_no(self.reusable_channels),
-            f" - Supported bases: {', '.join(self.supported_bases)}",
-            f" - Supported states: {', '.join(self.supported_states)}",
+            f" - Rydberg level: {self.rydberg_level}",
             self._param_check_none(self.interaction_coeff)(
                 " - Ising interaction coefficient: {}",
             ),
             self._param_check_none(self.interaction_coeff_xy)(
                 " - XY interaction coefficient: {}",
             ),
+            " - Channels can be reused: "
+            + self._param_yes_no(self.reusable_channels),
+            f" - Supported bases: {', '.join(self.supported_bases)}",
+            f" - Supported states: {', '.join(self.supported_states)}",
+            f" - SLM Mask: {self._param_yes_no(self.supports_slm_mask)}",
+            self._param_check_none(self.max_sequence_duration)(
+                " - Maximum sequence duration: {} ns",
+            ),
+            self._param_check_none(self.max_runs)(
+                " - Maximum number of runs: {}"
+            ),            
             self._param_check_none(self.default_noise_model)(
                 " - Default noise model: {}",
             ),
