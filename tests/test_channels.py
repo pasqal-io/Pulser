@@ -190,7 +190,7 @@ def test_repr():
         "Raman.Local(Max Absolute Detuning: None, Max Amplitude: "
         "2 rad/µs, Minimum retarget time: 1000 ns, "
         "Fixed retarget time: 200 ns, Max targets: 4, Clock period: 4 ns, "
-        "Minimum pulse duration: 16 ns, Basis: 'digital')"
+        "Minimum pulse duration: 16 ns, Supports EOM: False, Basis: 'digital')"
     )
     assert raman.__str__() == r1
 
@@ -200,7 +200,7 @@ def test_repr():
         "Max Amplitude: None, Clock period: 1 ns, "
         "Minimum pulse duration: 1 ns, "
         "Maximum pulse duration: 100000000 ns, "
-        "Modulation Bandwidth: 4 MHz, Basis: 'ground-rydberg')"
+        "Modulation Bandwidth: 4 MHz, Supports EOM: False, Basis: 'ground-rydberg')"
     )
     assert ryd.__str__() == r2
 
