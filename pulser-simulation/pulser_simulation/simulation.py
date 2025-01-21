@@ -579,18 +579,14 @@ class QutipEmulator:
                     self.initial_state,
                     self._eval_times_array,
                     self._hamiltonian._collapse_ops,
-                    options=dict(
-                        progress_bar=p_bar, normalize_output=False, **options
-                    ),
+                    options=dict(progress_bar=p_bar, **options),
                 )
             else:
                 result = qutip.sesolve(
                     self._hamiltonian._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
-                    options=dict(
-                        progress_bar=p_bar, normalize_output=False, **options
-                    ),
+                    options=dict(progress_bar=p_bar, **options),
                 )
             results = [
                 QutipResult(
