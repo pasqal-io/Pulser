@@ -348,6 +348,15 @@ def test_emulation_config():
                 eigenstates=("r", "g"), amplitudes={"rrr": 1.0}
             ),
         )
+    with pytest.raises(
+        ValueError,
+        match="interaction matrix is not symmetric",
+    ):
+        matrix_ = np.ones((4, 4))
+        matrix_[0, 3] += 1e-4
+        EmulationConfig(
+            interaction_matrix=matrix_,
+        )
     with pytest.raises(TypeError, match="must be a NoiseModel"):
         EmulationConfig(noise_model={"p_false_pos": 0.1})
 

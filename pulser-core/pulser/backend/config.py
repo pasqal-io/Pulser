@@ -191,6 +191,11 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
                     "incompatible with the received initial state of "
                     f"{initial_state.n_qudits} qudits."
                 )
+            matrix_arr = interaction_matrix.as_array(detach=True)
+            if not np.allclose(matrix_arr, matrix_arr.transpose()):
+                raise ValueError(
+                    "The received interaction matrix is not symmetric."
+                )
 
         if not isinstance(noise_model, NoiseModel):
             raise TypeError(
