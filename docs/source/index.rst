@@ -57,6 +57,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    :caption: Fundamental Concepts
 
    conventions
+   pulses
 
 .. toctree::
    :maxdepth: 2
