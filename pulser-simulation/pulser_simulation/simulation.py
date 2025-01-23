@@ -348,7 +348,9 @@ class QutipEmulator:
                     "Incompatible shape of initial state."
                     + f"Expected {legal_shape}, got {shape}."
                 )
-            self._initial_state = qutip.Qobj(state, dims=legal_dims).to("CSR")
+            self._initial_state = (
+                qutip.Qobj(state, dims=legal_dims).unit().to("CSR")
+            )
 
     @property
     def evaluation_times(self) -> np.ndarray:
@@ -579,14 +581,18 @@ class QutipEmulator:
                     self.initial_state,
                     self._eval_times_array,
                     self._hamiltonian._collapse_ops,
-                    options=dict(progress_bar=p_bar, **options),
+                    options=dict(
+                        progress_bar=p_bar, normalize_output=False, **options
+                    ),
                 )
             else:
                 result = qutip.sesolve(
                     self._hamiltonian._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
-                    options=dict(progress_bar=p_bar, **options),
+                    options=dict(
+                        progress_bar=p_bar, normalize_output=False, **options
+                    ),
                 )
             results = [
                 QutipResult(
