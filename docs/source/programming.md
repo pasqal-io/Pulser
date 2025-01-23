@@ -119,7 +119,7 @@ $$
 
   <summary>Interaction strength and entangling operator</summary>
 
-- The interaction strength is $\frac{C_6}{R_{ij}^6}$, with $C_6$ a coefficient that depends on the principal quantum number of the Rydberg state.
+- The interaction strength is $\frac{C_6}{R_{ij}^6}$, with $C_6$ the Ising interaction coefficient that depends on the principal quantum number of the Rydberg state.
 - The entangling operator between atom $i$ and $j$ is $\hat{n}_i\hat{n}_j = |r\rangle\langle r|_i |r\rangle\langle r|_j$. 
 
 </details>
