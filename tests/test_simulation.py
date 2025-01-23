@@ -1639,3 +1639,36 @@ def test_simulation_with_modulation(
         )
     # Drawing with modulation
     sim.draw()
+
+
+def test_initial_state_sim():
+    seq = Sequence(
+        Register({"q0": (-6, 0), "q1": (0, 0), "q2": (6, 0)}), AnalogDevice
+    )
+    seq.declare_channel("ising", "rydberg_global")
+    seq.add(Pulse.ConstantPulse(4000, 9.28, 18.7, 0), "ising")
+    L = len(seq.register.qubits)
+    initial_state = np.ones(2**L)
+    emulator = QutipEmulator.from_sequence(seq)
+    emulator.set_initial_state(initial_state)
+    np.random.seed(123)
+    res = emulator.run()
+    final_state = res.get_final_state()
+    assert np.all(
+        np.isclose(
+            final_state.full(),
+            np.array(
+                [
+                    [0.28985369 + 0.13530479j],
+                    [0.40220557 + 0.0j],
+                    [0.27445983 + 0.15541026j],
+                    [0.29608403 + 0.06155379j],
+                    [0.40220557 + 0.0j],
+                    [0.36173532 - 0.01617572j],
+                    [0.29608403 + 0.06155379j],
+                    [0.36931122 - 0.15570528j],
+                ]
+            ),
+            1e-2,
+        )
+    )
