@@ -70,7 +70,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a square array.
+        """Creates the register with the qubits in a square array.
 
         Args:
             side: Side of the square in number of qubits.
@@ -173,7 +173,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a triangular lattice.
+        """Creates the register with the qubits in a triangular lattice.
 
         Initializes the qubits in a triangular lattice pattern, more
         specifically a triangular lattice with horizontal rows, meaning the
@@ -226,7 +226,7 @@ class Register(BaseRegister, RegDrawer):
         spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a hexagonal layout.
+        """Creates the register with the qubits in a hexagonal layout.
 
         Args:
             layers: Number of layers around a central atom.
