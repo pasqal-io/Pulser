@@ -46,7 +46,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Installation and First Steps
+   :caption: Getting Started
 
    installation
    programming
@@ -54,14 +54,10 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Fundamental Concepts
+   :caption: Fundamentals
 
    conventions
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Backend Execution
-   
+   register
    tutorials/backends
 
 .. toctree::
@@ -91,20 +87,11 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Quantum Simulation
+   :caption: Quantum Simulation & Applications
 
    tutorials/afm_prep
    tutorials/optimization
    tutorials/xy_spin_chain
-   tutorials/mw_engineering
-   tutorials/shadow_est
-   tutorials/1D_crystals
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Other Applications
-
-   tutorials/cz_gate
    tutorials/qubo
 
 .. toctree::
