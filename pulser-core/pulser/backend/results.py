@@ -34,11 +34,13 @@ class Results:
 
     atom_order: tuple[str, ...]
     total_duration: int
-    _results: dict[uuid.UUID, dict[float, Any]] = field(init=False)
+    _results: dict[uuid.UUID, list[Any]] = field(init=False)
+    _times: dict[uuid.UUID, list[float]] = field(init=False)
     _tagmap: dict[str, uuid.UUID] = field(init=False)
 
     def __post_init__(self) -> None:
         self._results = {}
+        self._times = {}
         self._tagmap = {}
 
     def _store(
@@ -51,19 +53,19 @@ class Results:
             time: The relative time at which the observable was taken.
             value: The value of the observable.
         """
-        self._results.setdefault(observable.uuid, {})
-
-        if time in self._results[observable.uuid]:
+        _times = self._times.setdefault(observable.uuid, [])
+        if time in _times:
             raise RuntimeError(
                 f"A value is already stored for observable '{observable.tag}'"
                 f" at time {time}."
             )
         self._tagmap[observable.tag] = observable.uuid
-        self._results[observable.uuid][time] = value
+        _times.append(time)
+        self._results.setdefault(observable.uuid, []).append(value)
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> list[Any]:
         if name in self._tagmap:
-            return dict(self._results[self._tagmap[name]])
+            return list(self._results[self._tagmap[name]])
         raise AttributeError(f"{name!r} is not in the results.")
 
     def get_result_tags(self) -> list[str]:
@@ -80,7 +82,7 @@ class Results:
         Returns:
             List of relative times.
         """
-        return list(self._results[self._find_uuid(observable)].keys())
+        return list(self._times[self._find_uuid(observable)])
 
     def get_result(self, observable: Observable | str, time: float) -> Any:
         """Get the a specific result at a given time.
@@ -93,14 +95,16 @@ class Results:
         Returns:
             The result.
         """
+        obs_uuid = self._find_uuid(observable)
         try:
-            return self._results[self._find_uuid(observable)][time]
-        except KeyError:
+            ind = self._times[obs_uuid].index(time)
+            return self._results[obs_uuid][ind]
+        except (KeyError, ValueError):
             raise ValueError(
                 f"{observable!r} is not available at time {time}."
             )
 
-    def get_tagged_results(self) -> dict[str, dict[float, Any]]:
+    def get_tagged_results(self) -> dict[str, list[Any]]:
         """Gets the results for every tag.
 
         Returns:
@@ -108,7 +112,7 @@ class Results:
             at every evaluation time.
         """
         return {
-            tag: dict(self._results[uuid_])
+            tag: list(self._results[uuid_])
             for tag, uuid_ in self._tagmap.items()
         }
 

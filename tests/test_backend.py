@@ -395,7 +395,7 @@ def test_results():
         result=res,
     )
     assert res.get_result_tags() == ["bitstrings_test"]
-    expected_val = {1.0: Counter({"111": obs.num_shots})}
+    expected_val = [Counter({"111": obs.num_shots})]
     assert res.get_tagged_results() == {"bitstrings_test": expected_val}
     assert res.bitstrings_test == expected_val
     assert (
@@ -406,7 +406,7 @@ def test_results():
     assert (
         res.get_result(obs, 1.0)
         == res.get_result("bitstrings_test", 1.0)
-        == expected_val[1.0]
+        == expected_val[0]
     )
     with pytest.raises(ValueError, match="not available at time 0.912"):
         res.get_result(obs, 0.912)
