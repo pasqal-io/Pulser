@@ -169,7 +169,7 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 :width: 600
 :::
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented. For a complete view of the constraints introduced by the device, [check its description](./hardware.ipynb).
 
 ### 2. Create the Register
 
@@ -233,7 +233,7 @@ We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evol
 You can now simulate your first Hamiltonian by programming your first `Sequence`! [In this tutorial](tutorials/creating.nblink), you will simulate the evolution of the state of an atom initialized in $\left|g\right>$ under a Hamiltonian $H(t)=\frac{\Omega(t)}{2} |g\rangle \langle r|+\frac{\Omega(t)}{2} |r\rangle\langle g|$, with $\Omega$ chosen such that the final state of the atom is the excited state $\left|r\right>$.
 
 Many concepts have been introduced here and you might want further explanations.
-- The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](apidoc/core.rst) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), which is a more advanced feature described [here](tutorials/virtual_devices.nblink).
+- The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](./hardware.ipynb) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), which is a more advanced feature described [here](tutorials/virtual_devices.nblink).
 - There are multiple ways of defining a `Register`, as is further detailed [in this section](tutorials/reg_layouts.nblink).
-- The energy levels associated with each `Channel` and the interaction Hamiltonian they implement are summed up in [the conventions page](conventions.md). The channels contain lots of constraints and physical informations, they are detailed in [the same section as the `Device`](apidoc/core.rst).
+- The energy levels associated with each `Channel` and the interaction Hamiltonian they implement are summed up in [the conventions page](conventions.md). The channels contain lots of constraints and physical informations, they are detailed in [the same section as the `Device`](./hardware.ipynb).
 - The quantities in a `Pulse` are defined using `Waveform`s, you can read more about these [on this page](tutorials/composite_wfs.nblink).
