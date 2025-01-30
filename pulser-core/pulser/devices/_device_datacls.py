@@ -64,7 +64,7 @@ PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 class BaseDevice(ABC):
     r"""Base class of a neutral-atom device.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
         max_atom_num: Maximum number of atoms supported in an array.
