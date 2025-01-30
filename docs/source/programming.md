@@ -46,6 +46,10 @@ Here $H(t)$ is the Hamiltonian describing the evolution of the system. For a sys
 
 $$ \left|\Psi_f\right> = \exp\left(-\frac{i}{\hbar}\int_0^{\Delta t} H(t) dt\right)\left|\Psi_0\right>$$
 
+:::{tip}
+The equation below uses the [Indexed Operator](conventions.md#indexed-operator) notation.
+:::
+
 The Hamiltonian describing the evolution of the system can be written as
 
 $$
@@ -65,7 +69,7 @@ and $j$.
 The driving Hamiltonian describes the effect of a pulse on two energy levels of an individual atom, $|a\rangle$ and $|b\rangle$. A pulse is determined by its duration $\Delta t$, its Rabi frequency $\Omega(t)$, its detuning $\delta(t)$ and its phase $\phi$ (constant along the duration of the pulse). Between $0$ and $\Delta t$, the driving Hamiltonian is:
 
 $$
-H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-j\phi} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{j\phi} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
+H^D(t) / \hbar = \frac{\Omega(t)}{2} e^{-i\phi} |a\rangle\langle b| + \frac{\Omega(t)}{2} e^{i\phi} |b\rangle\langle a| - \delta(t) |b\rangle\langle b|
 $$
 
 <details>
