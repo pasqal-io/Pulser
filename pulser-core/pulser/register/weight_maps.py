@@ -32,6 +32,8 @@ from pulser.register.traps import COORD_PRECISION, Traps
 if TYPE_CHECKING:
     from pulser.register.base_register import QubitId
 
+import pulser.math as pm
+
 
 @dataclass(init=False, repr=False, eq=False, frozen=True)
 class WeightMap(Traps, RegDrawer):
@@ -63,7 +65,7 @@ class WeightMap(Traps, RegDrawer):
     @property
     def trap_coordinates(self) -> np.ndarray:
         """The array of trap coordinates, in the order they were given."""
-        return np.array(self._coords)
+        return self._coords_arr.as_array(detach=True)
 
     @property
     def sorted_weights(self) -> np.ndarray:
@@ -72,7 +74,7 @@ class WeightMap(Traps, RegDrawer):
         return cast(np.ndarray, np.array(self.weights)[sorting])
 
     def get_qubit_weight_map(
-        self, qubits: Mapping[QubitId, np.ndarray]
+        self, qubits: Mapping[QubitId, ArrayLike]
     ) -> dict[QubitId, float]:
         """Creates a map between qubit IDs and the weight on their sites."""
         qubit_weight_map = {}
@@ -81,7 +83,11 @@ class WeightMap(Traps, RegDrawer):
         for qid, pos in qubits.items():
             matches = np.argwhere(
                 np.all(
-                    np.isclose(coords_arr, pos, atol=10 ** (-COORD_PRECISION)),
+                    np.isclose(
+                        coords_arr,
+                        pm.AbstractArray(pos).as_array(detach=True),
+                        atol=10 ** (-COORD_PRECISION),
+                    ),
                     axis=1,
                 )
             )
@@ -115,10 +121,11 @@ class WeightMap(Traps, RegDrawer):
                 need to set this flag to False.
         """
         pos = self.trap_coordinates
-        if custom_ax is None:
-            _, custom_ax = self._initialize_fig_axes(pos)
+        custom_ax = custom_ax or cast(Axes, self._initialize_fig_axes(pos)[1])
 
-        labels_ = labels if labels is not None else list(range(len(pos)))
+        labels_ = (
+            labels if labels is not None else [str(i) for i in range(len(pos))]
+        )
 
         super()._draw_2D(
             custom_ax,
@@ -159,7 +166,8 @@ class WeightMap(Traps, RegDrawer):
             traps=[
                 {"weight": weight, "x": x, "y": y}
                 for weight, (x, y) in zip(
-                    self.sorted_weights, self.sorted_coords
+                    self.sorted_weights,
+                    self.sorted_coords,
                 )
             ]
         )

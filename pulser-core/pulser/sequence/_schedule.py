@@ -21,6 +21,7 @@ from typing import Dict, NamedTuple, Optional, Union, cast, overload
 
 import numpy as np
 
+import pulser.math as pm
 from pulser.channels.base_channel import Channel
 from pulser.channels.dmm import DMM
 from pulser.channels.eom import RydbergBeam
@@ -42,9 +43,9 @@ class _TimeSlot(NamedTuple):
 
 @dataclass
 class _EOMSettings:
-    rabi_freq: float
-    detuning_on: float
-    detuning_off: float
+    rabi_freq: pm.AbstractArray
+    detuning_on: pm.AbstractArray
+    detuning_off: pm.AbstractArray
     ti: int
     tf: int | None = None
     switching_beams: tuple[RydbergBeam, ...] = ()
@@ -52,10 +53,10 @@ class _EOMSettings:
 
 @dataclass
 class _PhaseDriftParams:
-    drift_rate: float  # rad/µs
+    drift_rate: pm.AbstractArray  # rad/µs
     ti: int  # ns
 
-    def calc_phase_drift(self, tf: int) -> float:
+    def calc_phase_drift(self, tf: int) -> pm.AbstractArray:
         """Calculate the phase drift during the elapsed time."""
         return self.drift_rate * (tf - self.ti) * 1e-3
 
@@ -97,7 +98,7 @@ class _ChannelSchedule:
     @staticmethod
     def is_detuned_delay(pulse: Pulse) -> bool:
         """Tells if a pulse is actually a delay with a constant detuning."""
-        return (
+        return bool(
             isinstance(pulse, Pulse)
             and isinstance(pulse.amplitude, ConstantWaveform)
             and pulse.amplitude[0] == 0.0
@@ -150,7 +151,11 @@ class _ChannelSchedule:
         # Keep only pulse slots
         channel_slots = [s for s in self.slots if isinstance(s.type, Pulse)]
         dt = self.get_duration()
-        amp, det, phase = np.zeros(dt), np.zeros(dt), np.zeros(dt)
+        amp, det, phase = (
+            pm.AbstractArray(np.zeros(dt)),
+            pm.AbstractArray(np.zeros(dt)),
+            pm.AbstractArray(np.zeros(dt)),
+        )
         slots: list[_PulseTargetSlot] = []
         target_time_slots: list[_TimeSlot] = [
             s for s in self.slots if s.type == "target"
@@ -272,7 +277,7 @@ class _DMMSchedule(_ChannelSchedule):
     def get_samples(
         self,
         ignore_detuned_delay_phase: bool = True,
-        qubits: dict[QubitId, np.ndarray] | None = None,
+        qubits: dict[QubitId, pm.AbstractArray] | None = None,
     ) -> DMMSamples:
         ch_samples = super().get_samples(
             ignore_detuned_delay_phase=ignore_detuned_delay_phase
@@ -336,17 +341,19 @@ class _Schedule(Dict[str, _ChannelSchedule]):
     def enable_eom(
         self,
         channel_id: str,
-        amp_on: float,
-        detuning_on: float,
-        detuning_off: float,
+        amp_on: pm.AbstractArray,
+        detuning_on: pm.AbstractArray,
+        detuning_off: pm.AbstractArray,
         switching_beams: tuple[RydbergBeam, ...] = (),
         _skip_buffer: bool = False,
+        _skip_wait_for_fall: bool = False,
     ) -> None:
         channel_obj = self[channel_id].channel_obj
         # Adds a buffer unless the channel is empty or _skip_buffer = True
         if not _skip_buffer and self.get_duration(channel_id):
-            # Wait for the last pulse to ramp down (if needed)
-            self.wait_for_fall(channel_id)
+            if not _skip_wait_for_fall:
+                # Wait for the last pulse to ramp down (if needed)
+                self.wait_for_fall(channel_id)
             eom_buffer_time = self[channel_id].adjust_duration(
                 channel_obj._eom_buffer_time
             )
@@ -389,16 +396,17 @@ class _Schedule(Dict[str, _ChannelSchedule]):
             else:
                 self.wait_for_fall(channel_id)
 
-    def add_pulse(
+    def make_next_pulse_slot(
         self,
         pulse: Pulse,
         channel: str,
         phase_barrier_ts: list[int],
         protocol: str,
         phase_drift_params: _PhaseDriftParams | None = None,
-    ) -> None:
-        def corrected_phase(tf: int) -> float:
-            phase_drift = (
+        block_over_max_duration: bool = False,
+    ) -> _TimeSlot:
+        def corrected_phase(tf: int) -> pm.AbstractArray:
+            phase_drift = pm.AbstractArray(
                 phase_drift_params.calc_phase_drift(tf)
                 if phase_drift_params
                 else 0
@@ -426,11 +434,14 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                     # last pulse from the phase_jump_time and adds the
                     # fall_time to let the last pulse ramp down
                     ch_obj = self[channel].channel_obj
+                    in_eom_mode = self[channel].in_eom_mode()
                     phase_jump_buffer = (
-                        ch_obj.phase_jump_time
-                        + last_pulse.fall_time(
-                            ch_obj, in_eom_mode=self[channel].in_eom_mode()
+                        max(
+                            ch_obj.phase_jump_time,
+                            # In EOM mode, we must wait at least 2*rise_time
+                            2 * ch_obj.rise_time * in_eom_mode,
                         )
+                        + last_pulse.fall_time(ch_obj, in_eom_mode=in_eom_mode)
                         - (t0 - last_pulse_slot.tf)
                     )
             except RuntimeError:
@@ -440,11 +451,10 @@ class _Schedule(Dict[str, _ChannelSchedule]):
         delay_duration = max(current_max_t - t0, phase_jump_buffer)
         if delay_duration > 0:
             delay_duration = self[channel].adjust_duration(delay_duration)
-            self.add_delay(delay_duration, channel)
 
         ti = t0 + delay_duration
         tf = ti + pulse.duration
-        self._check_duration(tf)
+        self._check_duration(tf, block_over_max_duration)
         # dataclasses.replace() does not work on Pulse (because init=False)
         if phase_drift_params is not None:
             pulse = Pulse(
@@ -453,7 +463,29 @@ class _Schedule(Dict[str, _ChannelSchedule]):
                 phase=corrected_phase(ti),
                 post_phase_shift=pulse.post_phase_shift,
             )
-        self[channel].slots.append(_TimeSlot(pulse, ti, tf, last.targets))
+        return _TimeSlot(pulse, ti, tf, last.targets)
+
+    def add_pulse(
+        self,
+        pulse: Pulse,
+        channel: str,
+        phase_barrier_ts: list[int],
+        protocol: str,
+        phase_drift_params: _PhaseDriftParams | None = None,
+    ) -> None:
+        last = self[channel][-1]
+        time_slot = self.make_next_pulse_slot(
+            pulse,
+            channel,
+            phase_barrier_ts,
+            protocol,
+            phase_drift_params,
+            True,
+        )
+        delay_duration = time_slot.ti - last.tf
+        if delay_duration > 0:
+            self.add_delay(delay_duration, channel)
+        self[channel].slots.append(time_slot)
 
     def add_delay(self, duration: int, channel: str) -> None:
         last = self[channel][-1]
@@ -542,17 +574,22 @@ class _Schedule(Dict[str, _ChannelSchedule]):
 
         return current_max_t
 
-    def _get_last_pulse_phase(self, channel: str) -> float:
+    def _get_last_pulse_phase(self, channel: str) -> pm.AbstractArray:
         try:
             last_pulse = cast(Pulse, self[channel].last_pulse_slot().type)
             phase = last_pulse.phase
         except RuntimeError:
-            phase = 0.0
+            phase = pm.AbstractArray(0.0)
         return phase
 
-    def _check_duration(self, t: int) -> None:
+    def _check_duration(
+        self, t: int, block_over_max_duration: bool = True
+    ) -> None:
         if self.max_duration is not None and t > self.max_duration:
-            raise RuntimeError(
+            msg = (
                 "The sequence's duration exceeded the maximum duration allowed"
                 f" by the device ({self.max_duration} ns)."
             )
+            if block_over_max_duration:
+                raise RuntimeError(msg)
+            warnings.warn(msg, UserWarning)

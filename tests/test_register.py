@@ -11,13 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
+import dataclasses
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 from pulser import Register, Register3D
-from pulser.devices import DigitalAnalogDevice, MockDevice
+from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
+from pulser.register import RegisterLayout
 
 
 def test_creation():
@@ -82,6 +86,17 @@ def test_creation():
         ValueError, match="must only be 'layout' and 'trap_ids'"
     ):
         Register(qubits, spacing=10, layout="square", trap_ids=(0, 1, 3))
+
+
+def test_repr():
+    assert (
+        repr(Register(dict(q0=(1.0, 0.0), q1=(-1, 5))))
+        == "Register({'q0': array([1., 0.]), 'q1': array([-1.,  5.])})"
+    )
+    assert (
+        repr(Register3D(dict(q0=(1, 2, 3))))
+        == "Register3D({'q0': array([1., 2., 3.])})"
+    )
 
 
 def test_rectangular_lattice():
@@ -292,7 +307,9 @@ def test_rotation():
     reg = Register.square(2, spacing=np.sqrt(2))
     rot_reg = reg.rotated(45)
     new_coords_ = np.array([(0, -1), (1, 0), (-1, 0), (0, 1)], dtype=float)
-    np.testing.assert_allclose(rot_reg._coords, new_coords_, atol=1e-15)
+    np.testing.assert_allclose(
+        rot_reg._coords_arr.as_array(), new_coords_, atol=1e-15
+    )
     assert rot_reg != reg
 
 
@@ -466,8 +483,8 @@ def test_coords_hash():
     reg1 = Register.square(2, prefix="foo")
     reg2 = Register.rectangle(2, 2, prefix="bar")
     assert reg1 != reg2  # Ids are different
-    coords1 = list(reg1.qubits.values())
-    coords2 = list(reg2.qubits.values())
+    coords1 = list(c.as_array() for c in reg1.qubits.values())
+    coords2 = list(c.as_array() for c in reg2.qubits.values())
     np.testing.assert_equal(coords1, coords2)  # But coords are the same
     assert reg1.coords_hex_hash() == reg2.coords_hex_hash()
 
@@ -484,3 +501,172 @@ def test_coords_hash():
     coords1[0][1] += 1e-6
     reg5 = Register.from_coordinates(coords1)
     assert reg1.coords_hex_hash() != reg5.coords_hex_hash()
+
+
+def _assert_reg_requires_grad(
+    reg: Register | Register3D, invert: bool = False
+) -> None:
+    for coords in reg.qubits.values():
+        if invert:
+            assert not coords.requires_grad
+        else:
+            assert coords.is_tensor and coords.requires_grad
+
+
+@pytest.mark.parametrize(
+    "register_type, coords",
+    [
+        (Register, [[1.0, -4.0], [0.0, 0.0]]),
+        (Register3D, [[1.0, -4.0, 5.0], [0.0, 0.0, 0.0]]),
+    ],
+)
+def test_custom_register_torch(register_type, coords, patch_plt_show):
+    torch = pytest.importorskip("torch")
+
+    diff_qubit = torch.tensor(coords[0], requires_grad=True)
+
+    reg1 = register_type({"q0": diff_qubit, "q1": coords[1]})
+    reg2 = register_type.from_coordinates(
+        [diff_qubit, coords[1]], center=False, prefix="q"
+    )
+    assert reg1 == reg2
+
+    # Also check that centering keeps the grad
+    reg3 = register_type.from_coordinates([diff_qubit, coords[1]], center=True)
+    assert torch.all(reg3.qubits[0].as_tensor() == diff_qubit / 2)
+
+    for r in [reg1, reg2, reg3]:
+        _assert_reg_requires_grad(r)
+        if r.dimensionality == 2:
+            # Check after rotation
+            _assert_reg_requires_grad(r.rotated(30))
+        else:
+            # Check after conversion to 2D
+            _assert_reg_requires_grad(r.to_2D(0.1))
+
+        # Check that drawing still works too
+        r.draw()
+
+
+@pytest.mark.parametrize(
+    "reg_classmethod, param_name, extra_params",
+    [
+        (Register.square, "spacing", {"side": 2}),
+        (Register.rectangle, "spacing", {"rows": 1, "columns": 3}),
+        (
+            Register.rectangular_lattice,
+            "row_spacing",
+            {"rows": 1, "columns": 3},
+        ),
+        (
+            Register.rectangular_lattice,
+            "col_spacing",
+            {"rows": 1, "columns": 3},
+        ),
+        (
+            Register.triangular_lattice,
+            "spacing",
+            {"rows": 3, "atoms_per_row": 5},
+        ),
+        (Register.hexagon, "spacing", {"layers": 5}),
+        (
+            Register.max_connectivity,
+            "spacing",
+            {"n_qubits": 20, "device": DigitalAnalogDevice},
+        ),
+        (Register3D.cubic, "spacing", {"side": 3}),
+        (Register3D.cuboid, "spacing", {"rows": 4, "columns": 2, "layers": 5}),
+    ],
+)
+@pytest.mark.parametrize("requires_grad", [True, False])
+def test_register_recipes_torch(
+    reg_classmethod, param_name, extra_params, requires_grad
+):
+    torch = pytest.importorskip("torch")
+    kwargs = {
+        param_name: torch.tensor(6.0, requires_grad=requires_grad),
+        **extra_params,
+    }
+    reg = reg_classmethod(**kwargs)
+    _assert_reg_requires_grad(reg, invert=not requires_grad)
+
+
+@pytest.mark.parametrize("optimal_filling", [None, 0.4, 0.1])
+def test_automatic_layout(optimal_filling):
+    reg = Register.square(4, spacing=5, prefix="test")
+    max_layout_filling = 0.5
+    min_traps = int(np.ceil(len(reg.qubits) / max_layout_filling))
+    optimal_traps = int(
+        np.ceil(len(reg.qubits) / (optimal_filling or max_layout_filling))
+    )
+    device = dataclasses.replace(
+        AnalogDevice,
+        max_atom_num=20,
+        max_layout_filling=max_layout_filling,
+        optimal_layout_filling=optimal_filling,
+        pre_calibrated_layouts=(),
+    )
+    device.validate_register(reg)
+
+    # On its own, it works
+    new_reg = reg.with_automatic_layout(device, layout_slug="foo")
+    assert new_reg.qubit_ids == reg.qubit_ids  # Same IDs in the same order
+    assert new_reg == reg  # The register itself is identical
+    assert isinstance(new_reg.layout, RegisterLayout)
+    assert str(new_reg.layout) == "foo"
+    trap_num = new_reg.layout.number_of_traps
+    assert min_traps <= trap_num <= optimal_traps
+    # To test the device limits on trap number are enforced
+    if not optimal_filling:
+        assert trap_num == min_traps
+        bound_below_dev = dataclasses.replace(
+            device, min_layout_traps=trap_num + 1
+        )
+        assert (
+            reg.with_automatic_layout(bound_below_dev).layout.number_of_traps
+            == bound_below_dev.min_layout_traps
+        )
+    elif trap_num < optimal_traps:
+        assert trap_num > min_traps
+        bound_above_dev = dataclasses.replace(
+            device, max_layout_traps=trap_num - 1
+        )
+        assert (
+            reg.with_automatic_layout(bound_above_dev).layout.number_of_traps
+            == bound_above_dev.max_layout_traps
+        )
+
+    with pytest.raises(TypeError, match="must be of type Device"):
+        reg.with_automatic_layout(MockDevice)
+
+    # Minimum number of traps is too high
+    with pytest.raises(RuntimeError, match="Failed to find a site"):
+        reg.with_automatic_layout(
+            dataclasses.replace(device, min_layout_traps=200)
+        )
+
+    # The Register is larger than max_traps
+    big_reg = Register.square(8, spacing=5)
+    min_traps = np.ceil(len(big_reg.qubit_ids) / max_layout_filling)
+    with pytest.raises(
+        RuntimeError, match="Failed to find a site for 2 traps"
+    ):
+        big_reg.with_automatic_layout(
+            dataclasses.replace(device, max_layout_traps=int(min_traps - 2))
+        )
+    # Without max_traps, it would still work
+    assert (
+        big_reg.with_automatic_layout(device).layout.number_of_traps
+        >= min_traps
+    )
+
+
+def test_automatic_layout_diff():
+    torch = pytest.importorskip("torch")
+    with pytest.raises(
+        NotImplementedError,
+        match="does not support registers with differentiable coordinates",
+    ):
+        Register.square(
+            2, spacing=torch.tensor(10.0, requires_grad=True)
+        ).with_automatic_layout(AnalogDevice)

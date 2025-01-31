@@ -18,7 +18,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from itertools import combinations
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional, Tuple, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,7 +48,7 @@ class RegDrawer:
 
     @staticmethod
     def _draw_2D(
-        ax: plt.axes._subplots.AxesSubplot,
+        ax: plt.Axes,
         pos: np.ndarray,
         ids: abcSequence[QubitId],
         plane: tuple = (0, 1),
@@ -56,7 +56,7 @@ class RegDrawer:
         blockade_radius: Optional[float] = None,
         draw_graph: bool = True,
         draw_half_radius: bool = False,
-        qubit_colors: Mapping[QubitId, str] = dict(),
+        qubit_colors: Mapping[QubitId, Any] = dict(),
         masked_qubits: set[QubitId] = set(),
         are_traps: bool = False,
         dmm_qubits: Mapping[QubitId, float] = {},
@@ -68,6 +68,7 @@ class RegDrawer:
 
         ix, iy = plane
 
+        params: dict[str, Any]
         if are_traps:
             params = dict(
                 s=50,
@@ -92,8 +93,8 @@ class RegDrawer:
 
         if dmm_qubits:
             dmm_pos = []
-            for i, c in zip(ids, pos):
-                if i in dmm_qubits.keys():
+            for id, c in zip(ids, pos):
+                if id in dmm_qubits.keys():
                     dmm_pos.append(c)
             dmm_arr = np.array(dmm_pos)
             max_weight = max(dmm_qubits.values())
@@ -107,7 +108,7 @@ class RegDrawer:
                 dmm_arr[:, iy],
                 marker="s",
                 s=1200,
-                alpha=alpha,
+                alpha=alpha,  # type: ignore[arg-type]
                 c="black" if not qubit_colors else ordered_qubit_colors,
             )
         axes = "xyz"
@@ -194,12 +195,12 @@ class RegDrawer:
                     fontsize=12 if i not in final_plot_det_map else 8.3,
                     multialignment="right",
                 )
-                txt._get_wrap_line_width = lambda: 50.0
+                txt._get_wrap_line_width = lambda: 50.0  # type: ignore
 
         if draw_half_radius and blockade_radius is not None:
             for p, color in zip(pos, ordered_qubit_colors):
                 circle = plt.Circle(
-                    tuple(p[[ix, iy]]),
+                    (p[ix], p[iy]),
                     blockade_radius / 2,
                     alpha=0.1,
                     color=color,
@@ -214,7 +215,11 @@ class RegDrawer:
                 lines = bonds[:, :, (ix, iy)]
             else:
                 lines = np.array([])
-            lc = mc.LineCollection(lines, linewidths=0.6, colors="grey")
+            lc = mc.LineCollection(
+                cast(abcSequence[np.ndarray], lines),
+                linewidths=0.6,
+                colors="grey",
+            )
             ax.add_collection(lc)
 
         else:
@@ -258,9 +263,14 @@ class RegDrawer:
                 blockade_radius=blockade_radius,
                 draw_half_radius=draw_half_radius,
             )
-            fig.get_layout_engine().set(w_pad=6.5)
+            _layout_engine = fig.get_layout_engine()
+            assert _layout_engine is not None
+            _layout_engine.set(w_pad=6.5)  # type: ignore[call-arg]
 
-            for ax, (ix, iy) in zip(axes, combinations(np.arange(3), 2)):
+            for ax, (ix, iy) in zip(
+                cast(abcSequence[plt.Axes], axes),
+                combinations(np.arange(3), 2),
+            ):
                 RegDrawer._draw_2D(
                     ax,
                     pos,
@@ -284,7 +294,12 @@ class RegDrawer:
                 )
 
         else:
-            fig = plt.figure(figsize=2 * plt.figaspect(0.5))
+            fig = plt.figure(
+                figsize=cast(
+                    Tuple[float, float],
+                    tuple(2 * np.array(plt.figaspect(0.5))),
+                )
+            )
 
             if draw_graph and blockade_radius is not None:
                 bonds = {}
@@ -293,6 +308,7 @@ class RegDrawer:
                     xj, yj, zj = pos[j]
                     bonds[(i, j)] = [[xi, xj], [yi, yj], [zi, zj]]
 
+            params: dict[str, Any]
             if are_traps:
                 params = dict(s=50, c="white", edgecolors="black")
             else:
@@ -313,7 +329,7 @@ class RegDrawer:
                             coords[0],
                             coords[1],
                             coords[2],
-                            q,
+                            q,  # type: ignore[arg-type]
                             fontsize=12,
                             ha="left",
                             va="bottom",
@@ -336,7 +352,13 @@ class RegDrawer:
                         y = radius * np.sin(u) * np.sin(v) + y0
                         z = radius * np.cos(v) + z0
                         # alpha controls opacity
-                        ax.plot_surface(x, y, z, color=color, alpha=0.1)
+                        ax.plot_surface(  # type: ignore[attr-defined]
+                            x,
+                            y,
+                            z,
+                            color=color,
+                            alpha=0.1,
+                        )
 
                 if draw_graph and blockade_radius is not None:
                     for x, y, z in bonds.values():
@@ -344,7 +366,7 @@ class RegDrawer:
 
                 ax.set_xlabel("x (µm)")
                 ax.set_ylabel("y (µm)")
-                ax.set_zlabel("z (µm)")
+                ax.set_zlabel("z (µm)")  # type: ignore[attr-defined]
 
     @staticmethod
     def _register_dims(
@@ -353,7 +375,7 @@ class RegDrawer:
         draw_half_radius: bool = False,
     ) -> np.ndarray:
         """Returns the dimensions of the register to be drawn."""
-        diffs = np.ptp(pos, axis=0)
+        diffs = np.ptp(pos, axis=0).astype(float)
         diffs[diffs < 9] *= 1.5
         diffs[diffs < 9] += 2
         if blockade_radius and draw_half_radius:
@@ -367,7 +389,7 @@ class RegDrawer:
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
         nregisters: int = 1,
-    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
+    ) -> tuple[plt.Figure, plt.Axes | abcSequence[plt.Axes]]:
         """Creates the Figure and Axes for drawing the register."""
         diffs = RegDrawer._register_dims(
             pos,
@@ -394,7 +416,9 @@ class RegDrawer:
         blockade_radius: Optional[float] = None,
         draw_half_radius: bool = False,
         nregisters: int = 1,
-    ) -> tuple[plt.figure.Figure, plt.axes.Axes]:
+    ) -> tuple[
+        plt.Figure, abcSequence[plt.Axes] | abcSequence[abcSequence[plt.Axes]]
+    ]:
         """Creates the Figure and Axes for drawing the register projections."""
         diffs = RegDrawer._register_dims(
             pos,

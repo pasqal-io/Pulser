@@ -291,6 +291,16 @@ def _deserialize_operation(seq: Sequence, op: dict, vars: dict) -> None:
             ),
             correct_phase_drift=op.get("correct_phase_drift", False),
         )
+    elif op["op"] == "modify_eom_setpoint":
+        seq.modify_eom_setpoint(
+            channel=op["channel"],
+            amp_on=_deserialize_parameter(op["amp_on"], vars),
+            detuning_on=_deserialize_parameter(op["detuning_on"], vars),
+            optimal_detuning_off=_deserialize_parameter(
+                op["optimal_detuning_off"], vars
+            ),
+            correct_phase_drift=op["correct_phase_drift"],
+        )
     elif op["op"] == "add_eom_pulse":
         seq.add_eom_pulse(
             channel=op["channel"],
@@ -425,10 +435,22 @@ def _deserialize_noise_model(noise_model_obj: dict[str, Any]) -> NoiseModel:
         eff_noise_opers.append(convert_complex(oper))
 
     noise_types = noise_model_obj.pop("noise_types")
+    with_leakage = "leakage" in noise_types
+    relevant_params = pulser.NoiseModel._find_relevant_params(
+        noise_types,
+        noise_model_obj["state_prep_error"],
+        noise_model_obj["amp_sigma"],
+        noise_model_obj["laser_waist"],
+    ) - {  # Handled separately
+        "eff_noise_rates",
+        "eff_noise_opers",
+        "with_leakage",
+    }
     noise_model = pulser.NoiseModel(
-        **noise_model_obj,
+        **{param: noise_model_obj[param] for param in relevant_params},
         eff_noise_rates=tuple(eff_noise_rates),
         eff_noise_opers=tuple(eff_noise_opers),
+        with_leakage=with_leakage,
     )
     assert set(noise_model.noise_types) == set(noise_types)
     return noise_model

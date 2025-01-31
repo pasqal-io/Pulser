@@ -28,12 +28,13 @@ from numpy.typing import ArrayLike
 
 import pulser.sampler as sampler
 from pulser import Sequence
+from pulser.channels.base_channel import States
 from pulser.devices._device_datacls import BaseDevice
 from pulser.noise_model import NoiseModel
 from pulser.register.base_register import BaseRegister
 from pulser.result import SampledResult
 from pulser.sampler.samples import ChannelSamples, SequenceSamples
-from pulser.sequence._seq_drawer import draw_samples, draw_sequence
+from pulser.sequence._seq_drawer import draw_samples
 from pulser_simulation.hamiltonian import Hamiltonian
 from pulser_simulation.qutip_result import QutipResult
 from pulser_simulation.simconfig import SimConfig
@@ -163,10 +164,10 @@ class QutipEmulator:
         if self.samples_obj._measurement:
             self._meas_basis = self.samples_obj._measurement
         else:
-            if self._hamiltonian.basis_name in {"digital", "all"}:
+            if "all" in self.basis_name:
                 self._meas_basis = "digital"
             else:
-                self._meas_basis = self._hamiltonian.basis_name
+                self._meas_basis = self.basis_name.replace("_with_error", "")
         self.set_initial_state("all-ground")
 
     @property
@@ -190,7 +191,7 @@ class QutipEmulator:
         return self._hamiltonian.basis_name
 
     @property
-    def basis(self) -> dict[str, Any]:
+    def basis(self) -> dict[States, Any]:
         """The basis in which result is expressed."""
         return self._hamiltonian.basis
 
@@ -217,7 +218,25 @@ class QutipEmulator:
                 " support simulation of noise types:"
                 f"{', '.join(not_supported)}."
             )
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(cfg.to_noise_model())
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting it to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
     def add_config(self, config: SimConfig) -> None:
         """Updates the current configuration with parameters of another one.
@@ -260,7 +279,25 @@ class QutipEmulator:
             param_dict[param] = getattr(noise_model, param)
         # set config with the new parameters:
         param_dict.pop("noise_types")
+        former_dim = self.dim
+        former_basis = self._hamiltonian.basis
         self._hamiltonian.set_config(NoiseModel(**param_dict))
+        if self.dim == former_dim:
+            self.set_initial_state(self._initial_state)
+            return
+        if self._initial_state != qutip.tensor(
+            [
+                former_basis[
+                    "u" if self._hamiltonian._interaction == "XY" else "g"
+                ]
+                for _ in range(self._hamiltonian._size)
+            ]
+        ):
+            warnings.warn(
+                "Current initial state's dimension does not match new"
+                " dimensions. Setting initial state to 'all-ground'."
+            )
+        self.set_initial_state("all-ground")
 
     def show_config(self, solver_options: bool = False) -> None:
         """Shows current configuration."""
@@ -311,7 +348,9 @@ class QutipEmulator:
                     "Incompatible shape of initial state."
                     + f"Expected {legal_shape}, got {shape}."
                 )
-            self._initial_state = qutip.Qobj(state, dims=legal_dims)
+            self._initial_state = (
+                qutip.Qobj(state, dims=legal_dims).unit().to("CSR")
+            )
 
     @property
     def evaluation_times(self) -> np.ndarray:
@@ -454,7 +493,7 @@ class QutipEmulator:
         Args:
             progress_bar: If True, the progress bar of QuTiP's
                 solver will be shown. If None or False, no text appears.
-            options: Used as arguments for qutip.Options(). If specified, will
+            options: Given directly to the Qutip Solver. If specified, will
                 override SimConfig solver_options. If no `max_step` value is
                 provided, an automatic one is calculated from the `Sequence`'s
                 schedule (half of the shortest duration among pulses and
@@ -467,7 +506,10 @@ class QutipEmulator:
         def get_min_variation(ch_sample: ChannelSamples) -> int:
             end_point = ch_sample.duration - 1
             min_variations: list[int] = []
-            for sample in (ch_sample.amp, ch_sample.det):
+            for sample in (
+                ch_sample.amp.as_array(detach=True),
+                ch_sample.det.as_array(detach=True),
+            ):
                 min_variations.append(
                     int(
                         np.min(
@@ -496,7 +538,6 @@ class QutipEmulator:
             options["nsteps"] = max(
                 1000, self._tot_duration // options["max_step"]
             )
-        solv_ops = qutip.Options(**options)
 
         meas_errors: Optional[Mapping[str, float]] = None
         if "SPAM" in self.config.noise:
@@ -540,30 +581,32 @@ class QutipEmulator:
                     self.initial_state,
                     self._eval_times_array,
                     self._hamiltonian._collapse_ops,
-                    progress_bar=p_bar,
-                    options=solv_ops,
+                    options=dict(
+                        progress_bar=p_bar, normalize_output=False, **options
+                    ),
                 )
             else:
                 result = qutip.sesolve(
                     self._hamiltonian._hamiltonian,
                     self.initial_state,
                     self._eval_times_array,
-                    progress_bar=p_bar,
-                    options=solv_ops,
+                    options=dict(
+                        progress_bar=p_bar, normalize_output=False, **options
+                    ),
                 )
             results = [
                 QutipResult(
                     tuple(self._hamiltonian._qdict),
                     self._meas_basis,
                     state,
-                    self._meas_basis == self._hamiltonian.basis_name,
+                    self._meas_basis in self.basis_name,
                 )
                 for state in result.states
             ]
             return CoherentResults(
                 results,
                 self._hamiltonian._size,
-                self._hamiltonian.basis_name,
+                self.basis_name,
                 self._eval_times_array,
                 self._meas_basis,
                 meas_errors,
@@ -578,6 +621,7 @@ class QutipEmulator:
                 "depolarizing",
                 "eff_noise",
                 "amplitude",
+                "leakage",
             }
         ) and (
             # If amplitude is in noise, not resampling needs amp_sigma=0.
@@ -650,7 +694,7 @@ class QutipEmulator:
         return NoisyResults(
             results,
             self._hamiltonian._size,
-            self._hamiltonian.basis_name,
+            self.basis_name,
             self._eval_times_array,
             n_measures,
         )
@@ -764,169 +808,3 @@ class QutipEmulator:
             config,
             evaluation_times,
         )
-
-
-class Simulation:
-    r"""Simulation of a pulse sequence using QuTiP.
-
-    Warning:
-        This class is deprecated in favour of ``QutipEmulator.from_sequence``.
-
-    Args:
-        sequence: An instance of a Pulser Sequence that we
-            want to simulate.
-        sampling_rate: The fraction of samples that we wish to
-            extract from the pulse sequence to simulate. Has to be a
-            value between 0.05 and 1.0.
-        config: Configuration to be used for this simulation.
-        evaluation_times: Choose between:
-
-            - "Full": The times are set to be the ones used to define the
-              Hamiltonian to the solver.
-
-            - "Minimal": The times are set to only include initial and final
-              times.
-
-            - An ArrayLike object of times in µs if you wish to only include
-              those specific times.
-
-            - A float to act as a sampling rate for the resulting state.
-        with_modulation: Whether to simulated the sequence with the programmed
-            input or the expected output.
-    """
-
-    def __init__(
-        self,
-        sequence: Sequence,
-        sampling_rate: float = 1.0,
-        config: Optional[SimConfig] = None,
-        evaluation_times: Union[float, str, ArrayLike] = "Full",
-        with_modulation: bool = False,
-    ) -> None:
-        """Instantiates a Simulation object."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(
-                DeprecationWarning(
-                    "The `Simulation` class is deprecated,"
-                    " use `QutipEmulator.from_sequence` instead."
-                )
-            )
-        self._seq = sequence
-        self._modulated = with_modulation
-        self._emulator = QutipEmulator.from_sequence(
-            self._seq, sampling_rate, config, evaluation_times, self._modulated
-        )
-
-    @property
-    def evaluation_times(self) -> np.ndarray:
-        """The times at which the results of this simulation are returned.
-
-        Args:
-            value: Choose between:
-
-                - "Full": The times are set to be the ones used to define the
-                  Hamiltonian to the solver.
-
-                - "Minimal": The times are set to only include initial and
-                  final times.
-
-                - An ArrayLike object of times in µs if you wish to only
-                  include those specific times.
-
-                - A float to act as a sampling rate for the resulting state.
-        """
-        return self._emulator.evaluation_times
-
-    @evaluation_times.setter
-    def evaluation_times(self, value: Union[str, ArrayLike, float]) -> None:
-        """Sets times at which the results of this simulation are returned."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(
-                DeprecationWarning(
-                    "Setting `evaluation_times` is deprecated,"
-                    " use `set_evaluation_times` instead."
-                )
-            )
-        self._emulator.set_evaluation_times(value)
-
-    @property
-    def initial_state(self) -> qutip.Qobj:
-        """The initial state of the simulation.
-
-        Args:
-            state: The initial state.
-                Choose between:
-
-                - "all-ground" for all atoms in ground state
-                - An ArrayLike with a shape compatible with the system
-                - A Qobj object
-        """
-        return self._emulator.initial_state
-
-    @initial_state.setter
-    def initial_state(self, value: Union[str, np.ndarray, qutip.Qobj]) -> None:
-        """Sets the initial state of the simulation."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(
-                DeprecationWarning(
-                    "Setting `initial_state` is deprecated,"
-                    " use `set_initial_state` instead."
-                )
-            )
-        self._emulator.set_initial_state(value)
-
-    def draw(
-        self,
-        draw_phase_area: bool = False,
-        draw_interp_pts: bool = False,
-        draw_phase_shifts: bool = False,
-        draw_phase_curve: bool = False,
-        fig_name: str | None = None,
-        kwargs_savefig: dict = {},
-    ) -> None:
-        """Draws the input sequence and the one used by the solver.
-
-        Args:
-            draw_phase_area: Whether phase and area values need
-                to be shown as text on the plot, defaults to False.
-            draw_interp_pts: When the sequence has pulses with waveforms
-                of type InterpolatedWaveform, draws the points of interpolation
-                on top of the respective waveforms (defaults to False). Can't
-                be used if the sequence is modulated.
-            draw_phase_shifts: Whether phase shift and reference
-                information should be added to the plot, defaults to False.
-            draw_phase_curve: Draws the changes in phase in its own curve
-                (ignored if the phase doesn't change throughout the channel).
-            fig_name: The name on which to save the figure.
-                If None the figure will not be saved.
-            kwargs_savefig: Keywords arguments for
-                ``matplotlib.pyplot.savefig``. Not applicable if `fig_name`
-                is ``None``.
-
-        See Also:
-            Sequence.draw(): Draws the sequence in its current state.
-        """
-        if draw_interp_pts and self._modulated:
-            raise ValueError(
-                "Can't draw the interpolation points when the sequence is "
-                "modulated; `draw_interp_pts` must be `False`."
-            )
-        draw_sequence(
-            self._seq,
-            self._emulator._sampling_rate,
-            draw_input=not self._modulated,
-            draw_modulation=self._modulated,
-            draw_phase_area=draw_phase_area,
-            draw_interp_pts=draw_interp_pts,
-            draw_phase_shifts=draw_phase_shifts,
-            draw_phase_curve=draw_phase_curve,
-        )
-        if fig_name is not None:
-            plt.savefig(fig_name, **kwargs_savefig)
-        plt.show()
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._emulator, name)

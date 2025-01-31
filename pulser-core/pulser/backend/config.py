@@ -76,7 +76,9 @@ class EmulatorConfig(BackendConfig):
 
     sampling_rate: float = 1.0
     evaluation_times: float | Sequence[float] | EVAL_TIMES_LITERAL = "Full"
-    initial_state: Literal["all-ground"] | Sequence[complex] = "all-ground"
+    initial_state: Literal["all-ground"] | Sequence[complex] | np.ndarray = (
+        "all-ground"
+    )
     with_modulation: bool = False
     prefer_device_noise_model: bool = False
     noise_model: NoiseModel = field(default_factory=NoiseModel)

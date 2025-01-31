@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from collections.abc import Sequence as abcSequence
@@ -33,6 +34,7 @@ from typing import (
 import numpy as np
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.abstract_repr.serializer import AbstractReprEncoder
 from pulser.json.abstract_repr.validation import validate_abstract_repr
 from pulser.json.utils import obj_to_dict
@@ -43,7 +45,7 @@ if TYPE_CHECKING:
     from pulser.register.register_layout import RegisterLayout
 
 T = TypeVar("T", bound="BaseRegister")
-QubitId = Union[int, str]
+QubitId = str
 
 
 class _LayoutInfo(NamedTuple):
@@ -57,7 +59,11 @@ class BaseRegister(ABC, CoordsCollection):
     """The abstract class for a register."""
 
     @abstractmethod
-    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
+    def __init__(
+        self,
+        qubits: Mapping[str, ArrayLike] | Mapping[int, ArrayLike],
+        **kwargs: Any,
+    ):
         """Initializes a custom Register."""
         if not isinstance(qubits, dict):
             raise TypeError(
@@ -68,8 +74,19 @@ class BaseRegister(ABC, CoordsCollection):
             raise ValueError(
                 "Cannot create a Register with an empty qubit " "dictionary."
             )
-        super().__init__([np.array(v, dtype=float) for v in qubits.values()])
+        super().__init__(
+            [pm.AbstractArray(v, dtype=float) for v in qubits.values()]
+        )
         self._ids: tuple[QubitId, ...] = tuple(qubits.keys())
+        if any(not isinstance(id, str) for id in self._ids):
+            warnings.warn(
+                "Usage of `int`s or any non-`str`types as `QubitId`s will be "
+                "deprecated. Define your `QubitId`s as `str`s, prefer setting "
+                "`prefix='q'` when using classmethods, as that will become the"
+                " new default once `int` qubit IDs become invalid.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self._layout_info: Optional[_LayoutInfo] = None
         self._init_kwargs(**kwargs)
 
@@ -86,9 +103,9 @@ class BaseRegister(ABC, CoordsCollection):
             self._layout_info = _LayoutInfo(layout, trap_ids)
 
     @property
-    def qubits(self) -> dict[QubitId, np.ndarray]:
+    def qubits(self) -> dict[QubitId, pm.AbstractArray]:
         """Dictionary of the qubit names and their position coordinates."""
-        return dict(zip(self._ids, self._coords))
+        return dict(zip(self._ids, self._coords_arr))
 
     @property
     def qubit_ids(self) -> tuple[QubitId, ...]:
@@ -136,7 +153,7 @@ class BaseRegister(ABC, CoordsCollection):
     @classmethod
     def from_coordinates(
         cls: Type[T],
-        coords: np.ndarray,
+        coords: ArrayLike | pm.TensorLike,
         center: bool = True,
         prefix: Optional[str] = None,
         labels: Optional[abcSequence[QubitId]] = None,
@@ -160,11 +177,13 @@ class BaseRegister(ABC, CoordsCollection):
         Returns:
             A register with qubits placed on the given coordinates.
         """
+        coords_ = pm.vstack(cast(abcSequence, coords))
         if center:
-            coords = coords - np.mean(coords, axis=0)  # Centers the array
+            coords_ = coords_ - pm.mean(coords_, axis=0)  # Centers the array
+        qubits: dict[str, pm.AbstractArray]
         if prefix is not None:
             pre = str(prefix)
-            qubits = {pre + str(i): pos for i, pos in enumerate(coords)}
+            qubits = {pre + str(i): pos for i, pos in enumerate(coords_)}
             if labels is not None:
                 raise NotImplementedError(
                     "It is impossible to specify a prefix and "
@@ -172,14 +191,14 @@ class BaseRegister(ABC, CoordsCollection):
                 )
 
         elif labels is not None:
-            if len(coords) != len(labels):
+            if len(coords_) != len(labels):
                 raise ValueError(
                     f"Label length ({len(labels)}) does not"
-                    f"match number of coordinates ({len(coords)})"
+                    f"match number of coordinates ({len(coords_)})"
                 )
-            qubits = dict(zip(cast(Iterable, labels), coords))
+            qubits = dict(zip(cast(Iterable, labels), coords_))
         else:
-            qubits = dict(cast(Iterable, enumerate(coords)))
+            qubits = dict(cast(Iterable, enumerate(coords_)))
         return cls(qubits, **kwargs)
 
     def _validate_layout(
@@ -201,7 +220,9 @@ class BaseRegister(ABC, CoordsCollection):
                 " in the register."
             )
 
-        for reg_coord, trap_id in zip(self._coords, trap_ids):
+        for reg_coord, trap_id in zip(
+            self._coords_arr.as_array(detach=True), trap_ids
+        ):
             if np.any(reg_coord != trap_coords[trap_id]):
                 raise ValueError(
                     "The chosen traps from the RegisterLayout don't match this"
@@ -230,7 +251,9 @@ class BaseRegister(ABC, CoordsCollection):
                 " in the register."
             )
         return DetuningMap(
-            [self.qubits[qubit_id] for qubit_id in detuning_weights],
+            pm.vstack(
+                [self.qubits[qubit_id] for qubit_id in detuning_weights]
+            ),
             list(detuning_weights.values()),
             slug,
         )
@@ -258,7 +281,7 @@ class BaseRegister(ABC, CoordsCollection):
         return obj_to_dict(
             self,
             cls_dict,
-            [np.ndarray.tolist(qubit_coords) for qubit_coords in self._coords],
+            [qubit_coords.tolist() for qubit_coords in self._coords_arr],
             False,
             None,
             self._ids,
@@ -271,15 +294,13 @@ class BaseRegister(ABC, CoordsCollection):
         if type(other) is not type(self):
             return False
 
-        return list(self._ids) == list(other._ids) and all(
-            (
-                np.allclose(  # Accounts for rounding errors
-                    self._coords[i],
-                    other._coords[other._ids.index(id)],
-                )
-                for i, id in enumerate(self._ids)
-            )
+        return self._ids == other._ids and np.allclose(
+            self._coords_arr.as_array(detach=True),
+            other._coords_arr.as_array(detach=True),
         )
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.qubits})"
 
     def coords_hex_hash(self) -> str:
         """Returns the idempotent hash of the coordinates.

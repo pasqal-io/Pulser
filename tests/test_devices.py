@@ -23,6 +23,7 @@ import pulser
 from pulser.channels import Microwave, Raman, Rydberg
 from pulser.channels.dmm import DMM
 from pulser.devices import (
+    AnalogDevice,
     Device,
     DigitalAnalogDevice,
     MockDevice,
@@ -47,6 +48,8 @@ def test_params():
         min_atom_distance=1,
         max_atom_num=None,
         max_radial_distance=None,
+        min_layout_traps=10,
+        max_layout_traps=100,
     )
 
 
@@ -121,6 +124,36 @@ def test_post_init_type_checks(test_params, param, value, msg):
             0.0,
             "maximum layout filling fraction must be greater than 0. and"
             " less than or equal to 1.",
+        ),
+        (
+            "optimal_layout_filling",
+            0.0,
+            "When defined, the optimal layout filling fraction must be greater"
+            " than 0. and less than or equal to `max_layout_filling`",
+        ),
+        (
+            "optimal_layout_filling",
+            0.9,
+            "When defined, the optimal layout filling fraction must be greater"
+            " than 0. and less than or equal to `max_layout_filling`",
+        ),
+        (
+            "min_layout_traps",
+            0,
+            "'min_layout_traps' must be greater than zero",
+        ),
+        ("max_layout_traps", 0, None),
+        (
+            "max_atom_num",
+            100,
+            "With the given maximum layout filling and maximum number "
+            "of traps, a layout supports at most 50 atoms",
+        ),
+        (
+            "max_layout_traps",
+            9,
+            "must be greater than or equal to the minimum number of "
+            "layout traps",
         ),
         (
             "channel_ids",
@@ -225,6 +258,85 @@ def test_tuple_conversion(test_params):
     assert dev.channel_ids == ("custom_channel",)
 
 
+@pytest.mark.parametrize(
+    "device", [MockDevice, AnalogDevice, DigitalAnalogDevice]
+)
+def test_device_specs(device):
+    def yes_no_fn(dev, attr, text):
+        if hasattr(dev, attr):
+            cond = getattr(dev, attr)
+            return f" - {text}: {'Yes' if cond else 'No'}\n"
+
+        return ""
+
+    def check_none_fn(dev, attr, text):
+        if hasattr(dev, attr):
+            var = getattr(dev, attr)
+            if var is not None:
+                return " - " + text.format(var) + "\n"
+
+        return ""
+
+    def specs(dev):
+        register_str = (
+            "\nRegister parameters:\n"
+            + f" - Dimensions: {dev.dimensions}D\n"
+            + f" - Rydberg level: {dev.rydberg_level}\n"
+            + check_none_fn(dev, "max_atom_num", "Maximum number of atoms: {}")
+            + check_none_fn(
+                dev,
+                "max_radial_distance",
+                "Maximum distance from origin: {} µm",
+            )
+            + " - Minimum distance between neighbouring atoms: "
+            + f"{dev.min_atom_distance} μm\n"
+            + yes_no_fn(dev, "supports_slm_mask", "SLM Mask")
+        )
+
+        layout_str = (
+            "\nLayout parameters:\n"
+            + yes_no_fn(dev, "requires_layout", "Requires layout")
+            + (
+                ""
+                if device is MockDevice
+                else yes_no_fn(
+                    dev, "accepts_new_layouts", "Accepts new layout"
+                )
+            )
+            + f" - Minimal number of traps: {dev.min_layout_traps}\n"
+            + check_none_fn(
+                dev, "max_layout_traps", "Maximal number of traps: {}"
+            )
+            + f" - Maximum layout filling fraction: {dev.max_layout_filling}\n"
+        )
+
+        device_str = (
+            "\nDevice parameters:\n"
+            + check_none_fn(dev, "max_runs", "Maximum number of runs: {}")
+            + check_none_fn(
+                dev,
+                "max_sequence_duration",
+                "Maximum sequence duration: {} ns",
+            )
+            + yes_no_fn(dev, "reusable_channels", "Channels can be reused")
+            + f" - Supported bases: {', '.join(dev.supported_bases)}\n"
+            + f" - Supported states: {', '.join(dev.supported_states)}\n"
+            + f" - Ising interaction coefficient: {dev.interaction_coeff}\n"
+            + check_none_fn(
+                dev, "interaction_coeff_xy", "XY interaction coefficient: {}"
+            )
+        )
+
+        channel_str = "\nChannels:\n" + "\n".join(
+            f" - '{name}': {ch!r}"
+            for name, ch in {**dev.channels, **dev.dmm_channels}.items()
+        )
+
+        return register_str + layout_str + device_str + channel_str
+
+    assert device.specs == specs(device)
+
+
 def test_valid_devices():
     for dev in pulser.devices._valid_devices:
         assert dev.dimensions in (2, 3)
@@ -270,27 +382,39 @@ def test_rydberg_blockade():
     )
 
 
-def test_validate_register():
+@pytest.mark.parametrize("with_diff", [False, True])
+def test_validate_register(with_diff):
+    bad_coords1 = [(100.0, 0.0), (-100.0, 0.0)]
+    bad_coords2 = [(-10, 4, 0), (0, 0, 0)]
+    good_spacing = 5.0
+    if with_diff:
+        torch = pytest.importorskip("torch")
+        bad_coords1 = torch.tensor(
+            bad_coords1, dtype=float, requires_grad=True
+        )
+        bad_coords2 = torch.tensor(
+            bad_coords2, dtype=float, requires_grad=True
+        )
+        good_spacing = torch.tensor(good_spacing, requires_grad=True)
+
     with pytest.raises(ValueError, match="The number of atoms"):
         DigitalAnalogDevice.validate_register(Register.square(50))
 
-    coords = [(100, 0), (-100, 0)]
     with pytest.raises(TypeError):
-        DigitalAnalogDevice.validate_register(coords)
+        DigitalAnalogDevice.validate_register(bad_coords1)
     with pytest.raises(ValueError, match="at most 50 μm away from the center"):
         DigitalAnalogDevice.validate_register(
-            Register.from_coordinates(coords)
+            Register.from_coordinates(bad_coords1)
         )
 
     with pytest.raises(ValueError, match="at most 2D vectors"):
-        coords = [(-10, 4, 0), (0, 0, 0)]
         DigitalAnalogDevice.validate_register(
-            Register3D(dict(enumerate(coords)))
+            Register3D(dict(enumerate(bad_coords2)))
         )
 
     with pytest.raises(ValueError, match="The minimal distance between atoms"):
         DigitalAnalogDevice.validate_register(
-            Register.triangular_lattice(3, 4, spacing=3.9)
+            Register.triangular_lattice(3, 4, spacing=good_spacing // 2)
         )
 
     with pytest.raises(
@@ -301,7 +425,9 @@ def test_validate_register():
             tri_layout.hexagonal_register(10)
         )
 
-    DigitalAnalogDevice.validate_register(Register.rectangle(5, 10, spacing=5))
+    DigitalAnalogDevice.validate_register(
+        Register.rectangle(5, 10, spacing=good_spacing)
+    )
 
 
 def test_validate_layout():
@@ -322,10 +448,26 @@ def test_validate_layout():
             )
         )
 
+    restricted_device = replace(
+        DigitalAnalogDevice, min_layout_traps=10, max_layout_traps=200
+    )
+    with pytest.raises(
+        ValueError,
+        match="The device requires register layouts to have "
+        "at least 10 traps",
+    ):
+        restricted_device.validate_layout(TriangularLatticeLayout(9, 10))
+    with pytest.raises(
+        ValueError,
+        match="The device requires register layouts to have "
+        "at most 200 traps",
+    ):
+        restricted_device.validate_layout(TriangularLatticeLayout(201, 10))
+
     valid_layout = RegisterLayout(
         Register.square(
             int(np.sqrt(DigitalAnalogDevice.max_atom_num * 2))
-        )._coords
+        )._coords_arr
     )
     DigitalAnalogDevice.validate_layout(valid_layout)
 

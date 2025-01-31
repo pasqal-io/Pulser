@@ -36,6 +36,9 @@ from pulser.waveforms import BlackmanWaveform, ConstantWaveform
         ("mod_bandwidth", 0),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
         ("min_avg_amp", -1e-3),
+        ("propagation_dir", (0, 0, 0)),
+        ("propagation_dir", [1, 0]),
+        ("custom_phase_jump_time", -10),
     ],
 )
 def test_bad_init_global_channel(bad_param, bad_value):
@@ -63,12 +66,16 @@ def test_bad_init_global_channel(bad_param, bad_value):
         ("mod_bandwidth", -1e4),
         ("mod_bandwidth", MODBW_TO_TR * 1e3 + 1),
         ("min_avg_amp", -1e-3),
+        ("propagation_dir", (1, 0, 0)),
+        ("custom_phase_jump_time", -0.5),
     ],
 )
 def test_bad_init_local_channel(bad_param, bad_value):
     kwargs = dict(max_abs_detuning=None, max_amp=None)
     kwargs[bad_param] = bad_value
-    if bad_param == "mod_bandwidth" and bad_value > 1:
+    if (
+        bad_param == "mod_bandwidth" and bad_value > 1
+    ) or bad_param == "propagation_dir":
         error_type = NotImplementedError
     else:
         error_type = ValueError
@@ -271,22 +278,30 @@ _eom_rydberg = Rydberg.Global(
         (_eom_rydberg, _eom_config.rise_time, True, 0),
     ],
 )
-def test_modulation(channel, tr, eom, side_buffer_len):
-    wf = ConstantWaveform(100, 1)
+@pytest.mark.parametrize("requires_grad", [False, True])
+def test_modulation(channel, tr, eom, side_buffer_len, requires_grad):
+    wf_vals = [1, np.pi]
+    if requires_grad:
+        wf_vals = pytest.importorskip("torch").tensor(
+            wf_vals, requires_grad=True
+        )
+    wf = ConstantWaveform(100, wf_vals[0])
     out_ = channel.modulate(wf.samples, eom=eom)
     assert len(out_) == wf.duration + 2 * tr
     assert channel.calc_modulation_buffer(wf.samples, out_, eom=eom) == (
         tr,
         tr,
     )
+    assert out_.requires_grad == requires_grad
 
-    wf2 = BlackmanWaveform(800, np.pi)
+    wf2 = BlackmanWaveform(800, wf_vals[1])
     out_ = channel.modulate(wf2.samples, eom=eom)
     assert len(out_) == wf2.duration + 2 * tr  # modulate() does not truncate
     assert channel.calc_modulation_buffer(wf2.samples, out_, eom=eom) == (
         side_buffer_len,
         side_buffer_len,
     )
+    assert out_.requires_grad == requires_grad
 
 
 @pytest.mark.parametrize(

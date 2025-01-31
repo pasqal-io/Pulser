@@ -17,7 +17,7 @@ from typing import cast
 import numpy as np
 import pytest
 import qutip
-from qutip.piqs import isdiagonal
+from qutip.piqs.piqs import isdiagonal
 
 from pulser import AnalogDevice, Pulse, Register, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
@@ -73,32 +73,41 @@ def results(sim):
     return sim.run()
 
 
-def test_initialization(results):
+@pytest.mark.parametrize(
+    ["basis", "exp_basis"],
+    [
+        ("ground-rydberg_with_error", "ground-rydberg"),
+        ("digital_with_error", "digital"),
+        ("all_with_error", "digital"),
+        ("all", "digital"),
+        ("XY_with_error", "XY"),
+    ],
+)
+def test_initialization(results, basis, exp_basis):
     rr_state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
     with pytest.raises(ValueError, match="`basis_name` must be"):
         CoherentResults(rr_state, 2, "bad_basis", None, [0])
-    with pytest.raises(
-        ValueError, match="`meas_basis` must be 'ground-rydberg' or 'digital'."
-    ):
-        CoherentResults(rr_state, 1, "all", None, "XY")
-    with pytest.raises(
-        ValueError,
-        match="`meas_basis` and `basis_name` must have the same value.",
-    ):
-        CoherentResults(
-            rr_state, 1, "ground-rydberg", [0], "wrong_measurement_basis"
-        )
-    with pytest.raises(ValueError, match="`basis_name` must be"):
-        NoisyResults(rr_state, 2, "bad_basis", [0], 123)
+    if "all" in basis:
+        with pytest.raises(
+            ValueError,
+            match="`meas_basis` must be 'ground-rydberg' or 'digital'.",
+        ):
+            CoherentResults(rr_state, 1, basis, None, "XY")
+    else:
+        with pytest.raises(
+            ValueError,
+            match=f"`meas_basis` associated to basis_name '{basis}' must be",
+        ):
+            CoherentResults(rr_state, 1, basis, [0], "wrong_measurement_basis")
     with pytest.raises(
         ValueError, match="only values of 'epsilon' and 'epsilon_prime'"
     ):
         CoherentResults(
             rr_state,
             1,
-            "ground-rydberg",
+            basis,
             [0],
-            "ground-rydberg",
+            exp_basis,
             {"eta": 0.1, "epsilon": 0.0, "epsilon_prime": 0.4},
         )
 
@@ -109,6 +118,23 @@ def test_initialization(results):
     assert results.states[0] == qutip.tensor(
         [qutip.basis(2, 1), qutip.basis(2, 1)]
     )
+
+
+@pytest.mark.parametrize(
+    ["basis", "exp_basis"],
+    [
+        ("ground-rydberg_with_error", "ground-rydberg"),
+        ("digital_with_error", "digital"),
+        ("all_with_error", "digital"),
+        ("all", "digital"),
+        ("XY_with_error", "XY"),
+    ],
+)
+def test_init_noisy(basis, exp_basis):
+    state = qutip.tensor([qutip.basis(2, 0), qutip.basis(2, 0)])
+    with pytest.raises(ValueError, match="`basis_name` must be"):
+        NoisyResults(state, 2, "bad_basis", [0], 123)
+    assert NoisyResults(state, 2, basis, [0], 100)._basis_name == exp_basis
 
 
 @pytest.mark.parametrize("noisychannel", [True, False])
@@ -163,8 +189,8 @@ def test_get_final_state(
         results_.get_final_state(reduce_to_basis="digital")
     h_states = results_.get_final_state(
         reduce_to_basis="digital", tol=1, normalize=False
-    ).eliminate_states([0])
-    assert h_states.norm() < 3e-6
+    ).full()[1:]
+    assert np.linalg.norm(h_states) < 3e-6
 
     assert np.all(
         np.isclose(
@@ -210,17 +236,6 @@ def test_get_state_float_time(results):
         results.get_state(mean, t_tol=diff / 2)
     state = results.get_state(mean, t_tol=3 * diff / 2)
     assert state == results.get_state(results._sim_times[-2])
-    assert np.isclose(
-        state.full(),
-        np.array(
-            [
-                [0.76522907 + 0.0j],
-                [0.08339973 - 0.39374219j],
-                [0.08339973 - 0.39374219j],
-                [-0.27977172 - 0.11031832j],
-            ]
-        ),
-    ).all()
 
 
 def test_expect(results, pi_pulse, reg):
@@ -282,7 +297,7 @@ def test_expect_noisy(results_noisy):
     with pytest.raises(ValueError, match="non-diagonal"):
         results_noisy.expect([bad_op])
     op = qutip.tensor([qutip.qeye(2), qutip.basis(2, 0).proj()])
-    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7333333333333334)
+    assert np.isclose(results_noisy.expect([op])[0][-1], 0.7466666666666667)
 
 
 def test_plot(results_noisy, results):
@@ -299,7 +314,7 @@ def test_sim_without_measurement(seq_no_meas):
     )
     results_no_meas = sim_no_meas.run()
     assert results_no_meas.sample_final_state() == Counter(
-        {"11": 587, "10": 165, "01": 164, "00": 84}
+        {"11": 580, "10": 173, "01": 167, "00": 80}
     )
 
 
@@ -331,7 +346,7 @@ def test_sample_final_state_three_level(seq_no_meas, pi_pulse):
 def test_sample_final_state_noisy(seq_no_meas, results_noisy):
     np.random.seed(123)
     assert results_noisy.sample_final_state(N_samples=1234) == Counter(
-        {"11": 725, "10": 265, "01": 192, "00": 52}
+        {"11": 676, "10": 244, "01": 218, "00": 96}
     )
     res_3level = QutipEmulator.from_sequence(
         seq_no_meas, config=SimConfig(noise=("SPAM", "doppler"), runs=10)

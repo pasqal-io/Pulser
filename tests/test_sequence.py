@@ -17,7 +17,8 @@ import contextlib
 import dataclasses
 import itertools
 import json
-from typing import Any
+import re
+from typing import Any, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -27,6 +28,7 @@ import pulser
 from pulser import Pulse, Register, Register3D, Sequence
 from pulser.channels import Raman, Rydberg
 from pulser.channels.dmm import DMM
+from pulser.channels.eom import RydbergBeam, RydbergEOM
 from pulser.devices import AnalogDevice, DigitalAnalogDevice, MockDevice
 from pulser.devices._device_datacls import Device, VirtualDevice
 from pulser.register.base_register import BaseRegister
@@ -73,7 +75,7 @@ def test_init(reg, device):
         Sequence(reg, Device)
 
     seq = Sequence(reg, device)
-    assert seq.qubit_info == reg.qubits
+    assert Register(seq.qubit_info) == reg
     assert seq.declared_channels == {}
     assert (
         seq.available_channels.keys()
@@ -357,8 +359,9 @@ def devices():
                 clock_period=4,
                 min_duration=16,
                 max_duration=2**26,
-                bottom_detuning=-2 * np.pi * 20,
-                total_bottom_detuning=-2 * np.pi * 2000,
+                # Better than DMM of DigitalAnalogDevice
+                bottom_detuning=-2 * np.pi * 40,
+                total_bottom_detuning=-2 * np.pi * 4000,
             ),
         ),
     )
@@ -742,40 +745,82 @@ def test_switch_device_down(
     ):
         # Can't find a match for the 2nd dmm_0
         seq.switch_device(phys_Chadoq2)
-    # Strict switch imposes to have same bottom detuning for DMMs
-    with pytest.raises(
-        ValueError,
-        match="No match for channel dmm_0_1 with the same bottom_detuning.",
-    ):
-        # Can't find a match for the 1st dmm_0
+    # There is no need to have same bottom detuning to have a strict switch
+    dmm_down = dataclasses.replace(
+        phys_Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
+    )
+    new_seq = seq.switch_device(
+        dataclasses.replace(phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)),
+        strict=True,
+    )
+    assert list(new_seq.declared_channels.keys()) == [
+        "global",
+        "dmm_0",
+        "dmm_1",
+    ]
+    seq.add_dmm_detuning(ConstantWaveform(100, -20), "dmm_0_1")
+    seq.add_dmm_detuning(ConstantWaveform(100, -20), dmm_name="dmm_0_1")
+    # Still works with reusable channels
+    new_seq = seq.switch_device(
+        dataclasses.replace(
+            phys_Chadoq2.to_virtual(),
+            reusable_channels=True,
+            dmm_objects=(dataclasses.replace(dmm_down, bottom_detuning=-20),),
+        ),
+        strict=True,
+    )
+    assert list(new_seq.declared_channels.keys()) == [
+        "global",
+        "dmm_0",
+        "dmm_0_1",
+    ]
+    # Still one compatible configuration
+    new_seq = seq.switch_device(
+        dataclasses.replace(
+            phys_Chadoq2,
+            dmm_objects=(phys_Chadoq2.dmm_channels["dmm_0"], dmm_down),
+        ),
+        strict=True,
+    )
+    assert list(new_seq.declared_channels.keys()) == [
+        "global",
+        "dmm_1",
+        "dmm_0",
+    ]
+    # No compatible configuration
+    error_msg = (
+        "No matching found between declared channels and channels in the "
+        "new device that does not modify the samples of the Sequence. "
+        "Here is a list of matchings tested and their associated errors: "
+        "{(('global', 'rydberg_global'), ('dmm_0', 'dmm_0'), ('dmm_0_1', "
+        "'dmm_1')): ('The detunings on some atoms go below the local bottom "
+        "detuning of the DMM (-10 rad/µs).',), (('global', 'rydberg_global'), "
+        "('dmm_0', 'dmm_1'), ('dmm_0_1', 'dmm_0')): ('The detunings on some "
+        "atoms go below the local bottom detuning of the DMM (-10 rad/µs).',)}"
+    )
+    with pytest.raises(ValueError, match=re.escape(error_msg)):
         seq.switch_device(
             dataclasses.replace(
-                phys_Chadoq2,
-                dmm_objects=(
-                    phys_Chadoq2.dmm_channels["dmm_0"],
-                    dataclasses.replace(
-                        phys_Chadoq2.dmm_channels["dmm_0"], bottom_detuning=-10
-                    ),
-                ),
+                phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
             ),
             strict=True,
         )
-    with pytest.raises(
-        ValueError,
-        match="No match for channel dmm_0_1 with the same "
-        "total_bottom_detuning.",
-    ):
-        # Can't find a match for the 1st dmm_0
+    dmm_down = dataclasses.replace(
+        phys_Chadoq2.dmm_channels["dmm_0"],
+        bottom_detuning=-10,
+        total_bottom_detuning=-10,
+    )
+    seq.switch_device(
+        dataclasses.replace(
+            phys_Chadoq2,
+            dmm_objects=(phys_Chadoq2.dmm_channels["dmm_0"], dmm_down),
+        ),
+        strict=True,
+    )
+    with pytest.raises(ValueError, match=re.escape(error_msg)):
         seq.switch_device(
             dataclasses.replace(
-                phys_Chadoq2,
-                dmm_objects=(
-                    phys_Chadoq2.dmm_channels["dmm_0"],
-                    dataclasses.replace(
-                        phys_Chadoq2.dmm_channels["dmm_0"],
-                        total_bottom_detuning=-500,
-                    ),
-                ),
+                phys_Chadoq2, dmm_objects=(dmm_down, dmm_down)
             ),
             strict=True,
         )
@@ -1029,17 +1074,38 @@ def test_switch_device_up(
     assert "digital" in seq.switch_device(devices[1], True).declared_channels
 
 
+extended_eom = dataclasses.replace(
+    cast(RydbergEOM, AnalogDevice.channels["rydberg_global"].eom_config),
+    controlled_beams=tuple(RydbergBeam),
+    multiple_beam_control=True,
+    custom_buffer_time=None,
+)
+extended_eom_channel = dataclasses.replace(
+    AnalogDevice.channels["rydberg_global"], eom_config=extended_eom
+)
+extended_eom_device = dataclasses.replace(
+    AnalogDevice, channel_objects=(extended_eom_channel,)
+)
+
+
+@pytest.mark.parametrize("device", [AnalogDevice, extended_eom_device])
 @pytest.mark.parametrize("mappable_reg", [False, True])
 @pytest.mark.parametrize("parametrized", [False, True])
-def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
+@pytest.mark.parametrize(
+    "extension_arg", ["amp", "control", "2control", "buffer_time"]
+)
+def test_switch_device_eom(
+    reg, device, mappable_reg, parametrized, extension_arg, patch_plt_show
+):
     # Sequence with EOM blocks
     seq = init_seq(
         reg,
-        dataclasses.replace(AnalogDevice, max_atom_num=28),
+        dataclasses.replace(device, max_atom_num=28),
         "rydberg",
         "rydberg_global",
         [],
         parametrized=parametrized,
+        mappable_reg=mappable_reg,
     )
     seq.enable_eom_mode("rydberg", amp_on=2.0, detuning_on=0.0)
     seq.add_eom_pulse("rydberg", 100, 0.0)
@@ -1057,30 +1123,196 @@ def test_switch_device_eom(reg, mappable_reg, parametrized, patch_plt_show):
         seq.switch_device(DigitalAnalogDevice)
 
     ch_obj = seq.declared_channels["rydberg"]
+    wrong_eom_config = dataclasses.replace(ch_obj.eom_config, mod_bandwidth=20)
+    wrong_ch_obj = dataclasses.replace(ch_obj, eom_config=wrong_eom_config)
+    wrong_analog = dataclasses.replace(
+        device, channel_objects=(wrong_ch_obj,), max_atom_num=28
+    )
+    if parametrized:
+        # Can't switch if the two EOM configurations don't match
+        # If the modulation bandwidth is different
+        with pytest.raises(
+            ValueError, match=err_base + "with the same EOM configuration."
+        ):
+            seq.switch_device(wrong_analog, strict=True)
+        down_eom_configs = {
+            # If the amplitude is different
+            "amp": dataclasses.replace(
+                ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
+            ),
+            # If less controlled beams/the controlled beam is not the same
+            "control": dataclasses.replace(
+                ch_obj.eom_config,
+                controlled_beams=(RydbergBeam.RED,),
+                multiple_beam_control=False,
+            ),
+            # If the multiple_beam_control is not the same
+            "2control": dataclasses.replace(
+                ch_obj.eom_config,
+                controlled_beams=(
+                    tuple(RydbergBeam)
+                    if device == extended_eom_device
+                    else (RydbergBeam.RED,)
+                ),
+                multiple_beam_control=False,
+            ),
+            # If the buffer time is different
+            "buffer_time": dataclasses.replace(
+                ch_obj.eom_config,
+                custom_buffer_time=300,
+            ),
+        }
+        wrong_ch_obj = dataclasses.replace(
+            ch_obj, eom_config=down_eom_configs[extension_arg]
+        )
+        wrong_analog = dataclasses.replace(
+            device, channel_objects=(wrong_ch_obj,), max_atom_num=28
+        )
+        with pytest.raises(
+            ValueError, match=err_base + "with the same EOM configuration."
+        ):
+            seq.switch_device(wrong_analog, strict=True)
+    else:
+        # Can't switch to eom if the modulation bandwidth doesn't match
+        with pytest.raises(
+            ValueError,
+            match=err_base + "with the same mod_bandwidth for the EOM.",
+        ):
+            seq.switch_device(wrong_analog, strict=True)
+    # Can if one Channel has a correct EOM configuration
+    new_seq = seq.switch_device(
+        dataclasses.replace(
+            wrong_analog,
+            channel_objects=(wrong_ch_obj, ch_obj),
+            channel_ids=("wrong_eom", "good_eom"),
+        ),
+        strict=True,
+    )
+    assert new_seq.declared_channels == {"rydberg": ch_obj}
+    # Can if eom extends current eom
+    up_eom_configs = {
+        # Still raises for max_amplitude in parametrized Sequence
+        "amp": dataclasses.replace(
+            ch_obj.eom_config, max_limiting_amp=40 * 2 * np.pi
+        ),
+        # With one controlled beam, don't care about multiple_beam_control
+        # Raises an error if device is extended_eom_device (less options)
+        "control": dataclasses.replace(
+            ch_obj.eom_config,
+            controlled_beams=(RydbergBeam.BLUE,),
+            multiple_beam_control=False,
+        ),
+        # Using 2 controlled beams
+        # Raises an error if device is extended_eom_device (less options)
+        "2control": dataclasses.replace(
+            ch_obj.eom_config,
+            controlled_beams=tuple(RydbergBeam),
+            multiple_beam_control=False,
+        ),
+        # If custom buffer time is None
+        # Raises an error if device is extended_eom_device
+        "buffer_time": dataclasses.replace(
+            ch_obj.eom_config,
+            custom_buffer_time=None,
+        ),
+    }
+    up_eom_config = up_eom_configs[extension_arg]
+    up_ch_obj = dataclasses.replace(ch_obj, eom_config=up_eom_config)
+    up_analog = dataclasses.replace(
+        device, channel_objects=(up_ch_obj,), max_atom_num=28
+    )
+    if (
+        (parametrized and extension_arg == "amp")
+        or (
+            parametrized
+            and extension_arg in ["control", "2control"]
+            and device == extended_eom_device
+        )
+        or (
+            parametrized
+            and extension_arg == "buffer_time"
+            and device == AnalogDevice
+        )
+    ):
+        with pytest.raises(
+            ValueError,
+            match=err_base + "with the same EOM configuration.",
+        ):
+            seq.switch_device(up_analog, strict=True)
+        return
+    if device == extended_eom_device:
+        if extension_arg in ["control", "2control"]:
+            with pytest.raises(
+                ValueError,
+                match="No match for channel rydberg with an EOM configuration",
+            ):
+                seq.switch_device(up_analog, strict=True)
+            return
+        elif extension_arg == "buffer_time":
+            with pytest.warns(
+                UserWarning, match="Switching a sequence to the same device"
+            ):
+                up_seq = seq.switch_device(up_analog, strict=True)
+        else:
+            up_seq = seq.switch_device(up_analog, strict=True)
+    else:
+        up_seq = seq.switch_device(up_analog, strict=True)
+    build_kwargs = {}
+    if parametrized:
+        build_kwargs["delay"] = 120
+    if mappable_reg:
+        build_kwargs["qubits"] = {"q0": 0}
+    og_eom_block = (
+        (seq.build(**build_kwargs) if build_kwargs else seq)
+        ._schedule["rydberg"]
+        .eom_blocks[0]
+    )
+    up_eom_block = (
+        (up_seq.build(**build_kwargs) if build_kwargs else up_seq)
+        ._schedule["rydberg"]
+        .eom_blocks[0]
+    )
+    assert og_eom_block.detuning_on == up_eom_block.detuning_on
+    assert og_eom_block.rabi_freq == up_eom_block.rabi_freq
+    assert og_eom_block.detuning_off == up_eom_block.detuning_off
+
+    # Some parameters might modify the samples
     mod_eom_config = dataclasses.replace(
-        ch_obj.eom_config, max_limiting_amp=10 * 2 * np.pi
+        ch_obj.eom_config, max_limiting_amp=5 * 2 * np.pi
     )
     mod_ch_obj = dataclasses.replace(ch_obj, eom_config=mod_eom_config)
     mod_analog = dataclasses.replace(
-        AnalogDevice, channel_objects=(mod_ch_obj,), max_atom_num=28
+        device, channel_objects=(mod_ch_obj,), max_atom_num=28
     )
-    with pytest.raises(
-        ValueError, match=err_base + "with the same EOM configuration."
-    ):
-        seq.switch_device(mod_analog, strict=True)
-
-    mod_seq = seq.switch_device(mod_analog, strict=False)
+    err_msg = (
+        "No matching found between declared channels and channels in "
+        "the new device that does not modify the samples of the "
+        "Sequence. Here is a list of matchings tested and their "
+        "associated errors: {(('rydberg', 'rydberg_global'),): ('No "
+        "match for channel rydberg with an EOM configuration that "
+        "does not change the samples."
+    )
     if parametrized:
-        seq = seq.build(delay=120)
-        mod_seq = mod_seq.build(delay=120)
-    og_eom_block = seq._schedule["rydberg"].eom_blocks[0]
-    mod_eom_block = mod_seq._schedule["rydberg"].eom_blocks[0]
+        with pytest.raises(
+            ValueError,
+            match=err_base + "with the same EOM configuration.",
+        ):
+            seq.switch_device(mod_analog, strict=True)
+        return
+    with pytest.raises(ValueError, match=re.escape(err_msg)):
+        seq.switch_device(mod_analog, strict=True)
+    mod_seq = seq.switch_device(mod_analog, strict=False)
+    mod_eom_block = (
+        (mod_seq.build(**build_kwargs) if build_kwargs else mod_seq)
+        ._schedule["rydberg"]
+        .eom_blocks[0]
+    )
     assert og_eom_block.detuning_on == mod_eom_block.detuning_on
     assert og_eom_block.rabi_freq == mod_eom_block.rabi_freq
     assert og_eom_block.detuning_off != mod_eom_block.detuning_off
 
     # Test drawing in eom mode
-    seq.draw()
+    (seq.build(**build_kwargs) if build_kwargs else seq).draw()
 
 
 def test_target(reg, device):
@@ -1381,10 +1613,12 @@ def test_str(reg, device, mod_device, det_map):
     )
 
     measure_msg = "\n\nMeasured in basis: digital"
-    print(seq)
     assert seq.__str__() == msg_ch0 + msg_ch1 + msg_det_map + measure_msg
-
-    seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        seq2 = Sequence(Register({"q0": (0, 0), 1: (5, 5)}), device)
     seq2.declare_channel("ch1", "rydberg_global")
     with pytest.raises(
         NotImplementedError,
@@ -1496,6 +1730,110 @@ def test_sequence(reg, device, patch_plt_show):
     assert json.loads(s)["__version__"] == pulser.__version__
     seq_ = Sequence._deserialize(s)
     assert str(seq) == str(seq_)
+
+
+@pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
+@pytest.mark.parametrize("eom", [False, True])
+def test_estimate_added_delay(eom, custom_phase_jump_time):
+    ryd_ch_obj = dataclasses.replace(
+        AnalogDevice.channels["rydberg_global"],
+        custom_phase_jump_time=custom_phase_jump_time,
+    )
+    device = dataclasses.replace(AnalogDevice, channel_objects=(ryd_ch_obj,))
+    reg = Register.square(2, 5)
+    seq = Sequence(reg, device)
+    pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
+    pulse_pi_2 = Pulse.ConstantPulse(100, 1, 0, np.pi / 2)
+
+    with pytest.raises(
+        ValueError, match="Use the name of a declared channel."
+    ):
+        seq.estimate_added_delay(pulse_0, "ising", "min-delay")
+    seq.declare_channel("ising", "rydberg_global")
+    ising_obj = seq.declared_channels["ising"]
+    if eom:
+        seq.enable_eom_mode("ising", 1, 0)
+        with pytest.warns(
+            UserWarning,
+            match="Channel ising is in EOM mode, the amplitude",
+        ):
+            assert (
+                seq.estimate_added_delay(
+                    Pulse.ConstantPulse(100, 2, 0, 0), "ising"
+                )
+                == 0
+            )
+        with pytest.warns(
+            UserWarning,
+            match="Channel ising is in EOM mode, the detuning",
+        ):
+            assert (
+                seq.estimate_added_delay(
+                    Pulse.ConstantPulse(100, 1, 1, 0), "ising"
+                )
+                == 0
+            )
+    assert seq.estimate_added_delay(pulse_0, "ising", "min-delay") == 0
+    seq._add(pulse_0, "ising", "min-delay")
+    first_pulse = seq._last("ising")
+    assert first_pulse.ti == 0
+    phase_jump_time = (
+        custom_phase_jump_time
+        if custom_phase_jump_time is not None and not eom
+        else 2 * ising_obj.rise_time
+    )
+    if not eom:
+        assert ising_obj.phase_jump_time == phase_jump_time
+    delay = pulse_0.fall_time(ising_obj, eom) + phase_jump_time
+    assert seq.estimate_added_delay(pulse_pi_2, "ising") == delay
+    seq._add(pulse_pi_2, "ising", "min-delay")
+    second_pulse = seq._last("ising")
+    assert second_pulse.ti - first_pulse.tf == delay
+    assert seq.estimate_added_delay(pulse_0, "ising") == delay
+    seq.delay(100, "ising")
+    assert seq.estimate_added_delay(pulse_0, "ising") == delay - 100
+    with pytest.warns(
+        UserWarning,
+        match="The sequence's duration exceeded the maximum duration",
+    ):
+        seq.estimate_added_delay(
+            pulser.Pulse.ConstantPulse(4000, 1, 0, np.pi), "ising"
+        )
+    var = seq.declare_variable("var", dtype=int)
+    with pytest.raises(
+        ValueError, match="Can't compute the delay to add before a pulse"
+    ):
+        seq.estimate_added_delay(Pulse.ConstantPulse(var, 1, 0, 0), "ising")
+    # We shift the phase of just one qubit, which blocks addition
+    # of new pulses on this basis
+    seq.phase_shift(1.0, 0, basis="ground-rydberg")
+    with pytest.raises(
+        ValueError,
+        match="Cannot do a multiple-target pulse on qubits with different",
+    ):
+        seq.estimate_added_delay(pulse_0, "ising")
+
+
+def test_estimate_added_delay_dmm():
+    pulse_0 = Pulse.ConstantPulse(100, 1, 0, 0)
+    det_pulse = Pulse.ConstantPulse(100, 0, -1, 0)
+    seq = Sequence(Register.square(2, 5), DigitalAnalogDevice)
+    seq.declare_channel("ising", "rydberg_global")
+    seq.config_slm_mask([0, 1])
+    with pytest.raises(
+        ValueError, match="You should add a Pulse to a Global Channel"
+    ):
+        seq.estimate_added_delay(det_pulse, "dmm_0")
+    seq.add(pulse_0, "ising")
+    assert seq.estimate_added_delay(det_pulse, "dmm_0") == 0
+    with pytest.raises(
+        ValueError, match="The detuning in a DMM must not be positive."
+    ):
+        seq.estimate_added_delay(Pulse.ConstantPulse(100, 0, 1, 0), "dmm_0")
+    with pytest.raises(
+        ValueError, match="The pulse's amplitude goes over the maximum"
+    ):
+        seq.estimate_added_delay(pulse_0, "dmm_0")
 
 
 @pytest.mark.parametrize("qubit_ids", [["q0", "q1", "q2"], [0, 1, 2]])
@@ -1679,7 +2017,7 @@ def test_draw_slm_mask_in_ising(
             seq1.draw(
                 draw_qubit_det=True, draw_interp_pts=False, mode="output"
             )  # Drawing Sequence with only a DMM
-        assert len(record) == 9
+        assert len(record) == 5
         assert np.all(
             str(record[i].message).startswith(
                 "No modulation bandwidth defined"
@@ -2175,6 +2513,7 @@ def test_multiple_index_targets(reg):
     assert built_seq._last("ch0").targets == {"q2", "q3"}
 
 
+@pytest.mark.parametrize("custom_phase_jump_time", (None, 0))
 @pytest.mark.parametrize("check_wait_for_fall", (True, False))
 @pytest.mark.parametrize("correct_phase_drift", (True, False))
 @pytest.mark.parametrize("custom_buffer_time", (None, 400))
@@ -2184,6 +2523,7 @@ def test_eom_mode(
     custom_buffer_time,
     correct_phase_drift,
     check_wait_for_fall,
+    custom_phase_jump_time,
     patch_plt_show,
 ):
     # Setting custom_buffer_time
@@ -2193,7 +2533,9 @@ def test_eom_mode(
         custom_buffer_time=custom_buffer_time,
     )
     channels["rydberg_global"] = dataclasses.replace(
-        channels["rydberg_global"], eom_config=eom_config
+        channels["rydberg_global"],
+        eom_config=eom_config,
+        custom_phase_jump_time=custom_phase_jump_time,
     )
     dev_ = dataclasses.replace(
         mod_device, channel_ids=None, channel_objects=tuple(channels.values())
@@ -2261,8 +2603,7 @@ def test_eom_mode(
     )
     second_pulse_slot = seq._schedule["ch0"].last_pulse_slot()
     phase_buffer = (
-        eom_pulse.fall_time(ch0_obj, in_eom_mode=True)
-        + seq.declared_channels["ch0"].phase_jump_time
+        eom_pulse.fall_time(ch0_obj, in_eom_mode=True) + 2 * ch0_obj.rise_time
     )
     assert second_pulse_slot.ti == first_pulse_slot.tf + phase_buffer
     # Corrects the phase acquired during the phase buffer
@@ -2338,7 +2679,7 @@ def test_eom_mode(
     )
     assert np.isclose(
         seq.current_phase_ref("q0", basis="ground-rydberg"),
-        phase_ref % (2 * np.pi),
+        float(phase_ref) % (2 * np.pi),
     )
 
     # Add delay to test the phase drift correction in disable_eom_mode
@@ -2349,7 +2690,7 @@ def test_eom_mode(
     phase_ref += new_eom_block.detuning_off * last_delay_time * 1e-3
     assert np.isclose(
         seq.current_phase_ref("q0", basis="ground-rydberg"),
-        phase_ref % (2 * np.pi),
+        float(phase_ref) % (2 * np.pi),
     )
 
     # Test drawing in eom mode
@@ -2408,6 +2749,69 @@ def test_eom_buffer(
         )
 
 
+@pytest.mark.parametrize("correct_phase_drift", [True, False])
+@pytest.mark.parametrize("amp_diff", [0, -0.5, 0.5])
+@pytest.mark.parametrize("det_diff", [0, -5, 10])
+def test_modify_eom_setpoint(
+    reg, mod_device, amp_diff, det_diff, correct_phase_drift
+):
+    seq = Sequence(reg, mod_device)
+    seq.declare_channel("ryd", "rydberg_global")
+    params = seq.declare_variable("params", dtype=float, size=2)
+    dt = 100
+    amp, det_on = params
+    with pytest.raises(
+        RuntimeError, match="The 'ryd' channel is not in EOM mode"
+    ):
+        seq.modify_eom_setpoint("ryd", amp, det_on)
+    seq.enable_eom_mode("ryd", amp, det_on)
+    assert seq.is_in_eom_mode("ryd")
+    seq.add_eom_pulse("ryd", dt, 0.0)
+    seq.delay(dt, "ryd")
+
+    new_amp, new_det_on = amp + amp_diff, det_on + det_diff
+    seq.modify_eom_setpoint(
+        "ryd", new_amp, new_det_on, correct_phase_drift=correct_phase_drift
+    )
+    assert seq.is_in_eom_mode("ryd")
+    seq.add_eom_pulse("ryd", dt, 0.0)
+    seq.delay(dt, "ryd")
+
+    ryd_ch_obj = seq.declared_channels["ryd"]
+    eom_buffer_dt = ryd_ch_obj._eom_buffer_time
+    param_vals = [1.0, 0.0]
+    built_seq = seq.build(params=param_vals)
+    expected_duration = 4 * dt + eom_buffer_dt
+    assert built_seq.get_duration() == expected_duration
+
+    amp, det = param_vals
+    ch_samples = sample(built_seq).channel_samples["ryd"]
+    expected_amp = np.zeros(expected_duration)
+    expected_amp[:dt] = amp
+    expected_amp[-2 * dt : -dt] = amp + amp_diff
+    np.testing.assert_array_equal(expected_amp, ch_samples.amp)
+
+    det_off = ryd_ch_obj.eom_config.calculate_detuning_off(amp, det, 0.0)
+    new_det_off = ryd_ch_obj.eom_config.calculate_detuning_off(
+        amp + amp_diff, det + det_diff, 0.0
+    )
+    expected_det = np.zeros(expected_duration)
+    expected_det[:dt] = det
+    expected_det[dt : 2 * dt] = det_off
+    expected_det[2 * dt : 2 * dt + eom_buffer_dt] = new_det_off
+    expected_det[-2 * dt : -dt] = det + det_diff
+    expected_det[-dt:] = new_det_off
+    np.testing.assert_array_equal(expected_det, ch_samples.det)
+
+    final_phase = built_seq.current_phase_ref("q0", "ground-rydberg")
+    if not correct_phase_drift:
+        assert final_phase == 0.0
+    else:
+        assert final_phase != 0.0
+    np.testing.assert_array_equal(ch_samples.phase[: 2 * dt], 0.0)
+    np.testing.assert_array_equal(ch_samples.phase[-2 * dt :], final_phase)
+
+
 def test_max_duration(reg, mod_device):
     dev_ = dataclasses.replace(mod_device, max_sequence_duration=100)
     seq = Sequence(reg, dev_)
@@ -2432,3 +2836,62 @@ def test_add_to_dmm_fails(reg, device, det_map):
     seq.declare_channel("ryd", "rydberg_global")
     with pytest.raises(ValueError, match="not the name of a DMM channel"):
         seq.add_dmm_detuning(pulse.detuning, "ryd")
+
+
+@pytest.mark.parametrize(
+    "with_eom, with_modulation", [(True, True), (True, False), (False, False)]
+)
+@pytest.mark.parametrize("parametrized", [True, False])
+def test_sequence_diff(device, parametrized, with_modulation, with_eom):
+    torch = pytest.importorskip("torch")
+    reg = Register(
+        {"q0": torch.tensor([0.0, 0.0], requires_grad=True), "q1": (-5.0, 5.0)}
+    )
+    seq = Sequence(reg, AnalogDevice if with_eom else device)
+    seq.declare_channel("ryd_global", "rydberg_global")
+
+    if parametrized:
+        amp = seq.declare_variable("amp", dtype=float)
+        dets = seq.declare_variable("dets", dtype=float, size=2)
+    else:
+        amp = torch.tensor(1.0, requires_grad=True)
+        dets = torch.tensor([-2.0, -1.0], requires_grad=True)
+
+    # The phase is never a variable so we're sure the gradient
+    # is kept after build
+    phase = torch.tensor(2.0, requires_grad=True)
+
+    if with_eom:
+        seq.enable_eom_mode("ryd_global", amp, dets[0], dets[1])
+        seq.add_eom_pulse("ryd_global", 100, phase, correct_phase_drift=False)
+        seq.delay(100, "ryd_global")
+        seq.modify_eom_setpoint("ryd_global", amp * 2, dets[1], -dets[0])
+        seq.add_eom_pulse("ryd_global", 100, -phase, correct_phase_drift=True)
+        seq.disable_eom_mode("ryd_global")
+
+    else:
+        pulse = Pulse.ConstantDetuning(
+            BlackmanWaveform(1000, amp), dets[0], phase
+        )
+        seq.add(pulse, "ryd_global")
+        det_map = reg.define_detuning_map({"q0": 1.0})
+        seq.config_detuning_map(det_map, "dmm_0")
+        seq.add_dmm_detuning(RampWaveform(2000, *dets), "dmm_0")
+
+    if parametrized:
+        seq = seq.build(
+            amp=torch.tensor(1.0, requires_grad=True),
+            dets=torch.tensor([-2.0, -1.0], requires_grad=True),
+        )
+
+    seq_samples = sample(seq, modulation=with_modulation)
+    ryd_ch_samples = seq_samples.channel_samples["ryd_global"]
+    assert ryd_ch_samples.amp.requires_grad
+    assert ryd_ch_samples.det.requires_grad
+    assert ryd_ch_samples.phase.requires_grad
+    if "dmm_0" in seq_samples.channel_samples:
+        dmm_ch_samples = seq_samples.channel_samples["dmm_0"]
+        # Only detuning is modulated
+        assert not dmm_ch_samples.amp.requires_grad
+        assert dmm_ch_samples.det.requires_grad
+        assert not dmm_ch_samples.phase.requires_grad

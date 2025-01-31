@@ -58,7 +58,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.12"]
+        python-version: ["3.9", "3.12"]
+        with-torch: ["with-torch", "no-torch"]
     steps:
       - name: Check out Pulser
         uses: actions/checkout@v4
@@ -67,9 +68,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           extra-packages: pytest
+          with-torch: ${{ matrix.with-torch }}
       - name: Run the unit tests & generate coverage report
+        if: ${{ matrix.with-torch == 'with-torch' }}
         run: pytest --cov --cov-fail-under=100
+      - name: Run the unit tests without torch installed
+        if: ${{ matrix.with-torch != 'with-torch' }}
+        run: pytest --cov
       - name: Test validation with legacy jsonschema
         run: |
           pip install jsonschema==4.17.3
-          pytest tests/test_abstract_repr.py
+          pytest tests/test_abstract_repr.py -W ignore::DeprecationWarning

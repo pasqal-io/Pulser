@@ -83,6 +83,10 @@
         "p_false_pos": {
           "type": "number"
         },
+        "pulser_version": {
+          "description": "The pulser version used to serialize the object.",
+          "type": "string"
+        },
         "relaxation_rate": {
           "type": "number"
         },

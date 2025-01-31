@@ -17,7 +17,6 @@ import re
 import numpy as np
 import pytest
 
-import pulser
 from pulser import Register, Register3D, Sequence
 from pulser.devices import DigitalAnalogDevice, MockDevice
 from pulser.json.coders import PulserDecoder, PulserEncoder
@@ -120,15 +119,24 @@ def test_detuning_map():
 
 
 @pytest.mark.parametrize(
-    "reg",
+    "reg_dict",
     [
-        Register(dict(enumerate([(2, 3), (5, 1), (10, 0)]))),
-        Register3D({3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)}),
+        dict(enumerate([(2, 3), (5, 1), (10, 0)])),
+        {3: (2, 3, 4), 4: (3, 4, 5), 2: (4, 5, 7)},
     ],
 )
-def test_register_numbered_keys(reg):
+def test_register_numbered_keys(reg_dict):
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        reg = (Register if len(reg_dict[2]) == 2 else Register3D)(reg_dict)
     j = json.dumps(reg, cls=PulserEncoder)
-    decoded_reg = json.loads(j, cls=PulserDecoder)
+    with pytest.warns(
+        DeprecationWarning,
+        match="Usage of `int`s or any non-`str`types as `QubitId`s",
+    ):
+        decoded_reg = json.loads(j, cls=PulserDecoder)
     assert reg == decoded_reg
     assert all([type(i) is int for i in decoded_reg.qubit_ids])
 
@@ -279,20 +287,3 @@ def test_deprecated_device_args():
     s = json.dumps(seq_dict)
     new_seq = Sequence._deserialize(s)
     assert new_seq.device == MockDevice
-
-
-def test_deprecation_warning():
-    msg = re.escape(
-        "`Sequence.serialize()` and `Sequence.deserialize()` have "
-        "been deprecated and will be removed in Pulser v1.0.0. "
-        "Use `Sequence.to_abstract_repr()` and "
-        "`Sequence.from_abstract_repr()` instead."
-    )
-    seq = Sequence(Register.square(1), MockDevice)
-    with pytest.warns(DeprecationWarning, match=msg):
-        s = seq.serialize()
-
-    with pytest.warns(DeprecationWarning, match=msg):
-        Sequence.deserialize(s)
-
-    assert pulser.__version__ < "1.0", "Remove legacy serializer methods"

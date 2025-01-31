@@ -21,7 +21,7 @@ from collections.abc import Mapping
 from collections.abc import Sequence as abcSequence
 from dataclasses import dataclass
 from operator import itemgetter
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -180,7 +180,7 @@ class RegisterLayout(Traps, RegDrawer):
             draw_graph=draw_graph,
             draw_half_radius=draw_half_radius,
         )
-        ids = list(range(self.number_of_traps))
+        ids = [str(i) for i in range(self.number_of_traps)]
         if self.dimensionality == 2:
             fig, ax = self._initialize_fig_axes(
                 coords,
@@ -188,7 +188,7 @@ class RegisterLayout(Traps, RegDrawer):
                 draw_half_radius=draw_half_radius,
             )
             self._draw_2D(
-                ax,
+                cast(plt.Axes, ax),
                 coords,
                 ids,
                 blockade_radius=blockade_radius,
@@ -255,7 +255,7 @@ class RegisterLayout(Traps, RegDrawer):
         # Allows for serialization of subclasses without a special _to_dict()
         return obj_to_dict(
             self,
-            self._coords,
+            self._coords_arr.tolist(),
             slug=self.slug,
             _module=__name__,
             _name="RegisterLayout",

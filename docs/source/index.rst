@@ -39,33 +39,25 @@ Additionally, Pulser features built-in tools for classical simulation to aid in
 the development and testing of new pulse sequences.
 
 To get started with Pulser, follow the instructions in :doc:`installation` and
-check out the :doc:`intro_rydberg_blockade` page. For a more in-depth
-introduction, consult the tutorials on :doc:`tutorials/creating` and
-:doc:`tutorials/simulating`.
-To better understand neutral atom devices and how they serve as quantum
-computers and simulators, check the pages in :doc:`review`.
+check out the :doc:`programming` page to learn what mathematical objects you
+are programming with Pulser and how to program them. Then, you can see examples
+of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
 
 .. toctree::
    :maxdepth: 2
-   :caption: Installation and First Steps
+   :caption: Getting Started
 
    installation
-   intro_rydberg_blockade
+   programming
    tutorials/creating
-   tutorials/simulating
 
 .. toctree::
    :maxdepth: 2
-   :caption: Fundamental Concepts
+   :caption: Fundamentals
 
-   review
    conventions
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Backend Execution
-   
+   register
    tutorials/backends
 
 .. toctree::
@@ -95,20 +87,11 @@ computers and simulators, check the pages in :doc:`review`.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Quantum Simulation
+   :caption: Quantum Simulation & Applications
 
    tutorials/afm_prep
    tutorials/optimization
    tutorials/xy_spin_chain
-   tutorials/mw_engineering
-   tutorials/shadow_est
-   tutorials/1D_crystals
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Other Applications
-
-   tutorials/cz_gate
    tutorials/qubo
 
 .. toctree::

@@ -46,7 +46,7 @@ kaiser = KaiserWaveform(40, np.pi)
 
 
 def test_duration():
-    with pytest.raises(TypeError, match="needs to be castable to an int"):
+    with pytest.raises(TypeError, match="needs to be castable to int"):
         ConstantWaveform("s", -1)
         RampWaveform([0, 1, 3], 1, 0)
 
@@ -84,11 +84,11 @@ def test_change_duration():
 
 
 def test_samples():
-    assert np.all(constant.samples == -3)
+    assert np.all(constant.samples.as_array() == -3)
     bm_samples = np.clip(np.blackman(40), 0, np.inf)
     bm_samples *= np.pi / np.sum(bm_samples) / 1e-3
     comp_samples = np.concatenate([bm_samples, np.full(100, -3), arb_samples])
-    assert np.all(np.isclose(composite.samples, comp_samples))
+    assert np.all(np.isclose(composite.samples.as_array(), comp_samples))
 
 
 def test_integral():
@@ -164,6 +164,11 @@ def test_custom():
 def test_ramp():
     assert np.isclose(ramp.slope, 7e-3, atol=1e-5)
 
+    ramp_samples = RampWaveform(
+        3000, top := 25.757450291031688, 0
+    ).samples.as_array()
+    assert np.all(np.logical_and(ramp_samples <= top, ramp_samples >= 0))
+
 
 def test_blackman():
     with pytest.raises(TypeError):
@@ -232,10 +237,14 @@ def test_interpolated():
         dt, [0, 1], interpolator="interp1d", kind="linear"
     )
     assert isinstance(interp_wf.interp_function, interp1d)
-    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 1.0, num=dt))
+    np.testing.assert_allclose(
+        interp_wf.samples.as_array(), np.linspace(0, 1.0, num=dt)
+    )
 
     interp_wf *= 2
-    np.testing.assert_allclose(interp_wf.samples, np.linspace(0, 2.0, num=dt))
+    np.testing.assert_allclose(
+        interp_wf.samples.as_array(), np.linspace(0, 2.0, num=dt)
+    )
 
     wf_str = "InterpolatedWaveform(Points: (0, 0), (999, 2)"
     assert str(interp_wf) == wf_str + ")"
@@ -246,14 +255,16 @@ def test_interpolated():
         dt, vals, interpolator="interp1d", kind="quadratic"
     )
     np.testing.assert_allclose(
-        interp_wf2.samples, np.linspace(0, 1, num=dt) ** 2, atol=1e-3
+        interp_wf2.samples.as_array(),
+        np.linspace(0, 1, num=dt) ** 2,
+        atol=1e-3,
     )
 
     # Test rounding when range of values is large
     wf = InterpolatedWaveform(
         1000, times=[0.0, 0.5, 1.0], values=[0, 2.6e7, 0]
     )
-    assert np.all(wf.samples >= 0)
+    assert np.all((wf.samples >= 0).as_array())
 
 
 def test_kaiser():
@@ -262,6 +273,7 @@ def test_kaiser():
     beta: float = 14.0
 
     wf: KaiserWaveform = KaiserWaveform(duration, area, beta)
+    wf_samples = wf.samples.as_array()
 
     # Check type error on area
     with pytest.raises(TypeError):
@@ -284,17 +296,19 @@ def test_kaiser():
     kaiser_beta_14: np.ndarray = np.kaiser(duration, 14.0)
     kaiser_beta_14 *= area / float(np.sum(kaiser_beta_14)) / 1e-3
     np.testing.assert_allclose(
-        wf_default_beta.samples, kaiser_beta_14, atol=1e-3
+        wf_default_beta.samples.as_array(), kaiser_beta_14, atol=1e-3
     )
 
     # Check area
-    assert np.isclose(np.sum(wf.samples), area * 1000.0)
+    assert np.isclose(np.sum(wf_samples), area * 1000.0)
 
     # Check duration change
     new_duration = duration * 2
     wf_change_duration = wf.change_duration(new_duration)
     assert wf_change_duration.samples.size == new_duration
-    assert np.isclose(np.sum(wf.samples), np.sum(wf_change_duration.samples))
+    assert np.isclose(
+        np.sum(wf_samples), np.sum(wf_change_duration.samples.as_array())
+    )
 
     # Check __str__
     assert str(wf) == (
@@ -309,7 +323,7 @@ def test_kaiser():
 
     # Check multiplication
     wf_multiplication = wf * 2
-    assert (wf_multiplication.samples == wf.samples * 2).all()
+    assert np.all(wf_multiplication.samples == wf_samples * 2)
 
     # Check area and max_val must have matching signs
     with pytest.raises(ValueError, match="must have matching signs"):
@@ -319,11 +333,11 @@ def test_kaiser():
     for max_val in range(1, 501, 50):
         for beta in range(1, 20):
             wf = KaiserWaveform.from_max_val(max_val, area, beta)
-            assert np.isclose(np.sum(wf.samples), area * 1000.0)
-            assert np.max(wf.samples) <= max_val
+            assert np.isclose(np.sum(wf.samples.as_array()), area * 1000.0)
+            assert np.max(wf.samples.as_array()) <= max_val
             wf = KaiserWaveform.from_max_val(-max_val, -area, beta)
-            assert np.isclose(np.sum(wf.samples), -area * 1000.0)
-            assert np.min(wf.samples) >= -max_val
+            assert np.isclose(np.sum(wf.samples.as_array()), -area * 1000.0)
+            assert np.min(wf.samples.as_array()) >= -max_val
 
 
 def test_ops():
@@ -386,44 +400,48 @@ def test_get_item():
 
         # Check with slices
 
-        assert (wf[0:duration] == samples).all()
-        assert (wf[0:-1] == samples[0:-1]).all()
-        assert (wf[0:] == samples).all()
-        assert (wf[-1:] == samples[-1:]).all()
-        assert (wf[:duration] == samples).all()
-        assert (wf[:] == samples).all()
-        assert (
+        assert np.all(wf[0:duration] == samples)
+        assert np.all(wf[0:-1] == samples[0:-1])
+        assert np.all(wf[0:] == samples)
+        assert np.all(wf[-1:] == samples[-1:])
+        assert np.all(wf[:duration] == samples)
+        assert np.all(wf[:] == samples)
+        assert np.all(
             wf[duration14:duration34] == samples[duration14:duration34]
-        ).all()
-        assert (
+        )
+        assert np.all(
             wf[-duration34:-duration14] == samples[-duration34:-duration14]
-        ).all()
+        )
 
         # Check with out of bounds slices
-        assert (wf[: duration * 2] == samples).all()
-        assert (wf[-duration * 2 :] == samples).all()
-        assert (wf[-duration * 2 : duration * 2] == samples).all()
-        assert (
+        assert np.all(wf[: duration * 2] == samples)
+        assert np.all(wf[-duration * 2 :] == samples)
+        assert np.all(wf[-duration * 2 : duration * 2] == samples)
+        assert np.all(
             wf[duration // 2 : duration * 2]
             == samples[duration // 2 : duration * 2]
-        ).all()
-        assert (
+        )
+        assert np.all(
             wf[-duration * 2 : duration // 2]
             == samples[-duration * 2 : duration // 2]
-        ).all()
+        )
         assert wf[2:1].size == 0
         assert wf[duration * 2 :].size == 0
         assert wf[duration * 2 : duration * 3].size == 0
         assert wf[-duration * 3 : -duration * 2].size == 0
 
 
-def test_modulation():
-    rydberg_global = Rydberg.Global(
+@pytest.fixture
+def rydberg_global():
+    return Rydberg.Global(
         2 * np.pi * 20,
         2 * np.pi * 2.5,
         mod_bandwidth=4,  # MHz
     )
-    mod_samples = constant.modulated_samples(rydberg_global)
+
+
+def test_modulation(rydberg_global):
+    mod_samples = constant.modulated_samples(rydberg_global).as_array()
     assert np.all(mod_samples == rydberg_global.modulate(constant.samples))
     assert constant.modulation_buffers(rydberg_global) == (
         rydberg_global.rise_time,
@@ -432,3 +450,68 @@ def test_modulation():
     assert len(mod_samples) == constant.duration + 2 * rydberg_global.rise_time
     assert np.isclose(np.sum(mod_samples) * 1e-3, constant.integral)
     assert max(np.abs(mod_samples)) < np.abs(constant[0])
+
+
+@pytest.mark.parametrize(
+    "wf_type, diff_param_name, diff_param_value, extra_params",
+    [
+        (CustomWaveform, "samples", np.arange(-10.0, 10.0), {}),
+        (ConstantWaveform, "value", -3.14, {"duration": 20}),
+        (RampWaveform, "start", -10.0, {"duration": 10, "stop": 10}),
+        (RampWaveform, "stop", -10.0, {"duration": 10, "start": 10}),
+        (BlackmanWaveform, "area", 2.0, {"duration": 200}),
+        (BlackmanWaveform.from_max_val, "area", -2.0, {"max_val": -1}),
+        (KaiserWaveform, "area", -2.0, {"duration": 200}),
+        (KaiserWaveform.from_max_val, "area", 2.0, {"max_val": 1}),
+    ],
+)
+@pytest.mark.parametrize("requires_grad", [True, False])
+@pytest.mark.parametrize("composite", [True, False])
+def test_waveform_diff(
+    wf_type,
+    diff_param_name,
+    diff_param_value,
+    extra_params,
+    requires_grad,
+    composite,
+    rydberg_global,
+    patch_plt_show,
+):
+    torch = pytest.importorskip("torch")
+    kwargs = {
+        diff_param_name: torch.tensor(
+            diff_param_value, requires_grad=requires_grad
+        ),
+        **extra_params,
+    }
+    wf = wf_type(**kwargs)
+    if composite:
+        wf = CompositeWaveform(wf, ConstantWaveform(100, 1.0))
+
+    samples_tensor = wf.samples.as_tensor()
+    assert samples_tensor.requires_grad == requires_grad
+    assert wf.modulated_samples(rydberg_global).requires_grad == requires_grad
+    wfx2_tensor = (-wf * 2).samples.as_tensor()
+    assert torch.equal(wfx2_tensor, samples_tensor * -2.0)
+    assert wfx2_tensor.requires_grad == requires_grad
+
+    wfdiv2 = wf / torch.tensor(2.0, requires_grad=True)
+    assert torch.equal(wfdiv2.samples.as_tensor(), samples_tensor / 2.0)
+    # Should always be true because it was divided by diff tensor
+    assert wfdiv2.samples.requires_grad
+
+    assert wf[-1].requires_grad == requires_grad
+
+    try:
+        assert wf.change_duration(1000).samples.requires_grad == requires_grad
+    except NotImplementedError:
+        pass
+
+    # Check that all non-related methods still work
+    wf.draw(output_channel=rydberg_global)
+    repr(wf)
+    str(wf)
+    hash(wf)
+    wf._to_dict()
+    wf._to_abstract_repr()
+    assert isinstance(wf.integral, float)

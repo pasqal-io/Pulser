@@ -54,6 +54,9 @@ def test_creation():
         Pulse.ConstantAmplitude(-1, cwf, 0)
         Pulse.ConstantPulse(100, -1, 0, 0)
 
+    with pytest.raises(TypeError, match="'phase' must be a single float"):
+        Pulse(bwf, rwf, [0.0, 1.0, 2.0])
+
     assert pls.phase == 0
     assert pls2 == pls3
     assert pls != pls4
@@ -167,15 +170,18 @@ def test_arbitrary_phase(phase_wf, det_wf, phase_0):
     pls_ = Pulse.ArbitraryPhase(bwf, phase_wf)
     assert pls_ == Pulse(bwf, det_wf, phase_0)
 
-    calculated_phase = -np.cumsum(pls_.detuning.samples * 1e-3) + phase_0
+    calculated_phase = -np.cumsum(
+        pls_.detuning.samples.as_array() * 1e-3
+    ) + float(phase_0)
+    phase_samples = phase_wf.samples.as_array()
     assert np.allclose(
         calculated_phase % (2 * np.pi),
-        phase_wf.samples % (2 * np.pi),
+        phase_samples % (2 * np.pi),
         atol=PHASE_PRECISION,
         # The shift makes sure we don't fail around the wrapping point
     ) or np.allclose(
         (calculated_phase + 1) % (2 * np.pi),
-        (phase_wf.samples + 1) % (2 * np.pi),
+        (phase_samples + 1) % (2 * np.pi),
         atol=PHASE_PRECISION,
     )
 
@@ -225,3 +231,51 @@ def test_eq():
         post_phase_shift=-1e-6,
     )
     assert pls_ != repr(pls_)
+
+
+def _assert_pulse_requires_grad(pulse: Pulse, invert: bool = False) -> None:
+    assert pulse.amplitude.samples.requires_grad == (not invert)
+    assert pulse.detuning.samples.requires_grad == (not invert)
+    assert pulse.phase.requires_grad == (not invert)
+
+
+@pytest.mark.parametrize("requires_grad", [True, False])
+def test_pulse_diff(requires_grad, eom_channel, patch_plt_show):
+    torch = pytest.importorskip("torch")
+
+    duration = 1000
+    diff_val = torch.tensor(1.0, requires_grad=requires_grad)
+    constant_wf = ConstantWaveform(duration, diff_val)
+    phase = torch.tensor(3.14, requires_grad=requires_grad)
+    phase_wf = RampWaveform(
+        duration,
+        phase - diff_val * 1e-3,
+        phase - diff_val * duration * 1e-3,
+    )
+    assert torch.isclose(torch.tensor(phase_wf.slope), -diff_val * 1e-3)
+
+    pulses: list[Pulse] = [
+        Pulse(constant_wf, constant_wf, phase),
+        Pulse.ConstantDetuning(constant_wf, diff_val, phase),
+        Pulse.ConstantAmplitude(diff_val, constant_wf, phase),
+        Pulse.ConstantPulse(constant_wf.duration, diff_val, diff_val, phase),
+        Pulse.ArbitraryPhase(constant_wf, phase_wf),
+    ]
+    for i, pulse in enumerate(pulses):
+        _assert_pulse_requires_grad(pulse, invert=not requires_grad)
+        # Check other methods still work
+        assert pulse.duration == duration
+        assert pulse.get_full_duration(
+            eom_channel
+        ) == duration + pulse.fall_time(eom_channel)
+
+    # Check all pulses are equal (by design)
+    for pulse2 in pulses[1:]:
+        assert str(pulses[0]) == str(pulse2)
+        assert repr(pulses[0]) == repr(pulse2)
+        assert pulses[0] == pulse2
+
+    # Extra checks for ArbitraryPhase (since it's more complex)
+    bwf = BlackmanWaveform(duration, diff_val)
+    phase_pulse = Pulse.ArbitraryPhase(constant_wf, bwf)
+    _assert_pulse_requires_grad(phase_pulse, invert=not requires_grad)

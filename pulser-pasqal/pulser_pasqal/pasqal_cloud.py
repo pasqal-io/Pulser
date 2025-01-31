@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Allows to connect to PASQAL's cloud platform to run sequences."""
+
 from __future__ import annotations
 
-import copy
 import json
 from dataclasses import fields
-from typing import Any, Type, cast
+from typing import Any, Mapping, Type, cast
 
 import backoff
 import numpy as np
@@ -33,10 +33,12 @@ from pulser.abstract_repr import deserialize_device
 from pulser.backend.config import EmulatorConfig
 from pulser.backend.qpu import QPUBackend
 from pulser.backend.remote import (
+    BatchStatus,
     JobParams,
+    JobStatus,
     RemoteConnection,
     RemoteResults,
-    SubmissionStatus,
+    RemoteResultsError,
 )
 from pulser.devices import Device
 from pulser.result import Result, SampledResult
@@ -91,16 +93,20 @@ class PasqalCloud(RemoteConnection):
         **kwargs: Any,
     ):
         """Initializes a connection to the Pasqal cloud platform."""
-        project_id_ = project_id or kwargs.pop("group_id", "")
         self._sdk_connection = pasqal_cloud.SDK(
             username=username,
             password=password,
-            project_id=project_id_,
+            project_id=project_id,
             **kwargs,
         )
 
     def submit(
-        self, sequence: Sequence, wait: bool = False, **kwargs: Any
+        self,
+        sequence: Sequence,
+        wait: bool = False,
+        open: bool = False,
+        batch_id: str | None = None,
+        **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
         if not sequence.is_measured():
@@ -110,8 +116,12 @@ class PasqalCloud(RemoteConnection):
                     "The measurement basis can't be implicitly determined "
                     "for a sequence not addressing a single basis."
                 )
-            # The copy prevents changing the input sequence
-            sequence = copy.deepcopy(sequence)
+            # This is equivalent to performing a deepcopy
+            # All tensors are converted to arrays but that's ok, it would
+            # have happened anyway later on
+            sequence = Sequence.from_abstract_repr(
+                sequence.to_abstract_repr(skip_validation=True)
+            )
             sequence.measure(bases[0])
 
         emulator = kwargs.get("emulator", None)
@@ -159,16 +169,36 @@ class PasqalCloud(RemoteConnection):
             emulator=emulator,
             strict_validation=mimic_qpu,
         )
-        create_batch_fn = backoff_decorator(self._sdk_connection.create_batch)
-        batch = create_batch_fn(
-            serialized_sequence=sequence.to_abstract_repr(),
-            jobs=job_params or [],  # type: ignore[arg-type]
-            emulator=emulator,
-            configuration=configuration,
-            wait=wait,
-        )
 
-        return RemoteResults(batch.id, self)
+        # If batch_id is not empty, then we can submit new jobs to a
+        # batch we just created otherwise, create a new one with
+        #  _sdk_connection.create_batch()
+        if batch_id:
+            submit_jobs_fn = backoff_decorator(self._sdk_connection.add_jobs)
+            old_job_ids = self._get_job_ids(batch_id)
+            batch = submit_jobs_fn(
+                batch_id,
+                jobs=job_params or [],  # type: ignore[arg-type]
+            )
+            new_job_ids = [
+                job_id
+                for job_id in self._get_job_ids(batch_id)
+                if job_id not in old_job_ids
+            ]
+        else:
+            create_batch_fn = backoff_decorator(
+                self._sdk_connection.create_batch
+            )
+            batch = create_batch_fn(
+                serialized_sequence=sequence.to_abstract_repr(),
+                jobs=job_params or [],  # type: ignore[arg-type]
+                emulator=emulator,
+                configuration=configuration,
+                wait=wait,
+                open=open,
+            )
+            new_job_ids = self._get_job_ids(batch.id)
+        return RemoteResults(batch.id, self, job_ids=new_job_ids)
 
     @backoff_decorator
     def fetch_available_devices(self) -> dict[str, Device]:
@@ -179,36 +209,72 @@ class PasqalCloud(RemoteConnection):
             for name, dev_str in abstract_devices.items()
         }
 
-    def _fetch_result(self, submission_id: str) -> tuple[Result, ...]:
+    def _fetch_result(
+        self, batch_id: str, job_ids: list[str] | None
+    ) -> tuple[Result, ...]:
         # For now, the results are always sampled results
+        jobs = self._query_job_progress(batch_id)
+
+        if job_ids is None:
+            job_ids = list(jobs.keys())
+
+        results: list[Result] = []
+        for id in job_ids:
+            status, result = jobs[id]
+            if status in {JobStatus.PENDING, JobStatus.RUNNING}:
+                raise RemoteResultsError(
+                    f"The results are not yet available, job {id} status is "
+                    f"{status}."
+                )
+            if result is None:
+                raise RemoteResultsError(f"No results found for job {id}.")
+            results.append(result)
+
+        return tuple(results)
+
+    def _query_job_progress(
+        self, batch_id: str
+    ) -> Mapping[str, tuple[JobStatus, Result | None]]:
         get_batch_fn = backoff_decorator(self._sdk_connection.get_batch)
-        batch = get_batch_fn(id=submission_id)
+        batch = get_batch_fn(id=batch_id)
+
+        assert isinstance(batch.sequence_builder, str)
         seq_builder = Sequence.from_abstract_repr(batch.sequence_builder)
         reg = seq_builder.get_register(include_mappable=True)
         all_qubit_ids = reg.qubit_ids
         meas_basis = seq_builder.get_measurement_basis()
 
-        results = []
+        results: dict[str, tuple[JobStatus, Result | None]] = {}
+
         for job in batch.ordered_jobs:
             vars = job.variables
             size: int | None = None
             if vars and "qubits" in vars:
                 size = len(vars["qubits"])
-            assert job.result is not None, "Failed to fetch the results."
-            results.append(
-                SampledResult(
-                    atom_order=all_qubit_ids[slice(size)],
-                    meas_basis=meas_basis,
-                    bitstring_counts=job.result,
+            if job.result is None:
+                results[job.id] = (JobStatus[job.status], None)
+            else:
+                results[job.id] = (
+                    JobStatus[job.status],
+                    SampledResult(
+                        atom_order=all_qubit_ids[slice(size)],
+                        meas_basis=meas_basis,
+                        bitstring_counts=job.result,
+                    ),
                 )
-            )
-        return tuple(results)
+        return results
 
     @backoff_decorator
-    def _get_submission_status(self, submission_id: str) -> SubmissionStatus:
-        """Gets the status of a submission from its ID."""
-        batch = self._sdk_connection.get_batch(id=submission_id)
-        return SubmissionStatus[batch.status]
+    def _get_batch_status(self, batch_id: str) -> BatchStatus:
+        """Gets the status of a batch from its ID."""
+        batch = self._sdk_connection.get_batch(id=batch_id)
+        return BatchStatus[batch.status]
+
+    @backoff_decorator
+    def _get_job_ids(self, batch_id: str) -> list[str]:
+        """Gets all the job IDs within a batch."""
+        batch = self._sdk_connection.get_batch(id=batch_id)
+        return [job.id for job in batch.ordered_jobs]
 
     def _convert_configuration(
         self,
@@ -234,3 +300,11 @@ class PasqalCloud(RemoteConnection):
 
         pasqal_config_kwargs["strict_validation"] = strict_validation
         return emu_cls(**pasqal_config_kwargs)
+
+    def supports_open_batch(self) -> bool:
+        """Flag to confirm this class can support creating an open batch."""
+        return True
+
+    def _close_batch(self, batch_id: str) -> None:
+        """Closes the batch on pasqal cloud associated with the batch ID."""
+        self._sdk_connection.close_batch(batch_id)

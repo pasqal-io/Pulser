@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,16 +25,19 @@ from matplotlib.axes import Axes
 from numpy.typing import ArrayLike
 
 import pulser
+import pulser.math as pm
 import pulser.register._patterns as patterns
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_register,
 )
 from pulser.json.utils import stringify_qubit_ids
+from pulser.register._layout_gen import generate_trap_coordinates
 from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 
 if TYPE_CHECKING:
     from pulser.devices._device_datacls import BaseDevice
+    from pulser.devices import Device
 
 
 class Register(BaseRegister, RegDrawer):
@@ -46,11 +49,16 @@ class Register(BaseRegister, RegDrawer):
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
+    def __init__(
+        self,
+        qubits: Mapping[Any, ArrayLike | pm.TensorLike],
+        **kwargs: Any,
+    ):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
-        if any(c.shape != (self.dimensionality,) for c in self._coords) or (
-            self.dimensionality != 2
+        if (
+            any(c.shape != (self.dimensionality,) for c in self._coords_arr)
+            or self.dimensionality != 2
         ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 2."
@@ -58,9 +66,12 @@ class Register(BaseRegister, RegDrawer):
 
     @classmethod
     def square(
-        cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
+        cls,
+        side: int,
+        spacing: float | pm.TensorLike = 4.0,
+        prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a square array.
+        """Creates the register with the qubits in a square array.
 
         Args:
             side: Side of the square in number of qubits.
@@ -86,7 +97,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         columns: int,
-        spacing: float = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Creates a rectangular array of qubits on a square lattice.
@@ -109,8 +120,8 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         columns: int,
-        row_spacing: float = 4.0,
-        col_spacing: float = 2.0,
+        row_spacing: float | pm.TensorLike = 4.0,
+        col_spacing: float | pm.TensorLike = 2.0,
         prefix: Optional[str] = None,
     ) -> Register:
         """Creates a rectangular array of qubits on a rectangular lattice.
@@ -142,13 +153,16 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than or equal to 1."
             )
 
+        row_spacing_ = pm.AbstractArray(row_spacing)
+        col_spacing_ = pm.AbstractArray(col_spacing)
+
         # Check spacing
-        if row_spacing <= 0.0 or col_spacing <= 0.0:
+        if row_spacing_ <= 0.0 or col_spacing_ <= 0.0:
             raise ValueError("Spacing between atoms must be greater than 0.")
 
-        coords = patterns.square_rect(rows, columns)
-        coords[:, 0] = coords[:, 0] * col_spacing
-        coords[:, 1] = coords[:, 1] * row_spacing
+        coords = pm.AbstractArray(patterns.square_rect(rows, columns))
+        coords[:, 0] = coords[:, 0] * col_spacing_
+        coords[:, 1] = coords[:, 1] * row_spacing_
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
@@ -157,10 +171,10 @@ class Register(BaseRegister, RegDrawer):
         cls,
         rows: int,
         atoms_per_row: int,
-        spacing: float = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a triangular lattice.
+        """Creates the register with the qubits in a triangular lattice.
 
         Initializes the qubits in a triangular lattice pattern, more
         specifically a triangular lattice with horizontal rows, meaning the
@@ -192,22 +206,28 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than or equal to 1."
             )
 
+        spacing_ = pm.AbstractArray(spacing)
         # Check spacing
-        if spacing <= 0.0:
+        if spacing_ <= 0.0:
             raise ValueError(
                 f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than 0."
             )
 
-        coords = patterns.triangular_rect(rows, atoms_per_row) * spacing
-
+        coords = (
+            pm.AbstractArray(patterns.triangular_rect(rows, atoms_per_row))
+            * spacing_
+        )
         return cls.from_coordinates(coords, center=True, prefix=prefix)
 
     @classmethod
     def hexagon(
-        cls, layers: int, spacing: float = 4.0, prefix: Optional[str] = None
+        cls,
+        layers: int,
+        spacing: float | pm.TensorLike = 4.0,
+        prefix: Optional[str] = None,
     ) -> Register:
-        """Initializes the register with the qubits in a hexagonal layout.
+        """Creates the register with the qubits in a hexagonal layout.
 
         Args:
             layers: Number of layers around a central atom.
@@ -226,15 +246,16 @@ class Register(BaseRegister, RegDrawer):
                 " must be greater than or equal to 1."
             )
 
+        spacing_ = pm.AbstractArray(spacing)
         # Check spacing
-        if spacing <= 0.0:
+        if spacing_ <= 0.0:
             raise ValueError(
                 f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than 0."
             )
 
         n_atoms = 1 + 3 * (layers**2 + layers)
-        coords = patterns.triangular_hex(n_atoms) * spacing
+        coords = pm.AbstractArray(patterns.triangular_hex(n_atoms)) * spacing_
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
 
@@ -243,7 +264,7 @@ class Register(BaseRegister, RegDrawer):
         cls,
         n_qubits: int,
         device: BaseDevice,
-        spacing: float | None = None,
+        spacing: float | pm.TensorLike | None = None,
         prefix: str | None = None,
     ) -> Register:
         """Initializes the register with maximum connectivity for a device.
@@ -287,24 +308,80 @@ class Register(BaseRegister, RegDrawer):
 
         # Default spacing or check minimal distance
         if spacing is None:
-            spacing = device.min_atom_distance
-        elif spacing < device.min_atom_distance:
+            spacing_ = pm.AbstractArray(device.min_atom_distance)
+        elif (
+            spacing_ := pm.AbstractArray(spacing)
+        ) < device.min_atom_distance:
             raise ValueError(
                 f"Spacing between atoms (`spacing = `{spacing})"
                 " must be greater than or equal to the minimal"
                 " distance supported by this device"
                 f" ({device.min_atom_distance})."
             )
-        if spacing <= 0.0:
+        if spacing_ <= 0.0:
             # spacing is None or 0.0, device.min_atom_distance is 0.0
             raise NotImplementedError(
                 "Maximum connectivity layouts are not well defined for a "
                 "device with 'min_atom_distance=0.0'."
             )
 
-        coords = patterns.triangular_hex(n_qubits) * spacing
+        coords = pm.AbstractArray(patterns.triangular_hex(n_qubits)) * spacing_
 
         return cls.from_coordinates(coords, center=False, prefix=prefix)
+
+    def with_automatic_layout(
+        self,
+        device: Device,
+        layout_slug: str | None = None,
+    ) -> Register:
+        """Replicates the register with an automatically generated layout.
+
+        The generated `RegisterLayout` can be accessed via `Register.layout`.
+
+        Args:
+            device: The device constraints for the layout generation.
+            layout_slug: An optional slug for the generated layout.
+
+        Raises:
+            RuntimeError: If the automatic layout generation fails to meet
+                the device constraints.
+            NotImplementedError: When the register has differentiable
+                coordinates (ie torch Tensors with requires_grad=True).
+
+        Returns:
+            Register: A new register instance with identical qubit IDs and
+            coordinates but also the newly generated RegisterLayout.
+        """
+        if not isinstance(device, pulser.devices.Device):
+            raise TypeError(
+                f"'device' must be of type Device, not {type(device)}."
+            )
+        if (
+            self._coords_arr.is_tensor
+            and self._coords_arr.as_tensor().requires_grad
+        ):
+            raise NotImplementedError(
+                "'Register.with_automatic_layout()' does not support "
+                "registers with differentiable coordinates."
+            )
+
+        trap_coords = generate_trap_coordinates(
+            self.sorted_coords,
+            min_trap_dist=device.min_atom_distance,
+            max_radial_dist=device.max_radial_distance,
+            max_layout_filling=device.max_layout_filling,
+            optimal_layout_filling=device.optimal_layout_filling,
+            min_traps=device.min_layout_traps,
+            max_traps=device.max_layout_traps,
+        )
+        layout = pulser.register.RegisterLayout(trap_coords, slug=layout_slug)
+        trap_ids = layout.get_traps_from_coordinates(
+            *self._coords_arr.as_array()
+        )
+        return cast(
+            Register,
+            layout.define_register(*trap_ids, qubit_ids=self.qubit_ids),
+        )
 
     def rotated(self, degrees: float) -> Register:
         """Makes a new rotated register.
@@ -319,7 +396,7 @@ class Register(BaseRegister, RegDrawer):
             angle.
         """
         theta = np.deg2rad(degrees)
-        rot = np.array(
+        rot = pm.vstack(
             [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
         )
         if self.layout is not None:
@@ -330,7 +407,7 @@ class Register(BaseRegister, RegDrawer):
             )
 
         return Register(
-            dict(zip(self.qubit_ids, [rot @ v for v in self._coords]))
+            dict(zip(self.qubit_ids, [rot @ v for v in self._coords_arr]))
         )
 
     def draw(
@@ -388,12 +465,15 @@ class Register(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
 
-        pos = np.array(self._coords)
+        pos = self._coords_arr.as_array(detach=True)
         if custom_ax is None:
-            _, custom_ax = self._initialize_fig_axes(
-                pos,
-                blockade_radius=blockade_radius,
-                draw_half_radius=draw_half_radius,
+            custom_ax = cast(
+                plt.Axes,
+                self._initialize_fig_axes(
+                    pos,
+                    blockade_radius=blockade_radius,
+                    draw_half_radius=draw_half_radius,
+                )[1],
             )
         super()._draw_2D(
             custom_ax,
@@ -419,7 +499,7 @@ class Register(BaseRegister, RegDrawer):
         names = stringify_qubit_ids(self._ids)
         return [
             {"name": name, "x": x, "y": y}
-            for name, (x, y) in zip(names, self._coords)
+            for name, (x, y) in zip(names, self._coords_arr.tolist())
         ]
 
     @staticmethod

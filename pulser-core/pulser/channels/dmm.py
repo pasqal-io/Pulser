@@ -14,12 +14,12 @@
 """Defines the detuning map modulator."""
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, Optional
 
 import numpy as np
 
+import pulser.math as pm
 from pulser.channels.base_channel import Channel
 from pulser.json.utils import get_dataclass_defaults
 from pulser.pulse import Pulse
@@ -28,7 +28,7 @@ from pulser.register.weight_maps import DetuningMap
 OPTIONAL_ABSTR_DMM_FIELDS = ["total_bottom_detuning"]
 
 
-@dataclass(init=True, repr=False, frozen=True)
+@dataclass(init=True, frozen=True)
 class DMM(Channel):
     """Defines a Detuning Map Modulator (DMM) Channel.
 
@@ -91,23 +91,12 @@ class DMM(Channel):
         return "ground-rydberg"
 
     def _undefined_fields(self) -> list[str]:
-        optional = [
-            "bottom_detuning",
-            "max_duration",
-            # TODO: "total_bottom_detuning"
-        ]
+        optional = ["bottom_detuning", "max_duration", "total_bottom_detuning"]
         return [field for field in optional if getattr(self, field) is None]
 
     def is_virtual(self) -> bool:
         """Whether the channel is virtual (i.e. partially defined)."""
-        virtual_dmm = bool(self._undefined_fields())
-        if not virtual_dmm and self.total_bottom_detuning is None:
-            warnings.warn(
-                "From v0.18 and onwards, `total_bottom_detuning` must be"
-                " defined to define a physical DMM.",
-                DeprecationWarning,
-            )
-        return virtual_dmm
+        return bool(self._undefined_fields())
 
     def validate_pulse(
         self,
@@ -124,7 +113,9 @@ class DMM(Channel):
                 (defaults to a detuning map with weight 1.0).
         """
         super().validate_pulse(pulse)
-        round_detuning = np.round(pulse.detuning.samples, decimals=6)
+        round_detuning = pm.round(pulse.detuning.samples, 6).as_array(
+            detach=True
+        )
         # Check that detuning is negative
         if np.any(round_detuning > 0):
             raise ValueError("The detuning in a DMM must not be positive.")

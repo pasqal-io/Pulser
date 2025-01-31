@@ -98,6 +98,7 @@ def test_bad_controlled_beam(params):
     assert RydbergEOM(**params).controlled_beams == tuple(RydbergBeam)
 
 
+@pytest.mark.parametrize("requires_grad", [False, True])
 @pytest.mark.parametrize("limiting_beam", list(RydbergBeam))
 @pytest.mark.parametrize("blue_shift_coeff", [0.5, 1.0, 2.0])
 @pytest.mark.parametrize("red_shift_coeff", [0.5, 1.0, 1.8])
@@ -110,7 +111,11 @@ def test_detuning_off(
     multiple_beam_control,
     limit_amp_fraction,
     params,
+    requires_grad,
 ):
+    if requires_grad:
+        torch = pytest.importorskip("torch")
+
     params["multiple_beam_control"] = multiple_beam_control
     params["blue_shift_coeff"] = blue_shift_coeff
     params["red_shift_coeff"] = red_shift_coeff
@@ -142,19 +147,24 @@ def test_detuning_off(
             limit_amp_ if limiting_beam == RydbergBeam.BLUE else non_limit_amp
         )
         # The offset to have resonance when the pulse is on is -lightshift
-        return -(
+        return -float(
             blue_shift_coeff * blue_amp**2 - red_shift_coeff * red_amp**2
         ) / (4 * params["intermediate_detuning"])
 
     # Case where the EOM pulses are resonant
     detuning_on = 0.0
+    if requires_grad:
+        amp = torch.tensor(amp, requires_grad=True)
+        detuning_on = torch.tensor(detuning_on, requires_grad=True)
+
     zero_det = calc_offset(amp)  # detuning when both beams are off = offset
-    assert np.isclose(eom._lightshift(amp, *RydbergBeam), -zero_det)
+    assert np.isclose(float(eom._lightshift(amp, *RydbergBeam)), -zero_det)
     assert eom._lightshift(amp) == 0.0
     det_off_options = eom.detuning_off_options(amp, detuning_on)
     switching_beams_opts = eom._switching_beams_combos
     assert len(det_off_options) == len(switching_beams_opts)
     assert len(det_off_options) == 2 + multiple_beam_control
+    det_off_options = det_off_options.as_array(detach=True)
     order = np.argsort(det_off_options)
     det_off_options = det_off_options[order]
     switching_beams_opts = [switching_beams_opts[ind] for ind in order]
@@ -180,9 +190,10 @@ def test_detuning_off(
         ]
     )
     assert calculated_det_off == min(det_off_options, key=abs)
+    assert calculated_det_off.requires_grad == requires_grad
 
     # Case where the EOM pulses are off-resonant
-    detuning_on = 1.0
+    detuning_on = detuning_on + 1.0
     for beam, ind in [(RydbergBeam.RED, next_), (RydbergBeam.BLUE, 0)]:
         # When only one beam is controlled, there is a single
         # detuning_off option
@@ -192,7 +203,10 @@ def test_detuning_off(
         assert len(off_options) == 1
         # The new detuning_off is shifted by the new detuning_on,
         # since that changes the offset compared the resonant case
-        assert np.isclose(off_options[0], det_off_options[ind] + detuning_on)
+        assert np.isclose(
+            float(off_options[0]), det_off_options[ind] + float(detuning_on)
+        )
         assert off_options[0] == eom_.calculate_detuning_off(
             amp, detuning_on, optimal_detuning_off=0.0
         )
+        assert off_options.requires_grad == requires_grad

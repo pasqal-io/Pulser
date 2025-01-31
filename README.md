@@ -21,9 +21,7 @@ For a comprehensive overview of Pulser, check out [Pulser's white paper](https:/
 
 ## Installation
 
-**Note**: *Pulser v0.6 introduced a split of the ``pulser`` package that prevents it from being correctly upgraded. If you have an older version of ``pulser`` installed and wish to upgrade, make sure to uninstall it first by running ``pip uninstall pulser``.*
-
-To install the latest release of ``pulser``, have Python 3.8 or higher installed, then use ``pip``:
+To install the latest release of ``pulser``, have Python 3.9 or higher installed, then use ``pip``:
 
 ```bash
 pip install pulser
@@ -38,6 +36,24 @@ If you wish to install only the core ``pulser`` features, you can instead run:
 ```bash
 pip install pulser-core
 ```
+
+### Including PyTorch
+
+To include PyTorch in your installation, append the ``[torch]`` suffix to the commands outlined above, i.e.
+
+```bash
+pip install pulser[torch]
+```
+
+for the standard ``pulser`` distribution with PyTorch, **or**
+
+```bash
+pip install pulser-core[torch]
+```
+
+for just the core features plus PyTorch support.
+
+### Development install
 
 If you wish to **install the development version of Pulser from source** instead, do the following from within this repository after cloning it:
 

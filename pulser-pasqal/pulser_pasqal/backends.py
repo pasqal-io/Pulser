@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import fields
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import pasqal_cloud
 
@@ -88,12 +88,14 @@ class PasqalEmulator(RemoteBackend):
                 "All elements of 'job_params' must specify 'runs'" + suffix
             )
 
-        return self._connection.submit(
-            self._sequence,
-            job_params=job_params,
+        return super().run(job_params, wait)
+
+    def _submit_kwargs(self) -> dict[str, Any]:
+        """Keyword arguments given to any call to RemoteConnection.submit()."""
+        return dict(
+            batch_id=self._batch_id,
             emulator=self.emulator,
             config=self._config,
-            wait=wait,
             mimic_qpu=self._mimic_qpu,
         )
 

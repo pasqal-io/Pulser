@@ -5,6 +5,6 @@ sphinx_autodoc_typehints == 2.2.1
 nbsphinx
 nbsphinx-link
 ipython >= 8.10 # Avoids bug with code highlighting
-
+myst-parser
 # Not on PyPI
 # pandoc

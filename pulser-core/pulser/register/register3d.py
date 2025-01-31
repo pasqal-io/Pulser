@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
+import pulser.math as pm
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_register,
 )
@@ -40,11 +41,16 @@ class Register3D(BaseRegister, RegDrawer):
             (e.g. {'q0':(2, -1, 0), 'q1':(-5, 10, 0), ...}).
     """
 
-    def __init__(self, qubits: Mapping[Any, ArrayLike], **kwargs: Any):
+    def __init__(
+        self,
+        qubits: Mapping[Any, ArrayLike | pm.TensorLike],
+        **kwargs: Any,
+    ):
         """Initializes a custom Register."""
         super().__init__(qubits, **kwargs)
-        if any(c.shape != (self.dimensionality,) for c in self._coords) or (
-            self.dimensionality != 3
+        if (
+            any(c.shape != (self.dimensionality,) for c in self._coords_arr)
+            or self.dimensionality != 3
         ):
             raise ValueError(
                 "All coordinates must be specified as vectors of size 3."
@@ -52,7 +58,10 @@ class Register3D(BaseRegister, RegDrawer):
 
     @classmethod
     def cubic(
-        cls, side: int, spacing: float = 4.0, prefix: Optional[str] = None
+        cls,
+        side: int,
+        spacing: float | pm.TensorLike = 4.0,
+        prefix: Optional[str] = None,
     ) -> Register3D:
         """Initializes the register with the qubits in a cubic array.
 
@@ -81,7 +90,7 @@ class Register3D(BaseRegister, RegDrawer):
         rows: int,
         columns: int,
         layers: int,
-        spacing: float = 4.0,
+        spacing: float | pm.TensorLike = 4.0,
         prefix: Optional[str] = None,
     ) -> Register3D:
         """Initializes the register with the qubits in a cuboid array.
@@ -120,14 +129,15 @@ class Register3D(BaseRegister, RegDrawer):
             )
 
         # Check spacing
-        if spacing <= 0.0:
+        spacing_ = pm.AbstractArray(spacing)
+        if spacing_ <= 0.0:
             raise ValueError(
                 f"Spacing between atoms (`spacing` = {spacing})"
                 " must be greater than 0."
             )
 
         coords = (
-            np.array(
+            pm.AbstractArray(
                 [
                     (x, y, z)
                     for z in range(layers)
@@ -136,7 +146,7 @@ class Register3D(BaseRegister, RegDrawer):
                 ],
                 dtype=float,
             )
-            * spacing
+            * spacing_
         )
 
         return cls.from_coordinates(coords, center=True, prefix=prefix)
@@ -155,11 +165,10 @@ class Register3D(BaseRegister, RegDrawer):
         Raises:
             ValueError: If the atoms are not coplanar.
         """
-        coords = np.array(self._coords)
-
+        coords = self._coords_arr.as_array(detach=True)
         barycenter = coords.sum(axis=0) / coords.shape[0]
         # run SVD
-        u, s, vh = np.linalg.svd(coords - barycenter)
+        _, _, vh = np.linalg.svd(coords - barycenter)
         e_z = vh[2, :]
         perp_extent = [e_z.dot(r) for r in coords]
         width = np.ptp(perp_extent)
@@ -171,8 +180,11 @@ class Register3D(BaseRegister, RegDrawer):
         else:
             e_x = vh[0, :]
             e_y = vh[1, :]
-            coords_2D = np.array(
-                [np.array([e_x.dot(r), e_y.dot(r)]) for r in coords]
+            coords_2D = pm.vstack(
+                [
+                    pm.hstack([pm.dot(e_x, r), pm.dot(e_y, r)])
+                    for r in self._coords_arr
+                ]
             )
             return Register.from_coordinates(coords_2D, labels=self._ids)
 
@@ -225,7 +237,7 @@ class Register3D(BaseRegister, RegDrawer):
             draw_half_radius=draw_half_radius,
         )
 
-        pos = np.array(self._coords)
+        pos = self._coords_arr.as_array(detach=True)
 
         self._draw_3D(
             pos,
