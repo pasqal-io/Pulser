@@ -36,8 +36,8 @@ from pulser.register._reg_drawer import RegDrawer
 from pulser.register.base_register import BaseRegister, QubitId
 
 if TYPE_CHECKING:
-    from pulser.devices._device_datacls import BaseDevice
     from pulser.devices import Device
+    from pulser.devices._device_datacls import BaseDevice
 
 
 class Register(BaseRegister, RegDrawer):

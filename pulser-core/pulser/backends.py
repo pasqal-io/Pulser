@@ -35,8 +35,8 @@ import importlib
 from typing import TYPE_CHECKING, Type
 
 if TYPE_CHECKING:
-    from pulser.backend.abc import Backend
     from pulser.backend import QPUBackend as QPUBackend
+    from pulser.backend.abc import Backend
     from pulser_pasqal import EmuFreeBackend as EmuFreeBackend
     from pulser_pasqal import EmuTNBackend as EmuTNBackend
     from pulser_simulation import QutipBackend as QutipBackend

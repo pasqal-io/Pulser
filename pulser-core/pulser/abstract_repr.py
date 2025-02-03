@@ -25,7 +25,9 @@ from pulser.json.abstract_repr.deserializer import (
 from pulser.json.abstract_repr.deserializer import (
     deserialize_abstract_sequence as deserialize_sequence,
 )
-from pulser.json.abstract_repr.deserializer import deserialize_device
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_device as deserialize_device,
+)
 
 __all__ = [
     "deserialize_layout",
