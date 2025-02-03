@@ -20,29 +20,13 @@
   background-color: #00ac85;
 }
 
-/* Home link container, including logo */
 .wy-side-nav-search a.icon {
-  display: flex;
-  /* flex-direction: row-reverse; */
-  align-items: center;
-  /* justify-content: space-between; */
-  font-size: 2rem;
-  font-weight: normal;
+  font-size: 0px;
   margin-bottom: 1rem;
 }
 
-.wy-side-nav-search a.icon {
-  color: white;
-}
-
-.wy-side-nav-search a.icon::before {
-  font-size: 1.5rem;
-  margin-right: 0.5rem;
-}
-
-.wy-side-nav-search a.icon > img.logo {
-  width: 40%;
-  margin: 0 0 0 auto;
+.wy-side-nav-search a.icon img.logo {
+  max-width: 200px;
 }
 
 .wy-menu-vertical header,
