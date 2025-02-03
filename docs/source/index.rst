@@ -100,6 +100,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
    apidoc/core
    apidoc/simulation
+   apidoc/pasqal
 
 
 Indices and tables

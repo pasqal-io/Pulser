@@ -3,8 +3,16 @@
 
 .. automodule:: pulser
 
-Primary symbols
+Classes
 -----------------
+
+These are classes that can be imported directly from ``pulser``. They should cover the fundamental
+needs for sequence creation.
+
+.. tip::
+
+   If the links to the classes on the table don't work, you can still access them via the sidebar.
+
 
 .. autosummary::
    :toctree: _autosummary
@@ -19,13 +27,31 @@ Primary symbols
    Pulse
    Register
    Register3D
-   AnalogDevice
-   DigitalAnalogDevice
-   MockDevice
    Sequence
    NoiseModel
    EmulatorConfig
    QPUBackend
+
+
+Device Examples
+-----------------
+
+These are built-in :py:class:`~pulser.devices.Device` and :py:class:`~pulser.devices.VirtualDevice` instances that can be
+imported directly from ``pulser``. 
+
+.. important::
+
+   These instances are **not** descriptions of actual devices. They are just examples that
+   can be used to enforce different sets of constraints during :py:class:`~pulser.Sequence` creation.
+
+
+.. autosummary::
+   :toctree: _autosummary
+
+   AnalogDevice
+   DigitalAnalogDevice
+   MockDevice
+
 
 Modules
 ----------
@@ -35,6 +61,7 @@ Modules
 
    pulser.abstract_repr
    pulser.backend
+   pulser.backends
    pulser.channels
    pulser.devices
    pulser.noise_model

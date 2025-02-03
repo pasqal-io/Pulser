@@ -3,7 +3,7 @@
 
 .. automodule:: pulser_simulation
 
-Primary Symbols
+Classes
 -----------------
 
 .. autosummary::
