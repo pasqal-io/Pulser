@@ -1,0 +1,51 @@
+/* Limit content width, for large screens only */
+@media screen and (min-width: 1100px) {
+  .wy-nav-content {
+    width: 80% !important;
+    max-width: 1600px !important;
+  }
+}
+
+/* Apply Pasqal branding colors */
+.wy-nav-content-wrap {
+  background-color: #fcfcfc;
+}
+
+.wy-nav-top,
+.wy-nav-side {
+  background-color: #243237;
+}
+
+.wy-side-nav-search {
+  background-color: #00ac85;
+}
+
+.wy-side-nav-search a.icon {
+  font-size: 0px;
+  margin-bottom: 1rem;
+}
+
+.wy-side-nav-search a.icon img.logo {
+  max-width: 200px;
+}
+
+.wy-menu-vertical header,
+.wy-menu-vertical p.caption {
+  color: #00ac85;
+}
+
+.wy-menu-vertical a {
+  color: white;
+}
+
+.wy-menu-vertical a:hover {
+  background: #173035;
+}
+
+a {
+  color: #00ac85;
+}
+
+a:hover {
+  color: #00c887;
+}
