@@ -169,7 +169,11 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 :width: 600
 :::
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented. For a complete view of the constraints introduced by the device, [check its description](./hardware.ipynb).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented. 
+
+:::{seealso}
+For a complete view of the constraints introduced by the device, [check its description](./hardware.ipynb).
+:::
 
 ### 2. Create the Register
 
@@ -212,6 +216,10 @@ $$
 The addressing of a `Channel` defines the number of atoms whose transition will be targeted by a pulse.
 
 The most common addressing for a `Channel` is the `Global` one: all the atoms evolve under the same [driving Hamiltonian](programming.md#21-driving-hamiltonian). 
+:::
+
+:::{seealso}
+For a thorough description of what a Channel is and some tips on how to select a Channel, [check this page](./hardware.ipynb#the-channels).
 :::
 
 ### 4. Add the Pulses
