@@ -99,6 +99,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    :caption: API Reference
 
    apidoc/core
+   apidoc/simulation
 
 
 Indices and tables

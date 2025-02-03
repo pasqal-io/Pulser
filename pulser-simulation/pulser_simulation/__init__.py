@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classes for classical emulation of a Sequence."""
+"""Classes for classical emulation of a Pulser Sequence."""
 
 from pulser import EmulatorConfig, NoiseModel
 

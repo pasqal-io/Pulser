@@ -305,6 +305,9 @@ class BaseDevice(ABC):
             if "channel" in param or param == "dmm_objects":
                 object.__setattr__(self, param, to_tuple(getattr(self, param)))
 
+        # Hack to override the docstring of an instance
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
+
     @property
     @abstractmethod
     def _optional_parameters(self) -> tuple[str, ...]:
@@ -731,7 +734,8 @@ class BaseDevice(ABC):
     def _specs(self, for_docs: bool = False) -> str:
 
         return "\n".join(
-            self._register_lines()
+            ([self.short_description] if self.short_description else [])
+            + self._register_lines()
             + self._layout_lines()
             + self._device_lines()
             + self._channel_lines(for_docs=for_docs)
@@ -818,8 +822,6 @@ class Device(BaseDevice):
                 )
         for layout in self.pre_calibrated_layouts:
             self.validate_layout(layout)
-        # Hack to override the docstring of an instance
-        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
@@ -992,8 +994,6 @@ class VirtualDevice(BaseDevice):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        # TODO: Improve docstring for virtual devices
-        object.__setattr__(self, "__doc__", self.short_description)
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
