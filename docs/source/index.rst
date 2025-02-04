@@ -58,6 +58,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
    conventions
    register
+   hardware
    tutorials/backends
 
 .. toctree::
