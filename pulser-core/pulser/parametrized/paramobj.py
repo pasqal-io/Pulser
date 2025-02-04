@@ -92,6 +92,10 @@ class OpSupport:
         """Calculates the trigonometric tangent of the object."""
         return ParamObj(pm.tan, self)
 
+    def tanh(self) -> ParamObj:
+        """Calculates the hyperbolic tangent of the object."""
+        return ParamObj(pm.tanh, self)
+
     # Binary operators
     def __add__(self, other: Union[int, float], /) -> ParamObj:
         return ParamObj(operator.add, self, other)
