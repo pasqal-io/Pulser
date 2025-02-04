@@ -219,7 +219,7 @@ The most common addressing for a `Channel` is the `Global` one: all the atoms ev
 :::
 
 :::{seealso}
-For a thorough description of what a Channel is and some tips on how to select a Channel, [check this page](./hardware.ipynb).
+For a thorough description of what a Channel is and some tips on how to select a Channel, [check this page](./hardware.ipynb#The-Channels).
 :::
 
 ### 4. Add the Pulses
