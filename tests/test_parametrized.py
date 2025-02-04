@@ -236,7 +236,8 @@ def test_opsupport(a, b, with_diff_tensor):
     y = np.tanh(b)
     check_var_grad(y)
     np.testing.assert_almost_equal(
-        y.build().as_array(detach=with_diff_tensor), np.tanh(b.build().as_array(detach=with_diff_tensor))
+        y.build().as_array(detach=with_diff_tensor),
+        np.tanh(b.build().as_array(detach=with_diff_tensor)),
     )
     y = np.exp(b)
     check_var_grad(y)
