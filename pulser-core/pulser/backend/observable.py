@@ -176,17 +176,19 @@ class Observable(Callback):
         return f"{self.tag}:{self.uuid}"
 
     @staticmethod
-    def _validate_eval_times(evaluation_times: ArrayLike) -> np.ndarray:
+    def _validate_eval_times(
+        evaluation_times: ArrayLike | Sequence[float],
+    ) -> np.ndarray:
         eval_times_arr = np.array(evaluation_times, dtype=float)
         if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
             raise ValueError(
                 "All evaluation times must be between 0. and 1. "
-                f"Instead, got {evaluation_times}."
+                f"Instead, got {evaluation_times!r}."
             )
         unique_eval_times = np.unique(eval_times_arr)
         if unique_eval_times.size < eval_times_arr.size:
             raise ValueError(
                 "Evaluation times must be unique but "
-                f"{evaluation_times} has repeated values."
+                f"{evaluation_times!r} has repeated values."
             )
         return eval_times_arr

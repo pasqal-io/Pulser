@@ -51,7 +51,8 @@ class StateResult(Observable):
 class BitStrings(Observable):
     """Stores bitstrings sampled from the state at the evaluation times.
 
-    Error rates are taken from the EmulationConfig given to the backend.
+    Error rates are taken from the NoiseModel passed to the backend via
+    the EmulationConfig.
     The bitstrings are stored as a Counter[str].
 
     Args:
@@ -324,6 +325,9 @@ class Occupation(Observable):
 class Energy(Observable):
     """Stores the energy of the system at the evaluation times.
 
+    The energy is calculated as the expectation value of the Hamilotinian,
+    i.e. <φ(t)|H(t)|φ(t)>.
+
     Args:
         evaluation_times: The relative times at which to compute the energy.
             If left as `None`, uses the `default_evaluation_times` of the
@@ -381,7 +385,7 @@ class EnergyVariance(Observable):
 
 
 class SecondMomentOfEnergy(Observable):
-    """Stores the expectation value of H(t)^2 at the evaluation times.
+    """Stores the expectation value of $H(t)^2$ at the evaluation times.
 
     Useful for computing the variance when averaging over many executions of
     the program.

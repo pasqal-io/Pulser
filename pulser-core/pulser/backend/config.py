@@ -161,7 +161,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 
         if default_evaluation_times != "Full":
             eval_times_arr = Observable._validate_eval_times(
-                default_evaluation_times
+                list(map(float, default_evaluation_times))
             )
             default_evaluation_times = cast(Sequence[float], eval_times_arr)
 
@@ -248,6 +248,10 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
 @dataclass
 class EmulatorConfig(BackendConfig):
     """The configuration for emulator backends.
+
+    Warning:
+        This class will be deprecated in favor of EmulationConfig once all
+        backends migrate to it.
 
     Attributes:
         backend_options: A dictionary of backend-specific options.

@@ -46,9 +46,6 @@ class QutipResult(Result):
     matching_meas_basis: bool
     evaluation_time: float = 1.0
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-
     @property
     def sampling_errors(self) -> dict[str, float]:
         """The sampling error associated to each bitstring's sampling rate.
