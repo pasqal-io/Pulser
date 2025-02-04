@@ -233,6 +233,11 @@ def test_opsupport(a, b, with_diff_tensor):
     )
 
     # Other transcendentals
+    y = np.tanh(b)
+    check_var_grad(y)
+    np.testing.assert_almost_equal(
+        y.build().as_array(detach=with_diff_tensor), [-0.7616, 0.7616], 4
+    )
     y = np.exp(b)
     check_var_grad(y)
     np.testing.assert_almost_equal(
