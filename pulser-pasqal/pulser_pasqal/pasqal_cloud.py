@@ -91,7 +91,7 @@ class PasqalCloud(RemoteConnection):
         **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
-        sequence = self.add_measurement_to_sequence(sequence)
+        sequence = self._add_measurement_to_sequence(sequence)
         emulator = kwargs.get("emulator", None)
         job_params: list[JobParams] = make_json_compatible(
             kwargs.get("job_params", [])
