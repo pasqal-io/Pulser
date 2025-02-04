@@ -323,6 +323,8 @@ def test_emulation_config():
         ValueError, match="All evaluation times must be between 0. and 1."
     ):
         EmulationConfig(default_evaluation_times=[-1e15, 0.0, 0.5, 1.0])
+    with pytest.raises(ValueError, match="Evaluation times must be unique"):
+        EmulationConfig(default_evaluation_times=[0.0, 0.5, 0.5, 1.0])
     with pytest.raises(
         TypeError, match="'initial_state' must be an instance of State"
     ):
@@ -450,6 +452,10 @@ class TestObservables:
             ValueError, match="All evaluation times must be between 0. and 1."
         ):
             StateResult(evaluation_times=[1.000001])
+        with pytest.raises(
+            ValueError, match="Evaluation times must be unique"
+        ):
+            StateResult(evaluation_times=[1.0, 1.0])
 
     @pytest.mark.parametrize("eval_times", [None, (0.0, 0.5, 1.0)])
     def test_call(

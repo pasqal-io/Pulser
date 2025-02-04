@@ -95,7 +95,7 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             evaluation times. The observables without specified evaluation
             times will use this configuration's 'default_evaluation_times'.
         default_evaluation_times: The default times at which observables
-            are computed. Can be a sequence of relative times between 0
+            are computed. Can be a sequence of unique relative times between 0
             (the start of the sequence) and 1 (the end of the sequence).
             Can also be specified as "Full", in which case every step in the
             emulation will also be an evaluation time.
@@ -160,12 +160,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             )
 
         if default_evaluation_times != "Full":
-            eval_times_arr = np.array(default_evaluation_times, dtype=float)
-            if np.any((eval_times_arr < 0.0) | (eval_times_arr > 1.0)):
-                raise ValueError(
-                    "All evaluation times must be between 0. and 1. "
-                    f"Instead, got {default_evaluation_times}."
-                )
+            eval_times_arr = Observable._validate_eval_times(
+                default_evaluation_times
+            )
             default_evaluation_times = cast(Sequence[float], eval_times_arr)
 
         if initial_state is not None and not isinstance(initial_state, State):

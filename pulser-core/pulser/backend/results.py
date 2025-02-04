@@ -62,6 +62,7 @@ class Results:
         self._tagmap[observable.tag] = observable.uuid
         _times.append(time)
         self._results.setdefault(observable.uuid, []).append(value)
+        assert len(_times) == len(self._results[observable.uuid])
 
     def __getattr__(self, name: str) -> list[Any]:
         if name in self._tagmap:
