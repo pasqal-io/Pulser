@@ -182,6 +182,10 @@ The `Register` defines the position of the atoms. This determines:
 - the number of atoms to use in the quantum computation, i.e, the size of the system (let's note it $N$).
 - the distance between the atoms, the $R_{ij}\ (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian).
 
+:::{seealso}
+For an in-depth view on Register creation, check out [this page](register.ipynb).
+:::
+
 ### 3. Pick the Channels
 
 A `Channel` targets the transition between two energy levels. Therefore, picking channels defines the energy levels that will be used in the computation. The channels must be picked from the `Device.channels`, so your device selection should take into account the channels it supports.
@@ -215,7 +219,7 @@ $$
 :::{important}
 The addressing of a `Channel` defines the number of atoms whose transition will be targeted by a pulse.
 
-The most common addressing for a `Channel` is the `Global` one: all the atoms evolve under the same [driving Hamiltonian](programming.md#21-driving-hamiltonian). 
+The most common addressing for a `Channel` is the `Global` one: all the atoms evolve under the same [driving Hamiltonian](programming.md#21-driving-hamiltonian).
 :::
 
 :::{seealso}
@@ -229,6 +233,10 @@ By adding pulses to a channel, we incrementally construct the [driving Hamiltoni
 - The channel dictates the states $\left|a\right>$ and $\left|b\right>$ of the driving Hamiltonian.
 
 By applying a series of pulses and delays, one defines the entire driving Hamiltonian of each atom over time.
+
+:::{seealso}
+For an in-depth view on Pulse creation, check out [this page](pulses.ipynb).
+:::
 
 ## Conclusion
 
