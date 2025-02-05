@@ -123,7 +123,7 @@ $$
 
   <summary>Interaction strength and entangling operator</summary>
 
-- The interaction strength is $\frac{C_6}{R_{ij}^6}$, with $C_6$ a coefficient that depends on the principal quantum number of the Rydberg state.
+- The interaction strength is $\frac{C_6}{R_{ij}^6}$, with $C_6$ the Ising interaction coefficient that depends on the principal quantum number of the Rydberg state.
 - The entangling operator between atom $i$ and $j$ is $\hat{n}_i\hat{n}_j = |r\rangle\langle r|_i |r\rangle\langle r|_j$. 
 
 </details>
@@ -169,7 +169,11 @@ As outlined above, Pulser lets you program an Hamiltonian ([the Hamiltonian $H$]
 :width: 600
 :::
 
-The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented. For a complete view of the constraints introduced by the device, [check its description](./apidoc/core.rst).
+The `Device` you select will dictate some parameters and constrain others. For instance, the value of the $C_6$ and $C_3$ coefficients of the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian) are defined by the device. Notably, the `Device` defines the list of `Channels` that can be used in the computation, which have a direct impact on the Hamiltonian that can be implemented. 
+
+:::{seealso}
+For a complete view of the constraints introduced by the device, [check its description](./hardware.ipynb).
+:::
 
 ### 2. Create the Register
 
@@ -177,6 +181,10 @@ The `Register` defines the position of the atoms. This determines:
 
 - the number of atoms to use in the quantum computation, i.e, the size of the system (let's note it $N$).
 - the distance between the atoms, the $R_{ij}\ (1\le i, j\le N)$ parameters in the [interaction Hamiltonian](programming.md#22-interaction-hamiltonian).
+
+:::{seealso}
+For an in-depth view on Register creation, check out [this page](register.ipynb).
+:::
 
 ### 3. Pick the Channels
 
@@ -211,7 +219,11 @@ $$
 :::{important}
 The addressing of a `Channel` defines the number of atoms whose transition will be targeted by a pulse.
 
-The most common addressing for a `Channel` is the `Global` one: all the atoms evolve under the same [driving Hamiltonian](programming.md#21-driving-hamiltonian). 
+The most common addressing for a `Channel` is the `Global` one: all the atoms evolve under the same [driving Hamiltonian](programming.md#21-driving-hamiltonian).
+:::
+
+:::{seealso}
+For a thorough description of what a Channel is and some tips on how to select a Channel, [check this page](./hardware.ipynb).
 :::
 
 ### 4. Add the Pulses
@@ -221,6 +233,10 @@ By adding pulses to a channel, we incrementally construct the [driving Hamiltoni
 - The channel dictates the states $\left|a\right>$ and $\left|b\right>$ of the driving Hamiltonian.
 
 By applying a series of pulses and delays, one defines the entire driving Hamiltonian of each atom over time.
+
+:::{seealso}
+For an in-depth view on Pulse creation, check out [this page](pulses.ipynb).
+:::
 
 ## Conclusion
 
@@ -233,7 +249,7 @@ We have successfully defined the [Hamiltonian](programming.md#2-hamiltonian-evol
 You can now simulate your first Hamiltonian by programming your first `Sequence`! [In this tutorial](tutorials/creating.nblink), you will simulate the evolution of the state of an atom initialized in $\left|g\right>$ under a Hamiltonian $H(t)=\frac{\Omega(t)}{2} |g\rangle \langle r|+\frac{\Omega(t)}{2} |r\rangle\langle g|$, with $\Omega$ chosen such that the final state of the atom is the excited state $\left|r\right>$.
 
 Many concepts have been introduced here and you might want further explanations.
-- The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](apidoc/core.rst) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), which is a more advanced feature described [here](tutorials/virtual_devices.nblink).
+- The `Device` object contains all the constraints and physical quantities that are defined in a QPU. [This section in the fundamentals](./hardware.ipynb) details these and provides examples of `Devices`. The `VirtualDevices` were also mentioned in this document ([here](programming.md#1-pick-a-device)), which is a more advanced feature described [here](tutorials/virtual_devices.nblink).
 - There are multiple ways of defining a `Register`, as is further detailed [in this section](tutorials/reg_layouts.nblink).
-- The energy levels associated with each `Channel` and the interaction Hamiltonian they implement are summed up in [the conventions page](conventions.md). The channels contain lots of constraints and physical informations, they are detailed in [the same section as the `Device`](apidoc/core.rst).
+- The energy levels associated with each `Channel` and the interaction Hamiltonian they implement are summed up in [the conventions page](conventions.md). The channels contain lots of constraints and physical informations, they are detailed in [the same section as the `Device`](./hardware.ipynb).
 - The quantities in a `Pulse` are defined using `Waveform`s, you can read more about these [on this page](tutorials/composite_wfs.nblink).

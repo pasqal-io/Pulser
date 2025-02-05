@@ -789,7 +789,7 @@ class BlackmanWaveform(Waveform):
 
 
 class InterpolatedWaveform(Waveform):
-    """Creates a waveform from interpolation of a set of data points.
+    """A waveform created from interpolation of a set of data points.
 
     Args:
         duration: The waveform duration (in ns).
