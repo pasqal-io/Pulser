@@ -12,7 +12,7 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ### 2. Create the Register
 
-- [3D Registers](./apidoc/core/pulser.Register3D) enable the definition of Registers in 3D.
+- [3D Registers](./apidoc/_autosummary/pulser.Register3D) enable the definition of Registers in 3D.
 - [RegisterLayout](./tutorials/reg_layouts.nblink) define the traps from which Registers are defined. For some QPU, it is mandatory to define the `Register` from a `RegisterLayout`. 
 - [MappableRegister](./tutorials/reg_layouts.nblink) is a Register with the traps of each qubit still to be defined.
 
@@ -23,7 +23,7 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ### 4. Add the Pulses
 
-- [Arbitrary Phase Waveforms](./apidoc/core/pulser.Pulse) enables the definition of a Pulse with an arbitrary phase.
+- [Arbitrary Phase Waveforms](./apidoc/_autosummary/pulser.Pulse) enables the definition of a Pulse with an arbitrary phase.
 
 ### Other extended usage
 
