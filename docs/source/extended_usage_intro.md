@@ -1,6 +1,6 @@
 # Introduction to Extended Usage
 
-Extended Usage cover features that are specific to some QPUs or applications. In the fundamentals section, we focused on Analog quantum computing with the Ising Hamiltonian. In this section, we extend the features for Analog quantum computing with the Ising Hamiltonian, and present tools for other quantum computing paradigms: Weighted Analog and Digital. 
+In the "Fundamentals" section, we introduced the basic tools for Analog quantum computing with the Ising Hamiltonian. In this section, we present more tools for Analog quantum computing with the Ising Hamiltonian, as well as introduce other tools to program in other quantum computing paradigms: Weighted Analog and Digital. 
 
 ## Extending Analog Quantum Computing with the Ising Hamiltonian
 
@@ -13,8 +13,8 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 ### 2. Create the Register
 
 - [3D Registers](./apidoc/_autosummary/pulser.Register3D) enable the definition of Registers in 3D.
-- [RegisterLayout](./tutorials/reg_layouts.nblink) define the traps from which Registers are defined. For some QPU, it is mandatory to define the `Register` from a `RegisterLayout`. 
-- [MappableRegister](./tutorials/reg_layouts.nblink) is a Register with the traps of each qubit still to be defined.
+- [RegisterLayout](./tutorials/reg_layouts.nblink) defines the layout of traps from which registers of atoms can be defined. For some QPU, it is mandatory to define the `Register` from a `RegisterLayout`. 
+- [MappableRegister](./tutorials/reg_layouts.nblink) is a `Register` with the traps of each qubit still to be defined.
 
 ### 3. Pick the channels
 
@@ -39,7 +39,7 @@ The `Channel` associated with Analog Quantum Computing with the Ising Hamiltonia
 $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)
 $$
 
-Weighted Analog designs quantum programs combining the `Rydberg.Global` channel with a `DMM` channel. It enables the definition of an Ising Hamiltonian with local control over the detuning:
+_Weighted Analog with the Ising Hamiltonian_ designates quantum programs combining the `Rydberg.Global` channel with a `DMM` channel. It enables the definition of an Ising Hamiltonian with local control over the detuning:
 
 $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - (\delta(t)+\epsilon_k\delta_{DMM}(t)) + |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)
 $$
