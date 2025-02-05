@@ -98,9 +98,11 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
 .. toctree::
    :maxdepth: 3
-   :caption: Documentation
+   :caption: API Reference
 
-   apidoc/pulser
+   apidoc/core
+   apidoc/simulation
+   apidoc/pasqal
 
 
 Indices and tables

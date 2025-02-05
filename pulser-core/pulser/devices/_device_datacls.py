@@ -64,7 +64,7 @@ PARAMS_WITH_ABSTR_REPR = ("channel_objects", "channel_ids", "dmm_objects")
 class BaseDevice(ABC):
     r"""Base class of a neutral-atom device.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -126,6 +126,7 @@ class BaseDevice(ABC):
     channel_objects: tuple[Channel, ...] = field(default_factory=tuple)
     dmm_objects: tuple[DMM, ...] = field(default_factory=tuple)
     default_noise_model: NoiseModel | None = None
+    short_description: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
         def type_check(
@@ -292,6 +293,8 @@ class BaseDevice(ABC):
         if self.default_noise_model is not None:
             type_check("default_noise_model", NoiseModel)
 
+        type_check("short_description", str)
+
         def to_tuple(obj: tuple | list) -> tuple:
             if isinstance(obj, (tuple, list)):
                 obj = tuple(to_tuple(el) for el in obj)
@@ -301,6 +304,9 @@ class BaseDevice(ABC):
         for param in self._params():
             if "channel" in param or param == "dmm_objects":
                 object.__setattr__(self, param, to_tuple(getattr(self, param)))
+
+        # Hack to override the docstring of an instance
+        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     @abstractmethod
@@ -524,7 +530,7 @@ class BaseDevice(ABC):
         return {
             f.name: getattr(self, f.name)
             for f in fields(self)
-            if not init_only or f.init
+            if (not init_only or f.init) and f.name != "short_description"
         }
 
     def _validate_coords(
@@ -728,7 +734,8 @@ class BaseDevice(ABC):
     def _specs(self, for_docs: bool = False) -> str:
 
         return "\n".join(
-            self._register_lines()
+            ([self.short_description] if self.short_description else [])
+            + self._register_lines()
             + self._layout_lines()
             + self._device_lines()
             + self._channel_lines(for_docs=for_docs)
@@ -739,9 +746,14 @@ class BaseDevice(ABC):
 class Device(BaseDevice):
     r"""Specifications of a neutral-atom device.
 
-    A Device instance is immutable and must have all of its parameters defined.
-    For usage in emulations, it can be converted to a VirtualDevice through the
-    `Device.to_virtual()` method.
+    Each ``Device`` instance holds the characteristics of a physical device,
+    which when associated with a :class:`pulser.Sequence` condition its
+    development.
+
+    Note:
+        A Device instance is immutable and must have all of its parameters
+        defined. For more unconstrained usage in emulations, it can be
+        converted to a VirtualDevice through the `Device.to_virtual()` method.`
 
     Args:
         name: The name of the device.
@@ -810,8 +822,6 @@ class Device(BaseDevice):
                 )
         for layout in self.pre_calibrated_layouts:
             self.validate_layout(layout)
-        # Hack to override the docstring of an instance
-        object.__setattr__(self, "__doc__", self._specs(for_docs=True))
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:
@@ -930,7 +940,7 @@ class VirtualDevice(BaseDevice):
     to be declared multiple times in the same Sequence (when
     `reusable_channels=True`) and allows the Rydberg level to be changed.
 
-    Attributes:
+    Args:
         name: The name of the device.
         dimensions: Whether it supports 2D or 3D arrays.
         max_atom_num: Maximum number of atoms supported in an array.
@@ -981,6 +991,9 @@ class VirtualDevice(BaseDevice):
     # Needed to support SLM mask by default
     dmm_objects: tuple[DMM, ...] = (DMM(),)
     reusable_channels: bool = True
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
     @property
     def _optional_parameters(self) -> tuple[str, ...]:

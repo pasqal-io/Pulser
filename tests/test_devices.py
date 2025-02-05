@@ -332,7 +332,14 @@ def test_device_specs(device):
             for name, ch in {**dev.channels, **dev.dmm_channels}.items()
         )
 
-        return register_str + layout_str + device_str + channel_str
+        first_line = (
+            (device.short_description + "\n")
+            if device.short_description
+            else ""
+        )
+        return (
+            first_line + register_str + layout_str + device_str + channel_str
+        )
 
     assert device.specs == specs(device)
 

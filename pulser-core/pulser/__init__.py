@@ -45,6 +45,8 @@ from pulser import (
     backends as backends,
 )
 
+# NOTE: If any of these change, remember to MANUALLY replicate them in the
+# API reference doc (ie they are not updated automatically).
 __all__ = [
     # pulser.waveforms
     "CompositeWaveform",

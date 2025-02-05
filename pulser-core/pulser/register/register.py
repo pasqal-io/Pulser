@@ -37,6 +37,7 @@ from pulser.register.base_register import BaseRegister, QubitId
 
 if TYPE_CHECKING:
     from pulser.devices import Device
+    from pulser.devices._device_datacls import BaseDevice
 
 
 class Register(BaseRegister, RegDrawer):
@@ -262,7 +263,7 @@ class Register(BaseRegister, RegDrawer):
     def max_connectivity(
         cls,
         n_qubits: int,
-        device: pulser.devices._device_datacls.BaseDevice,
+        device: BaseDevice,
         spacing: float | pm.TensorLike | None = None,
         prefix: str | None = None,
     ) -> Register:

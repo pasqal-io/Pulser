@@ -65,6 +65,7 @@ DigitalAnalogDevice = Device(
             total_bottom_detuning=-2 * np.pi * 2000,
         ),
     ),
+    short_description="A device with digital and analog capabilites.",
 )
 
 AnalogDevice = Device(
@@ -96,4 +97,5 @@ AnalogDevice = Device(
         ),
     ),
     pre_calibrated_layouts=(TriangularLatticeLayout(61, 5),),
+    short_description="A realistic device for analog sequence execution.",
 )
