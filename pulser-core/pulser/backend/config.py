@@ -96,9 +96,9 @@ class EmulationConfig(BackendConfig, Generic[StateType]):
             times will use this configuration's 'default_evaluation_times'.
         default_evaluation_times: The default times at which observables
             are computed. Can be a sequence of unique relative times between 0
-            (the start of the sequence) and 1 (the end of the sequence).
-            Can also be specified as "Full", in which case every step in the
-            emulation will also be an evaluation time.
+            (the start of the sequence) and 1 (the end of the sequence), in
+            ascending order. Can also be specified as "Full", in which case
+            every step in the emulation will also be an evaluation time.
         initial_state: The initial state from which emulation starts. If
             specified, the state type needs to be compatible with the emulator
             backend. If left undefined, defaults to starting with all qudits

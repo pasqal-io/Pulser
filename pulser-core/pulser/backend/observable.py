@@ -191,4 +191,9 @@ class Observable(Callback):
                 "Evaluation times must be unique but "
                 f"{evaluation_times!r} has repeated values."
             )
+        if not np.all(eval_times_arr[:-1] < eval_times_arr[1:]):
+            raise ValueError(
+                "Evaluation times must be in ascending order."
+                f"Instead, got {evaluation_times!r}."
+            )
         return eval_times_arr

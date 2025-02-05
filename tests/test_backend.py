@@ -326,6 +326,10 @@ def test_emulation_config():
     with pytest.raises(ValueError, match="Evaluation times must be unique"):
         EmulationConfig(default_evaluation_times=[0.0, 0.5, 0.5, 1.0])
     with pytest.raises(
+        ValueError, match="Evaluation times must be in ascending order"
+    ):
+        EmulationConfig(default_evaluation_times=[0.0, 1.0, 0.5])
+    with pytest.raises(
         TypeError, match="'initial_state' must be an instance of State"
     ):
         EmulationConfig(initial_state=[[1], [0]])
@@ -456,6 +460,10 @@ class TestObservables:
             ValueError, match="Evaluation times must be unique"
         ):
             StateResult(evaluation_times=[1.0, 1.0])
+        with pytest.raises(
+            ValueError, match="Evaluation times must be in ascending order"
+        ):
+            StateResult(evaluation_times=[0.0, 1.0, 0.9999])
 
     @pytest.mark.parametrize("eval_times", [None, (0.0, 0.5, 1.0)])
     def test_call(
