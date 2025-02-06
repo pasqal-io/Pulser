@@ -9,28 +9,25 @@ Classes
 These are classes that can be imported directly from ``pulser``. They should cover the fundamental
 needs for sequence creation.
 
-.. tip::
-
-   If the links to the classes on the table don't work, you can still access them via the sidebar.
 
 
 .. autosummary::
    :toctree: _autosummary
 
-   CompositeWaveform
-   CustomWaveform
-   ConstantWaveform
-   RampWaveform
-   BlackmanWaveform
-   InterpolatedWaveform
-   KaiserWaveform
-   Pulse
-   Register
-   Register3D
-   Sequence
-   NoiseModel
-   EmulatorConfig
-   QPUBackend
+   ~pulser.waveforms.CompositeWaveform
+   ~pulser.waveforms.CustomWaveform
+   ~pulser.waveforms.ConstantWaveform
+   ~pulser.waveforms.RampWaveform
+   ~pulser.waveforms.BlackmanWaveform
+   ~pulser.waveforms.InterpolatedWaveform
+   ~pulser.waveforms.KaiserWaveform
+   ~pulser.Pulse
+   ~pulser.register.Register
+   ~pulser.register.Register3D
+   ~pulser.Sequence
+   ~pulser.NoiseModel
+   ~pulser.backend.EmulatorConfig
+   ~pulser.backend.QPUBackend
 
 
 Device Examples
@@ -64,10 +61,8 @@ Modules
    pulser.backends
    pulser.channels
    pulser.devices
-   pulser.noise_model
    pulser.parametrized
    pulser.register
    pulser.result
    pulser.sampler
-   pulser.sequence
    pulser.waveforms
