@@ -21,11 +21,11 @@ needs for sequence creation.
    ~pulser.waveforms.BlackmanWaveform
    ~pulser.waveforms.InterpolatedWaveform
    ~pulser.waveforms.KaiserWaveform
-   ~pulser.Pulse
+   ~pulser.pulse.Pulse
    ~pulser.register.Register
    ~pulser.register.Register3D
-   ~pulser.Sequence
-   ~pulser.NoiseModel
+   ~pulser.sequence.Sequence
+   ~pulser.noise_model.NoiseModel
    ~pulser.backend.EmulatorConfig
    ~pulser.backend.QPUBackend
 

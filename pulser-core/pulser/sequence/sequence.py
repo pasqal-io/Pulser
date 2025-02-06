@@ -82,7 +82,7 @@ class Sequence(Generic[DeviceType]):
 
     A sequence is composed by
 
-        - The device in which we want to implement it
+        - The device constraints it must respect
         - The register of qubits on which to act
         - The device's channels that are used
         - The schedule of operations on each channel
@@ -104,8 +104,7 @@ class Sequence(Generic[DeviceType]):
         register: The atom register on which to apply the pulses. If given as
             a MappableRegister instance, the traps corrresponding to each
             qubit ID must be given when building the sequence.
-        device: A valid device in which to execute the Sequence (import
-            it from ``pulser.devices``).
+        device: A valid device in which to execute the Sequence.
 
     Note:
         The register and device do not support variable parameters. As such,
@@ -685,9 +684,9 @@ class Sequence(Generic[DeviceType]):
 
         Warns:
             UserWarning: If the sequence is configuring a detuning map, a
-            warning is raised to remind the user that the detuning map is
-            unchanged and might no longer be aligned with the qubits in
-            the new register.
+                warning is raised to remind the user that the detuning map is
+                unchanged and might no longer be aligned with the qubits in
+                the new register.
 
         Args:
             new_register: The new register to give the sequence.
@@ -726,8 +725,7 @@ class Sequence(Generic[DeviceType]):
                 guarantee the pulse sequence is left unchanged.
 
         Returns:
-            The sequence on the new device, using the match channels of
-            the former device declared in the sequence.
+            The sequence on the new device.
         """
         return switch_device(self, new_device, strict)
 
@@ -738,7 +736,7 @@ class Sequence(Generic[DeviceType]):
         channel_id: str,
         initial_target: Optional[Union[QubitId, Collection[QubitId]]] = None,
     ) -> None:
-        """Declares a new channel to the Sequence.
+        """Declares a new channel in the Sequence.
 
         The first declared channel implicitly defines the sequence's mode of
         operation (i.e. the underlying Hamiltonian). In particular, if the
@@ -749,7 +747,8 @@ class Sequence(Generic[DeviceType]):
 
         Note:
             Regular devices only allow a channel to be declared once, but
-            ``MockDevice`` channels can be repeatedly declared if needed.
+            channels in ``VirtualDevice`` with ``reusable_channels=True``
+            can be repeatedly declared if needed.
 
         Args:
             name: Unique name for the channel in the sequence.
