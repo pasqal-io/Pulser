@@ -60,6 +60,10 @@ class Results:
                 f" at time {time}."
             )
         self._tagmap[observable.tag] = observable.uuid
+        try:
+            assert _times[-1] < time, "Evaluation times are not sorted."
+        except IndexError:
+            assert not _times  # List is still empty
         _times.append(time)
         self._results.setdefault(observable.uuid, []).append(value)
         assert len(_times) == len(self._results[observable.uuid])

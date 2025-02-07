@@ -487,13 +487,22 @@ class TestObservables:
         assert not results.get_result_tags()  # ie it's still empty
 
         t_ = 1.0
+        expected_tol = 0.5 / results.total_duration
+        t_minus_tol = t_ - expected_tol
+        assert config.is_time_in_evaluation_times(
+            t_minus_tol, true_eval_times, tol=expected_tol
+        )
+        obs(config, t_minus_tol, ghz_state, ham, results)
+        assert results.get_result_times(obs) == [t_minus_tol]
+        assert results.get_result(obs, t_minus_tol) == ghz_state
+
         assert config.is_time_in_evaluation_times(t_, true_eval_times)
         obs(config, t_, ghz_state, ham, results)
         assert results.get_result_tags() == ["state"]
         assert (
             results.get_result_times("state")
             == results.get_result_times(obs)
-            == [t_]
+            == [t_minus_tol, t_]
         )
         assert results.get_result(obs, t_) == ghz_state
         with pytest.raises(
@@ -502,15 +511,6 @@ class TestObservables:
             f"{t_}",
         ):
             obs(config, t_, ghz_state, ham, results)
-
-        expected_tol = 0.5 / results.total_duration
-        t_minus_tol = t_ - expected_tol
-        assert config.is_time_in_evaluation_times(
-            t_minus_tol, true_eval_times, tol=expected_tol
-        )
-        obs(config, t_minus_tol, ghz_state, ham, results)
-        assert results.get_result_times(obs) == [t_, t_minus_tol]
-        assert results.get_result(obs, t_minus_tol) == ghz_state
 
         t_plus_tol = t_ + expected_tol
         assert t_plus_tol > 1.0  # ie it's not an evaluation time
