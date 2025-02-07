@@ -95,6 +95,13 @@ def tan(a: AbstractArrayLike, /) -> AbstractArray:
     return AbstractArray(np.tan(a.as_array()))
 
 
+def tanh(a: AbstractArrayLike, /) -> AbstractArray:
+    a = AbstractArray(a)
+    if a.is_tensor:
+        return AbstractArray(torch.tanh(a.as_tensor()))
+    return AbstractArray(np.tanh(a.as_array()))
+
+
 def pad(
     a: AbstractArrayLike,
     pad_width: tuple | int,
