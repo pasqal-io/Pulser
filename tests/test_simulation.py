@@ -287,7 +287,7 @@ def test_building_basis_and_projection_operators(seq, reg, leakage, matrices):
     # Check building operator with one operator
     op_standard = sim.build_operator([("sigma_gg", ["target"])])
     op_one = sim.build_operator(("sigma_gg", ["target"]))
-    assert (op_standard - op_one).norm() < 1e-10
+    assert (op_standard - op_one).to("dense").norm() < 1e-10
 
     # Global ground-rydberg
     seq2 = Sequence(reg, DigitalAnalogDevice)
