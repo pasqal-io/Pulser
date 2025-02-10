@@ -2494,6 +2494,7 @@ class TestDeserialization:
             {"expression": "sin", "lhs": {"variable": "var1"}},
             {"expression": "cos", "lhs": var1},
             {"expression": "tan", "lhs": {"variable": "var1"}},
+            {"expression": "tanh", "lhs": {"variable": "var1"}},
             {"expression": "index", "lhs": {"variable": "var1"}, "rhs": 0},
             {
                 "expression": "index",

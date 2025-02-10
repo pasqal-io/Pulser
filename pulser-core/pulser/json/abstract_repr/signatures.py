@@ -118,4 +118,5 @@ UNARY_OPERATORS: dict[str, Callable] = {
     "sin": np.sin,
     "cos": np.cos,
     "tan": np.tan,
+    "tanh": np.tanh,
 }
