@@ -63,15 +63,6 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    tutorials/backends
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Classical Simulation
-
-   tutorials/noisy_sim
-   tutorials/spam
-   tutorials/laser_noise
-   tutorials/effective_noise
-
-.. toctree::
    :maxdepth: 1
    :caption: Advanced Features
 
@@ -84,7 +75,17 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    tutorials/serialization
    tutorials/dmm
    tutorials/slm_mask
+   tutorials/xy_spin_chain
    tutorials/phase_shifts_vz_gates
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Emulation
+
+   tutorials/noisy_sim
+   tutorials/spam
+   tutorials/laser_noise
+   tutorials/effective_noise
 
 
 .. toctree::
@@ -92,7 +93,6 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    :caption: Applications
 
    tutorials/optimization
-   tutorials/xy_spin_chain
    tutorials/qubo
 
 .. toctree::
