@@ -384,7 +384,7 @@ class EnergyVariance(Observable):
         return result  # pragma: no cover
 
 
-class SecondMomentOfEnergy(Observable):
+class EnergySecondMoment(Observable):
     """Stores the expectation value of $H(t)^2$ at the evaluation times.
 
     Useful for computing the variance when averaging over many executions of
@@ -401,7 +401,7 @@ class SecondMomentOfEnergy(Observable):
 
     @property
     def _base_tag(self) -> str:
-        return "second_moment_of_energy"
+        return "energy_second_moment"
 
     def apply(
         self, *, state: State, hamiltonian: Operator, **kwargs: Any

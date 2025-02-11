@@ -26,11 +26,11 @@ from pulser.backend.default_observables import (
     BitStrings,
     CorrelationMatrix,
     Energy,
+    EnergySecondMoment,
     EnergyVariance,
     Expectation,
     Fidelity,
     Occupation,
-    SecondMomentOfEnergy,
     StateResult,
 )
 
@@ -48,10 +48,10 @@ __all__ = [
     "BitStrings",
     "CorrelationMatrix",
     "Energy",
+    "EnergySecondMoment",
     "EnergyVariance",
     "Expectation",
     "Fidelity",
     "Occupation",
-    "SecondMomentOfEnergy",
     "StateResult",
 ]

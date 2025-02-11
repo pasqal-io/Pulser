@@ -32,11 +32,11 @@ from pulser.backend.default_observables import (
     BitStrings,
     CorrelationMatrix,
     Energy,
+    EnergySecondMoment,
     EnergyVariance,
     Expectation,
     Fidelity,
     Occupation,
-    SecondMomentOfEnergy,
     StateResult,
 )
 from pulser.backend.qpu import QPUBackend
@@ -625,8 +625,8 @@ class TestObservables:
         assert energy.tag == "energy"
         var = EnergyVariance()
         assert var.tag == "energy_variance"
-        energy2 = SecondMomentOfEnergy()
-        assert energy2.tag == "second_moment_of_energy"
+        energy2 = EnergySecondMoment()
+        assert energy2.tag == "energy_second_moment"
         assert np.isclose(energy.apply(state=ghz_state, hamiltonian=ham), 1.0)
         assert np.isclose(energy2.apply(state=ghz_state, hamiltonian=ham), 1.0)
         assert np.isclose(var.apply(state=ghz_state, hamiltonian=ham), 0.0)
