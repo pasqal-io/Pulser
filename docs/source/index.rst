@@ -89,9 +89,8 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Quantum Simulation & Applications
+   :caption: Applications
 
-   tutorials/afm_prep
    tutorials/optimization
    tutorials/xy_spin_chain
    tutorials/qubo
