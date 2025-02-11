@@ -1,10 +1,15 @@
 # Introduction to Extended Usage
 
-In the "Fundamentals" section, we introduced the basic tools for Analog quantum computing with the Ising Hamiltonian. In this section, we present more tools for Analog quantum computing with the Ising Hamiltonian, as well as introduce other tools to program in other quantum computing paradigms: Weighted Analog and Digital. 
+In the "Fundamentals" section, we introduced the basic tools for Analog quantum computing with the Ising Hamiltonian. In this section, we present more tools for Analog quantum computing with the Ising Hamiltonian, as well as introduce other tools to program in other quantum computing paradigms: Weighted Analog with the Ising Hamiltonian, Analog with the XY Hamiltonian and Digital. 
 
 ## Extending Analog Quantum Computing with the Ising Hamiltonian
 
-Let's follow the [step-by-step guide on how to create a quantum program using Pulser](./programming.md#writing-a-pulser-program):
+Analog Quantum Computing with the Ising Hamiltonian refers to quantum programs using only one `Channel`, the `Rydberg.Global` channel. It enables to manipulate the [Ising Hamiltonian](./programming.md#ising-hamiltonian):
+
+$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)
+$$
+
+Let's follow the [step-by-step guide on how to create a quantum program using Pulser](./programming.md#writing-a-pulser-program), and introduce new features to extend the one introduced in "Fundamentals":
 
 ### 1. Pick a Device
 
@@ -32,35 +37,25 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ## Weighted Analog Quantum Computing
 
-### Weighted Analog with the Ising Hamiltonian
-
-The `Channel` associated with Analog Quantum Computing with the Ising Hamiltonian is the `Rydberg.Global` channel. It enables to manipulate the [Ising Hamiltonian](./programming.md#ising-hamiltonian):
-
-$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)
-$$
-
 _Weighted Analog with the Ising Hamiltonian_ designates quantum programs combining the `Rydberg.Global` channel with a `DMM` channel. It enables the definition of an Ising Hamiltonian with local control over the detuning:
 
-$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - (\delta(t)+\epsilon_k\delta_{DMM}(t)) + |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)
+$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - (\delta(t)\mathbf{+\epsilon_k\delta_{DMM}(t)}) + |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)
 $$
 
 Here, the _weights_ $\{\epsilon_k\}_{1\lt k\lt N}$ are defined by a `DetuningMap`, that has to be defined right after [you create the register](./programming.md#2-create-the-register).
 
-### Weighted Analog with the XY Hamiltonian
+- An in-depth presentation of Weighted Analog with the Ising Hamiltonian is available [in this notebook](./tutorials/dmm.nblink). Notably, it presents how to create a `DetuningMap`, how to pick a `DMM` and how to add detuning waveforms $\delta_{DMM}$ to it. 
+- Weighted Analog can be used to prepare the qubits in a specific initial state. This is eased by using an [SLM mask](./tutorials/slm_mask.nblink).
+
+## Analog with the XY Hamiltonian
 
 One can also perform Analog Quantum Computing with the [XY Hamiltonian](./programming.md#xy-hamiltonian). The `Channel` associated with this is the `Microwave.Global` Channel:
 
 $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_3}{\hbar R_{kj}^3} (|1\rangle\langle 0|_k |0\rangle\langle 1|_j + |0\rangle\langle 1|_i |1\rangle\langle 0|_k) \right)
 $$
 
-An `SLM mask`, relying on a `DMM`, can be used here to prepare the initial state of the qubits in a state different than $\left|0\right>\otimes \left|0\right> \otimes ... \otimes \left|0\right>$.
-
-### Documentation
-
-- An in-depth presentation of Weighted Analog with the Ising Hamiltonian is available [in this notebook](./tutorials/dmm.nblink). Notably, it presents how to create a `DetuningMap`, how to pick a `DMM` and how to add detuning waveforms $\delta_{DMM}$ to it. 
-- The `DMM` enables to use the [SLM mask feature](./tutorials/slm_mask.nblink), that allows the preparation of the qubits in an initial state composed of:
-    - ground $\left|g\right>$ and Rydberg state $\left|r\right>$ when the SLM mask is applied on a `Rydberg.Global` channel.
-    - XY states $\left|0\right>$ and $\left|1\right>$ when the SLM mask is applied on a `Microwave.Global` channel.
+- An example of a `Sequence` using a `Microwave` channel is presented [in this notebook](./tutorials/slm_mask.nblink).
+- An [SLM mask](./tutorials/slm_mask.nblink) can also be used to prepare the initial state in a combination of XY states, $\left|0\right>$ and $\left|1\right>$.
 
 ## Digital Quantum Computing
 
