@@ -75,16 +75,16 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    :maxdepth: 1
    :caption: Advanced Features
 
-   tutorials/phase_shifts_vz_gates
-   tutorials/composite_wfs
-   tutorials/paramseqs
    tutorials/reg_layouts
+   tutorials/output_mod_eom
+   tutorials/virtual_devices
+   tutorials/paramseqs
+   tutorials/composite_wfs
    tutorials/interpolated_wfs
    tutorials/serialization
    tutorials/dmm
    tutorials/slm_mask
-   tutorials/output_mod_eom
-   tutorials/virtual_devices
+   tutorials/phase_shifts_vz_gates
 
 
 .. toctree::
