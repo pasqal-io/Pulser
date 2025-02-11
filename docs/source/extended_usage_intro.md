@@ -27,7 +27,7 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ### 3. Pick the channels
 
-- [Modulation](tutorials/output_mod_eom.nblink#Output-Modulation): Each channel has a _modulation bandwidth_, that defines how the pulses that will be added to it will be affected by the modulation phenomenon.
+- [Modulation](tutorials/output_mod_eom.nblink:Output-Modulation): Each channel has a _modulation bandwidth_, that defines how the pulses that will be added to it will be affected by the modulation phenomenon.
 - [EOM](tutorials/output_mod_eom.nblink#EOM-Mode-Operation): Some channels support an "EOM" mode, a mode in which the pulses are less impacted by the modulation phenomenon, but have to be of square shape.
 
 ### 4. Add the Pulses
