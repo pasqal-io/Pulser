@@ -4,7 +4,7 @@ In the "Fundamentals" section, we introduced the basic tools for Analog quantum 
 
 ## Extending Analog Quantum Computing with the Ising Hamiltonian
 
-Analog Quantum Computing with the Ising Hamiltonian refers to quantum programs using only one `Channel`, the `Rydberg.Global` channel. It enables to manipulate the [Ising Hamiltonian](./programming.md#ising-hamiltonian):
+Analog Quantum Computing with the Ising Hamiltonian refers to quantum programs written using only one `Channel`, the `Rydberg.Global` channel. It enables the programming of the [Ising Hamiltonian](./programming.md#ising-hamiltonian):
 
 $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega(t)}{2} e^{-i\phi(t)} |g\rangle\langle r|_k + \frac{\Omega(t)}{2} e^{i\phi(t)} |r\rangle\langle g|_k - \delta(t) |r\rangle\langle r|_k(t) + \sum_{j<k}\frac{C_6}{\hbar R_{kj}^6} \hat{n}_k \hat{n}_j \right)
 $$
@@ -13,7 +13,7 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ### 1. Pick a Device
 
-[VirtualDevice](./tutorials/virtual_devices.nblink) extends the definition of [Device](./hardware.ipynb), enabling the definition of a `Device` with less physical constraints.
+- [VirtualDevice](./tutorials/virtual_devices.nblink) extends the definition of [Device](./hardware.ipynb), enabling the definition of a `Device` with less physical constraints.
 
 ### 2. Create the Register
 
@@ -23,8 +23,8 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ### 3. Pick the channels
 
-- [Modulation](./tutorials/output_mod_eom.nblink): Each channel has a _modulation bandwidth_, that defines how the pulses that will be added to it will be affected by the modulation phenomenon.
-- [EOM](./tutorials/output_mod_eom.nblink): Some channels support an "EOM" mode, a mode in which the pulses are less impacted by the modulation phenomenon, but have to be of square shape.
+- [Modulation](./tutorials/output_mod_eom.nblink#Output-Modulation): Each channel has a _modulation bandwidth_, that defines how the pulses that will be added to it will be affected by the modulation phenomenon.
+- [EOM](./tutorials/output_mod_eom.nblink#EOM-Mode-Operation): Some channels support an "EOM" mode, a mode in which the pulses are less impacted by the modulation phenomenon, but have to be of square shape.
 
 ### 4. Add the Pulses
 
@@ -45,7 +45,7 @@ $$
 Here, the _weights_ $\{\epsilon_k\}_{1\lt k\lt N}$ are defined by a `DetuningMap`, that has to be defined right after [you create the register](./programming.md#2-create-the-register).
 
 - An in-depth presentation of Weighted Analog with the Ising Hamiltonian is available [in this notebook](./tutorials/dmm.nblink). Notably, it presents how to create a `DetuningMap`, how to pick a `DMM` and how to add detuning waveforms $\delta_{DMM}$ to it. 
-- Weighted Analog can be used to prepare the qubits in a specific initial state. This is eased by using an [SLM mask](./tutorials/slm_mask.nblink).
+- Weighted Analog can be used to prepare the qubits in a specific initial state. This is eased by using an [SLM mask](./tutorials/slm_mask.nblink#SLM-Mask-in-Ising-mode).
 
 ## Analog with the XY Hamiltonian
 
@@ -59,6 +59,12 @@ $$
 
 ## Digital Quantum Computing
 
-By using `Rydberg` and `Raman` channels in your quantum program, you can program digital quantum computations. To perform such operations, here are some extended usage of relevance:
-- [Local pulses and target operations](./tutorials/phase_shifts_vz_gates.nblink) enable to define a driving Hamiltonian for a set of targeted atoms specifically.
-- [Virtual Z gates and phase shifts](./tutorials/phase_shifts_vz_gates.nblink): phase shift is an operation on the Sequence, that can be programmed in between two pulses to program a _virtual-Z gate_, a phase gate. This tutorial presents how to use it to perform an Hadamard gate.
+Digital Quantum Computing is a paradigm in which a system's state evolves through a series of discrete manipulation of its qubits' states, known as quantum gates. This is the underlying approach in quantum circuits, and can be replicated in neutral-atom devices at the pulse level. 
+
+To achieve this, the qubit states are encoded in the states of the "digital" basis $\left|g\right>$ and $\left|h\right>$. Digital Quantum Computing is thus associated with the `Raman` channel. When adding a pulse to the `Raman` channel, the Hamiltonian you program is:
+
+$$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega_k(t)}{2} e^{-i\phi_k(t)} |h\rangle\langle g|_k + \frac{\Omega_k(t)}{2} e^{i\phi_k(t)} |g\rangle\langle h|_k - \delta_k(t) |g\rangle\langle g|_k(t) \right)
+$$
+
+- [Local pulses and target operations](./tutorials/phase_shifts_vz_gates.nblink#Phase-shifts-with-multiple-channels-and-different-targets) enable to define gates applying on only specific qubits, by defining a driving Hamiltonian for a set of targeted atoms specifically (the quantities $\Omega_k$, $\delta_k$ and $\phi_k$ in the Hamiltonian above depend on the atoms).
+- [Virtual Z gates and phase shifts](./tutorials/phase_shifts_vz_gates.nblink): phase shift is an operation that can be programmed in between two pulses to program a _virtual-Z gate_, a phase gate. This tutorial presents how to use it to perform an Hadamard gate.
