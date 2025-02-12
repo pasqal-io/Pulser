@@ -27,8 +27,8 @@ Let's follow the [step-by-step guide on how to create a quantum program using Pu
 
 ### 3. Pick the channels
 
-- [Modulation](tutorials/output_mod_eom.nblink#-Output-Modulation): Each channel has a _modulation bandwidth_, that defines how the pulses that will be added to it will be affected by the modulation phenomenon.
-- [EOM](tutorials/output_mod_eom.nblink#-EOM-Mode-Operation): Some channels support an "EOM" mode, a mode in which the pulses are less impacted by the modulation phenomenon, but have to be of square shape.
+- [Modulation](tutorials/output_mod_eom.nblink): Each channel has a _modulation bandwidth_, that defines how the pulses that will be added to it will be affected by the modulation phenomenon.
+- [EOM](tutorials/output_mod_eom.nblink): Some channels support an "EOM" mode, a mode in which the pulses are less impacted by the modulation phenomenon, but have to be of square shape.
 
 ### 4. Add the Pulses
 
@@ -49,7 +49,7 @@ $$
 Here, the _weights_ $\{\epsilon_k\}_{1\lt k\lt N}$ are defined by a `DetuningMap`, that has to be defined right after [you create the register](programming.md#2-create-the-register).
 
 - An in-depth presentation of Weighted Analog with the Ising Hamiltonian is available [in this notebook](./tutorials/dmm.nblink). Notably, it presents how to create a `DetuningMap`, how to pick a `DMM` and how to add detuning waveforms $\delta_{DMM}$ to it. 
-- Weighted Analog can be used to prepare the qubits in a specific initial state. This is eased by using an [SLM mask](tutorials/slm_mask.nblink#-SLM-Mask-in-Ising-mode).
+- Weighted Analog can be used to prepare the qubits in a specific initial state. This is eased by using an [SLM mask](tutorials/slm_mask.nblink).
 
 ## Analog with the XY Hamiltonian
 
@@ -70,5 +70,5 @@ To achieve this, the qubit states are encoded in the states of the "digital" bas
 $$\frac{H}{\hbar}(t) = \sum_{k=1}^N \left (\frac{\Omega_k(t)}{2} e^{-i\phi_k(t)} |h\rangle\langle g|_k + \frac{\Omega_k(t)}{2} e^{i\phi_k(t)} |g\rangle\langle h|_k - \delta_k(t) |g\rangle\langle g|_k(t) \right)
 $$
 
-- [Local pulses and target operations](tutorials/phase_shifts_vz_gates.nblink#-Phase-shifts-with-multiple-channels-and-different-targets) enable to define gates applying on only specific qubits, by defining a driving Hamiltonian for a set of targeted atoms specifically (the quantities $\Omega_k$, $\delta_k$ and $\phi_k$ in the Hamiltonian above depend on the atoms).
+- [Local pulses and target operations](tutorials/phase_shifts_vz_gates.nblink) enable to define gates applying on only specific qubits, by defining a driving Hamiltonian for a set of targeted atoms specifically (the quantities $\Omega_k$, $\delta_k$ and $\phi_k$ in the Hamiltonian above depend on the atoms).
 - [Virtual Z gates and phase shifts](tutorials/phase_shifts_vz_gates.nblink): phase shift is an operation that can be programmed in between two pulses to program a _virtual-Z gate_, a phase gate. This tutorial presents how to use it to perform an Hadamard gate.
