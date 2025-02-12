@@ -60,6 +60,7 @@ of quantum programs written with Pulser on :doc:`tutorials/creating`.
    register
    hardware
    pulses
+   sequence
    tutorials/backends
 
 .. toctree::

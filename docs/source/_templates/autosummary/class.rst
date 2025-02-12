@@ -7,9 +7,6 @@
    :inherited-members:
    :show-inheritance:
    :member-order: groupwise
-   {% if module == "pulser" -%}
-   :no-index:  {# TODO: Try to avoid doing this #}
-   {%- endif -%}
 
    {% block attributes %}
    {% if attributes %}
