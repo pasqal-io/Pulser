@@ -259,7 +259,8 @@
             "log",
             "sin",
             "cos",
-            "tan"
+            "tan",
+            "tanh"
           ],
           "type": "string"
         },
